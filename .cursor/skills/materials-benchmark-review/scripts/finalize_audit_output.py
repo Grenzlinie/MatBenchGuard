@@ -127,6 +127,7 @@ def classify_verdict(
     findings: list[dict[str, Any]],
     usable_reward_count: int,
     checker_test_count: int,
+    paper_status: str = "NOT_ASSESSED",
 ) -> tuple[str, float | None, str]:
     maximum = max(
         (SEVERITY_RANK[item["severity"]] for item in findings), default=0
@@ -135,7 +136,7 @@ def classify_verdict(
         return (
             "REJECT",
             0.0,
-            "A FATAL no-paper E1 finding triggered a Hard gate.",
+            "A FATAL audit finding triggered a Hard gate.",
         )
     if usable_reward_count != checker_test_count:
         return (
@@ -143,16 +144,22 @@ def classify_verdict(
             None,
             "At least one checker probe lacks usable finite numeric E1 evidence.",
         )
+    if paper_status == "NOT_ASSESSABLE":
+        return (
+            "NOT_ASSESSABLE",
+            None,
+            "Essential paper-grounded evidence is unavailable.",
+        )
     if maximum >= SEVERITY_RANK["MEDIUM"]:
         return (
             "CONDITIONAL",
             0.7,
-            "Repairable no-paper E1 findings remain.",
+            "Repairable findings remain at the selected evidence depth.",
         )
     return (
         "PASS",
         0.9,
-        "No blocking no-paper E1 finding was detected.",
+        "No blocking finding was detected at the selected evidence depth.",
     )
 
 
@@ -187,6 +194,75 @@ def execution_findings(
             }
         ]
     return []
+
+
+def paper_assessment_findings(
+    assessment: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if assessment is None or "dimensions" not in assessment:
+        return []
+    findings: list[dict[str, Any]] = []
+    for name, value in assessment["dimensions"].items():
+        status = value["status"]
+        if status in {"PASS", "NOT_ASSESSABLE"}:
+            continue
+        affected_files = ["paper/paper.md"]
+        affected_files.extend(
+            item["package_file"] for item in value["evidence"]
+        )
+        findings.append(
+            {
+                "severity": "FATAL" if status == "FAIL" else "HIGH",
+                "code": f"PAPER_{name.upper()}_{status}",
+                "message": value["rationale"],
+                "test_type": name,
+                "evidence": value["evidence"],
+                "affected_files": list(dict.fromkeys(affected_files)),
+            }
+        )
+    return findings
+
+
+def paper_consistency(
+    assessment: dict[str, Any] | None,
+    skip_reason: str | None = None,
+) -> dict[str, Any]:
+    if skip_reason is not None:
+        return {
+            "status": "NOT_ASSESSED",
+            "reason": skip_reason,
+            "reproduction_type": None,
+            "dimensions": {},
+        }
+    if assessment is None or "dimensions" not in assessment:
+        return {
+            "status": "NOT_ASSESSED",
+            "reason": "No-paper mode does not assess paper fidelity.",
+            "reproduction_type": None,
+            "dimensions": {},
+        }
+    statuses = {
+        value["status"] for value in assessment["dimensions"].values()
+    }
+    status = (
+        "FAIL"
+        if "FAIL" in statuses
+        else "NOT_ASSESSABLE"
+        if "NOT_ASSESSABLE" in statuses
+        else "WARNING"
+        if "WARNING" in statuses
+        else "PASS"
+    )
+    return {
+        "status": status,
+        "reason": (
+            "Agent evidence validates every required paper-grounded dimension."
+            if status == "PASS"
+            else "One or more paper-grounded dimensions require attention."
+        ),
+        "reproduction_type": assessment["reproduction_type"],
+        "dimensions": assessment["dimensions"],
+    }
 
 
 def markdown_summary(report: dict[str, Any]) -> str:
@@ -237,6 +313,46 @@ def markdown_summary(report: dict[str, Any]) -> str:
         )
         or "No resources were declared."
     )
+    paper = report["paper_consistency"]
+    paper_assessment = (
+        f"- Status: {paper['status']}\n"
+        f"- Reproduction type: {paper['reproduction_type']}\n"
+        f"- Reason: {paper['reason']}"
+        if paper["status"] != "NOT_ASSESSED"
+        else f"Status: NOT_ASSESSED\nReason: {paper['reason']}"
+    )
+    taxonomy = report["taxonomy_labels"]
+    taxonomy_lines = (
+        f"- Computation task: {taxonomy['computation_task']}\n"
+        f"- Research domain: {taxonomy['research_domain']}\n"
+        f"- Material system: {taxonomy['material_system']}"
+    )
+    taxonomy_evidence_lines = (
+        "\n".join(
+            f"- {item['dimension']}={item['label']}: "
+            f"{item['package_file']} — {item['package_quote']}"
+            for item in report["taxonomy_evidence"]
+        )
+        or "No evidence-backed taxonomy labels were supplied."
+    )
+    gold = paper["dimensions"].get("gold_provenance")
+    gold_assessment = (
+        f"Status: {gold['status']}\nReason: {gold['rationale']}"
+        if gold is not None
+        else "Status: NOT_ASSESSED\n"
+        "Reason: Gold provenance requires paper-grounded review."
+    )
+    scope_mode = (
+        f"paper-grounded {configuration['execution_level']}"
+        if configuration["paper_mode"] == "paper_grounded"
+        else f"no-paper {configuration['execution_level']}"
+    )
+    next_step = (
+        "Run task-family-specific probes before production admission."
+        if configuration["paper_mode"] == "paper_grounded"
+        else "Run paper-grounded and task-family-specific slices before "
+        "production admission."
+    )
     return f"""# Materials Benchmark Audit Report
 
 ## 1. Audit Summary
@@ -268,6 +384,10 @@ def markdown_summary(report: dict[str, Any]) -> str:
 
 - Class: {summary['materials_class']}
 - Prescreen evidence is recorded in the static evidence.
+{taxonomy_lines}
+
+Taxonomy evidence:
+{taxonomy_evidence_lines}
 
 ## 6. Capability Alignment
 
@@ -292,8 +412,7 @@ Cross-file output consistency was checked statically.
 
 ## 11. Gold Standard Assessment
 
-Status: NOT_ASSESSED
-Reason: Gold provenance requires paper-grounded review.
+{gold_assessment}
 
 ## 12. Execution Feasibility
 
@@ -305,8 +424,7 @@ Solution content was not inspected or copied into the checker runtime.
 
 ## 14. Paper Consistency
 
-Status: NOT_ASSESSED
-Reason: No-paper mode does not assess paper fidelity.
+{paper_assessment}
 
 ## 15. Dimension Scores
 
@@ -322,11 +440,11 @@ See each finding's required_fix field.
 
 ## 18. Recommended Improvements
 
-Run paper-grounded and task-family-specific slices before production admission.
+{next_step}
 
 ## 19. Audit Scope and Limitations
 
-This audit covers no-paper E1 behavior only.
+This audit covers {scope_mode} behavior only.
 
 ## 20. Audit Log Summary
 
@@ -341,6 +459,8 @@ def synthesize_report(
     checker_result: dict[str, Any],
     resource_result: dict[str, Any] | None = None,
     execution_evidence: dict[str, Any] | None = None,
+    agent_assessment: dict[str, Any] | None = None,
+    paper_skip_reason: str | None = None,
 ) -> dict[str, Any]:
     resource_result = resource_result or {
         "status": "NOT_ASSESSED",
@@ -366,6 +486,9 @@ def synthesize_report(
     ] + [
         (item, "E2", "EXECUTION_FEASIBILITY")
         for item in execution_findings(execution_evidence)
+    ] + [
+        (item, "PAPER", "PAPER_FIDELITY")
+        for item in paper_assessment_findings(agent_assessment)
     ]
     findings = [
         normalized_finding(
@@ -373,10 +496,15 @@ def synthesize_report(
         )
         for index, (source, phase, category) in enumerate(sources, start=1)
     ]
+    paper_result = paper_consistency(
+        agent_assessment,
+        skip_reason=paper_skip_reason,
+    )
     verdict, score, reason = classify_verdict(
         findings,
         checker_result["usable_reward_count"],
         len(checker_result["tests"]),
+        paper_result["status"],
     )
     report = read_json(temp_dir / "audit_report.json")
     report["summary"] = {
@@ -395,12 +523,28 @@ def synthesize_report(
         "axes": static_result["materials_prescreen"]["axes_present"],
         "prescreen": static_result["materials_prescreen"],
     }
-    report["paper_consistency"] = {
-        "status": "NOT_ASSESSED",
-        "reason": "No-paper mode does not assess paper fidelity.",
-    }
     report["resources"] = resource_result["resources"]
     report["execution_evidence"] = execution_evidence
+    report["paper_consistency"] = paper_result
+    report["taxonomy_labels"] = (
+        agent_assessment["taxonomy"]
+        if agent_assessment is not None
+        else {
+            "computation_task": [],
+            "research_domain": [],
+            "material_system": {"primary": None, "secondary": []},
+        }
+    )
+    report["taxonomy_source"] = (
+        agent_assessment["taxonomy_source"]
+        if agent_assessment is not None
+        else None
+    )
+    report["taxonomy_evidence"] = (
+        agent_assessment["taxonomy_evidence"]
+        if agent_assessment is not None
+        else []
+    )
     e0_status = gate_status(findings, "E0")
     e1_status = (
         gate_status(findings, "E1")
@@ -435,7 +579,16 @@ def synthesize_report(
                 else "NOT_ASSESSED"
             ),
         },
-        {"gate_id": "PAPER_CONSISTENCY", "status": "NOT_ASSESSED"},
+        {
+            "gate_id": "PAPER_CONSISTENCY",
+            "status": (
+                "NOT_ASSESSED"
+                if paper_result["status"] == "NOT_ASSESSED"
+                else "WARNING"
+                if paper_result["status"] == "NOT_ASSESSABLE"
+                else gate_status(findings, "PAPER")
+            ),
+        },
     ]
     report["dimension_scores"] = [
         {
@@ -460,9 +613,22 @@ def synthesize_report(
     ]
     report["scope"] = {
         "files_reviewed": sorted(
-            role for role in REQUIRED_ROLES if (root / role).exists()
+            [
+                role for role in REQUIRED_ROLES if (root / role).exists()
+            ]
+            + (
+                ["paper/paper.md", "paper/images_manifest.json"]
+                if agent_assessment is not None
+                and "dimensions" in agent_assessment
+                else []
+            )
         ),
-        "files_not_reviewed": ["paper/paper.md", "solution/**"],
+        "files_not_reviewed": (
+            ["solution/**"]
+            if agent_assessment is not None
+            and "dimensions" in agent_assessment
+            else ["paper/paper.md", "solution/**"]
+        ),
         "tests_executed": [
             *[item["test_type"] for item in checker_result["tests"]],
             *(
@@ -477,7 +643,12 @@ def synthesize_report(
                 if not checker_result["tests"]
                 else []
             ),
-            "paper fidelity",
+            *(
+                ["paper fidelity"]
+                if agent_assessment is None
+                or "dimensions" not in agent_assessment
+                else []
+            ),
             *(
                 ["scientific workflow execution"]
                 if execution_evidence["claim"] != "SMOKE_RUN"

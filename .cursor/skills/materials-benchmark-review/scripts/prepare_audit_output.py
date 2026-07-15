@@ -150,6 +150,47 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
+def validate_paper_boundary(root: Path) -> None:
+    """Ensure bundled paper roles are local files outside solution/."""
+    resolved_root = root.resolve()
+    solution = resolved_root / "solution"
+    paper_dir = root / "paper"
+    if paper_dir.is_symlink():
+        raise ValueError("paper role routes through a symlink: paper/")
+    for relative in ("paper/paper.md", "paper/images_manifest.json"):
+        path = root / relative
+        if path.is_symlink():
+            raise ValueError(
+                f"paper role routes through a symlink: {relative}"
+            )
+        if not path.is_file():
+            raise ValueError(
+                f"paper_grounded mode requires bundled paper role: {relative}"
+            )
+        resolved = path.resolve()
+        if not resolved.is_relative_to(resolved_root):
+            raise ValueError(f"paper role escapes 题包 root: {relative}")
+        if resolved.is_relative_to(solution):
+            raise ValueError(f"paper role routes through solution/: {relative}")
+
+
+def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
+    """Add bundled paper hashes only after the no-paper Hard gate passes."""
+    validate_paper_boundary(root)
+    manifest_path = temp_dir / "audit_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for relative in ("paper/paper.md", "paper/images_manifest.json"):
+        path = root / relative
+        manifest["input_hashes"][relative] = sha256_file(path)
+    manifest["input_hashes"] = dict(
+        sorted(manifest["input_hashes"].items())
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
 def prepare_workspace(
     root: Path, paper_mode: str, execution_level: str
 ) -> dict[str, Any]:
@@ -210,6 +251,8 @@ def prepare_workspace(
         "completed_at": None,
         "auditor_version": "materials-benchmark-review/0.1",
         "benchmark_root": str(root),
+        # Paper roles are deliberately added only after the no-paper gate
+        # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
         "output_hashes": {},
         "resolved_findings": [],
@@ -237,7 +280,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("input")
     parser.add_argument(
-        "--paper-mode", choices=["no_paper"], default="no_paper"
+        "--paper-mode",
+        choices=["no_paper", "paper_grounded"],
+        default="no_paper",
     )
     parser.add_argument(
         "--execution-level", choices=["E1", "E2"], default="E1"
