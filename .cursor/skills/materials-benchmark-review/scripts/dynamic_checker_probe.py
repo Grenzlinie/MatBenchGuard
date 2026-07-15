@@ -117,6 +117,30 @@ def write_synthetic_outputs(
     return created
 
 
+def write_malformed_outputs(
+    output_dir: Path, specification: dict[str, Any]
+) -> list[str]:
+    created: list[str] = []
+    outputs = (
+        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
+    )
+    for output in outputs:
+        filename = basename(output.get("file"))
+        if not filename:
+            continue
+        path = output_dir / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        output_format = str(output.get("format", "")).lower()
+        if output_format == "json":
+            path.write_text('{"malformed": ', encoding="utf-8")
+        elif output_format in {"csv", "tsv"}:
+            path.write_text("\x00not_the_required_schema\n", encoding="utf-8")
+        else:
+            path.write_bytes(b"\x00\xffmalformed")
+        created.append(filename)
+    return created
+
+
 def reject_solution_fixture(root: Path, source_dir: Path) -> Path:
     source_dir = source_dir.expanduser().resolve()
     solution_dir = (root / "solution").resolve()
@@ -179,6 +203,147 @@ def retain_one_known_valid_row(
             writer.writerow(rows[-1])
 
 
+def finite_number(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def response_column(
+    fieldnames: list[str], rows: list[dict[str, Any]]
+) -> str | None:
+    numeric = [
+        field
+        for field in fieldnames
+        if any(finite_number(row.get(field)) is not None for row in rows)
+    ]
+    if not numeric:
+        return None
+    coordinate_names = {
+        "id",
+        "index",
+        "step",
+        "iteration",
+        "frame",
+        "time",
+        "x",
+        "y",
+        "z",
+        "k",
+        "q",
+    }
+    responses = [
+        field for field in numeric if field.strip().lower() not in coordinate_names
+    ]
+    return (responses or numeric)[-1]
+
+
+def perturb_json(value: Any, fraction: float) -> Any:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        number = float(value)
+        return number + fraction * max(abs(number), 1.0)
+    if isinstance(value, list):
+        return [perturb_json(item, fraction) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: perturb_json(item, fraction)
+            for key, item in value.items()
+        }
+    return value
+
+
+def transform_known_valid_outputs(
+    output_dir: Path,
+    specification: dict[str, Any],
+    mode: str,
+) -> list[dict[str, Any]]:
+    transformations: list[dict[str, Any]] = []
+    outputs = (
+        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
+    )
+    for output in outputs:
+        filename = basename(output.get("file"))
+        if not filename:
+            continue
+        path = output_dir / filename
+        output_format = str(output.get("format", "")).lower()
+        if output_format in {"csv", "tsv"}:
+            delimiter = "\t" if output_format == "tsv" else ","
+            with path.open(newline="", encoding="utf-8") as handle:
+                reader = csv.DictReader(handle, delimiter=delimiter)
+                fieldnames = list(reader.fieldnames or [])
+                rows = list(reader)
+            detail: dict[str, Any] = {
+                "file": filename,
+                "format": output_format,
+            }
+            if mode == "metamorphic":
+                rows.reverse()
+                fieldnames.reverse()
+                detail["operation"] = "reverse_rows_and_columns"
+            else:
+                column = response_column(fieldnames, rows)
+                fraction = 0.05 if mode == "quality_small" else 0.5
+                changed = 0
+                if column is not None:
+                    for row in rows:
+                        number = finite_number(row.get(column))
+                        if number is None:
+                            continue
+                        row[column] = f"{number + fraction * max(abs(number), 1.0):.12g}"
+                        changed += 1
+                detail.update(
+                    {
+                        "operation": "perturb_numeric_materials_response",
+                        "response_column": column,
+                        "fraction": fraction,
+                        "changed_values": changed,
+                    }
+                )
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(
+                    handle, fieldnames=fieldnames, delimiter=delimiter
+                )
+                writer.writeheader()
+                writer.writerows(rows)
+            transformations.append(detail)
+        elif output_format == "json":
+            value = read_json(path)
+            if mode == "metamorphic":
+                operation = "canonical_key_order_and_indentation"
+                transformed = value
+            else:
+                fraction = 0.05 if mode == "quality_small" else 0.5
+                operation = "perturb_numeric_materials_response"
+                transformed = perturb_json(value, fraction)
+            path.write_text(
+                json.dumps(
+                    transformed,
+                    indent=4 if mode == "metamorphic" else None,
+                    sort_keys=mode == "metamorphic",
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            transformations.append(
+                {
+                    "file": filename,
+                    "format": output_format,
+                    "operation": operation,
+                    **(
+                        {}
+                        if mode == "metamorphic"
+                        else {"fraction": fraction}
+                    ),
+                }
+            )
+    return transformations
+
+
 def copy_public_package(root: Path, destination: Path) -> None:
     """Copy the checker runtime context without solution or audit artifacts."""
     for source in iter_public_files(root):
@@ -213,7 +378,15 @@ def run_checker_case(
         )
 
         created: list[str] = []
-        if mode in {"known_valid", "sparse_known_valid"}:
+        transformations: list[dict[str, Any]] = []
+        known_valid_modes = {
+            "known_valid",
+            "sparse_known_valid",
+            "quality_small",
+            "quality_large",
+            "metamorphic",
+        }
+        if mode in known_valid_modes:
             if known_valid_output is None:
                 raise ValueError("known-valid case requires an output directory")
             created = copy_known_valid_outputs(
@@ -221,6 +394,12 @@ def run_checker_case(
             )
             if mode == "sparse_known_valid":
                 retain_one_known_valid_row(outputs_dir, specification)
+            elif mode in {"quality_small", "quality_large", "metamorphic"}:
+                transformations = transform_known_valid_outputs(
+                    outputs_dir, specification, mode
+                )
+        elif mode == "malformed":
+            created = write_malformed_outputs(outputs_dir, specification)
         elif mode != "missing":
             created = write_synthetic_outputs(
                 outputs_dir, specification, mode
@@ -265,6 +444,7 @@ def run_checker_case(
             "case": case_name,
             "mode": mode,
             "created_outputs": created,
+            "transformations": transformations,
             "returncode": process.returncode,
             "reward": reward,
             "breakdown": breakdown,
@@ -300,6 +480,7 @@ def evaluate_results(
     adversarial = {
         "missing_outputs",
         "empty_valid_shape",
+        "malformed_outputs",
         "random_baseline",
         "minimal_gold_shape",
         "duplicate_gold_rows",
@@ -366,6 +547,59 @@ def evaluate_results(
                     },
                 )
             )
+    by_case = {result["case"]: result for result in results}
+
+    def usable_score(case: str) -> float | None:
+        reward = by_case.get(case, {}).get("reward")
+        return (
+            reward
+            if isinstance(reward, float) and math.isfinite(reward)
+            else None
+        )
+
+    valid = usable_score("known_valid_public")
+    small = usable_score("quality_gradient_small_error")
+    large = usable_score("quality_gradient_large_error")
+    if (
+        valid is not None
+        and small is not None
+        and large is not None
+        and (small > valid + 1e-6 or large > small + 1e-6)
+    ):
+        findings.append(
+            finding(
+                "FATAL",
+                "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
+                "checker reward is not monotonic as scientific numeric error increases",
+                "materials_quality_gradient",
+                {
+                    "known_valid_reward": valid,
+                    "small_error_reward": small,
+                    "large_error_reward": large,
+                    "expected_order": "known_valid >= small_error >= large_error",
+                },
+            )
+        )
+    equivalent = usable_score("metamorphic_equivalent_representation")
+    if (
+        valid is not None
+        and equivalent is not None
+        and abs(valid - equivalent) > 1e-6
+    ):
+        findings.append(
+            finding(
+                "FATAL",
+                "SCIENTIFIC_INVARIANCE_VIOLATION",
+                "equivalent row/key ordering or serialization changes the checker reward",
+                "metamorphic_equivalent_representation",
+                {
+                    "known_valid_reward": valid,
+                    "equivalent_representation_reward": equivalent,
+                    "absolute_difference": abs(valid - equivalent),
+                    "allowed_difference": 1e-6,
+                },
+            )
+        )
     return findings
 
 
@@ -385,6 +619,7 @@ def dynamic_checker_probe(
     cases = [
         ("missing_outputs", "missing"),
         ("empty_valid_shape", "empty"),
+        ("malformed_outputs", "malformed"),
         ("random_baseline", "random"),
         ("minimal_gold_shape", "minimal"),
         ("duplicate_gold_rows", "duplicate"),
@@ -395,6 +630,12 @@ def dynamic_checker_probe(
             (
                 ("known_valid_public", "known_valid"),
                 ("sparse_known_valid", "sparse_known_valid"),
+                ("quality_gradient_small_error", "quality_small"),
+                ("quality_gradient_large_error", "quality_large"),
+                (
+                    "metamorphic_equivalent_representation",
+                    "metamorphic",
+                ),
             )
         )
     results = [
@@ -412,12 +653,22 @@ def dynamic_checker_probe(
     expected = {
         "missing_outputs": "score below pass threshold without crashing",
         "empty_valid_shape": "score below pass threshold without crashing",
+        "malformed_outputs": "score below pass threshold without crashing",
         "random_baseline": "score below pass threshold",
         "minimal_gold_shape": "score below pass threshold",
         "duplicate_gold_rows": "duplicates do not create a passing score",
         "nonfinite_values": "non-finite values score below pass threshold",
         "known_valid_public": "independently justified output passes",
         "sparse_known_valid": "a sparse subset cannot pass the full task",
+        "quality_gradient_small_error": (
+            "small scientific numeric error scores no higher than known-valid"
+        ),
+        "quality_gradient_large_error": (
+            "larger scientific numeric error scores no higher than small error"
+        ),
+        "metamorphic_equivalent_representation": (
+            "equivalent ordering and serialization preserve the reward"
+        ),
     }
     tests = []
     for index, result in enumerate(results, start=1):
@@ -455,7 +706,7 @@ def dynamic_checker_probe(
         ),
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",
-            "task-family-specific gradients and metamorphic probes are later slices",
+            "scientific gradients and metamorphic probes require an independently justified public valid output",
             "external-service or compiled checker dependencies may require container execution",
         ],
     }

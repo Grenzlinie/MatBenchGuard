@@ -11,9 +11,11 @@ machine-checkable materials task. It does not compare the task with its paper.
 - Cross-file sets for instruction, workflow, output contract, and grading
   references.
 - Grading weight and pass-threshold checks.
-- Real checker rewards for missing, empty, random, minimal-shaped, duplicate,
-  and non-finite submissions.
+- Real checker rewards for missing, empty, malformed, random, minimal-shaped,
+  duplicate, and non-finite submissions.
 - An optional independently justified known-valid public submission.
+- When that public submission is supplied, a numeric materials-response quality
+  gradient and an equivalent row/key ordering and serialization probe.
 
 ## Initial verdict
 
@@ -28,6 +30,8 @@ the complete weighted material audit dimensions and Hard gates.
 ## Claim boundaries
 
 - E1 proves checker behavior only for the executed probes.
+- Numeric perturbation is one materials quality gradient, not a claim that all
+  task-family scientific invariants have been exhausted.
 - E1 does not prove resource reachability or scientific workflow execution.
 - `no_paper` does not establish fidelity to the source paper or Gold
   provenance.

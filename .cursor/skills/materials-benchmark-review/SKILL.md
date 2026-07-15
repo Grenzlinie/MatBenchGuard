@@ -140,6 +140,10 @@ This slice is complete only when:
   leaves `environment_verified: false`;
 - a supplied known-valid public output executes; rejection produces
   `KNOWN_VALID_OUTPUT_REJECTED` and prevents `PASS`;
+- a supplied known-valid public output also runs a monotonic numeric materials
+  quality gradient and an equivalent ordering/serialization probe;
+- a non-monotonic quality gradient or materially changed equivalent-output
+  reward produces a FATAL scientific checker finding;
 - any malformed or adversarial output at or above the threshold produces a
   FATAL finding and `REJECT`;
 - the checker executes in a copied runtime that contains no `solution/`, and

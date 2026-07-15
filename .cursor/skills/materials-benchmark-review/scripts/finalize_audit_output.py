@@ -654,7 +654,15 @@ def synthesize_report(
                 if execution_evidence["claim"] != "SMOKE_RUN"
                 else []
             ),
-            "task-family-specific metamorphic tests",
+            *(
+                ["task-family-specific scientific probes"]
+                if not any(
+                    item["test_type"]
+                    == "metamorphic_equivalent_representation"
+                    for item in checker_result["tests"]
+                )
+                else []
+            ),
         ],
         "limitations": [
             *static_result["limitations"],
