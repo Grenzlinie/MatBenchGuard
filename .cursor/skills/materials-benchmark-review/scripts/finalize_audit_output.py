@@ -110,7 +110,11 @@ def answer_type_for(root: Path) -> str:
         return "TOLERANCE_BASED"
     if "exact_match" in policies:
         return "DETERMINISTIC_EXACT"
-    if "structural_audit" in policies:
+    if policies & {"set_match", "set_equality", "unordered_set"}:
+        return "SET_VALUED"
+    if policies & {"ranking", "rank_correlation", "ordered_list"}:
+        return "RANKING_BASED"
+    if policies & {"structural_audit", "evidence_match"}:
         return "EVIDENCE_BASED"
     return "OPEN_ENDED"
 
