@@ -50,3 +50,34 @@ The repair is complete only when:
 
 Do not infer that arbitrary scientific, Gold, checker, or scoring changes are
 safe. Those require an assisted workflow.
+
+## ASSISTED_FIX and failure states
+
+An `ASSISTED_FIX` plan uses the same external plan seam and adds:
+
+```json
+{
+  "approval": {
+    "approved": true,
+    "approved_by": "materials-owner",
+    "approved_at": "RFC3339 timestamp",
+    "evidence": [{"source": "reviewed evidence"}]
+  }
+}
+```
+
+Without approval, the runner records `AWAITING_APPROVAL` outside the package
+and exits before copying or mutation. Changes to Gold/scoring JSON, scientific
+workflow steps, endpoints, or key parameters also require non-empty approval
+evidence; otherwise the state is `BLOCKED_EVIDENCE`.
+
+A failed first mutation/regression/re-audit archives the full snapshot and
+candidate as `ROLLED_BACK`. One corrective attempt is allowed for the same
+`audit_id` and `finding_id`; if it also fails, the root cause is `ABANDONED`.
+Later calls return the existing abandoned state without creating a third
+candidate. Neither state is publishable.
+
+Every control stop and mutation attempt writes
+`.benchmark_repair_history/<repair_id>/attempt_manifest.json`. Failed mutation
+attempts retain both `snapshot/` and `candidate/` for verification while the
+authoritative package remains unchanged.

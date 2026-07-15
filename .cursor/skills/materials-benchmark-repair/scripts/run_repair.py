@@ -18,6 +18,18 @@ sys.dont_write_bytecode = True
 
 
 SAFE_JSON_FILES = {"resources.json"}
+ASSISTED_JSON_FILES = {
+    "manifest.json",
+    "resources.json",
+    "steps.json",
+    "tests/grading_spec.json",
+}
+SENSITIVE_FILES = {
+    "instruction.md",
+    "steps.json",
+    "tests/checker.py",
+    "tests/grading_spec.json",
+}
 
 
 def read_json(path: Path) -> Any:
@@ -47,18 +59,18 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
     plan = read_json(resolved)
     if not isinstance(plan, dict) or plan.get("schema_version") != "0.1":
         raise ValueError("repair plan must use schema_version 0.1")
-    if plan.get("repair_class") != "SAFE_AUTO_FIX":
-        raise ValueError("this runner requires repair_class SAFE_AUTO_FIX")
+    if plan.get("repair_class") not in {"SAFE_AUTO_FIX", "ASSISTED_FIX"}:
+        raise ValueError("repair_class must be SAFE_AUTO_FIX or ASSISTED_FIX")
     if not isinstance(plan.get("justification"), str) or not plan[
         "justification"
     ].strip():
-        raise ValueError("SAFE_AUTO_FIX requires a justification")
+        raise ValueError("repair plan requires a justification")
     operations = plan.get("operations")
     tests = plan.get("regression_tests")
     if not isinstance(operations, list) or len(operations) != 1:
-        raise ValueError("SAFE_AUTO_FIX requires exactly one operation")
+        raise ValueError("repair plan requires exactly one operation")
     if not isinstance(tests, list) or not tests:
-        raise ValueError("SAFE_AUTO_FIX requires regression tests")
+        raise ValueError("repair plan requires regression tests")
     return plan
 
 
@@ -93,17 +105,26 @@ def validate_fresh_audit(
     return report, manifest, findings[finding_id]
 
 
-def validated_relative_file(root: Path, relative: Any) -> Path:
+def validated_relative_file(
+    root: Path,
+    relative: Any,
+    plan: dict[str, Any],
+) -> Path:
     if not isinstance(relative, str):
         raise ValueError("operation file must be a relative string")
     relative_path = Path(relative)
+    allowed = (
+        SAFE_JSON_FILES
+        if plan["repair_class"] == "SAFE_AUTO_FIX"
+        else ASSISTED_JSON_FILES
+    )
     if (
-        relative_path.as_posix() not in SAFE_JSON_FILES
+        relative_path.as_posix() not in allowed
         or relative_path.is_absolute()
         or ".." in relative_path.parts
     ):
         raise ValueError(
-            "SAFE_AUTO_FIX json_set is limited to deterministic metadata files"
+            "repair json_set targets an unsupported file"
         )
     path = root / relative_path
     if not path.is_file():
@@ -153,14 +174,18 @@ def set_json_path(value: Any, tokens: list[Any], replacement: Any) -> None:
         raise ValueError("JSON operation final token is invalid")
 
 
-def apply_operation(candidate: Path, operation: dict[str, Any]) -> dict[str, Any]:
+def apply_operation(
+    candidate: Path,
+    operation: dict[str, Any],
+    plan: dict[str, Any],
+) -> dict[str, Any]:
     if operation.get("type") != "json_set":
-        raise ValueError("SAFE_AUTO_FIX supports only json_set")
-    path = validated_relative_file(candidate, operation.get("file"))
+        raise ValueError("repair operations currently support only json_set")
+    path = validated_relative_file(candidate, operation.get("file"), plan)
     before_hash = sha256_file(path)
     document = read_json(path)
     tokens = operation.get("path")
-    if not (
+    if plan["repair_class"] == "SAFE_AUTO_FIX" and not (
         isinstance(tokens, list)
         and len(tokens) == 4
         and tokens[0] == "resources"
@@ -181,10 +206,14 @@ def apply_operation(candidate: Path, operation: dict[str, Any]) -> dict[str, Any
     }
 
 
-def regression_result(root: Path, specification: dict[str, Any]) -> bool:
+def regression_result(
+    root: Path,
+    specification: dict[str, Any],
+    plan: dict[str, Any],
+) -> bool:
     if specification.get("type") != "json_path_equals":
         raise ValueError("unsupported regression test type")
-    path = validated_relative_file(root, specification.get("file"))
+    path = validated_relative_file(root, specification.get("file"), plan)
     present, value = json_path_value(
         read_json(path),
         specification.get("path"),
@@ -304,12 +333,135 @@ def rebase_audit_paths(candidate: Path, final_root: Path) -> None:
     write_json(manifest_path, manifest)
 
 
+def root_cause_id(report: dict[str, Any], plan: dict[str, Any]) -> str:
+    value = f"{report['audit_id']}:{plan['finding_id']}"
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
+
+
+def history_root_for(root: Path) -> Path:
+    return root.parent / ".benchmark_repair_history"
+
+
+def prior_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
+    history_root = history_root_for(root)
+    if not history_root.is_dir():
+        return []
+    attempts = []
+    for path in history_root.glob("*/attempt_manifest.json"):
+        try:
+            value = read_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if (
+            isinstance(value, dict)
+            and value.get("root_cause") == root_cause
+            and value.get("status") in {"ROLLED_BACK", "ABANDONED", "PUBLISHED"}
+        ):
+            attempts.append(value)
+    return sorted(attempts, key=lambda item: item["attempt_number"])
+
+
+def preflight_stop(plan: dict[str, Any]) -> tuple[str, str] | None:
+    if plan["repair_class"] != "ASSISTED_FIX":
+        return None
+    approval = plan.get("approval")
+    if not isinstance(approval, dict) or approval.get("approved") is not True:
+        return (
+            "AWAITING_APPROVAL",
+            "ASSISTED_FIX requires explicit approval before copying or mutation.",
+        )
+    if not all(
+        isinstance(approval.get(key), str) and approval[key].strip()
+        for key in ("approved_by", "approved_at")
+    ):
+        return (
+            "AWAITING_APPROVAL",
+            "Approved ASSISTED_FIX requires approver identity and timestamp.",
+        )
+    sensitive = any(
+        operation.get("file") in SENSITIVE_FILES
+        for operation in plan["operations"]
+    )
+    evidence = approval.get("evidence")
+    if sensitive and (not isinstance(evidence, list) or not evidence):
+        return (
+            "BLOCKED_EVIDENCE",
+            "Gold, scientific endpoint, key parameter, and scoring changes "
+            "require explicit approval evidence.",
+        )
+    return None
+
+
+def record_control_stop(
+    root: Path,
+    report: dict[str, Any],
+    plan: dict[str, Any],
+    root_cause: str,
+    status: str,
+    reason: str,
+) -> dict[str, Any]:
+    stop_id = (
+        time.strftime("repair-stop-%Y%m%dT%H%M%SZ-", time.gmtime())
+        + uuid.uuid4().hex[:8]
+    )
+    history_root = history_root_for(root)
+    destination = history_root / stop_id
+    destination.mkdir(parents=True)
+    manifest = {
+        "schema_version": "0.1",
+        "repair_id": stop_id,
+        "root_cause": root_cause,
+        "attempt_number": 0,
+        "status": status,
+        "audit_id": report["audit_id"],
+        "finding_id": plan["finding_id"],
+        "repair_class": plan["repair_class"],
+        "reason": reason,
+        "package_mutated": False,
+        "recorded_at": time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+        ),
+    }
+    write_json(destination / "attempt_manifest.json", manifest)
+    return {
+        "status": status,
+        "root_cause": root_cause,
+        "history_root": str(history_root),
+        "attempt_manifest": str(destination / "attempt_manifest.json"),
+        "reason": reason,
+    }
+
+
 def repair(root: Path, plan_path: Path) -> dict[str, Any]:
     root = root.expanduser().resolve()
     if not root.is_dir() or not (root / "solution").is_dir():
         raise ValueError("input must be a complete Harbor 题包")
     plan = validate_external_plan(root, plan_path)
     report, audit_manifest, finding = validate_fresh_audit(root, plan)
+    root_cause = root_cause_id(report, plan)
+    prior = prior_attempts(root, root_cause)
+    if len(prior) >= 2 or any(
+        item["status"] == "ABANDONED" for item in prior
+    ):
+        return {
+            "status": "ABANDONED",
+            "root_cause": root_cause,
+            "history_root": str(history_root_for(root)),
+            "attempts": len(prior),
+            "reason": "Two failed attempts exhausted the root-cause limit.",
+        }
+    stop = preflight_stop(plan)
+    if stop is not None:
+        status, reason = stop
+        return record_control_stop(
+            root,
+            report,
+            plan,
+            root_cause,
+            status,
+            reason,
+        )
+    attempt_number = len(prior) + 1
     repair_id = (
         time.strftime("repair-%Y%m%dT%H%M%SZ-", time.gmtime())
         + uuid.uuid4().hex[:8]
@@ -330,19 +482,24 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             regression_tests.append(
                 {
                     "specification": specification,
-                    "before_passed": regression_result(snapshot, specification),
+                    "before_passed": regression_result(
+                        snapshot,
+                        specification,
+                        plan,
+                    ),
                 }
             )
         if any(item["before_passed"] for item in regression_tests):
             raise ValueError("regression test must fail before the repair")
         changes = [
-            apply_operation(candidate, operation)
+            apply_operation(candidate, operation, plan)
             for operation in plan["operations"]
         ]
         for item in regression_tests:
             item["after_passed"] = regression_result(
                 candidate,
                 item["specification"],
+                plan,
             )
         if not all(item["after_passed"] for item in regression_tests):
             raise ValueError("regression test did not pass after the repair")
@@ -361,7 +518,7 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "status": "PUBLISHED",
             "finding_id": plan["finding_id"],
             "finding_code": finding["title"],
-            "repair_class": "SAFE_AUTO_FIX",
+            "repair_class": plan["repair_class"],
             "source_audit_id": report["audit_id"],
             "source_audit_input_hashes": audit_manifest["input_hashes"],
             "justification": plan["justification"],
@@ -386,6 +543,23 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
 
         history.mkdir(parents=True)
         snapshot.rename(history / "snapshot")
+        attempt_manifest = {
+            "schema_version": "0.1",
+            "repair_id": repair_id,
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "status": "PUBLISHED",
+            "audit_id": report["audit_id"],
+            "finding_id": plan["finding_id"],
+            "repair_class": plan["repair_class"],
+            "error": None,
+            "snapshot_preserved": True,
+            "candidate_preserved": False,
+            "recorded_at": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            ),
+        }
+        write_json(history / "attempt_manifest.json", attempt_manifest)
         original = history / "original"
         root.rename(original)
         try:
@@ -399,12 +573,48 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "status": "PUBLISHED",
             "benchmark_root": str(root),
             "history_dir": str(history),
+            "history_root": str(history_root_for(root)),
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
             "audit_id": reaudit["audit_id"],
         }
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        status = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
+        history.mkdir(parents=True, exist_ok=True)
+        if snapshot.exists():
+            snapshot.rename(history / "snapshot")
+        if candidate.exists():
+            candidate.rename(history / "candidate")
+        attempt_manifest = {
+            "schema_version": "0.1",
+            "repair_id": repair_id,
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "status": status,
+            "audit_id": report["audit_id"],
+            "finding_id": plan["finding_id"],
+            "repair_class": plan["repair_class"],
+            "error": str(exc),
+            "snapshot_preserved": (history / "snapshot").is_dir(),
+            "candidate_preserved": (history / "candidate").is_dir(),
+            "package_mutated": False,
+            "recorded_at": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            ),
+        }
+        write_json(history / "attempt_manifest.json", attempt_manifest)
         if workspace.exists():
             shutil.rmtree(workspace, ignore_errors=True)
-        raise
+        return {
+            "repair_id": repair_id,
+            "status": status,
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "history_dir": str(history),
+            "history_root": str(history_root_for(root)),
+            "attempt_manifest": str(history / "attempt_manifest.json"),
+            "reason": str(exc),
+        }
 
 
 def main() -> int:
@@ -418,7 +628,7 @@ def main() -> int:
             Path(arguments.plan),
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        return 0
+        return 0 if result["status"] == "PUBLISHED" else 3
     except Exception as exc:  # noqa: BLE001
         print(f"materials repair failed: {exc}", file=sys.stderr)
         return 2
