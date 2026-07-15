@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute formation energy ordering at a fixed μ_O and insulating gap presence/dimensions directly from the agent's raw CSV tables; no self-reported metrics are trusted.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "mu_O",
+            "E_form",
+            "method"
+          ],
+          "units": {
+            "mu_O": "eV",
+            "E_form": "eV"
+          }
+        },
+        "description": "Formation energies for LaNiO3, LaNiO2.5, LaNiO2 as a function of oxygen chemical potential from DFT+U and DFT+DMFT."
+      },
+      {
+        "file": "total_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_dos": "states/eV"
+          }
+        },
+        "description": "Total density of states for LaNiO2.5 computed via DFT+DMFT at T≈290 K."
+      }
+    ],
+    "notes": "The checker verifies the formation energy ordering (LaNiO2.5 lowest at reduced μ_O) and the presence of an insulating gap in the total DOS."
+  },
+  "steps": [
+    {
+      "id": "formation_ordering",
+      "output_file": "formation_energies.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "mu_O": -1.7,
+      "mu_O_tol": 0.001,
+      "structures": [
+        "LaNiO3",
+        "LaNiO2.5",
+        "LaNiO2"
+      ],
+      "methods": [
+        "DFT+U",
+        "DFT+DMFT"
+      ]
+    },
+    {
+      "id": "dos_gap",
+      "output_file": "total_dos.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "gap_energy_range": [
+        -0.1,
+        0.1
+      ],
+      "max_dos_in_gap": 0.2,
+      "dos_threshold_outside": 0.1
+    }
+  ]
+}

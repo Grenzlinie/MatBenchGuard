@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Run Geant4 simulations for Ta-only converter thickness scan",
+    "role": "process",
+    "action": "Using Geant4, simulate a planar 10 MeV electron beam incident on a tantalum disk of radius 2.0 cm between two vacuum tally cells. Run separate simulations for Ta thicknesses: 0.1, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0 mm, each with 1e8 primary histories. For each thickness, record the number of electrons transmitted to the downstream vacuum cell, the total number of photons produced inside the Ta layer, and the track-length estimate of photon fluence in the downstream vacuum cell. Consolidate results into a single CSV file.",
+    "output_file": "",
+    "evidence": "ta_raw_tallies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw tally data per Ta thickness needed as input for the next step.",
+    "output_schema": "thickness_mm, electrons_transmitted, total_photons_created, photon_fluence_cm2"
+  },
+  {
+    "id": "step_02",
+    "title": "Compute escaped photon fluence and optimal Ta thickness",
+    "role": "scored",
+    "action": "Read ta_raw_tallies.csv and compute the escaped photon track-length fluence per source electron (units 1/cm^2) and the total photons produced. Output a CSV with columns: Ta_thickness_mm, photon_fluence_1percm2, total_photons_produced.",
+    "output_file": "photon_fluence_vs_Ta.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Contains escaped photon fluence and internal photon production counts as functions of Ta thickness. The optimal Ta thickness for maximum escaping photon fluence is derivable from this file.",
+    "output_schema": "Ta_thickness_mm (float), photon_fluence_1percm2 (float), total_photons_produced (float)"
+  },
+  {
+    "id": "step_03",
+    "title": "Simulate ErD3 targets with and without optimized Ta converter",
+    "role": "process",
+    "action": "From photon_fluence_vs_Ta.csv, determine the Ta thickness corresponding to the maximum photon_fluence_1percm2 (optimal Ta thickness). Using Geant4, simulate the same electron beam incident on: (a) a cylinder of erbium deuteride (ErD3) of radius 10.0 cm, density 3.8 g/cm^3 (50% packing fraction), without any Ta layer; (b) the same but with the optimal Ta foil placed immediately upstream. For each configuration, vary the ErD3 thickness over [1, 2, 5, 8, 10, 12, 15, 20] cm. Run 1e8 histories per case. Record the total number of photoneutrons generated and the number of photoneutrons crossing the rear plane (directional yield). Consolidate all results into one CSV file.",
+    "output_file": "",
+    "evidence": "erd3_raw_results.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw neutron tally data for all ErD3 thicknesses and configurations.",
+    "output_schema": "ErD3_thickness_cm, configuration, total_neutrons_generated, directional_neutrons_crossing"
+  },
+  {
+    "id": "step_04",
+    "title": "Compute photoneutron yield vs ErD3 thickness",
+    "role": "scored",
+    "action": "Read erd3_raw_results.csv and compute for each ErD3 thickness and configuration the total neutrons per source electron and the directional neutrons per source electron. Output a CSV with columns: ErD3_thickness_cm, configuration, total_neutrons_per_source_electron, directional_neutrons_per_source_electron.",
+    "output_file": "neutron_yield_vs_ErD3.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Photoneutron yield metrics as a function of ErD3 thickness for both the with-Ta and without-Ta configurations.",
+    "output_schema": "ErD3_thickness_cm (float), configuration (string, one of: with_Ta, without_Ta), total_neutrons_per_source_electron (float), directional_neutrons_per_source_electron (float)"
+  },
+  {
+    "id": "step_05",
+    "title": "Generate summary of key findings",
+    "role": "scored",
+    "action": "From photon_fluence_vs_Ta.csv, extract the optimal Ta thickness (the Ta_thickness_mm value corresponding to the maximum photon_fluence_1percm2). From neutron_yield_vs_ErD3.csv, compute the overall neutron yield per source electron (the maximum total_neutrons_per_source_electron across all ErD3 thicknesses for the without_Ta configuration), the directional neutron yield per source electron (the maximum directional_neutrons_per_source_electron for without_Ta), and the ErD3 thickness that gives that maximum directional yield. Write these four values to summary_results.txt, each on a separate line in 'key: value' format.",
+    "output_file": "summary_results.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Text file summarizing the optimal thicknesses and neutron yields.",
+    "output_schema": "Lines: optimal_Ta_thickness_mm: <float>, overall_neutrons_per_source_electron: <float>, directional_neutrons_per_source_electron: <float>, optimal_ErD3_thickness_for_directional_cm: <float>"
+  }
+]

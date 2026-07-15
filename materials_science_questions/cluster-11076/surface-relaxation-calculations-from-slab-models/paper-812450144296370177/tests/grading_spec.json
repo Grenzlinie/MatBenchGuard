@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Headline quantities are DFT-calculated energies and spin populations, which the verifier cannot recompute; ordering, closeness, and threshold relationships derived from the paper's tables are validated.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference adsorption energies for trend checks",
+      "source_provenance": "Table 3 and Table 4 of paper (VASP PW91 optimized with relaxation)",
+      "generation_method": "Extracted from published tables: 3L R=10.70, H1=8.86, H2=8.96; 6L R=7.12, H1=6.58, H2=7.72; 9L R=7.86, H1=6.58, H2=6.62.",
+      "why_not_fabricated": "Values are directly from the paper's reported DFT results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "spin population thresholds and reference max_abs_spin",
+      "source_provenance": "Table 6 (B3LYP Mulliken spin polarizations) and paper text (Ti spin near 1, H <0.1)",
+      "generation_method": "Derived from paper's discussion: Ti spin >0.5 e, H spin <0.1 e. Reference values used for validation of thresholds.",
+      "why_not_fabricated": "Thresholds are based on the paper's qualitative conclusion that spin localizes on Ti (values near unity) and H retains negligible spin."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "NH3 adsorption energy difference threshold",
+      "source_provenance": "Table 7 (VASP PW91) and paper text (reduction >0.3 eV)",
+      "generation_method": "Derived from paper's claim of significant decrease: 3L diff ~1.22 eV, 6L diff ~0.53 eV, with >0.3 eV as a minimal threshold.",
+      "why_not_fabricated": "Threshold ensures the qualitative trend of decreased acidity upon hydrogenation is reproduced."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slab",
+            "model",
+            "E_ads"
+          ],
+          "units": {
+            "E_ads": "eV"
+          }
+        },
+        "description": "Hydrogen adsorption energies per two H atoms for each slab thickness and adsorption model. Checker compares ordering (R > H1, R > H2) and values to hidden paper reference within tolerance."
+      },
+      {
+        "file": "spin_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slab",
+            "max_abs_spin_Ti",
+            "max_abs_spin_H"
+          ],
+          "units": {
+            "max_abs_spin_Ti": "e",
+            "max_abs_spin_H": "e"
+          }
+        },
+        "description": "Maximum absolute Mulliken (or Bader) spin populations on Ti and H atoms for the R model on selected slabs. Checker verifies that for at least one slab, max_abs_spin_Ti > 0.5 e and max_abs_spin_H < 0.1 e."
+      },
+      {
+        "file": "nh3_adsorption.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slab",
+            "system",
+            "E_ads_NH3"
+          ],
+          "units": {
+            "E_ads_NH3": "eV"
+          }
+        },
+        "description": "NH3 adsorption energies on clean and hydrogenated TiO2(110) slabs. Checker verifies that for each slab, E_ads_NH3(clean) - E_ads_NH3(H_covered) > 0.3 eV."
+      }
+    ],
+    "notes": "All checks are performed at the result level (T0) against the paper's VASP PW91 reference values, with tolerances absorbing code-to-code spread. Process steps must be executed to reach the scored artifacts; the spin and NH3 steps are load-bearing."
+  },
+  "steps": [
+    {
+      "id": "adsorption_energies_check",
+      "output_file": "adsorption_energies.csv",
+      "weight": 0.4,
+      "kind": "adsorption_ordering_and_closeness",
+      "config": {
+        "slabs": [
+          3,
+          6,
+          9
+        ],
+        "models": [
+          "R",
+          "H1",
+          "H2"
+        ],
+        "ordering_strict": true,
+        "closeness_threshold_eV": 0.5,
+        "reference": {
+          "3": {
+            "R": 10.7,
+            "H1": 8.86,
+            "H2": 8.96
+          },
+          "6": {
+            "R": 7.12,
+            "H1": 6.58,
+            "H2": 7.72
+          },
+          "9": {
+            "R": 7.86,
+            "H1": 6.58,
+            "H2": 6.62
+          }
+        }
+      }
+    },
+    {
+      "id": "spin_localization_check",
+      "output_file": "spin_analysis.csv",
+      "weight": 0.4,
+      "kind": "spin_threshold",
+      "config": {
+        "slabs": [
+          3,
+          6
+        ],
+        "min_abs_Ti_spin": 0.5,
+        "max_abs_H_spin": 0.1
+      }
+    },
+    {
+      "id": "nh3_acidity_check",
+      "output_file": "nh3_adsorption.csv",
+      "weight": 0.2,
+      "kind": "nh3_acidity",
+      "config": {
+        "slabs": [
+          3,
+          6
+        ],
+        "min_diff_eV": 0.3
+      }
+    }
+  ]
+}

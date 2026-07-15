@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The headline quantities are fixed lattice energies from a compute-driven simulation; recomputing from raw GULP logs is infeasible in the sandbox, so a result-level compare against the paper's Table 1 with a tolerance of 0.02 eV plus a structural ordering audit is the chosen fallback.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "lattice_energies.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice energies per SiO2 unit for five zeolites under rigid-ion and shell-model potentials.",
+      "source_provenance": "Paper Table 1: 'Relative stabilities of siliceous zeolites.'",
+      "generation_method": "Exact copy of the values reported in the paper's table.",
+      "why_not_fabricated": "These are the published results of the computational study; the reference reproduction must match them within a reasonable tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": [
+              "zeolite",
+              "model",
+              "energy_per_SiO2"
+            ],
+            "properties": {
+              "zeolite": {
+                "type": "string",
+                "enum": [
+                  "faujasite",
+                  "zeolite_A",
+                  "mordenite",
+                  "silicalite",
+                  "alpha_quartz"
+                ]
+              },
+              "model": {
+                "type": "string",
+                "enum": [
+                  "rigid_ion",
+                  "shell_model"
+                ]
+              },
+              "energy_per_SiO2": {
+                "type": "number",
+                "units": "eV"
+              }
+            }
+          }
+        },
+        "description": "Minimum lattice energies per SiO2 unit for the five zeolites under both rigid-ion and shell-model potentials. Absolute energy values will be compared against the paper's reported numbers with a hidden tolerance; ordering of shell-model energies will be checked for correct ranking (silicalite most stable, then mordenite, zeolite_A, faujasite)."
+      }
+    ],
+    "notes": "Scoring for lattice_energies.json uses exact_match with an absolute tolerance for each energy plus a structural ordering check."
+  },
+  "steps": [
+    {
+      "id": "energy_values",
+      "output_file": "lattice_energies.json",
+      "kind": "reference_match",
+      "metric": "absolute_difference",
+      "target_policy": "exact_match",
+      "weight": 0.7,
+      "tolerance_abs": 0.02,
+      "gold": {
+        "faujasite_rigid_ion": -123.48,
+        "zeolite_A_rigid_ion": -123.66,
+        "mordenite_rigid_ion": -123.8,
+        "silicalite_rigid_ion": -123.89,
+        "alpha_quartz_rigid_ion": -123.9,
+        "faujasite_shell_model": -128.45,
+        "zeolite_A_shell_model": -128.47,
+        "mordenite_shell_model": -128.57,
+        "silicalite_shell_model": -128.59,
+        "alpha_quartz_shell_model": -128.64
+      },
+      "description": "Compare each per-SiO2 lattice energy to paper's Table 1 values with absolute tolerance 0.02 eV. Partial credit proportional to number of entries meeting tolerance."
+    },
+    {
+      "id": "shell_ordering",
+      "output_file": "lattice_energies.json",
+      "kind": "ordering",
+      "weight": 0.3,
+      "model": "shell_model",
+      "expected_order": [
+        "silicalite",
+        "mordenite",
+        "zeolite_A",
+        "faujasite"
+      ],
+      "description": "Verify that for shell-model entries, the energies (more negative = more stable) are ordered as silicalite < mordenite < zeolite_A < faujasite. Binary score: 1.0 if order holds, else 0.0."
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Frequency is recomputed from the agent's raw frequency data against the theoretical isolated-bond frequency (Eq. 7) using scipy.special.ellipk; envelope and relaxation time are scored by structural metrics; critical amplitude compared to paper's A_c_num ≈ 1.181 with tolerance; power-law exponents compared to paper's reported 0.61 and 0.87. This constitutes a mix of T1 recompute and T0 reference matching, but the strongest tier achievable is recompute.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_envelope.csv": "structural_audit",
+    "step_02_frequency.csv": "metric_recompute",
+    "step_03_relaxation_time.csv": "structural_audit",
+    "step_04_critical_amplitude.txt": "reference_match",
+    "step_05_powerlaw_exponents.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference critical amplitude A_c = 1.181, gamma = 0.61, delta = 0.87",
+      "source_provenance": "Paper text: A_c_num ≅ 1.181; power-law exponents approximately 0.61 and 0.87",
+      "generation_method": "direct extraction from the paper",
+      "why_not_fabricated": "These are the paper's own reported results, necessary for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_envelope.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "A",
+            "q_env"
+          ],
+          "units": {
+            "A": "dimensionless",
+            "q_env": "dimensionless"
+          }
+        },
+        "description": "Envelope of |q(τ)| at late times for each amplitude."
+      },
+      {
+        "file": "step_02_frequency.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "A",
+            "omega"
+          ],
+          "units": {
+            "A": "dimensionless",
+            "omega": "frequency in units of ω0"
+          }
+        },
+        "description": "Breather frequency Ω(A) for A above the critical amplitude."
+      },
+      {
+        "file": "step_03_relaxation_time.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "A",
+            "tau_rel"
+          ],
+          "units": {
+            "A": "dimensionless",
+            "tau_rel": "dimensionless time"
+          }
+        },
+        "description": "Relaxation time τ_rel for A below the critical amplitude."
+      },
+      {
+        "file": "step_04_critical_amplitude.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "single float value"
+        },
+        "description": "Critical amplitude A_c separating delocalization from localization."
+      },
+      {
+        "file": "step_05_powerlaw_exponents.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "gamma",
+            "gamma_error",
+            "delta",
+            "delta_error",
+            "fit_range"
+          ],
+          "properties": {
+            "gamma": {
+              "type": "number",
+              "description": "exponent for τ_rel divergence"
+            },
+            "gamma_error": {
+              "type": "number",
+              "description": "uncertainty in gamma"
+            },
+            "delta": {
+              "type": "number",
+              "description": "exponent for modulation period divergence"
+            },
+            "delta_error": {
+              "type": "number",
+              "description": "uncertainty in delta"
+            },
+            "fit_range": {
+              "type": "object",
+              "description": "range of amplitudes used in the power-law fits (e.g., min_A, max_A for each side)"
+            }
+          }
+        },
+        "description": "Power-law exponents of divergence of relaxation time and modulation period near A_c."
+      }
+    ],
+    "notes": "All scored outputs are derived from the numerical solution of the integro-differential equation. The checker will compare envelope, frequency, relaxation time, critical amplitude, and exponents to paper-reported values (hidden gold) with appropriate tolerances, and verify structural trends (envelope shape, divergence, frequency above band edge). The modulation period extraction is implicit in the power-law exponents step; no separate output file is required for the period values."
+  },
+  "steps": [
+    {
+      "id": "step_01_envelope",
+      "output_file": "step_01_envelope.csv",
+      "kind": "envelope_check",
+      "weight": 0.15
+    },
+    {
+      "id": "step_02_frequency",
+      "output_file": "step_02_frequency.csv",
+      "kind": "frequency_recompute",
+      "weight": 0.15
+    },
+    {
+      "id": "step_03_relaxation_time",
+      "output_file": "step_03_relaxation_time.csv",
+      "kind": "relaxation_time_check",
+      "weight": 0.2
+    },
+    {
+      "id": "step_04_critical_amplitude",
+      "output_file": "step_04_critical_amplitude.txt",
+      "kind": "critical_amplitude_check",
+      "weight": 0.25
+    },
+    {
+      "id": "step_05_powerlaw_exponents",
+      "output_file": "step_05_powerlaw_exponents.json",
+      "kind": "powerlaw_exponents_check",
+      "weight": 0.25
+    }
+  ]
+}

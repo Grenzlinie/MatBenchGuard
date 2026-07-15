@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Kinetic parameters are fitted constants that can be compared to paper gold with tolerance; interfacial energy is derived from known formula and agent's fitted term; critical cooling rate is recomputed from the TTT curve artifact, enforcing process integrity.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "kinetic_parameters.json": "exact_match",
+    "interfacial_energy_range.json": "exact_match",
+    "critical_cooling_rate.json": "threshold_or_better"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "kinetic_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "ln_A3",
+            "Q_over_k",
+            "b_sigma3_f_over_4k"
+          ],
+          "properties": {
+            "ln_A3": {
+              "type": "number",
+              "units": "s⁻¹"
+            },
+            "Q_over_k": {
+              "type": "number",
+              "units": "K"
+            },
+            "b_sigma3_f_over_4k": {
+              "type": "number",
+              "units": "K J² m⁻⁶"
+            }
+          }
+        },
+        "description": "Fitted kinetic parameters for the ε→τ transformation: pre‑exponential factor, activation energy term, and interfacial energy term."
+      },
+      {
+        "file": "interfacial_energy_range.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "sigma_min",
+            "sigma_max"
+          ],
+          "properties": {
+            "sigma_min": {
+              "type": "number",
+              "units": "J m⁻²"
+            },
+            "sigma_max": {
+              "type": "number",
+              "units": "J m⁻²"
+            }
+          }
+        },
+        "description": "Estimated range of the interfacial energy σ, derived from the kinetic fit and assumed shape‑factor bounds."
+      },
+      {
+        "file": "critical_cooling_rate.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "critical_cooling_rate"
+          ],
+          "properties": {
+            "critical_cooling_rate": {
+              "type": "number",
+              "units": "K s⁻¹"
+            }
+          }
+        },
+        "description": "Critical cooling rate required to bypass τ‑phase nucleation during solid‑state cooling, computed from the full TTT diagram."
+      }
+    ],
+    "notes": "All numerical comparisons are based on hidden tolerances appropriate for the digitisation and fitting variability. The critical cooling rate is evaluated in a threshold‑or‑better manner to avoid penalising estimates that are safely above the reported value."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for kinetic parameters and critical cooling rate threshold from the source paper.",
+      "source_provenance": "Paper 'The thermodynamics and competitive kinetics ...' (doi:10.1016/0921-5093(93)90586-4): conclusion text gives ln A₃=38 s⁻¹, Q/k=3.28×10⁴ K, bσ³f(θ)/4k=1.43×10¹⁸ K J² m⁻⁶; Fig. 7 and conclusion state critical cooling rate ~20 K s⁻¹ and nose at 7 s / 915 K; temperature span uses T₀^{ε/l}=1490 K from thermodynamic analysis.",
+      "generation_method": "Directly transcribed from the paper text; fundamental constant k=1.380649e-23 J/K; geometric factor b=16π/3; shape factor bounds f(θ)∈[0.1,0.9] as stated in the paper.",
+      "why_not_fabricated": "These are the exact reported numbers that constitute the paper's main experimental claim; they are the hidden gold for reproduction verification."
+    }
+  ],
+  "steps": [
+    {
+      "id": "kinetic_params",
+      "output_file": "kinetic_parameters.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "reference": {
+        "ln_A3": 38.0,
+        "Q_over_k": 32800.0,
+        "b_sigma3_f_over_4k": 1.43e+18
+      },
+      "relative_tolerances": {
+        "ln_A3": 0.05,
+        "Q_over_k": 0.05,
+        "b_sigma3_f_over_4k": 0.1
+      }
+    },
+    {
+      "id": "interfacial_energy",
+      "output_file": "interfacial_energy_range.json",
+      "weight": 0.3,
+      "kind": "recompute",
+      "dependencies": [
+        "kinetic_parameters.json"
+      ],
+      "relative_tolerance": 0.05,
+      "params": {
+        "k_B": 1.380649e-23,
+        "b": 16.75516081914656,
+        "f_min": 0.1,
+        "f_max": 0.9
+      }
+    },
+    {
+      "id": "critical_cooling_rate",
+      "output_file": "critical_cooling_rate.json",
+      "weight": 0.3,
+      "kind": "threshold_or_better",
+      "reference_rate": 20.0,
+      "temp_upper": 1490.0,
+      "dependencies": [
+        "ttt_curve.csv"
+      ]
+    }
+  ]
+}

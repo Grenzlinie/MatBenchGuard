@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1_geom_scf",
+    "title": "Geometry construction and SCF calculation",
+    "role": "process",
+    "action": "Build the aluminium nanocontact geometry (central Al atom connected to two planar hexagonal Al layers of 7 atoms each, in fcc (111) orientation, periodic in ab-plane). Perform a self-consistent DFT calculation using Quantum ESPRESSO with LDA exchange-correlation and an Al LDA pseudopotential, using sufficient k-point sampling to converge the electronic ground state.",
+    "output_file": "",
+    "evidence": "scf.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_pdos",
+    "title": "Compute projected density of states",
+    "role": "scored",
+    "action": "From the self-consistent charge density, compute the projected density of states (PDOS) for the 3s, 3p_x, 3p_y, 3p_z orbitals of the central Al atom. Output the raw PDOS data to /app/outputs/pdos.csv with columns: energy (eV, relative to Fermi level, set to zero), s, px, py, pz (DOS in states/eV/atom).",
+    "output_file": "pdos.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw projected density of states for the central Al atom; Fermi level at energy=0. The checker recomputes orbital occupancies from this file.",
+    "output_schema": "CSV with header: energy,s,px,py,pz. energy in eV (float); s, px, py, pz are floats (DOS in states/eV/atom)."
+  },
+  {
+    "id": "step3_results",
+    "title": "Derive occupancies and charge transfer",
+    "role": "scored",
+    "action": "Read pdos.csv, integrate the PDOS for energy < 0 to obtain the number of electrons in 3s, total 3p, pz, and px orbitals. Compute net_charge_transfer = 3 - (s_occupancy + p_occupancy), positive indicating electron loss. Output these values to /app/outputs/results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derived orbital occupancies and net charge transfer from the PDOS. The checker cross-checks consistency with its own recomputation from pdos.csv.",
+    "output_schema": "JSON object with keys: s_occupancy (float), p_occupancy (float), net_charge_transfer (float), pz_occupancy (float), px_occupancy (float)."
+  }
+]

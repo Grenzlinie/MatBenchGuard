@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level comparison: recomputing the full tight-binding energy minimization and band structure in the checker is infeasible; therefore we compare the agent's reported numbers to the paper's theory values with tolerance scoring.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relaxed_parameters.json": "exact_match",
+    "surface_band_structure.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for relaxation parameters and surface state energy",
+      "source_provenance": "Paper Table I (theory row) for all relaxation parameters; Figure 3 and associated text for surface state energy (approx. -0.3 eV relative to VBM).",
+      "generation_method": "Direct copy from the paper's theoretical predictions.",
+      "why_not_fabricated": "All values are taken from the published paper's theory predictions; no synthetic fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_1_perp": "float (Å)",
+            "delta_1_y": "float (Å)",
+            "d_12_y": "float (Å)",
+            "d_12_perp": "float (Å)",
+            "delta_2_perp": "float (Å)",
+            "omega_1": "float (degrees)"
+          }
+        },
+        "description": "Relaxed surface structural parameters obtained from the tight‑binding energy minimisation."
+      },
+      {
+        "file": "surface_band_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "s1_energy_M_point": "float or null (eV relative to VBM)",
+            "surface_state_exists": "boolean"
+          }
+        },
+        "description": "Existence and energy of the surface state S1 at the M point of the surface Brillouin zone."
+      }
+    ],
+    "notes": "The tight‑binding parameters and elastic energy parameters are provided in the instruction as fixed inputs; the agent does not need to fit them. The scoring compares the submitted structural parameters and surface‑state energy to the paper’s theoretical values using tolerances. The relaxation step is load‑bearing: its output must be computed via total‑energy minimisation, not guessed."
+  },
+  "steps": [
+    {
+      "id": "step_relax",
+      "output_file": "relaxed_parameters.json",
+      "weight": 0.8,
+      "kind": "parameter_check",
+      "expected_parameters": {
+        "delta_1_perp": {
+          "target": 0.775,
+          "tolerance": 0.05
+        },
+        "delta_1_y": {
+          "target": 4.593,
+          "tolerance": 0.1
+        },
+        "d_12_y": {
+          "target": 4.036,
+          "tolerance": 0.1
+        },
+        "d_12_perp": {
+          "target": 0.639,
+          "tolerance": 0.1
+        },
+        "delta_2_perp": {
+          "target": 0.065,
+          "tolerance": 0.1
+        },
+        "omega_1": {
+          "target": 17.7,
+          "tolerance": 1.0
+        }
+      }
+    },
+    {
+      "id": "step_surface_state",
+      "output_file": "surface_band_structure.json",
+      "weight": 0.2,
+      "kind": "surface_state_check",
+      "energy_target": -0.3,
+      "energy_tolerance": 0.2
+    }
+  ]
+}

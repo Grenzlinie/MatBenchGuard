@@ -1,0 +1,153 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute DFT outputs; compares agent's reported phase diagram and properties to paper's gold within tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "ground_state_symmetry",
+            "magnetic_character"
+          ],
+          "units": {
+            "strain": "percent",
+            "ground_state_symmetry": "string, one of P4mm, Pbam, P21/c, C2/m, Pc",
+            "magnetic_character": "string, FM or AFM"
+          }
+        },
+        "description": "Epitaxial strain phase diagram: the ground‑state structural symmetry and magnetic ordering identified at each strain value."
+      },
+      {
+        "file": "multiferroic_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "band_gap_eV",
+            "total_magnetic_moment_mu_B",
+            "Px_muC_cm2",
+            "Py_muC_cm2",
+            "Pz_muC_cm2",
+            "MAE_001_meV_per_Co",
+            "MAE_100_meV_per_Co",
+            "alpha_gaussian_unit"
+          ],
+          "units": {
+            "strain": "percent",
+            "band_gap_eV": "eV",
+            "total_magnetic_moment_mu_B": "μB",
+            "Px_muC_cm2": "μC/cm²",
+            "Py_muC_cm2": "μC/cm²",
+            "Pz_muC_cm2": "μC/cm²",
+            "MAE_001_meV_per_Co": "meV/Co",
+            "MAE_100_meV_per_Co": "meV/Co",
+            "alpha_gaussian_unit": "dimensionless (Gaussian units)"
+          }
+        },
+        "description": "Multiferroic properties of the Pc phase at e=2.3%: electronic band gap, total magnetic moment, electric polarization components, magnetocrystalline anisotropy energies, and magnetoelectric constant α."
+      }
+    ],
+    "notes": "The phase diagram is compared against the reference sequence reported in the paper; each row's ground_state_symmetry and magnetic_character must match within the tolerance on the strain boundary position. The multiferroic properties are compared numerically with appropriate tolerances to account for differences between Quantum ESPRESSO and the paper's original VASP calculations."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold phase sequence and region boundaries",
+      "source_provenance": "paper Fig.1 and text",
+      "generation_method": "extracted phase boundaries and allowed sym/mag from paper",
+      "why_not_fabricated": "directly from paper's reported phase diagram and description"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "multiferroic gold values for Pc at e=2.3%",
+      "source_provenance": "paper text and Fig.5; polarization derived from paper's linear relation",
+      "generation_method": "band gap, moment, MAE, alpha taken directly from paper; polarization components computed from linear scaling (P=0 at e=0.86%, P=(-23.9,-23.9,12.75) at e=5.53%)",
+      "why_not_fabricated": "values correspond to paper's reported numbers at given strain"
+    }
+  ],
+  "steps": [
+    {
+      "id": "phase_diagram",
+      "output_file": "phase_diagram.csv",
+      "kind": "phase_sequence_match",
+      "weight": 0.5,
+      "phase_regions": [
+        {
+          "upper": -4.3,
+          "allowed_symmetries": [
+            "P4mm"
+          ],
+          "magnetic_character": "AFM"
+        },
+        {
+          "lower": -4.3,
+          "upper": -0.57,
+          "allowed_symmetries": [
+            "Pbam"
+          ],
+          "magnetic_character": "FM"
+        },
+        {
+          "lower": -0.57,
+          "upper": 0.86,
+          "allowed_symmetries": [
+            "P21/c",
+            "C2/m"
+          ],
+          "magnetic_character": "FM"
+        },
+        {
+          "lower": 0.86,
+          "upper": 5.53,
+          "allowed_symmetries": [
+            "Pc"
+          ],
+          "magnetic_character": "FM"
+        },
+        {
+          "lower": 5.53,
+          "allowed_symmetries": [
+            "Pc"
+          ],
+          "magnetic_character": "AFM"
+        }
+      ]
+    },
+    {
+      "id": "multiferroic_properties",
+      "output_file": "multiferroic_properties.csv",
+      "kind": "numeric_property_match",
+      "weight": 0.5,
+      "target_values": {
+        "band_gap_eV": 0.12,
+        "total_magnetic_moment_mu_B": 6.0,
+        "Px_muC_cm2": -7.37,
+        "Py_muC_cm2": -7.37,
+        "Pz_muC_cm2": 3.93,
+        "MAE_001_meV_per_Co": 0.16,
+        "MAE_100_meV_per_Co": 0.61,
+        "alpha_gaussian_unit": 0.00144
+      },
+      "tolerances": {
+        "band_gap_eV": 0.05,
+        "total_magnetic_moment_mu_B": 0.5,
+        "Px_muC_cm2": 1.474,
+        "Py_muC_cm2": 1.474,
+        "Pz_muC_cm2": 0.786,
+        "MAE_001_meV_per_Co": 0.05,
+        "MAE_100_meV_per_Co": 0.05,
+        "alpha_gaussian_unit": 0.000288
+      }
+    }
+  ]
+}

@@ -1,0 +1,236 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The main claim similarity is recomputed from the agent's ξ ordering (extracted from seebeck_coefficients.csv) against hidden experimental series (paper Table I). Seebeck coefficients are compared to paper-reported values with generous (±50%) tolerances to validate DFT output; the verifier cannot re-run DFT.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference_seebeck_xi_table",
+      "source_provenance": "paper Table II",
+      "generation_method": "copied from paper digital supplement",
+      "why_not_fabricated": "These are the exact values reported in the paper's Table II, used as the reference for tolerance-based comparison."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "experimental_triboelectric_series",
+      "source_provenance": "paper Table I (mapped series A-E)",
+      "generation_method": "mapping from literature references in the paper to standard material names as described in Table I",
+      "why_not_fabricated": "The series are extracted from published experimental triboelectric series cited in the paper and used to evaluate the paper's own proposed series."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "seebeck_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "S_muV_per_K",
+            "xi_V_s0p5_per_J_cm2"
+          ],
+          "units": {
+            "S_muV_per_K": "μV/K",
+            "xi_V_s0p5_per_J_cm2": "V·s^(1/2)/(J·cm⁻²)"
+          },
+          "description": "material: string, S_muV_per_K: float, xi_V_s0p5_per_J_cm2: float"
+        },
+        "description": "CSV table of computed Seebeck coefficients and triboelectric factors for the 14 triboelectric materials."
+      },
+      {
+        "file": "similarity_score.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number between 0 and 1."
+        },
+        "description": "Overall average pairwise order similarity between the computed ξ series and the experimental series."
+      },
+      {
+        "file": "validation_Al_Si.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "Two lines: Al_rel_error: <float>%; Si_rel_error: <float>%."
+        },
+        "description": "Validation relative errors for Al and Si Seebeck coefficients against known experimental values."
+      }
+    ],
+    "notes": "The similarity score is scored against a hidden threshold; the Seebeck coefficients are compared against reference values with generous tolerances. The verification ensures that the computed numbers are derived from the specified DFT calculations and are self-consistent."
+  },
+  "steps": [
+    {
+      "id": "check_seebeck",
+      "output_file": "seebeck_coefficients.csv",
+      "kind": "numeric",
+      "weight": 0.4
+    },
+    {
+      "id": "check_similarity",
+      "output_file": "similarity_score.txt",
+      "kind": "recompute_metric",
+      "metric": "average_pairwise_similarity",
+      "threshold": 0.8,
+      "target_policy": "threshold_or_better",
+      "weight": 0.5,
+      "depends_on": "seebeck_coefficients.csv"
+    },
+    {
+      "id": "check_validation_Al_Si",
+      "output_file": "validation_Al_Si.txt",
+      "kind": "numeric",
+      "weight": 0.1
+    }
+  ],
+  "reference_seebeck_xi": [
+    {
+      "material": "wool",
+      "S_gold": 6458,
+      "xi_gold": 1.86,
+      "sign": 1
+    },
+    {
+      "material": "PP",
+      "S_gold": 13821,
+      "xi_gold": 0.239,
+      "sign": 1
+    },
+    {
+      "material": "silk",
+      "S_gold": 12201,
+      "xi_gold": 0.183,
+      "sign": 1
+    },
+    {
+      "material": "nylon",
+      "S_gold": 11118,
+      "xi_gold": 0.156,
+      "sign": 1
+    },
+    {
+      "material": "NR",
+      "S_gold": 9392,
+      "xi_gold": 0.117,
+      "sign": 1
+    },
+    {
+      "material": "cellulose",
+      "S_gold": 12604,
+      "xi_gold": 0.035,
+      "sign": 1
+    },
+    {
+      "material": "Al",
+      "S_gold": -2.5,
+      "xi_gold": -1e-06,
+      "sign": -1
+    },
+    {
+      "material": "Si",
+      "S_gold": -1769,
+      "xi_gold": -0.0012,
+      "sign": -1
+    },
+    {
+      "material": "quartz",
+      "S_gold": -13434,
+      "xi_gold": -0.081,
+      "sign": -1
+    },
+    {
+      "material": "sulfur",
+      "S_gold": -7492,
+      "xi_gold": -0.118,
+      "sign": -1
+    },
+    {
+      "material": "PE",
+      "S_gold": -13846,
+      "xi_gold": -0.156,
+      "sign": -1
+    },
+    {
+      "material": "PTFE",
+      "S_gold": -12291,
+      "xi_gold": -0.158,
+      "sign": -1
+    },
+    {
+      "material": "PDMS",
+      "S_gold": -12568,
+      "xi_gold": -0.225,
+      "sign": -1
+    },
+    {
+      "material": "PVC",
+      "S_gold": -12449,
+      "xi_gold": -0.279,
+      "sign": -1
+    }
+  ],
+  "experimental_series": {
+    "A": [
+      "wool",
+      "nylon",
+      "cellulose",
+      "silk",
+      "PVC",
+      "PE",
+      "PTFE"
+    ],
+    "B": [
+      "nylon",
+      "wool",
+      "silk",
+      "cellulose",
+      "NR",
+      "sulfur",
+      "PE",
+      "PVC",
+      "PTFE"
+    ],
+    "C": [
+      "nylon",
+      "wool",
+      "silk",
+      "cellulose",
+      "PE",
+      "PP",
+      "PVC",
+      "Si",
+      "PTFE"
+    ],
+    "D": [
+      "quartz",
+      "nylon",
+      "wool",
+      "silk",
+      "cellulose",
+      "Al",
+      "PDMS",
+      "PTFE",
+      "PVC"
+    ],
+    "E": [
+      "cellulose",
+      "nylon",
+      "PP",
+      "quartz",
+      "PE",
+      "PDMS",
+      "PTFE",
+      "PVC"
+    ]
+  },
+  "val_Al_Si_thresholds": {
+    "Al_max_rel_error": 80.0,
+    "Si_max_rel_error": 80.0
+  }
+}

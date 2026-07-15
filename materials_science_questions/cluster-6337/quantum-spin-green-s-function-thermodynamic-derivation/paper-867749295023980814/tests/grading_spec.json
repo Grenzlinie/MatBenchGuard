@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Dispersion is recomputed from the agent’s q-points using Eq. 10‑11 with paper‑reported T=0 σ; magnetization is compared to paper‑gold σ(T) points; Néel temperature is compared to paper‑gold Tc values within ±5 %. These constitute T1 recompute for the main quantities.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold σ values for dispersion and magnetization, and paper‑gold Tc values for required Néel‑temperature cases.",
+      "source_provenance": "σ=0.37 (symmetric Ba₂IrO₄) stated on p.3; σ=0.44 (large anisotropic) stated on p.4; σ=0.36 (NNN model) stated on p.6. Magnetization gold points estimated from Fig. 3 of the paper. Tc=0.365 J = 275 K for symmetric case (p.5) and Tc=0.3 J = 220 K for NNN model (Appendix).",
+      "generation_method": "σ values taken verbatim from the paper text; magnetization σ(T) points read from Fig. 3 using digitisation; Tc values taken from the paper’s explicit statements.",
+      "why_not_fabricated": "All numbers are extracted directly from the paper’s own quantitative results; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "dispersion": [
+            {
+              "q_point": [
+                "float",
+                "float",
+                "float"
+              ],
+              "omega_minus": "float",
+              "omega_plus": "float"
+            }
+          ],
+          "magnetization_curve": [
+            {
+              "T": "float",
+              "sigma": "float"
+            }
+          ],
+          "neel_temperatures": {
+            "symmetric_Ba2IrO4": {
+              "Tc_meV": "float",
+              "Tc_K": "float"
+            },
+            "NNN_model": {
+              "Tc_meV": "float",
+              "Tc_K": "float"
+            }
+          }
+        },
+        "description": "JSON file containing the RPA spin-wave dispersion for the symmetric compass model (J=65 meV, Jz=0, Γx=Γy=3.4 meV, σ=0.37), the sublattice magnetization σ(T) for the symmetric Ba₂IrO₄ case (J=65 meV, Jz=5e-5 J, Γx=Γy=3.4 meV) with T in units of J, and the Néel temperatures for two required cases: symmetric_Ba2IrO4 and NNN_model. The checker recomputes dispersion at the provided q-points, compares magnetization at selected temperatures, and verifies TN against hidden paper values."
+      }
+    ],
+    "notes": "All quantities must be computed from the given model parameters using the RPA Green's function formalism. The q-point path must follow Γ→X→M→Γ in the square lattice with qz=0. Temperatures in magnetization_curve must be dimensionless T/J. The keys in neel_temperatures are exact: 'symmetric_Ba2IrO4' and 'NNN_model'. Other keys may be present but will not be scored."
+  },
+  "steps": [
+    {
+      "id": "dispersion",
+      "output_file": "results.json",
+      "weight": 0.4,
+      "kind": "numeric_recompute",
+      "description": "Recompute spin‑wave dispersion from the submitted q‑points using Eq. 10‑11 with the paper‑reported T=0 σ (0.37). Tolerance ±3 meV.",
+      "params": {
+        "sigma": 0.37,
+        "J": 65.0,
+        "Gamma_x": 3.4,
+        "Gamma_y": 3.4,
+        "Jz": 0.0,
+        "tolerance_meV": 3.0,
+        "min_points": 10
+      }
+    },
+    {
+      "id": "magnetization",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "result_compare",
+      "description": "Compare sublattice magnetization σ at selected temperatures (in units of J) against paper‑gold values, tolerance ±0.02.",
+      "params": {
+        "gold_points": {
+          "T": [
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.35
+          ],
+          "sigma": [
+            0.37,
+            0.35,
+            0.32,
+            0.21,
+            0.08
+          ],
+          "T_unit": "J",
+          "tolerance_sigma": 0.02
+        }
+      }
+    },
+    {
+      "id": "neel_temperature",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "result_compare",
+      "description": "Compare reported Tc_meV for the required cases against paper‑gold values (0.365 J ≈ 23.7 meV for symmetric Ba₂IrO₄, 0.3 J ≈ 19.5 meV for NNN model), tolerance ±5 %.",
+      "params": {
+        "gold_Tc_meV": {
+          "symmetric_Ba2IrO4": 23.725,
+          "NNN_model": 19.5
+        },
+        "tolerance_relative": 0.05
+      }
+    }
+  ]
+}

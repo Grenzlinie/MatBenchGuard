@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_potentials",
+    "title": "Construct muffin-tin crystal potentials",
+    "role": "process",
+    "action": "Using the Hartree–Fock–Slater method with the Herman–Skillman atomic program and Löwdin α-expansion, construct muffin-tin potentials for BCC Cr (atomic configuration 3d⁵4s¹, α=0.725) and Fe (3d⁷4s¹, α=1.0). Superpose atomic charge densities, solve Poisson's equation, and add Slater exchange.",
+    "output_file": "",
+    "evidence": "potential_cr.dat, potential_fe.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Build the crystal potential required for the KKR calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_log_derivatives",
+    "title": "Compute logarithmic derivatives",
+    "role": "process",
+    "action": "For each metal, solve the radial Schrödinger equation inside the muffin-tin sphere on an energy grid to obtain energy-dependent logarithmic derivatives L_l(E) for all required angular momenta l.",
+    "output_file": "",
+    "evidence": "log_derivatives_cr.dat, log_derivatives_fe.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Logarithmic derivatives are required input to the KKR secular determinant.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_structure_constants",
+    "title": "Fit polynomial coefficients for structure constants",
+    "role": "process",
+    "action": "Implement the Segall–Yang representation of KKR structure constants. Using the Davis numerical technique with η=0.25, N_reciprocal=43, N_direct=20, and cutoffs for largest reciprocal/direct vectors squared of 6 and 27, compute the smooth function f_{LM}(k,E) on a grid of energies and |k| along symmetry axes. Fit f_{LM} with two‑dimensional polynomials in E and |k| and store the coefficients.",
+    "output_file": "",
+    "evidence": "coeff_poly_LM_cr.dat, coeff_poly_LM_fe.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Polynomial coefficients that enable rapid evaluation of structure constants at arbitrary k-points and energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_band_structure",
+    "title": "Solve KKR secular determinant to obtain band structures",
+    "role": "process",
+    "action": "Using the fitted polynomial coefficients (for the smooth part), the explicit pole‑sum terms, and the logarithmic derivatives, evaluate the KKR structure constants D_{LM}(k,E). Solve the secular determinant det|...|=0 to find energy eigenvalues E(k) on a dense k‑point mesh along high‑symmetry directions for both Cr and Fe. Store the electronic band structures.",
+    "output_file": "",
+    "evidence": "bands_cr.dat, bands_fe.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The band structure is the central result needed for density of states and optical spectra.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_compute_e2",
+    "title": "Compute ε₂ optical spectra",
+    "role": "process",
+    "action": "From the converged band structures, calculate the imaginary part of the dielectric function ε₂(ω) for photon energies up to 6 eV. Evaluate the joint density of states using constant transition matrix elements, integrating over the Brillouin zone. Store the full ε₂ spectrum as a function of photon energy for each metal.",
+    "output_file": "",
+    "evidence": "e2_spectrum_cr.csv, e2_spectrum_fe.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The full ε₂ spectrum for Cr and Fe; used as raw evidence for peak extraction and recomputation by the checker.",
+    "output_schema": "CSV with columns: energy_eV (float), e2_imag (float)"
+  },
+  {
+    "id": "step_06_cr_peaks",
+    "title": "Extract ε₂ peak positions for chromium",
+    "role": "scored",
+    "action": "From the ε₂ spectrum for Cr (e2_spectrum_cr.csv), identify local maxima (peaks) in the range 0–6 eV. Write the peak positions to cr_e2_peaks.csv.",
+    "output_file": "cr_e2_peaks.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The main scored target for Cr: the ε₂ peak positions that characterize the optical absorption. The checker recomputes peaks from the submitted e2_spectrum_cr.csv and compares against the paper‑reported gold peaks with tolerance ±0.2 eV.",
+    "output_schema": "CSV with columns: peak_id (string), energy_eV (float). Must contain at least three rows for the major absorption peaks."
+  },
+  {
+    "id": "step_07_fe_peaks",
+    "title": "Extract ε₂ peak positions for iron",
+    "role": "scored",
+    "action": "From the ε₂ spectrum for Fe (e2_spectrum_fe.csv), identify local maxima in the range 0–6 eV and write the peak positions to fe_e2_peaks.csv.",
+    "output_file": "fe_e2_peaks.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The main scored target for Fe: the ε₂ peak positions. Checker recomputes peaks from e2_spectrum_fe.csv and compares to paper‑reported gold peaks within ±0.2 eV.",
+    "output_schema": "CSV with columns: peak_id (string), energy_eV (float). Must contain at least three rows for the major absorption peaks."
+  }
+]

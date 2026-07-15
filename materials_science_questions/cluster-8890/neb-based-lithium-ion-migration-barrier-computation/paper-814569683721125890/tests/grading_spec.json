@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute average deintercalation potential from voltage CSV; structural and migration compared to paper-reported references with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "voltage_profile.csv": "metric_recompute",
+    "structural_properties.json": "reference_match",
+    "migration_barrier.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for average voltage, structural properties, and migration barrier.",
+      "source_provenance": "Paper 'Evaluating bulk Nb2O2F3 for Li-battery electrode applications' (DOI: 10.1039/c5cp06829k). Average deintercalation potential 1.29 V from abstract/voltage analysis; volume expansion 5%, interlayer distances 3.97/4.97 Å from text; band gap 1.0 eV from DOS; migration barrier 0.79 eV from cNEB results.",
+      "generation_method": "Extracted from paper's text, tables, and figures.",
+      "why_not_fabricated": "These are the exact headline quantitative claims of the paper, traceable to specific sections."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "voltage_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "V"
+          ],
+          "units": {
+            "x": "Li fraction (dimensionless)",
+            "V": "Volts vs Li/Li+"
+          }
+        },
+        "description": "Voltage profile of LixNb2O2F3 deintercalation; the checker re-derives the average voltage and verifies monotonic trend."
+      },
+      {
+        "file": "structural_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "volume_expansion_percent": "float",
+            "band_gap_LiNb2O2F3_eV": "float",
+            "interlayer_distance_delithiated_A": "float",
+            "interlayer_distance_lithiated_A": "float"
+          }
+        },
+        "description": "Volume expansion, band gap, and interlayer distances upon lithiation."
+      },
+      {
+        "file": "migration_barrier.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "activation_energy_eV": "float",
+            "pathway": "string"
+          }
+        },
+        "description": "Li-ion migration barrier for Pathway 01."
+      }
+    ],
+    "notes": "The hidden checker uses paper-reported values for the deintercalation average voltage, volume expansion, band gap, and migration barrier as reference. Tolerances are set to accommodate toolchain differences."
+  },
+  "steps": [
+    {
+      "id": "voltage_profile",
+      "output_file": "voltage_profile.csv",
+      "kind": "recompute_metric",
+      "target": 1.29,
+      "tolerance": 0.1,
+      "weight": 0.3,
+      "description": "Recompute average deintercalation voltage from CSV (weighted mean over x intervals) and compare to paper-reported 1.29 V; require monotonic decreasing V(x)."
+    },
+    {
+      "id": "structural_properties",
+      "output_file": "structural_properties.json",
+      "kind": "reference_match",
+      "fields": [
+        {
+          "key": "volume_expansion_percent",
+          "target": 5.0,
+          "tolerance": 1.0
+        },
+        {
+          "key": "band_gap_LiNb2O2F3_eV",
+          "target": 1.0,
+          "tolerance": 0.2
+        },
+        {
+          "key": "interlayer_distance_delithiated_A",
+          "target": 3.97,
+          "tolerance": 0.1
+        },
+        {
+          "key": "interlayer_distance_lithiated_A",
+          "target": 4.97,
+          "tolerance": 0.1
+        }
+      ],
+      "weight": 0.3,
+      "description": "Check each structural/electronic property against paper-reported values. Volume expansion 5±1%, band gap 1.0±0.2 eV, interlayer distances 3.97/4.97±0.1 Å."
+    },
+    {
+      "id": "migration_barrier",
+      "output_file": "migration_barrier.json",
+      "kind": "reference_match",
+      "target": 0.79,
+      "tolerance": 0.1,
+      "pathway": "01",
+      "weight": 0.4,
+      "description": "Activation energy must be close to paper-reported 0.79 eV (within ±0.1 eV) and pathway must be '01'."
+    }
+  ]
+}

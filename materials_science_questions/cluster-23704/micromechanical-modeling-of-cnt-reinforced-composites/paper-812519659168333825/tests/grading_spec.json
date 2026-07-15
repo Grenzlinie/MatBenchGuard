@@ -1,0 +1,157 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DIR trends are checked via structural audit (monotonicity); validation values compared to published paper numbers with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold validation values from paper Tables 1-3",
+      "source_provenance": "paper Tables 1-3",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "values are paper-reported numerical results; used for validation tolerance check"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "validation": "object",
+            "dir_cnt": "array",
+            "dir_cf": "array"
+          },
+          "items": {
+            "natural_frequencies": {
+              "mode": "int",
+              "frequency": "float"
+            },
+            "buckling_loads": {
+              "BC": "string",
+              "buckling_load": "float"
+            },
+            "dimensionless_frequencies": {
+              "theory": "string",
+              "dimensionless_frequency": "float"
+            },
+            "cnt_weight_frac": "float",
+            "cf_volume_frac": "float",
+            "beta": "float",
+            "excitation_frequency": "float (rad/s)"
+          },
+          "required_columns": [],
+          "units": {
+            "excitation_frequency": "rad/s"
+          }
+        },
+        "description": "Contains validation benchmarks (natural frequencies, buckling loads, dimensionless frequencies) and DIR curves for multiple CNT weight fractions and CF volume fractions. The validation values will be compared against paper-reported benchmarks; the DIR trends will be checked for the required monotonic increase with reinforcement content."
+      }
+    ],
+    "notes": "The checker will verify that validation frequencies, buckling loads, and dimensionless frequencies match literature benchmarks within appropriate tolerances. For the DIR data, structural checks will confirm that excitation frequency increases monotonically with increasing CNT weight fraction at a fixed β, and similarly with increasing CF volume fraction."
+  },
+  "steps": [
+    {
+      "id": "val_natural_freq",
+      "output_file": "computed_results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "gold": [
+        {
+          "mode": 1,
+          "frequency": 112.12
+        },
+        {
+          "mode": 2,
+          "frequency": 366.23
+        },
+        {
+          "mode": 3,
+          "frequency": 687.33
+        },
+        {
+          "mode": 4,
+          "frequency": 1074.98
+        },
+        {
+          "mode": 5,
+          "frequency": 1666.44
+        }
+      ],
+      "relative_tolerance": 0.01
+    },
+    {
+      "id": "val_buckling",
+      "output_file": "computed_results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "gold": [
+        {
+          "BC": "SS",
+          "buckling_load": 0.09844
+        },
+        {
+          "BC": "CS",
+          "buckling_load": 0.14852
+        },
+        {
+          "BC": "CC",
+          "buckling_load": 0.21272
+        }
+      ],
+      "relative_tolerance": 0.02
+    },
+    {
+      "id": "val_dimless_freq",
+      "output_file": "computed_results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "gold": [
+        {
+          "theory": "FSDT",
+          "dimensionless_frequency": 0.9974
+        },
+        {
+          "theory": "TSDT",
+          "dimensionless_frequency": 0.9749
+        },
+        {
+          "theory": "ESDT",
+          "dimensionless_frequency": 0.9759
+        },
+        {
+          "theory": "HSDT",
+          "dimensionless_frequency": 0.9744
+        },
+        {
+          "theory": "TrSDT",
+          "dimensionless_frequency": 0.9741
+        }
+      ],
+      "relative_tolerance": 0.005
+    },
+    {
+      "id": "dir_cnt_trend",
+      "output_file": "computed_results.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "array_key": "dir_cnt",
+      "parameter_field": "cnt_weight_frac",
+      "value_field": "excitation_frequency",
+      "group_field": "beta"
+    },
+    {
+      "id": "dir_cf_trend",
+      "output_file": "computed_results.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "array_key": "dir_cf",
+      "parameter_field": "cf_volume_frac",
+      "value_field": "excitation_frequency",
+      "group_field": "beta"
+    }
+  ]
+}

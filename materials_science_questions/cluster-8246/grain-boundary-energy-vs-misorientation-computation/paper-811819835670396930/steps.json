@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Implement the Monte Carlo Potts simulation model",
+    "role": "process",
+    "action": "Implement a 2D Monte Carlo Potts simulation on a triangular lattice (6 nearest-neighbours) with periodic boundary conditions. The system has Q=3722 distinct crystallographic orientations (Bunge Euler angles). The total Hamiltonian includes surface energy (broken-bond model with γ0(100)=2.610 J/m² at 200°C and dγ/dT=-5.0e-4 J/(m²°C)), interface energy (equal to surface), biaxial strain energy (γ_strain = h e² ∫ M_hkl dA_hkl, with thermal mismatch strain e ≈ Δα·ΔT, Δα = 14e-6 /K, ΔT = 275°C from deposition 25°C to anneal 300°C, and biaxial modulus M_hkl computed from elastic constants C11=170.2 GPa, C12=123.2 GPa, C44=75.4 GPa at 25°C with temperature derivatives dC11/dT=-0.0353 GPa/°C, dC12/dT=-0.0153 GPa/°C, dC44/dT=-0.0277 GPa/°C), and grain-boundary energy separated into large-angle (LAGB), incoherent twin (ICTB), and coherent twin (CTB) contributions (γ_LAGB=0.625 J/m² at 925°C, γ_ICTB=0.498 J/m² at 950°C, γ_CTB=0.024 J/m² at 800°C with temperature derivatives dγ_LAGB/dT=-1.0e-4, dγ_ICTB/dT=-1.0e-4, dγ_CTB/dT=-2.0e-5 J/(m²°C)). The reorientation probability is p=1 for ΔE≤0 and p=exp(-ΔE/(k_B T)) for ΔE>0, where T=300°C annealing temperature and k_B is Boltzmann constant. The n-fold algorithm may optionally be used to accelerate late-stage growth, but a standard Metropolis loop is acceptable. No external data—embed all constants directly.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run grain growth simulations for three film thicknesses",
+    "role": "process",
+    "action": "Using the implemented model, simulate grain growth for film thicknesses h = 100 nm, 500 nm, and 800 nm at 300°C. Use a lattice size of at least 200×200 sites and periodic boundary conditions. Run the simulation until the major texture components stabilise (typically thousands of Monte Carlo steps, MCS). For each thickness, record the orientation (Bunge Euler angles) of every lattice site at regular MCS intervals (e.g., every 500 or 1000 MCS) and at the final MCS. Save the full time series of orientation maps for later analysis.",
+    "output_file": "",
+    "evidence": "simulation_state.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Extract time-series texture component fractions",
+    "role": "scored",
+    "action": "For each recorded MCS snapshot and for each thickness, classify every lattice site into one of the texture components {111}, {001}, {511}, {101} by comparing its Bunge Euler angle orientation to the ideal orientation of each component (use a misorientation tolerance, e.g., 15°). Compute the volume fraction of each component at that MCS. Write the time-series data to texture_fractions.csv with columns: thickness_nm (int), MCS (int), fraction_111 (float), fraction_001 (float), fraction_511 (float), fraction_101 (float). Include rows for every recorded snapshot, including the final MCS.",
+    "output_file": "texture_fractions.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Time series of texture component fractions for each film thickness and Monte Carlo step.",
+    "output_schema": "CSV with columns: thickness_nm (int), MCS (int), fraction_111 (float), fraction_001 (float), fraction_511 (float), fraction_101 (float). One row per snapshot per thickness."
+  },
+  {
+    "id": "step_04",
+    "title": "Extract final texture summary",
+    "role": "scored",
+    "action": "From the final MCS orientation data for each film thickness (100 nm, 500 nm, 800 nm), compute the final fractions of the {111}, {001}, {511}, and {101} texture components (using the same misorientation classification as in step 03). Write these final fractions to final_texture_summary.json as a JSON object with top-level keys \"100nm\", \"500nm\", \"800nm\". Each key maps to an object containing the keys \"fraction_111\", \"fraction_001\", \"fraction_511\", and \"fraction_101\" with their numeric final values.",
+    "output_file": "final_texture_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final texture component fractions for the three simulated film thicknesses.",
+    "output_schema": "JSON object with keys '100nm', '500nm', '800nm'. Each value is an object with keys 'fraction_111', 'fraction_001', 'fraction_511', 'fraction_101' (numeric fractions)."
+  }
+]

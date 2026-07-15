@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Setup bulk TiN input files",
+    "role": "process",
+    "action": "Create Quantum ESPRESSO input files for a bulk TiN unit cell in the rocksalt structure (space group Fm-3m, lattice constant a=0.4242 nm). Define a converged k-mesh and plane-wave cutoff suitable for the chosen pseudopotentials. Set up a band structure path along Gamma-Delta-X.",
+    "output_file": "",
+    "evidence": "bulk_input_files/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run BLYP bulk SCF and band structure",
+    "role": "process",
+    "action": "Perform a self-consistent field (SCF) calculation for the bulk TiN unit cell using a GGA functional approximating BLYP (e.g., PBE with appropriate parameters) in Quantum ESPRESSO. Then run a non-self-consistent bands calculation along the Gamma-Delta-X path and process the data to obtain eigenvalues at the Gamma and X points.",
+    "output_file": "",
+    "evidence": "bulk_bands.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Extract bulk eigenvalues at high-symmetry states",
+    "role": "scored",
+    "action": "From the bulk band structure, identify the energy eigenvalues (in eV, relative to the Fermi level) corresponding to the Gamma15, X3, X5', and X4' states. Output a JSON file with keys 'Gamma15', 'X3', 'X5_prime', 'X4_prime' containing the extracted values.",
+    "output_file": "bulk_eigenvalues.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with four float fields: Gamma15, X3, X5_prime, X4_prime. All values in eV relative to the Fermi energy (set Fermi as zero).",
+    "output_schema": "{ 'Gamma15': float, 'X3': float, 'X5_prime': float, 'X4_prime': float }"
+  },
+  {
+    "id": "step_04",
+    "title": "Compute elastic constants via energy-strain fits",
+    "role": "scored",
+    "action": "Apply a series of small volume-conserving deformations (orthorhombic, monoclinic) to the bulk TiN unit cell. For each deformed configuration, run a DFT total energy calculation with the BLYP functional in Quantum ESPRESSO. Fit the energy vs. strain data to a polynomial and derive the cubic elastic constants C11, C12, C44 (in Mbar). Write these three values to a JSON file.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys C11, C12, C44, each a float in Mbar.",
+    "output_schema": "{ 'C11': float, 'C12': float, 'C44': float }"
+  },
+  {
+    "id": "step_05",
+    "title": "Setup and run BLYP DFT for 4-layer TiN(001) slab",
+    "role": "process",
+    "action": "Construct a 4-layer TiN(001) slab model (terminated with Ti and N in equal numbers) with a sufficient vacuum layer (e.g., 15 Å). Create Quantum ESPRESSO input files, perform SCF and band structure calculations along the Gamma-Delta-X direction using the same BLYP functional.",
+    "output_file": "",
+    "evidence": "slab_bands.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Extract surface state energy at Gamma",
+    "role": "scored",
+    "action": "Examine the slab band structure and identify the non-dispersive sigma-type surface state (band A) that originates from N 2pz orbitals near the Fermi level. Record its energy eigenvalue (relative to EF) at the Gamma point. Write this single float value to a plain text file.",
+    "output_file": "surface_state_gamma_energy.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "A single line containing a floating-point number: the energy in eV relative to the Fermi level of the surface state at the Gamma point.",
+    "output_schema": "A plain text file with one float (e.g., '-2.9')"
+  }
+]

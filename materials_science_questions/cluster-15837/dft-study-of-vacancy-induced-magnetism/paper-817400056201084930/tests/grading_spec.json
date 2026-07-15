@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Magnetic moment compared to paper reference with tolerance; exchange integrals checked for sign and ordering. Recompute from raw DFT/Wannier/cRPA outputs is infeasible without full toolchain.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetic_moment.json": "reference_match",
+    "exchange_integrals.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference magnetic moment of 1.0 μB per unit cell",
+      "source_provenance": "paper Fig 1(c) and the statement 'a local moment of 1 μB per unit cell' in the section 'Origin of local moments'",
+      "generation_method": "extracted from published paper text",
+      "why_not_fabricated": "directly stated in the paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_moment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu_B_per_cell": "float"
+          },
+          "units": {
+            "mu_B_per_cell": "μB"
+          }
+        },
+        "description": "Magnetic moment per unit cell computed from spin-polarized DFT."
+      },
+      {
+        "file": "exchange_integrals.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "J_01_D_meV": "float",
+            "J_02_D_meV": "float"
+          },
+          "units": {
+            "J_01_D_meV": "meV",
+            "J_02_D_meV": "meV"
+          }
+        },
+        "description": "Direct-exchange integrals; must satisfy J_01_D_meV > 0, J_02_D_meV > 0, and J_01_D_meV > J_02_D_meV."
+      }
+    ],
+    "notes": "Scoring is structural (T3): magnetic moment is compared to a hidden reference with tolerance; exchange integrals are checked for sign and ordering (both positive, J01^D > J02^D). No exact match to paper values is required."
+  },
+  "steps": [
+    {
+      "id": "magnetic_moment",
+      "output_file": "magnetic_moment.json",
+      "kind": "numeric",
+      "field": "mu_B_per_cell",
+      "target": 1.0,
+      "tolerance_abs": 0.2,
+      "weight": 0.4
+    },
+    {
+      "id": "exchange_integrals",
+      "output_file": "exchange_integrals.json",
+      "kind": "structural",
+      "conditions": [
+        "J_01_D_meV > 0",
+        "J_02_D_meV > 0",
+        "J_01_D_meV > J_02_D_meV"
+      ],
+      "weight": 0.6
+    }
+  ]
+}

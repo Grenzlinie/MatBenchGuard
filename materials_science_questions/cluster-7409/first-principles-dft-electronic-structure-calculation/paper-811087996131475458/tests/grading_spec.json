@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The verifier recomputes O-ion pair counts and Ti-Ti bond existence from the agent's raw Mulliken positions data and checks band gap thresholds; no self-reported numbers are used.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mulliken_and_positions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "atom_index",
+            "element",
+            "x",
+            "y",
+            "z",
+            "mulliken_charge"
+          ],
+          "units": {
+            "x": "Å",
+            "y": "Å",
+            "z": "Å",
+            "mulliken_charge": "e"
+          }
+        },
+        "description": "Per-atom Mulliken charges and Cartesian coordinates for all atoms at each snapshot. The verifier recomputes O-ion pair counts (positive Mulliken charge and O-O distance < 3.0 Å) and Ti-Ti bond presence from this data."
+      },
+      {
+        "file": "band_gaps.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "band_gap_eV"
+          ],
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Kohn-Sham band gap (eV) at each snapshot. The verifier checks that for snapshots at 0.5, 1, 2, and 3 ps the band gap is ≤ 0.15 eV (metallic)."
+      }
+    ],
+    "notes": "The verifier will recompute the O-ion pair counts and Ti-Ti bond existence from mulliken_and_positions.csv, and evaluate the band gap threshold from band_gaps.txt. No other scored outputs are required."
+  },
+  "steps": [
+    {
+      "id": "mulliken_pairs",
+      "output_file": "mulliken_and_positions.csv",
+      "weight": 0.5,
+      "kind": "recompute_pair_count",
+      "description": "Recompute O-ion pair counts at each snapshot (0.0,0.5,1.0,2.0,3.0 ps) and compare to expected trend with tolerance ±1.",
+      "gold": {
+        "pairs": {
+          "0.0": 1,
+          "0.5": 2,
+          "1.0": 2,
+          "2.0": 3,
+          "3.0": 3
+        },
+        "tolerance": 1,
+        "charge_threshold": 0.0,
+        "distance_threshold": 3.0
+      }
+    },
+    {
+      "id": "mulliken_bonds",
+      "output_file": "mulliken_and_positions.csv",
+      "weight": 0.3,
+      "kind": "recompute_bond_existence",
+      "description": "Check that at least one Ti-Ti bond along [010] direction (2.5–3.2 Å, projection alignment ≥ 80%) exists at 2.0 and 3.0 ps snapshots.",
+      "gold": {
+        "check_times": [
+          2.0,
+          3.0
+        ],
+        "distance_range": [
+          2.5,
+          3.2
+        ],
+        "alignment_threshold": 0.8
+      }
+    },
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.txt",
+      "weight": 0.2,
+      "kind": "threshold_check",
+      "description": "Verify that the Kohn-Sham band gap is ≤ 0.15 eV for snapshots at 0.5, 1.0, 2.0, and 3.0 ps.",
+      "gold": {
+        "times": [
+          0.5,
+          1.0,
+          2.0,
+          3.0
+        ],
+        "max_gap_eV": 0.15
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected O-ion pair counts per snapshot (Table 1 and paper text): 0 ps:1, 0.5 ps:2, 1 ps:2, 2 ps:3, 3 ps:3.",
+      "source_provenance": "Derived from paper Table 1 and textual description of pair evolution.",
+      "generation_method": "Direct extraction from published data.",
+      "why_not_fabricated": "These are the exact published counts used in the paper's analysis."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Ti-Ti bond existence criteria (times 2 and 3 ps, distance 2.5-3.2 Å, alignment along [010]).",
+      "source_provenance": "Based on paper's description of belt-like conduction path and Ti-Ti bonds in Figs. 2(e,f).",
+      "generation_method": "Interpretation of geometric conditions from the paper's text and figures.",
+      "why_not_fabricated": "These thresholds correspond to the structural description of the conduction path."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Band gap threshold of 0.15 eV for metallic character at equilibrated snapshots.",
+      "source_provenance": "Paper states band gaps equal 0 eV (metallic) in PDOS; 0.15 eV tolerance accounts for numerical noise.",
+      "generation_method": "Set as a generous upper bound consistent with the paper's conclusion of zero gap.",
+      "why_not_fabricated": "Tolerance chosen to accommodate minor code differences while still reflecting the metallic nature."
+    }
+  ]
+}

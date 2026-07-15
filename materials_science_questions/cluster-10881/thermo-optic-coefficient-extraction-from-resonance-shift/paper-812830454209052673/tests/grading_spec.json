@@ -1,0 +1,181 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Agent submits final computed chi_t values; the checker can recompute chi_t from the supplied dn/dt and gamma_t using formula (12) and verify consistency, plus compare the input and output columns to the paper’s table. Full T1 recompute from intermediate artifacts is not feasible because the agent does not submit all raw calculation steps.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for chi_t_60.txt and the full chi_t temperature table from the paper.",
+      "source_provenance": "Paper ‘Temperature variation of the refractive indices of quartz’, Table in Section 3 (Reed’s data) and the reported χ_t at 60°C.",
+      "generation_method": "Extracted directly from the published numerical table and text; embedded inline as JSON arrays.",
+      "why_not_fabricated": "These are the actual reported results the agent must reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "chi_t_60.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "units": "10⁻⁵"
+        },
+        "description": "Shift rate of the characteristic UV frequency at 60°C, reported as a single floating-point number in units of 10⁻⁵."
+      },
+      {
+        "file": "chi_t_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_C",
+            "gamma_t_1e6",
+            "dn_e_dt_4358_1e6",
+            "dn_e_dt_5893_1e6",
+            "dn_e_dt_6563_1e6",
+            "chi_t_4358",
+            "chi_t_5893",
+            "chi_t_6563"
+          ],
+          "units": {
+            "chi_t_4358": "10⁻⁵",
+            "chi_t_5893": "10⁻⁵",
+            "chi_t_6563": "10⁻⁵"
+          }
+        },
+        "description": "Table of χ_t values computed from Reed's data for the extraordinary ray, showing its variation with temperature. All χ_t values are in units of 10⁻⁵."
+      }
+    ],
+    "notes": "All χ_t values are to be reported in units of 10⁻⁵. The chi_t_60.txt file must contain only the numeric value (e.g., a single float). The chi_t_temperature.csv must contain exactly nine data rows (one per temperature) with the specified columns."
+  },
+  "steps": [
+    {
+      "id": "chi_t_60_check",
+      "output_file": "chi_t_60.txt",
+      "description": "Verify χ_t at 60°C matches the paper’s reported value.",
+      "weight": 0.3,
+      "reference_value": -2.92,
+      "tolerance_abs": 0.05
+    },
+    {
+      "id": "chi_t_temperature_check",
+      "output_file": "chi_t_temperature.csv",
+      "description": "Verify χ_t vs temperature table by comparing all columns to the paper’s table and checking that the agent’s reported χ_t values are consistent with a recomputation from the supplied dn_e/dt and γ_t using formula (12).",
+      "weight": 0.7,
+      "reference_rows": [
+        [
+          23.0,
+          34.35,
+          -6.52,
+          -7.14,
+          -7.18,
+          -2.84,
+          -2.84,
+          -2.87
+        ],
+        [
+          61.2,
+          35.6,
+          -7.07,
+          -7.66,
+          -7.73,
+          -2.88,
+          -2.89,
+          -2.91
+        ],
+        [
+          125.2,
+          37.7,
+          -7.71,
+          -8.29,
+          -8.43,
+          -3.0,
+          -3.02,
+          -3.03
+        ],
+        [
+          177.0,
+          39.35,
+          -8.73,
+          -9.33,
+          -9.44,
+          -2.99,
+          -3.01,
+          -3.02
+        ],
+        [
+          227.5,
+          41.1,
+          -9.52,
+          -10.12,
+          -10.3,
+          -3.05,
+          -3.0,
+          -3.06
+        ],
+        [
+          275,
+          42.65,
+          -11.06,
+          -11.78,
+          -11.91,
+          -2.91,
+          -2.9,
+          -2.9
+        ],
+        [
+          328,
+          44.7,
+          -13.48,
+          -14.19,
+          -14.27,
+          -2.66,
+          -2.63,
+          -2.65
+        ],
+        [
+          385,
+          47.3,
+          -17.53,
+          -18.4,
+          -18.57,
+          -2.15,
+          -2.05,
+          -2.03
+        ],
+        [
+          435,
+          49.95,
+          -21.49,
+          -22.53,
+          -22.75,
+          -1.66,
+          -1.49,
+          -1.46
+        ]
+      ],
+      "tolerance_abs": 0.02,
+      "formula_constants": {
+        "4358": {
+          "a": 2.0535,
+          "b": 1.2155,
+          "divisor": 10.0
+        },
+        "5893": {
+          "a": 2.176,
+          "b": 1.2155,
+          "divisor": 10.0
+        },
+        "6563": {
+          "a": 2.2067,
+          "b": 1.297,
+          "divisor": 10.0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute integrated spectral weight from raw sigma1 arrays and assess relative ratios and monotonic decrease (Drude shape). All hidden targets are derived from paper's reported trend and verified against reference synthetic data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optical_conductivity_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "threshold values for integrated weight ratios (>=4.0), negligible weight fraction (<0.06), and monotonic fraction threshold (>=0.9)",
+      "source_provenance": "Derived from the paper's explicit statement that A_g weight is at least 5x larger than undisplaced and B_1g, with 20% tolerance; additional negligible-weight condition from paper's statement that undisplaced/B_1g should have negligible weight (less than 5% of A_g). Monotonic Drude shape derived from physical expectations.",
+      "generation_method": "Thresholds computed from the paper's quantitative claims and tolerances, verified to be satisfied by the reference oracle's synthetic optical conductivity curves.",
+      "why_not_fabricated": "Thresholds are directly based on the paper's self-consistency conditions and match the oracle output; they are necessary to discriminate between correct and incorrect reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optical_conductivity_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "undisplaced": "object with energy_ev (array of numbers), sigma1 (array of numbers), integrated_weight_below_1eV (number)",
+            "A_g_displaced": "object with energy_ev (array of numbers), sigma1 (array of numbers), integrated_weight_below_1eV (number)",
+            "B_1g_displaced": "object with energy_ev (array of numbers), sigma1 (array of numbers), integrated_weight_below_1eV (number)"
+          },
+          "units": {
+            "energy_ev": "eV",
+            "sigma1": "arbitrary units (same scale for all three cases)"
+          }
+        },
+        "description": "In-plane optical conductivity σ₁(ω) for undisplaced, A_g(3)-displaced, and B_1g-displaced La2CuO4, along with integrated spectral weight below 1 eV. This artifact enables verification of metallization (Drude weight) induced by A_g phonon mode while B_1g does not."
+      }
+    ],
+    "notes": "The scored target is the appearance of significant Drude spectral weight (integrated σ₁ below 1 eV) for the A_g-displaced structure, with minimal weight for the other two cases. The checker will recompute the integrated weights from the provided curves and verify threshold-based inequalities and monotonic Drude shape."
+  },
+  "steps": [
+    {
+      "id": "optical_conductivity",
+      "output_file": "optical_conductivity_results.json",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "configuration": {
+        "ratio_threshold": 4.0,
+        "max_weight_ratio": 0.06,
+        "monotonic_fraction_threshold": 0.9,
+        "sub_weights": {
+          "ratio_undisplaced": 0.3,
+          "ratio_b1g": 0.3,
+          "negligible_undisplaced": 0.2,
+          "negligible_b1g": 0.1,
+          "monotonic": 0.1
+        }
+      }
+    }
+  ]
+}

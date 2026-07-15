@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1: The headline quantities (shift at key powers, trend linear/quadratic, cutoff frequency) can be recomputed from the agent's raw artifacts. The checker compares shift/temp values at specified powers to paper-derived references and examines the trend in the CSV data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "steady_state_results.csv": "reference_match",
+    "cutoff_frequency.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold shift and temperature values at 4.2 and 12.7 mW for standard and re-etched toroids, and cutoff frequency.",
+      "source_provenance": "Paper-reported: silica temperature 443 K at 12.7 mW (re-etched), tuning sensitivity 3200 fm/mW (standard), thermo-optic relation Eq (1) with λ0=1.566 μm, n0=1.444, dn/dT(T)=2.6e-8 T + 7.5e-7 K^{-1}, T0=300 K, temperature-to-shift slope 9.2 pm/K (standard). Cutoff frequency ~5000 Hz. Derived shifts consistent with paper figures.",
+      "generation_method": "Standard toroid: shift=power*3.2 pm/mW (3200 fm/mW), temperature from shift / 9.2 pm/K + 300 K. Re-etched: at 12.7 mW T=443 K, shift = (λ0/n0)*dn/dT(443)*(143) = 1902 pm; at 4.2 mW T estimated 350 K, shift computed similarly = 534 pm. Cutoff 5000 Hz.",
+      "why_not_fabricated": "All values are either directly in the paper or derived directly from its equations and reported parameters without arbitrary choice."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "steady_state_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "toroid_type",
+            "pump_power_mW",
+            "temperature_K",
+            "shift_pm"
+          ]
+        },
+        "description": "Predicted resonance wavelength shift as a function of pump power for both standard and re-etched toroids, derived from steady-state finite-element heat-flow simulations and the thermo-optic coefficient relation."
+      },
+      {
+        "file": "cutoff_frequency.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number, the thermal equilibration cutoff frequency in Hz."
+        },
+        "description": "Predicted thermal equilibration cutoff frequency for a standard toroid geometry from time-dependent finite-element simulations."
+      }
+    ],
+    "notes": "The checker compares the agent's shift values at key pump powers and the cutoff frequency to the paper-reported values with appropriate tolerances, and may also verify the shift-vs-power trend (linear for standard toroid, quadratic for re-etched toroid)."
+  },
+  "steps": [
+    {
+      "id": "steady_state_check",
+      "output_file": "steady_state_results.csv",
+      "kind": "custom",
+      "weight": 0.8,
+      "target": {
+        "standard": {
+          "shifts": {
+            "4.2": 13.44,
+            "12.7": 40.64
+          },
+          "temps": {
+            "4.2": 301.46,
+            "12.7": 304.42
+          },
+          "tolerances": {
+            "shift_rel": 0.1,
+            "temp_abs": 3.0
+          }
+        },
+        "re-etched": {
+          "shifts": {
+            "4.2": 534.0,
+            "12.7": 1902.0
+          },
+          "temps": {
+            "4.2": 350.0,
+            "12.7": 443.0
+          },
+          "tolerances": {
+            "shift_rel": 0.1,
+            "temp_abs": 50.0
+          }
+        },
+        "trend": {
+          "standard_linear_r2": 0.95,
+          "re-etched_quadratic_vs_linear_adj_r2_diff": 0.05
+        }
+      }
+    },
+    {
+      "id": "cutoff_frequency_check",
+      "output_file": "cutoff_frequency.txt",
+      "kind": "custom",
+      "weight": 0.2,
+      "target": {
+        "value": 5000.0,
+        "tolerance": 1000.0
+      }
+    }
+  ]
+}

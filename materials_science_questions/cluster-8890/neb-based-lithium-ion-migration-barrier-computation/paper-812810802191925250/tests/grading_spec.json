@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible: the checker sandbox cannot run DFT to recompute adsorption energies and diffusion barriers. The scored artifacts are the computed numeric values. We compare the agent's reported values to the hidden paper gold (tolerance 0.05 eV) and also verify the structural ordering of adsorption energies (Ti3C2O2 < Ti3C2F2 < Ti3C2(OH)2).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_energies.json": "exact_match",
+    "diffusion_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Li adsorption energies per Li atom and CI‑NEB diffusion barriers",
+      "source_provenance": "Paper text: adsorption energies for Ti3C2O2, Ti3C2F2, Ti3C2(OH)2 are -1.581, -0.222, -0.053 eV; diffusion barriers for Ti27C18O18, Ti27C18O17F, Ti27C18O17(OH) are 0.36, 0.34, 0.43 eV.",
+      "generation_method": "Extracted directly from the paper's DFT results section.",
+      "why_not_fabricated": "These are the exact values reported in the paper for the same quantities the agent computes."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Ti3C2O2": "number (eV)",
+            "Ti3C2F2": "number (eV)",
+            "Ti3C2(OH)2": "number (eV)"
+          }
+        },
+        "description": "First‑layer Li adsorption energy per Li atom (eV) on three differently terminated Ti3C2 monolayers."
+      },
+      {
+        "file": "diffusion_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Ti3C2O2_barrier": "number (eV)",
+            "Ti3C2O1.75F0.25_barrier": "number (eV)",
+            "Ti3C2O1.75(OH)0.25_barrier": "number (eV)"
+          }
+        },
+        "description": "CI‑NEB energy barriers (eV) for Li diffusion along the C→Ti→C path on O‑dominated Ti3C2Tx surfaces with and without small F/OH substitutions."
+      }
+    ],
+    "notes": "This is a compute‑driven reproduction task. The solving agent must run DFT relaxations and CI‑NEB calculations using Quantum ESPRESSO and the specified pseudopotentials. No experimental data is required; the results are compared to the paper‑reported values within a hidden tolerance."
+  },
+  "steps": [
+    {
+      "id": "step2_adsorption_energies",
+      "output_file": "adsorption_energies.json",
+      "weight": 0.5,
+      "kind": "numeric_tolerance",
+      "target_values": {
+        "Ti3C2O2": -1.581,
+        "Ti3C2F2": -0.222,
+        "Ti3C2(OH)2": -0.053
+      },
+      "tolerance": 0.05,
+      "description": "Check each adsorption energy against the paper-reported value with absolute tolerance 0.05 eV."
+    },
+    {
+      "id": "step4_diffusion_barriers",
+      "output_file": "diffusion_barriers.json",
+      "weight": 0.5,
+      "kind": "numeric_tolerance",
+      "target_values": {
+        "Ti3C2O2_barrier": 0.36,
+        "Ti3C2O1.75F0.25_barrier": 0.34,
+        "Ti3C2O1.75(OH)0.25_barrier": 0.43
+      },
+      "tolerance": 0.05,
+      "description": "Check each diffusion barrier against the paper-reported value with absolute tolerance 0.05 eV."
+    }
+  ]
+}

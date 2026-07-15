@@ -1,0 +1,209 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Quantities are DFT-computed binding energies and diffusion barriers; verifier cannot re-run DFT, therefore compares agent-reported values to paper-reported key values with tolerances and verifies structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies.csv": "reference_match",
+    "diffusion_barriers.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ion",
+            "c_A",
+            "site",
+            "binding_energy_eV"
+          ]
+        },
+        "description": "Binding energies of Li, Na, Mg intercalated in 2H-MoS2 at octahedral and tetrahedral sites for various interlayer spacings (lattice constant c)."
+      },
+      {
+        "file": "diffusion_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ion",
+            "c_A",
+            "barrier_eV",
+            "start_site",
+            "end_site",
+            "reference_site"
+          ]
+        },
+        "description": "Diffusion energy barriers for Li, Na, Mg migration between Oh and Th sites in 2H-MoS2 at selected interlayer spacings."
+      }
+    ],
+    "notes": "The checker compares computed binding energies and diffusion barriers to hidden reference values with appropriate tolerances and verifies structural trends (monotonic decrease with c, minimum barrier for Li, similarity of Na/Mg barriers, etc.)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported binding energies and diffusion barriers for key (ion, c, site) points used as numeric comparison targets.",
+      "source_provenance": "Paper text (results section and discussion) and supporting information tables S1/S2 as referenced in the paper.",
+      "generation_method": "Extracted directly from the paper's reported numbers in the main text and figures.",
+      "why_not_fabricated": "Values are the paper's own published results, ensuring the hidden gold is the genuine target the reproduction aims to match."
+    }
+  ],
+  "steps": [
+    {
+      "id": "binding_key_values",
+      "output_file": "binding_energies.csv",
+      "weight": 0.1,
+      "kind": "key_value_compare",
+      "params": {
+        "key_cols": [
+          "ion",
+          "c_A",
+          "site"
+        ],
+        "value_col": "binding_energy_eV",
+        "gold": [
+          {
+            "ion": "Li",
+            "c_A": 12.0,
+            "site": "Oh",
+            "value": -2.42,
+            "tolerance": 0.2
+          },
+          {
+            "ion": "Li",
+            "c_A": 14.0,
+            "site": "Oh",
+            "value": -2.57,
+            "tolerance": 0.2
+          },
+          {
+            "ion": "Li",
+            "c_A": 24.0,
+            "site": "Oh",
+            "value": -1.83,
+            "tolerance": 0.2
+          },
+          {
+            "ion": "Li",
+            "c_A": 24.0,
+            "site": "Th",
+            "value": -1.94,
+            "tolerance": 0.2
+          },
+          {
+            "ion": "Na",
+            "c_A": 12.0,
+            "site": "Oh",
+            "value": -0.44,
+            "tolerance": 0.2
+          },
+          {
+            "ion": "Mg",
+            "c_A": 12.0,
+            "site": "Oh",
+            "value": -0.87,
+            "tolerance": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "binding_li_site_reversal",
+      "output_file": "binding_energies.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "params": {}
+    },
+    {
+      "id": "barrier_key_values",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.45,
+      "kind": "key_value_compare",
+      "params": {
+        "key_cols": [
+          "ion",
+          "c_A"
+        ],
+        "value_col": "barrier_eV",
+        "gold": [
+          {
+            "ion": "Li",
+            "c_A": 13.0,
+            "value": 0.54,
+            "tolerance": 0.1
+          },
+          {
+            "ion": "Li",
+            "c_A": 15.0,
+            "value": 0.26,
+            "tolerance": 0.1
+          },
+          {
+            "ion": "Li",
+            "c_A": 18.0,
+            "value": 0.31,
+            "tolerance": 0.1
+          },
+          {
+            "ion": "Na",
+            "c_A": 13.0,
+            "value": 1.14,
+            "tolerance": 0.15
+          },
+          {
+            "ion": "Na",
+            "c_A": 18.0,
+            "value": 0.2,
+            "tolerance": 0.15
+          },
+          {
+            "ion": "Mg",
+            "c_A": 13.0,
+            "value": 1.12,
+            "tolerance": 0.15
+          },
+          {
+            "ion": "Mg",
+            "c_A": 18.0,
+            "value": 0.22,
+            "tolerance": 0.15
+          }
+        ]
+      }
+    },
+    {
+      "id": "barrier_monotonic",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "params": {}
+    },
+    {
+      "id": "li_barrier_minimum",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "params": {}
+    },
+    {
+      "id": "mg_na_similarity",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "params": {}
+    },
+    {
+      "id": "na_mg_low_at_large_c",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "params": {}
+    }
+  ]
+}

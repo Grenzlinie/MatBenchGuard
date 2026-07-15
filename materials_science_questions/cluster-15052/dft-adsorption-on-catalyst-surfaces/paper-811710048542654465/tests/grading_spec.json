@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker recomputes E_ads from raw E_total/E_reduced/E_O2 and compares to paper gold with tolerance; also recomputes atomic O adsorption energy; bond length compared with tolerance",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_energies.json": "exact_match",
+    "O-O_bond_length.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported adsorption energies per O2 molecule (Table II, 0.25 ML), atomic O adsorption energy, and O-O bond length",
+      "source_provenance": "extracted from Table II and text of the paper (Phys. Rev. B 82, 155326)",
+      "generation_method": "direct copy from paper",
+      "why_not_fabricated": "these are the paper's own published numerical results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "configurations": "object",
+            "most_stable": "string",
+            "E_ads_atomic_O_eV": "number",
+            "E_O2": "number",
+            "E_atomic_O": "number",
+            "E_reduced": "number",
+            "E_bare": "number"
+          },
+          "description": "Adsorption energies per O2 molecule for five configurations on reduced ZnO(10-10) surface with 0.25 ML oxygen vacancy, plus atomic oxygen adsorption energy for the most stable structure."
+        },
+        "description": "Scored adsorption energies and supporting raw energies; checker recomputes from raw totals and compares to paper values with tolerance."
+      },
+      {
+        "file": "O-O_bond_length.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number representing the O–O bond length in Å for the most stable O2 adsorption configuration (structure 3e)."
+        },
+        "description": "O–O bond length of the O–O complex formed at the oxygen vacancy site."
+      }
+    ],
+    "notes": "All energies are in eV and bond lengths in Å. The checker uses the paper's reported adsorption energies and bond length as hidden gold with fixed tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_5",
+      "output_file": "adsorption_energies.json",
+      "kind": "recompute",
+      "weight": 0.8,
+      "reference_E_ads_per_O2": {
+        "3a": -1.26,
+        "3b": -1.63,
+        "3c": -1.83,
+        "3d": -1.89,
+        "3e": -2.06
+      },
+      "tolerance_abs_ads": 0.2,
+      "reference_E_ads_atomic_O": -2.11,
+      "tolerance_abs_atomic": 0.2,
+      "expected_most_stable": "3e"
+    },
+    {
+      "id": "step_6",
+      "output_file": "O-O_bond_length.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "reference_bond": 1.5,
+      "tolerance_abs": 0.1
+    }
+  ]
+}

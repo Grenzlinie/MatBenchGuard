@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "IE is recomputed from the agent's reported component energies (E_neutral, E_charged_corrected, epsilon_VBM) to verify arithmetic consistency, then compared to paper reference values with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "defect_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference defect ionization energies for V_N (donor) and C_N (acceptor) in monolayer BN",
+      "source_provenance": "Paper Table I: V_N +1 IE = 2.01 eV, C_N -1 IE = 1.39 eV",
+      "generation_method": "Extracted directly from the paper's published Table I",
+      "why_not_fabricated": "These are the exact values reported by the paper for the same system, charge state, and method; used as authoritative ground truth for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "defect",
+              "charge_state",
+              "E_neutral",
+              "E_charged_corrected",
+              "epsilon_VBM",
+              "IE"
+            ],
+            "properties": {
+              "defect": {
+                "type": "string"
+              },
+              "charge_state": {
+                "type": "integer"
+              },
+              "E_neutral": {
+                "type": "number",
+                "units": "eV"
+              },
+              "E_charged_corrected": {
+                "type": "number",
+                "units": "eV"
+              },
+              "epsilon_VBM": {
+                "type": "number",
+                "units": "eV"
+              },
+              "IE": {
+                "type": "number",
+                "units": "eV"
+              }
+            }
+          }
+        },
+        "description": "Defect ionization energies and intermediate total energies for C_N and V_N in monolayer BN computed with the charge-corrected jellium model. The verifier recomputes IE from the component energies and compares to the correct reference values."
+      }
+    ],
+    "notes": "The verifier checks internal consistency by recomputing IE from the reported component energies, then compares the IE to the expected physical values. Only the two defects C_N and V_N are required."
+  },
+  "steps": [
+    {
+      "id": "defect_results",
+      "output_file": "defect_results.json",
+      "weight": 1.0,
+      "kind": "numeric_comparison",
+      "description": "Verify internal IE consistency and compare recomputed IE to paper gold within tolerance.",
+      "gold": {
+        "V_N": 2.01,
+        "C_N": 1.39
+      },
+      "tolerance_abs": 0.2,
+      "consistency_eps": 0.0001
+    }
+  ]
+}

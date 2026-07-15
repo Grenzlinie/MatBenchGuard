@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible (full DFT CI-NEB rerun impossible in verifier); scoring relies on agent-reported values to verify required structural relations (ordering, magnitude thresholds, monotonic trend).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_formation_energies.json": "structural_audit",
+    "step_02_diffusion_barriers.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "STO": "float, eV",
+            "Sr3Ti2O7": "float, eV"
+          },
+          "optional": {
+            "Sr2TiO4": "float, eV",
+            "Sr4Ti3O10": "float, eV"
+          }
+        },
+        "description": "Oxygen vacancy formation energies (ΔH) in eV for SrTiO3 and Sr3Ti2O7 (required), and optionally for Sr2TiO4 and Sr4Ti3O10. The checker verifies structural plausibility and required relative ordering among the materials."
+      },
+      {
+        "file": "step_02_diffusion_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "STO": "float, eV",
+            "Sr3Ti2O7": "float, eV"
+          },
+          "optional": {
+            "Sr2TiO4": "float, eV",
+            "Sr4Ti3O10": "float, eV"
+          }
+        },
+        "description": "Oxygen vacancy diffusion barriers (eV) for migration along the c-axis in SrTiO3 and Sr3Ti2O7 (required), and optionally for Sr2TiO4 and Sr4Ti3O10. The checker verifies structural plausibility and required trends among the materials, including monotonicity across the n-series if provided."
+      }
+    ],
+    "notes": "The formation energies and diffusion barriers should be computed using DFT with PBE functional and open-source Quantum ESPRESSO. The checker will verify structural ordering and magnitude thresholds; no specific direction is disclosed. Absolute values may differ slightly due to different DFT implementations; scoring focuses on relative trends."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "step_01_formation_energies.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "target_policy": "structural_audit",
+      "description": "Verify formation energy ordering: Sr3Ti2O7 - STO >= 0.5 eV and positivity"
+    },
+    {
+      "id": "diffusion_barriers",
+      "output_file": "step_02_diffusion_barriers.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "target_policy": "structural_audit",
+      "description": "Verify barrier ordering: Sr3Ti2O7 - STO >= 0.3 eV; if n=1,3 present, check monotonic decrease"
+    }
+  ]
+}

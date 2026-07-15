@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_build_structures",
+    "title": "Build initial and lower-symmetry structural models",
+    "role": "process",
+    "action": "Build atomic structures for Li6SiO4XX' compositions (X,X' = F, Cl, Br, I) in the P6_3mc space group, using alternating Li3X and Li3SiO4 layers with half of B-sites occupied by halide. Then generate lower-symmetry polymorphs (P31c, P6_3, Pna2_1, Pca2_1) by displacing Li atoms off mirror planes according to the soft-mode patterns (Γ2, Γ3, Γ5, M2, M3). Also construct reference compounds Li4SiO4, LiX (X=Cl,Br,I,F) in their ground-state structures.",
+    "output_file": "",
+    "evidence": "structures_manifest.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "List of generated structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft_relax",
+    "title": "DFT geometry optimization of all structures",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for every built structure (candidates and references) using Quantum ESPRESSO with PBE functional, plane-wave cutoff ≥700 eV, k-point spacing ≤0.15 Å⁻¹. Relax atomic positions and cell until forces <0.001 eV/Å. Save final total energies for each structure.",
+    "output_file": "",
+    "evidence": "dft_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "File listing each structure name and its DFT total energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_decomposition_energies",
+    "title": "Compute decomposition energies",
+    "role": "scored",
+    "action": "For each Li6SiO4XX' composition and space group, compute decomposition energy ΔE = E(Li6SiO4XX') - [E(Li4SiO4) + E(LiX) + E(LiX')] (in meV/atom). Output a JSON file mapping the design string (e.g., 'Li6SiO4Cl2_Pna2_1') to the energy value.",
+    "output_file": "decomposition_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object mapping composition+space_group to decomposition energy in meV/atom (float).",
+    "output_schema": "{ 'composition_space_group': number }"
+  },
+  {
+    "id": "step_04_elastic_constants_calc",
+    "title": "Elastic constant calculation for ground-state Li6SiO4Cl2",
+    "role": "process",
+    "action": "Using the DFT-optimized Li6SiO4Cl2 structure in the Pna2_1 space group, perform finite-difference phonon calculations (displacement 0.01 Å) to obtain the elastic stiffness matrix. Compute bulk modulus B and shear modulus G via the Voigt-Reuss-Hill averaging scheme.",
+    "output_file": "",
+    "evidence": "elastic_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file recording the elastic constant calculation procedure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_report_moduli",
+    "title": "Report elastic moduli",
+    "role": "scored",
+    "action": "Write the computed bulk modulus (B) and shear modulus (G) in GPa to elastic_constants.json.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'B_DFT' (float) and 'G_DFT' (float).",
+    "output_schema": "{ 'B_DFT': 53.0, 'G_DFT': 31.0 }"
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare molecular models",
+    "role": "process",
+    "action": "Build initial Cartesian coordinates for the three one-electron-oxidized dithiolate radicals [SCH2XCH2S]1- (X=CH2 (pdt), NH (dtma), O (dtme)) in two geometries: (i) relaxed – starting from standard bond lengths for gas-phase optimization; (ii) fixed – geometries extracted from the crystal structures of the corresponding [2Fe] biomimetic complexes (res_03, res_04, res_05) by removing the iron and carbonyl groups and adding the missing hydrogen atoms, then fixing all non-hydrogen atoms at the crystallographic positions.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate six molecular models: three ligands × two geometries.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT geometry optimization of relaxed free radicals",
+    "role": "process",
+    "action": "Perform gas-phase geometry optimization of each free dithiolate radical (pdt, dtma, dtme) using DFT with BP86/TZVP or an equivalent functional (e.g., PBE/def2-TZVP) to obtain fully relaxed structures.",
+    "output_file": "",
+    "evidence": "relaxed_geometries.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimize the three relaxed radical geometries; the structures are needed for the subsequent single-point and CASSCF steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Single-point DFT calculations for all six ligand/geometry combinations",
+    "role": "process",
+    "action": "Run single-point DFT calculations (BP86/TZVP or equivalent) for each of the six ligand/geometry combinations (pdt relaxed, pdt fixed, dtma relaxed, dtma fixed, dtme relaxed, dtme fixed). Use the optimized relaxed coordinates from step_02 and the fixed coordinates from step_01. The calculations must produce wavefunction or electron density files suitable for QTAIM analysis.",
+    "output_file": "",
+    "evidence": "single_point_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate Kohn-Sham wavefunction / electron density for all six conditions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "QTAIM atomic spin density integration",
+    "role": "process",
+    "action": "For each of the six conditions, use a QTAIM tool (Multiwfn or AIMAll) to perform basin integration of the total electron density from step_03. Obtain the integrated atomic spin density (in electrons) on the bridgehead atom (C, N, O) and the sum of spin densities on the two sulfur atoms.",
+    "output_file": "",
+    "evidence": "aim_integration.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Integrate spin densities for bridgehead and sulfur atoms for all six cases.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Write free ligand spin densities CSV",
+    "role": "scored",
+    "action": "Compile the integrated spin densities from step_04 into a CSV file. Each row must contain the ligand identifier (pdt, dtma, or dtme), the geometry type (relaxed or fixed), the bridgehead atomic spin density (in e), and the total sulfur atomic spin density (in e).",
+    "output_file": "free_ligand_spin_densities.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with spin densities for six conditions; the bridgehead and sulfur values must match the paper's Table 1 within tolerances.",
+    "output_schema": "Header: ligand, geometry, bridgehead_spin_density_e, sulfur_spin_density_e. Each row corresponds to one ligand/geometry combination."
+  },
+  {
+    "id": "step_06",
+    "title": "CASSCF(13,17) calculation for dtma radical",
+    "role": "process",
+    "action": "For the dtma radical ([SCH2NHCH2S]1-) in both relaxed and fixed geometries, run CASSCF with an active space of 13 orbitals (four S–C σ/σ*, four C–N σ/σ*, four S lone pairs, one N lone pair) containing 17 electrons. Use the geometries obtained in step_02 (relaxed) and step_01 (fixed). Converge the calculation and obtain the natural orbital occupation numbers.",
+    "output_file": "",
+    "evidence": "casscf_occupation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Run CASSCF on dtma to validate the single-reference DFT picture.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Write CASSCF mixing values JSON",
+    "role": "scored",
+    "action": "From the CASSCF one-electron density matrix of step_06, compute the maximum deviation from integer occupation (2 or 0) for any active orbital (the largest occupied–virtual mixing). Report this value for the relaxed and for the fixed geometry in a JSON file.",
+    "output_file": "casdtma_mixing.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with the maximal occupied–virtual mixing populations in electrons.",
+    "output_schema": "Keys: \"relaxed_max_mixing\" (float, e), \"fixed_max_mixing\" (float, e)."
+  }
+]

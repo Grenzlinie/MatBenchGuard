@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build bulk crystal structure",
+    "role": "process",
+    "action": "Construct the unit cell for bulk Zr2VGa in the CuHg2Ti-type structure (space group F-43m) with atomic positions Zr(1) (0,0,0), Zr(2) (0.25,0.25,0.25), V (0.5,0.5,0.5), Ga (0.75,0.75,0.75).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Determine equilibrium lattice parameter",
+    "role": "process",
+    "action": "Perform spin-polarized DFT-GGA energy-volume scans on the bulk Zr2VGa cell to locate the minimum total energy, determining the equilibrium lattice constant.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute bulk electronic and magnetic properties",
+    "role": "scored",
+    "action": "At the equilibrium lattice constant from step_02, run a self-consistent field calculation (spin-polarized) followed by a non-self-consistent density-of-states calculation. Extract the majority-spin band gap at the Fermi level, the total spin magnetic moment, and the atomic magnetic moments for Zr(1), Zr(2), V, and Ga. Save these values to bulk_properties.json.",
+    "output_file": "bulk_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bulk half-metallic properties of Zr2VGa: equilibrium lattice constant, majority-spin band gap, total and atomic magnetic moments.",
+    "output_schema": "JSON object with keys: equilibrium_lattice_constant_A (float), bulk_band_gap_majority_eV (float), total_magnetic_moment_mu_B (float), atomic_magnetic_moments (object with keys Zr1, Zr2, V, Ga as floats)."
+  },
+  {
+    "id": "step_04",
+    "title": "Construct surface slab models",
+    "role": "process",
+    "action": "Build symmetric slab models for all seven surface terminations (Zr(1)-, Zr(2)-, V-, Ga-terminated (111); Zr(1)V- and Zr(2)Ga-terminated (001); Zr(1)Zr(2)VGa-terminated (110)). Use the equilibrium lattice constant from step_02, the layer counts specified in the paper (19 layers for (111), 13 for (001), 9 for (110)), and add at least 15 Å vacuum on both sides. Slab geometries must reflect the paper’s description of layer composition (one atom per layer for (111), two atoms per layer for (001), four atoms per layer for (110)).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Relax surfaces and compute relaxation/displacement and magnetic properties",
+    "role": "scored",
+    "action": "For each slab from step_04, fix the bottom layers and relax the top four atomic layers using spin-polarized DFT. After relaxation, compute the interlayer spacing displacements (ΔZ in Å) for the surface–subsurface atom pairs specified in the paper’s Table 1, and the atomic magnetic moments (in μ_B) for surface and subsurface atoms as listed in Table 2. Verify that no spin channel displays a band gap at the Fermi level for any termination (i.e., half-metallicity is destroyed). Write all results, keyed by termination, to surface_results.json.",
+    "output_file": "surface_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Surface relaxation displacements and magnetic moments for all seven terminations, plus confirmation that half-metallicity is absent at every surface.",
+    "output_schema": "JSON object keyed by termination string (e.g., 'Zr1_ter_111', 'Zr2_ter_111', 'V_ter_111', 'Ga_ter_111', 'Zr1V_ter_001', 'Zr2Ga_ter_001', 'Zr1Zr2VGa_110'). Each value is an object with: relaxation_displacements_A (list of floats, interlayer displacement values as in Table 1), atomic_magnetic_moments_mu_B (list of floats for surface and subsurface atoms), half_metallic (boolean, must be false for all)."
+  }
+]

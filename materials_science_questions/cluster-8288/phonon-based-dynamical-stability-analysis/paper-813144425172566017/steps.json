@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step-geom-opt",
+    "title": "Geometry optimization of chalcopyrite structures",
+    "role": "process",
+    "action": "Perform DFT geometry relaxation for the tetragonal I-42d chalcopyrite phase of BeSiP₂, MgSiP₂, CdSiP₂, ZnSiP₂, and HgSiP₂ to obtain equilibrium lattice parameters and atomic positions.",
+    "output_file": "",
+    "evidence": "relaxation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimize the crystal structures of all five compounds in the chalcopyrite space group using DFT (PAW PBE) with adequate k-point mesh and energy cutoff. The relaxed structures are the foundation for subsequent elastic, phonon, and equation-of-state calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-elastic",
+    "title": "Single-crystal elastic constants",
+    "role": "scored",
+    "action": "Calculate the elastic stiffness tensor C_ij for the chalcopyrite phase of each compound by applying small finite strains to the relaxed structure, computing stress, and fitting Hooke's law.",
+    "output_file": "step_01_elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produce a JSON array of objects, each with keys: compound (string), C11, C12, C13, C33, C44, C66 (all float, GPa). One object per compound.",
+    "output_schema": "Array of objects: {compound: string, C11: number, C12: number, C13: number, C33: number, C44: number, C66: number}"
+  },
+  {
+    "id": "step-phonon",
+    "title": "Phonon dynamical stability",
+    "role": "scored",
+    "action": "Compute phonon dispersion for the relaxed chalcopyrite phase using DFPT with a supercell via PHONOPY. Assess dynamical stability by checking for imaginary modes (negative squared frequency).",
+    "output_file": "step_02_phonon_stability.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Output a single JSON object with keys: stable (boolean: true if no imaginary modes), min_squared_frequency (float, THz²; the smallest squared frequency; must be >= 0 for stability).",
+    "output_schema": "Object: {stable: boolean, min_squared_frequency: number} (unit THz²)"
+  },
+  {
+    "id": "step-poly",
+    "title": "Polycrystalline moduli (VRH averages)",
+    "role": "scored",
+    "action": "From the single-crystal elastic constants, compute polycrystalline bulk modulus B_VRH, shear modulus G_VRH, Young's modulus Y_VRH, and Poisson's ratio ν_VRH using Voigt–Reuss–Hill averaging.",
+    "output_file": "step_03_polycrystalline_moduli.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produce a JSON array of objects, each with keys: compound (string), B_VRH, G_VRH, Y_VRH (float, GPa), Poisson_VRH (float, dimensionless). One object per compound.",
+    "output_schema": "Array of objects: {compound: string, B_VRH: number, G_VRH: number, Y_VRH: number, Poisson_VRH: number}"
+  },
+  {
+    "id": "step-aniso",
+    "title": "Elastic anisotropy extremes",
+    "role": "scored",
+    "action": "Calculate the elastic compliance tensor S, then compute directional Young's modulus and linear compressibility as functions of direction (θ,φ) and extract the minimum and maximum values for each compound.",
+    "output_file": "step_05_anisotropy_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Output a JSON array of objects, each with keys: compound (string), Y_min, Y_max (float, GPa), beta_min, beta_max (float, TPa⁻¹). These represent the extremes of the directional Young's modulus and linear compressibility surfaces.",
+    "output_schema": "Array of objects: {compound: string, Y_min: number, Y_max: number, beta_min: number, beta_max: number}"
+  },
+  {
+    "id": "step-ev-scan",
+    "title": "Total energy vs volume curves for all phases",
+    "role": "process",
+    "action": "Perform a series of DFT total energy calculations at multiple fixed volumes for the chalcopyrite (I-42d), orthorhombic (Pna2₁), and cubic (Fm-3m) phases of each compound, relaxing internal coordinates at each volume. Obtain E(V) data for subsequent phase transition analysis.",
+    "output_file": "",
+    "evidence": "ev_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produce a structure (e.g., JSON) containing for each compound and phase the volume and total energy pairs. This intermediate is used to compute phase transition pressures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-transition",
+    "title": "Phase transition pressures",
+    "role": "scored",
+    "action": "From the E(V) data, compute enthalpies H = E + pV and determine the crossing pressures for the I-42d → Pna2₁ and I-42d → Fm-3m transitions for each compound.",
+    "output_file": "step_04_transition_pressures.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Output a JSON array of objects, each with keys: compound (string), Pt_I42d_Pna21 (float, GPa), Pt_I42d_Fm3m (float, GPa). One object per compound.",
+    "output_schema": "Array of objects: {compound: string, Pt_I42d_Pna21: number, Pt_I42d_Fm3m: number}"
+  }
+]

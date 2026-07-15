@@ -1,0 +1,590 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level comparison against paper-reported LDA values because full DFT recompute in the verifier sandbox is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eos_data.json": "exact_match",
+    "structural_data.json": "exact_match",
+    "band_gap.json": "exact_match",
+    "phonon_frequencies.json": "exact_match",
+    "transition_pressure.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference LDA values (binding energies, volumes, bulk moduli, derivatives, lattice constants, internal coordinates, band gaps, phonon frequencies, transition pressure) from the paper.",
+      "source_provenance": "Paper Tables II, III, V and the main text (transition pressure).",
+      "generation_method": "Manually extracted from the published Physical Review B article.",
+      "why_not_fabricated": "Directly taken from the paper's reported results, verifiable against the PDF."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eos_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "beta",
+            "gamma"
+          ],
+          "beta": {
+            "type": "object",
+            "properties": {
+              "E0": "number (eV/atom)",
+              "V0": "number (Å³/atom)",
+              "K": "number (GPa)",
+              "K_prime": "number (dimensionless)"
+            }
+          },
+          "gamma": {
+            "type": "object",
+            "properties": {
+              "E0": "number (eV/atom)",
+              "V0": "number (Å³/atom)",
+              "K": "number (GPa)",
+              "K_prime": "number (dimensionless)"
+            }
+          }
+        },
+        "description": "Birch-Murnaghan EOS parameters (E0, V0, K, K') for beta and gamma phases."
+      },
+      {
+        "file": "structural_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "beta",
+            "gamma"
+          ],
+          "beta": {
+            "type": "object",
+            "properties": {
+              "lattice_constants": {
+                "type": "object",
+                "properties": {
+                  "a": "number (Å)",
+                  "c": "number (Å)"
+                }
+              },
+              "internal_coordinates": {
+                "type": "array",
+                "items": {
+                  "atom": "string",
+                  "site_label": "string",
+                  "x": "number",
+                  "y": "number",
+                  "z": "number"
+                }
+              }
+            }
+          },
+          "gamma": {
+            "type": "object",
+            "properties": {
+              "lattice_constants": {
+                "type": "object",
+                "properties": {
+                  "a": "number (Å)"
+                }
+              },
+              "internal_coordinates": {
+                "type": "array",
+                "items": {
+                  "atom": "string",
+                  "site_label": "string",
+                  "x": "number",
+                  "y": "number",
+                  "z": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Optimized zero-pressure crystal structures (lattice constants and fractional internal coordinates)."
+      },
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "beta",
+            "gamma"
+          ],
+          "beta": {
+            "LDA_gap": "number (eV)"
+          },
+          "gamma": {
+            "LDA_gap": "number (eV)"
+          }
+        },
+        "description": "LDA direct band gap at Gamma for beta and gamma phases."
+      },
+      {
+        "file": "phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "beta",
+            "gamma"
+          ],
+          "beta": {
+            "type": "array",
+            "items": {
+              "frequency_cm-1": "number",
+              "symmetry_label": "string",
+              "ir_active": "boolean",
+              "raman_active": "boolean"
+            }
+          },
+          "gamma": {
+            "type": "array",
+            "items": {
+              "frequency_cm-1": "number",
+              "symmetry_label": "string",
+              "ir_active": "boolean",
+              "raman_active": "boolean"
+            }
+          }
+        },
+        "description": "Gamma-point phonon frequencies and symmetries for beta and gamma phases."
+      },
+      {
+        "file": "transition_pressure.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "content": "single GPa value"
+        },
+        "description": "Beta→gamma equilibrium phase transition pressure in GPa."
+      }
+    ],
+    "notes": "All scored artifacts are compared to the paper’s LDA results with appropriate hidden tolerances. The structural_data step is marked load-bearing to ensure actual DFT geometry optimizations are performed."
+  },
+  "steps": [
+    {
+      "id": "step03_eos_fit",
+      "output_file": "eos_data.json",
+      "weight": 0.2,
+      "check_type": "eos_field_comparison",
+      "gold": {
+        "beta": {
+          "E0": -7.627,
+          "V0": 12.053,
+          "K": 185,
+          "K_prime": 3.7
+        },
+        "gamma": {
+          "E0": -7.577,
+          "V0": 9.73,
+          "K": 240,
+          "K_prime": 4.5
+        }
+      },
+      "tolerances": {
+        "E0": 0.01,
+        "V0": 0.1,
+        "K": 10,
+        "K_prime": 0.5
+      }
+    },
+    {
+      "id": "step04_structural",
+      "output_file": "structural_data.json",
+      "weight": 0.35,
+      "check_type": "structural_comparison",
+      "gold": {
+        "beta": {
+          "lattice_constants": {
+            "a": 7.987,
+            "c": 3.054
+          },
+          "internal_coordinates": [
+            {
+              "atom": "Ge",
+              "site_label": "6h",
+              "coords": [
+                0.1696,
+                0.7628,
+                0.25
+              ]
+            },
+            {
+              "atom": "N",
+              "site_label": "6h",
+              "coords": [
+                0.3304,
+                0.0257,
+                0.25
+              ]
+            },
+            {
+              "atom": "N",
+              "site_label": "2c",
+              "coords": [
+                0.3333333333333333,
+                0.6666666666666666,
+                0.25
+              ]
+            }
+          ]
+        },
+        "gamma": {
+          "lattice_constants": {
+            "a": 8.1676
+          },
+          "internal_coordinates": [
+            {
+              "atom": "Ge",
+              "site_label": "8a",
+              "coords": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "atom": "Ge",
+              "site_label": "16d",
+              "coords": [
+                0.625,
+                0.625,
+                0.625
+              ]
+            },
+            {
+              "atom": "N",
+              "site_label": "32e",
+              "coords": [
+                0.133,
+                0.133,
+                0.133
+              ]
+            }
+          ]
+        }
+      },
+      "tolerances": {
+        "lattice": {
+          "a": 0.005,
+          "c": 0.005
+        },
+        "coordinate": 0.002
+      }
+    },
+    {
+      "id": "step05_band_gap",
+      "output_file": "band_gap.json",
+      "weight": 0.15,
+      "check_type": "bandgap_comparison",
+      "gold": {
+        "beta": 2.45,
+        "gamma": 2.17
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "step06_phonon",
+      "output_file": "phonon_frequencies.json",
+      "weight": 0.2,
+      "check_type": "phonon_comparison",
+      "gold_beta": [
+        {
+          "symmetry_label": "A_u",
+          "frequency_cm-1": 0,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_1u",
+          "frequency_cm-1": 0,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_2g",
+          "frequency_cm-1": 106,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "A_g",
+          "frequency_cm-1": 108,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_1g",
+          "frequency_cm-1": 129,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "B_u",
+          "frequency_cm-1": 137,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_2u",
+          "frequency_cm-1": 169,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "B_g",
+          "frequency_cm-1": 172,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "A_u",
+          "frequency_cm-1": 247,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "B_g",
+          "frequency_cm-1": 254,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_1u",
+          "frequency_cm-1": 271,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_2g",
+          "frequency_cm-1": 275,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "B_u",
+          "frequency_cm-1": 306,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "A_g",
+          "frequency_cm-1": 309,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_1u",
+          "frequency_cm-1": 339,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "B_u",
+          "frequency_cm-1": 365,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_2g",
+          "frequency_cm-1": 373,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "A_g",
+          "frequency_cm-1": 443,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "A_u",
+          "frequency_cm-1": 703,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_1g",
+          "frequency_cm-1": 721,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_2u",
+          "frequency_cm-1": 735,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_1u",
+          "frequency_cm-1": 739,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "B_g",
+          "frequency_cm-1": 753,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "A_g",
+          "frequency_cm-1": 781,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_2g",
+          "frequency_cm-1": 791,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_1u",
+          "frequency_cm-1": 878,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_2g",
+          "frequency_cm-1": 878,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "B_u",
+          "frequency_cm-1": 896,
+          "ir_active": false,
+          "raman_active": false
+        }
+      ],
+      "gold_gamma": [
+        {
+          "symmetry_label": "T_1u",
+          "frequency_cm-1": 0,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_2u",
+          "frequency_cm-1": 153,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_1u",
+          "frequency_cm-1": 224,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_2g",
+          "frequency_cm-1": 245,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "E_u",
+          "frequency_cm-1": 245,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_1u",
+          "frequency_cm-1": 406,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_1g",
+          "frequency_cm-1": 453,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "A_2u",
+          "frequency_cm-1": 455,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_g",
+          "frequency_cm-1": 467,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "T_1u",
+          "frequency_cm-1": 475,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_2u",
+          "frequency_cm-1": 535,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_2g",
+          "frequency_cm-1": 576,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "T_1u",
+          "frequency_cm-1": 656,
+          "ir_active": true,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "E_u",
+          "frequency_cm-1": 667,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "T_2g",
+          "frequency_cm-1": 710,
+          "ir_active": false,
+          "raman_active": true
+        },
+        {
+          "symmetry_label": "A_2u",
+          "frequency_cm-1": 806,
+          "ir_active": false,
+          "raman_active": false
+        },
+        {
+          "symmetry_label": "A_1g",
+          "frequency_cm-1": 830,
+          "ir_active": false,
+          "raman_active": true
+        }
+      ],
+      "tolerance_freq": 10
+    },
+    {
+      "id": "step07_transition",
+      "output_file": "transition_pressure.txt",
+      "weight": 0.1,
+      "check_type": "transition_pressure_comparison",
+      "gold": 3.7,
+      "tolerance": 5.0
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the agreement metrics (fraction of frequencies within tolerance, Debye temperature errors) from the submitted tabulated artifacts against hidden reference values, which is the strongest feasible tier for a compute‑driven reproduction of a full phonon simulation.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Phonon frequency gold values at high-symmetry points for scoring frequencies.csv",
+      "source_provenance": "These are the computed frequencies from the paper’s five‑parameter model for α‑Sn, consistent with the dispersion curves in Fig. 1. The model inputs (elastic constants and zone‑boundary frequencies) are from Price et al. (1971).",
+      "generation_method": "Values taken from the reference solution solve.sh, which implements the correct model output for the diamond structure of α‑Sn using the fitted parameters, and verified to match the paper’s dispersion.",
+      "why_not_fabricated": "They are the actual numerical results of the paper’s model; the agent’s task is to reproduce them."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Debye temperature reference points for scoring debye_temperatures.csv",
+      "source_provenance": "Correspond to the Debye temperature curve in Fig. 3 of the paper, derived from the density of states and compared to Hill & Parkinson (1952).",
+      "generation_method": "Extracted from solve.sh, which embodies the correct computed θD(T) relation based on the five‑parameter model and Blackman’s sampling technique.",
+      "why_not_fabricated": "They represent the paper’s calculated Debye temperatures, a verifiable quantity."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Compressibility gold value for scoring compressibility.txt",
+      "source_provenance": "The paper states: 'compressibility (χ) comes out to be 1.76×10⁻¹² cm²/dyne' from the Brout sum rule.",
+      "generation_method": "Taken directly from the paper text.",
+      "why_not_fabricated": "This is the paper’s reported compressibility value."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q_point",
+            "branch_label",
+            "frequency"
+          ],
+          "columns": {
+            "q_point": "string",
+            "branch_label": "string",
+            "frequency": {
+              "type": "number",
+              "unit": "THz"
+            }
+          }
+        },
+        "description": "Phonon frequencies at high-symmetry points Γ, X, L, K for the six branches of α‑Sn."
+      },
+      {
+        "file": "dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "freq_low",
+            "freq_high",
+            "g_nu"
+          ],
+          "columns": {
+            "freq_low": {
+              "type": "number",
+              "unit": "THz"
+            },
+            "freq_high": {
+              "type": "number",
+              "unit": "THz"
+            },
+            "g_nu": {
+              "type": "number",
+              "unit": "states/THz"
+            }
+          }
+        },
+        "description": "Phonon density of states histogram g(ν) for α‑Sn. Integral over the histogram should be approximately 6 (the total number of phonon branches)."
+      },
+      {
+        "file": "debye_temperatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "theta_D"
+          ],
+          "columns": {
+            "T": {
+              "type": "number",
+              "unit": "K"
+            },
+            "theta_D": {
+              "type": "number",
+              "unit": "K"
+            }
+          }
+        },
+        "description": "Debye characteristic temperature θD of α‑Sn as a function of temperature from 10 K to 300 K."
+      },
+      {
+        "file": "compressibility.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "content": "A single line containing a float representing the compressibility χ in units of 10^{-12} cm^2/dyne."
+        },
+        "description": "Compressibility of α‑Sn computed from the Brout sum rule using the full phonon spectrum."
+      }
+    ],
+    "notes": "All scored outputs are derived from the same underlying phonon eigenfrequency spectrum. The agent must implement the five‑parameter model and perform the eigenfrequency calculation; the process steps are not scored directly but are enforced by the load‑bearing scored steps (frequencies and compressibility)."
+  },
+  "steps": [
+    {
+      "id": "frequencies_check",
+      "output_file": "frequencies.csv",
+      "weight": 0.5,
+      "params": {
+        "tolerance": 0.5,
+        "gold_table": {
+          "Γ/TA1": 0.0,
+          "Γ/TA2": 0.0,
+          "Γ/LA": 0.0,
+          "Γ/TO1": 5.5,
+          "Γ/TO2": 5.5,
+          "Γ/LO": 5.5,
+          "X/TA1": 1.25,
+          "X/TA2": 1.25,
+          "X/LA": 4.67,
+          "X/TO1": 5.51,
+          "X/TO2": 5.51,
+          "X/LO": 4.67,
+          "L/TA1": 1.0,
+          "L/TA2": 1.0,
+          "L/LA": 4.0,
+          "L/TO1": 5.0,
+          "L/TO2": 5.0,
+          "L/LO": 5.3,
+          "K/TA1": 1.5,
+          "K/TA2": 1.5,
+          "K/LA": 4.2,
+          "K/TO1": 5.1,
+          "K/TO2": 5.1,
+          "K/LO": 5.4
+        }
+      }
+    },
+    {
+      "id": "dos_check",
+      "output_file": "dos.csv",
+      "weight": 0.1,
+      "params": {}
+    },
+    {
+      "id": "debye_check",
+      "output_file": "debye_temperatures.csv",
+      "weight": 0.2,
+      "params": {
+        "tolerance": 10.0,
+        "target_points": [
+          [
+            10.0,
+            230.0
+          ],
+          [
+            50.0,
+            215.0
+          ],
+          [
+            110.0,
+            198.0
+          ],
+          [
+            150.0,
+            195.0
+          ],
+          [
+            210.0,
+            196.0
+          ],
+          [
+            290.0,
+            206.0
+          ]
+        ]
+      }
+    },
+    {
+      "id": "compressibility_check",
+      "output_file": "compressibility.txt",
+      "weight": 0.2,
+      "params": {
+        "tolerance_rel": 0.2,
+        "expected": 1.76
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All required quantities (disappearance temperatures, dominant phase, gas presence) can be recomputed directly from the agent's equilibrium_composition.csv grid; no hidden labels are needed.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "equilibrium_composition.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold acceptance windows for disappearance temperatures, dominant iron phase, and gas presence criteria derived from the paper's reported trends",
+      "source_provenance": "Paper: Fig.5, text 'silica transfers to a gaseous state within the temperature range of 2750-3400 K', 'Al2O3 being condensed', 'Fe3O4' listed as a condensed product, and the explicit modeling of SiO2(g) and AlO(g) above 3000 K.",
+      "generation_method": "Extracted directly from the paper's quantitative statements; the windows are relaxed slightly to absorb toolchain spread (e.g., ±100 K tolerance around the stated interval).",
+      "why_not_fabricated": "No synthetic labels or invented holdouts are used; the criteria are the paper's own conditions that any correct reproduction must satisfy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equilibrium_composition.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "SiO2(s)",
+            "Al2O3(s)",
+            "Fe2O3(s)",
+            "Fe3O4(s)",
+            "SiO2(g)",
+            "AlO(g)"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "SiO2(s)": "mass fraction (dimensionless)",
+            "Al2O3(s)": "mass fraction (dimensionless)",
+            "Fe2O3(s)": "mass fraction (dimensionless)",
+            "Fe3O4(s)": "mass fraction (dimensionless)",
+            "SiO2(g)": "mass fraction (dimensionless)",
+            "AlO(g)": "mass fraction (dimensionless)"
+          }
+        },
+        "description": "Equilibrium mass fraction grid vs. temperature. The verifier recomputes the paper's key phase transition temperatures (condensed SiO2 disappearance, Al2O3 disappearance), identifies the dominant iron condensed phase above 2000 K, and checks presence of gaseous SiO2 and AlO above 3000 K."
+      }
+    ],
+    "notes": "Only the CSV file is scored. The process evidence files (input_summary.json, raw_equilibrium_data.npy) are not checked. Ignition loss (3.48%) may be excluded or interpreted by the agent; the scoring criteria are robust to that choice."
+  },
+  "steps": [
+    {
+      "id": "equilibrium_metrics",
+      "output_file": "equilibrium_composition.csv",
+      "weight": 1.0,
+      "kind": "phase_analysis",
+      "description": "Recompute phase transition temperatures and species presence from the equilibrium grid and compare to paper criteria",
+      "sio2_disappear_range": [
+        2750,
+        3400
+      ],
+      "al2o3_disappear_min": 3400,
+      "dominant_iron_phase_expected": "Fe3O4",
+      "gas_present_epsilon": 1e-09,
+      "sub_weights": {
+        "sio2_disappear": 0.25,
+        "al2o3_disappear": 0.25,
+        "dominant_iron": 0.2,
+        "sio2_gas_present": 0.15,
+        "alo_gas_present": 0.15
+      }
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline quantities (ΔΣ_Al−L, activation energies) are outputs of DFT simulations; the checker cannot re-run the simulations. We compare the agent's reported results to the paper's reference values with tolerances and required trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "delta_sigma_al_l.csv": "reference_match",
+    "activation_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for delta_sigma_Al_L (Å)",
+      "source_provenance": "Table 3 of the paper (Phys. Chem. Chem. Phys., 2014, 16, 10566)",
+      "generation_method": "Extracted from paper Table 3: 0F=0.831, F_inter=1.104, F_intra=1.050 Å.",
+      "why_not_fabricated": "These are the exact reported numbers from the paper's computational results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for activation energy barriers (kJ/mol)",
+      "source_provenance": "Fig. 3 of the paper and associated narrative; approximate values for mono‑fluoridated clusters.",
+      "generation_method": "Estimated from Fig. 3: 0F ≈ 45.5, F_inter ≈ 52.8, F_intra ≈ 50.1 kJ/mol. Tolerance ±10 kJ/mol absorbs estimation error and code/basis set differences.",
+      "why_not_fabricated": "Derived from the paper's published Figure 3, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_sigma_al_l.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "delta_sigma_Al_L"
+          ],
+          "units": {
+            "delta_sigma_Al_L": "Å"
+          }
+        },
+        "description": "Total metal-ligand distance change ΔΣ_Al-L for the reactant-to-TS water exchange. All values must be positive (dissociative mechanism) and the fluoridated clusters (F_inter, F_intra) must show larger ΔΣ_Al-L than the non-fluoridated cluster (0F)."
+      },
+      {
+        "file": "activation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "activation_energy_kJmol"
+          ],
+          "units": {
+            "activation_energy_kJmol": "kJ/mol"
+          }
+        },
+        "description": "Electronic activation energy barriers for water exchange. The barriers for fluoridated clusters (F_inter, F_intra) must be greater than for the non-fluoridated cluster (0F)."
+      }
+    ],
+    "notes": "The agent must construct the K-Al13 structures from public knowledge; no pre-built coordinates are provided. All DFT calculations should use an open-source code such as ORCA, NWChem, or PySCF."
+  },
+  "steps": [
+    {
+      "id": "step_03_delta_sigma_al_l",
+      "output_file": "delta_sigma_al_l.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "gold": {
+        "0F": 0.831,
+        "F_inter": 1.104,
+        "F_intra": 1.05
+      },
+      "tolerance": 0.05,
+      "description": "Check positivity (all >0), trend (F_inter > 0F, F_intra > 0F), and closeness to paper values."
+    },
+    {
+      "id": "step_04_activation_energies",
+      "output_file": "activation_energies.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "gold": {
+        "0F": 45.5,
+        "F_inter": 52.8,
+        "F_intra": 50.1
+      },
+      "tolerance": 10.0,
+      "description": "Check trend (F_inter > 0F, F_intra > 0F) and closeness to paper energy barriers."
+    }
+  ]
+}

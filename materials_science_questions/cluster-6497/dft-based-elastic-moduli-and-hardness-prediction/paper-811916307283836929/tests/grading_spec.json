@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Recomputing from raw E-V DFT data is infeasible in the verifier sandbox; result-level comparison with tolerances is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "fitted_properties.json": "reference_match",
+    "dos_at_fermi.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for lattice constants, cohesive energies, volumes, bulk moduli, pressure derivatives, and DOS at EF for the five TaN phases.",
+      "source_provenance": "Paper Tables 1 and 2",
+      "generation_method": "Extracted from the paper and hardcoded inline in grading_spec.json",
+      "why_not_fabricated": "These are the exact published values from the paper that the reproduction should match qualitatively."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fitted_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CoSn",
+            "WC",
+            "CsCl",
+            "ZnS_B3",
+            "NaCl"
+          ],
+          "items": {
+            "a": "number (Å)",
+            "c": "number or null (Å)",
+            "E0": "number (eV per TaN f.u.)",
+            "V0": "number (Å³ per TaN f.u.)",
+            "K0": "number (GPa)",
+            "K0_prime": "number (dimensionless)"
+          }
+        },
+        "description": "Equilibrium properties from Birch-Murnaghan fit for the five TaN phases."
+      },
+      {
+        "file": "dos_at_fermi.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CoSn",
+            "WC",
+            "CsCl",
+            "ZnS_B3",
+            "NaCl"
+          ],
+          "items": {
+            "CoSn": "number (states/eV per f.u.)",
+            "WC": "number (states/eV per f.u.)",
+            "CsCl": "number (states/eV per f.u.)",
+            "ZnS_B3": "number (states/eV per f.u.)",
+            "NaCl": "number (states/eV per f.u.)"
+          }
+        },
+        "description": "Total density of states at the Fermi level for each TaN phase."
+      }
+    ],
+    "notes": "The checker compares the agent's submitted fitted_properties.json and dos_at_fermi.json against hidden reference values derived from the paper's reported data, using appropriate tolerances for DFT reproducibility."
+  },
+  "steps": [
+    {
+      "id": "step_bm_fit",
+      "output_file": "fitted_properties.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "reference": {
+        "CoSn": {
+          "a": 5.221,
+          "c": 2.921,
+          "E0": -14.046,
+          "V0": 22.99,
+          "K0": 303.6,
+          "K0_prime": 4.19
+        },
+        "WC": {
+          "a": 2.913,
+          "c": 2.862,
+          "E0": -13.953,
+          "V0": 21.035,
+          "K0": 337.1,
+          "K0_prime": 4.17
+        },
+        "CsCl": {
+          "a": 2.75,
+          "c": null,
+          "E0": -12.348,
+          "V0": 20.797,
+          "K0": 307.0,
+          "K0_prime": 4.28
+        },
+        "ZnS_B3": {
+          "a": 4.753,
+          "c": null,
+          "E0": -13.042,
+          "V0": 26.845,
+          "K0": 244.2,
+          "K0_prime": 4.18
+        },
+        "NaCl": {
+          "a": 4.413,
+          "c": null,
+          "E0": -13.37,
+          "V0": 21.481,
+          "K0": 327.6,
+          "K0_prime": 4.35
+        }
+      },
+      "tolerances": {
+        "a": 0.1,
+        "c": 0.1,
+        "E0": 0.5,
+        "V0": 0.5,
+        "K0": 20.0,
+        "K0_prime": 0.5
+      }
+    },
+    {
+      "id": "step_dos_fermi",
+      "output_file": "dos_at_fermi.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "reference": {
+        "CoSn": 0.24,
+        "WC": 0.05,
+        "CsCl": 0.69,
+        "ZnS_B3": 1.39,
+        "NaCl": 0.92
+      },
+      "tolerance_abs": 0.1
+    }
+  ]
+}

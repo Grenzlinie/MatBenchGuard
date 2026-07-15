@@ -1,0 +1,439 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "RMSD/NRMSD recomputed from agent's submitted CSV against hidden experimental reference arrays; force_field_parameters validated by structural audit.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden experimental reference values for gas-phase properties (20 salts), solid densities (20 salts), liquid densities (10 salts).",
+      "source_provenance": "Gas-phase experimental r_e, D_e, ν, μ from NIST Diatomic Spectral Database and Brewer & Brackett, Chem. Rev. 1961, Veazey & Gordy, Phys. Rev. 1965. Solid densities at 298 K from Sirdeshmukh et al. 'Alkali Halides' (Springer, 2001) / CRC Handbook of Chemistry and Physics, 98th Ed. Liquid densities at Tm from Galwey, J. Therm. Anal. Calorim. 2005, 82, 23–40. These are the same experimental references used in the paper.",
+      "generation_method": "Values compiled from the standard published sources; consistent with the paper's experimental tables (SI Tables S2–S8).",
+      "why_not_fabricated": "Every value is traceable to a specific public experimental reference, and the set is complete for the required salts. The WBK computed properties in the paper yield RMSDs that meet the hidden thresholds when compared to these exact references."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "force_field_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "combining_rule",
+            "Li+",
+            "Na+",
+            "K+",
+            "Cs+",
+            "F-",
+            "Cl-",
+            "Br-",
+            "I-"
+          ],
+          "description": "JSON object containing per-ion WBK parameters and the combining rule. Each ion key maps to an object with keys sigma (float, nm), epsilon (float, kJ/mol), gamma (float, dimensionless). combining_rule must be the string 'Hogervorst'."
+        },
+        "description": "Final force field parameters for the WBK potential. Validated for structure and physically plausible ranges."
+      },
+      {
+        "file": "gas_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "salt",
+            "re_pm",
+            "De_kjmol",
+            "nu_cm1",
+            "mu_D"
+          ],
+          "units": {
+            "re_pm": "pm",
+            "De_kjmol": "kJ/mol",
+            "nu_cm1": "cm⁻¹",
+            "mu_D": "Debye"
+          },
+          "row_count": 20
+        },
+        "description": "Computed gas-phase ion-pair properties for all 20 alkali halide salts."
+      },
+      {
+        "file": "solid_density_298K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "salt",
+            "density_kgm3"
+          ],
+          "units": {
+            "density_kgm3": "kg/m³"
+          },
+          "row_count": 20
+        },
+        "description": "Room-temperature solid densities for all 20 salts."
+      },
+      {
+        "file": "liquid_density_Tm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "salt",
+            "density_kgm3"
+          ],
+          "units": {
+            "density_kgm3": "kg/m³"
+          },
+          "row_count": 10
+        },
+        "description": "Liquid densities at the melting point for the specified 10 salts."
+      }
+    ],
+    "notes": "The force_field_parameters.json step is scored via structural audit to ensure the correct format and physically reasonable parameter ranges. The gas, solid, and liquid property artifacts are scored by computing RMSD/NRMSD against hidden experimental references; meeting or beating the hidden thresholds earns full credit (threshold_or_better policy). All required experimental input data are publicly available from the sources listed in resources."
+  },
+  "steps": [
+    {
+      "id": "force_field_params_check",
+      "output_file": "force_field_parameters.json",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "params": {
+        "required_keys": [
+          "combining_rule",
+          "Li+",
+          "Na+",
+          "K+",
+          "Cs+",
+          "F-",
+          "Cl-",
+          "Br-",
+          "I-"
+        ],
+        "combining_rule_expected": "Hogervorst",
+        "ion_parameter_ranges": {
+          "sigma_nm": {
+            "min": 0.1,
+            "max": 0.4
+          },
+          "epsilon_kjmol": {
+            "min": 0.1,
+            "max": 10.0
+          },
+          "gamma": {
+            "min": 5,
+            "max": 20
+          }
+        }
+      }
+    },
+    {
+      "id": "gas_properties_check",
+      "output_file": "gas_properties.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "metric": "gas_average_nrmd",
+      "threshold": 7.0,
+      "direction": "lower_better",
+      "max_nrmd_for_zero": 30.0,
+      "hidden_gold": {
+        "gas_experimental": [
+          {
+            "salt": "LiF",
+            "re_pm": 156.4,
+            "De_kjmol": 578.0,
+            "nu_cm1": 910,
+            "mu_D": 6.3
+          },
+          {
+            "salt": "LiCl",
+            "re_pm": 202.1,
+            "De_kjmol": 477.0,
+            "nu_cm1": 641,
+            "mu_D": 7.1
+          },
+          {
+            "salt": "LiBr",
+            "re_pm": 217.0,
+            "De_kjmol": 436.0,
+            "nu_cm1": 560,
+            "mu_D": 7.3
+          },
+          {
+            "salt": "LiI",
+            "re_pm": 239.2,
+            "De_kjmol": 393.0,
+            "nu_cm1": 498,
+            "mu_D": 7.4
+          },
+          {
+            "salt": "NaF",
+            "re_pm": 193.3,
+            "De_kjmol": 483.0,
+            "nu_cm1": 536,
+            "mu_D": 8.2
+          },
+          {
+            "salt": "NaCl",
+            "re_pm": 236.1,
+            "De_kjmol": 410.0,
+            "nu_cm1": 360,
+            "mu_D": 9.0
+          },
+          {
+            "salt": "NaBr",
+            "re_pm": 250.0,
+            "De_kjmol": 373.0,
+            "nu_cm1": 298,
+            "mu_D": 9.1
+          },
+          {
+            "salt": "NaI",
+            "re_pm": 271.0,
+            "De_kjmol": 332.0,
+            "nu_cm1": 258,
+            "mu_D": 9.2
+          },
+          {
+            "salt": "KF",
+            "re_pm": 217.0,
+            "De_kjmol": 414.0,
+            "nu_cm1": 426,
+            "mu_D": 8.6
+          },
+          {
+            "salt": "KCl",
+            "re_pm": 266.8,
+            "De_kjmol": 365.0,
+            "nu_cm1": 278,
+            "mu_D": 10.3
+          },
+          {
+            "salt": "KBr",
+            "re_pm": 282.1,
+            "De_kjmol": 340.0,
+            "nu_cm1": 219,
+            "mu_D": 10.6
+          },
+          {
+            "salt": "KI",
+            "re_pm": 304.8,
+            "De_kjmol": 310.0,
+            "nu_cm1": 186,
+            "mu_D": 11.1
+          },
+          {
+            "salt": "RbF",
+            "re_pm": 227.3,
+            "De_kjmol": 389.0,
+            "nu_cm1": 373,
+            "mu_D": 8.5
+          },
+          {
+            "salt": "RbCl",
+            "re_pm": 276.7,
+            "De_kjmol": 345.0,
+            "nu_cm1": 225,
+            "mu_D": 10.5
+          },
+          {
+            "salt": "RbBr",
+            "re_pm": 293.0,
+            "De_kjmol": 325.0,
+            "nu_cm1": 176,
+            "mu_D": 10.8
+          },
+          {
+            "salt": "RbI",
+            "re_pm": 316.8,
+            "De_kjmol": 298.0,
+            "nu_cm1": 150,
+            "mu_D": 11.3
+          },
+          {
+            "salt": "CsF",
+            "re_pm": 234.0,
+            "De_kjmol": 376.0,
+            "nu_cm1": 350,
+            "mu_D": 7.9
+          },
+          {
+            "salt": "CsCl",
+            "re_pm": 290.6,
+            "De_kjmol": 336.0,
+            "nu_cm1": 210,
+            "mu_D": 10.4
+          },
+          {
+            "salt": "CsBr",
+            "re_pm": 305.0,
+            "De_kjmol": 318.0,
+            "nu_cm1": 165,
+            "mu_D": 10.6
+          },
+          {
+            "salt": "CsI",
+            "re_pm": 330.0,
+            "De_kjmol": 291.0,
+            "nu_cm1": 140,
+            "mu_D": 11.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "solid_density_check",
+      "output_file": "solid_density_298K.csv",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "metric": "solid_density_rmsd",
+      "threshold": 30.0,
+      "direction": "lower_better",
+      "max_rmsd_for_zero": 200.0,
+      "hidden_gold": {
+        "solid_experimental_densities_kgm3": [
+          {
+            "salt": "LiF",
+            "density_kgm3": 2640
+          },
+          {
+            "salt": "LiCl",
+            "density_kgm3": 2070
+          },
+          {
+            "salt": "LiBr",
+            "density_kgm3": 3460
+          },
+          {
+            "salt": "LiI",
+            "density_kgm3": 4080
+          },
+          {
+            "salt": "NaF",
+            "density_kgm3": 2558
+          },
+          {
+            "salt": "NaCl",
+            "density_kgm3": 2165
+          },
+          {
+            "salt": "NaBr",
+            "density_kgm3": 3200
+          },
+          {
+            "salt": "NaI",
+            "density_kgm3": 3670
+          },
+          {
+            "salt": "KF",
+            "density_kgm3": 2475
+          },
+          {
+            "salt": "KCl",
+            "density_kgm3": 1984
+          },
+          {
+            "salt": "KBr",
+            "density_kgm3": 2740
+          },
+          {
+            "salt": "KI",
+            "density_kgm3": 3120
+          },
+          {
+            "salt": "RbF",
+            "density_kgm3": 3730
+          },
+          {
+            "salt": "RbCl",
+            "density_kgm3": 2760
+          },
+          {
+            "salt": "RbBr",
+            "density_kgm3": 3350
+          },
+          {
+            "salt": "RbI",
+            "density_kgm3": 4050
+          },
+          {
+            "salt": "CsF",
+            "density_kgm3": 3930
+          },
+          {
+            "salt": "CsCl",
+            "density_kgm3": 3990
+          },
+          {
+            "salt": "CsBr",
+            "density_kgm3": 4440
+          },
+          {
+            "salt": "CsI",
+            "density_kgm3": 4510
+          }
+        ]
+      }
+    },
+    {
+      "id": "liquid_density_check",
+      "output_file": "liquid_density_Tm.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "metric": "liquid_density_rmsd",
+      "threshold": 80.0,
+      "direction": "lower_better",
+      "max_rmsd_for_zero": 300.0,
+      "hidden_gold": {
+        "liquid_experimental_densities_kgm3": [
+          {
+            "salt": "LiF",
+            "density_kgm3": 1800
+          },
+          {
+            "salt": "LiCl",
+            "density_kgm3": 1500
+          },
+          {
+            "salt": "NaCl",
+            "density_kgm3": 1550
+          },
+          {
+            "salt": "KF",
+            "density_kgm3": 1900
+          },
+          {
+            "salt": "KCl",
+            "density_kgm3": 1500
+          },
+          {
+            "salt": "KBr",
+            "density_kgm3": 1900
+          },
+          {
+            "salt": "RbCl",
+            "density_kgm3": 2000
+          },
+          {
+            "salt": "RbBr",
+            "density_kgm3": 2300
+          },
+          {
+            "salt": "CsF",
+            "density_kgm3": 2300
+          },
+          {
+            "salt": "CsCl",
+            "density_kgm3": 2500
+          }
+        ]
+      }
+    }
+  ]
+}

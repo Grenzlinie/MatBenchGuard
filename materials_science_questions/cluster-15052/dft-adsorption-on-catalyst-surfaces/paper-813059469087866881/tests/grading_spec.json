@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "CSSC dihedral recomputed from agent's raw XYZ (T1 structural); orbital energies and compositions validated by comparison to paper‑reported reference values (T0 reference_match) because full extended Hückel recompute is infeasible in the verifier environment.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "geometry_optimized.xyz": "structural_audit",
+    "orbital_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "CSSC dihedral reference (90° ±5°), NO₂‑DPDS LUMO energy (−10.5 eV ±0.5 eV), H‑DPDS HOMO sulfur composition threshold (>50%), and composition sum tolerance (0.01).",
+      "source_provenance": "Paper text: Section 3.2 reports the dihedral of 90°; Section 3.3 reports the LUMO of NO₂‑DPDS at −10.5 eV and states that the HOMO of H‑DPDS consists mainly of the two sulfur lone pairs.",
+      "generation_method": "Direct extraction from the paper’s descriptive text and figures.",
+      "why_not_fabricated": "These are the exact paper‑reported values used for comparison; no alternate fabricated data were introduced."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometry_optimized.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "format_description": "Standard multi-molecule XYZ format: comment line per molecule (can include substructure name), followed by atom lines with element symbol and x, y, z coordinates."
+        },
+        "description": "Optimized atomic coordinates for all six molecules. The checker recomputes the CSSC dihedral angle for each and verifies it is within 5° of 90°, scoring the structural property."
+      },
+      {
+        "file": "orbital_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "H_DPDS",
+            "NO2_DPDS"
+          ],
+          "structure": "Each key maps to an object with 'HOMO_energy' (float, eV), 'LUMO_energy' (float, eV), 'HOMO_composition' (dict mapping atom label to float), and 'LUMO_composition' (dict). Compositions should sum to 1.0 within tolerance."
+        },
+        "description": "HOMO and LUMO energies (eV) and atom-wise compositions for H-DPDS and NO2-DPDS. The checker compares the LUMO energy of NO2-DPDS to the paper value (±0.5 eV tolerance), verifies that the HOMO of H-DPDS is dominated by sulfur lone pairs (S contribution > 50%), and checks the overall composition thresholds."
+      }
+    ],
+    "notes": "Only the dry-lab computational sub-result is included; wet-lab catalytic experiments are excluded. The agent must perform geometry optimization and EH calculation using public tools or a self-implemented EH solver. The key output dihedral angle and frontier orbital energies/compositions are checked against the paper's reported values with appropriate tolerances. The task is compute-driven with no external data fetching beyond the bundled parameter file."
+  },
+  "steps": [
+    {
+      "id": "step_geometry",
+      "output_file": "geometry_optimized.xyz",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Compute CSSC dihedral angle for each molecule and verify it is within 5° of 90°."
+    },
+    {
+      "id": "step_orbitals",
+      "output_file": "orbital_energies.json",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Check that H-DPDS HOMO is dominated by S lone pairs (>50% S contribution), NO2-DPDS LUMO energy is near −10.5 eV (±0.5 eV), and compositions sum to 1.0 within 0.01."
+    }
+  ]
+}

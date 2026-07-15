@@ -1,0 +1,186 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute of HSE06 band structures and OER free energies from raw DFT logs is infeasible in the verifier sandbox. Valid result-level comparison against paper-reported gold values with tolerances is the appropriate tier.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "Eg",
+            "CBM_vacuum",
+            "VBM_vacuum",
+            "band_type"
+          ],
+          "units": {
+            "Eg": "eV",
+            "CBM_vacuum": "eV",
+            "VBM_vacuum": "eV"
+          }
+        },
+        "description": "Computed band gaps, absolute CBM and VBM energies (vacuum-referenced), and band alignment type for each strained heterostructure."
+      },
+      {
+        "file": "step_02_oer_thermodynamics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "PDS_pH0",
+            "EDF_pH0",
+            "feasible_pH0",
+            "PDS_pH7",
+            "EDF_pH7",
+            "feasible_pH7"
+          ],
+          "units": {
+            "PDS_pH0": "eV",
+            "EDF_pH0": "eV",
+            "PDS_pH7": "eV",
+            "EDF_pH7": "eV"
+          }
+        },
+        "description": "Potential-determining step (PDS), electrochemical driving force (EDF), and thermodynamic feasibility at pH=0 and pH=7 for each strained heterostructure."
+      }
+    ],
+    "notes": "Scoring compares each quantitative column (Eg, CBM_vacuum, VBM_vacuum, PDS, EDF) to hidden reference values within a tolerance of ±0.1 eV. band_type and feasibility flags are matched exactly. Both CSV files must be present for full credit."
+  },
+  "target_policies": {
+    "step_01_band_properties.csv": "exact_match",
+    "step_02_oer_thermodynamics.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for band properties and OER thermodynamics extracted from the paper's Table 3 and text.",
+      "source_provenance": "Paper Catalysis Science and Technology, 2020, DOI:10.1039/d0cy01656j, Table 3 and associated discussion.",
+      "generation_method": "Band gaps derived from CBM−VBM; PDS, EDF, and feasibility from Table 3. Exact strings for band_type from Table 2.",
+      "why_not_fabricated": "Values are the published quantitative results the paper claims; the reference solver writes these exact numbers to ensure consistency with the hidden gold."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01_band_properties",
+      "output_file": "step_01_band_properties.csv",
+      "weight": 0.4,
+      "kind": "result_level_compare",
+      "reference": {
+        "cases": [
+          {
+            "case": "uniaxial_-2%",
+            "Eg": 2.985,
+            "CBM_vacuum": -4.298,
+            "VBM_vacuum": -7.283,
+            "band_type": "Z-scheme"
+          },
+          {
+            "case": "uniaxial_-4%",
+            "Eg": 2.57,
+            "CBM_vacuum": -4.574,
+            "VBM_vacuum": -7.144,
+            "band_type": "Z-scheme"
+          },
+          {
+            "case": "biaxial_-2%",
+            "Eg": 3.673,
+            "CBM_vacuum": -3.615,
+            "VBM_vacuum": -7.288,
+            "band_type": "Z-scheme"
+          },
+          {
+            "case": "biaxial_-6%",
+            "Eg": 0.917,
+            "CBM_vacuum": -4.899,
+            "VBM_vacuum": -5.816,
+            "band_type": "Type-II"
+          },
+          {
+            "case": "biaxial_-8%",
+            "Eg": 0.707,
+            "CBM_vacuum": -5.216,
+            "VBM_vacuum": -5.923,
+            "band_type": "Type-II"
+          }
+        ]
+      },
+      "tolerances": {
+        "Eg": 0.1,
+        "CBM_vacuum": 0.1,
+        "VBM_vacuum": 0.1,
+        "band_type": "exact"
+      }
+    },
+    {
+      "id": "step_02_oer_thermodynamics",
+      "output_file": "step_02_oer_thermodynamics.csv",
+      "weight": 0.6,
+      "kind": "result_level_compare",
+      "reference": {
+        "cases": [
+          {
+            "case": "uniaxial_-2%",
+            "PDS_pH0": 0.585,
+            "EDF_pH0": 1.553,
+            "feasible_pH0": true,
+            "PDS_pH7": 0.172,
+            "EDF_pH7": 1.966,
+            "feasible_pH7": true
+          },
+          {
+            "case": "uniaxial_-4%",
+            "PDS_pH0": 0.639,
+            "EDF_pH0": 1.414,
+            "feasible_pH0": true,
+            "PDS_pH7": 0.226,
+            "EDF_pH7": 1.827,
+            "feasible_pH7": true
+          },
+          {
+            "case": "biaxial_-2%",
+            "PDS_pH0": 0.61,
+            "EDF_pH0": 1.558,
+            "feasible_pH0": true,
+            "PDS_pH7": 0.197,
+            "EDF_pH7": 1.971,
+            "feasible_pH7": true
+          },
+          {
+            "case": "biaxial_-6%",
+            "PDS_pH0": 0.527,
+            "EDF_pH0": 0.086,
+            "feasible_pH0": false,
+            "PDS_pH7": 0.114,
+            "EDF_pH7": 0.499,
+            "feasible_pH7": true
+          },
+          {
+            "case": "biaxial_-8%",
+            "PDS_pH0": 0.607,
+            "EDF_pH0": 0.193,
+            "feasible_pH0": false,
+            "PDS_pH7": 0.194,
+            "EDF_pH7": 0.606,
+            "feasible_pH7": true
+          }
+        ]
+      },
+      "tolerances": {
+        "PDS_pH0": 0.1,
+        "EDF_pH0": 0.1,
+        "PDS_pH7": 0.1,
+        "EDF_pH7": 0.1,
+        "feasible_pH0": "exact",
+        "feasible_pH7": "exact"
+      }
+    }
+  ]
+}

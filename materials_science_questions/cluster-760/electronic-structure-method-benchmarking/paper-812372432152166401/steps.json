@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_prepare",
+    "title": "Prepare initial cluster geometries",
+    "role": "process",
+    "action": "Generate initial Cartesian coordinates for YSi_n clusters (n=1–6) by substituting a Y atom into known geometries of Si_{n+1}, Si_n, or corresponding ScSi_n clusters, or by attaching Y to a Si_n surface. Refer to published structures for small silicon and scandium-silicon clusters.",
+    "output_file": "",
+    "evidence": "initial_structures.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces input structures for all subsequent DFT calculations. The evidence file documents the generated starting geometries.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_optimize",
+    "title": "Geometry optimization and vibrational analysis",
+    "role": "process",
+    "action": "For each YSi_n cluster (n=1–6), perform geometry optimizations using B3LYP with an all-electron double-zeta quality basis (e.g., def2-SVP or DZVP) in ORCA. Optimize structures in both spin-doublet and spin-quartet multiplicities, and for each multiplicity sample several electronic configurations by altering orbital occupations around the Fermi level. Run harmonic frequency calculations to confirm obtained structures are minima (no imaginary frequencies). Save total energies and frequency outputs for all successful optimizations.",
+    "output_file": "",
+    "evidence": "optimization_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Runs the DFT calculations that produce the raw total energies and geometries required by all downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_spin",
+    "title": "Spin state energies",
+    "role": "scored",
+    "action": "From the optimized total energies, identify the lowest-energy state for each cluster size and spin multiplicity. Compute the energy difference ΔE = E_doublet - E_quartet in eV for each n. Output a JSON array with one entry per cluster containing the doublet and quartet energies, ΔE, the assigned ground-state spin, and a flag indicating all harmonic frequencies are positive.",
+    "output_file": "spin_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reports the spin-state energy comparisons for YSi_n (n=1–6). The ground-state spin is determined from the computed total energies and recorded along with the doublet-quartet energy difference and frequency analysis result.",
+    "output_schema": "Array of objects; each object with keys: cluster (string, e.g. 'YSi1'), doublet_energy (float, Hartree), quartet_energy (float, Hartree), delta_E_eV (float, doublet - quartet in eV), ground_state_spin (string, 'doublet' or 'quartet'), all_freq_positive (bool)."
+  },
+  {
+    "id": "step_04_binding",
+    "title": "Binding energies",
+    "role": "scored",
+    "action": "Using the total energies of the most stable isomer for each cluster size (lowest-energy state irrespective of multiplicity) and the atomic energies of Y and Si computed at the same level, calculate the binding energy per atom: Eb_per_atom(eV) = [E(Y) + n*E(Si) - E(YSi_n)] / (n+1). Output a JSON array with one entry per cluster size.",
+    "output_file": "binding_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Binding energy per atom for the most stable YSi_n isomers. The size-dependent trend is reported.",
+    "output_schema": "Array of objects; each object with keys: cluster (string, e.g. 'YSi1'), binding_energy_per_atom (float, eV)."
+  },
+  {
+    "id": "step_05_fragmentation",
+    "title": "Fragmentation energies",
+    "role": "scored",
+    "action": "Compute two fragmentation channels: FE1 = E(YSi_n) - [E(Y) + E(Si_n)] and FE2 = E(YSi_n) - [E(Si) + E(YSi_{n-1})]. For FE1, use the total energy of the most stable neutral Si_n cluster optimized at the same level. For FE2, use the most stable YSi_{n-1} energies. Output a JSON array with FE1 and FE2 values (in eV) for n=1–6.",
+    "output_file": "fragmentation_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fragmentation energies for the YSi_n series. The size-dependent energies for the two dissociation channels are reported.",
+    "output_schema": "Array of objects; each object with keys: cluster (string, e.g. 'YSi1'), FE1_Y_Si_n (float, eV), FE2_Si_YSi_{n-1} (float, eV)."
+  }
+]

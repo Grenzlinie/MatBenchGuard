@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Implement Water-Graphite PES",
+    "role": "process",
+    "action": "Implement the potential energy surface V = V_ww + V_wg. V_ww: TIP4P water–water pairwise interaction (Coulomb + Lennard-Jones). V_wg: dispersion-repulsion via Steele summation (LJ O–C interactions, parameters ε_CO=0.389 kJ/mol, σ_CO=3.28 Å) and electrostatic polarization via image charges (perfect-conductor limit) and image dipoles (α⊥=0.220 Å).",
+    "output_file": "",
+    "evidence": "pes_module.py",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute Free Water Cluster Minima",
+    "role": "process",
+    "action": "Using only the TIP4P water model (no graphite), perform basin-hopping global optimization to find the global potential energy minimum of (H2O)n clusters for n=1..21. Record the minimum energy E_free_n for each cluster size.",
+    "output_file": "",
+    "evidence": "free_water_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Global Optimization on Graphite",
+    "role": "process",
+    "action": "Using the full PES from step 1, perform basin-hopping global optimization for graphite-(H2O)n clusters with n=1..21. Store the global minimum structure (atomic coordinates) for each n.",
+    "output_file": "",
+    "evidence": "graphite_minima_structures.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute Energies and Output CSV",
+    "role": "scored",
+    "action": "For each n, from the global minimum structure, compute: total potential energy V, dispersion-repulsion V_dr, polarization V_pol. Derive association energy ΔEa = -V (reference: isolated graphite + n isolated water molecules). Compute binding energy ΔEb = ΔEa - E_free_n. Report per water molecule: ΔEa/n, ΔEb, V_dr/n, V_pol/n. Write to global_minimum_energies.csv with columns: n, association_energy_kJ_per_mol, binding_energy_kJ_per_mol, V_dr_kJ_per_mol, V_pol_kJ_per_mol.",
+    "output_file": "global_minimum_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing per-water-molecule association energy, binding energy, and their decomposition for n=1..21.",
+    "output_schema": "Columns: n (integer), association_energy_kJ_per_mol (float), binding_energy_kJ_per_mol (float), V_dr_kJ_per_mol (float), V_pol_kJ_per_mol (float)."
+  },
+  {
+    "id": "step_05",
+    "title": "Compute Monomer Orientation",
+    "role": "scored",
+    "action": "From the n=1 global minimum structure, compute the angle between the water C2 symmetry axis and the surface normal (z-axis) in degrees, and the distance between the oxygen atom and the topmost graphite surface plane in Å. Write to monomer_orientation.txt with line 1: 'angle_C2_to_z = <value>', line 2: 'O_distance = <value>'.",
+    "output_file": "monomer_orientation.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Two-line text file with monomer equilibrium orientation on graphite.",
+    "output_schema": "Line 1: 'angle_C2_to_z = <value in degrees>'. Line 2: 'O_distance = <value in Angstroms>'."
+  }
+]

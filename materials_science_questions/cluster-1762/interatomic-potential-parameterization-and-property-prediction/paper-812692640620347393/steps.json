@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step-1",
+    "title": "MD simulation of Ag2S",
+    "role": "process",
+    "action": "Set up and run molecular dynamics simulations of Ag2S using effective pair potentials (Coulomb, short-range repulsion, van der Waals) and Ewald summation. Place sulphur ions on a BCC lattice and distribute silver ions randomly over tetrahedral sites; system size 384 particles at fixed number density 5.233×10²² cm⁻³. Perform production runs of at least 18000 steps at 268 K, 339 K, and 470 K, saving trajectories and velocities with sufficient temporal resolution to compute intermediate scattering functions up to ~40 ps.",
+    "output_file": "",
+    "evidence": "md_trajectories.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the ionic trajectories that are the sole input for all downstream scattering analyses.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-2",
+    "title": "Intermediate scattering functions F_αβ(Q,t) static values",
+    "role": "scored",
+    "action": "From the MD trajectories at 470 K, compute the species-resolved intermediate scattering functions F_αβ(Q,t) = ⟨ρ_α(Q,t)ρ_β*(Q,0)⟩ for α,β ∈ {Ag,S} at the five Q vectors (in BCC reciprocal lattice units): (1.8,1,0), (1.6,1,0), (1.4,1,0), (1.6,0.8,0), (1.6,1.2,0). Extract the t=0 values (static structure factors) and write them to a CSV file.",
+    "output_file": "intermediate_scattering_functions_470K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the static (t=0) species-pair intermediate scattering functions for the five Q vectors at 470 K, enabling verification of Ag–Ag dominance.",
+    "output_schema": "Header: Q_h, Q_k, Q_l, F_AgAg, F_AgS, F_SAg, F_SS. Five rows, one per Q vector. All values floating-point."
+  },
+  {
+    "id": "step-3",
+    "title": "Coherent zero-energy neutron intensity S(Q,0) and quasi-elastic linewidth",
+    "role": "scored",
+    "action": "For all three temperatures, compute the species-weighted coherent neutron scattering function S(Q,ω) = Σ_αβ b_α b_β √(c_α c_β) S_αβ(Q,ω) using neutron scattering lengths b_Ag = 5.922 fm, b_S = 2.847 fm and concentrations c_Ag = 2/3, c_S = 1/3, by Fourier transforming F_αβ(Q,t). Apply a Gaussian energy resolution with FWHM = 0.7 meV and extract the zero-energy intensity S(Q,0) for each of the five Q vectors. Additionally, for Q=(1.6,1,0) at each temperature, fit the quasi-elastic peak to obtain its full width at half maximum (FWHM) in meV. Write the zero-energy intensities and the FWHM values to a single CSV file.",
+    "output_file": "zero_energy_intensity.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with S(Q,0) for all three temperatures and five Q vectors, plus the quasi-elastic peak FWHM for Q=(1.6,1,0) at each temperature. Used to verify the spatial pattern (max at (1.6,1,0), anisotropic decay), temperature trend of S(Q,0), and monotonic increase of the quasi-elastic linewidth with temperature.",
+    "output_schema": "Header: temperature, Q_h, Q_k, Q_l, S_zero, FWHM_meV. 15 rows (three temperatures × five Q vectors). FWHM_meV column is populated only for the three rows where Q=(1.6,1,0); other rows hold null or 0. All values floating-point."
+  },
+  {
+    "id": "step-4",
+    "title": "Energy-resolved S(Q,ω) at Q=(1.8,1,0)",
+    "role": "scored",
+    "action": "For each temperature, extract the energy-resolved coherent scattering function S(Q,ω) for Q=(1.8,1,0) on an energy grid from 0 to 10 meV with steps no larger than 0.2 meV, after applying the 0.7 meV Gaussian resolution broadening. Write the curves to a CSV file.",
+    "output_file": "S_Q_w_Q1.8_1_0.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "S(Q,ω) curves for Q=(1.8,1,0) at 268 K, 339 K, and 470 K, providing evidence for the low-energy excitation and its temperature evolution.",
+    "output_schema": "Header: temperature, energy_meV, S. Multiple rows per temperature. Energy in meV, S unitless (arbitrary relative scale)."
+  },
+  {
+    "id": "step-5",
+    "title": "Low-energy excitation peak location",
+    "role": "scored",
+    "action": "From the S(Q,ω) curves for Q=(1.8,1,0), locate the energy at which S(Q,ω) attains its maximum in the range 0–5 meV after resolution broadening, separately for the 268 K and 339 K runs. For the 470 K run, if no distinct peak exists above the baseline, record null. Write the peak energies as a JSON object.",
+    "output_file": "low_energy_peak_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the detected low-energy peak positions for each temperature, verifying the existence of a ~2–3 meV excitation below the superionic transition and its disappearance above it.",
+    "output_schema": "JSON object with keys: peak_energy_meV_268K (float), peak_energy_meV_339K (float or null), peak_energy_meV_470K (float or null)."
+  }
+]

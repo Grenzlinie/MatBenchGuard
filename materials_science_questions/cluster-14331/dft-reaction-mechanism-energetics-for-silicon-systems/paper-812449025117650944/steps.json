@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Build initial geometries",
+    "role": "process",
+    "action": "Construct initial molecular geometries for the SiO2 surface model (SiH3-O-SiH3 with H termination), disilane (Si2H6), transition states TS2a (Si-H cleavage) and TS2b (Si-Si cleavage), product SiH3-O-SiH2-SiH3, and gas-phase species SiH4, SiH3, H. Use standard bond lengths and the paper's description of the surface model to generate starting coordinates.",
+    "output_file": "",
+    "evidence": "initial_geometries.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Manual construction of starting coordinates for all molecules and transition states. The surface model is SiH3-O-SiH3; disilane is SiH3-SiH3. Transition state guesses follow the bond-breaking/forming patterns described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "HF/6-31G** optimization and frequency calculation",
+    "role": "process",
+    "action": "Perform Hartree-Fock geometry optimization with the 6-31G** basis set for all species. Run harmonic frequency calculations on the optimized structures to verify stationary points (minima: zero imaginary frequencies; TS: exactly one imaginary frequency). Collect zero-point vibrational energies (ZPE) from the frequency output, applying a scaling factor of 0.89.",
+    "output_file": "",
+    "evidence": "hf_opt_freq.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimize geometries at HF/6-31G** level and compute harmonic frequencies. This step yields optimized geometries and ZPE values needed for later energy refinement and barrier calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Single-point MP2 energy calculation",
+    "role": "process",
+    "action": "Run single-point energy calculations using MP2(FC)/6-31G** on the HF-optimized geometries for all species. Extract the MP2 total energy for each species.",
+    "output_file": "",
+    "evidence": "mp2_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Perform MP2(FC)/6-31G** single-point calculations to refine the electronic energies. The total energies from this step are the primary quantities for activation barrier and bond enthalpy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Compute activation energies and bond enthalpies",
+    "role": "scored",
+    "action": "From the MP2 total energies and ZPEs, compute: (1) surface activation energies for Si-H cleavage (TS2a) and Si-Si cleavage (TS2b) both raw MP2 and ZPE-corrected; (2) gas-phase bond dissociation enthalpies for Si-H bond (from SiH4 -> SiH3 + H) and Si-Si bond (from Si2H6 -> 2SiH3). Package all computed values into energies.json.",
+    "output_file": "energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final scored artifact containing all key quantitative results: surface activation barriers (raw and ZPE-corrected) and gas-phase bond enthalpies. The checker reads this file and compares against gold values.",
+    "output_schema": "{\n  \"surface\": {\n    \"ts2a_raw_MP2_energy_hartree\": float,\n    \"ts2b_raw_MP2_energy_hartree\": float,\n    \"reactants_sum_raw_MP2_energy_hartree\": float,\n    \"ts2a_MP2_Ea_kcal_mol_raw\": float,\n    \"ts2b_MP2_Ea_kcal_mol_raw\": float,\n    \"ts2a_MP2_Ea_kcal_mol_with_ZPE\": float,\n    \"ts2b_MP2_Ea_kcal_mol_with_ZPE\": float\n  },\n  \"gas_phase\": {\n    \"SiH4_MP2_energy_hartree\": float,\n    \"SiH3_MP2_energy_hartree\": float,\n    \"H_MP2_energy_hartree\": float,\n    \"Si2H6_MP2_energy_hartree\": float,\n    \"SiH_bond_enthalpy_kcal_mol\": float,\n    \"SiSi_bond_enthalpy_kcal_mol\": float\n  }\n}"
+  }
+]

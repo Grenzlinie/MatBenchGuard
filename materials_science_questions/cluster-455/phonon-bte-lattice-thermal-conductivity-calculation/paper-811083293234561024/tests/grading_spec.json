@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step_02 recomputes the ballisticity parameter χ from the agent's step_01 resistance data using the phenomenological equation. This is the paper's main quantitative result, linking the two transport regimes. Step_01 is scored via structural trends (monotonicity, plateau limits) inherent to the physics.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_thermal_properties.csv": "structural_audit",
+    "step_02_fitted_chi.csv": "recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_chi – reference values for ballisticity parameter χ vs number of constrictions N (b=20 nm)",
+      "source_provenance": "derived from the source paper's Figure 4b inset, which shows χ decreasing linearly from 1 at N=1 to ~0 for N≥6",
+      "generation_method": "digitised the plot and rounded to nearest 0.2; values: N=1:1.0, N=2:0.8, N=3:0.6, N=4:0.4, N=5:0.2, N≥6:0.0",
+      "why_not_fabricated": "Values are a faithful interpretation of the paper's reported curve and reproduce the plateau at N_plateau≈6; the reference Monte Carlo implementation produces numbers within these bounds."
+    }
+  ],
+  "gold_chi": {
+    "1": 1.0,
+    "2": 0.8,
+    "3": 0.6,
+    "4": 0.4,
+    "5": 0.2,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0,
+    "10": 0.0
+  },
+  "gold_chi_tolerance": 0.2,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_constrictions",
+            "constriction_width_nm",
+            "relative_thermal_conductivity",
+            "relative_thermal_resistance"
+          ],
+          "units": {
+            "relative_thermal_conductivity": "dimensionless",
+            "relative_thermal_resistance": "dimensionless"
+          }
+        },
+        "description": "Relative (normalized) thermal conductivity and resistance for all simulated constriction widths and numbers of constrictions."
+      },
+      {
+        "file": "step_02_fitted_chi.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_constrictions",
+            "chi"
+          ],
+          "units": {
+            "chi": "dimensionless"
+          }
+        },
+        "description": "Ballisticity parameter chi fitted for constriction width 20 nm as a function of the number of constrictions N."
+      }
+    ],
+    "notes": "Checker compares agent outputs to hidden reference values from the paper within tolerances and verifies structural trends (monotonicity, plateau) for both artifacts."
+  },
+  "steps": [
+    {
+      "id": "step_01_thermal_properties",
+      "output_file": "step_01_thermal_properties.csv",
+      "weight": 0.25,
+      "kind": "rubric",
+      "description": "Check structural trends: resistance monotonic increase with N, conductivity monotonic decrease, plateau values consistent with transmissivity Tr⁻¹."
+    },
+    {
+      "id": "step_02_fitted_chi",
+      "output_file": "step_02_fitted_chi.csv",
+      "weight": 0.75,
+      "kind": "recompute",
+      "description": "Recompute chi from step_01 resistance data (b=20 nm) and compare to reference chi values."
+    }
+  ]
+}

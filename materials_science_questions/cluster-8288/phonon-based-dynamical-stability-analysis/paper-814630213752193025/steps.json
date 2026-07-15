@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_0_geometry_optimization",
+    "title": "DFT geometry optimization and total energy calculations",
+    "role": "process",
+    "action": "Perform spin-polarized DFT calculations using PBE functional and PAW potentials to relax the 1T and 1H monolayer structures, as well as isolated Fe and Cl atoms. Compute total energies, magnetic moments, and charge density files. Convergence criteria should yield well-relaxed structures. Additionally, run Bader analysis on the relaxed charge densities to obtain atomic charges.",
+    "output_file": "",
+    "evidence": "relaxation_summary.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Foundation step that produces relaxed structures and total energies required by all downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1_structure_properties",
+    "title": "Report structural, magnetic, and charge properties",
+    "role": "scored",
+    "action": "Extract from Step 0 outputs for the 1T phase: lattice constant a, Fe-Cl bond length, Cl-Cl distance, Cl-Fe-Cl bond angle, total magnetic moment per unit cell, Bader charges for Fe and Cl, and cohesive energy per atom (Ec = (E_T[Fe] + 2 E_T[Cl] - E_T[FeCl2]) / number of atoms). Write all results to the specified file.",
+    "output_file": "step_01_structure.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Primary structural and bonding descriptors of the 1T-FeCl2 monolayer, load-bearing because it cannot be obtained without running the relaxation in Step 0.",
+    "output_schema": "JSON object with keys: phase (string '1T'), lattice_constant_a (float, angstrom), bond_length_Fe_Cl (float, angstrom), bond_length_Cl_Cl (float, angstrom), angle_Cl_Fe_Cl (float, deg), total_magnetic_moment (float, mu_B), Bader_charge_Fe (float, e), Bader_charge_Cl (float, e), cohesive_energy_per_atom (float, eV/atom), total_energy (float, eV)."
+  },
+  {
+    "id": "step_2_band_gap",
+    "title": "Compute PBE band structure and half-metallicity",
+    "role": "scored",
+    "action": "Using the optimized 1T structure from Step 0, perform a non-self-consistent PBE band structure calculation along a high-symmetry path. Determine the minority-spin band gap (top of valence to bottom of conduction in the minority channel) and verify that at least one majority-spin band crosses the Fermi level.",
+    "output_file": "step_04_band_gap.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "PBE-level confirmation of half-metallic behavior.",
+    "output_schema": "JSON object with keys: minority_gap (float, eV), majority_has_bands_at_Fermi (bool)."
+  },
+  {
+    "id": "step_3_phonon",
+    "title": "Compute phonon dispersion and identify Raman/IR active modes",
+    "role": "scored",
+    "action": "For the relaxed 1T structure from Step 0, use the finite-displacement method (Phonopy) to generate a supercell, compute forces from DFT, and obtain the phonon dispersion. At the Gamma point, extract all 9 branch frequencies. Classify optical modes as Raman-active (E', A1') or IR-active (A2'', E'') based on symmetry. Write all frequencies and activity flags.",
+    "output_file": "step_02_phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gamma-point phonon modes for comparison with the paper's reported Raman and IR frequencies.",
+    "output_schema": "JSON array of objects, each with keys: branch (string), frequency (float, cm-1), Raman_active (bool), IR_active (bool). Must contain all 9 branches at Gamma, including acoustic modes."
+  },
+  {
+    "id": "step_4_curie",
+    "title": "Compute magnetic exchange and Curie temperature",
+    "role": "scored",
+    "action": "Construct a 2x2 supercell of the optimized 1T structure. Perform spin-polarized total-energy calculations for ferromagnetic (FM) and antiferromagnetic (AFM) arrangements. Compute energy difference per primitive cell ΔE = E_AFM - E_FM (meV). Calculate exchange parameter J = (1/12) * ΔE / (2 * m^2) with m = 4 μB. Estimate Curie temperature via mean-field: T_c = (3*J)/(2*k_B). Report energies and derived values.",
+    "output_file": "step_03_magnetic_energy.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Ferromagnetic stability and mean-field Curie temperature estimation.",
+    "output_schema": "JSON object with keys: energy_FM (float, eV per supercell), energy_AFM (float, eV per supercell), energy_difference_per_primitive_cell (float, meV), exchange_parameter_J (float, meV), Curie_temperature (float, K)."
+  }
+]

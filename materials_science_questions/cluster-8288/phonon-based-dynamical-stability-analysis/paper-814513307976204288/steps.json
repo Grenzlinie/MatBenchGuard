@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_phonon",
+    "title": "Compute phonon dispersion",
+    "role": "scored",
+    "action": "Construct the 20-atom rectangular unit cell of phagraphene. Using GULP with the optimized Tersoff potential, compute the phonon dispersion along the high-symmetry path Γ→X→Z→Y→Γ. Save the frequencies for all branches at each k-point.",
+    "output_file": "phonon_dispersion.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Phonon dispersion frequencies along the high-symmetry path for phagraphene 20-atom cell.",
+    "output_schema": "CSV with columns: k_path_point (string), branch (int), frequency_THz (float). Header: k_path_point,branch,frequency_THz."
+  },
+  {
+    "id": "step_stability",
+    "title": "Assess dynamical stability",
+    "role": "scored",
+    "action": "Read phonon_dispersion.csv. Determine whether any frequency is less than -1e-3 THz (imaginary mode). Write a summary with boolean negative_frequencies and min/max frequency.",
+    "output_file": "dynamical_stability.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Stability verdict: indicates presence of negative frequencies and extremes.",
+    "output_schema": "JSON object with keys: negative_frequencies (bool), min_frequency_THz (float), max_frequency_THz (float)."
+  },
+  {
+    "id": "step_nemd",
+    "title": "Run NEMD simulations for thermal conductivity",
+    "role": "scored",
+    "action": "Build phagraphene nanoribbon supercells of several lengths (at least 4 lengths) along armchair and zigzag directions. For each direction and length, run NEMD with LAMMPS using the optimized Tersoff potential (without cutoff modification). Equilibrate at 300 K, impose temperature gradient (hot 310 K, cold 290 K), reach steady state, compute thermal conductivity. Save length-dependent conductivities.",
+    "output_file": "thermal_conductivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Size-dependent thermal conductivity from NEMD for armchair and zigzag directions.",
+    "output_schema": "CSV with columns: length_nm (float), direction (string), kappa_WmK (float). Header: length_nm,direction,kappa_WmK."
+  },
+  {
+    "id": "step_fit",
+    "title": "Fit intrinsic thermal conductivity and MFP",
+    "role": "scored",
+    "action": "From thermal_conductivity.csv, for each direction, fit 1/kappa = (1/kappa_inf)*(1 + mfp/length) to extract intrinsic thermal conductivity and effective phonon mean free path. Save fitted parameters.",
+    "output_file": "thermal_fit.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted intrinsic thermal conductivity and effective phonon MFP.",
+    "output_schema": "JSON object with keys 'armchair' and 'zigzag', each a dict with 'kappa_intrinsic_WmK' (float) and 'mfp_nm' (float)."
+  },
+  {
+    "id": "step_tensile",
+    "title": "Run uniaxial tensile simulations",
+    "role": "scored",
+    "action": "Prepare phagraphene supercells with periodic in-plane boundaries. Use cutoff-modified Tersoff potential (cutoff increased from 0.18 to 0.20 nm). Equilibrate at 300 K and zero pressure. Perform uniaxial tensile deformation at constant strain rate along armchair and zigzag directions. Record stress-strain curves.",
+    "output_file": "stress_strain_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stress-strain curves from uniaxial tensile MD simulations.",
+    "output_schema": "CSV with columns: strain (float), stress_GPa (float), direction (string). Header: strain,stress_GPa,direction."
+  },
+  {
+    "id": "step_mech",
+    "title": "Extract elastic modulus and tensile strength",
+    "role": "scored",
+    "action": "From stress_strain_data.csv, compute elastic modulus from initial linear region (strain up to ~0.02) and tensile strength as maximum stress. Save properties.",
+    "output_file": "mechanical_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Elastic modulus and tensile strength for armchair and zigzag directions.",
+    "output_schema": "JSON object with keys 'armchair' and 'zigzag', each with 'elastic_modulus_GPa' (float) and 'tensile_strength_GPa' (float)."
+  }
+]

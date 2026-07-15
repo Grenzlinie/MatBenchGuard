@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The scan is fully recomputed by fitting a spline to the agent's angle-energy table and extracting minima positions and energy difference. The three scalar properties are directly compared to the paper's reported O3 values with tolerances; these are fixed deterministic simulation outputs, so a result-level comparison is acceptable.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "constrained_scan.csv": "metric_recompute",
+    "step_02_properties.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for proton out-of-plane scan minima positions and energy difference, and for deprotonation energy, O-H vibrational frequency, and ammonia adsorption energy on the O3 acid site.",
+      "source_provenance": "Paper Table 1 (deprotonation energy 1174.6 kJ/mol, O-H vibrational frequency 3514 cm⁻¹; O3), Table 4 (ammonia adsorption energy on O3 144.5 kJ/mol), and Fig. 3 caption/text (scan minima at 35.7° and −39.5° with ΔE ≈ 6.30 kJ/mol).",
+      "generation_method": "Directly extracted from the published paper values for chabazite with 1 Al/unit cell and proton on O3.",
+      "why_not_fabricated": "These are the exact numbers reported in the study and serve as the verification standard for a correct reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "constrained_scan.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "out_of_plane_angle",
+            "total_energy_Ha",
+            "relative_energy_kJmol"
+          ],
+          "units": {
+            "out_of_plane_angle": "degrees",
+            "total_energy_Ha": "Hartree",
+            "relative_energy_kJmol": "kJ/mol"
+          }
+        },
+        "description": "Potential energy scan of the proton out-of-plane angle on the O3 oxygen. The checker will fit a cubic spline to the energy curve, locate the two local minima, and compare their angles and the energy difference to the paper-reported values with appropriate tolerances."
+      },
+      {
+        "file": "step_02_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "acid_sites"
+          ],
+          "properties": {
+            "acid_sites": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "site",
+                  "deprotonation_energy_kJmol",
+                  "oh_stretch_frequency_cm1",
+                  "ammonia_adsorption_energy_kJmol"
+                ],
+                "properties": {
+                  "site": {
+                    "type": "string",
+                    "enum": [
+                      "O1",
+                      "O2",
+                      "O3",
+                      "O4"
+                    ]
+                  },
+                  "deprotonation_energy_kJmol": {
+                    "type": "number",
+                    "units": "kJ/mol"
+                  },
+                  "oh_stretch_frequency_cm1": {
+                    "type": "number",
+                    "units": "cm⁻¹"
+                  },
+                  "ammonia_adsorption_energy_kJmol": {
+                    "type": "number",
+                    "units": "kJ/mol"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Computed deprotonation energy, O–H vibrational stretch frequency, and ammonia adsorption energy for each of the four acid sites O1–O4. The checker compares each site's values to the paper-reported values within tolerances, testing the homogeneity conclusion."
+      }
+    ],
+    "notes": "The scan artifact remains focused on O3 to identify proton minima. The properties artifact now contains all four acid sites, allowing the verifier to check cross-site comparisons required by the paper's central claims."
+  },
+  "steps": [
+    {
+      "id": "scan_analysis",
+      "output_file": "constrained_scan.csv",
+      "kind": "recompute_curve_minima",
+      "weight": 0.6,
+      "description": "Fit a cubic spline to the angle–relative-energy table, locate the two local minima (global and metastable) and their energy difference, and compare to the paper-reported values for the O3 site.",
+      "gold_minima_angles": [
+        35.7,
+        -39.5
+      ],
+      "tolerance_angle_deg": 3.0,
+      "gold_energy_diff_kjmol": 6.3,
+      "tolerance_energy_diff_kjmol": 2.0,
+      "recompute_config": {
+        "angle_col": "out_of_plane_angle",
+        "energy_col": "relative_energy_kJmol",
+        "smooth_spline": true
+      }
+    },
+    {
+      "id": "properties_comparison",
+      "output_file": "step_02_properties.json",
+      "kind": "numeric_compare",
+      "weight": 0.4,
+      "description": "Compare deprotonation energy, O-H vibrational frequency, and ammonia adsorption energy to the paper's O3 site values using tolerances.",
+      "fields": {
+        "deprotonation_energy_kJmol": {
+          "gold": 1174.6,
+          "tolerance": 20.0
+        },
+        "oh_stretch_frequency_cm1": {
+          "gold": 3514,
+          "tolerance": 50
+        },
+        "ammonia_adsorption_energy_kJmol": {
+          "gold": 144.5,
+          "tolerance": 15.0
+        }
+      },
+      "partial_weights": {
+        "deprotonation_energy_kJmol": 0.3334,
+        "oh_stretch_frequency_cm1": 0.3333,
+        "ammonia_adsorption_energy_kJmol": 0.3333
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_00_setup",
+    "title": "Implement extended Hückel method and set up cluster",
+    "role": "process",
+    "action": "Implement the extended Hückel molecular orbital method using the given Slater-type orbital parameters and Coulomb integrals (H 1s: ξ=1.3, Hss=-13.6 eV; O 2s/2p: ξ=2.275, Hss=-32.3 eV, Hpp=-14.8 eV; F 2s/2p: ξ=2.425, Hss=-40.0 eV, Hpp=-18.1 eV; Si 3s/3p: ξ=1.383, Hss=-17.3 eV, Hpp=-9.2 eV) and Hückel constant K=1.75. Build the Hamiltonian matrix H_μν = (K/2)(H_μμ + H_νν) S_μν and the overlap matrix S_μν from Slater-type atomic orbitals. Solve the generalized eigenvalue problem H C = ε S C to obtain molecular orbitals and total electronic energy as the sum of occupied eigenvalues. Define the (HO)₃SiOSiF₃ cluster geometry with fixed bond lengths: R(Si–O)=1.601 Å, R(Si–F)=1.635 Å, R(O–H)=0.92 Å, and angles ∠O–Si–O=109.47°, ∠Si–O–Si=180.0°. This step must produce a reusable function that computes total electronic energy and atomic bond population for a given set of nuclear coordinates.",
+    "output_file": "",
+    "evidence": "eht_implementation_check.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Verifies that the extended Hückel implementation is correct on a simple test system (e.g., H₂ molecule) before proceeding.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01_sif4_scan",
+    "title": "SiF4 binding energy scan",
+    "role": "scored",
+    "action": "Build an isolated SiF4 molecule with tetrahedral geometry. For a range of Si-F bond lengths (covering the vicinity of the expected minimum), compute the total electronic energy using the implemented extended Hückel method. Save the scanned energies.",
+    "output_file": "sif4_binding_curve.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Computed total electronic energy of an isolated SiF4 molecule as a function of the Si-F bond length.",
+    "output_schema": "Two columns: r_Si_F (Å, float), total_energy (eV, float). The grid should be dense enough to resolve the minimum."
+  },
+  {
+    "id": "step_02_hf2_dissociation",
+    "title": "HF2- dissociation potential energy surface",
+    "role": "scored",
+    "action": "Build the linear HF2- ion. Compute the total electronic energy on a two-dimensional grid of the two H-F distances r(FH–F⁻) and r(F⁻–HF), covering a range that includes the symmetric saddle region and the asymmetric dissociation valleys.",
+    "output_file": "hf2_dissociation_surface.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Potential energy surface for HF2- dissociation as a function of the two symmetric H–F distances.",
+    "output_schema": "Three columns: r_FH_Fminus (Å, float), r_Fminus_HF (Å, float), total_energy (eV, float). Grid resolution sufficient to capture the saddle point."
+  },
+  {
+    "id": "step_03_desorption_no_h",
+    "title": "Desorption energy surface without H+ attack",
+    "role": "scored",
+    "action": "Construct the (HO)3SiOSiF3 cluster with the fixed geometry. With the H+ held infinitely far away, for each point on a grid of r(O-Si) from 1.601 to 2.651 Å and r(Si-F⁻) from 1.635 to 3.035 Å, relax the O-Si-F bond angle to minimize the total electronic energy. Record the final energy, optimized angle, and the Si-O Mulliken bond population.",
+    "output_file": "desorption_energy_surface_without_Hplus.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Desorption energy surface computed without hydrogen attack. Contains total energy and structural/electronic properties on a grid of O-Si and Si-F⁻ distances.",
+    "output_schema": "Columns: r_O_Si (Å, float), r_Si_Fminus (Å, float), total_energy (eV, float), optimized_O_Si_F_angle (deg, float), Si_O_bond_population (float, dimensionless)."
+  },
+  {
+    "id": "step_04_desorption_with_h",
+    "title": "Desorption energy surface with H+ attack",
+    "role": "scored",
+    "action": "Repeat the same cluster setup and grid scan as in step_03_desorption_no_h, but now place the attacking hydrogen ion at a fixed distance r(O-H⁺) = 0.92 Å from the back-bond oxygen. For each grid point, relax the O-Si-F angle and compute total energy, optimized angle, and Si-O bond population.",
+    "output_file": "desorption_energy_surface_with_Hplus.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Desorption energy surface computed with explicit H+ attack on the oxygen back bond. This is the core computation from which the activation energy is derived.",
+    "output_schema": "Columns: r_O_Si (Å, float), r_Si_Fminus (Å, float), total_energy (eV, float), optimized_O_Si_F_angle (deg, float), Si_O_bond_population (float, dimensionless)."
+  },
+  {
+    "id": "step_05_report",
+    "title": "Activation energy report",
+    "role": "scored",
+    "action": "Analyze the raw energy surfaces produced in steps 01, 02 and 04. Extract the equilibrium Si-F distance from the binding curve, locate the saddle point on the HF2- surface and compute its barrier relative to the dissociation asymptotic energy, find the minimum-energy path on the desorption surface with H+ and identify the transition state. Compute the desorption activation energy as the energy difference between the transition state and the initial minimum. Compile these values into a structured JSON report.",
+    "output_file": "activation_energy_report.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary report containing the extracted key quantities: equilibrium bond length, saddle-point geometries, and activation energies.",
+    "output_schema": "JSON object with keys: sif4_equilibrium_bond_length (Å, float), hf2_dissociation_barrier (eV, float), hf2_saddle_r (Å, float), siF4_desorption_activation_energy (eV, float), transition_state_r_O_Si (Å, float), transition_state_r_Si_Fminus (Å, float), angle_range (list of two floats: min and max optimized angle from step 04), bond_population_range (list of two floats: max and approximate min Si-O population from step 04)."
+  },
+  {
+    "id": "step_06_trends",
+    "title": "Angle and bond population trend along reaction coordinate",
+    "role": "scored",
+    "action": "From the desorption energy surfaces (steps 03 and 04), extract the minimum-energy path. Project the optimized O-Si-F angle and the Si-O Mulliken bond population onto the variable rc = r(O-Si) - r(Si-F⁻). Output a table with the trend for both the 'with_Hplus' and 'without_Hplus' cases.",
+    "output_file": "angle_population_trend.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Trend of O-Si-F bond angle and Si-O bond population along the minimum-energy desorption path, for both H+ conditions.",
+    "output_schema": "Columns: case (string, 'with_Hplus' or 'without_Hplus'), reaction_coordinate_rc (Å, float), optimized_O_Si_F_angle (deg, float), Si_O_bond_population (float, dimensionless). Rows sorted by rc."
+  }
+]

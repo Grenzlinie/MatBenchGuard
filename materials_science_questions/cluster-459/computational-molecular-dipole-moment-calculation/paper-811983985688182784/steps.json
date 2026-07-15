@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_geomopt",
+    "title": "Geometry optimization",
+    "role": "process",
+    "action": "For each of the nine monomers (from monomers.smi), perform DFT geometry optimization using the B3LYP functional with the 6-31G basis set. Run in both gas phase and chloroform solvent (IEF-PCM model). Save the optimized geometries for all 18 monomer/phase combinations.",
+    "output_file": "",
+    "evidence": "geomopt_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate: the optimized structures are needed for downstream property extraction and TD-DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_analysis",
+    "title": "Extract geometric and electronic properties",
+    "role": "process",
+    "action": "From each optimized geometry, compute: donor–acceptor dihedral angle φ (degrees), link bond length d_BL (Å), dipole moment (Debye), HOMO energy (eV), LUMO energy (eV), and band gap Eg = LUMO − HOMO (eV). Save per-monomer/per-phase values for later compilation.",
+    "output_file": "",
+    "evidence": "analysis_raw",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Extracts the geometric parameters, dipole moment, and frontier orbital energies from the DFT output.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_tddft",
+    "title": "TD-DFT excited-state calculation",
+    "role": "process",
+    "action": "For each optimized geometry (monomer/phase), run a TD-DFT calculation at the B3LYP/6-31G level to obtain the first singlet excitation energy Eopt (eV) and its corresponding wavelength λmax (nm). Store the outputs.",
+    "output_file": "",
+    "evidence": "tddft_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the optical gap and absorption maximum needed for exciton binding energy and reference checking.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_compile",
+    "title": "Compile final property table",
+    "role": "scored",
+    "action": "Aggregate the computed properties for all nine monomers in both phases. Compute the exciton binding energy EB = Eg − Eopt (eV). Write a single CSV file monomer_properties.csv with one row per monomer/phase (18 rows total).",
+    "output_file": "monomer_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final scored artifact containing all required geometric, electronic, and optical results. The checker will verify the band gap ordering trend (identical to the paper's reported ranking), the dihedral angle range (130°–160°), the anomalous bond length for 3,6-MMCB-SDP, and the exciton binding energy positivity and tolerances against reference values.",
+    "output_schema": "Table with columns: monomer (string), phase (string, 'gas' or 'sol'), phi_deg (float, degrees), d_BL_A (float, angstrom), dipole_D (float, Debye), HOMO_eV (float, eV), LUMO_eV (float, eV), Eg_eV (float, eV), Eopt_eV (float, eV), EB_eV (float, eV), lambda_max_nm (float, nm). 18 rows (9 monomers × 2 phases)."
+  }
+]

@@ -1,0 +1,160 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute lattice energies or structural parameters from raw structures in verifier; result-level comparison with tolerances and structural ordering relations.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "calculated_structure_properties.csv": "exact_match",
+    "lattice_energies.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for lattice energies and structural parameters from paper Tables 1 and 3",
+      "source_provenance": "Paper Macromol. Theory Simul. 2006, Table 1 (calculated column) and Table 3",
+      "generation_method": "Direct transcription from published tables",
+      "why_not_fabricated": "Values are the actual reported numbers in the paper; reference solution reproduces them exactly."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "calculated_structure_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "parameter",
+            "value",
+            "unit"
+          ],
+          "items": {},
+          "units": {}
+        },
+        "description": "Predicted crystal structure unit cell parameters and chain conformational parameters (bond angles and dihedral angles) extracted from the packing energy minimization. Checked against paper-reported values with absolute tolerances."
+      },
+      {
+        "file": "lattice_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "experimental_Ein": "number",
+            "experimental_Eopt": "number",
+            "model_A_Ein": "number",
+            "model_A_Eopt": "number",
+            "model_B_Ein": "number",
+            "model_B_Eopt": "number"
+          },
+          "items": {},
+          "units": {
+            "all": "kJ/mol"
+          }
+        },
+        "description": "Lattice energies per monomeric unit for experimental, model A and model B structures before and after coordinate relaxation, computed with the MM2_85 force field. Checked against paper-reported values within tolerance."
+      }
+    ],
+    "notes": "The X-ray diffraction and fiber spectrum simulations are omitted as they do not produce a numerically checkable metric and would require proprietary Cerius2 modules. The core validation rests on the structural parameters and lattice energies."
+  },
+  "steps": [
+    {
+      "id": "structure_properties",
+      "output_file": "calculated_structure_properties.csv",
+      "kind": "tabular_numeric",
+      "weight": 0.4,
+      "parameters_check": {
+        "required_columns": [
+          "parameter",
+          "value",
+          "unit"
+        ],
+        "items": [
+          {
+            "parameter": "a",
+            "unit": "Å",
+            "tolerance": 0.02
+          },
+          {
+            "parameter": "b",
+            "unit": "Å",
+            "tolerance": 0.02
+          },
+          {
+            "parameter": "c",
+            "unit": "Å",
+            "tolerance": 0.02
+          },
+          {
+            "parameter": "C(1)-C(2)-C(3)",
+            "unit": "degrees",
+            "tolerance": 0.5
+          },
+          {
+            "parameter": "C(2)-C(3)-C(4)",
+            "unit": "degrees",
+            "tolerance": 0.5
+          },
+          {
+            "parameter": "C(3)-C(4)-C(1')",
+            "unit": "degrees",
+            "tolerance": 0.5
+          },
+          {
+            "parameter": "C(4)-C(1')-C(2')",
+            "unit": "degrees",
+            "tolerance": 0.5
+          },
+          {
+            "parameter": "C(3)-C(4)-C(5)",
+            "unit": "degrees",
+            "tolerance": 0.5
+          },
+          {
+            "parameter": "C(1)-C(2)-C(3)-C(4)",
+            "unit": "degrees",
+            "tolerance": 2.0
+          },
+          {
+            "parameter": "C(2)-C(3)-C(4)-C(1')",
+            "unit": "degrees",
+            "tolerance": 2.0
+          },
+          {
+            "parameter": "C(3)-C(4)-C(1')-C(2')",
+            "unit": "degrees",
+            "tolerance": 2.0
+          },
+          {
+            "parameter": "C(4)-C(1')-C(2')-C(3')",
+            "unit": "degrees",
+            "tolerance": 2.0
+          },
+          {
+            "parameter": "C(2)-C(3)-C(4)-C(5)",
+            "unit": "degrees",
+            "tolerance": 2.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "lattice_energies",
+      "output_file": "lattice_energies.json",
+      "kind": "energy_comparison",
+      "weight": 0.6,
+      "fields": {
+        "experimental_Ein": -14.0,
+        "experimental_Eopt": -17.6,
+        "model_A_Ein": -2.5,
+        "model_A_Eopt": -13.8,
+        "model_B_Ein": -15.1,
+        "model_B_Eopt": -18.6
+      },
+      "tolerance": 1.0,
+      "ordering_check": true
+    }
+  ]
+}

@@ -1,0 +1,257 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Derived mechanical properties, sound velocities and Debye temperature are recomputed from the agent's elastic constants; dielectric spectrum scored via Pearson correlation with hidden reference; remaining scalars compared to paper gold with tolerances (T0 fallback).",
+  "pass_threshold": 0.5,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "All hidden gold values (scalars from paper Tables 1‑3 and dielectric oscillator parameters) embedded inline.",
+      "source_provenance": "Paper Tables 1‑3, text values; oscillator parameters chosen so that the generated dielectric spectrum matches the reference solve.sh and approximates the paper's Figure 4/5 peak structure.",
+      "generation_method": "Scalars: verbatim from paper. Dielectric spectrum: Drude‑Lorentz model with parameters listed in hidden_oscillators_100/hidden_oscillators_001; energy grid 0‑35 eV, step 0.05 eV.",
+      "why_not_fabricated": "All scalars are the paper’s reported values for the same quantity, same units, same conditions. The dielectric spectrum is a synthetic analytic curve that serves as a reproducible reference defined by solve.sh; it is not a digitisation of the paper’s figure, thus avoids copyright/fabrication issues and is used as a consistent hidden reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lattice_parameters",
+            "bulk_modulus_B0",
+            "elastic_constants",
+            "derived_mechanical",
+            "sound_velocities",
+            "Debye_temperature",
+            "band_gaps",
+            "static_dielectric_constants",
+            "dielectric_spectrum"
+          ],
+          "items": {},
+          "description": "Nested object; each key holds a sub-object as described in output_schema."
+        },
+        "description": "Structured JSON containing all computed physical quantities and dielectric spectra."
+      }
+    ],
+    "notes": "The dielectric spectrum arrays must share the same energy grid length. All scalar quantities and derived properties will be compared to hidden paper-reported values using appropriate tolerances. The dielectric spectrum will be evaluated by recomputed Pearson correlation against hidden reference arrays and by checking the static constants."
+  },
+  "steps": [
+    {
+      "id": "check_lattice",
+      "output_file": "results.json",
+      "weight": 0.03,
+      "kind": "numeric",
+      "target": {
+        "a": 2.881,
+        "c": 17.101,
+        "u": 0.1101
+      },
+      "tolerance_abs": {
+        "a": 0.05,
+        "c": 0.3,
+        "u": 0.005
+      }
+    },
+    {
+      "id": "check_bulk",
+      "output_file": "results.json",
+      "weight": 0.02,
+      "kind": "numeric",
+      "target": 162.6,
+      "tolerance_rel": 0.25
+    },
+    {
+      "id": "check_elastic",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target": {
+        "C11": 277.73,
+        "C12": 68.9,
+        "C13": 82.65,
+        "C33": 533.73,
+        "C44": 41.04
+      },
+      "tolerance_rel": {
+        "C11": 0.25,
+        "C12": 0.25,
+        "C13": 0.25,
+        "C33": 0.25,
+        "C44": 0.35
+      }
+    },
+    {
+      "id": "check_derived",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "recompute_from_elastic",
+      "target": {
+        "B_R": 158.14,
+        "B_V": 173.07,
+        "B_H": 165.6,
+        "G_R": 67.62,
+        "G_V": 94.3,
+        "G_H": 80.96,
+        "E_R": 177.55,
+        "E_V": 239.42,
+        "E_H": 208.85,
+        "v_R": 0.313,
+        "v_V": 0.269,
+        "v_H": 0.29,
+        "B_G_Hill": 2.05,
+        "Delta_p": 1.922,
+        "Delta_s1": 2.377,
+        "Delta_s2": 0.393
+      },
+      "tolerance_rel": {
+        "B_R": 0.15,
+        "B_V": 0.15,
+        "B_H": 0.15,
+        "G_R": 0.15,
+        "G_V": 0.15,
+        "G_H": 0.15,
+        "E_R": 0.15,
+        "E_V": 0.15,
+        "E_H": 0.15,
+        "v_R": 0.05,
+        "v_V": 0.05,
+        "v_H": 0.05,
+        "B_G_Hill": 0.1,
+        "Delta_p": 0.1,
+        "Delta_s1": 0.15,
+        "Delta_s2": 0.15
+      }
+    },
+    {
+      "id": "check_sound",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "numeric",
+      "target": {
+        "vs_R": 3691.0,
+        "vs_V": 4358.0,
+        "vs_H": 4038.0,
+        "vp_R": 7072.0,
+        "vp_V": 7758.0,
+        "vp_H": 7423.0,
+        "vm_R": 4130.0,
+        "vm_V": 4849.0,
+        "vm_H": 4505.0
+      },
+      "tolerance_rel": 0.15
+    },
+    {
+      "id": "check_debye",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "numeric",
+      "target": {
+        "Theta_R": 566.5,
+        "Theta_V": 665.1,
+        "Theta_H": 617.9
+      },
+      "tolerance_abs": 30.0
+    },
+    {
+      "id": "check_bandgaps",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "target": {
+        "indirect_F_Gamma": 1.8,
+        "direct_Gamma": 2.86
+      },
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "check_static_eps",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "numeric",
+      "target": {
+        "epsilon0_100": 7.18,
+        "epsilon0_001": 5.24
+      },
+      "tolerance_abs": 2.0
+    },
+    {
+      "id": "check_dielectric_spectrum",
+      "output_file": "results.json",
+      "weight": 0.35,
+      "kind": "dielectric_spectrum",
+      "config": {
+        "corr_threshold": 0.9,
+        "static_eps_tolerance": 0.1
+      }
+    }
+  ],
+  "hidden_oscillators_100": [
+    [
+      3.5,
+      1.0,
+      1.4
+    ],
+    [
+      7.8,
+      1.5,
+      1.5
+    ],
+    [
+      10.5,
+      2.0,
+      1.2
+    ],
+    [
+      14.0,
+      2.5,
+      1.0
+    ],
+    [
+      18.0,
+      3.0,
+      0.68
+    ],
+    [
+      23.0,
+      4.0,
+      0.4
+    ]
+  ],
+  "hidden_oscillators_001": [
+    [
+      4.0,
+      1.0,
+      0.9
+    ],
+    [
+      8.5,
+      1.5,
+      1.0
+    ],
+    [
+      12.0,
+      2.0,
+      0.8
+    ],
+    [
+      16.0,
+      2.5,
+      0.6
+    ],
+    [
+      20.0,
+      3.0,
+      0.54
+    ],
+    [
+      25.0,
+      4.0,
+      0.4
+    ]
+  ]
+}

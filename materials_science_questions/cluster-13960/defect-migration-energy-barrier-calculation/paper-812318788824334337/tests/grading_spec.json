@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Cannot recompute DFT from raw outputs in the verifier sandbox. Agent reports formation energies and bond lengths; hidden checker compares to paper-reported reference values with domain-appropriate tolerances and verifies monotonic decrease and negativity at 30 V/nm.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference formation energies for fields 0,4,6,10,30 V/nm from Table I and Fig. 4(a) of the paper; bond lengths from Fig. 4(b).",
+      "source_provenance": "paper 'Electric field-induced oxygen vacancies in YBa2Cu3O7', J. Chem. Phys. 154, 224703 (2021), Table I and Fig. 4.",
+      "generation_method": "For fields 0,4,6,10 V/nm: exact values from Table I. For 30 V/nm: paper states negative, trend extrapolation gives ~-0.05 eV. Bond lengths: Cu-O_surface 1.85 Å, O_plane-O_surface 6.27 Å, directly from Fig. 4(b).",
+      "why_not_fabricated": "Numbers are direct extracts from the paper's published numerical data; no fabrication or guesswork."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_V_per_nm",
+            "delta_E_vac_eV"
+          ],
+          "units": {
+            "field_V_per_nm": "V/nm",
+            "delta_E_vac_eV": "eV"
+          }
+        },
+        "description": "Vacancy formation energies per vacancy for configuration (a) at five electric field strengths."
+      },
+      {
+        "file": "bond_lengths.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Cu_O_surface_A": "float",
+            "O_plane_O_surface_A": "float"
+          },
+          "units": {
+            "Cu_O_surface_A": "Å",
+            "O_plane_O_surface_A": "Å"
+          }
+        },
+        "description": "Cu-O_surface and O_plane-O_surface distances from the relaxed defective slab at 30 V/nm, showing bond lengthening."
+      }
+    ],
+    "notes": "The task reproduces the surface vacancy configuration (a) and the structural change at maximum field. Other defect configurations, band structure, CI-NEB, and field penetration analysis are omitted."
+  },
+  "steps": [
+    {
+      "id": "formation_energy",
+      "output_file": "formation_energies.csv",
+      "kind": "rubric",
+      "weight": 0.7,
+      "reference_values": {
+        "0": 0.611,
+        "4": 0.556,
+        "6": 0.52,
+        "10": 0.456,
+        "30": -0.05
+      },
+      "tolerances": {
+        "0": 0.02,
+        "4": 0.02,
+        "6": 0.02,
+        "10": 0.02,
+        "30": 0.05
+      },
+      "trend_required": true,
+      "description": "Check formation energy values for each field within tolerance, verify strictly decreasing trend, and ensure negative at 30 V/nm."
+    },
+    {
+      "id": "bond_lengths",
+      "output_file": "bond_lengths.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "reference_values": {
+        "Cu_O_surface_A": 1.85,
+        "O_plane_O_surface_A": 6.27
+      },
+      "tolerances": {
+        "Cu_O_surface_A": 0.03,
+        "O_plane_O_surface_A": 0.03
+      },
+      "description": "Check bond lengths against paper-reported values for the 30 V/nm slab."
+    }
+  ]
+}

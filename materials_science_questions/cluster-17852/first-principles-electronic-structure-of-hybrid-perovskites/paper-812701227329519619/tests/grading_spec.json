@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energy ordering is structural (T3), but the main scoring weight falls on band gap values compared to hidden paper references within tolerances, effectively recomputing the final answer from the agent's raw output.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference formation energies and band gaps for CsPbI3, CsPbBr1.5I1.5, CsPbBr3",
+      "source_provenance": "Paper text: 'The calculated formation energies ... -13.02, -14.32, -15.67 eV. Without SOC, the calculated band gap is 1.79 eV, 2.1 eV, 2.42 eV; with SOC 0.83, 1.19, 1.97 eV.'",
+      "generation_method": "Extracted directly from the paper's Computational Details and Results sections.",
+      "why_not_fabricated": "Values are directly quoted from the paper's reported DFT results; no fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CsPbI3",
+            "CsPbBr1.5I1.5",
+            "CsPbBr3"
+          ],
+          "properties": {
+            "CsPbI3": {
+              "type": "object",
+              "required": [
+                "formation_energy(eV)",
+                "bandgap_noSOC(eV)",
+                "bandgap_withSOC(eV)"
+              ],
+              "properties": {
+                "formation_energy(eV)": {
+                  "type": "number"
+                },
+                "bandgap_noSOC(eV)": {
+                  "type": "number"
+                },
+                "bandgap_withSOC(eV)": {
+                  "type": "number"
+                }
+              }
+            },
+            "CsPbBr1.5I1.5": {
+              "type": "object",
+              "required": [
+                "formation_energy(eV)",
+                "bandgap_noSOC(eV)",
+                "bandgap_withSOC(eV)"
+              ],
+              "properties": {
+                "formation_energy(eV)": {
+                  "type": "number"
+                },
+                "bandgap_noSOC(eV)": {
+                  "type": "number"
+                },
+                "bandgap_withSOC(eV)": {
+                  "type": "number"
+                }
+              }
+            },
+            "CsPbBr3": {
+              "type": "object",
+              "required": [
+                "formation_energy(eV)",
+                "bandgap_noSOC(eV)",
+                "bandgap_withSOC(eV)"
+              ],
+              "properties": {
+                "formation_energy(eV)": {
+                  "type": "number"
+                },
+                "bandgap_noSOC(eV)": {
+                  "type": "number"
+                },
+                "bandgap_withSOC(eV)": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "JSON file containing the computed formation energies and band gaps (with and without spin-orbit coupling) for the three perovskite compositions. Used for scoring against hidden reference values and ordering checks."
+      }
+    ],
+    "notes": "The checker will compare each reported field to hidden reference values (paper-reported) within appropriate tolerances, and verify formation energy ordering: E(CsPbBr3) < E(CsPbBr1.5I1.5) < E(CsPbI3)."
+  },
+  "steps": [
+    {
+      "id": "formation_ordering",
+      "output_file": "dft_results.json",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify formation energy ordering: E(CsPbBr3) < E(CsPbBr1.5I1.5) < E(CsPbI3)"
+    },
+    {
+      "id": "band_gap_checks",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare each band gap (noSOC and withSOC) for CsPbI3, CsPbBr1.5I1.5, CsPbBr3 to paper references within tolerances.",
+      "targets": {
+        "CsPbI3_noSOC": 1.79,
+        "CsPbI3_withSOC": 0.83,
+        "CsPbBr1.5I1.5_noSOC": 2.1,
+        "CsPbBr1.5I1.5_withSOC": 1.19,
+        "CsPbBr3_noSOC": 2.42,
+        "CsPbBr3_withSOC": 1.97
+      },
+      "tolerances": {
+        "noSOC": 0.15,
+        "withSOC": 0.2
+      }
+    }
+  ]
+}

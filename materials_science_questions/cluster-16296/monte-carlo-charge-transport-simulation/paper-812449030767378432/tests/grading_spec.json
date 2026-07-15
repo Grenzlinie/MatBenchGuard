@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Threshold/valley fields, mobility, and max negative differential mobility are recomputed from the v(E) curve; population ratio cannot be recomputed from CSV and is scored by reference match against paper values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_vE_curve.csv": "metric_recompute",
+    "step_02_summary.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold characteristic quantities from the paper's Table 1",
+      "source_provenance": "Table 1 of the paper \"Influence of nonparabolicity on the Gunn-effect characteristic in GaAs in the displaced Maxwellian approximation\", Physics Letters A, 1968.",
+      "generation_method": "digitized directly from the published table: parabolic threshold 3.34 kV/cm, nonparabolic 3.95; valley 25/39; mobility 8100/7200; NDM -4300/-2000; population ratio 0.13%/0.08%.",
+      "why_not_fabricated": "Values are the exact published reference numbers the reproduction aims to match within tolerances that account for legitimate toolchain variability."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_vE_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_kV_per_cm",
+            "v_parabolic",
+            "v_nonparabolic"
+          ],
+          "units": {
+            "field_kV_per_cm": "kV/cm",
+            "v_parabolic": "cm/s",
+            "v_nonparabolic": "cm/s"
+          }
+        },
+        "description": "Drift velocity vs electric field for parabolic and nonparabolic cases. The checker will recompute threshold field, valley field, zero-field mobility, and maximum negative differential mobility from this curve."
+      },
+      {
+        "file": "step_02_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "parabolic_threshold_field_kV_per_cm": "number (kV/cm)",
+            "nonparabolic_threshold_field_kV_per_cm": "number (kV/cm)",
+            "parabolic_valley_field_kV_per_cm": "number (kV/cm)",
+            "nonparabolic_valley_field_kV_per_cm": "number (kV/cm)",
+            "parabolic_zero_field_mobility_cm2_per_Vs": "number (cm^2/V·s)",
+            "nonparabolic_zero_field_mobility_cm2_per_Vs": "number (cm^2/V·s)",
+            "parabolic_max_NDM_cm2_per_Vs": "number (cm^2/V·s)",
+            "nonparabolic_max_NDM_cm2_per_Vs": "number (cm^2/V·s)",
+            "parabolic_population_ratio_2kV_per_cm_pct": "number (%)",
+            "nonparabolic_population_ratio_2kV_per_cm_pct": "number (%)"
+          }
+        },
+        "description": "Characteristic quantities extracted from the simulation, compared against hidden reference values."
+      }
+    ],
+    "notes": "The hidden checker will also cross-verify consistency between the curve and the summary for quantities that can be recomputed."
+  },
+  "steps": [
+    {
+      "id": "step_01_vE_curve",
+      "output_file": "step_01_vE_curve.csv",
+      "weight": 0.75,
+      "kind": "recompute",
+      "gold": {
+        "parabolic_threshold_field_kV_per_cm": 3.34,
+        "nonparabolic_threshold_field_kV_per_cm": 3.95,
+        "parabolic_valley_field_kV_per_cm": 25.0,
+        "nonparabolic_valley_field_kV_per_cm": 39.0,
+        "parabolic_zero_field_mobility_cm2_per_Vs": 8100.0,
+        "nonparabolic_zero_field_mobility_cm2_per_Vs": 7200.0,
+        "parabolic_max_NDM_cm2_per_Vs": -4300.0,
+        "nonparabolic_max_NDM_cm2_per_Vs": -2000.0
+      },
+      "tolerances": {
+        "threshold_field_tol": 0.2,
+        "valley_field_tol": 0.5,
+        "mobility_tol": 500.0,
+        "ndm_tol": 500.0
+      },
+      "consistency_max_rel_dev": 0.15,
+      "consistency_penalty_factor": 0.5
+    },
+    {
+      "id": "step_02_summary",
+      "output_file": "step_02_summary.json",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "gold": {
+        "parabolic_population_ratio_2kV_per_cm_pct": 0.13,
+        "nonparabolic_population_ratio_2kV_per_cm_pct": 0.08
+      },
+      "tolerance": 0.02
+    }
+  ]
+}

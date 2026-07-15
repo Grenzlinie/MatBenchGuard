@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1: recompute total meeting probability W from spatial distribution CSV, and compare 2D dimensionless rate against paper's deterministic value.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "spatial_distribution_d1.csv": "metric_recompute",
+    "nucleation_rates.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_1d_W",
+      "source_provenance": "Paper's reported total meeting probability for L=100, zero barrier; from Eq.(43) and surrounding text.",
+      "generation_method": "Extracted from paper text; value ≈ 0.47.",
+      "why_not_fabricated": "Real paper-reported value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_2d_omega_dimless",
+      "source_provenance": "Paper's asymptotic formula Eq.(76) with L=32; value = 0.008 / ln(32/1.3).",
+      "generation_method": "Computed directly from the formula given in the paper.",
+      "why_not_fabricated": "Directly derived from paper's own analytical expression."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "spatial_distribution_d1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "P_n"
+          ],
+          "units": {
+            "P_n": "dimensionless probability"
+          }
+        },
+        "description": "Unnormalized first-meeting probability P(n) for each site n=1..100 on a 1D terrace of size L=100 with zero Ehrlich-Schwoebel barrier. The checker recomputes total meeting probability W = sum(P_n) and dimensionless rate ω D/(F² L⁴) = W/12 from this artifact."
+      },
+      {
+        "file": "nucleation_rates.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d1_W": "float (dimensionless probability)",
+            "d1_omega_dimless": "float (dimensionless rate, ω D/(F² L⁴))",
+            "d2_omega_dimless": "float (dimensionless rate, ω D/(F² L⁶))"
+          }
+        },
+        "description": "Total meeting probability for 1D zero-barrier interacting adatoms and the dimensionless nucleation rates for both 1D (L=100) and 2D (L=32) zero-barrier cases, computed exactly by the mapping method."
+      }
+    ],
+    "notes": "The dimensionless rates are derived from the total meeting probability W. For 1D, ω D/(F² L⁴) = W/12; for 2D, the 4D numerical integration directly yields ω D/(F² L⁶). The hidden reference values are the paper‐reported quantities for these exact conditions."
+  },
+  "steps": [
+    {
+      "id": "check_spatial_d1",
+      "output_file": "spatial_distribution_d1.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "metric": "W_total_meeting_probability",
+      "gold_W": 0.47,
+      "tolerance_relative": 0.02,
+      "shape_check_weight": 0.05
+    },
+    {
+      "id": "check_nucleation_rates",
+      "output_file": "nucleation_rates.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "field": "d2_omega_dimless",
+      "gold": 0.002497,
+      "tolerance_relative": 1e-06
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "pass_threshold": 0.6,
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of calibrated MAE, r², and q² requires the original dataset and DFT energies, unavailable in the verifier; scoring relies on reported metrics compared to paper thresholds and on structural checks of the descriptor list and coefficient artifact.",
+  "target_policies": {
+    "descriptor_selection.txt": "structural_audit",
+    "model_coefficients.json": "structural_audit",
+    "performance_metrics.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold expected set of 17 descriptor abbreviations",
+      "source_provenance": "Paper Table 1 (selected descriptors)",
+      "generation_method": "Directly taken from the paper's reported optimal subset",
+      "why_not_fabricated": "These are the exact descriptors the paper selected after simulated annealing; a genuine reproduction must produce the same set."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Performance metric thresholds (MAE after calibration, r², q²)",
+      "source_provenance": "Paper reported values: MAE 2.1 kcal/mol, r² 0.86, q² 0.84",
+      "generation_method": "Thresholds set as relaxed bounds from paper values, absorbing legitimate code‑dependent variation (MAE ≤ 2.6, r² ≥ 0.81, q² ≥ 0.79)",
+      "why_not_fabricated": "These thresholds are looser than the paper's reported numbers, ensuring a correct reproduction can achieve full credit while still requiring a genuine pipeline to produce a competitive result."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "descriptor_selection.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required_lines": 17,
+          "unit": null
+        },
+        "description": "The set of 17 descriptor abbreviations selected by the feature selection procedure. Order-insensitive comparison against the expected set."
+      },
+      {
+        "file": "model_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "constant_A": "number",
+            "coefficients": "object"
+          },
+          "coefficients_keys_count": 17
+        },
+        "description": "Regression coefficients for the 17 selected descriptors and the constant term. Checked for structural completeness; coefficient values are not scored against exact paper numbers due to potential DFT code differences."
+      },
+      {
+        "file": "performance_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mae_before_calibration": "number (kcal/mol)",
+            "mae_after_calibration": "number (kcal/mol)",
+            "r_squared": "number (dimensionless)",
+            "q_squared": "number (dimensionless)"
+          }
+        },
+        "description": "Reported MAE before and after calibration, r², and q². The verifier compares these values against hidden thresholds; full credit is awarded for meeting or exceeding the required level of accuracy."
+      }
+    ],
+    "notes": "The descriptor_selection.txt file must contain exactly 17 lines; the model_coefficients.json must contain exactly 17 coefficient entries plus constant_A.  The performance_metrics are only accepted under the contract that the metric conventions (r², q²) follow the definitions in the instruction."
+  },
+  "steps": [
+    {
+      "id": "desc_set",
+      "output_file": "descriptor_selection.txt",
+      "kind": "set_intersection",
+      "weight": 0.1,
+      "hidden_config": {
+        "expected_set": [
+          "N_C",
+          "N_O",
+          "N_S",
+          "N_F",
+          "N_Cl",
+          "N_Br",
+          "N_CCD",
+          "N_NH",
+          "N_OH",
+          "N_COS",
+          "N_CND",
+          "N_NND",
+          "N_SOD",
+          "N_5_6_7_8_ring",
+          "N_RA",
+          "I_RT",
+          "ZPE"
+        ]
+      }
+    },
+    {
+      "id": "coeff_struct",
+      "output_file": "model_coefficients.json",
+      "kind": "structural",
+      "weight": 0.05,
+      "hidden_config": {
+        "expected_descriptors": [
+          "N_C",
+          "N_O",
+          "N_S",
+          "N_F",
+          "N_Cl",
+          "N_Br",
+          "N_CCD",
+          "N_NH",
+          "N_OH",
+          "N_COS",
+          "N_CND",
+          "N_NND",
+          "N_SOD",
+          "N_5_6_7_8_ring",
+          "N_RA",
+          "I_RT",
+          "ZPE"
+        ]
+      }
+    },
+    {
+      "id": "mae_after",
+      "output_file": "performance_metrics.json",
+      "kind": "threshold_or_better",
+      "weight": 0.45,
+      "field": "mae_after_calibration",
+      "hidden_config": {
+        "lower_is_better": true,
+        "target_max": 2.6,
+        "max_for_zero": 6.0
+      }
+    },
+    {
+      "id": "r2",
+      "output_file": "performance_metrics.json",
+      "kind": "threshold_or_better",
+      "weight": 0.2,
+      "field": "r_squared",
+      "hidden_config": {
+        "higher_is_better": true,
+        "target_min": 0.81
+      }
+    },
+    {
+      "id": "q2",
+      "output_file": "performance_metrics.json",
+      "kind": "threshold_or_better",
+      "weight": 0.2,
+      "field": "q_squared",
+      "hidden_config": {
+        "higher_is_better": true,
+        "target_min": 0.79
+      }
+    }
+  ]
+}

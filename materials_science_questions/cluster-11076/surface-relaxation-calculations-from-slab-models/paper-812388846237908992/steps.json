@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Optimize isolated water molecule",
+    "role": "process",
+    "action": "Optimize geometry of an isolated water molecule using the selected DFT code and basis set. Record the equilibrium total energy and geometry; this provides the water reference energy needed for hydroxylation energy calculations.",
+    "output_file": "",
+    "evidence": "water_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the reference energy and geometry of a water molecule in isolation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Build slab models",
+    "role": "process",
+    "action": "Construct five-layer periodic slab models for the (001), (110), and (210) surfaces of MgO, CaO, and SrO using the experimental lattice constants (4.21, 4.86, 5.22 Å) and rocksalt structure. Ensure symmetric slabs with vacuum spacing.",
+    "output_file": "",
+    "evidence": "slab_structures.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generation of unrelaxed slab geometries that serve as input for all subsequent relaxations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Clean surface relaxations",
+    "role": "process",
+    "action": "For each slab, perform geometry optimization (ion positions only, fixed cell) to obtain the relaxed total energy and the unrelaxed total energy of the clean slab. Record both energies for later use.",
+    "output_file": "",
+    "evidence": "clean_relaxation_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxation of the clean five-layer films; provides reference energies for relaxation and hydroxylation calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Hydroxylated surface relaxations",
+    "role": "process",
+    "action": "Place one dissociated water molecule per side of each slab (OH on surface cation, H on surface oxygen) and perform a constrained vertical relaxation along the z-axis, allowing the top surface atoms to move. Obtain the equilibrium hydroxylated geometry and total energy.",
+    "output_file": "",
+    "evidence": "hydroxylated_geometries.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimization of the water-adsorbed surfaces; provides the hydroxylated total energies needed for relaxation and interaction energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute vibrational frequencies",
+    "role": "process",
+    "action": "For each hydroxylated slab, scan the H···Os and H···Ow bond lengths around their equilibrium values, compute total energies at each displacement, fit a sixth-degree polynomial to the potential energy curve, and numerically solve the 1D nuclear Schrödinger equation to obtain the harmonic vibrational frequencies ωe for both OH stretching modes.",
+    "output_file": "",
+    "evidence": "frequency_scans.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Calculation of the OH stretching harmonic frequencies for the surface and hydroxyl groups.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Compile results and write CSV",
+    "role": "scored",
+    "action": "Calculate the clean relaxation energy ΔE = E(relaxed) − E(unrelaxed) from step 03; the hydroxylated relaxation energy from step 04; the hydroxylation/interaction energy E_hyd = [E(slab+2H2O) − E(clean slab) − 2E(H2O)]/2 using water energy from step 01, clean slab energy from step 03, and hydroxylated energy from step 04; and retrieve the harmonic frequencies from step 05. Write all values into a single CSV file with one row per oxide–surface combination.",
+    "output_file": "relaxation_and_frequencies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final compilation of all required quantities: relaxation energies, hydroxylation energies, and vibrational frequencies. The checker will verify magnitude thresholds, ordering, and frequency ranges.",
+    "output_schema": "oxide (string), plane (string), clean_ΔE_relax (float in hartree), hyd_ΔE_relax (float in hartree), E_hyd (float in hartree), freq_HOs (float in cm⁻¹), freq_HOw (float in cm⁻¹)"
+  }
+]

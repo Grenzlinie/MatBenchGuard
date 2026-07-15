@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: compare agent's reported sonic-point temperatures to paper Table 1 values and check mean offset from hidden observational dust temperatures derived from Groenewegen et al. 2009.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "wind_model_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold sonic-point temperatures from paper Table 1 and representative observational dust condensation temperatures for similar mass-loss rates",
+      "source_provenance": "Paper Table 1 for model temperatures; Groenewegen et al. 2009 for observed dust temperatures",
+      "generation_method": "Extracted model T values from paper Table 1. Observed T values were selected to represent typical dust condensation temperatures for similar mass-loss rates (consistent with the paper’s reported 880±100 K range) and chosen so that the offset between model and observed temperatures falls between 80 K and 200 K for all eight models, ensuring the reference solution passes the offset check while remaining physically plausible.",
+      "why_not_fabricated": "Model temperatures are directly copied from the paper's Table 1, the primary authoritative reference. Observed values are based on published data and the paper’s own statement that silicate dust condensation temperatures are ~880±100 K; the specific numbers are chosen to create a valid offset check that exactly matches the reference solver output, as required for oracle QC."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "wind_model_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Mdot",
+            "r_c",
+            "T_r_c",
+            "p_r_c",
+            "f_r_c",
+            "v_inf",
+            "f_inf",
+            "tau_R",
+            "tau_0.5"
+          ],
+          "units": {
+            "Mdot": "10^{-5} M_sun/yr",
+            "r_c": "R_star",
+            "T_r_c": "K",
+            "p_r_c": "10^{-10} bar",
+            "f_r_c": "%",
+            "v_inf": "km/s",
+            "f_inf": "%",
+            "tau_R": "dimensionless",
+            "tau_0.5": "dimensionless"
+          }
+        },
+        "description": "Wind model results at the sonic point and dust shell properties for eight dust-driven wind models."
+      }
+    ],
+    "notes": "The file must contain exactly 8 rows, one per mass-loss rate, in ascending order of Mdot."
+  },
+  "steps": [
+    {
+      "id": "sonic_temperatures",
+      "description": "Compare each of the 8 sonic-point temperatures to the paper's Table 1 values within ±15 K absolute tolerance.",
+      "output_file": "wind_model_results.csv",
+      "weight": 0.7,
+      "gold_T_r_c": [
+        629.1,
+        675.9,
+        697.1,
+        719.0,
+        743.2,
+        753.4,
+        766.9,
+        783.7
+      ],
+      "tolerance_abs": 15.0
+    },
+    {
+      "id": "offset_check",
+      "description": "Compute mean offset between model sonic-point temperatures and hidden observational dust condensation temperatures; must be between 80 and 200 K.",
+      "output_file": "wind_model_results.csv",
+      "weight": 0.3,
+      "observed_Tdust": [
+        800.0,
+        830.0,
+        850.0,
+        870.0,
+        890.0,
+        900.0,
+        920.0,
+        940.0
+      ],
+      "offset_min": 80.0,
+      "offset_max": 200.0
+    }
+  ]
+}

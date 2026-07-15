@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes maximum energy/temperature values from the submitted time series CSV and evaluates structural trends in derived properties, without trusting any agent-reported summary.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for energy/temperature maxima and structural thresholds",
+      "source_provenance": "Paper text: 'EKIN maximum is 250 kcal/mol, EPOT maximum is 150 kcal/mol, ETOT is 750 kcal/mol and TEMP maximum is 1280 K.' and described asymptotic/mol specific heat behavior and inverse relationship.",
+      "generation_method": "directly quoted from paper",
+      "why_not_fabricated": "These are exact reported values in the paper's Results section."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "EKIN_kcal_per_mol",
+            "EPOT_kcal_per_mol",
+            "ETOT_kcal_per_mol",
+            "TEMP_K",
+            "molar_specific_heat_kcal_per_mol_K",
+            "molar_entropy_variation_kcal_per_mol_K",
+            "efficiency",
+            "EKIN_over_TEMP_kcal_per_mol_K"
+          ],
+          "units": {
+            "time_ps": "ps",
+            "EKIN_kcal_per_mol": "kcal/mol",
+            "EPOT_kcal_per_mol": "kcal/mol",
+            "ETOT_kcal_per_mol": "kcal/mol",
+            "TEMP_K": "K",
+            "molar_specific_heat_kcal_per_mol_K": "kcal/(mol K)",
+            "molar_entropy_variation_kcal_per_mol_K": "kcal/(mol K)",
+            "efficiency": "dimensionless",
+            "EKIN_over_TEMP_kcal_per_mol_K": "kcal/(mol K)"
+          }
+        },
+        "description": "Time series of raw kinetic, potential, total energy and instantaneous temperature together with derived molar specific heat, molar entropy variation, efficiency, and EKIN/TEMP ratio over the 8000 ps simulation."
+      }
+    ],
+    "notes": "The checker will recompute the maximum values of EKIN, EPOT, ETOT, and TEMP from this CSV and also verify structural trends in the derived properties (molar specific heat asymptote, inverse relation between entropy and efficiency). No gold values or tolerances are provided to the solving agent."
+  },
+  "steps": [
+    {
+      "id": "simulation_results",
+      "output_file": "simulation_results.csv",
+      "weight": 1.0,
+      "kind": "recompute_custom",
+      "gold": {
+        "ekin_max": 250,
+        "epot_max": 150,
+        "etot_max": 750,
+        "temp_max": 1280,
+        "tolerance_relative": 0.15
+      },
+      "description": "Recompute maximum energy and temperature values and structural properties from the time series CSV."
+    }
+  ]
+}

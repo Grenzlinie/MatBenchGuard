@@ -1,0 +1,165 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full DFT recompute is infeasible in the verifier sandbox; structural scoring compares reported m_tunnel to paper's DFT-calculated values within tolerance and validates relative ordering between orientations/stoichiometries.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_mtunnel.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported DFT effective tunneling mass values and expected relative trends",
+      "source_provenance": "Tables II and III in Kaczer et al., JVSTB 31, 01A105 (2013); doi:10.1116/1.4767125",
+      "generation_method": "Transcribed directly from paper's tables; values match the reference solve.sh output.",
+      "why_not_fabricated": "Values are the paper's own calculated results, not a solver's output. They are the authoritative hidden gold for this reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_mtunnel.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "material",
+              "orientation",
+              "stoichiometry",
+              "energy_below_CBM",
+              "m_tunnel"
+            ],
+            "properties": {
+              "material": {
+                "type": "string"
+              },
+              "orientation": {
+                "type": "string"
+              },
+              "stoichiometry": {
+                "type": "string"
+              },
+              "energy_below_CBM": {
+                "type": "number",
+                "units": "eV"
+              },
+              "m_tunnel": {
+                "type": "number",
+                "units": "m_e"
+              }
+            }
+          }
+        },
+        "description": "Effective tunneling mass values computed from DFT imaginary bands at the specified trap depth energies."
+      }
+    ],
+    "notes": "The DFT calculations require substantial CPU/GPU resources; the agent is expected to acquire necessary compute outside the sandbox and bring the final artifact back."
+  },
+  "tolerance_rel": 0.3,
+  "tolerance_abs": 0.05,
+  "reference_values": [
+    {
+      "material": "r-TiO2",
+      "orientation": "(110)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 1.3,
+      "m_tunnel": 0.15
+    },
+    {
+      "material": "r-TiO2",
+      "orientation": "(001)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 1.3,
+      "m_tunnel": 0.19
+    },
+    {
+      "material": "r-TiO2",
+      "orientation": "(100)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 1.3,
+      "m_tunnel": 0.27
+    },
+    {
+      "material": "r-TiO2",
+      "orientation": "(101)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 1.3,
+      "m_tunnel": 0.23
+    },
+    {
+      "material": "SrTiO3",
+      "orientation": "(110)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 0.9,
+      "m_tunnel": 0.18
+    },
+    {
+      "material": "SrTiO3",
+      "orientation": "(001)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 0.9,
+      "m_tunnel": 0.21
+    },
+    {
+      "material": "SrTiO3",
+      "orientation": "(111)",
+      "stoichiometry": "stoichiometric",
+      "energy_below_CBM": 0.9,
+      "m_tunnel": 0.25
+    },
+    {
+      "material": "SrTiO3",
+      "orientation": "(001)",
+      "stoichiometry": "Sr0.62Ti0.38O4",
+      "energy_below_CBM": 0.9,
+      "m_tunnel": 0.45
+    },
+    {
+      "material": "SrTiO3",
+      "orientation": "(001)",
+      "stoichiometry": "Sr2TiO4",
+      "energy_below_CBM": 0.9,
+      "m_tunnel": 0.44
+    }
+  ],
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "computed_mtunnel.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "description": "File exists, is a JSON array of 9 items with required keys"
+    },
+    {
+      "id": "mtunnel_values",
+      "output_file": "computed_mtunnel.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "description": "Compare m_tunnel to paper DFT values within tolerance (rel 0.3 or abs 0.05)"
+    },
+    {
+      "id": "r_tio2_ordering",
+      "output_file": "computed_mtunnel.json",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Ordering r-TiO2 (110) m_tunnel < (001) m_tunnel < (100) m_tunnel"
+    },
+    {
+      "id": "sto_ordering",
+      "output_file": "computed_mtunnel.json",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Ordering SrTiO3 stoichiometric (110) < (001) < (111)"
+    },
+    {
+      "id": "sr_rich_ordering",
+      "output_file": "computed_mtunnel.json",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Sr-rich m_tunnel > all stoichiometric SrTiO3 m_tunnel"
+    }
+  ]
+}

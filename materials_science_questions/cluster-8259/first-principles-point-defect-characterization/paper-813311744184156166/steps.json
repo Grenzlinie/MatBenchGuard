@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_build",
+    "title": "Construct nano 3C-SiC cluster with silicon vacancy",
+    "role": "process",
+    "action": "From the public 3C-SiC zinc blende structure, construct a nano cubic cluster of approximately 1.4 nm diameter centred at an interstitial site, then remove one silicon atom to create a vacancy, ensuring a near-Td symmetry.",
+    "output_file": "",
+    "evidence": "cluster.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the atomic structure (coordinates) of the 3C-SiC nano cluster containing a silicon vacancy; used by all subsequent electronic structure calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dft_gs",
+    "title": "DFT ground-state calculation for nano cluster",
+    "role": "process",
+    "action": "Perform spin-polarised DFT geometry optimisation and ground-state electronic structure calculations for the neutral (charge=0, S=1) and negatively charged (charge=-1, S=3/2) silicon vacancy using the PBE0 hybrid functional.",
+    "output_file": "",
+    "evidence": "dft_gs.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain relaxed geometries, ground-state energies, and wavefunctions that serve as the reference state for TD-DFT.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_tddft",
+    "title": "TD-DFT excitation calculation",
+    "role": "process",
+    "action": "Using TD-DFT with the PBE0 hybrid kernel, compute the lowest excitation energies and the many-electron symmetry labels for the neutral vacancy (lowest excitation, e.g. ^3E from ^3A_2) and for the negatively charged vacancy (two lowest excitations, ^4A_2 and ^4E).",
+    "output_file": "",
+    "evidence": "tddft.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce the raw optical transition energies and symmetry assignments required for the final comparison with experiment.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_relax",
+    "title": "Constrained DFT relaxation for the negatively charged vacancy",
+    "role": "process",
+    "action": "For the negatively charged vacancy, perform a geometry optimisation under an occupation constraint that mimics the excited state (e.g. the ^4A_2 occupation) to obtain the relaxed excited-state geometry; compute the relaxation energy as the difference between the vertical excitation energy and the relaxed excitation energy.",
+    "output_file": "",
+    "evidence": "relax_energy.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the relaxation energy needed to derive the zero-phonon line.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_compile",
+    "title": "Compile computed properties and compare with experiment",
+    "role": "scored",
+    "action": "Collect all computed quantities: for the neutral vacancy, ground-state symmetry, lowest excitation energy, excited-state symmetry, and polarisation rules; for the negatively charged vacancy, ground-state symmetry, first and second excitation energies and their symmetries, relaxation energy, estimated zero-phonon line (vertical excitation minus relaxation energy), and polarisation rules. Write the complete results into computed_properties.json. Include a comparison statement that honestly assesses, based on the computed values, whether the properties of the neutral and negatively charged silicon vacancy agree or disagree with the experimental V1/V1' photoluminescence data (ZPL ~1.44 eV, parallel and perpendicular polarisation components).",
+    "output_file": "computed_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The main verifiable artifact containing the key computational results and the comparison with experiment that supports the paper's central claim.",
+    "output_schema": "{\n  \"neutral_vacancy\": {\n    \"ground_state_symmetry\": \"string (e.g., ^3A_2)\",\n    \"lowest_excitation_energy_eV\": \"number\",\n    \"lowest_excited_state_symmetry\": \"string (e.g., ^3E)\",\n    \"polarization_rules\": \"string (e.g., perpendicular only)\"\n  },\n  \"negative_vacancy\": {\n    \"ground_state_symmetry\": \"string (e.g., ^4A_2)\",\n    \"first_excitation_energy_eV\": \"number\",\n    \"first_excited_state_symmetry\": \"string (e.g., ^4A_2)\",\n    \"second_excitation_energy_eV\": \"number\",\n    \"second_excited_state_symmetry\": \"string (e.g., ^4E)\",\n    \"relaxation_energy_eV\": \"number\",\n    \"estimated_zero_phonon_line_eV\": \"number\",\n    \"polarization_rules\": \"string (e.g., E||c for ^4A_2, E_perp_c for ^4E)\"\n  },\n  \"comparison_experiment\": \"string (statement describing agreement/mismatch with experimental V1/V1' data)\"\n}"
+  }
+]

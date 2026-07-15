@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_dft",
+    "title": "DFT calculations (geometry optimization, E(V) curve, elastic constants)",
+    "role": "process",
+    "action": "Perform DFT geometry optimization of AlB₂-type WB₂ using GGA-PBE with plane-wave pseudopotentials. Compute the equilibrium lattice constants, then generate an energy vs. volume curve for a set of volumes (with fixed c/a ratio). Additionally, compute the five independent elastic constants C_ij via the stress-strain method. Save the E(V) data and elastic constants for later steps.",
+    "output_file": "",
+    "evidence": "energy_volume.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "DFT reference calculations providing the E(V) data and elastic constants needed for subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_poisson",
+    "title": "Poisson ratio from elastic constants",
+    "role": "scored",
+    "action": "Using the elastic constants obtained in step 1, compute the Voigt, Reuss, and Hill bulk (B_V, B_R, B_H) and shear (G_V, G_R, G_H) moduli. Calculate the Poisson ratio ν = (3B_H - 2G_H) / [2(3B_H + G_H)]. Write the values to poisson_ratio.json with keys 'nu', 'B_H', 'G_H'.",
+    "output_file": "poisson_ratio.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Poisson ratio ν and the Hill-averaged bulk and shear moduli, required as input to GIBBS2.",
+    "output_schema": "{\"nu\": <float>, \"B_H\": <float>, \"G_H\": <float>}"
+  },
+  {
+    "id": "step3_alpha_avg",
+    "title": "Average volumetric thermal expansion coefficient",
+    "role": "scored",
+    "action": "Run the quasi-harmonic Debye model (e.g., using GIBBS2 code) with the E(V) data and Poisson ratio ν. Compute the equilibrium volume V(T) at zero pressure over 298–473 K and derive the average volumetric thermal expansion coefficient α_V. Write the single value (in 10⁻⁶ K⁻¹) to alpha_V_avg.txt.",
+    "output_file": "alpha_V_avg.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Average volumetric thermal expansion coefficient over 298–473 K at 0 GPa.",
+    "output_schema": "single float (e.g., 24.86)"
+  },
+  {
+    "id": "step4_thermal_props",
+    "title": "Temperature-dependent thermal properties",
+    "role": "scored",
+    "action": "From the same GIBBS2 simulation, extract the thermal expansion α and constant-volume heat capacity C_V at 0 GPa for T = 300, 500, 1000, 1500, 2000 K. Save the data as a CSV file with columns T(K), alpha(10⁻⁶ K⁻¹), C_V(J/mol-K).",
+    "output_file": "thermal_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature scan of thermal expansion and heat capacity at zero pressure.",
+    "output_schema": "columns: T(K), alpha(10⁻⁶ K⁻¹), C_V(J/mol-K)"
+  }
+]

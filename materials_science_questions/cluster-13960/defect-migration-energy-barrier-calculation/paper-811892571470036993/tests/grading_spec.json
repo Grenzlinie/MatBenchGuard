@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing barriers from raw NEB energy profiles would require the agent to submit full DFT output files, which is infeasible. The checker instead compares the agent's reported numbers to paper-reported gold values within tolerances, augmented by sign and ordering trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for barriers and total energy changes for Au and Co segregation, plus tolerances.",
+      "source_provenance": "Paper main text (Results and Discussion): Au barrier_step1_2=0.07 eV, barrier_TS3=1.15 eV, ΔE_1_to_4=-0.57 eV; Co barrier_step1_2=0.48 eV, barrier_TS3=1.15 eV, ΔE_1_to_4=0.45 eV.",
+      "generation_method": "Extracted directly from the paper's Results and Discussion section.",
+      "why_not_fabricated": "These are the exact reported values from the published paper, not invented. Tolerances (±0.1 eV for barriers, ±0.2 eV for total energy changes) account for expected variation from different pseudopotential/code implementations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_au_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "impurity": "string",
+            "barrier_step1_2_eV": "number",
+            "barrier_TS3_eV": "number",
+            "delta_E_total_1_to_4_eV": "number"
+          },
+          "units": {
+            "barrier_step1_2_eV": "eV",
+            "barrier_TS3_eV": "eV",
+            "delta_E_total_1_to_4_eV": "eV"
+          }
+        },
+        "description": "Au vacancy-mediated segregation barriers and overall energy change. Checked against the paper's reported values within hidden tolerances."
+      },
+      {
+        "file": "step_02_co_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "impurity": "string",
+            "barrier_step1_2_eV": "number",
+            "barrier_TS3_eV": "number",
+            "delta_E_total_1_to_4_eV": "number"
+          },
+          "units": {
+            "barrier_step1_2_eV": "eV",
+            "barrier_TS3_eV": "eV",
+            "delta_E_total_1_to_4_eV": "eV"
+          }
+        },
+        "description": "Co vacancy-mediated segregation barriers and overall energy change. Checked against the paper's reported values within hidden tolerances."
+      }
+    ],
+    "notes": "The agent must compute the quantities via DFT+NEB as described in the steps. The checker performs result-level comparison (T0) with hidden tolerances to account for different pseudopotentials and code implementations."
+  },
+  "steps": [
+    {
+      "id": "au_barriers",
+      "output_file": "step_01_au_barriers.json",
+      "weight": 0.45,
+      "targets": {
+        "barrier_step1_2_eV": {
+          "value": 0.07,
+          "tolerance": 0.1
+        },
+        "barrier_TS3_eV": {
+          "value": 1.15,
+          "tolerance": 0.1
+        },
+        "delta_E_total_1_to_4_eV": {
+          "value": -0.57,
+          "tolerance": 0.2
+        }
+      }
+    },
+    {
+      "id": "co_barriers",
+      "output_file": "step_02_co_barriers.json",
+      "weight": 0.45,
+      "targets": {
+        "barrier_step1_2_eV": {
+          "value": 0.48,
+          "tolerance": 0.1
+        },
+        "barrier_TS3_eV": {
+          "value": 1.15,
+          "tolerance": 0.1
+        },
+        "delta_E_total_1_to_4_eV": {
+          "value": 0.45,
+          "tolerance": 0.2
+        }
+      }
+    },
+    {
+      "id": "trends",
+      "weight": 0.1,
+      "description": "Verify structural trends: Au barrier_step1_2 < Co barrier_step1_2, Au delta_E < 0, Co delta_E > 0"
+    }
+  ]
+}

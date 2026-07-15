@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact reference DBAR ratio and MDB differential curves cannot be embedded as gold numeric tables; derived structural properties (low-momentum ratio peak, high-momentum convergence, monotonic decrease, peak sign/location, tail near zero) are scored instead.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "v12_dbar_ratio.csv": "structural_audit",
+    "v12_mdb_differential.csv": "structural_audit",
+    "v12_magnetization.txt": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "v12_dbar_ratio.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "momentum",
+            "ratio"
+          ],
+          "units": {
+            "momentum": "m₀c",
+            "ratio": "dimensionless"
+          },
+          "description": "One column 'momentum' (float, unit m₀c) and one column 'ratio' (float)."
+        },
+        "description": "DBAR ratio spectrum N(p)/N_ref(p) of the V12 vacancy cluster. The verifier compares intensity values against hidden reference data using a tolerance‑based metric."
+      },
+      {
+        "file": "v12_mdb_differential.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "momentum",
+            "differential_intensity"
+          ],
+          "units": {
+            "momentum": "m₀c",
+            "differential_intensity": "arbitrary"
+          },
+          "description": "One column 'momentum' (float, unit m₀c) and one column 'differential_intensity' (float)."
+        },
+        "description": "MDB differential spectrum N+(p) − N−(p) of the V12 cluster. The verifier compares intensity values against hidden reference data using a tolerance‑based metric."
+      },
+      {
+        "file": "v12_magnetization.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "contents": "single float in µB",
+          "description": "A single floating‑point number representing the total magnetization of the double‑V12 supercell."
+        },
+        "description": "Spontaneous magnetization of the double-V12 supercell. The verifier checks the agent’s value against a hidden reference within a small tolerance."
+      }
+    ],
+    "notes": "All outputs are required. The DBAR and MDB curves must cover the momentum range 0 to ~20×10⁻³ m₀c with sufficient resolution (~0.1×10⁻³ m₀c). Hidden reference values are derived from the published theoretical curves."
+  },
+  "steps": [
+    {
+      "id": "dbar_ratio",
+      "output_file": "v12_dbar_ratio.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "config": {
+        "ratio_low_threshold": 1.08,
+        "ratio_high_threshold": 1.02,
+        "ratio_decrease_momentum_points": [
+          0.005,
+          0.015
+        ],
+        "ratio_decrease_min_diff": 0.03
+      }
+    },
+    {
+      "id": "mdb_diff",
+      "output_file": "v12_mdb_differential.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "config": {
+        "peak_intensity_threshold": 0.005,
+        "peak_momentum_window": 0.002,
+        "tail_intensity_threshold": 0.002,
+        "tail_momentum_start": 0.01
+      }
+    },
+    {
+      "id": "magnetization",
+      "output_file": "v12_magnetization.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "config": {
+        "target": 2.0,
+        "tolerance_abs": 0.2
+      }
+    }
+  ],
+  "hidden_assets": []
+}

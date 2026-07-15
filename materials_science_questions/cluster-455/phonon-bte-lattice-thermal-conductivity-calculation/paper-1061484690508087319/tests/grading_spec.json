@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent's final numeric values are compared to paper-reported gold using tolerance and trend checks; recompute from raw computational intermediates is not required.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for band gaps, lattice thermal conductivity, and ZT",
+      "source_provenance": "Paper Table 2, Table 4, Fig. 10, text (values from 300 K and 800 K). Extract exact numbers as reported in the manuscript.",
+      "generation_method": "Extracted directly from paper tables and text (e.g., GeS ML PBE band gap 1.76 eV, lattice kappa 1.16 W/mK at 300 K, ZT 300K 0.64, 800K 1.83).",
+      "why_not_fabricated": "All values are taken from the paper's own results; no random generation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "GeS_ML": "float, eV",
+            "GeSe_ML": "float, eV",
+            "XX": "float, eV",
+            "XY": "float, eV"
+          }
+        },
+        "description": "PBE indirect band gaps for GeS monolayer, GeSe monolayer, GeS/GeSe XX, and GeS/GeSe XY heterostructure."
+      },
+      {
+        "file": "lattice_thermal_conductivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "GeS_ML": "float, W/mK",
+            "GeSe_ML": "float, W/mK",
+            "XX": "float, W/mK",
+            "XY": "float, W/mK"
+          }
+        },
+        "description": "Lattice thermal conductivity at 300 K for the four systems."
+      },
+      {
+        "file": "zt_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "GeS_ML": {
+              "300K": "float",
+              "800K": "float"
+            },
+            "GeSe_ML": {
+              "300K": "float",
+              "800K": "float"
+            },
+            "XX": {
+              "300K": "float",
+              "800K": "float"
+            },
+            "XY": {
+              "300K": "float",
+              "800K": "float"
+            }
+          }
+        },
+        "description": "Maximum ZT at 300 K and 800 K for all four materials."
+      }
+    ],
+    "notes": "All values are compared to the corresponding paper-reported numbers with appropriate tolerances. Relative trends (ZT increase with temperature, heterostructure ZT lower than monolayer ZT at 300 K) are also assessed."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "weight": 0.2,
+      "gold": {
+        "GeS_ML": 1.76,
+        "GeSe_ML": 1.23,
+        "XX": 0.91,
+        "XY": 1.02
+      },
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "lattice_thermal_conductivity",
+      "output_file": "lattice_thermal_conductivity.json",
+      "weight": 0.3,
+      "gold": {
+        "GeS_ML": 1.16,
+        "GeSe_ML": 0.32,
+        "XX": 15.21,
+        "XY": 17.95
+      },
+      "tolerance_rel": 0.2
+    },
+    {
+      "id": "zt_values",
+      "output_file": "zt_values.json",
+      "weight": 0.5,
+      "gold_300K": {
+        "GeS_ML": 0.64,
+        "GeSe_ML": 0.47,
+        "XX": 0.13,
+        "XY": 0.16
+      },
+      "gold_800K": {
+        "GeS_ML": 1.83,
+        "GeSe_ML": 1.73,
+        "XX": 0.84,
+        "XY": 0.83
+      },
+      "trend_checks": true
+    }
+  ]
+}

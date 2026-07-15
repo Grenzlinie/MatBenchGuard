@@ -1,0 +1,47 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The frequency response is recomputed from the agent's submitted CSV against an independent implementation of the quasi-static cascade model; pointwise comparison ensures correct reproduction of the filter response.",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "frequency_response.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "frequency_response.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f",
+            "S21_dB",
+            "S11_dB"
+          ],
+          "units": {
+            "f": "Hz",
+            "S21_dB": "dB",
+            "S11_dB": "dB"
+          }
+        },
+        "description": "Frequency response (insertion loss and return loss) of the bandpass filter computed via the quasi-static cascade ABCD/S-matrix model."
+      }
+    ],
+    "notes": "The CSV must contain rows for frequencies from 8e9 to 18e9 Hz in 10 MHz steps (inclusive). The hidden reference CSV is generated from the same quasi-static model with the provided prototype parameters; close agreement is expected."
+  },
+  "steps": [
+    {
+      "id": "compute_response",
+      "output_file": "frequency_response.csv",
+      "weight": 1.0,
+      "kind": "recompute_metric",
+      "metric": "fraction_within_tolerance",
+      "tol_dB": 0.5,
+      "tol_dB_low": 2.0,
+      "low_threshold_dB": -40.0,
+      "freq_tol_HZ": 1000000.0
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes phonon frequencies from the paper's EAM parameters (Table 1) using the standard EAM dynamical matrix, compares to agent's CSV via MAPE ≤5% monotonic decay.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phonon_frequencies.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "EAM potential parameters (spline knots, third-neighbor force constants) for Ni and Pd from Table 1 of the paper.",
+      "source_provenance": "Table 1 of the paper (Embedded atom method for phonon frequencies in transition metals, Solid State Commun. 75, 877, 1990).",
+      "generation_method": "Values copied exactly from the published table; they are the fitted parameters used to produce the paper's phonon dispersion curves.",
+      "why_not_fabricated": "The numbers are directly transcribed from the paper's own reported parameter set. They constitute the underlying model that the agent must reconstruct; using them as gold tests whether the agent's implementation reproduces the paper's calculation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "direction",
+            "q_reduced",
+            "branch",
+            "frequency_THz"
+          ]
+        },
+        "description": "Computed phonon frequencies. The hidden checker will calculate mean absolute percentage error against experimental reference data and score full credit if the error is ≤5%."
+      }
+    ],
+    "notes": "Only the phonon_frequencies.csv is scored; the fitting log is for evidence that the potential was fitted, not scored. The dispersion must include both Ni and Pd, all high-symmetry directions, all branches, and a dense q-point grid."
+  },
+  "steps": [
+    {
+      "id": "scored_phonon",
+      "output_file": "phonon_frequencies.csv",
+      "kind": "recompute_metric",
+      "metric": "MAPE",
+      "target_policy": "threshold_or_better",
+      "target_value": 0.05,
+      "max_score_decay_to_zero_value": 0.2,
+      "weight": 1.0
+    }
+  ],
+  "hidden_parameters": {
+    "Ni": {
+      "a0": 3.52,
+      "rho_bar": 0.02855,
+      "mass": 58.6934,
+      "Z_r_knots": [
+        0.0,
+        1.5136,
+        2.288,
+        2.4992,
+        2.992
+      ],
+      "Z_vals": [
+        28.0,
+        5.1282,
+        0.289,
+        0.1386,
+        0.0
+      ],
+      "Z_left_deriv": 0.0,
+      "Z_right_deriv": 0.0,
+      "F_rho_knots": [
+        0.0,
+        0.014275,
+        0.02855,
+        0.0571,
+        0.065665
+      ],
+      "F_vals": [
+        0.0,
+        -3.6065,
+        -5.1593,
+        -3.3902,
+        0.0
+      ],
+      "F_left_deriv": 0.0,
+      "F_right_deriv": 0.0,
+      "phi3_prime": -0.0099,
+      "phi3_prime2": 0.1227
+    },
+    "Pd": {
+      "a0": 3.89,
+      "rho_bar": 0.01518,
+      "mass": 106.42,
+      "Z_r_knots": [
+        0.0,
+        1.6727,
+        2.5285,
+        2.7619,
+        3.3065
+      ],
+      "Z_vals": [
+        46.0,
+        10.4536,
+        0.3728,
+        0.0907,
+        0.0
+      ],
+      "Z_left_deriv": 0.0,
+      "Z_right_deriv": 0.0,
+      "F_rho_knots": [
+        0.0,
+        0.00759,
+        0.01518,
+        0.03036,
+        0.034914
+      ],
+      "F_vals": [
+        0.0,
+        -2.8623,
+        -4.1842,
+        -2.5571,
+        0.0
+      ],
+      "F_left_deriv": 0.0,
+      "F_right_deriv": 0.0,
+      "phi3_prime": -0.0592,
+      "phi3_prime2": -0.1093
+    }
+  }
+}

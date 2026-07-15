@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT recomputation infeasible in verifier; agent's reported v(NO) and relative energy are compared to paper's DFT values within tolerances, and geometry structural plausibility is verified.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optimized_triplet.xyz": "structural_audit",
+    "optimized_singlet.xyz": "structural_audit",
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for N-O stretching frequency (1643 cm-1) and singlet-triplet relative energy (11.8 kcal/mol) from the paper's DFT results.",
+      "source_provenance": "Paper Supporting Information Tables S4 and S3",
+      "generation_method": "Extracted from the published paper's reported computed values.",
+      "why_not_fabricated": "These are the paper's own authoritative DFT-calculated numbers; they are the target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_triplet.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "XYZ file containing 58 atoms with atomic symbols and coordinates in Angstrom."
+        },
+        "description": "Optimized geometry of the triplet state of the {FeNO}8 complex. Verified by structural audit (existence, 58 atoms, Fe-N-O angle in plausible range)."
+      },
+      {
+        "file": "optimized_singlet.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "XYZ file containing 58 atoms with atomic symbols and coordinates in Angstrom."
+        },
+        "description": "Optimized geometry of the singlet state of the {FeNO}8 complex. Verified by structural audit (existence, 58 atoms, Fe-N-O angle in plausible range)."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "v_no_triplet_cm-1": "float",
+            "relative_energy_kcal_per_mol": "float"
+          }
+        },
+        "description": "Computed N-O stretching frequency (cm⁻¹) of the triplet state and the singlet-triplet energy difference (kcal/mol) from B3LYP single-point calculations."
+      }
+    ],
+    "notes": "The key scored artifacts are the vibrational frequency and energy difference; geometry files are scored only for structural sanity."
+  },
+  "steps": [
+    {
+      "id": "step1_triplet_opt",
+      "output_file": "optimized_triplet.xyz",
+      "kind": "rubric",
+      "weight": 0.1,
+      "target_angle_range": [
+        130,
+        170
+      ]
+    },
+    {
+      "id": "step2_singlet_opt",
+      "output_file": "optimized_singlet.xyz",
+      "kind": "rubric",
+      "weight": 0.1,
+      "target_angle_range": [
+        110,
+        140
+      ]
+    },
+    {
+      "id": "step3_results",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.8,
+      "target_v_no": 1643,
+      "tolerance_v_no": 50,
+      "target_rel_energy": 11.8,
+      "tolerance_rel_energy": 2.0
+    }
+  ]
+}

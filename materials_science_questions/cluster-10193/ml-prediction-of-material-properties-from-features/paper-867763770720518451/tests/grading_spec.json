@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of training metrics from hidden training data is infeasible because the hidden training dataset (80 rows) is not available to the grading author; thus result-level comparison with paper-reported gold values using tolerances is used.",
+  "pass_threshold": 0.75,
+  "target_policies": {
+    "step_01_regression_coefficients.json": "reference_match",
+    "step_02_sisso_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference gold for OLS coefficients and metrics",
+      "source_provenance": "Table I(c) of the source paper",
+      "generation_method": "copied directly from the published table (a=0.7426, b=-0.1735, c=0.1844, d=0.9927, R²=0.94, MAE=0.52, RMSE=0.69)",
+      "why_not_fabricated": "these are the exact values reported in the paper and are used only as a comparison reference"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference gold for SISSO model coefficients and RMSE",
+      "source_provenance": "Equation 6 of the source paper",
+      "generation_method": "copied directly from the paper (intercept=0.787, coeffs -0.044, 0.178, 1.01 for V_met, WF_minus_half_gap, MBE; RMSE=0.65)",
+      "why_not_fabricated": "these are the exact values reported in the paper and are used only as a comparison reference"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_regression_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a": "float",
+            "b": "float",
+            "c": "float",
+            "d": "float",
+            "R2": "float",
+            "MAE": "float",
+            "RMSE": "float"
+          },
+          "units": {
+            "MAE": "eV",
+            "RMSE": "eV"
+          }
+        },
+        "description": "Coefficients of the linear adsorption model (Eq. 3) and training set performance metrics."
+      },
+      {
+        "file": "step_02_sisso_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "intercept": "float",
+            "coeff_1": "float",
+            "coeff_2": "float",
+            "coeff_3": "float",
+            "descriptor_1": "string",
+            "descriptor_2": "string",
+            "descriptor_3": "string",
+            "RMSE": "float"
+          },
+          "units": {
+            "RMSE": "eV"
+          }
+        },
+        "description": "Best 3‑descriptor linear model found by SISSO, its coefficients and training RMSE."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01_regression_coefficients",
+      "output_file": "step_01_regression_coefficients.json",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "gold": {
+        "a": 0.7426,
+        "b": -0.1735,
+        "c": 0.1844,
+        "d": 0.9927,
+        "R2": 0.94,
+        "MAE": 0.52,
+        "RMSE": 0.69
+      },
+      "tolerances": {
+        "coeff_abs": 0.01,
+        "mae_abs": 0.02,
+        "rmse_abs": 0.02,
+        "r2_abs": 0.01
+      }
+    },
+    {
+      "id": "step_02_sisso_results",
+      "output_file": "step_02_sisso_results.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "gold": {
+        "intercept": 0.787,
+        "coeff_1": -0.044,
+        "coeff_2": 0.178,
+        "coeff_3": 1.01,
+        "descriptor_1": "V_met",
+        "descriptor_2": "WF_minus_half_gap",
+        "descriptor_3": "MBE",
+        "RMSE": 0.65
+      },
+      "tolerances": {
+        "coeff_abs": 0.01,
+        "rmse_abs": 0.02
+      }
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent only submits final computed photon numbers and derived ratios; no raw event data or transition rates are provided, making a full recompute infeasible. Comparison against digitized paper gold with tolerances is the appropriate strong tier.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "temperature_dependence.csv": "reference_match",
+    "anisotropy_and_polarization.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for temperature_dependence.csv and anisotropy_and_polarization.csv digitized from the paper's Figs 2 and 4.",
+      "source_provenance": "Digital extraction from the source paper Figures 2 and 4 (Bulahsenko et al., Infrared Phys. Technol. 35, 1994).",
+      "generation_method": "Manual digitization of the published graphical data using WebPlotDigitizer.",
+      "why_not_fabricated": "Values are derived directly from the paper's primary reported results for this theoretical calculation; they constitute the hidden reference comparison target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "temperature_dependence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "columns": [
+            {
+              "name": "T",
+              "unit": "K"
+            },
+            {
+              "name": "P_transverse",
+              "unit": "arbitrary"
+            },
+            {
+              "name": "P_longitudinal",
+              "unit": "arbitrary"
+            }
+          ]
+        },
+        "description": "Photon emission intensities (arbitrary units) for the transverse and longitudinal directions as a function of lattice temperature, obtained from the Monte Carlo simulation. Must contain one row for each T = 10, 20, 30, ..., 140 K in ascending order."
+      },
+      {
+        "file": "anisotropy_and_polarization.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "columns": [
+            {
+              "name": "T",
+              "unit": "K"
+            },
+            {
+              "name": "K",
+              "unit": "dimensionless"
+            },
+            {
+              "name": "D",
+              "unit": "dimensionless"
+            }
+          ]
+        },
+        "description": "Emission anisotropy K and degree of polarization D of the transverse emission as functions of lattice temperature, derived from the directional intensities. Must contain one row for each T = 10, 20, 30, ..., 140 K in ascending order."
+      }
+    ],
+    "notes": "The hidden checker compares the simulated intensity curves and the anisotropy/polarization values to reference data digitized from the paper's figures, using tolerances appropriate for independent Monte Carlo reproductions. The temperature grid is fixed at 10,20,…,140 K."
+  },
+  "steps": [
+    {
+      "id": "temperature_intensity",
+      "output_file": "temperature_dependence.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "gold_temperatures": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140
+      ],
+      "gold_P_transverse": [
+        3.3,
+        3.5455,
+        3.8263,
+        4.1354,
+        4.5039,
+        4.9015,
+        5.337,
+        5.8154,
+        6.3385,
+        6.9052,
+        7.4829,
+        8.0554,
+        8.5937,
+        9.06
+      ],
+      "gold_P_longitudinal": [
+        1.5,
+        1.67,
+        1.87,
+        2.1,
+        2.38,
+        2.7,
+        3.07,
+        3.5,
+        4.0,
+        4.58,
+        5.23,
+        5.95,
+        6.73,
+        7.55
+      ],
+      "tolerance_P": 0.2
+    },
+    {
+      "id": "anisotropy_polarization",
+      "output_file": "anisotropy_and_polarization.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "gold_temperatures": [
+        10,
+        20,
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        110,
+        120,
+        130,
+        140
+      ],
+      "gold_K": [
+        2.2,
+        2.122455,
+        2.046,
+        1.969,
+        1.892,
+        1.815,
+        1.738,
+        1.661,
+        1.5846,
+        1.507,
+        1.431,
+        1.354,
+        1.277,
+        1.2
+      ],
+      "gold_D": [
+        0.375,
+        0.3596,
+        0.3434,
+        0.3265,
+        0.3086,
+        0.2897,
+        0.2696,
+        0.2485,
+        0.2262,
+        0.2025,
+        0.1772,
+        0.1503,
+        0.1216,
+        0.0909
+      ],
+      "tolerance_K": 0.25,
+      "tolerance_D": 0.25
+    },
+    {
+      "id": "structural_trends",
+      "output_file": "anisotropy_and_polarization.csv",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "check_K_gt_1": true,
+      "check_monotonic_decrease_K": true,
+      "check_monotonic_decrease_D": true
+    }
+  ]
+}

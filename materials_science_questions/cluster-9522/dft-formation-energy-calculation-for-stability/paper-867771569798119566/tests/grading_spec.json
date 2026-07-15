@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energies are recomputed from the submitted total energies using stoichiometries and elemental references, then compared to paper-reported values. Bulk moduli and band gap are directly compared. Recompute from the agent's raw artifact is feasible and is the strongest tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported formation energies (mRy/atom), bulk moduli (GPa), band gap (eV) from Table IV and text.",
+      "source_provenance": "Paper's Table IV: beta -10.93 mRy/atom, beta'' 3.53, U1 -0.45, U2 -3.04; bulk moduli: beta 54.3 GPa, beta'' 65 GPa, U1 71 GPa, U2 69.1 GPa; band gap 1.77 eV from text.",
+      "generation_method": "Extracted from the paper's reported results.",
+      "why_not_fabricated": "These are the actual reported values from the source paper; they are the ground truth for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energies": "object with keys: Mg_hcp (eV/atom), Si_diamond (eV/atom), Al_fcc (eV/atom), beta_phase (eV/unit cell), beta_prime_prime_phase (eV/unit cell), U1_phase (eV/unit cell), U2_phase (eV/unit cell)",
+            "bulk_moduli": "object with keys: beta_phase (GPa), beta_prime_prime_phase (GPa), U1_phase (GPa), U2_phase (GPa)",
+            "band_gap_beta": "number (eV)"
+          }
+        },
+        "description": "Compiler of DFT outputs: raw total energies of elemental references and precipitate phases, fitted bulk moduli, and direct band gap at Γ for β. The checker recomputes formation energies per atom from these total energies and compares all quantities to hidden reference values."
+      }
+    ],
+    "notes": "The scoring logic recomputes formation energies using the submitted total energies and compares each to the paper value; bulk moduli and band gap are compared directly. All comparisons use appropriate tolerances that respect toolchain spread."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "step_01_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "description": "Recompute formation energies per atom in mRy from total energies and compare to paper values.",
+      "reference": {
+        "beta": -10.93,
+        "beta_prime_prime": 3.53,
+        "U1": -0.45,
+        "U2": -3.04
+      },
+      "tolerance_mRy_per_atom": 5.0
+    },
+    {
+      "id": "bulk_moduli",
+      "output_file": "step_01_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "description": "Compare bulk moduli directly to paper values.",
+      "reference": {
+        "beta_phase": 54.3,
+        "beta_prime_prime_phase": 65.0,
+        "U1_phase": 71.0,
+        "U2_phase": 69.1
+      },
+      "tolerance_GPa": 10.0
+    },
+    {
+      "id": "band_gap",
+      "output_file": "step_01_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.15,
+      "description": "Compare direct band gap at Γ for β phase.",
+      "reference": 1.77,
+      "tolerance_eV": 0.2
+    }
+  ]
+}

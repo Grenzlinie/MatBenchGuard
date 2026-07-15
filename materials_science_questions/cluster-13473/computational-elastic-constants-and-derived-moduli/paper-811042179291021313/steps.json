@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_init",
+    "title": "Generate initial PMMA configuration",
+    "role": "process",
+    "action": "Build an initial configuration of 3 linear isotactic PMMA chains, each with 100 monomers, using a united-atom model in a 40 Å cubic simulation box. Generate a LAMMPS data file (system.data) containing atom coordinates and bonding topology.",
+    "output_file": "",
+    "evidence": "system.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_equilibration",
+    "title": "Energy minimization and melt equilibration",
+    "role": "process",
+    "action": "Perform conjugate gradient energy minimization, thermal annealing (NVT from 600 K to 300 K and back), and then equilibrate the melt at 600 K and zero pressure using the NPT ensemble for 5 ns. Record the relaxation of the end-to-end vector autocorrelation to confirm equilibration.",
+    "output_file": "",
+    "evidence": "equilibration.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_cooling",
+    "title": "Cooling production run",
+    "role": "process",
+    "action": "Starting from the equilibrated melt at 600 K, run NPT ensemble MD cooling from 600 K down to 300 K at a constant cooling rate of 20 K/ns (total 15 ns). Record temperature and density at intervals of no more than 10 K. Save the simulation log as cooling.log.",
+    "output_file": "",
+    "evidence": "cooling.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_density_data",
+    "title": "Extract density vs temperature",
+    "role": "scored",
+    "action": "Parse the cooling simulation log (cooling.log) and produce a CSV file containing temperature and density at each recorded step.",
+    "output_file": "density_vs_temperature.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Comma-separated file with two columns: temperature (K) and density (g/cm^3). One row per recorded temperature step during cooling, covering from 600 K down to 300 K. The CSV must contain at least 30 rows and span temperatures above 550 K and below 400 K.",
+    "output_schema": "Two columns: temperature (K) and density (g/cm^3). No header row."
+  },
+  {
+    "id": "step_05_tg",
+    "title": "Determine glass transition temperature",
+    "role": "scored",
+    "action": "Using the density data, compute the reduced volume (V-V0)/V0 where V0 is the volume at 600 K, perform piecewise linear fitting (orthogonal distance regression) to the reduced-volume vs temperature curve, and output the intersection temperature as the glass transition temperature Tg.",
+    "output_file": "tg_from_density.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "A plain text file containing a single number in Kelvin, e.g., '450'.",
+    "output_schema": "Single numeric value in Kelvin, no extra text."
+  }
+]

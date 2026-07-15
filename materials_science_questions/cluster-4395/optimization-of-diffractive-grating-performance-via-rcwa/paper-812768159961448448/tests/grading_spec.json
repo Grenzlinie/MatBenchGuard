@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker extracts EIT peak wavelength and FWHM from the agent's raw reflection spectrum CSV and scores them against paper-reported values with monotonic tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold tolerances for EIT peak characteristics (normal incidence and oblique 5°)",
+      "source_provenance": "Paper's reported FWHM linewidths (Fig. 2: 1.5 nm at normal incidence, Fig. 7: 0.75 nm at θ=5°) and peak wavelengths (722.8 nm and 685.8 nm). Tolerances widened to 2.0 nm and 1.0 nm for FWHM, and wavelength windows (720–725 nm, 683–688 nm) to accommodate toolchain differences.",
+      "generation_method": "manual extraction from paper; tolerances set to discriminate lazy priors while passing a correct independent re‑run.",
+      "why_not_fabricated": "Values are directly from the paper figures; we do not invent numbers. The generous windows still require a genuine EIT peak near the paper location."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reflection_spectrum_normal.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "reflectance"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "reflectance": "dimensionless (0–1)"
+          }
+        },
+        "description": "Raw reflection spectrum for normal incidence. The checker extracts the EIT peak wavelength and FWHM and scores them against the paper‑reported reference."
+      },
+      {
+        "file": "reflection_spectrum_oblique5.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "reflectance"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "reflectance": "dimensionless (0–1)"
+          }
+        },
+        "description": "Raw reflection spectrum for oblique incidence at 5°. The checker extracts the EIT peak wavelength and FWHM and scores them against the paper‑reported reference."
+      }
+    ],
+    "notes": "Both spectra must be computed with the specified Au Drude–Lorentz parameters and geometry. The checker recomputes the EIT peak wavelength and FWHM from the raw data and compares them to the paper’s values using a metric that rewards a correctly located, ultranarrow peak. No self‑reported metrics are accepted."
+  },
+  "steps": [
+    {
+      "id": "normal_eit",
+      "output_file": "reflection_spectrum_normal.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "thresholds": {
+        "wl_min": 700.0,
+        "wl_max": 750.0,
+        "fwhm_nm_max": 2.0,
+        "peak_wl_min": 720.0,
+        "peak_wl_max": 725.0
+      }
+    },
+    {
+      "id": "oblique_eit",
+      "output_file": "reflection_spectrum_oblique5.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "thresholds": {
+        "wl_min": 670.0,
+        "wl_max": 700.0,
+        "fwhm_nm_max": 1.0,
+        "peak_wl_min": 683.0,
+        "peak_wl_max": 688.0
+      }
+    }
+  ]
+}

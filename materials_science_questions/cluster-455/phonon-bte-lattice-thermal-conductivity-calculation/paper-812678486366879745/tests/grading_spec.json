@@ -1,0 +1,147 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step 1 checks against paper Table 1 with tolerance and monotonicity; Step 2 recomputes the normalized ratio and compares its pitch trend via Pearson correlation with the paper's modulus-reduction factor.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_first_principles_results.csv": "reference_match",
+    "step_02_kappa_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for step_01 (Table 1) and expected normalized modulus sqrt for step_02 trend comparison",
+      "source_provenance": "paper Table 1 and Figure 4(b) measured modulus data",
+      "generation_method": "digitized from the paper's reported numbers and approximate readings from Fig 4(a)",
+      "why_not_fabricated": "Values derived from the paper's own experimental measurements"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_first_principles_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_percent",
+            "lattice_constant_angstrom",
+            "elastic_modulus_GPa",
+            "thermal_conductivity_W_mK"
+          ],
+          "units": {
+            "elastic_modulus_GPa": "GPa",
+            "thermal_conductivity_W_mK": "W/mK"
+          }
+        },
+        "description": "Strain-dependent elastic modulus and lattice thermal conductivity for single-crystal Si at 300 K. The checker compares values to hidden reference within tolerance and verifies monotonic decrease with strain."
+      },
+      {
+        "file": "step_02_kappa_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pitch_nm",
+            "kappa_sim",
+            "kappa_strain"
+          ],
+          "units": {
+            "kappa_sim": "W/mK",
+            "kappa_strain": "W/mK"
+          }
+        },
+        "description": "Simulated thermal conductivity for each pitch: Casimir limit κ_sim and strain-incorporated κ_strain. The checker computes the ratio κ_strain/κ_sim and compares its pitch dependence against a hidden experimental trend (mean absolute error)."
+      }
+    ],
+    "notes": "The full phonon data file phonon_data_0pct.npz is required as an intermediate for step_02 but is not scored."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_first_principles_results.csv",
+      "weight": 0.35,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "params": {
+        "columns": [
+          "strain_percent",
+          "elastic_modulus_GPa",
+          "thermal_conductivity_W_mK"
+        ],
+        "gold": [
+          {
+            "strain_percent": 0,
+            "elastic_modulus_GPa": 147,
+            "thermal_conductivity_W_mK": 141
+          },
+          {
+            "strain_percent": 2,
+            "elastic_modulus_GPa": 136,
+            "thermal_conductivity_W_mK": 138
+          },
+          {
+            "strain_percent": 4,
+            "elastic_modulus_GPa": 115,
+            "thermal_conductivity_W_mK": 117
+          },
+          {
+            "strain_percent": 6,
+            "elastic_modulus_GPa": 94,
+            "thermal_conductivity_W_mK": 91
+          },
+          {
+            "strain_percent": 8,
+            "elastic_modulus_GPa": 76,
+            "thermal_conductivity_W_mK": 61
+          },
+          {
+            "strain_percent": 10,
+            "elastic_modulus_GPa": 55,
+            "thermal_conductivity_W_mK": 47
+          }
+        ],
+        "tolerance_relative": 0.2,
+        "check_monotonic_decreasing": [
+          "elastic_modulus_GPa",
+          "thermal_conductivity_W_mK"
+        ]
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_kappa_results.csv",
+      "weight": 0.65,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "params": {
+        "columns": [
+          "pitch_nm",
+          "kappa_sim",
+          "kappa_strain"
+        ],
+        "expected_ratio_sqrt_modulus": {
+          "pitch_nm": [
+            34,
+            100,
+            200,
+            500,
+            1000,
+            2000
+          ],
+          "expected_ratio": [
+            0.55,
+            0.65,
+            0.75,
+            0.85,
+            0.95,
+            0.97
+          ]
+        }
+      }
+    }
+  ]
+}

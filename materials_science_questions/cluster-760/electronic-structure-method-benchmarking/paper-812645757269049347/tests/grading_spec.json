@@ -1,0 +1,276 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute RMS/mean from agent's corrected enthalpies against hidden experimental enthalpies and compare to paper values, while also checking individual corrected/uncorrected values against paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_03_enthalpies.csv": "reference_match",
+    "step_04_summary.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold experimental enthalpies, corrected and uncorrected enthalpies for all species/methods, and RMS/mean summary values from Table 3A and 3B",
+      "source_provenance": "paper Table 3",
+      "generation_method": "transcribed from paper's Table 3",
+      "why_not_fabricated": "values are directly from the published paper; used as hidden reference for reproduction verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_03_enthalpies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "method",
+            "enthalpy_type",
+            "delta_H",
+            "deviation_from_expt"
+          ],
+          "units": {
+            "delta_H": "kJ/mol",
+            "deviation_from_expt": "kJ/mol"
+          }
+        },
+        "description": "Table of uncorrected and BAC‑corrected enthalpies of formation (ΔfH° at 298.15 K) for each molecule and method, together with deviations from the provided experimental references."
+      },
+      {
+        "file": "step_04_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "method",
+            "enthalpy_type",
+            "rms_deviation",
+            "avg_deviation"
+          ],
+          "units": {
+            "rms_deviation": "kJ/mol",
+            "avg_deviation": "kJ/mol"
+          }
+        },
+        "description": "Per‑method RMS and average deviations of corrected enthalpies from experiment."
+      }
+    ],
+    "notes": "The hidden checker reads step_03_enthalpies.csv, joins it with hidden experimental enthalpies, recomputes per‑method RMS and mean deviation for corrected values, and compares both the per‑entry corrected enthalpies and the recomputed RMS/mean to the paper‑reported gold with tolerances."
+  },
+  "steps": [
+    {
+      "id": "enthalpies_corrected",
+      "output_file": "step_03_enthalpies.csv",
+      "kind": "tabular_match",
+      "weight": 0.55,
+      "tolerance_abs": 3.0,
+      "target_column": "delta_H",
+      "filter": {
+        "enthalpy_type": "corrected"
+      },
+      "gold_values": {
+        "G2": {
+          "CH4": -77.7,
+          "CH3F": -237.6,
+          "CH2F2": -450.7,
+          "CHF3": -694.5,
+          "CF4": -930.5,
+          "CH3Cl": -82.7,
+          "CH2Cl2": -92.4,
+          "CHCl3": -99.2,
+          "CCl4": -96.5,
+          "CH2FCl": -264.0,
+          "CHF2Cl": -482.3,
+          "CF3Cl": -709.4,
+          "CHFCl2": -283.7,
+          "CF2Cl2": -495.3,
+          "CFCl3": -290.3
+        },
+        "G2(MP2)": {
+          "CH4": -75.6,
+          "CH3F": -237.0,
+          "CH2F2": -450.9,
+          "CHF3": -695.0,
+          "CF4": -930.7,
+          "CH3Cl": -81.6,
+          "CH2Cl2": -92.1,
+          "CHCl3": -99.5,
+          "CCl4": -97.1,
+          "CH2FCl": -263.7,
+          "CHF2Cl": -482.2,
+          "CF3Cl": -709.1,
+          "CHFCl2": -283.6,
+          "CF2Cl2": -495.0,
+          "CFCl3": -290.2
+        },
+        "CBS-4": {
+          "CH4": -77.6,
+          "CH3F": -235.6,
+          "CH2F2": -448.5,
+          "CHF3": -693.1,
+          "CF4": -931.2,
+          "CH3Cl": -78.3,
+          "CH2Cl2": -87.4,
+          "CHCl3": -94.7,
+          "CCl4": -101.3,
+          "CH2FCl": -260.6,
+          "CHF2Cl": -481.2,
+          "CF3Cl": -711.4,
+          "CHFCl2": -282.3,
+          "CF2Cl2": -498.3,
+          "CFCl3": -292.9
+        },
+        "CBS-Q": {
+          "CH4": -74.0,
+          "CH3F": -235.2,
+          "CH2F2": -450.6,
+          "CHF3": -696.2,
+          "CF4": -933.7,
+          "CH3Cl": -77.8,
+          "CH2Cl2": -88.6,
+          "CHCl3": -99.8,
+          "CCl4": -103.3,
+          "CH2FCl": -260.3,
+          "CHF2Cl": -480.4,
+          "CF3Cl": -709.2,
+          "CHFCl2": -280.9,
+          "CF2Cl2": -493.4,
+          "CFCl3": -289.8
+        }
+      }
+    },
+    {
+      "id": "enthalpies_uncorrected",
+      "output_file": "step_03_enthalpies.csv",
+      "kind": "tabular_match",
+      "weight": 0.1,
+      "tolerance_abs": 5.0,
+      "target_column": "delta_H",
+      "filter": {
+        "enthalpy_type": "uncorrected"
+      },
+      "gold_values": {
+        "G2": {
+          "CH4": -77.7,
+          "CH3F": -244.1,
+          "CH2F2": -463.7,
+          "CHF3": -714.0,
+          "CF4": -956.5,
+          "CH3Cl": -85.5,
+          "CH2Cl2": -98.1,
+          "CHCl3": -107.6,
+          "CCl4": -107.7,
+          "CH2FCl": -273.3,
+          "CHF2Cl": -498.1,
+          "CF3Cl": -731.8,
+          "CHFCl2": -295.8,
+          "CF2Cl2": -513.9,
+          "CFCl3": -305.2
+        },
+        "G2(MP2)": {
+          "CH4": -75.6,
+          "CH3F": -245.0,
+          "CH2F2": -466.9,
+          "CHF3": -718.9,
+          "CF4": -962.6,
+          "CH3Cl": -88.1,
+          "CH2Cl2": -105.2,
+          "CHCl3": -119.2,
+          "CCl4": -123.2,
+          "CH2FCl": -278.3,
+          "CHF2Cl": -504.7,
+          "CF3Cl": -739.6,
+          "CHFCl2": -304.7,
+          "CF2Cl2": -524.0,
+          "CFCl3": -317.8
+        },
+        "CBS-4": {
+          "CH4": -77.6,
+          "CH3F": -236.9,
+          "CH2F2": -451.1,
+          "CHF3": -696.9,
+          "CF4": -936.6,
+          "CH3Cl": -88.9,
+          "CH2Cl2": -108.6,
+          "CHCl3": -126.5,
+          "CCl4": -143.8,
+          "CH2FCl": -272.5,
+          "CHF2Cl": -494.4,
+          "CF3Cl": -725.9,
+          "CHFCl2": -304.8,
+          "CF2Cl2": -522.1,
+          "CFCl3": -326.0
+        },
+        "CBS-Q": {
+          "CH4": -74.0,
+          "CH3F": -238.7,
+          "CH2F2": -457.6,
+          "CHF3": -706.7,
+          "CF4": -947.7,
+          "CH3Cl": -86.3,
+          "CH2Cl2": -105.6,
+          "CHCl3": -125.3,
+          "CCl4": -137.3,
+          "CH2FCl": -272.3,
+          "CHF2Cl": -495.9,
+          "CF3Cl": -728.2,
+          "CHFCl2": -301.4,
+          "CF2Cl2": -517.4,
+          "CFCl3": -318.8
+        }
+      }
+    },
+    {
+      "id": "summary_recompute",
+      "output_file": "step_03_enthalpies.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "tolerance_abs": 2.0,
+      "experimental_enthalpies": {
+        "CH4": -74.9,
+        "CH3F": -232.6,
+        "CH2F2": -452.2,
+        "CHF3": -697.6,
+        "CF4": -933.0,
+        "CH3Cl": -83.7,
+        "CH2Cl2": -95.5,
+        "CHCl3": -103.2,
+        "CCl4": -96.0,
+        "CH2FCl": -261.9,
+        "CHF2Cl": -481.6,
+        "CF3Cl": -707.9,
+        "CHFCl2": -283.3,
+        "CF2Cl2": -491.6,
+        "CFCl3": -288.7
+      },
+      "gold_values": {
+        "G2": {
+          "rms_deviation": 2.6,
+          "avg_deviation": -0.2
+        },
+        "G2(MP2)": {
+          "rms_deviation": 2.4,
+          "avg_deviation": 0.0
+        },
+        "CBS-4": {
+          "rms_deviation": 4.7,
+          "avg_deviation": 0.6
+        },
+        "CBS-Q": {
+          "rms_deviation": 3.4,
+          "avg_deviation": 0.7
+        }
+      }
+    },
+    {
+      "id": "summary_validity",
+      "output_file": "step_04_summary.csv",
+      "kind": "structural",
+      "weight": 0.05
+    }
+  ]
+}

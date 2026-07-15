@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step0",
+    "title": "Generate DFT potential energy surface grid",
+    "role": "process",
+    "action": "Optimize the FePorIm model geometry in the quintet state using B97D/6-311+G*(Fe,O)/6-31G**(C,N,H). Compute single-point energies for singlet, triplet, quintet, and septet states on a grid of coordinates (R, θ, d) covering the relevant ranges. Use cubic spline interpolation to obtain continuous potential energy surfaces for all four spin multiplicities.",
+    "output_file": "",
+    "evidence": "pes_grid_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Compute spin-orbit coupling matrix elements",
+    "role": "process",
+    "action": "At selected Fe-O distances (with d=0) covering the crossing region, perform state-averaged CASSCF(8e,7o)/def2-TZVP calculations with the SOMF approximation. The active space comprises five Fe 3d and two O2 π* orbitals. Compute the singlet-triplet, triplet-quintet, and quintet-septet SOC elements.",
+    "output_file": "",
+    "evidence": "soc_raw_data.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Run wave packet dynamics",
+    "role": "process",
+    "action": "Assemble the 16×16 Hermitian potential energy matrix from the interpolated PES and SOCs. Set up a 3D DVR grid and propagate an initial Gaussian wave packet with equal population on triplet, quintet, and septet states (collision energy ≈0.136 eV) using the extended split-operator method. Record diabatic populations for all spin sub-states for at least 2 ps.",
+    "output_file": "",
+    "evidence": "wavepacket_trajectory.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Output spin-orbit coupling curve",
+    "role": "scored",
+    "action": "From the computed spin-orbit couplings, create /app/outputs/soc_curve.csv containing the SOC elements as a function of Fe-O distance. Include at least 8 data points spanning the crossing region (approx 1.8–5.0 Å).",
+    "output_file": "soc_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulated spin-orbit coupling matrix elements. The primary scored quantity is the real singlet-triplet coupling b1.",
+    "output_schema": "Columns: R (Å), b1 (cm⁻¹), z1_real (cm⁻¹), z1_imag (cm⁻¹), z1_star_real (cm⁻¹), z1_star_imag (cm⁻¹). At least 8 points spanning approx 1.8–5.0 Å."
+  },
+  {
+    "id": "step4",
+    "title": "Output population evolution",
+    "role": "scored",
+    "action": "From the wave packet dynamics simulation, save /app/outputs/population_evolution.csv containing the spin-multiplicity populations summed over M_S sub-states.",
+    "output_file": "population_evolution.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Time series of summed populations for singlet, triplet, quintet, and septet states. The scored property is the singlet population peak and its timing.",
+    "output_schema": "Columns: time_ps (ps), pop_singlet, pop_triplet_total, pop_quintet_total, pop_septet_total. Time points from 0 to 2 ps, steps ≤ 0.01 ps."
+  }
+]

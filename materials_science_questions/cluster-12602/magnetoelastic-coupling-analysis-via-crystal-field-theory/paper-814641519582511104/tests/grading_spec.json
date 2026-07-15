@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Headline quantities are computed via full DFT pipeline; recomputation from raw electronic structure is infeasible; compare reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_magnetoelastic_params.json": "exact_match",
+    "step_02_polarization_contributions.json": "exact_match",
+    "step_03_field_dependence.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Table I, Table II, and Fig. 4 from the paper.",
+      "source_provenance": "Paper Table I, Table II, and text for ΔP(20T)=9e-4 μC/cm²",
+      "generation_method": "Directly transcribed from the paper.",
+      "why_not_fabricated": "These are the paper's reported results; they are the authoritative reproduction targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_magnetoelastic_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "dJ_deta": "array of 6 floats (eV)",
+            "stress_model": "array of 6 floats (kbar)"
+          }
+        },
+        "description": "Contains the six derivatives ∂J_NN/∂η_j and the six model stress components σ_j. Checked against paper Table I with tolerance."
+      },
+      {
+        "file": "step_02_polarization_contributions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "model_lattice": "float (μC/cm²)",
+            "model_electronic": "float (μC/cm²)",
+            "model_ionic": "float (μC/cm²)",
+            "dft_lattice": "float (μC/cm²)",
+            "dft_electronic": "float (μC/cm²)",
+            "dft_ionic": "float (μC/cm²)"
+          }
+        },
+        "description": "Six polarization contributions (model and DFT) in μC/cm². Checked against paper Table II with tolerance."
+      },
+      {
+        "file": "step_03_field_dependence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H_T",
+            "DeltaP_muC_cm2"
+          ],
+          "units": {
+            "H_T": "Tesla",
+            "DeltaP_muC_cm2": "μC/cm²"
+          },
+          "min_rows": 5,
+          "allowed_H_values": [
+            0,
+            5,
+            10,
+            15,
+            20
+          ]
+        },
+        "description": "Magnetic field vs. polarization change. Quadratic trend and ΔP at 20 T are compared to paper Fig. 4 with 20% tolerance."
+      }
+    ],
+    "notes": "All output files must be placed under /app/outputs. The scores are determined by comparing the agent's values to the paper-reported gold with appropriate tolerances (T0)."
+  },
+  "steps": [
+    {
+      "id": "step_01_magnetoelastic_params",
+      "output_file": "step_01_magnetoelastic_params.json",
+      "weight": 0.35,
+      "gold": {
+        "dJ_deta": [
+          -0.086,
+          -0.041,
+          -0.084,
+          0.022,
+          0.075,
+          -0.029
+        ],
+        "stress_model": [
+          -4.769,
+          -4.769,
+          -6.322,
+          0,
+          0,
+          0
+        ]
+      },
+      "tolerances": {
+        "dJ_deta_tol": 0.01,
+        "stress_nonzero_tol": 0.5,
+        "stress_zero_tol": 0.1
+      }
+    },
+    {
+      "id": "step_02_polarization_contributions",
+      "output_file": "step_02_polarization_contributions.json",
+      "weight": 0.45,
+      "gold": {
+        "model_lattice": 1.32,
+        "model_electronic": 0.53,
+        "model_ionic": 0.56,
+        "dft_lattice": 1.22,
+        "dft_electronic": 0.4,
+        "dft_ionic": 0.54
+      },
+      "tolerance": 0.2
+    },
+    {
+      "id": "step_03_field_dependence",
+      "output_file": "step_03_field_dependence.csv",
+      "weight": 0.2,
+      "gold_deltaP_20T": 0.0009,
+      "tolerance_20T": 0.00018,
+      "H_values": [
+        0,
+        5,
+        10,
+        15,
+        20
+      ],
+      "quadratic_rel_tol": 0.2
+    }
+  ]
+}

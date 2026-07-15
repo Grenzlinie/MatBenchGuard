@@ -1,0 +1,480 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Full recompute from raw DFT outputs is infeasible in the verifier; using paper-reported values as hidden gold with tolerances and structural stability checks for elastic constants.",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eos_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lattice",
+            "V0_ang3",
+            "B0_GPa",
+            "B0_prime",
+            "Vsp_ang3",
+            "psp_GPa"
+          ],
+          "units": {
+            "V0_ang3": "Å³",
+            "B0_GPa": "GPa",
+            "B0_prime": "dimensionless",
+            "Vsp_ang3": "Å³",
+            "psp_GPa": "GPa"
+          }
+        },
+        "description": "Equation-of-state and spinodal parameters for each Al lattice."
+      },
+      {
+        "file": "elastic_constants_sc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "volume_A3",
+            "pressure_GPa",
+            "C11_GPa",
+            "C12_GPa",
+            "C44_GPa",
+            "B_GPa",
+            "C11_minus_C12_abs_GPa"
+          ],
+          "units": {
+            "volume_A3": "Å³",
+            "pressure_GPa": "GPa",
+            "C11_GPa": "GPa",
+            "C12_GPa": "GPa",
+            "C44_GPa": "GPa",
+            "B_GPa": "GPa",
+            "C11_minus_C12_abs_GPa": "GPa"
+          }
+        },
+        "description": "Elastic constants and stability indicators for simple cubic Al as a function of volume."
+      },
+      {
+        "file": "elastic_constants_grae1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "volume_A3",
+            "pressure_GPa",
+            "C11_GPa",
+            "C12_GPa",
+            "C33_GPa",
+            "C44_GPa",
+            "C13_GPa"
+          ],
+          "units": {
+            "volume_A3": "Å³",
+            "pressure_GPa": "GPa",
+            "C11_GPa": "GPa",
+            "C12_GPa": "GPa",
+            "C33_GPa": "GPa",
+            "C44_GPa": "GPa",
+            "C13_GPa": "GPa"
+          }
+        },
+        "description": "Elastic constants for hexagonal gra-e1 Al as a function of volume."
+      },
+      {
+        "file": "critical_points.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lattice",
+            "cp_type",
+            "x",
+            "y",
+            "z",
+            "rho_e_per_bohr3",
+            "laplacian_e_per_bohr5"
+          ],
+          "units": {
+            "rho_e_per_bohr3": "e/bohr³",
+            "laplacian_e_per_bohr5": "e/bohr⁵"
+          }
+        },
+        "description": "Critical point positions and properties for selected Al lattices at equilibrium."
+      }
+    ],
+    "notes": "All artifacts are produced by the solver and scored against hidden reference values from the paper. Elastic constants are load-bearing to ensure the strain-energy process steps are actually executed."
+  },
+  "steps": [
+    {
+      "id": "eos",
+      "output_file": "eos_parameters.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "gold": {
+        "fcc": {
+          "V0_ang3": 16.58,
+          "B0_GPa": 75.8,
+          "B0_prime": 4.61,
+          "Vsp_ang3": 24.22,
+          "psp_GPa": -10.87
+        },
+        "bcc": {
+          "V0_ang3": 17.1,
+          "B0_GPa": 63.25,
+          "B0_prime": 4.72,
+          "Vsp_ang3": 26.08,
+          "psp_GPa": -10.71
+        },
+        "hcp": {
+          "V0_ang3": 16.74,
+          "B0_GPa": 70.62,
+          "B0_prime": 4.44,
+          "Vsp_ang3": 25.12,
+          "psp_GPa": -11.09
+        },
+        "sc": {
+          "V0_ang3": 20.25,
+          "B0_GPa": 56.5,
+          "B0_prime": 4.56,
+          "Vsp_ang3": 30.07,
+          "psp_GPa": -8.64
+        },
+        "spinel": {
+          "V0_ang3": 27.71,
+          "B0_GPa": 37.7,
+          "B0_prime": 4.43,
+          "Vsp_ang3": 41.6,
+          "psp_GPa": -5.93
+        },
+        "gra-e1": {
+          "V0_ang3": 24.67,
+          "B0_GPa": 43.77,
+          "B0_prime": 4.25,
+          "Vsp_ang3": 37.64,
+          "psp_GPa": -7.16
+        },
+        "gra-e": {
+          "V0_ang3": 20.68,
+          "B0_GPa": 57.78,
+          "B0_prime": 3.74,
+          "Vsp_ang3": 32.32,
+          "psp_GPa": -9.92
+        }
+      },
+      "tolerances": {
+        "V0_ang3_abs": 1.0,
+        "B0_GPa_rel": 0.05,
+        "B0_prime_abs": 0.5,
+        "Vsp_ang3_abs": 1.0,
+        "psp_GPa_abs": 0.5
+      }
+    },
+    {
+      "id": "elastic_sc",
+      "output_file": "elastic_constants_sc.csv",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "criteria": [
+        {
+          "field": "B_GPa",
+          "op": ">",
+          "value": 0,
+          "desc": "B>0 at zero pressure"
+        },
+        {
+          "field": "C11_minus_C12_abs_GPa",
+          "op": ">",
+          "value": 0,
+          "desc": "C11-|C12|>0 at zero pressure"
+        },
+        {
+          "field": "C44_GPa",
+          "op": "<",
+          "value": 0,
+          "desc": "C44<0 at zero pressure"
+        }
+      ],
+      "zero_pressure_tol": 0.1
+    },
+    {
+      "id": "elastic_grae1",
+      "output_file": "elastic_constants_grae1.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "gold_points": [
+        {
+          "volume_A3": 20.81,
+          "pressure_GPa": 10.627,
+          "C11_GPa": 80.3,
+          "C12_GPa": 141.5,
+          "C33_GPa": 154.2,
+          "C44_GPa": -9.1,
+          "C13_GPa": 38.8
+        },
+        {
+          "volume_A3": 22.43,
+          "pressure_GPa": 5.097,
+          "C11_GPa": 73.0,
+          "C12_GPa": 102.5,
+          "C33_GPa": 139.4,
+          "C44_GPa": -15.9,
+          "C13_GPa": 22.0
+        },
+        {
+          "volume_A3": 24.67,
+          "pressure_GPa": 0.0,
+          "C11_GPa": 74.2,
+          "C12_GPa": 53.7,
+          "C33_GPa": 137.7,
+          "C44_GPa": -19.8,
+          "C13_GPa": -2.5
+        },
+        {
+          "volume_A3": 26.85,
+          "pressure_GPa": -3.08,
+          "C11_GPa": 57.3,
+          "C12_GPa": 25.9,
+          "C33_GPa": 98.3,
+          "C44_GPa": -15.0,
+          "C13_GPa": 0.5
+        },
+        {
+          "volume_A3": 28.76,
+          "pressure_GPa": -4.813,
+          "C11_GPa": 54.5,
+          "C12_GPa": 15.8,
+          "C33_GPa": 68.5,
+          "C44_GPa": -10.4,
+          "C13_GPa": -1.8
+        },
+        {
+          "volume_A3": 37.34,
+          "pressure_GPa": -7.161,
+          "C11_GPa": 20.4,
+          "C12_GPa": 8.1,
+          "C33_GPa": -19.1,
+          "C44_GPa": 0.6,
+          "C13_GPa": 0.2
+        }
+      ],
+      "component_tol": 10.0,
+      "pressure_tol": 0.2
+    },
+    {
+      "id": "critical_pts",
+      "output_file": "critical_points.csv",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "gold_rows": [
+        {
+          "lattice": "fcc",
+          "cp_type": "BP",
+          "x": 0.0,
+          "y": 0.25,
+          "z": 0.25,
+          "rho_e_per_bohr3": 2.96,
+          "laplacian_e_per_bohr5": -0.00049
+        },
+        {
+          "lattice": "fcc",
+          "cp_type": "RP",
+          "x": 0.282,
+          "y": 0.282,
+          "z": 0.282,
+          "rho_e_per_bohr3": 2.82,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "fcc",
+          "cp_type": "CP",
+          "x": 0.25,
+          "y": 0.25,
+          "z": 0.25,
+          "rho_e_per_bohr3": 2.81,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "fcc",
+          "cp_type": "CP",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.5,
+          "rho_e_per_bohr3": 1.76,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "sc",
+          "cp_type": "BP",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.5,
+          "rho_e_per_bohr3": 3.09,
+          "laplacian_e_per_bohr5": -0.0123
+        },
+        {
+          "lattice": "sc",
+          "cp_type": "RP",
+          "x": 0.0,
+          "y": 0.5,
+          "z": 0.5,
+          "rho_e_per_bohr3": 1.74,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "sc",
+          "cp_type": "CP",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5,
+          "rho_e_per_bohr3": 0.815,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "spinel",
+          "cp_type": "BP",
+          "x": 0.125,
+          "y": 0.125,
+          "z": 0.525,
+          "rho_e_per_bohr3": 3.55,
+          "laplacian_e_per_bohr5": -0.00454
+        },
+        {
+          "lattice": "spinel",
+          "cp_type": "RP",
+          "x": 0.341,
+          "y": 0.341,
+          "z": 0.341,
+          "rho_e_per_bohr3": 3.33,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "spinel",
+          "cp_type": "RP",
+          "x": 0.0,
+          "y": 0.25,
+          "z": 0.25,
+          "rho_e_per_bohr3": 0.193,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "spinel",
+          "cp_type": "CP",
+          "x": 0.375,
+          "y": 0.375,
+          "z": 0.375,
+          "rho_e_per_bohr3": 3.25,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "spinel",
+          "cp_type": "CP",
+          "x": 0.125,
+          "y": 0.125,
+          "z": 0.125,
+          "rho_e_per_bohr3": 0.0489,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "gra-e1",
+          "cp_type": "BP",
+          "x": 0.0,
+          "y": 0.5,
+          "z": 0.5,
+          "rho_e_per_bohr3": 3.62,
+          "laplacian_e_per_bohr5": -0.0223
+        },
+        {
+          "lattice": "gra-e1",
+          "cp_type": "BP",
+          "x": 0.333333,
+          "y": 0.666667,
+          "z": 0.0,
+          "rho_e_per_bohr3": 2.85,
+          "laplacian_e_per_bohr5": -0.00753
+        },
+        {
+          "lattice": "gra-e1",
+          "cp_type": "RP",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.0,
+          "rho_e_per_bohr3": 1.92,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "gra-e1",
+          "cp_type": "RP",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.5,
+          "rho_e_per_bohr3": 0.262,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "gra-e1",
+          "cp_type": "CP",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "rho_e_per_bohr3": 0.115,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "gra-a",
+          "cp_type": "BP",
+          "x": 0.166667,
+          "y": 0.333333,
+          "z": 0.333333,
+          "rho_e_per_bohr3": 3.86,
+          "laplacian_e_per_bohr5": -0.0263
+        },
+        {
+          "lattice": "gra-a",
+          "cp_type": "BP",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.5,
+          "rho_e_per_bohr3": 3.26,
+          "laplacian_e_per_bohr5": -0.00819
+        },
+        {
+          "lattice": "gra-a",
+          "cp_type": "RP",
+          "x": 0.333333,
+          "y": 0.166667,
+          "z": 0.166667,
+          "rho_e_per_bohr3": 1.11,
+          "laplacian_e_per_bohr5": null
+        },
+        {
+          "lattice": "gra-a",
+          "cp_type": "CP",
+          "x": 0.666667,
+          "y": 0.333333,
+          "z": 0.333333,
+          "rho_e_per_bohr3": 0.349,
+          "laplacian_e_per_bohr5": null
+        }
+      ],
+      "pos_tol": 0.05,
+      "rho_rel_tol": 0.1,
+      "laplacian_rel_tol": 0.2
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for all scored artifacts",
+      "source_provenance": "Paper Tables 2, 3, 4 and text descriptions",
+      "generation_method": "Direct transcription from the paper's tables with appropriate unit conversion",
+      "why_not_fabricated": "Every value is the paper's own reported number for the same quantity, ensuring the reference oracle (which hardcodes these) matches the paper exactly."
+    }
+  ]
+}

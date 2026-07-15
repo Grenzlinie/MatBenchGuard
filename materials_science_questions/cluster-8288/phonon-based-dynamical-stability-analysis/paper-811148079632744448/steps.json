@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare crystal structure",
+    "role": "process",
+    "action": "Obtain the room‑temperature trigonal P‑3m1 structure of Cs3Bi2Br9 from a public database (e.g., Materials Project or ICSD). If the structure is not fully relaxed, perform a DFT relaxation using a standard functional (e.g., PBE) to obtain equilibrium lattice parameters and atomic positions. Save the final structure as structure.cif.",
+    "output_file": "",
+    "evidence": "structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The input structure must be in a standard format readable by the DFT code. If relaxation is required, the optimized geometry becomes the input for subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute electronic band structure and projected density of states (HSE06+SOC)",
+    "role": "process",
+    "action": "Using the prepared structure, run a HSE06+SOC DFT calculation with a suitable k‑point mesh to compute the electronic band structure along the high‑symmetry path including Γ and A, and the atom‑projected density of states (PDOS). Store the band structure data (k‑point coordinates and eigenvalues) in band_structure.dat and the PDOS data in pdos.dat.",
+    "output_file": "",
+    "evidence": "band_structure.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The HSE06+SOC calculation yields the band gaps and orbital character needed for the paper’s main computational claims. The PDOS data is used later to determine the orbital character at the band edges.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute phonon dispersion",
+    "role": "process",
+    "action": "Using the relaxed structure and DFT force constants (obtained via DFPT or finite‑displacement method), compute the phonon dispersion along the same high‑symmetry path, and obtain phonon frequencies for all q‑points, with special attention to the Γ point. Save q‑point coordinates and mode frequencies in phonon_dispersion.dat.",
+    "output_file": "",
+    "evidence": "phonon_dispersion.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The phonon calculation reveals the dynamical instability by showing imaginary (negative) squared frequencies at the Γ point.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Extract band gaps and phonon instability into summary",
+    "role": "scored",
+    "action": "Process the band structure data to determine the indirect band gap (Γ→A) and direct band gap (Γ). From the phonon dispersion, list all negative phonon frequencies at the Γ point. Write these quantities to computational_results.json with keys indirect_gap_ev (float), direct_gap_ev (float), and phonon_zone_center_negative_frequencies (list of floats in cm⁻¹).",
+    "output_file": "computational_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The extracted band gaps and negative phonon frequencies are the core verifiable results. The verifier will recompute the band gaps from the raw band_structure.dat and compare them with the reported values, and also compare the gaps and the negative frequency list to hidden reference values with tolerances.",
+    "output_schema": "{\"indirect_gap_ev\": <number>, \"direct_gap_ev\": <number>, \"phonon_zone_center_negative_frequencies\": [<number>, ...]}"
+  },
+  {
+    "id": "step_05",
+    "title": "Extract orbital character at band edges",
+    "role": "scored",
+    "action": "From the PDOS data, identify the dominant orbital compositions at the valence band maximum (VBM) and conduction band minimum (CBM). Write the result to orbital_character.txt as two lines, each beginning with \"VBM: \" or \"CBM: \" followed by a string describing the dominant atomic orbital contributions.",
+    "output_file": "orbital_character.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The orbital character strings verify the electronic structure description in the paper. The verifier checks exact string match against the hidden reference.",
+    "output_schema": "Two lines; first line starts with \"VBM: \" and contains a non-empty description, second line starts with \"CBM: \" and contains a non-empty description."
+  }
+]

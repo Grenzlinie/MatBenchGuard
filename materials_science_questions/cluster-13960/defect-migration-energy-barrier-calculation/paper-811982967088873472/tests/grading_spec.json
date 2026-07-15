@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "T0 result-level comparison is used because the binding energies are the headline quantity; recomputing from total DFT energies is infeasible in the verifier sandbox. The checker compares the agent's reported values to the paper-reported gold with tolerance and verifies the coverage trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold binding energies for O(23) site from paper Tables I and II.",
+      "source_provenance": "Paper 'Oxygen Adsorption on Zr(0001): An ab Initio Study', Tables I and II.",
+      "generation_method": "Extracted from paper text: PW91 Θ=1/4 Eb=-8.82 eV, Θ=1/2 Eb=-8.81 eV, Θ=1 Eb=-8.44 eV; LDA Θ=1/2 Eb=-9.90 eV, Θ=1 Eb=-9.46 eV.",
+      "why_not_fabricated": "Values are directly from the paper; they are the target of reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "PW91": {
+              "1/4": "number (eV)",
+              "1/2": "number (eV)",
+              "1": "number (eV)"
+            },
+            "LDA": {
+              "1/2": "number (eV)",
+              "1": "number (eV)"
+            }
+          }
+        },
+        "description": "Computed binding energies per oxygen atom for the O(23) subsurface site. The checker compares each value to a hidden reference with an absolute tolerance."
+      }
+    ],
+    "notes": "The agent must use open-source DFT code with appropriate pseudopotentials; the exact numerical values will differ slightly from the paper due to implementation differences. The hidden tolerance accounts for this spread. The reference energies from step_01 are not scored but are necessary for step_02."
+  },
+  "steps": [
+    {
+      "id": "step_02_value",
+      "output_file": "binding_energies.json",
+      "weight": 1.0,
+      "kind": "numeric",
+      "hidden_gold": {
+        "PW91": {
+          "1/4": -8.82,
+          "1/2": -8.81,
+          "1": -8.44
+        },
+        "LDA": {
+          "1/2": -9.9,
+          "1": -9.46
+        }
+      },
+      "tolerance_abs": 0.2,
+      "description": "Check all binding energy values against paper gold within ±0.2 eV, and verify coverage trend."
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gaps are recomputed from submitted band structure files (T1). Dielectric constants and absorption edge are compared to paper values with tolerances (T0 result-level). Polaron mobility is thresholded against paper-reported enhancement (T0). Overall the strongest feasible tier is recompute.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bandstructure_pristine.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Space-separated columns: k_x k_y k_z spin_index eigenvalue (eV). spin_index=0 (non-spin-polarized). Eigenvalues are referenced so that occupied states ≤ 0, unoccupied > 0. Bands separated by blank lines."
+        },
+        "description": "Band structure of pristine BiVO4 from DFT."
+      },
+      {
+        "file": "bandstructure_N_charge_balanced.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Same format as bandstructure_pristine.dat: k_x k_y k_z spin_index(0) eigenvalue (eV); occupied ≤ 0, unoccupied > 0; bands separated by blank lines."
+        },
+        "description": "Band structure of charge-balanced N-doped BiVO4."
+      },
+      {
+        "file": "bandstructure_N_excess_Vac.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Space-separated columns: k_x k_y k_z spin_index eigenvalue (eV). spin_index=0 for spin-up, 1 for spin-down. Eigenvalues referenced so that occupied states ≤ 0, unoccupied > 0. Bands separated by blank lines."
+        },
+        "description": "Band structure of N-doped BiVO4 with excess O vacancies (spin-polarized)."
+      },
+      {
+        "file": "dielectric_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "pristine_epsilon_inf",
+            "pristine_epsilon_0",
+            "N_doped_epsilon_inf",
+            "N_doped_epsilon_0"
+          ],
+          "units": {
+            "all": "dimensionless"
+          }
+        },
+        "description": "High-frequency and static dielectric constants for pristine and N-doped BiVO4."
+      },
+      {
+        "file": "polaron_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "W_p_eV",
+            "W_H_pristine_eV",
+            "W_H_doped_eV",
+            "mobility_enhancement_percent"
+          ],
+          "units": {
+            "W_p_eV": "eV",
+            "W_H_pristine_eV": "eV",
+            "W_H_doped_eV": "eV",
+            "mobility_enhancement_percent": "%"
+          }
+        },
+        "description": "Small polaron properties and computed mobility enhancement."
+      },
+      {
+        "file": "absorption_edge.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "pristine_bandgap_edge_eV",
+            "N_doped_bandgap_edge_eV",
+            "redshift_eV"
+          ],
+          "units": {
+            "all": "eV"
+          }
+        },
+        "description": "Absorption onset energies and redshift."
+      }
+    ],
+    "notes": "All outputs are re-derivable from first-principles calculations. The band structure files allow recomputation of band gaps; dielectric constants and polaron quantities are directly compared to hidden paper values. The optical absorption redshift is a result-level comparison."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for band gaps, dielectric constants, polaron mobility enhancement, and absorption redshift, sourced from the paper.",
+      "source_provenance": "Paper Nature Communications 6:8769 (2015), sections Results, Methods, and Supplementary Information.",
+      "generation_method": "Extracted from the paper's reported DFT results: pristine bandgap 2.25 eV; dielectric constants ε∞=6.9, ε₀=52; N-doped ε∞=6.2, ε₀=27; polaron mobility enhancement ~25%; absorption redshift ~0.3 eV.",
+      "why_not_fabricated": "These numbers are the exact values published in the paper and are used as hidden reference targets; they are not fabricated."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "bandstructure_pristine.dat",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "metric_recompute",
+      "description": "Pristine BiVO4 bandgap",
+      "notes": "Recomputed bandgap from band structure file; compared to paper value 2.25 eV with tolerance."
+    },
+    {
+      "id": "step_02",
+      "output_file": "bandstructure_N_charge_balanced.dat",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "metric_recompute",
+      "description": "Charge-balanced N-doped BiVO4 bandgap reduction",
+      "notes": "Reduction relative to pristine gap; paper target reduction ≥0.3 eV."
+    },
+    {
+      "id": "step_03",
+      "output_file": "bandstructure_N_excess_Vac.dat",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "metric_recompute",
+      "description": "N-doped BiVO4 with excess vacancies bandgap reduction",
+      "notes": "Reduction relative to pristine gap; paper target reduction ≥0.25 eV."
+    },
+    {
+      "id": "step_04",
+      "output_file": "dielectric_constants.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "exact_match",
+      "description": "Dielectric constants for pristine and N-doped BiVO4",
+      "notes": "Compared to paper values with ±20% tolerance."
+    },
+    {
+      "id": "step_05",
+      "output_file": "polaron_properties.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "target_policy": "threshold_or_better",
+      "description": "Polaron mobility enhancement",
+      "notes": "mobility_enhancement_percent must be ≥20% for full credit."
+    },
+    {
+      "id": "step_06",
+      "output_file": "absorption_edge.json",
+      "kind": "numeric",
+      "weight": 0.05,
+      "target_policy": "reference_match",
+      "description": "Optical absorption edge redshift",
+      "notes": "redshift_eV compared to paper value 0.3 eV with ±0.1 eV tolerance."
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's claims are captured by structural features of the three simulation outputs, not a single scalar metric. T1 recompute is infeasible because there is no single metric to recompute, and the outputs are not compared to a gold dataset. T2 consistency is not applicable. T3 structural audits of the spectrum, spatial extent, and time profile directly verify the key qualitative results described in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_spectrum.csv": "structural_audit",
+    "spatial_distribution.csv": "structural_audit",
+    "time_profile.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_MeV",
+            "differential_flux"
+          ],
+          "units": {
+            "energy_MeV": "MeV",
+            "differential_flux": "arbitrary units per MeV"
+          }
+        },
+        "description": "Differential energy spectrum of escaping secondary electrons. Checker verifies that the spectrum contains a data point with energy ≥ 30 MeV and non-zero flux."
+      },
+      {
+        "file": "spatial_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radius_km",
+            "flux_per_area"
+          ],
+          "units": {
+            "radius_km": "km",
+            "flux_per_area": "arbitrary units per area"
+          }
+        },
+        "description": "Radial distribution of electron number per unit area at 500 km altitude. Checker verifies that the electron beam half-width at half-max is between 5 and 20 km, implying a factor ~10 narrower than the gamma-ray beam."
+      },
+      {
+        "file": "time_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ms",
+            "count_rate"
+          ],
+          "units": {
+            "time_ms": "ms",
+            "count_rate": "arbitrary units"
+          }
+        },
+        "description": "Simulated electron count rate vs time at satellite altitude, showing two distinct peaks separated by 5–15 ms with the second peak amplitude 0.5–2× the first. This artifact carries the highest weight and is load-bearing, requiring the full simulation chain."
+      }
+    ],
+    "notes": "All outputs are produced from the Monte Carlo and propagation pipeline. The checker performs structural audits: for energy_spectrum.csv it checks for presence of non-zero flux at >=30 MeV; for spatial_distribution.csv it computes the half-width at half-max and verifies it lies in 5–20 km; for time_profile.csv it identifies two distinct peaks with separation 5–15 ms and second-to-first amplitude ratio between 0.5 and 2.0. No gold numerical values are disclosed."
+  },
+  "steps": [
+    {
+      "id": "energy_spectrum_check",
+      "output_file": "energy_spectrum.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "params": {
+        "min_energy_MeV": 30
+      }
+    },
+    {
+      "id": "spatial_distribution_check",
+      "output_file": "spatial_distribution.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "params": {
+        "hwhm_min_km": 5,
+        "hwhm_max_km": 20
+      }
+    },
+    {
+      "id": "time_profile_check",
+      "output_file": "time_profile.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "params": {
+        "peak_separation_min_ms": 5,
+        "peak_separation_max_ms": 15,
+        "amplitude_ratio_min": 0.5,
+        "amplitude_ratio_max": 2.0
+      }
+    }
+  ]
+}

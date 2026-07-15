@@ -1,0 +1,302 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Verifier cannot rerun DFT; result-level comparison against paper-reported gold with tolerances is the strongest feasible tier. Qualitative trends are also checked.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_polymer_angles.csv": "exact_match",
+    "step_02_doped_geometries.csv": "exact_match",
+    "step_03_strain_energy.csv": "exact_match",
+    "step_04_adsorption_energy.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold polymer reference angles and repeat lengths from paper Table 1",
+      "source_provenance": "Paper Table 1: (SiO)₂(OH)₄ Si-O-Si 154.1°, 157.6°, repeat 4.9 Å; (SiNH)(SiO)(OH)₄ Si-N-Si 129.7°, Si-O-Si 134.6°, repeat 5.1 Å; (SiCH₂)(SiO)(OH)₄ Si-C-Si 123.7°, Si-O-Si 130.5°, repeat 5.1 Å.",
+      "generation_method": "extracted directly from paper table",
+      "why_not_fabricated": "Exact numerical values reported in peer-reviewed published paper; verifiable against publicly available article."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold doped sodalite geometries from paper Table 2 and text",
+      "source_provenance": "From Table 2: OXY-SOD a=8.83 Å, Si-O-Si=156.7°; 1CH2-SOD (i) a=8.83 Å, Si-C-Si=126.1°; 1CH2-SOD (f) a=8.72 Å, Si-C-Si=119.1°, Si-C≈1.81 Å (text range); 1NH-SOD (i) a=8.83 Å, Si-N-Si=135.5°; 1NH-SOD (f) a=8.80 Å, Si-N-Si=133.2°, Si-N≈1.69 Å (text range).",
+      "generation_method": "extracted from Table 2 and Results text",
+      "why_not_fabricated": "Reported in paper's Table 2 and main text; publicly verifiable."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold strain energies from paper Results section",
+      "source_provenance": "Paper states strain energies per defect for singly doped sodalites are 0.10 eV for CH2-SOD and 0.15 eV for NH-SOD (see Figure 3 and text).",
+      "generation_method": "read from paper's text and figure",
+      "why_not_fabricated": "Explicitly stated in the paper's Results and Discussion; not invented."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold BF3 adsorption energies from paper Table 4",
+      "source_provenance": "Table 4: BF3 + Si-O-Si (OXY-SOD) -0.5 eV; BF3 + Si-NH-Si (1NH-SOD) -0.8 eV.",
+      "generation_method": "extracted from Table 4",
+      "why_not_fabricated": "Paper Table 4 reports these values; publicly verifiable."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_polymer_angles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polymer_name",
+            "angle_type",
+            "angle_value_deg",
+            "repeat_length_A"
+          ],
+          "units": {
+            "angle_value_deg": "degrees",
+            "repeat_length_A": "Angstrom"
+          }
+        },
+        "description": "Optimized polymer reference angles and repeat lengths."
+      },
+      {
+        "file": "step_02_doped_geometries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "relaxation_type",
+            "lattice_parameter_a_A",
+            "SiXSi_angle_deg",
+            "SiC_bond_length_A",
+            "SiN_bond_length_A"
+          ],
+          "units": {
+            "lattice_parameter_a_A": "Angstrom",
+            "SiXSi_angle_deg": "degrees",
+            "SiC_bond_length_A": "Angstrom",
+            "SiN_bond_length_A": "Angstrom"
+          }
+        },
+        "description": "Geometry parameters for pristine and singly doped sodalites."
+      },
+      {
+        "file": "step_03_strain_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "strain_energy_per_defect_eV"
+          ],
+          "units": {
+            "strain_energy_per_defect_eV": "eV"
+          }
+        },
+        "description": "Defect strain energies per impurity."
+      },
+      {
+        "file": "step_04_adsorption_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "reaction",
+            "adsorption_energy_eV"
+          ],
+          "units": {
+            "adsorption_energy_eV": "eV"
+          }
+        },
+        "description": "BF3 adsorption energies at Si-O-Si and Si-NH-Si sites."
+      }
+    ],
+    "notes": "Values are compared to the paper's DFT-LDA results with tolerances that account for code-to-code differences (Quantum ESPRESSO vs VASP). The verifier reads the CSV files and checks each numeric value within a tolerance."
+  },
+  "steps": [
+    {
+      "id": "polymer_angles",
+      "output_file": "step_01_polymer_angles.csv",
+      "weight": 0.2,
+      "kind": "numeric_comparison",
+      "expected": {
+        "columns": [
+          "polymer_name",
+          "angle_type",
+          "angle_value_deg",
+          "repeat_length_A"
+        ],
+        "tolerances": {
+          "angle_value_deg": 2.0,
+          "repeat_length_A": 0.05
+        },
+        "rows": [
+          {
+            "polymer_name": "(SiO)₂(OH)₄",
+            "angle_type": "Si-O-Si",
+            "angle_value_deg": 154.1,
+            "repeat_length_A": 4.9
+          },
+          {
+            "polymer_name": "(SiO)₂(OH)₄",
+            "angle_type": "Si-O-Si",
+            "angle_value_deg": 157.6,
+            "repeat_length_A": 4.9
+          },
+          {
+            "polymer_name": "(SiNH)(SiO)(OH)₄",
+            "angle_type": "Si-N-Si",
+            "angle_value_deg": 129.7,
+            "repeat_length_A": 5.1
+          },
+          {
+            "polymer_name": "(SiNH)(SiO)(OH)₄",
+            "angle_type": "Si-O-Si",
+            "angle_value_deg": 134.6,
+            "repeat_length_A": 5.1
+          },
+          {
+            "polymer_name": "(SiCH₂)(SiO)(OH)₄",
+            "angle_type": "Si-C-Si",
+            "angle_value_deg": 123.7,
+            "repeat_length_A": 5.1
+          },
+          {
+            "polymer_name": "(SiCH₂)(SiO)(OH)₄",
+            "angle_type": "Si-O-Si",
+            "angle_value_deg": 130.5,
+            "repeat_length_A": 5.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "doped_geometries",
+      "output_file": "step_02_doped_geometries.csv",
+      "weight": 0.25,
+      "kind": "numeric_comparison",
+      "expected": {
+        "columns": [
+          "system",
+          "relaxation_type",
+          "lattice_parameter_a_A",
+          "SiXSi_angle_deg",
+          "SiC_bond_length_A",
+          "SiN_bond_length_A"
+        ],
+        "tolerances": {
+          "lattice_parameter_a_A": 0.05,
+          "SiXSi_angle_deg": 2.0,
+          "SiC_bond_length_A": 0.02,
+          "SiN_bond_length_A": 0.02
+        },
+        "rows": [
+          {
+            "system": "OXY-SOD",
+            "relaxation_type": "f",
+            "lattice_parameter_a_A": 8.83,
+            "SiXSi_angle_deg": 156.7,
+            "SiC_bond_length_A": null,
+            "SiN_bond_length_A": null
+          },
+          {
+            "system": "1CH2-SOD",
+            "relaxation_type": "i",
+            "lattice_parameter_a_A": 8.83,
+            "SiXSi_angle_deg": 126.1,
+            "SiC_bond_length_A": 1.81,
+            "SiN_bond_length_A": null
+          },
+          {
+            "system": "1CH2-SOD",
+            "relaxation_type": "f",
+            "lattice_parameter_a_A": 8.72,
+            "SiXSi_angle_deg": 119.1,
+            "SiC_bond_length_A": 1.81,
+            "SiN_bond_length_A": null
+          },
+          {
+            "system": "1NH-SOD",
+            "relaxation_type": "i",
+            "lattice_parameter_a_A": 8.83,
+            "SiXSi_angle_deg": 135.5,
+            "SiC_bond_length_A": null,
+            "SiN_bond_length_A": 1.69
+          },
+          {
+            "system": "1NH-SOD",
+            "relaxation_type": "f",
+            "lattice_parameter_a_A": 8.8,
+            "SiXSi_angle_deg": 133.2,
+            "SiC_bond_length_A": null,
+            "SiN_bond_length_A": 1.69
+          }
+        ]
+      }
+    },
+    {
+      "id": "strain_energy",
+      "output_file": "step_03_strain_energy.csv",
+      "weight": 0.2,
+      "kind": "numeric_comparison",
+      "expected": {
+        "columns": [
+          "system",
+          "strain_energy_per_defect_eV"
+        ],
+        "tolerances": {
+          "strain_energy_per_defect_eV": 0.15
+        },
+        "rows": [
+          {
+            "system": "1CH2-SOD (f)",
+            "strain_energy_per_defect_eV": 0.1
+          },
+          {
+            "system": "1NH-SOD (f)",
+            "strain_energy_per_defect_eV": 0.15
+          }
+        ]
+      }
+    },
+    {
+      "id": "adsorption_energy",
+      "output_file": "step_04_adsorption_energy.csv",
+      "weight": 0.2,
+      "kind": "numeric_comparison",
+      "expected": {
+        "columns": [
+          "reaction",
+          "adsorption_energy_eV"
+        ],
+        "tolerances": {
+          "adsorption_energy_eV": 0.15
+        },
+        "rows": [
+          {
+            "reaction": "BF3 + Si-O-Si (OXY-SOD)",
+            "adsorption_energy_eV": -0.5
+          },
+          {
+            "reaction": "BF3 + Si-NH-Si (1NH-SOD)",
+            "adsorption_energy_eV": -0.8
+          }
+        ]
+      }
+    },
+    {
+      "id": "structural_trends",
+      "output_file": "",
+      "weight": 0.15,
+      "kind": "trend_checks"
+    }
+  ]
+}

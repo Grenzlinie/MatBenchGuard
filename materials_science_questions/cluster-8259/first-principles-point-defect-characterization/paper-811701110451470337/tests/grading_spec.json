@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot fully recompute formation energies from agent's raw DFT total energies without access to the agent's code; instead verify the relative formation energy ordering between charge states at two Fermi levels and the transition level crossing range, which are the paper's key findings.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect",
+            "configuration",
+            "charge",
+            "Fermi_level",
+            "formation_energy"
+          ],
+          "columns": {
+            "defect": "string",
+            "configuration": "string",
+            "charge": "integer",
+            "Fermi_level": "float, eV",
+            "formation_energy": "float, eV"
+          }
+        },
+        "description": "Formation energies for oxygen defect configurations and charge states at two Fermi levels. The verifier checks relative formation energy ordering between charge states at the two specified Fermi levels and verifies that the charge-state transition levels fall within the expected range."
+      }
+    ],
+    "notes": "The verifier applies structural checks (charge ordering and transition level) to formation_energies.csv. The evidence files host_reference.json and defect_total_energies.json are required intermediate artifacts but are not scored directly."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "formation_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.02,
+      "description": "Verify required columns exist and all 36 required rows are present."
+    },
+    {
+      "id": "ordering_EF0",
+      "output_file": "formation_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "At Fermi_level=0.0 eV, O_Sb charge -1 configurations have lower formation energy than charge +1, and O_i charge -2 lower than charge 0."
+    },
+    {
+      "id": "ordering_EF025",
+      "output_file": "formation_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "At Fermi_level=0.25 eV, O_Sb charge +1 configurations have lower formation energy than charge -1, and O_i charge 0 lower than charge -2."
+    },
+    {
+      "id": "transition_level",
+      "output_file": "formation_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.38,
+      "description": "The Fermi level at which formation energies of O_Sb(beta-CCB-DX, -1) and O_Sb(OBB-DX, +1) cross is in [0.1, 0.3] eV, and for O_i(C3V, -2) and O_i(C3V, 0) the crossing lies in [0.1, 0.3] eV (linear interpolation between 0.0 and 0.25 eV)."
+    }
+  ]
+}

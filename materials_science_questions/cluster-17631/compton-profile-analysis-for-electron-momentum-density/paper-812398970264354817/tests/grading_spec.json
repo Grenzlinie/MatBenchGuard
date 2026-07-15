@@ -1,0 +1,151 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing efficiency and P/T from raw simulation and reconstruction outputs is infeasible in the verifier; the agent reports final metrics which are compared to paper-derived reference values with tolerant thresholds and structural ordering checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reconstruction_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold metrics for the three figures-of-merit and Compton profile effect.",
+      "source_provenance": "Extracted from paper Figure 1 (Mγ=5, σpos=1 mm, 1332 keV γ rays) and Figure 6 (Compton effect at Mγ=25 scaled to Mγ=5 context). The reference solve.sh encodes the same values.",
+      "generation_method": "Manual reading from the published figure; tolerances chosen to be generous (+0.05 for ε, +0.10 for P/T) to absorb implementation differences while preserving the stated conclusion that w3_step is best and Compton profile degrades performance.",
+      "why_not_fabricated": "These are the actual quantitative conclusions reported in the paper; the checker enforces that the agent's reproduction matches the paper's findings within expected run-to-run variation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reconstruction_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "fom_comparison": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": {
+                  "fom": "string (one of w1_step, w2_step, w3_step)",
+                  "epsilon": "number (between 0 and 1)",
+                  "P_over_T": "number (between 0 and 1)"
+                }
+              }
+            },
+            "compton_profile_effect": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": {
+                  "case": "string (one of without_compton, with_compton)",
+                  "epsilon": "number (between 0 and 1)",
+                  "P_over_T": "number (between 0 and 1)"
+                }
+              }
+            }
+          }
+        },
+        "description": "JSON file containing the computed photopeak efficiency and peak-to-total ratio for each figure-of-merit and for the atomic Compton profile effect."
+      }
+    ],
+    "notes": "The checker will compare the reported metrics against the paper's published values using generous tolerances and verify the relative ordering w3_step > w2_step > w1_step for both ε and P/T. For the Compton profile effect, it will verify that the 'with_compton' values are lower than 'without_compton'."
+  },
+  "steps": [
+    {
+      "id": "shape_and_parse",
+      "output_file": "reconstruction_results.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "description": "Validates that the JSON file exists, is valid, and contains the required top-level keys.",
+      "rubric": {
+        "exists": 0.2,
+        "valid_json": 0.3,
+        "contains_fom_comparison": 0.25,
+        "contains_compton_profile_effect": 0.25
+      }
+    },
+    {
+      "id": "fom_ordering",
+      "output_file": "reconstruction_results.json",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Verifies that w3_step > w2_step > w1_step for both epsilon and P_over_T.",
+      "rubric": {
+        "epsilon_ordering": 0.5,
+        "P_over_T_ordering": 0.5
+      }
+    },
+    {
+      "id": "compton_ordering",
+      "output_file": "reconstruction_results.json",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Verifies that for the same metric, with_compton < without_compton (degradation).",
+      "rubric": {
+        "epsilon_decrease": 0.5,
+        "P_over_T_decrease": 0.5
+      }
+    },
+    {
+      "id": "fom_epsilon_magnitude",
+      "output_file": "reconstruction_results.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "metric": "epsilon",
+      "target_policy": "threshold_or_better",
+      "reference": {
+        "w1_step": 0.3,
+        "w2_step": 0.34,
+        "w3_step": 0.38
+      },
+      "tolerance_abs": 0.05,
+      "description": "Scores the absolute epsilon values against paper-derived gold; values at or above (gold - tol) receive full credit, lower values receive proportional credit."
+    },
+    {
+      "id": "fom_PoT_magnitude",
+      "output_file": "reconstruction_results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "metric": "P_over_T",
+      "target_policy": "threshold_or_better",
+      "reference": {
+        "w1_step": 0.45,
+        "w2_step": 0.5,
+        "w3_step": 0.55
+      },
+      "tolerance_abs": 0.1,
+      "description": "Scores the absolute P/T values; values at or above (gold - tol) receive full credit."
+    },
+    {
+      "id": "compton_epsilon_magnitude",
+      "output_file": "reconstruction_results.json",
+      "kind": "numeric",
+      "weight": 0.1,
+      "metric": "epsilon",
+      "target_policy": "threshold_or_better",
+      "reference": {
+        "without_compton": 0.38,
+        "with_compton": 0.32
+      },
+      "tolerance_abs": 0.05,
+      "description": "Scores epsilon for the Compton profile effect cases."
+    },
+    {
+      "id": "compton_PoT_magnitude",
+      "output_file": "reconstruction_results.json",
+      "kind": "numeric",
+      "weight": 0.05,
+      "metric": "P_over_T",
+      "target_policy": "threshold_or_better",
+      "reference": {
+        "without_compton": 0.55,
+        "with_compton": 0.48
+      },
+      "tolerance_abs": 0.1,
+      "description": "Scores P/T for the Compton profile effect cases."
+    }
+  ]
+}

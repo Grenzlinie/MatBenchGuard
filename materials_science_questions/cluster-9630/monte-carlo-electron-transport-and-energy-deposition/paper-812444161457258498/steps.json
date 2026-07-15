@@ -1,0 +1,67 @@
+[
+  {
+    "id": "s0",
+    "title": "Precompute material energy grid and scattering distributions",
+    "role": "process",
+    "action": "Precompute material-specific lookup tables of energy steps E_n, path-length steps d_n, and cumulative Molière multiple-scattering probability distributions F_n^i for graphite, aluminium, silver, and lead using the Bethe stopping power formula and the scaling law E_n = E_{n-1} / 2^{1/16}.",
+    "output_file": "",
+    "evidence": "precomputed_tables.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This preprocessing stage generates material-specific lookup tables reused across all transport calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "s1",
+    "title": "Monte Carlo electron transport simulations",
+    "role": "process",
+    "action": "Using the precomputed tables, run Monte Carlo transport simulations for: (a) backscattering coefficient for semi-infinite foils at 1 MeV incident energy for graphite, aluminium, silver, and lead (6000 histories each); (b) backscattering coefficient vs. foil thickness for aluminium at 0.25 MeV, thickness multiples of total electron path length s0 from 0.1 to 1.0 in steps of 0.1 (6000 histories per thickness); (c) transmission coefficient vs. foil thickness for aluminium at 0.25 MeV, same thickness grid (6000 histories per thickness); (d) energy deposition profile for aluminium at 1 MeV in a semi-infinite foil (4500 histories). Record all tallied coefficients and the energy deposition histogram as a function of depth in s0 units.",
+    "output_file": "",
+    "evidence": "simulation_raw.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This stage runs the full Monte Carlo electron transport and writes all raw tallies to a JSON file.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Extract backscattering coefficients",
+    "role": "scored",
+    "action": "Read the raw simulation tallies from simulation_raw.json, extract the backscattering coefficient for graphite, Al, Ag, Pb at 1 MeV semi-infinite, and for Al at 0.25 MeV at each thickness, and write them to a CSV file.",
+    "output_file": "backscattering_coefficients.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing backscattering coefficients for all required conditions.",
+    "output_schema": "Columns: material (str), foil_thickness_in_s0_or_inf (float or 'inf'), incident_energy_MeV (float), backscattering_coefficient (float)."
+  },
+  {
+    "id": "s3",
+    "title": "Extract transmission coefficients",
+    "role": "scored",
+    "action": "Read simulation_raw.json, extract the transmission coefficient for aluminium at 0.25 MeV for each thickness, and write them to a CSV file.",
+    "output_file": "transmission_coefficients.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing transmission coefficients for aluminium at 0.25 MeV as a function of foil thickness.",
+    "output_schema": "Columns: material (str), foil_thickness_in_s0_units (float), incident_energy_MeV (float), transmission_coefficient (float)."
+  },
+  {
+    "id": "s4",
+    "title": "Extract energy deposition profile",
+    "role": "scored",
+    "action": "Read simulation_raw.json, obtain the energy deposition histogram for aluminium at 1 MeV, normalize the maximum to 100, and write the depth-dependent profile to a CSV file.",
+    "output_file": "energy_deposition_al_1MeV.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing the normalized energy deposition profile for aluminium at 1 MeV.",
+    "output_schema": "Columns: depth_in_s0_units (float), energy_deposition_normalized (float). Depth sampling from 0.0 to approximately 0.6 s0 at regular intervals."
+  }
+]

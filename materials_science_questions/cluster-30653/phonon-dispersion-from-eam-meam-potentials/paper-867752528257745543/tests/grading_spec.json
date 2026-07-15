@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "The quantities are deterministic for the given DP potential; recomputing from raw simulation outputs in the verifier sandbox is not feasible, so a result-level comparison with appropriate tolerances is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "splitting_widths.csv": "exact_match",
+    "core_energy.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold splitting widths and core energy from paper Table 2 and Section 3.4",
+      "source_provenance": "Table 2 (splitting widths) and Section 3.4 (core energy: 0.22 eV/Å) of the source paper",
+      "generation_method": "Extracted directly from the paper text; no transformation needed.",
+      "why_not_fabricated": "These are the exact values reported in the paper and serve as reference for the DP potential used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "splitting_widths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "dislocation_angle",
+            "splitting_width_b"
+          ],
+          "units": {
+            "splitting_width_b": "b (Burgers vector, b=2.57 Å)"
+          }
+        },
+        "description": "Splitting widths d (in units of b) for 0° screw, 60° mixed, and 90° edge dislocations, extracted from DP relaxed configurations."
+      },
+      {
+        "file": "core_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "Single line: 'core_energy_eV_per_Angstrom: <float>'",
+          "units": "eV/Å"
+        },
+        "description": "Core energy per unit length of a screw dislocation in FCC Cu, derived from DP array simulations."
+      }
+    ],
+    "notes": "The scored quantities are obtained from the same DP potential and are deterministic. Tolerances will be applied by the hidden checker."
+  },
+  "steps": [
+    {
+      "id": "step_extract_widths",
+      "output_file": "splitting_widths.csv",
+      "kind": "exact_match",
+      "weight": 0.7,
+      "expected_widths": {
+        "0deg": 6.1,
+        "60deg": 14.7,
+        "90deg": 15.0
+      },
+      "tolerance_width": 0.5,
+      "description": "Splitting widths d (in units of b) from DP molecular statics"
+    },
+    {
+      "id": "step_extract_core_energy",
+      "output_file": "core_energy.txt",
+      "kind": "exact_match",
+      "weight": 0.3,
+      "expected_energy": 0.22,
+      "tolerance_energy": 0.02,
+      "description": "Core energy per unit length (eV/Å) of screw dislocation"
+    }
+  ]
+}

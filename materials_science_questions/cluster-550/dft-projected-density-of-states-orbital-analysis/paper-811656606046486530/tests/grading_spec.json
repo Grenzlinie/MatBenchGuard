@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT-derived lattice constant and DOS peak cannot be recomputed by the lightweight verifier; the zT analytical model could be recomputed from the peak energy but that peak energy itself is a DFT output. Therefore result-level comparison against paper-reported values with tolerances is the feasible approach.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for lattice constant, DOS peak energy and height, and zT.",
+      "source_provenance": "Paper-reported values: lattice constant 9.466 Å (text: 'Our calculation yields an equilibrium lattice constant a0 = 9.466 Å'), DOS peak energy 0.21 eV and height 200 states/(eV·unit cell) (from Fig. 3 caption and text), ideal zT 13.5 (text: 'we obtain the ideal zT=13.5 for Ce3Te4 at T=1200 K').",
+      "generation_method": "Extracted from the paper text.",
+      "why_not_fabricated": "These are the exact values reported in the paper; they are not invented and have clear traceable lineage."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_lattice_constant.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "value_format": "single floating-point number",
+          "units": "angstroms"
+        },
+        "description": "Equilibrium lattice constant obtained from DFT structural relaxation."
+      },
+      {
+        "file": "step_02_dos_peak.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "peak_energy_eV",
+            "peak_height_states_per_eV_per_unit_cell"
+          ],
+          "properties": {
+            "peak_energy_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "peak_height_states_per_eV_per_unit_cell": {
+              "type": "number",
+              "unit": "states/(eV·unit cell)"
+            }
+          }
+        },
+        "description": "Position (eV above Fermi level) and height of the delta‑shaped conduction‑band DOS peak."
+      },
+      {
+        "file": "step_03_zt_value.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "value_format": "single floating-point number",
+          "units": "dimensionless"
+        },
+        "description": "Ideal thermoelectric figure of merit zT at 1200 K computed from the Mahan‑Sofo model."
+      }
+    ],
+    "notes": "All three outputs are compared to hidden reference values with tolerances appropriate for the chosen DFT implementation."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_lattice_constant.txt",
+      "file_format": "txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 9.466,
+      "tolerance_abs": 0.05,
+      "description": "Compare relaxed lattice constant to paper-reported 9.466 Å with tolerance ±0.05 Å."
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_dos_peak.json",
+      "file_format": "json",
+      "kind": "json_fields_numeric",
+      "weight": 0.3,
+      "fields": {
+        "peak_energy_eV": {
+          "target": 0.21,
+          "tolerance_abs": 0.02,
+          "weight": 0.5
+        },
+        "peak_height_states_per_eV_per_unit_cell": {
+          "target": 200,
+          "tolerance_abs": 10,
+          "weight": 0.5
+        }
+      },
+      "description": "Compare DOS peak energy and height to paper-reported values (0.21 eV, 200 states/(eV·unit cell)) with tolerances."
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_zt_value.txt",
+      "file_format": "txt",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": 13.5,
+      "tolerance_abs": 0.5,
+      "description": "Compare computed ideal zT to paper-reported 13.5 with tolerance ±0.5."
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing phonon DOS and elastic constants from the fitted ACE potential requires LAMMPS and phonopy, and extracting the eutectic from calphy free-energy simulations is computationally heavy; infeasible in the verifier sandbox. Agent-reported results are compared to the paper's ACE-specific reference values within tolerances.",
+  "pass_threshold": 0.6,
+  "steps": [
+    {
+      "id": "validation",
+      "output_file": "validation_results.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "tolerances": {
+        "elastic_relative": 0.2,
+        "phonon_abs": 1.0
+      },
+      "gold": {
+        "phonon_peaks": {
+          "fcc_Al": [
+            7.0,
+            8.5
+          ],
+          "bcc_Li": [
+            5.5,
+            7.0
+          ],
+          "AlLi": [
+            5.0,
+            6.0,
+            7.0
+          ],
+          "Al3Li": [
+            5.5,
+            6.5,
+            7.5
+          ]
+        },
+        "elastic_constants": {
+          "Al_fcc": {
+            "C11": 130,
+            "C12": 57,
+            "C44": 39
+          },
+          "Li_bcc": {
+            "C11": 13,
+            "C12": 12,
+            "C44": 11
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_diagram",
+      "output_file": "phase_diagram_features.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "tolerances": {
+        "temperature_abs": 50,
+        "composition_abs": 0.05,
+        "solubility_abs": 0.05
+      },
+      "gold": {
+        "eutectic_temperature_K": 771,
+        "eutectic_composition_Li_fraction": 0.32,
+        "Li_solubility_in_fcc_Al_fraction": 0.21
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for ACE validation and phase diagram features",
+      "source_provenance": "Paper Table II (elastic constants for ACE) and inferred phonon peak positions from Fig. 5; Table III (ACE column) for phase diagram features.",
+      "generation_method": "Elastic constants exactly as reported in the paper. Phonon peak positions read approximately from Fig. 5. Phase diagram features taken from the ACE column of Table III.",
+      "why_not_fabricated": "These are the paper's own ACE-potential results, the target quantities the reproduction must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "validation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "phonon_peaks",
+            "elastic_constants"
+          ],
+          "properties": {
+            "phonon_peaks": {
+              "fcc_Al": "array",
+              "bcc_Li": "array",
+              "AlLi": "array",
+              "Al3Li": "array"
+            },
+            "elastic_constants": {
+              "Al_fcc": {
+                "C11": "number",
+                "C12": "number",
+                "C44": "number"
+              },
+              "Li_bcc": {
+                "C11": "number",
+                "C12": "number",
+                "C44": "number"
+              }
+            }
+          }
+        },
+        "description": "Phonon DOS peak positions (THz) and elastic constants (GPa) computed from the fitted ACE potential."
+      },
+      {
+        "file": "phase_diagram_features.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "eutectic_temperature_K",
+            "eutectic_composition_Li_fraction",
+            "Li_solubility_in_fcc_Al_fraction"
+          ],
+          "properties": {
+            "eutectic_temperature_K": "number",
+            "eutectic_composition_Li_fraction": "number",
+            "Li_solubility_in_fcc_Al_fraction": "number"
+          }
+        },
+        "description": "Eutectic temperature (K), eutectic liquid Li fraction, and Li solubility in fcc Al at the eutectic temperature, extracted from common tangent constructions on the free-energy data."
+      }
+    ],
+    "notes": "Scoring uses exact_match with tolerances against the paper's reference values. The hidden checker compares the reported numbers to the gold values within tolerances (elastic constants 20%, peak positions 1 THz, eutectic temperature 50 K, composition/solubility 0.05 fraction)."
+  }
+}

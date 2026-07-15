@@ -1,0 +1,80 @@
+[
+  {
+    "id": "rcwa_scan",
+    "title": "RCWA unit-cell scan for two thicknesses",
+    "role": "process",
+    "action": "Use an open-source RCWA solver to compute, for TE-polarized light at 1550 nm, the transmitted amplitude (transmittivity) and phase shift of periodic unit cells as functions of period Λ (0.4–1.2 µm) and duty cycle τ (0.2–0.9) for the two thicknesses tg = 1.3 µm and tg = 1.2 µm. Save the resulting 2D arrays.",
+    "output_file": "",
+    "evidence": "rcwa_scan.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Compute transmittivity and phase shift maps for both thicknesses.",
+    "output_schema": ""
+  },
+  {
+    "id": "select_high_trans",
+    "title": "Select high-transmittance points",
+    "role": "process",
+    "action": "For each thickness, filter the RCWA results to retain only the (Λ, τ) pairs whose transmittivity exceeds 90%.",
+    "output_file": "",
+    "evidence": "selected_points.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Filter high-transmission operating points.",
+    "output_schema": ""
+  },
+  {
+    "id": "sort_by_phase",
+    "title": "Sort selected points by phase",
+    "role": "process",
+    "action": "For each thickness, sort the high-transmittance (Λ, τ) points by their associated transmitted phase shift to create an ordered list of attainable high‑transmission phases.",
+    "output_file": "",
+    "evidence": "sorted_phase_lists.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Sort phase-ordered lists.",
+    "output_schema": ""
+  },
+  {
+    "id": "concatenate_phase_lists",
+    "title": "Concatenate phase lists from two thicknesses",
+    "role": "process",
+    "action": "Concatenate the sorted phase lists: first the tg=1.3 µm list, then the tg=1.2 µm list, to form a single combined list that spans the full 0–2π rad range. Each entry carries the associated (Λ, τ, tg) triple.",
+    "output_file": "",
+    "evidence": "combined_phase_list.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Combine phase lists for full phase coverage.",
+    "output_schema": ""
+  },
+  {
+    "id": "target_phase_and_mapping",
+    "title": "Compute target phase profile and assemble grating layout",
+    "role": "process",
+    "action": "Compute the target hyperbolic phase profile Φ(x) = (2π/λ)(√(x²+f²) – f) + Φ0 for focal length f = 7 µm at λ = 1550 nm, modulo 2π. Choose an appropriate initial phase. For each lateral position x across the lens aperture (total size 26 µm), map the target phase to the nearest available phase in the combined list and assign the corresponding (Λ, τ, tg) to that grating bar. Assemble the complete non-periodic grating layout.",
+    "output_file": "",
+    "evidence": "grating_layout.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Design the grating layout from phase mapping.",
+    "output_schema": ""
+  },
+  {
+    "id": "fem_simulation",
+    "title": "Full-device simulation and performance evaluation",
+    "role": "scored",
+    "action": "Simulate the designed grating lens using an open-source electromagnetic solver for TE-polarized plane-wave illumination at normal incidence and λ = 1550 nm. Extract the total transmissivity (ratio of transmitted power to incident power) and the full-width at half-maximum (FWHM) of the intensity distribution at the focal plane. Write these two values as a JSON object with keys 'transmittance' and 'fwhm_um' into 'performance.json'.",
+    "output_file": "performance.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored output containing total transmissivity and focal-plane FWHM of the designed focusing lens.",
+    "output_schema": "{\"transmittance\": <float between 0 and 1>, \"fwhm_um\": <float>}"
+  }
+]

@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of PDOS from raw force constants and FV method is computationally heavy; instead, structural trends (downward shift, monotonicity) and reference_match of E2g peak frequencies to digitized paper values provide strong verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "E2g peak frequency gold values digitized from Fig. 2(b) of the paper.",
+      "source_provenance": "Paper's Fig. 2(b) defect-dependent E2g mode frequencies",
+      "generation_method": "Digitized from figure using typical graphane Raman mode around 1350 cm-1 and linear downshift observed in paper.",
+      "why_not_fabricated": "Values are consistent with the paper's description of approximately linear softening and with the known E2g mode of graphane."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pdos_pristine_30.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "PDOS_pristine",
+            "PDOS_30"
+          ],
+          "units": {
+            "frequency": "cm^-1",
+            "PDOS_pristine": "arbitrary",
+            "PDOS_30": "arbitrary"
+          }
+        },
+        "description": "PDOS curves for pristine and 30% vacancy graphane. The checker will verify a downward shift in the intermediate-frequency region (500–1500 cm⁻¹) via normalized cumulative difference."
+      },
+      {
+        "file": "e2g_peaks.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "vacancy_concentration",
+            "e2g_frequency"
+          ],
+          "units": {
+            "vacancy_concentration": "%",
+            "e2g_frequency": "cm^-1"
+          }
+        },
+        "description": "E2g Raman peak frequencies for each vacancy concentration. The checker compares these values against digitized reference results and verifies monotonic decrease."
+      },
+      {
+        "file": "specific_heat.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "C_V_pristine",
+            "C_V_10",
+            "C_V_20",
+            "C_V_30"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "C_V_pristine": "J/(mol·K)",
+            "C_V_10": "J/(mol·K)",
+            "C_V_20": "J/(mol·K)",
+            "C_V_30": "J/(mol·K)"
+          }
+        },
+        "description": "Constant-volume specific heat capacity vs temperature for all four structures. The checker verifies monotonic decrease of C_V with vacancy concentration at selected temperatures."
+      }
+    ],
+    "notes": "The PDOS CSV provides raw curves for structural analysis; the E2g peak CSV is compared to reference values from the paper with hidden tolerances; the specific heat CSV is structurally audited for monotonic trends with a relative error bound. All outputs are derived from the PDOS arrays computed in the process steps."
+  },
+  "steps": [
+    {
+      "id": "e2g_peak_check",
+      "output_file": "e2g_peaks.csv",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "reference_targets": {
+        "0": 1350.0,
+        "10": 1342.0,
+        "20": 1330.0,
+        "30": 1315.0
+      },
+      "tolerance_cm": 50.0,
+      "require_monotonic_decrease": true
+    },
+    {
+      "id": "pdos_shift_check",
+      "output_file": "pdos_pristine_30.csv",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "frequency_range_min": 500.0,
+      "frequency_range_max": 1500.0
+    },
+    {
+      "id": "specific_heat_mono_check",
+      "output_file": "specific_heat.csv",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "temperature_points": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        600
+      ]
+    }
+  ]
+}

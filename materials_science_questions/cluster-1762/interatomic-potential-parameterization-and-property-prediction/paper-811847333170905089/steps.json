@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_static",
+    "title": "Static lattice dynamics",
+    "role": "process",
+    "action": "Use GULP with the Tersoff potential to compute the equilibrium lattice constant, elastic constants, and the phonon density of states D(ω) of zinc-blende ZnTe. Save D(ω) as phonon_dos.csv.",
+    "output_file": "",
+    "evidence": "phonon_dos.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the phonon density of states needed for the quantum temperature correction and validates the potential.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_scaling",
+    "title": "Quantum temperature correction",
+    "role": "process",
+    "action": "From the phonon density of states D(ω), compute the classical MD temperature T_MD as a function of real temperature T using the temperature-dependent internal energy relation and the temperature gradient factor dT_MD/dT. Save the mapping table as temperature_scaling.csv with columns T_K, T_MD_K, dT_MD_dT.",
+    "output_file": "",
+    "evidence": "temperature_scaling.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Provides the quantum-correction mapping required to convert classical MD thermal conductivity to the real quantum-corrected value.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_emd_hcacf",
+    "title": "EMD heat-current autocorrelation at 400 K",
+    "role": "process",
+    "action": "Run equilibrium MD simulations for ZnTe at 400 K using LAMMPS with a 5×5×5 supercell (1000 atoms), the Tersoff potential, and the equilibrium lattice constant. Equilibrate in the NPT ensemble, then run NVE production to collect heat-current data. Compute the normalized heat-current autocorrelation function g(t). Save g(t) as g_t_400K.csv with columns t_ps and g_t.",
+    "output_file": "",
+    "evidence": "g_t_400K.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generates the raw HCACF data at 400 K required for downstream fitting and as a check for the fit-parameter verification.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_kappa",
+    "title": "Thermal conductivity calculation",
+    "role": "scored",
+    "action": "For each temperature T = 300, 400, 500, 600, 700, 800 K, perform EMD simulations to obtain the normalized HCACF g(t), fit it to a double-exponential decay g(t)=A1·exp(−t/τ1)+A2·exp(−t/τ2), and compute the real thermal conductivity κ using the Green–Kubo formula with quantum temperature correction: κ = K(0)·(A1·τ1 + A2·τ2) where K(0)=G(0)·dT_MD/dT. Output κ(T) in thermal_conductivity.csv with columns T_K and kappa_W_mK.",
+    "output_file": "thermal_conductivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main reproduction target: lattice thermal conductivity of ZnTe at temperatures 300-800 K. Values will be compared against reference data from the paper.",
+    "output_schema": "columns: T_K (int, K), kappa_W_mK (float, W/m/K)"
+  },
+  {
+    "id": "step_05_fit",
+    "title": "HCACF double-exponential fit parameters at 400 K",
+    "role": "scored",
+    "action": "For T=400 K, record the double-exponential fit parameters obtained from the normalized HCACF g(t) and the temperature-corrected prefactor K(0). Save them as fit_parameters_400K.json.",
+    "output_file": "fit_parameters_400K.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Double-exponential fit parameters at 400 K. The verifier will refit the agent-supplied raw g(t) to check self-consistency and structural constraints.",
+    "output_schema": "JSON object with keys: A1 (float), tau1_ps (float, ps), A2 (float), tau2_ps (float, ps), K0 (float, W/m/K)"
+  }
+]

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_build_systems",
+    "title": "Build molecular systems and valence-bond basis",
+    "role": "process",
+    "action": "Generate all-trans polyene geometries for N=4,6,8,10 (including hexatriene with a rotatable central double bond for twist study). Place carbon atoms along the x-axis with spacing 1.397 Å. For twist, rotate the appropriate fragment by angle θ and scale the central bond's resonance integral by cos θ. Assign site energies ±ε at push/pull sites, ε=0 elsewhere. Construct the complete spin-adapted VB singlet basis.",
+    "output_file": "",
+    "evidence": "system_info.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_full_ci",
+    "title": "Solve ground state via exact full configuration interaction",
+    "role": "process",
+    "action": "Build the PPP Hamiltonian matrix in the VB basis using Ohno parametrization V_{pp'} = 14.397 (1.6348 + r_{pp'}^2)^{-1/2} eV, on-site U=11.13 eV, t0=2.4 eV, δ=0.07. Diagonalise to obtain ground-state wavefunction and full eigenvalue spectrum for every required system (all N, ε, substitution patterns, twist angles).",
+    "output_file": "",
+    "evidence": "eigenvalues.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_linear_response",
+    "title": "Compute first-order perturbed wavefunctions",
+    "role": "process",
+    "action": "For each system, construct dipole operator. For each required ε, Ω (0 and 1.167 eV), and dipole component, solve (Ĥ − E_G − ħΩ) φ^(1) = −μ φ_G^(0) in the full VB space using conjugate gradient. Store the perturbed wavefunctions.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_shg_output",
+    "title": "Compute SHG coefficients and output final results",
+    "role": "scored",
+    "action": "Evaluate β_ijk from the direct-response formula, compute tumbling-averaged β_x for all conditions. Extract CT excitation gaps and dipole moments, compute two-state β^CT. Fit β_x vs chain length to obtain α. Write results to shg_results.json.",
+    "output_file": "shg_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing all computed quantities: CT gaps, position dependence, β_exact and β_CT vs chain length, twist dependence, and size exponent.",
+    "output_schema": "table1_CT_gaps: array of {N:int, epsilon:float, CT_gap:float}; table2_position_dependence: array of {position:str, beta_x_exact:float, mu_gr:float, mu_ex:float}; table4_beta_exact: object keys '4','6','8','10', each with sub-keys 'eps0.6','eps2.0' containing {beta_exact:float, beta_CT:float}; twist_dependence: array of {theta:int, beta_x_exact:float}; alpha_exponent: object keys '0.6','2.0' (float). Units: β in a.u., energies eV, dipole D, α dimensionless."
+  }
+]

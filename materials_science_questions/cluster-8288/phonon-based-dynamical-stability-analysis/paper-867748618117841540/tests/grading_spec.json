@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Gamma frequencies are compared to hidden paper experimental values (result-level compare) with tolerance; minimum frequency is compared to threshold (−10 cm⁻¹) using a threshold-or-better policy.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gamma_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A1g_1": "float",
+            "A1g_2": "float",
+            "Eg_1": "float",
+            "Eg_2": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "A1g_1": "cm⁻¹",
+            "A1g_2": "cm⁻¹",
+            "Eg_1": "cm⁻¹",
+            "Eg_2": "cm⁻¹"
+          }
+        },
+        "description": "Computed Γ-point phonon frequencies for the four Raman-active modes. The checker will compare each value to a hidden reference (the experimental Raman frequencies) within a tolerance."
+      },
+      {
+        "file": "minimum_phonon_frequency.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "min_frequency_cm-1": "float",
+            "q_point": "array of 3 floats",
+            "q_label": "string"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "min_frequency_cm-1": "cm⁻¹"
+          }
+        },
+        "description": "Most negative phonon frequency from the dispersion, indicating the presence of imaginary modes. The checker verifies that min_frequency_cm-1 ≤ −10 cm⁻¹ (threshold-or-better). q_point and q_label are validated for shape but carry negligible weight."
+      }
+    ],
+    "notes": "The checker uses the hidden paper-reported experimental Raman frequencies for the Γ-point modes and a −10 cm⁻¹ threshold for the minimum phonon frequency. The exact DFT protocol (cutoff, k-mesh, pseudopotential choice) is left to the solver; the scoring tolerances account for method dependence."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference Raman frequencies from the paper's experimental data.",
+      "source_provenance": "Paper's Fig. 1(c) and text: experimental Raman frequencies A1g(1)=178.1 cm⁻¹, A1g(2)=192.4 cm⁻¹, Eg(1)=116.8 cm⁻¹, Eg(2)=175.2 cm⁻¹.",
+      "generation_method": "Directly transcribed from the source paper.",
+      "why_not_fabricated": "These are the paper's own reported experimental measurements; they are the benchmark for the computational reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_gamma",
+      "output_file": "gamma_frequencies.json",
+      "kind": "json_field_compare",
+      "weight": 0.7,
+      "gold": {
+        "A1g_1": 178.1,
+        "A1g_2": 192.4,
+        "Eg_1": 116.8,
+        "Eg_2": 175.2
+      },
+      "tolerance_abs": 15.0,
+      "description": "Compare each computed frequency to the paper's experimental Raman frequency; number of matches within tolerance over 4 gives score."
+    },
+    {
+      "id": "step_minphonon",
+      "output_file": "minimum_phonon_frequency.json",
+      "kind": "composite",
+      "weight": 0.3,
+      "checks": [
+        {
+          "name": "min_freq_threshold",
+          "type": "threshold_or_better",
+          "field": "min_frequency_cm-1",
+          "threshold": -10.0,
+          "direction": "less_equal"
+        },
+        {
+          "name": "q_point_shape",
+          "type": "array_shape",
+          "field": "q_point",
+          "element_count": 3,
+          "element_type": "float"
+        },
+        {
+          "name": "q_label_exists",
+          "type": "string_nonempty",
+          "field": "q_label"
+        }
+      ],
+      "sub_weights": [
+        0.95,
+        0.025,
+        0.025
+      ],
+      "description": "Check min_frequency_cm-1 <= -10 cm⁻¹ (dominant weight), and that q_point is an array of 3 floats and q_label is a non-empty string (negligible weight)."
+    }
+  ]
+}

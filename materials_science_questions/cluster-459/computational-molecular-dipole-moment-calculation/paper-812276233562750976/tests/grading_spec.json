@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level compare: submitted energy compared to paper’s -47 kcal/mol with monotonic threshold; rotation angle compared to -120.0° with closeness tolerance. Both use appropriate target_policy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "final_energy.txt": "threshold_or_better",
+    "first_iteration_rotation.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for final energy and first diagnostic rotation",
+      "source_provenance": "Energy from Table V (α‑helix energy = –47 kcal/mol) and rotation from text description of single C‑defect (ψ₁₁new = ψ₁₁old – 120°, i.e., rotation = –120.0°)",
+      "generation_method": "Extracted directly from published paper values",
+      "why_not_fabricated": "These are the exact values reported in the paper for the same system and conditions; they are traceable and not made up."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "final_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "One line containing a single floating-point number representing the total ECEPP/2 energy in kcal/mol."
+        },
+        "description": "Final total ECEPP/2 potential energy of the converged α-helix. Scoring compares this energy to the paper-reported value (–47 kcal/mol) with a tolerance, accepting any value that meets or exceeds the reference (i.e., is not worse)."
+      },
+      {
+        "file": "first_iteration_rotation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "residue": "integer",
+            "dihedral": "string (psi or phi)",
+            "rotation_degrees": "float"
+          }
+        },
+        "description": "Diagnostic rotation applied in the first SCEF iteration. The rotation_degrees field is compared to the paper's reported value (−120.0°) with a tolerance; values closer to or matching the target score higher."
+      }
+    ],
+    "notes": "The scored artifacts are the final potential energy and the first rotation. Both are checked against the paper-reported gold values via threshold_or_better scoring, with tolerances chosen to accommodate minor numerical differences from different implementations or minimizers. The process steps produce supporting artifacts (reference helix, defected structure, iteration log) but they are not scored; only the two listed outputs are used for scoring."
+  },
+  "steps": [
+    {
+      "id": "final_energy",
+      "output_file": "final_energy.txt",
+      "kind": "numeric",
+      "weight": 0.6,
+      "energy_threshold": -44.0,
+      "energy_range": 24.0
+    },
+    {
+      "id": "first_rotation",
+      "output_file": "first_iteration_rotation.json",
+      "kind": "json_field",
+      "weight": 0.4,
+      "target_residue": 11,
+      "target_dihedral": "psi",
+      "target_rotation": -120.0,
+      "tolerance_tight": 5.0,
+      "max_diff": 30.0
+    }
+  ]
+}

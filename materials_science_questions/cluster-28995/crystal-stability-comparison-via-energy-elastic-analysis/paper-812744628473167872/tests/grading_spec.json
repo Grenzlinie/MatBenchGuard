@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Re-running the full RFA computation in the checker is infeasible (requires orbital databases and heavy integration), so we compare the agent's computed values at the paper's reported q points to the published gold with an absolute tolerance. A lightweight integral recompute provides a T1 consistency boost.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "compton_profile_TiC.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold Compton profile values for Neckel and Lye configurations at Table 1 q points",
+      "source_provenance": "Table 1 of the paper (1987 J. Phys. C: Solid State Phys. 20 5415)",
+      "generation_method": "Manually transcribed from the paper's published table.",
+      "why_not_fabricated": "These are the exact reported values from the paper; they serve as the authoritative reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "compton_profile_TiC.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q",
+            "J_RFA_Neckel",
+            "J_RFA_Lye"
+          ],
+          "items": {},
+          "units": {}
+        },
+        "description": "Compton profile values J(q) for TiC computed with the RFA model, convoluted with the instrumental resolution function (Gaussian, FWHM=0.41 au), for two charge configurations, normalized to 12.10 electrons over [0,5] au. Values for q=0.0,0.1,...,5.0 au."
+      }
+    ],
+    "notes": "Convolution step added to match the gold values from the paper's Table 1."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "compton_profile_TiC.csv",
+      "kind": "file_exists",
+      "weight": 0.0,
+      "description": "Ensure CSV exists, has required columns, and sufficient rows."
+    },
+    {
+      "id": "profile_accuracy",
+      "output_file": "compton_profile_TiC.csv",
+      "kind": "numeric",
+      "weight": 0.95,
+      "description": "Compare J_RFA_Neckel and J_RFA_Lye values at Table 1 q points against paper's published values within absolute tolerance 0.01; score as fraction of correct points.",
+      "tolerance_abs": 0.01,
+      "gold_q": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.2,
+        1.4,
+        1.6,
+        1.8,
+        2.0,
+        2.5,
+        3.0,
+        3.5,
+        4.0,
+        5.0
+      ],
+      "gold_J_RFA_Neckel": [
+        7.488,
+        7.454,
+        7.352,
+        7.182,
+        6.946,
+        6.649,
+        6.298,
+        5.902,
+        5.475,
+        5.033,
+        4.59,
+        3.76,
+        3.063,
+        2.524,
+        2.122,
+        1.818,
+        1.303,
+        0.997,
+        0.812,
+        0.685,
+        0.495
+      ],
+      "gold_J_RFA_Lye": [
+        7.501,
+        7.452,
+        7.308,
+        7.082,
+        6.788,
+        6.446,
+        6.072,
+        5.683,
+        5.29,
+        4.9,
+        4.518,
+        3.794,
+        3.146,
+        2.604,
+        2.181,
+        1.866,
+        1.355,
+        1.033,
+        0.834,
+        0.699,
+        0.498
+      ]
+    },
+    {
+      "id": "normalization_check",
+      "output_file": "compton_profile_TiC.csv",
+      "kind": "numeric",
+      "weight": 0.05,
+      "description": "Verify the integrated area under J(q) from 0 to 5 au equals 12.10 (within 0.1 electrons) for both columns.",
+      "integral_target": 12.1,
+      "integral_tolerance": 0.1
+    }
+  ]
+}

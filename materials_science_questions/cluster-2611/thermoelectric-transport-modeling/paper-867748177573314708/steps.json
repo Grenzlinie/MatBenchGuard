@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step0",
+    "title": "DFT geometry optimization of puckered monolayers",
+    "role": "process",
+    "action": "Construct initial flat honeycomb geometries for As, Sb, Bi with a vacuum layer. Perform DFT structural relaxation allowing puckering, with spin‑orbit coupling included. Save the optimized atomic coordinates and total energies for the puckered phases of As, Sb, Bi as evidence.",
+    "output_file": "",
+    "evidence": "optimized_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Energy‑minimized puckered geometries (lattice constants, fractional coordinates) for As, Sb, Bi monolayers. Used as input for subsequent band structure and thermopower steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Puckering displacement scan for Sb monolayer",
+    "role": "process",
+    "action": "For Sb monolayer only, perform a series of constrained DFT calculations where the vertical displacement d between A and B sublattice atoms is systematically varied from 0 (flat) to beyond the equilibrium puckering value. At each d, compute the band structure with SOI. Record the band gap evolution to identify the metal‑semimetal and semimetal‑semiconductor transitions.",
+    "output_file": "",
+    "evidence": "puckering_scan_evidence.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Record of the Sb puckering scan used to extract critical transition distances. The agent uses this evidence to produce the scored puckering_critical_distances.json in the next step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Extract critical puckering distances (scored)",
+    "role": "scored",
+    "action": "From the band gap evolution obtained in step1, determine the critical vertical displacements at which the Sb monolayer transitions from metal to semimetal and from semimetal to semiconductor. Write the two distances in Å.",
+    "output_file": "puckering_critical_distances.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact reporting the critical puckering displacements for the metal–semimetal and semimetal–semiconductor transitions in Sb monolayer.",
+    "output_schema": "{\"d_metal_semimetal_A\": \"float\", \"d_semimetal_semiconductor_A\": \"float\"}"
+  },
+  {
+    "id": "step3",
+    "title": "DFT band structure calculations with SOI",
+    "role": "process",
+    "action": "Using the puckered geometries from step0, perform DFT band structure calculations for As, Sb, Bi with spin‑orbit coupling included. Compute eigenvalues along the Γ‑K‑M path and on a dense k‑mesh suitable for BoltzTraP. Calculate the band gaps (direct at Γ) with and without SOI, and identify the SOI‑induced gap at the upper Dirac point near K. Save the band structure data for downstream extraction.",
+    "output_file": "",
+    "evidence": "band_structure_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Raw band energies along high‑symmetry lines and on the dense mesh for As, Sb, Bi with SOI. Used to extract electronic properties in step4 and as input for BoltzTraP in step5.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Extract electronic properties (scored)",
+    "role": "scored",
+    "action": "From the band structures computed in step3, extract for each system (As, Sb, Bi) the direct band gap at Γ without SOI, the direct band gap at Γ with SOI, and the SOI‑induced gap at the upper Dirac point. Write these values in a structured JSON.",
+    "output_file": "electronic_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the computed band gaps and SOI‑induced gaps for As, Sb, and Bi puckered monolayers.",
+    "output_schema": "{\"As\": {\"direct_gap_no_SOI_eV\": \"float\", \"direct_gap_with_SOI_eV\": \"float\", \"SOI_gap_at_DP_eV\": \"float\"}, \"Sb\": {\"direct_gap_no_SOI_eV\": \"float\", \"direct_gap_with_SOI_eV\": \"float\", \"SOI_gap_at_DP_eV\": \"float\"}, \"Bi\": {\"direct_gap_no_SOI_eV\": \"float\", \"direct_gap_with_SOI_eV\": \"float\", \"SOI_gap_at_DP_eV\": \"float\"}}"
+  },
+  {
+    "id": "step5",
+    "title": "Boltzmann transport calculation of thermopower",
+    "role": "process",
+    "action": "Use the dense k‑mesh band structure from step3 as input to BoltzTraP (constant relaxation time approximation). Compute the Seebeck coefficient S as a function of temperature and chemical potential (doping) for p‑type and n‑type carriers in As, Sb, Bi. Save the BoltzTraP output log.",
+    "output_file": "",
+    "evidence": "boltztrap_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Temporary output from BoltzTraP containing the computed Seebeck coefficients. The scored summary in step6 is derived from this run.",
+    "output_schema": ""
+  },
+  {
+    "id": "step6",
+    "title": "Thermopower summary (scored)",
+    "role": "scored",
+    "action": "From the BoltzTraP results, determine the peak magnitude of the Seebeck coefficient for p‑type and n‑type doping in As and Sb, and the peak p‑type value in Bi. Assess whether bipolar suppression occurs at higher temperatures in Bi (sign change or sharp drop). Write the values and a bipolar suppression flag.",
+    "output_file": "thermopower_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact reporting the key Seebeck coefficients and bipolar suppression evidence. This is the main reproduction target.",
+    "output_schema": "{\"As\": {\"peak_p_type_Seebeck_uV_per_K\": \"float\", \"peak_n_type_Seebeck_uV_per_K\": \"float\"}, \"Sb\": {\"peak_p_type_Seebeck_uV_per_K\": \"float\", \"peak_n_type_Seebeck_uV_per_K\": \"float\"}, \"Bi\": {\"peak_p_type_Seebeck_uV_per_K\": \"float\", \"bipolar_suppression_observed\": \"bool\"}}"
+  }
+]

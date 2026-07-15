@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "No raw computational artifacts (phonon dynamical matrices, electron-phonon matrix elements) are submitted; only final λ, ω_log, Tc values. Compare to paper-reported gold with tolerances and verify trend monotonicity.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lattice_constants.json": "exact_match",
+    "epc_properties.json": "exact_match",
+    "xrd_pattern.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for lattice constants, EPC parameters, and XRD expected peak positions.",
+      "source_provenance": "Paper Table I (lattice constants) and Table II (λ, ω_log, Tc) for PtH phase at 113, 130, 160 GPa. XRD peaks derived from the known crystal structure (P6_3/mmc, Wyckoff positions) and lattice constants a=2.70 Å, c=4.53 Å with λ=0.3344 Å.",
+      "generation_method": "Lattice and EPC values extracted verbatim from paper tables. XRD peak positions computed analytically from d-spacings and structure factor conditions using standard crystallographic formulas; intensities not used for scoring, only peak positions.",
+      "why_not_fabricated": "These are the actual paper-reported values needed for reproduction comparison; they are the only authoritative reference for the paper's own computational result."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "113": {
+              "a": "float_Å",
+              "c": "float_Å"
+            },
+            "130": {
+              "a": "float_Å",
+              "c": "float_Å"
+            },
+            "160": {
+              "a": "float_Å",
+              "c": "float_Å"
+            }
+          }
+        },
+        "description": "DFT-optimized hexagonal lattice constants of P6₃/mmc PtH at 113, 130, and 160 GPa. Compared to hidden reference values with a small absolute tolerance."
+      },
+      {
+        "file": "epc_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "113": {
+              "lambda": "float_dimensionless",
+              "omega_log_K": "float_K",
+              "Tc_K": "float_K"
+            },
+            "130": {
+              "lambda": "float_dimensionless",
+              "omega_log_K": "float_K",
+              "Tc_K": "float_K"
+            },
+            "160": {
+              "lambda": "float_dimensionless",
+              "omega_log_K": "float_K",
+              "Tc_K": "float_K"
+            }
+          }
+        },
+        "description": "Electron-phonon coupling strength λ, logarithmic average phonon frequency ω_log, and superconducting transition temperature Tc at three pressures. Hidden checker compares to paper-reported values and verifies Tc monotonicity."
+      },
+      {
+        "file": "xrd_pattern.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "two_theta",
+            "intensity"
+          ],
+          "units": {
+            "two_theta": "degrees",
+            "intensity": "arbitrary_units"
+          }
+        },
+        "description": "Simulated powder XRD pattern at 113 GPa, wavelength 0.3344 Å. The hidden checker validates peak positions and relative intensities against a reference."
+      }
+    ],
+    "notes": "All scored outputs are re-derived from first-principles calculations. The hidden checker uses paper-reported values and simulated patterns as reference, with tolerances appropriate for the change in DFT code (VASP to Quantum ESPRESSO) and pseudopotential."
+  },
+  "steps": [
+    {
+      "id": "lattice_constants_check",
+      "output_file": "lattice_constants.json",
+      "weight": 0.3,
+      "gold": {
+        "113": {
+          "a": 2.7,
+          "c": 4.53
+        },
+        "130": {
+          "a": 2.674,
+          "c": 4.493
+        },
+        "160": {
+          "a": 2.645,
+          "c": 4.436
+        }
+      },
+      "tolerance": 0.01
+    },
+    {
+      "id": "epc_properties_check",
+      "output_file": "epc_properties.json",
+      "weight": 0.5,
+      "gold": {
+        "113": {
+          "lambda": 0.85,
+          "omega_log_K": 328.66,
+          "Tc_K": 17.2
+        },
+        "130": {
+          "lambda": 0.62,
+          "omega_log_K": 591.01,
+          "Tc_K": 15.1
+        },
+        "160": {
+          "lambda": 0.53,
+          "omega_log_K": 658.56,
+          "Tc_K": 9.7
+        }
+      },
+      "tolerances": {
+        "lambda": 0.1,
+        "omega_log_K": 20,
+        "Tc_K": 2
+      }
+    },
+    {
+      "id": "xrd_pattern_check",
+      "output_file": "xrd_pattern.csv",
+      "weight": 0.2,
+      "gold_peaks": [
+        9.22,
+        14.23,
+        18.53,
+        19.13,
+        22.24
+      ],
+      "tolerance_2theta": 0.1
+    }
+  ]
+}

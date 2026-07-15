@@ -1,0 +1,153 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The headline quantities cannot be recomputed from the submitted summary artifacts without re‑running the full DFT and Boltzmann transport calculations, which is infeasible in the verifier sandbox. Therefore we compare the agent's reported values to the paper's published gold with generous, reproducible‑spread‑absorbing tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relaxed_lattice.json": "reference_match",
+    "electronic_results.json": "reference_match",
+    "transport_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported relaxed lattice constants",
+      "source_provenance": "text: 'the relaxed lattice constants for SnO2 are a=0.48 and c=0.327 nm'",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "the values are the paper's actual published numbers"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported band gap",
+      "source_provenance": "text: 'The calculated band gap value is 3.1 eV'",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "the value is the paper's actual published number"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported Seebeck peaks, power factor maxima, and electronic ZT",
+      "source_provenance": "text: Seebeck p-type +2391 uV/K, n-type -2336 uV/K; PF max n-type 0.0000876 W/mK2, p-type 0.00021 W/mK2; ZT_e around unity",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "the values are the paper's actual published numbers"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_lattice.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a_nm": "float (nm)",
+            "c_nm": "float (nm)"
+          }
+        },
+        "description": "Relaxed lattice constants a and c from GGA structural optimization."
+      },
+      {
+        "file": "electronic_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "float (eV)"
+          }
+        },
+        "description": "Band gap computed with TB-mBJ functional."
+      },
+      {
+        "file": "transport_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Seebeck_p_type_muV_per_K": "float (positive)",
+            "Seebeck_n_type_muV_per_K": "float (negative)",
+            "PF_n_type_W_per_mK2": "float",
+            "PF_p_type_W_per_mK2": "float",
+            "ZT_electronic": "float"
+          }
+        },
+        "description": "Final thermoelectric quantities extracted from the calibrated transport data: peak Seebeck coefficients, maximum power factors, and electronic figure of merit."
+      }
+    ],
+    "notes": "All scored artifacts are compared against hidden reference values derived from the paper, using tolerances appropriate for code/functional differences. The relaxation-time calibration step (process) must be executed by the agent to obtain the model required for step 4."
+  },
+  "steps": [
+    {
+      "id": "relaxed_lattice",
+      "output_file": "relaxed_lattice.json",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "gold": {
+        "a_nm": 0.48,
+        "c_nm": 0.327
+      },
+      "tolerance": {
+        "type": "relative",
+        "full_credit_tol": 0.05,
+        "zero_credit_tol": 0.1
+      }
+    },
+    {
+      "id": "electronic_results",
+      "output_file": "electronic_results.json",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "gold": {
+        "band_gap_eV": 3.1
+      },
+      "tolerance": {
+        "type": "absolute",
+        "full_credit_tol": 0.2,
+        "zero_credit_tol": 0.4
+      }
+    },
+    {
+      "id": "transport_results",
+      "output_file": "transport_results.json",
+      "kind": "reference_match",
+      "weight": 0.8,
+      "gold": {
+        "Seebeck_p_type_muV_per_K": 2391.0,
+        "Seebeck_n_type_muV_per_K": -2336.0,
+        "PF_n_type_W_per_mK2": 8.76e-05,
+        "PF_p_type_W_per_mK2": 0.00021,
+        "ZT_electronic": 1.0
+      },
+      "field_tolerances": {
+        "Seebeck_p_type_muV_per_K": {
+          "type": "absolute",
+          "full_credit_tol": 300.0,
+          "zero_credit_tol": 600.0
+        },
+        "Seebeck_n_type_muV_per_K": {
+          "type": "absolute",
+          "full_credit_tol": 300.0,
+          "zero_credit_tol": 600.0
+        },
+        "PF_n_type_W_per_mK2": {
+          "type": "relative",
+          "full_credit_tol": 0.3,
+          "zero_credit_tol": 0.6
+        },
+        "PF_p_type_W_per_mK2": {
+          "type": "relative",
+          "full_credit_tol": 0.3,
+          "zero_credit_tol": 0.6
+        },
+        "ZT_electronic": {
+          "type": "absolute",
+          "full_credit_tol": 0.2,
+          "zero_credit_tol": 0.4
+        }
+      }
+    }
+  ]
+}

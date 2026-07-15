@@ -1,0 +1,226 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker independently refits Morse potential from the submitted discrete curve and also recomputes WKB vibrational states from the Morse parameters; all results are compared to paper-reported reference values with directionally-appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_rotational_constants.json": "exact_match",
+    "step_03_interaction_energy.json": "exact_match",
+    "step_04_potential_curve.csv": "metric_recompute",
+    "step_05_morse_fit_params.json": "reference_match",
+    "step_06_wkb_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported B3LYP/6-311++G(d,p) rotational constants (A, B, C) from Table 1.",
+      "source_provenance": "Ref. paper Table 1: B3LYP row A=20068 MHz, B=1159.9234 MHz, C=1120.3176 MHz",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the paper's actual computed B3LYP values; the task reproduces those results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported B3LYP BSSE- and ZPVE-corrected dissociation energy D0 = 1.42 kcal/mol from Table 1 / text.",
+      "source_provenance": "Ref. paper Table 1: B3LYP D0=1.42 kcal mol^-1",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Paper's headline interaction energy."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Morse potential parameters V0=0.00305 au, γ=0.86897, x_min=2.952 Å, rms=5.34e-4 au from Sec. Results and discussion (Morse fit of B3LYP potential).",
+      "source_provenance": "Paper text: V0=0.00305 au, γ=0.86897, rms 5.34e-4; x_min taken as B3LYP r(*···Cl)=2.952 Å from Table 1.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the paper's fitted Morse parameters."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported WKB vibrational energies (Table 3) and derived quantities: fundamental 115.9 cm^-1, overtone 219.5 cm^-1, ZPVE 0.17 kcal/mol.",
+      "source_provenance": "Ref. paper Table 3: energies n=0..4; text: fundamental 1←0 115.9 cm^-1, overtone 2←0 219.5 cm^-1, ZPVE 0.17 kcal mol^-1.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the paper's own WKB results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_rotational_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A_MHz": "float",
+            "B_MHz": "float",
+            "C_MHz": "float"
+          }
+        },
+        "description": "Rotational constants A, B, C in MHz computed from the optimized B3LYP geometry. The checker compares each to a hidden reference within a tolerance."
+      },
+      {
+        "file": "step_03_interaction_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "D0_kcal_mol": "float"
+          }
+        },
+        "description": "BSSE‑ and ZPVE‑corrected dissociation energy D₀ in kcal/mol. The checker compares to the paper‑reported value within a tolerance."
+      },
+      {
+        "file": "step_04_potential_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_A",
+            "energy_au"
+          ],
+          "units": {
+            "r_A": "Angstrom",
+            "energy_au": "Hartree"
+          }
+        },
+        "description": "Discrete intermolecular potential energy points (35 rows). The checker independently fits a Morse function from this data and compares the obtained parameters to a hidden standard."
+      },
+      {
+        "file": "step_05_morse_fit_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V0_au": "float",
+            "gamma": "float",
+            "x_min_A": "float",
+            "rms_deviation_au": "float"
+          }
+        },
+        "description": "Morse potential parameters obtained by fitting the 35 DFT points. The checker either compares these directly to hidden references or refits independently from step_04."
+      },
+      {
+        "file": "step_06_wkb_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "n_bound_states": "int",
+            "energies_au": "list of float",
+            "fundamental_cm-1": "float",
+            "first_overtone_cm-1": "float",
+            "zpve_kcal_mol": "float"
+          }
+        },
+        "description": "WKB bound vibrational states and excitation energies. The checker re‑solves the WKB integral from the agent‑submitted potential (step_04 or step_05) and compares the derived quantities against paper‑reported values."
+      }
+    ],
+    "notes": "All DFT calculations use standard B3LYP/6‑311++G(d,p); tolerances absorb the spread from using the standard functional instead of the paper's slightly modified Becke exchange. The reduced mass μ = 7.3938 u is a fixed input for the WKB step."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "step_02_rotational_constants.json",
+      "weight": 0.15,
+      "kind": "numeric_reference_match",
+      "target": {
+        "A_MHz": 20068,
+        "B_MHz": 1159.9234,
+        "C_MHz": 1120.3176
+      },
+      "tolerance": 0.005,
+      "tolerance_type": "relative",
+      "description": "Compare each rotational constant to paper B3LYP reference within 0.5% relative tolerance."
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_interaction_energy.json",
+      "weight": 0.1,
+      "kind": "numeric_reference_match",
+      "target": {
+        "D0_kcal_mol": 1.42
+      },
+      "tolerance_abs": 0.1,
+      "tolerance_type": "absolute",
+      "description": "Compare D0 to 1.42 kcal/mol within ±0.10 kcal/mol full credit; linear decay to 0 at ±0.20."
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_potential_curve.csv",
+      "weight": 0.25,
+      "kind": "recompute_morse_fit",
+      "target": {
+        "V0_au": 0.00305,
+        "gamma": 0.86897
+      },
+      "tolerances": {
+        "V0_au": 0.0002,
+        "gamma": 0.02
+      },
+      "description": "Validate shape (35 rows, required columns) and compare refitted Morse V0, gamma to paper values. Sub-scores: shape 0.4, V0 0.3, gamma 0.3."
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_morse_fit_params.json",
+      "weight": 0.2,
+      "kind": "numeric_reference_match",
+      "target": {
+        "V0_au": 0.00305,
+        "gamma": 0.86897,
+        "x_min_A": 2.952,
+        "rms_deviation_au": 0.000534
+      },
+      "field_tolerances": {
+        "V0_au": {
+          "type": "absolute",
+          "tol": 0.0002
+        },
+        "gamma": {
+          "type": "absolute",
+          "tol": 0.02
+        },
+        "x_min_A": {
+          "type": "absolute",
+          "tol": 0.01
+        },
+        "rms_deviation_au": {
+          "type": "threshold_upper",
+          "threshold": 0.00055
+        }
+      },
+      "description": "Compare agent's Morse parameters to paper values; rms_deviation_au must be <= 5.5e-4 for full credit."
+    },
+    {
+      "id": "step_06",
+      "output_file": "step_06_wkb_energies.json",
+      "weight": 0.3,
+      "kind": "recompute_wkb",
+      "target": {
+        "n_bound_states": 5,
+        "energies_au": [
+          -0.00277,
+          -0.00224,
+          -0.00177,
+          -0.00135,
+          -0.00099
+        ],
+        "fundamental_cm-1": 115.9,
+        "first_overtone_cm-1": 219.5,
+        "zpve_kcal_mol": 0.17
+      },
+      "tolerances": {
+        "energy_au": 1e-05,
+        "fundamental_cm-1": 0.1,
+        "overtone_cm-1": 0.1,
+        "zpve_kcal_mol": 0.02
+      },
+      "description": "Recompute WKB bound states from agent's Morse parameters; validate number of states=5, energies match paper within 1e-5 au, fundamental within 10%, overtone 10%, ZPVE within ±0.02 kcal/mol."
+    }
+  ]
+}

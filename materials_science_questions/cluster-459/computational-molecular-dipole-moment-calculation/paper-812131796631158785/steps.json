@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_params",
+    "title": "Gather input parameters",
+    "role": "process",
+    "action": "Collect the molecular parameters: squared multipole moments Q3² = 12/5*(2.6 e a0³)², Q4² = 12/7*(8.2 e a0⁴)², dipole–quadrupole polarizability element A3² = 6*(12.8 a0⁴)², isotropic polarizability α = 17.22 a0³. Obtain the rotational constant B and proton-spin statistical weights for CH4 from the literature. Retrieve the parameters of the isotropic Morse-Spline-van der Waals (MSV) intermolecular potential for CH4-CH4 from the Capelletti reference. Save all parameters in a structured JSON file for reproducibility.",
+    "output_file": "",
+    "evidence": "parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Collects all numerical inputs needed for the subsequent computation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_schrodinger",
+    "title": "Solve radial Schrödinger equation for CH4 pair",
+    "role": "process",
+    "action": "Numerically integrate the radial Schrödinger equation for the CH4-CH4 pair using the MSV potential to obtain bound and free pair wavefunctions for s-wave and higher partial waves up to sufficient angular momentum to converge the dipole matrix elements. Save wavefunction grids as evidence.",
+    "output_file": "",
+    "evidence": "wavefunctions.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the pair wavefunctions needed to compute translational spectral functions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_g_funcs",
+    "title": "Compute translational spectral functions",
+    "role": "process",
+    "action": "For each distinct dipole component (octopole-induced 3034, hexadecapole-induced 4045, gradient-induced 33_5, and the combined 4346/3436), compute the translational spectral function g(ω) at T=195 K using the wavefunctions and the analytic dipole expressions: multipole-induced dipole B_{ℓ,0,ℓ,ℓ+1}(R) = (-1)^ℓ √(ℓ+1) α Q_ℓ / R^{ℓ+2}, gradient-induced for ℓ=3 as B_{3,3,_,5}(R) = (16/7) Q_3 A_3 / R⁶, and for ℓ=4 the general gradient-induced component B_{(4,3,_,5)}(R) = √(1/45·5·6·11) Q_4 A_3 / R⁷. Save g-functions as evidence.",
+    "output_file": "",
+    "evidence": "g_functions.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Translational spectral functions that underpin the spectrum.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_unconvolved",
+    "title": "Compute unconvolved absorption coefficient",
+    "role": "process",
+    "action": "Combine the g-functions with rotational statistical weights and rotational transition frequencies (using methane selection rules and nuclear spin weights) to obtain the total spectral profile G(ω,T) at 195 K. Convert to absorption coefficient α(ω,T) via the relation α(ω,T) = (4π²/(3ℏc)) (ρ²/2) ω [1−exp(−ℏω/kT)] G(ω,T), with number density ρ corresponding to 1 amagat. Save the unconvolved spectrum as evidence.",
+    "output_file": "",
+    "evidence": "unconvolved_spectrum_195K.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate unconvolved spectrum before slit convolution.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_final",
+    "title": "Convolve and output final absorption spectrum at 195 K",
+    "role": "scored",
+    "action": "Convolve the unconvolved absorption spectrum with a triangular slit function of half-width 8.75 cm⁻¹. Output the final convolved spectrum as a CSV file with columns wavenumber (cm⁻¹) and absorption_coefficient (cm⁻¹ amagat⁻²) at T=195 K. The wavenumber grid must cover 0 to 800 cm⁻¹ with a step ≤ 2 cm⁻¹ and be monotonically increasing.",
+    "output_file": "absorption_spectrum_195K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final rototranslational absorption spectrum convolved to match experimental resolution.",
+    "output_schema": "CSV with header: wavenumber,absorption_coefficient. wavenumber: float, monotonically increasing, 0–800 cm⁻¹ with step ≤ 2 cm⁻¹. absorption_coefficient: float, positive, in cm⁻¹ amagat⁻²."
+  }
+]

@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Young's moduli and Poisson's ratios from the submitted elastic constants, verifies consistency with the submitted mechanical properties, and then compares those derived values against the paper's reported gold values with 10% relative tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "elastic constants reference (C11, C22, C12, C66 in GPa)",
+      "source_provenance": "Paper Supplementary Information Table S1",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Directly from the source paper, verified against Table S1.",
+      "data": {
+        "C11": 88.64,
+        "C22": 149.21,
+        "C12": -23.71,
+        "C66": 24.5
+      }
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "mechanical properties reference (Ex, Ey in GPa; vxy, vyx dimensionless)",
+      "source_provenance": "Paper Table 2",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Directly from the source paper, verified against Table 2.",
+      "data": {
+        "Ex": 84.87,
+        "Ey": 142.86,
+        "vxy": -0.158,
+        "vyx": -0.267
+      }
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "C11",
+            "C22",
+            "C12",
+            "C66",
+            "units"
+          ],
+          "units": {
+            "C11": "GPa",
+            "C22": "GPa",
+            "C12": "GPa",
+            "C66": "GPa"
+          }
+        },
+        "description": "In‑plane elastic stiffness constants in GPa."
+      },
+      {
+        "file": "mechanical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ex",
+            "Ey",
+            "vxy",
+            "vyx",
+            "units_Ex",
+            "units_Ey"
+          ],
+          "units": {
+            "Ex": "GPa",
+            "Ey": "GPa",
+            "vxy": "dimensionless",
+            "vyx": "dimensionless"
+          }
+        },
+        "description": "Young’s moduli Ex, Ey (GPa) and Poisson’s ratios vxy, vyx."
+      }
+    ],
+    "notes": "The checker verifies mechanical stability (C11*C22 – C12^2 > 0 and all diagonal constants > 0) from elastic_constants.json. It recomputes Ex, Ey, vxy, vyx from the constants and cross‑checks consistency with the values in mechanical_properties.json. The final reward compares the mechanical_properties.json entries against the paper’s reference values within a hidden tolerance."
+  },
+  "steps": [
+    {
+      "id": "elastic_constants_stability",
+      "output_file": "elastic_constants.json",
+      "kind": "scorer",
+      "weight": 0.3
+    },
+    {
+      "id": "mechanical_properties_eval",
+      "output_file": "mechanical_properties.json",
+      "kind": "scorer",
+      "weight": 0.7
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing intercalation energies from raw total energies is not feasible without requiring the agent to output all raw DFT energies, which is not part of the contract. Result-level comparison with tolerances against paper gold, augmented with structural trend checks, yields a verifiable score.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results_table.csv": "reference_match",
+    "voltage_capacity.txt": "reference_match",
+    "bader_charge_output.txt": "reference_match",
+    "diffusion_barrier.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold intercalation energies and interlayer distances for all 16 stage/concentration combinations",
+      "source_provenance": "Paper Table 1 (rows for stages 1-4, various PF6 counts)",
+      "generation_method": "Values transcribed from the paper's Table 1 into the grading spec's gold_table.",
+      "why_not_fabricated": "These are the paper's own reported numbers, the exact target a faithful reproduction should match within expected DFT tolerances."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for voltage range, specific capacity, Bader charge, and diffusion barrier",
+      "source_provenance": "Paper sections 3.5 and 3.6, and the reported diffusion barrier in section 3.7.",
+      "generation_method": "Directly from paper: voltage 5.28-5.49 V, capacity 124 mAh/g, Bader charge -0.97 |e|, diffusion barrier 0.14 eV.",
+      "why_not_fabricated": "These are the exact paper-reported quantities used to set hidden targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "stage",
+            "PF6_count",
+            "intercalation_energy_eV",
+            "interlayer_distance_Angstrom"
+          ],
+          "units": {
+            "intercalation_energy_eV": "eV",
+            "interlayer_distance_Angstrom": "Å"
+          }
+        },
+        "description": "All 16 rows of intercalation energies and interlayer distances for the four stages and varying PF6‑ concentrations."
+      },
+      {
+        "file": "voltage_capacity.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": "Two lines: 'Voltage range: X.XX‑Y.YY V' and 'Specific capacity: ZZZ mAh/g'"
+        },
+        "description": "Cell voltage range and maximum specific capacity derived from the intercalation energies."
+      },
+      {
+        "file": "bader_charge_output.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": "A single float (e.g., '-0.97') representing the net Bader charge on PF6 in |e|."
+        },
+        "description": "Quantitative charge transfer from graphite to PF6‑ in the fully intercalated stage‑1 structure."
+      },
+      {
+        "file": "diffusion_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "required": "A single float (e.g., '0.14') representing the minimum diffusion barrier in eV."
+        },
+        "description": "Energy barrier for PF6‑ migration in graphite via the optimal diffusion path; lower is better."
+      }
+    ],
+    "notes": "The first step (model building and DFT optimization) is a required process step whose outcomes are consumed by all subsequent scored steps. The diffusion barrier is scored with threshold_or_better (lower barrier earns full credit). All other quantities are compared against paper‑reported reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "results_structure",
+      "output_file": "results_table.csv",
+      "weight": 0.0,
+      "kind": "shape_audit",
+      "description": "Confirm file exists with required columns; scoring is near-zero weight because the output_contract shape gate already enforces this.",
+      "required_rows": 16
+    },
+    {
+      "id": "intercal_energy_trends",
+      "output_file": "results_table.csv",
+      "weight": 0.025,
+      "kind": "trend_monotonic",
+      "description": "Within each stage, intercalation energy must become more negative (decrease) as PF6_count increases.",
+      "field": "intercalation_energy_eV",
+      "group_by": "stage",
+      "order_by": "PF6_count",
+      "direction": "decreasing",
+      "tolerance": 0.0
+    },
+    {
+      "id": "interlayer_distance_trends",
+      "output_file": "results_table.csv",
+      "weight": 0.025,
+      "kind": "trend_monotonic",
+      "description": "Within each stage, interlayer distance must increase as PF6_count increases.",
+      "field": "interlayer_distance_Angstrom",
+      "group_by": "stage",
+      "order_by": "PF6_count",
+      "direction": "increasing",
+      "tolerance": 0.0
+    },
+    {
+      "id": "intercal_energy_values",
+      "output_file": "results_table.csv",
+      "weight": 0.3,
+      "kind": "value_table_match",
+      "description": "Each row's intercalation energy must match the paper's reported value within ±0.10 eV.",
+      "match_columns": [
+        "stage",
+        "PF6_count"
+      ],
+      "value_column": "intercalation_energy_eV",
+      "tolerance": 0.1,
+      "gold_table": {
+        "1-4": -0.85,
+        "1-8": -2.22,
+        "1-12": -2.58,
+        "1-16": -2.7,
+        "2-2": -0.88,
+        "2-4": -2.32,
+        "2-6": -2.71,
+        "2-8": -2.86,
+        "3-2": -0.87,
+        "3-4": -2.33,
+        "3-6": -2.74,
+        "3-8": -2.88,
+        "4-1": -0.89,
+        "4-2": -2.36,
+        "4-3": -2.76,
+        "4-4": -2.91
+      }
+    },
+    {
+      "id": "interlayer_distance_values",
+      "output_file": "results_table.csv",
+      "weight": 0.15,
+      "kind": "value_table_match",
+      "description": "Each row's interlayer distance must match the paper's reported value within ±0.05 Å.",
+      "match_columns": [
+        "stage",
+        "PF6_count"
+      ],
+      "value_column": "interlayer_distance_Angstrom",
+      "tolerance": 0.05,
+      "gold_table": {
+        "1-4": 6.94,
+        "1-8": 7.06,
+        "1-12": 7.3,
+        "1-16": 7.35,
+        "2-2": 7.06,
+        "2-4": 7.23,
+        "2-6": 7.32,
+        "2-8": 7.35,
+        "3-2": 7.07,
+        "3-4": 7.26,
+        "3-6": 7.34,
+        "3-8": 7.37,
+        "4-1": 7.22,
+        "4-2": 7.35,
+        "4-3": 7.38,
+        "4-4": 7.4
+      }
+    },
+    {
+      "id": "gallery_expansion",
+      "output_file": "results_table.csv",
+      "weight": 0.05,
+      "kind": "derived_numeric",
+      "description": "Stage‑1 with 16 PF6 must yield a gallery expansion of (interlayer_distance/3.34 - 1)*100 ≈ 114 ± 5 %.",
+      "filter": {
+        "stage": 1,
+        "PF6_count": 16
+      },
+      "derive": "expansion",
+      "derive_expression": "100 * (d / 3.34 - 1)",
+      "expected": 114,
+      "tolerance": 5.0
+    },
+    {
+      "id": "voltage_range",
+      "output_file": "voltage_capacity.txt",
+      "weight": 0.1,
+      "kind": "extract_range",
+      "description": "Voltage range must be 5.28–5.49 V (±0.15 V each).",
+      "regex_min": "Voltage range:\\s*([0-9.]+)-",
+      "regex_max": "Voltage range:\\s*[0-9.]+-([0-9.]+)",
+      "expected_min": 5.28,
+      "expected_max": 5.49,
+      "tolerance": 0.15
+    },
+    {
+      "id": "specific_capacity",
+      "output_file": "voltage_capacity.txt",
+      "weight": 0.1,
+      "kind": "extract_number",
+      "description": "Specific capacity must be 124 mAh/g (±10 mAh/g).",
+      "regex": "Specific capacity:\\s*([0-9]+)\\s*mAh/g",
+      "expected": 124,
+      "tolerance": 10
+    },
+    {
+      "id": "bader_charge",
+      "output_file": "bader_charge_output.txt",
+      "weight": 0.1,
+      "kind": "numeric",
+      "description": "Bader charge must be -0.97 ± 0.05 |e|.",
+      "expected": -0.97,
+      "tolerance": 0.05
+    },
+    {
+      "id": "diffusion_barrier",
+      "output_file": "diffusion_barrier.txt",
+      "weight": 0.15,
+      "kind": "threshold_or_better",
+      "description": "Diffusion barrier ≤ 0.14 eV earns full credit; higher barriers are penalized.",
+      "expected": 0.14,
+      "direction": "lower_is_better",
+      "decay_factor": 0.05
+    }
+  ]
+}

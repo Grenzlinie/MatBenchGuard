@@ -1,0 +1,239 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT recompute is infeasible in the verifier; comparing reported values against paper gold with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "materials",
+            "supercells",
+            "surface_energies",
+            "imaginary_frequencies_MoC",
+            "geometric_parameters",
+            "bulk_energy_diff"
+          ],
+          "properties": {
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "supercells": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "surface_energies": {
+              "type": "object",
+              "patternProperties": {
+                ".*": {
+                  "type": "object",
+                  "patternProperties": {
+                    ".*": {
+                      "type": "object",
+                      "properties": {
+                        "gamma_rel": {
+                          "type": "number"
+                        },
+                        "units": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "gamma_rel",
+                        "units"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "imaginary_frequencies_MoC": {
+              "type": "object",
+              "properties": {
+                "1x1": {
+                  "type": "boolean"
+                },
+                "2x2": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "1x1",
+                "2x2"
+              ]
+            },
+            "geometric_parameters": {
+              "type": "object",
+              "patternProperties": {
+                ".*": {
+                  "type": "object",
+                  "properties": {
+                    "d_MC_surface": {
+                      "type": "number"
+                    },
+                    "d_MC_subsurface": {
+                      "type": "number"
+                    },
+                    "alpha_surface": {
+                      "type": "number"
+                    },
+                    "alpha_subsurface": {
+                      "type": "number"
+                    },
+                    "units": {
+                      "type": "object",
+                      "properties": {
+                        "distance": {
+                          "type": "string"
+                        },
+                        "angle": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "distance",
+                        "angle"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "d_MC_surface",
+                    "d_MC_subsurface",
+                    "alpha_surface",
+                    "alpha_subsurface",
+                    "units"
+                  ]
+                }
+              }
+            },
+            "bulk_energy_diff": {
+              "type": "object",
+              "patternProperties": {
+                ".*": {
+                  "type": "object",
+                  "properties": {
+                    "Delta_E": {
+                      "type": "number"
+                    },
+                    "units": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "Delta_E",
+                    "units"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "The scored artifact containing relaxed surface energies, geometric distortions, imaginary frequency flags, and bulk energy differences. The hidden checker compares each value against paper-reported gold values with tolerances and verifies the trend that (2×2) and (4×4) surface energies are lower than (1×1)."
+      }
+    ],
+    "notes": "All quantities are computed from DFT slab relaxations. The checker uses result-level comparison (T0) with physical tolerances: surface energies ±0.05 J/m², distances ±0.05 Å, angles ±2°, ΔE ±0.05 eV, and exact boolean matches for imaginary frequencies."
+  },
+  "steps": [
+    {
+      "id": "surface_energies",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold": {
+        "MoC": {
+          "1x1": 0.77,
+          "2x2": 0.67,
+          "3x3": 0.7,
+          "4x4": 0.67
+        },
+        "WC": {
+          "1x1": 0.66,
+          "2x2": 0.59,
+          "3x3": 0.62,
+          "4x4": 0.61
+        },
+        "MoN": {
+          "1x1": -0.77,
+          "2x2": -0.75,
+          "3x3": -0.67,
+          "4x4": -0.79
+        },
+        "WN": {
+          "1x1": -1.57,
+          "2x2": -1.35,
+          "3x3": -1.81,
+          "4x4": -1.83
+        }
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "imaginary_freqs",
+      "output_file": "results.json",
+      "kind": "boolean",
+      "weight": 0.1,
+      "gold": {
+        "1x1": false,
+        "2x2": true
+      }
+    },
+    {
+      "id": "geometric_params",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tol_distance": 0.05,
+      "tol_angle": 2.0,
+      "gold": {
+        "MoC": {
+          "d_MC_surface": 0.18,
+          "d_MC_subsurface": 0.05,
+          "alpha_surface": 10,
+          "alpha_subsurface": 10
+        },
+        "WC": {
+          "d_MC_surface": 0.17,
+          "d_MC_subsurface": 0.05,
+          "alpha_surface": 10,
+          "alpha_subsurface": 12
+        },
+        "MoN": {
+          "d_MC_surface": 0.07,
+          "d_MC_subsurface": 0.05,
+          "alpha_surface": 13,
+          "alpha_subsurface": 12
+        },
+        "WN": {
+          "d_MC_surface": 0.32,
+          "d_MC_subsurface": 1.24,
+          "alpha_surface": 13,
+          "alpha_subsurface": 37
+        }
+      }
+    },
+    {
+      "id": "bulk_energy_diff",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "tol_deltaE": 0.05,
+      "gold": {
+        "MoC": 0.4,
+        "WC": 0.69,
+        "MoN": 0.62,
+        "WN": 0.81
+      }
+    }
+  ]
+}

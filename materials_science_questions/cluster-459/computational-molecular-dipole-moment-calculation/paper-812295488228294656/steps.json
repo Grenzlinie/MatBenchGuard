@@ -1,0 +1,54 @@
+[
+  {
+    "id": "compute_tropolone_anisotropy",
+    "title": "Compute optical anisotropy of tropolone",
+    "role": "process",
+    "action": "Using the provided experimental dipole moment and molar Kerr constant of tropolone in cyclohexane (or CCl4) and the simplified Langevin-Born equation for a planar molecule (assuming b1=b2 and b3 perpendicular to the ring plane), compute the polarizability anisotropy (b1-b3) of tropolone. The equation is: mK = (2πN/405kT)[ 2(DP/EP)(b1-b3)^2 + (1/kT) μ_obsd^2 (b1-b3) ], with DP/EP = 1.1, and 2πN/405kT evaluated at 25°C.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate step to obtain the tropolone anisotropy needed for all subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "assemble_anisotropies",
+    "title": "Assemble bond/group polarizability anisotropies",
+    "role": "process",
+    "action": "Combine the computed tropolone anisotropy with the provided literature bond polarizability anisotropies (Sn-Cl: 5.5e-24 cm3, Sn-CH3: 5.3e-24 cm3, Sn-O: 3.5e-24 cm3) to obtain the Sn(trop) group anisotropy. The Sn(trop) group anisotropy is the sum of the tropolone ring anisotropy and the contributions from two Sn-O bonds oriented at 90° to each other.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Preparation of all required bond/group polarizability differences for vector addition.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_polarizability_differences",
+    "title": "Compute molecular polarizability differences for all candidate structures",
+    "role": "process",
+    "action": "For each derivative and candidate structure, use the molecular coordinate systems defined below to resolve each bond/group polarizability tensor into the molecular frame, sum the tensors, and then compute the principal polarizabilities b₁, b₂, b₃ and the differences (b₁‑b₂), (b₁‑b₃). All anisotropies are expressed as the difference between the largest in‑plane component and the perpendicular component (b∥ – b⊥). The molecular axes are chosen so that the tensor is diagonal after summation.\n\n  * **trans D₂h**: Place the Sn atom at the origin. The two Sn–R bonds lie along the ±x axis. The four O atoms of the two tropolonate ligands lie in the yz plane: one ligand has its two O atoms at (0, d, 0) and (0, 0, d), the other at (0, −d, 0) and (0, 0, −d). The tropolone ring lies in the yz plane. For each Sn(trop) group, the principal axes are oriented with b₁ and b₂ in the yz plane at 45° to the y and z axes, and b₃ along the x axis. The Sn–R bonds are uniaxial along x, contributing an anisotropy Δ to the x direction. Summing the two groups (each with anisotropy a = 17.7 × 10⁻²⁴ cm³) and the two Sn–R bonds (each Δ = bond anisotropy) yields the molecular polarizability differences.\n\n  * **cis C₂** (C₂ symmetry axis = z): The two Sn–R bonds are in the xy plane at 90° to each other, along the +x and +y directions. The two tropolonate ligands occupy the remaining positions: ligand A chelates via two O atoms located at (0, −d, d) and (0, d, d), so its ring plane contains the z axis and the y direction; its b₃ axis (perpendicular to the ring) points along x. Ligand B is obtained by a 180° rotation about z, giving O atoms at (0, d, −d) and (0, −d, −d), with b₃ along −x. In each Sn(trop) group, the in‑plane axes b₁ and b₂ are in the yz plane with b₁ along the direction bisecting the O‑Sn‑O angle (i.e., along z) and b₂ along y. Sum all tensors and diagonalize.\n\n  * **cis C₂ᵥ** (mirror plane σᵥ): The two Sn–R bonds are cis and lie in the xz mirror plane at an angle of about 75° to each other; the precise angle is less than 90° due to distortion. The two tropolonate ligands are positioned such that their ring planes are parallel and perpendicular to the y axis. For the vector addition, one may orient the Sn(trop) b₃ axes along ±y, and the in‑plane axes b₁ and b₂ in the xz plane with b₁ pointing approximately along the bisector of the O–Sn–O angle. The agent should compute by summing the tensors as described for cis C₂ but with the modified geometry.\n\n  All vector additions shall be carried out using standard tensor summation. The resulting b₁, b₂, b₃ are the eigenvalues of the total polarizability matrix; then compute (b₁ – b₂) and (b₁ – b₃).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate calculation of the polarizability anisotropy tensors needed for Kerr constant evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_all_results",
+    "title": "Compute molar Kerr constants and group moments, output final results",
+    "role": "scored",
+    "action": "Using the polarizability differences from the previous step, the resolved dipole moment components derived from the provided bond moments and geometry, and the full Langevin‑Born equation\n\n$$\n_{\\mathrm{m}} K = \\frac{2\\pi N}{405kT} \\left[ \\left(\\frac{D\\!P}{E\\!P}\\right) \\Big( (b_1-b_2)^2 + (b_2-b_3)^2 + (b_3-b_1)^2 \\Big) + \\frac{1}{kT} \\Big( (\\mu_1^2-\\mu_2^2)(b_1-b_2) + (\\mu_2^2-\\mu_3^2)(b_2-b_3) + (\\mu_3^2-\\mu_1^2)(b_3-b_1) \\Big) \\right]\n$$\n\nwith $\\frac{D\\!P}{E\\!P}=1.1$, $N=6.02214\\times10^{23}$, $k=1.38065\\times10^{-23}\\,\\mathrm{erg\\,K^{-1}}$, $T=298.15\\,\\mathrm{K}$, and the dipole moment components $\\mu_1,\\mu_2,\\mu_3$ obtained from the bond moments and the assumed geometry (see bond moments: Sn–Cl 4.2 D, Sn–CH₃ 0.6 D, Sn–C₆H₅ 1.1 D). The constant $\\frac{2\\pi N}{405kT}$ can be evaluated directly from these constants. Compute the theoretical molar Kerr constant for every candidate structure. Also derive the group dipole moment of the Sn(trop) moiety. The measured total dipole moments for the three complexes are: Cl₂Sn(trop)₂ μ = 8.8 D, (CH₃)₂Sn(trop)₂ μ = 3.65 D, (C₆H₅)₂Sn(trop)₂ μ = 4.6 D. Assuming a regular octahedral cis configuration where the Sn–R bonds are oriented at 90° to each other and to the Sn(trop) group moment direction, perform vector subtraction to obtain the scalar magnitude of the Sn(trop) group moment for each derivative. Aggregate all results into a single JSON file as specified in the output contract.",
+    "output_file": "/app/outputs/computed_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing all computed quantities: tropolone anisotropy, bond/group anisotropies, polarizability differences, molar Kerr constants, and group moments.",
+    "output_schema": "{\"type\": \"object\", \"required\": [\"tropolone_anisotropy\", \"bond_anisotropies\", \"derivatives\", \"group_moments\"], \"properties\": {\"tropolone_anisotropy\": {\"type\": \"number\", \"description\": \"(b1-b3) in 1e-24 cm^3\"}, \"bond_anisotropies\": {\"type\": \"object\", \"required\": [\"Sn-Cl\", \"Sn-CH3\", \"Sn-O\", \"Sn(trop)\"], \"properties\": {\"Sn-Cl\": {\"type\": \"number\"}, \"Sn-CH3\": {\"type\": \"number\"}, \"Sn-O\": {\"type\": \"number\"}, \"Sn(trop)\": {\"type\": \"number\"}}}, \"derivatives\": {\"type\": \"object\", \"required\": [\"Cl2Sn(trop)2\", \"(CH3)2Sn(trop)2\", \"(C6H5)2Sn(trop)2\"], \"properties\": {\"Cl2Sn(trop)2\": {\"type\": \"object\", \"required\": [\"trans_D2h\", \"cis_C2\", \"cis_C2v\"], \"properties\": {\"trans_D2h\": {\"type\": \"object\", \"required\": [\"b1_minus_b2\", \"b1_minus_b3\", \"molar_Kerr\"], \"properties\": {\"b1_minus_b2\": {\"type\": \"number\", \"unit\": \"1e-24 cm^3\"}, \"b1_minus_b3\": {\"type\": \"number\", \"unit\": \"1e-24 cm^3\"}, \"molar_Kerr\": {\"type\": \"number\", \"unit\": \"1e-12 cgs\"}}}, \"cis_C2\": {\"$ref\": \"#/properties/derivatives/properties/Cl2Sn(trop)2/properties/trans_D2h\"}, \"cis_C2v\": {\"$ref\": \"#/properties/derivatives/properties/Cl2Sn(trop)2/properties/trans_D2h\"}}}, \"(CH3)2Sn(trop)2\": {\"$ref\": \"#/properties/derivatives/properties/Cl2Sn(trop)2\"}, \"(C6H5)2Sn(trop)2\": {\"$ref\": \"#/properties/derivatives/properties/Cl2Sn(trop)2\"}}}, \"group_moments\": {\"type\": \"object\", \"required\": [\"Cl2Sn(trop)2\", \"(CH3)2Sn(trop)2\", \"(C6H5)2Sn(trop)2\"], \"properties\": {\"Cl2Sn(trop)2\": {\"type\": \"number\", \"unit\": \"D\"}, \"(CH3)2Sn(trop)2\": {\"type\": \"number\", \"unit\": \"D\"}, \"(C6H5)2Sn(trop)2\": {\"type\": \"number\", \"unit\": \"D\"}}}}}"
+  }
+]

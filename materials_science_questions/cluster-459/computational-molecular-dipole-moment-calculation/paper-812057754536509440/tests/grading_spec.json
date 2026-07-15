@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "The proton affinities and dipole moments are computed by the agent's quantum chemistry workflow. Their raw intermediate total energies are not part of the scored output contract and may be absent, making a recompute from raw infeasible. Therefore we compare the agent's reported values to the paper's published numbers with tolerances, and the most favorable sites by exact match.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "proton_affinities.json": "reference_match",
+    "most_favorable_sites.json": "exact_match",
+    "dipole_moments.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Proton affinities and dipole moments as reported in the paper.",
+      "source_provenance": "Paper Table 4 (proton affinities) and Table 1 (dipole moments).",
+      "generation_method": "Extracted directly from the paper's tables.",
+      "why_not_fabricated": "These are the exact published results, consistent with the reference solver and the paper's claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "proton_affinities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "methionine": "object",
+            "methionine_sulfoxide": "object",
+            "methionine_sulfone": "object"
+          },
+          "items": {
+            "methionine": {
+              "N": "float",
+              "O": "float",
+              "S": "float"
+            },
+            "methionine_sulfoxide": {
+              "N": "float",
+              "O": "float",
+              "SO": "float"
+            },
+            "methionine_sulfone": {
+              "N": "float",
+              "O": "float",
+              "SO2": "float"
+            }
+          },
+          "units": {
+            "all_site_keys": "kcal/mol"
+          }
+        },
+        "description": "Proton affinities (kcal/mol) for all considered protonation sites of the three compounds. Compared against the paper's Table 4 values within a hidden tolerance."
+      },
+      {
+        "file": "most_favorable_sites.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "methionine": "string",
+            "methionine_sulfoxide": "string",
+            "methionine_sulfone": "string"
+          },
+          "items": {
+            "methionine": "string",
+            "methionine_sulfoxide": "string",
+            "methionine_sulfone": "string"
+          }
+        },
+        "description": "Most favorable protonation site for each compound (one of 'N', 'O', 'S', 'SO', 'SO2'). Exact string match against the paper's conclusion."
+      },
+      {
+        "file": "dipole_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "methionine": "float",
+            "methionine_sulfoxide": "float",
+            "methionine_sulfone": "float"
+          },
+          "units": {
+            "methionine": "Debye",
+            "methionine_sulfoxide": "Debye",
+            "methionine_sulfone": "Debye"
+          }
+        },
+        "description": "Dipole moments of the neutral molecules in Debye. Compared against the paper's Table 1 values within a hidden tolerance."
+      }
+    ],
+    "notes": "All gold values and tolerances are hidden. The checker compares the agent's reported numbers against the paper's published values (Table 4 for PA, Table 1 for dipole moments). The most favorable sites are compared as exact strings."
+  },
+  "steps": [
+    {
+      "id": "pa_values",
+      "output_file": "proton_affinities.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold": {
+        "methionine": {
+          "N": 223.2,
+          "O": 197.2,
+          "S": 211.4
+        },
+        "methionine_sulfoxide": {
+          "N": 217.1,
+          "O": 195.0,
+          "SO": 241.2
+        },
+        "methionine_sulfone": {
+          "N": 221.5,
+          "O": 200.6,
+          "SO2": 216.8
+        }
+      },
+      "tolerance_abs": 1.0,
+      "metric": "fraction_within_tolerance"
+    },
+    {
+      "id": "most_favorable_sites",
+      "output_file": "most_favorable_sites.json",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "gold": {
+        "methionine": "N",
+        "methionine_sulfoxide": "SO",
+        "methionine_sulfone": "N"
+      }
+    },
+    {
+      "id": "dipole_moments",
+      "output_file": "dipole_moments.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "methionine": 2.1,
+        "methionine_sulfoxide": 5.5,
+        "methionine_sulfone": 5.4
+      },
+      "tolerance_abs": 0.2,
+      "metric": "fraction_within_tolerance"
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Comparing agent's computed scalars to paper-reported values; recompute from raw not feasible as it requires re-running the full CALPHAD calculation, which is the agent's task. Tolerances accommodate toolchain differences.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_02_invariant_equilibria.csv": "exact_match",
+    "step_03_in_partial_pressures.csv": "exact_match",
+    "step_04_enthalpies_melting.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for invariant equilibria, In partial pressures, and enthalpies of melting",
+      "source_provenance": "Paper Tables 6, 7, 8, and the reference solve.sh which hardcodes the paper's calculated results.",
+      "generation_method": "Extracted from paper text and cross-checked with the reference oracle; the oracle writes these exact values.",
+      "why_not_fabricated": "Values are the paper's own computed predictions; the same model and parameters should reproduce them within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_invariant_equilibria.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "reaction",
+            "T_C",
+            "composition_phase1",
+            "composition_phase2",
+            "composition_phase3"
+          ],
+          "units": {
+            "T_C": "°C",
+            "composition_phase1": "at% In",
+            "composition_phase2": "at% In",
+            "composition_phase3": "at% In"
+          }
+        },
+        "description": "Invariant equilibria temperatures and phase compositions calculated from the Ni-In thermodynamic description."
+      },
+      {
+        "file": "step_03_in_partial_pressures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "two_phase_region",
+            "log_p_In"
+          ],
+          "units": {
+            "log_p_In": "log10(p/bar)"
+          }
+        },
+        "description": "Indium partial pressures (log10 scale) in four two-phase regions at 1000 K."
+      },
+      {
+        "file": "step_04_enthalpies_melting.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "melting_T_C",
+            "composition",
+            "enthalpy_melting"
+          ],
+          "units": {
+            "melting_T_C": "°C",
+            "composition": "mole fraction In",
+            "enthalpy_melting": "J/mol"
+          }
+        },
+        "description": "Enthalpies of melting and congruent melting points for ζ-Ni₂In and δ-NiIn."
+      }
+    ],
+    "notes": "All values are computed from the provided Gibbs energy parameters using PyCalphad equilibrium calculations. The checker compares each scalar to the paper-reported reference values within hidden tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_02_invariant_equilibria",
+      "output_file": "step_02_invariant_equilibria.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "tolerances": {
+        "T_C": 5.0,
+        "composition_phase1": 1.0,
+        "composition_phase2": 1.0,
+        "composition_phase3": 1.0
+      },
+      "gold": [
+        {
+          "reaction": "Ni(s)/ liquid",
+          "T_C": 1455.1,
+          "composition_phase1": 0.0,
+          "composition_phase2": 0.0,
+          "composition_phase3": ""
+        },
+        {
+          "reaction": "fcc-(Ni)/ liquid/ζ",
+          "T_C": 909.7,
+          "composition_phase1": 7.9,
+          "composition_phase2": 25.0,
+          "composition_phase3": 31.4
+        },
+        {
+          "reaction": "fcc-(Ni)/ Ni₃In/ζ",
+          "T_C": 845.0,
+          "composition_phase1": 6.9,
+          "composition_phase2": 25.0,
+          "composition_phase3": 31.6
+        },
+        {
+          "reaction": "Ni₃In/ Ni₂In/ζ",
+          "T_C": 665.0,
+          "composition_phase1": 25.0,
+          "composition_phase2": 33.3,
+          "composition_phase3": 33.4
+        },
+        {
+          "reaction": "Ni₂In/ ζ/ζ'",
+          "T_C": 472.6,
+          "composition_phase1": 33.3,
+          "composition_phase2": 35.3,
+          "composition_phase3": 40.9
+        },
+        {
+          "reaction": "ζ/liquid/ δ",
+          "T_C": 923.8,
+          "composition_phase1": 41.7,
+          "composition_phase2": 48.7,
+          "composition_phase3": 51.2
+        },
+        {
+          "reaction": "ζ/ζ'/δ",
+          "T_C": 868.7,
+          "composition_phase1": 41.0,
+          "composition_phase2": 42.4,
+          "composition_phase3": 51.6
+        },
+        {
+          "reaction": "ζ'/NiIn/ δ",
+          "T_C": 862.8,
+          "composition_phase1": 42.4,
+          "composition_phase2": 50.0,
+          "composition_phase3": 51.8
+        },
+        {
+          "reaction": "ζ/liquid",
+          "T_C": 946.6,
+          "composition_phase1": 35.6,
+          "composition_phase2": 35.6,
+          "composition_phase3": ""
+        },
+        {
+          "reaction": "δ/liquid",
+          "T_C": 926.2,
+          "composition_phase1": 55.0,
+          "composition_phase2": 55.0,
+          "composition_phase3": ""
+        },
+        {
+          "reaction": "NiIn/δ/ Ni₂In₃",
+          "T_C": 776.4,
+          "composition_phase1": 50.0,
+          "composition_phase2": 55.8,
+          "composition_phase3": 60.0
+        },
+        {
+          "reaction": "δ/Ni₂In₃/ liquid",
+          "T_C": 868.9,
+          "composition_phase1": 59.4,
+          "composition_phase2": 60.0,
+          "composition_phase3": 76.1
+        },
+        {
+          "reaction": "Ni₂In₃/ Ni₃In₇/ liquid",
+          "T_C": 404.2,
+          "composition_phase1": 60.0,
+          "composition_phase2": 70.0,
+          "composition_phase3": 96.3
+        },
+        {
+          "reaction": "Ni₃In₇/ liquid/ In(s)",
+          "T_C": 156.3,
+          "composition_phase1": 70.0,
+          "composition_phase2": 99.9,
+          "composition_phase3": 100.0
+        },
+        {
+          "reaction": "In(s)/ liquid",
+          "T_C": 156.6,
+          "composition_phase1": 100.0,
+          "composition_phase2": 100.0,
+          "composition_phase3": ""
+        }
+      ]
+    },
+    {
+      "id": "step_03_in_partial_pressures",
+      "output_file": "step_03_in_partial_pressures.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tolerances": {
+        "log_p_In": 0.1
+      },
+      "gold": [
+        {
+          "two_phase_region": "ζ/ζ'",
+          "log_p_In": -7.941
+        },
+        {
+          "two_phase_region": "ζ'/NiIn",
+          "log_p_In": -7.801
+        },
+        {
+          "two_phase_region": "NiIn/Ni₂In₃",
+          "log_p_In": -7.415
+        },
+        {
+          "two_phase_region": "Ni₂In₃/liquid",
+          "log_p_In": -7.053
+        }
+      ]
+    },
+    {
+      "id": "step_04_enthalpies_melting",
+      "output_file": "step_04_enthalpies_melting.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tolerances": {
+        "melting_T_C": 5.0,
+        "composition": 0.01,
+        "enthalpy_melting": 500.0
+      },
+      "gold": [
+        {
+          "phase": "ζ-Ni₂In",
+          "melting_T_C": 946.6,
+          "composition": 0.356,
+          "enthalpy_melting": 15914
+        },
+        {
+          "phase": "δ-NiIn",
+          "melting_T_C": 926.2,
+          "composition": 0.549,
+          "enthalpy_melting": 19628
+        }
+      ]
+    }
+  ]
+}

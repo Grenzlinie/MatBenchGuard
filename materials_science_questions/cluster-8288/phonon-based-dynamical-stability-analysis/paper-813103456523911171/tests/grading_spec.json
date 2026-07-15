@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute formation energies are method-dependent; scoring by structural pattern of local minima at magic thicknesses is necessary (T3). Interlayer coupling energy is compared to the paper-reported value via threshold_or_better (T0).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "structural_audit",
+    "interlayer_coupling_energy.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference magic thickness set {3,6,9,12,15} for formation energy minima",
+      "source_provenance": "Derived from paper Fig. 3 and main text: oscillatory formation energy with minima at N=3,6,9,12,15.",
+      "generation_method": "Extracted from paper's narrative.",
+      "why_not_fabricated": "Values directly from the paper's reported results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference interlayer coupling energy 26.0 meV/Å^2",
+      "source_provenance": "Paper text: 'interlayer coupling strength ... is 26 meV/Å^2' and comparison to MoS2 (21 meV/Å^2).",
+      "generation_method": "Extracted from paper section describing Fig. 3 and supporting text.",
+      "why_not_fabricated": "Value is the paper's own reported number."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "E_slab_total",
+            "E_bulk_per_atom",
+            "Ef"
+          ],
+          "units": {
+            "E_slab_total": "eV",
+            "E_bulk_per_atom": "eV",
+            "Ef": "eV/atom"
+          }
+        },
+        "description": "Formation energy per atom for Te slabs of thickness N=1..20 layers, used to identify magic thicknesses via local minima in Ef."
+      },
+      {
+        "file": "interlayer_coupling_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": "single line containing a number and unit 'meV/Å^2'",
+          "units": "meV/Å^2"
+        },
+        "description": "Interlayer coupling energy between two adjacent α-Te trilayers, compared to the paper-reported value with symmetric tolerance."
+      }
+    ],
+    "notes": "Magic thicknesses are derived from formation_energies.csv minima; absolute Ef values are not scored. Interlayer coupling energy is compared to the paper reference with a reference_match tolerance (full credit within ±40%, linear decay up to ±80%). Omitted headline quantities (with concrete reasons): (i) optical absorption spectra and carrier mobilities — require extensive additional DFT calculations (dielectric function, deformation potentials) that are not part of the core formation-energy/band-structure pipeline; (ii) β‑Te formation from [010]/[100] truncations — a separate thickness scan that would unnecessarily duplicate the slab‑relaxation pattern; (iii) stability under alternative vdW schemes — a sensitivity analysis beyond the single‑vdW scheme used in the main task; (iv) Se monolayer results — require a different element’s pseudopotential and crystal structure, constituting a separate study."
+  },
+  "steps": [
+    {
+      "id": "formation_energy_minima",
+      "output_file": "formation_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.6,
+      "description": "Verify that Ef(N) has local minima at expected magic thicknesses N=3,6,9,12,15 (or a subset).",
+      "magic_set": [
+        3,
+        6,
+        9,
+        12,
+        15
+      ]
+    },
+    {
+      "id": "interlayer_coupling_energy",
+      "output_file": "interlayer_coupling_energy.txt",
+      "kind": "threshold_or_better",
+      "weight": 0.4,
+      "description": "Compare interlayer coupling energy to paper-reported value 26.0 meV/Å^2 within relative tolerance ±40%.",
+      "gold_value": 26.0,
+      "unit": "meV/Å^2",
+      "tolerance_rel": 0.4
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes cumulative energy fraction from agent depth-energy arrays and compares to reference curves derived from hidden parametric model matching paper's Figure 3.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_deposition_Ni63_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "depth_nm",
+            "energy_deposition_eV_per_electron"
+          ],
+          "units": {
+            "depth_nm": "nm",
+            "energy_deposition_eV_per_electron": "eV per electron"
+          }
+        },
+        "description": "Energy deposition versus depth for isotropic 63Ni beta source. The checker will recompute a comparison metric (e.g., depth-dependent energy deposition or cumulative fraction) against a hidden digitized reference curve."
+      },
+      {
+        "file": "energy_deposition_17keV_beam.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "depth_nm",
+            "energy_deposition_eV_per_electron"
+          ],
+          "units": {
+            "depth_nm": "nm",
+            "energy_deposition_eV_per_electron": "eV per electron"
+          }
+        },
+        "description": "Energy deposition versus depth for 17.4 keV monoenergetic electron beam. The checker will recompute a comparison metric against a hidden digitized reference curve and verify that the beam curve peaks at a shallower depth than the spectrum curve."
+      }
+    ],
+    "notes": "The two CSV files provide the depth-resolved energy deposition profiles. The checker will independently recompute quantities such as cumulative energy fraction and compare depth profiles to digitized reference data from the source paper, using relative tolerances appropriate for Monte Carlo re-runs with different code implementations. No gold values or tolerances are revealed to the solving agent."
+  },
+  "hidden_assets": [],
+  "reference_model_params": {
+    "beam": {
+      "mu": 80,
+      "sigma_left": 20,
+      "sigma_right": 50,
+      "amplitude": 30
+    },
+    "spectrum": {
+      "mu": 200,
+      "sigma_left": 60,
+      "sigma_right": 80,
+      "amplitude": 22
+    }
+  },
+  "tolerance_cum_frac": 0.1,
+  "steps": [
+    {
+      "id": "check_ni63_shape",
+      "output_file": "energy_deposition_Ni63_spectrum.csv",
+      "kind": "shape_gate",
+      "weight": 0.0
+    },
+    {
+      "id": "profile_ni63",
+      "output_file": "energy_deposition_Ni63_spectrum.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "tolerance_cum_frac": 0.1,
+      "params_key": "spectrum"
+    },
+    {
+      "id": "check_beam_shape",
+      "output_file": "energy_deposition_17keV_beam.csv",
+      "kind": "shape_gate",
+      "weight": 0.0
+    },
+    {
+      "id": "profile_beam",
+      "output_file": "energy_deposition_17keV_beam.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "tolerance_cum_frac": 0.1,
+      "params_key": "beam"
+    },
+    {
+      "id": "trend",
+      "output_file": null,
+      "kind": "custom",
+      "weight": 0.1
+    }
+  ]
+}

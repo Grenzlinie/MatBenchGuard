@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "DFT and phonon calculations cannot be re‑executed in the verifier; agent self‑reports values. Comparison to hidden paper gold (VHS 70 meV ±30) and phonon stability condition (min freq > 0, no imaginary modes) provides verifiable correctness.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "VHS energy offset and phonon stability gold values",
+      "source_provenance": "Paper text: van Hove singularity ~70 meV above εF; no soft phonon modes.",
+      "generation_method": "Extracted from paper’s explicit statement and phonon dispersion nature.",
+      "why_not_fabricated": "Values match the paper’s central claim and are not invented arbitrarily."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_and_band_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "vhs_energy_relative_to_fermi_meV": "number",
+            "dos_at_fermi_states_per_eV_formula_unit": "number",
+            "vhs_present_at_L_point": "boolean"
+          }
+        },
+        "description": "Electronic structure analysis results: energy offset of the van Hove singularity at the L-point relative to the Fermi level (meV), electronic density of states at the Fermi level (states/eV per formula unit), and a boolean indicating whether the singularity is present at the L-point."
+      },
+      {
+        "file": "phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "minimum_phonon_frequency_cm-1": "number",
+            "imaginary_modes_present": "boolean"
+          }
+        },
+        "description": "Phonon dispersion results: the minimum phonon frequency (cm⁻¹) across the Brillouin zone, and a boolean indicating whether any imaginary (negative) phonon modes exist."
+      }
+    ],
+    "notes": "The checker extracts the reported VHS energy offset and compares it to the paper's reference value with a hidden tolerance; it verifies that the minimum phonon frequency is positive (dynamical stability)."
+  },
+  "steps": [
+    {
+      "id": "dos_check",
+      "output_file": "dos_and_band_analysis.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "target_vhs_energy_meV": 70.0,
+      "tolerance_meV": 30.0
+    },
+    {
+      "id": "phonon_check",
+      "output_file": "phonon_frequencies.json",
+      "weight": 0.6,
+      "kind": "custom",
+      "min_freq_threshold_cm-1": 0.0
+    }
+  ]
+}

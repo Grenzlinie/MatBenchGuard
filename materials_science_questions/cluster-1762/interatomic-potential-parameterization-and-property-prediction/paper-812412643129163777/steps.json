@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_0_implement_potential",
+    "title": "Implement GaN bond-order potential",
+    "role": "process",
+    "action": "Implement the analytic bond-order potential for GaN as described by the Morse-like repulsive (V_R) and attractive (V_A) pair terms with an environment-dependent bond-order factor and a short-range ZBL correction smoothly blended via a Fermi-like function. Use the full parameter set: γ(0.007874,0.001632,0.76612), S(1.11,1.1122,1.4922), β(1.08,1.968,2.05945), D0(1.40,2.45,9.91), R0(2.3235,1.921,1.11), c(1.918,65.207,0.178493), d(0.750,2.821,0.20172), h(0.3013,0.518,0.045238), μ(1.846,0.0,0.0), Rcut(2.87,2.9,2.2), Dcut(0.15,0.2,0.2), rf(1.2,0.6,0.5), bf(12.0,12.0,12.0) for Ga–Ga, Ga–N, N–N respectively. Implement in LAMMPS or an equivalent MD code.",
+    "output_file": "",
+    "evidence": "potential_impl.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1_threshold_simulations",
+    "title": "Run threshold displacement simulations",
+    "role": "process",
+    "action": "Run MD simulations to determine threshold displacement energies. For Ga and N primary knock-on atoms, start projectiles with energies in the range ~20–40 eV and vary the direction randomly (1000 directions per atom type). Use a small wurtzite GaN supercell with periodic boundary conditions and a Berendsen thermostat at cell borders. Monitor whether a stable Frenkel pair is formed. Record the minimum energy at which a displacement occurs (minimum threshold) and the average over all successful directions (average threshold).",
+    "output_file": "",
+    "evidence": "threshold_sim.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_threshold_energies",
+    "title": "Report threshold displacement energies",
+    "role": "scored",
+    "action": "From the threshold simulations, compute the minimum threshold energy for Ga and N, and the spatial average threshold energy (mean over all directions that produced a displacement) with its standard error. Write the results to step_01_threshold_energies.csv.",
+    "output_file": "step_01_threshold_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Threshold displacement energies for Ga and N.",
+    "output_schema": "Columns: atom_type (string, 'Ga' or 'N'), threshold_energy (float, mean in eV), error (float, standard error). Two rows, one per atom type."
+  },
+  {
+    "id": "step_3_cascade_simulations",
+    "title": "Run collision cascade simulations",
+    "role": "process",
+    "action": "Using the implemented GaN potential, run single-recoil collision cascade simulations for each combination of recoil atom type (Ga, N) and initial kinetic energy (200, 400, 1000, 2000, 5000, 10000 eV), with multiple independent events (8–100) and random displacement directions. Use a large wurtzite GaN supercell (size appropriate to energy), periodic boundary conditions, a Berendsen thermostat at the border, and a variable timestep integration. After thermalisation, save the final atomic coordinates for defect analysis.",
+    "output_file": "",
+    "evidence": "cascade_sim.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_defect_counts",
+    "title": "Analyze defects via Voronoi method and report counts",
+    "role": "scored",
+    "action": "For each cascade simulation, perform Voronoi-polyhedron analysis relative to the initial lattice. Count vacancies (V_N, V_Ga), interstitials (I_N, I_Ga), and antisites (N_Ga, Ga_N). Average the counts over all runs for each recoil type and energy, and compute standard errors. Report the mean values in step_02_defect_counts.csv.",
+    "output_file": "step_02_defect_counts.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Average point defect counts per cascade from Table 1.",
+    "output_schema": "Columns: recoil_type (string, 'N' or 'Ga'), energy_eV (integer), V_N (float, mean), V_Ga (float), I_N (float), I_Ga (float), N_Ga (float), Ga_N (float). 12 rows (combinations of two recoil types and six energies)."
+  }
+]

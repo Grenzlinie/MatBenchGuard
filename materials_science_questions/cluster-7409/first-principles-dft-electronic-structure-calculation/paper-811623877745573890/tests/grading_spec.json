@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute band gaps from provided artifacts; checker compares reported values to paper reference with tolerance and verifies doping reduces gap (trend).",
+  "pass_threshold": 0.75,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap values for CsTaWO6 and CsCa2Ta3O10 (from paper DFT results) and tolerance.",
+      "source_provenance": "Paper section 3.4: 'calculated band gaps of CsTaWO6 and CsCa2Ta3O10 were decreased from 3.8 and 2.1 eV to 2.3 and 1.6 eV, respectively.'",
+      "generation_method": "Extracted from sentence; values in eV.",
+      "why_not_fabricated": "Directly from the paper's reported calculated band gaps, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "CsTaWO6_undoped": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "CsTaWO6_doped": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "CsCa2Ta3O10_undoped": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "CsCa2Ta3O10_doped": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "Ba4Ta4O15_undoped": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "Ba4Ta4O15_doped": {
+              "type": "number",
+              "unit": "eV"
+            }
+          },
+          "required": [
+            "CsTaWO6_undoped",
+            "CsTaWO6_doped",
+            "CsCa2Ta3O10_undoped",
+            "CsCa2Ta3O10_doped",
+            "Ba4Ta4O15_undoped",
+            "Ba4Ta4O15_doped"
+          ]
+        },
+        "description": "Band gaps computed from DFT total DOS for undoped and nitrogen-doped CsTaWO6, CsCa2Ta3O10, and Ba4Ta4O15. The checker compares four of the gaps against paper-reported DFT values with an absolute tolerance, and verifies that the doped Ba4Ta4O15 gap is strictly smaller than its undoped counterpart."
+      }
+    ],
+    "notes": "The hidden checker uses paper-reported DFT band gaps for CsTaWO6 and CsCa2Ta3O10 (undoped and doped) as reference, applying a tolerance to allow for basis-set and pseudopotential differences. For Ba4Ta4O15, where the paper did not report explicit DFT values, the checker enforces the qualitative trend that doping reduces the band gap."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Verify band gaps against paper reference and trend",
+      "targets": {
+        "CsTaWO6_undoped": 3.8,
+        "CsTaWO6_doped": 2.3,
+        "CsCa2Ta3O10_undoped": 2.1,
+        "CsCa2Ta3O10_doped": 1.6
+      },
+      "tolerance": 0.3,
+      "trend_check": "Ba4Ta4O15_doped < Ba4Ta4O15_undoped"
+    }
+  ]
+}

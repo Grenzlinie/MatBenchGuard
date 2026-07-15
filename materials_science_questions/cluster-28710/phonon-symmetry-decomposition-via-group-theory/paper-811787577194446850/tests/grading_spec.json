@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The CGC matrix entries and block‑diagonal decomposition are recomputed from the known symbolic expressions (a,b,w) and WVSRs, enabling direct comparison with the paper's Table 1 within tolerance.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cgc_matrix_L1_M1.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "matrix": "9x9 array of [real,imag] pairs"
+          },
+          "items": {
+            "matrix": "array of array of [number, number]"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "The 9×9 unitary CGC matrix for L1⊗M1. Each entry is a complex number given as [real, imag] with at least 6 decimal places. Rows correspond to the nine WVSR blocks, columns are grouped as A1, A5, L1 (3 basis indices), L2 (3 basis indices)."
+      },
+      {
+        "file": "reduction_verification.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "irreps_decomposition": "list of irrep labels",
+            "block_sizes": "list of integers",
+            "block_diagonal_norm": "float"
+          },
+          "items": {
+            "irreps_decomposition": "array of strings",
+            "block_sizes": "array of integers",
+            "block_diagonal_norm": "number"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Verification that the CGC matrix block‑diagonalizes the Kronecker product. The irrep labels are in block order (A1, A5, L1, L2), block sizes are [1,1,3,3], and block_diagonal_norm is the maximum absolute value of any off‑block‑diagonal element after applying U."
+      }
+    ],
+    "notes": "The reference for the CGC matrix is an independent recomputation using the same WVSRs and Berenson–Birman method. The block‑diagonal norm should be near zero (numeric tolerance). All quantities are expressed in the standard basis used in the paper."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "step_1_cgc_matrix",
+      "output_file": "cgc_matrix_L1_M1.json",
+      "weight": 0.8,
+      "kind": "reference_match",
+      "tolerance": 1e-06,
+      "description": "Compare agent's CGC matrix element‑wise to the paper's Table 1 entries computed from a,b,w."
+    },
+    {
+      "id": "step_2_reduction",
+      "output_file": "reduction_verification.json",
+      "weight": 0.2,
+      "kind": "structural",
+      "tolerance": 1e-06,
+      "description": "Check irrep decomposition labels, block sizes, and off‑diagonal norm."
+    }
+  ]
+}

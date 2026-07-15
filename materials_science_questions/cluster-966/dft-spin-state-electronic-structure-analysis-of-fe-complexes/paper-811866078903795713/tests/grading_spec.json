@@ -1,0 +1,169 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The workflow involves heavy DFT geometry optimizations, CCSD(T) single-point calculations, and GIAO NMR shielding computations which cannot be re-run in the verifier sandbox. The checker therefore compares the agent's reported numeric values to the paper's published results within tolerance windows, using linear decay beyond tolerance for partial credit.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bde_results.json": "exact_match",
+    "nmr_shifts.json": "exact_match",
+    "anisotropy_components.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for BDE, NMR shifts, and anisotropy components taken directly from the paper's Tables 2, 3, and 4 (CCSD(T)/BS-A and B3LYP/BS-C levels).",
+      "source_provenance": "paper Tables 2, 3, 4",
+      "generation_method": "Extracted from the paper's reported numerical results as published.",
+      "why_not_fabricated": "All gold values are the exact numbers reported in the paper for the same theoretical levels and conditions, ensuring the checker validates a genuine reproduction of the paper's findings."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bde_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "D0_1b_kcal_per_mol": "number",
+            "D0_2_kcal_per_mol": "number",
+            "energy_difference_1b_minus_1a_kcal_per_mol": "number"
+          },
+          "units": {
+            "D0_1b_kcal_per_mol": "kcal/mol",
+            "D0_2_kcal_per_mol": "kcal/mol",
+            "energy_difference_1b_minus_1a_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Bond dissociation energies (D0) and isomer energy difference computed from CCSD(T)/BS-A energies and BP86/BS-A zero-point corrections."
+      },
+      {
+        "file": "nmr_shifts.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "13C_carbene_shift_ppm": "number",
+            "13C_axial_CO_shift_ppm": "number",
+            "13C_equatorial_CO_shift_ppm": "number",
+            "13C_average_CO_shift_ppm": "number",
+            "19F_shift_ppm": "number"
+          },
+          "units": {
+            "13C_carbene_shift_ppm": "ppm",
+            "13C_axial_CO_shift_ppm": "ppm",
+            "13C_equatorial_CO_shift_ppm": "ppm",
+            "13C_average_CO_shift_ppm": "ppm",
+            "19F_shift_ppm": "ppm"
+          }
+        },
+        "description": "13C and 19F NMR chemical shifts for (CO)4FeCF2 (1b) calculated at B3LYP/BS-C level."
+      },
+      {
+        "file": "anisotropy_components.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_YY_ppm": "number",
+            "delta_XX_ppm": "number",
+            "delta_ZZ_ppm": "number"
+          },
+          "units": {
+            "delta_YY_ppm": "ppm",
+            "delta_XX_ppm": "ppm",
+            "delta_ZZ_ppm": "ppm"
+          }
+        },
+        "description": "Principal components of the 13C chemical shift tensor for the carbene carbon in 1b."
+      }
+    ],
+    "notes": "All scored values are compared against the paper's reported numbers with appropriate tolerances. The agent should use an open‑source quantum chemistry package (e.g., ORCA) and construct the basis sets (BS‑A, BS‑C) according to the paper's description, which are publicly available."
+  },
+  "steps": [
+    {
+      "id": "bde_check",
+      "output_file": "bde_results.json",
+      "kind": "field_tolerance",
+      "weight": 0.35,
+      "fields": {
+        "D0_1b_kcal_per_mol": {
+          "target": 63.8,
+          "tolerance": 3.0,
+          "decay_scale": 3.0
+        },
+        "D0_2_kcal_per_mol": {
+          "target": 44.9,
+          "tolerance": 3.0,
+          "decay_scale": 3.0
+        },
+        "energy_difference_1b_minus_1a_kcal_per_mol": {
+          "target": -4.2,
+          "tolerance": 3.0,
+          "decay_scale": 3.0
+        }
+      }
+    },
+    {
+      "id": "nmr_shifts_check",
+      "output_file": "nmr_shifts.json",
+      "kind": "field_tolerance",
+      "weight": 0.4,
+      "fields": {
+        "13C_carbene_shift_ppm": {
+          "target": 290.3,
+          "tolerance": 10.0,
+          "decay_scale": 10.0
+        },
+        "13C_axial_CO_shift_ppm": {
+          "target": 254.1,
+          "tolerance": 10.0,
+          "decay_scale": 10.0
+        },
+        "13C_equatorial_CO_shift_ppm": {
+          "target": 237.7,
+          "tolerance": 10.0,
+          "decay_scale": 10.0
+        },
+        "13C_average_CO_shift_ppm": {
+          "target": 245.9,
+          "tolerance": 10.0,
+          "decay_scale": 10.0
+        },
+        "19F_shift_ppm": {
+          "target": 162.8,
+          "tolerance": 20.0,
+          "decay_scale": 20.0
+        }
+      }
+    },
+    {
+      "id": "anisotropy_check",
+      "output_file": "anisotropy_components.json",
+      "kind": "field_tolerance",
+      "weight": 0.25,
+      "fields": {
+        "delta_YY_ppm": {
+          "target": 546.6,
+          "tolerance": 20.0,
+          "decay_scale": 20.0
+        },
+        "delta_XX_ppm": {
+          "target": 190.2,
+          "tolerance": 20.0,
+          "decay_scale": 20.0
+        },
+        "delta_ZZ_ppm": {
+          "target": 134.1,
+          "tolerance": 20.0,
+          "decay_scale": 20.0
+        }
+      }
+    }
+  ]
+}

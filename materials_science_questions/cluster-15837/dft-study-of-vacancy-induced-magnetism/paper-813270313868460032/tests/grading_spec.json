@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Compute-driven DFT workflow; final values are reported by the agent and compared against paper gold; structural energy ordering check ensures the ground state is correctly identified.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for ground state, band gap, oxygen moments, relative energies",
+      "source_provenance": "Paper Table 1 row ZO(3,6) and text: ground state AFM-G, band gap 155.2 meV, Bader moments 0.11-0.31 μB, relative energies NM=0, AFM-LR=-92.10, AFM-G=-96.03 meV.",
+      "generation_method": "Extracted verbatim from the paper as published.",
+      "why_not_fabricated": "These are the paper's actual reported numbers for the same system and conditions; they are not invented by the solver or the verifier author."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ground_state_configuration": "string",
+            "band_gap_meV": "float",
+            "oxygen_moment_min_muB": "float",
+            "oxygen_moment_max_muB": "float",
+            "relative_energies": "object"
+          },
+          "items": {
+            "relative_energies.NM": "0.0 or missing",
+            "relative_energies.FM": "null or float",
+            "relative_energies.AFM-S": "null or float",
+            "relative_energies.AFM-LR": "float",
+            "relative_energies.AFM-G": "float"
+          },
+          "units": {
+            "band_gap_meV": "meV",
+            "oxygen_moment_min_muB": "μ_B",
+            "oxygen_moment_max_muB": "μ_B"
+          }
+        },
+        "description": "Hidden checker compares ground_state_configuration to the paper's ground state, band_gap_meV within a tolerance, oxygen moment min/max within tolerances, and verifies AFM-G energy is lowest among all computed configurations (excluding NM=0)."
+      }
+    ],
+    "notes": "Only the ZO(3,6) structure is required. Configurations that did not converge may be represented by null in relative_energies. The checker will validate that AFM-G has the lowest total energy among the converged magnetic configurations."
+  },
+  "steps": [
+    {
+      "id": "ground_state_label",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "json_field_value",
+      "target_policy": "exact_match",
+      "field": "ground_state_configuration",
+      "target": "AFM-G",
+      "tolerance": 0
+    },
+    {
+      "id": "band_gap",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "json_field_value",
+      "target_policy": "reference_match",
+      "field": "band_gap_meV",
+      "target": 155.2,
+      "tolerance_abs": 20.0
+    },
+    {
+      "id": "oxygen_moments",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "json_field_range",
+      "target_policy": "reference_match",
+      "fields": [
+        "oxygen_moment_min_muB",
+        "oxygen_moment_max_muB"
+      ],
+      "target_min": 0.11,
+      "tolerance_min": 0.05,
+      "target_max": 0.31,
+      "tolerance_max": 0.05
+    },
+    {
+      "id": "energy_ordering",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "structural_check",
+      "target_policy": "structural_audit"
+    }
+  ]
+}

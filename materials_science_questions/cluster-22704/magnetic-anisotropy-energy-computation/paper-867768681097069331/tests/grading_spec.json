@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Paper-reported lattice parameters, spin moment, and MAE are verified against gold values with tolerances; unit-cell volume is recomputed from lattice parameters for consistency; MAE unit conversion is cross-checked using volume from the relaxation step.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_structures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Fe2Ta": {
+              "a_angstrom": "number",
+              "c_angstrom": "number",
+              "xFe2": "number",
+              "z5d": "number",
+              "volume_angstrom3": "number",
+              "total_energy_Ry": "number"
+            },
+            "Fe2W": {
+              "a_angstrom": "number",
+              "c_angstrom": "number",
+              "xFe2": "number",
+              "z5d": "number",
+              "volume_angstrom3": "number",
+              "total_energy_Ry": "number"
+            }
+          }
+        },
+        "description": "Optimized lattice parameters, internal coordinates, unit cell volume, and total energy for Fe2Ta and Fe2W obtained from scalar-relativistic spin-polarized DFT relaxation."
+      },
+      {
+        "file": "mae_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Fe2Ta": {
+              "total_spin_moment_muB_per_unit_cell": "number",
+              "mae_meV_per_unit_cell": "number",
+              "mae_MJ_per_m3": "number",
+              "easy_axis": "c"
+            },
+            "Fe2W": {
+              "total_spin_moment_muB_per_unit_cell": "number",
+              "mae_meV_per_unit_cell": "number",
+              "mae_MJ_per_m3": "number",
+              "easy_axis": "c"
+            }
+          }
+        },
+        "description": "Magnetocrystalline anisotropy energy (meV/u.c. and MJ/m³), total spin magnetic moment per unit cell, and easy axis direction for Fe2Ta and Fe2W, computed with spin-orbit coupling."
+      }
+    ],
+    "notes": "The total spin moment in mae_moments.json should match the value in spin_moments.json. The easy axis string must be exactly 'c' (lower-case) for both compounds. Scoring uses a symmetric tolerance window around the paper-reported values; values must fall within the tolerance to earn credit. The alloy series Fe2Ta1-xWx and the ferro‑to‑ferrimagnetic transition composition are omitted because the VCA is an approximate method with known over‑estimation, the paper's primary quantitative claims are the end‑compound properties, and the alloy results are qualitative and heavily post‑processed, making a verifiable scored artifact impractical under the paper2arm reproducibility model."
+  },
+  "steps": [
+    {
+      "id": "relaxed_structures",
+      "output_file": "relaxed_structures.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "gold": {
+        "tolerances": {
+          "a_c_ang": 0.01,
+          "xFe2": 0.002,
+          "z5d": 0.002,
+          "volume_ang3": 0.5
+        },
+        "Fe2Ta": {
+          "a_angstrom": 4.811,
+          "c_angstrom": 7.874,
+          "xFe2": 0.83192,
+          "z5d": 0.06405
+        },
+        "Fe2W": {
+          "a_angstrom": 4.674,
+          "c_angstrom": 7.768,
+          "xFe2": 0.82946,
+          "z5d": 0.06924
+        }
+      }
+    },
+    {
+      "id": "mae_moments",
+      "output_file": "mae_moments.json",
+      "kind": "recompute_metric",
+      "weight": 0.8,
+      "gold": {
+        "tolerances": {
+          "spin_moment_muB": 0.2,
+          "mae_meV": 0.1,
+          "mae_MJ_m3": 0.05
+        },
+        "Fe2Ta": {
+          "total_spin_moment_muB_per_unit_cell": 8.88,
+          "mae_meV_per_unit_cell": 1.24,
+          "mae_MJ_per_m3": 1.25
+        },
+        "Fe2W": {
+          "total_spin_moment_muB_per_unit_cell": 4.45,
+          "mae_meV_per_unit_cell": 0.79,
+          "mae_MJ_per_m3": 0.87
+        }
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for relaxed structures and MAE/moments",
+      "source_provenance": "Paper Table I (lattice parameters, internal coordinates, total spin moment) and Table II (MAE, easy axis).",
+      "generation_method": "Directly transcribed from the paper’s tables.",
+      "why_not_fabricated": "These are the paper-reported reference values; the task reproduces them, so the checker compares the agent’s computed results against the published numbers."
+    }
+  ]
+}

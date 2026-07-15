@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Geometry optimization of bare Rh4 and selected Rh3X clusters",
+    "role": "process",
+    "action": "Construct a 14 Å cubic supercell containing a Rh4 tetrahedron. Perform spin‑polarized DFT geometry optimization (PBE, energy convergence 1e‑6 eV, force convergence 0.005 eV/Å) to obtain the ground‑state geometry, total energy, and magnetic moment. Then, for each dopant X = Fe, Ru, Ti, Cr, Tc, substitute one Rh atom in the optimized Rh4 geometry, re‑optimize, and record total energies and magnetic moments.",
+    "output_file": "",
+    "evidence": "cluster_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate results; the computed energies and moments are inputs to the final property computations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Calculation of isolated atom and molecule reference energies",
+    "role": "process",
+    "action": "Compute spin‑polarized total energies of isolated atoms Rh, Fe, Ru, Ti, Cr, Tc and isolated molecules CO, CO2, N2, NO, O2, N2O, NO2 in the same cubic supercell, using identical DFT parameters. These reference energies are needed to evaluate binding and adsorption energies.",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Stores the computed total energies of all reference species.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Adsorption geometry optimization",
+    "role": "process",
+    "action": "For each combination (Rh4 + molecule) and (Rh3Ti + molecule) where molecule = NO, CO, CO2, N2, and for (Rh4 + molecule) and (Rh3Fe + molecule) where molecule = O2, N2O, NO2, place the molecule at plausible high‑symmetry adsorption sites on the cluster, perform DFT geometry optimization, and record the lowest total energy for each system. The initial cluster geometries are taken from step01.",
+    "output_file": "",
+    "evidence": "adsorption_complexes_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Stores the lowest total energy found for each cluster‑molecule complex.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "NEB barrier calculations for O2 dissociation",
+    "role": "process",
+    "action": "For O2 adsorption on Rh4, Rh3Cr, and Rh3Tc, build initial (physisorbed O2) and final (dissociated O atoms) structures from step03 results. Run climbing‑image nudged elastic band (CI-NEB) calculations with force convergence 0.01 eV/Å to obtain the minimum energy path and extract the energy barrier (energy difference between transition state and initial state). Use the same DFT parameters as previous steps.",
+    "output_file": "",
+    "evidence": "o2_barriers.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Records the computed reaction barriers (eV) for the three clusters.",
+    "output_schema": ""
+  },
+  {
+    "id": "step05",
+    "title": "Compute and output target properties",
+    "role": "scored",
+    "action": "Using the total energies from the previous steps, compute average binding energies (E_b = [3*E(Rh) + E(X) − E(Rh3X)]/4), adsorption energies (E_ads = E(cluster) + E(molecule) − E(complex)), magnetic moments, and the Rh4 bond length from the optimized geometry. Collect all results into a single JSON file named computed_properties.json exactly following the output schema.",
+    "output_file": "computed_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The sole scored artifact containing all required properties.",
+    "output_schema": "A JSON object with keys: Rh4_bond_length (float, Å), Rh4_avg_binding_energy (float, eV), Rh4_magnetic_moment (integer, μB), Rh3Fe_avg_binding_energy (float, eV), Rh3Fe_magnetic_moment (integer, μB), Rh3Ru_avg_binding_energy (float, eV), Rh3Ru_magnetic_moment (integer, μB), physical_adsorption_energies (object with keys: Rh4_NO, Rh4_CO, Rh4_CO2, Rh4_N2, Rh3Ti_NO, Rh3Ti_CO, Rh3Ti_CO2, Rh3Ti_N2; values in eV), chemical_adsorption_energies (object with keys: Rh4_O2, Rh4_N2O, Rh4_NO2, Rh3Fe_O2, Rh3Fe_N2O, Rh3Fe_NO2; values in eV), O2_barriers (object with keys: Rh4, Rh3Cr, Rh3Tc; values in eV). All adsorption energies are positive (E_ads computed by Eq. 3). Magnetic moments are integer values."
+  }
+]

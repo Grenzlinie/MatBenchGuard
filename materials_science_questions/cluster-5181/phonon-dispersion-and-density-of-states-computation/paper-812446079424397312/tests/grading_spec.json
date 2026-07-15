@@ -1,0 +1,471 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Form factor relative error at hidden q-points, resistivity relative error, phonon MAPE against hidden experimental points; all recomputed from agent's raw artifacts.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "form_factor.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q",
+            "v_screened"
+          ],
+          "units": {
+            "q": "atomic units",
+            "v_screened": "Rydbergs"
+          }
+        },
+        "description": "Screened pseudopotential form factor on a q-grid; the checker compares v_screened at hidden q-points to digitized reference values and scores a relative error metric (lower is better)."
+      },
+      {
+        "file": "resistivity.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "scalar",
+          "unit": "μΩ·cm"
+        },
+        "description": "Single-value liquid metal resistivity of gold; the checker compares the reported value to a hidden reference with a tolerance (closer to reference is better)."
+      },
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "zeta",
+            "branch",
+            "frequency"
+          ],
+          "units": {
+            "frequency": "THz"
+          }
+        },
+        "description": "Phonon frequencies at sampled points along principal symmetry directions; the checker computes mean absolute percentage error (MAPE) against hidden experimental data (lower MAPE is better) and scores against a threshold."
+      }
+    ],
+    "notes": "The checker will compare the agent's numeric outputs to reference data (digitized form factor, experimental resistivity, experimental phonon frequencies) using relative error or MAPE. Scores are monotonic in quality: better-than-reference earns full credit, and credit degrades as the result worsens."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Form factor reference points (q, v_screened) from digitized Fig. 2",
+      "source_provenance": "Digitized from solid curve in Fig. 2 of paper",
+      "generation_method": "Manual digitization of the curve at selected q values",
+      "why_not_fabricated": "Points are read directly from the paper's figure"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold resistivity value 31.256 μΩ·cm",
+      "source_provenance": "Paper reports computed value 31.256 μΩ cm",
+      "generation_method": "Copied from the paper text",
+      "why_not_fabricated": "Direct quote from paper"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Phonon experimental reference points",
+      "source_provenance": "Digitized from experimental points (Lynn et al.) in Fig. 3",
+      "generation_method": "Manual digitization of experimental points from the figure",
+      "why_not_fabricated": "Points correspond to published experimental neutron scattering data"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_form_factor",
+      "output_file": "form_factor.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "config": {
+        "gold_points": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            0.2,
+            -0.08
+          ],
+          [
+            0.4,
+            -0.22
+          ],
+          [
+            0.6,
+            -0.28
+          ],
+          [
+            0.8,
+            -0.23
+          ],
+          [
+            1.0,
+            -0.1
+          ],
+          [
+            1.2,
+            -0.01
+          ],
+          [
+            1.274,
+            -0.05
+          ]
+        ],
+        "tolerance_rel": 0.05
+      }
+    },
+    {
+      "id": "step_resistivity",
+      "output_file": "resistivity.txt",
+      "weight": 0.2,
+      "kind": "custom",
+      "config": {
+        "gold_value": 31.256,
+        "tolerance_rel": 0.05
+      }
+    },
+    {
+      "id": "step_phonon",
+      "output_file": "phonon_frequencies.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "config": {
+        "mape_threshold": 0.1,
+        "gold_points": [
+          {
+            "direction": "100",
+            "zeta": 0.0,
+            "branch": "L",
+            "frequency": 0.0
+          },
+          {
+            "direction": "100",
+            "zeta": 0.0,
+            "branch": "T1",
+            "frequency": 0.0
+          },
+          {
+            "direction": "100",
+            "zeta": 0.0,
+            "branch": "T2",
+            "frequency": 0.0
+          },
+          {
+            "direction": "100",
+            "zeta": 0.2,
+            "branch": "L",
+            "frequency": 2.1
+          },
+          {
+            "direction": "100",
+            "zeta": 0.2,
+            "branch": "T1",
+            "frequency": 1.2
+          },
+          {
+            "direction": "100",
+            "zeta": 0.2,
+            "branch": "T2",
+            "frequency": 1.2
+          },
+          {
+            "direction": "100",
+            "zeta": 0.4,
+            "branch": "L",
+            "frequency": 3.8
+          },
+          {
+            "direction": "100",
+            "zeta": 0.4,
+            "branch": "T1",
+            "frequency": 1.9
+          },
+          {
+            "direction": "100",
+            "zeta": 0.4,
+            "branch": "T2",
+            "frequency": 1.9
+          },
+          {
+            "direction": "100",
+            "zeta": 0.6,
+            "branch": "L",
+            "frequency": 4.2
+          },
+          {
+            "direction": "100",
+            "zeta": 0.6,
+            "branch": "T1",
+            "frequency": 2.1
+          },
+          {
+            "direction": "100",
+            "zeta": 0.6,
+            "branch": "T2",
+            "frequency": 2.1
+          },
+          {
+            "direction": "100",
+            "zeta": 0.8,
+            "branch": "L",
+            "frequency": 4.5
+          },
+          {
+            "direction": "100",
+            "zeta": 0.8,
+            "branch": "T1",
+            "frequency": 2.0
+          },
+          {
+            "direction": "100",
+            "zeta": 0.8,
+            "branch": "T2",
+            "frequency": 2.0
+          },
+          {
+            "direction": "100",
+            "zeta": 1.0,
+            "branch": "L",
+            "frequency": 4.61
+          },
+          {
+            "direction": "100",
+            "zeta": 1.0,
+            "branch": "T1",
+            "frequency": 1.95
+          },
+          {
+            "direction": "100",
+            "zeta": 1.0,
+            "branch": "T2",
+            "frequency": 1.95
+          },
+          {
+            "direction": "110",
+            "zeta": 0.0,
+            "branch": "L",
+            "frequency": 0.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.0,
+            "branch": "T1",
+            "frequency": 0.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.0,
+            "branch": "T2",
+            "frequency": 0.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.2,
+            "branch": "L",
+            "frequency": 2.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.2,
+            "branch": "T1",
+            "frequency": 1.1
+          },
+          {
+            "direction": "110",
+            "zeta": 0.2,
+            "branch": "T2",
+            "frequency": 1.3
+          },
+          {
+            "direction": "110",
+            "zeta": 0.4,
+            "branch": "L",
+            "frequency": 3.5
+          },
+          {
+            "direction": "110",
+            "zeta": 0.4,
+            "branch": "T1",
+            "frequency": 1.8
+          },
+          {
+            "direction": "110",
+            "zeta": 0.4,
+            "branch": "T2",
+            "frequency": 2.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.6,
+            "branch": "L",
+            "frequency": 4.1
+          },
+          {
+            "direction": "110",
+            "zeta": 0.6,
+            "branch": "T1",
+            "frequency": 2.0
+          },
+          {
+            "direction": "110",
+            "zeta": 0.6,
+            "branch": "T2",
+            "frequency": 2.3
+          },
+          {
+            "direction": "110",
+            "zeta": 0.8,
+            "branch": "L",
+            "frequency": 4.4
+          },
+          {
+            "direction": "110",
+            "zeta": 0.8,
+            "branch": "T1",
+            "frequency": 1.9
+          },
+          {
+            "direction": "110",
+            "zeta": 0.8,
+            "branch": "T2",
+            "frequency": 2.4
+          },
+          {
+            "direction": "110",
+            "zeta": 1.0,
+            "branch": "L",
+            "frequency": 4.6
+          },
+          {
+            "direction": "110",
+            "zeta": 1.0,
+            "branch": "T1",
+            "frequency": 1.8
+          },
+          {
+            "direction": "110",
+            "zeta": 1.0,
+            "branch": "T2",
+            "frequency": 2.45
+          },
+          {
+            "direction": "111",
+            "zeta": 0.0,
+            "branch": "L",
+            "frequency": 0.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.0,
+            "branch": "T1",
+            "frequency": 0.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.0,
+            "branch": "T2",
+            "frequency": 0.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.2,
+            "branch": "L",
+            "frequency": 1.9
+          },
+          {
+            "direction": "111",
+            "zeta": 0.2,
+            "branch": "T1",
+            "frequency": 1.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.2,
+            "branch": "T2",
+            "frequency": 1.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.4,
+            "branch": "L",
+            "frequency": 3.4
+          },
+          {
+            "direction": "111",
+            "zeta": 0.4,
+            "branch": "T1",
+            "frequency": 1.6
+          },
+          {
+            "direction": "111",
+            "zeta": 0.4,
+            "branch": "T2",
+            "frequency": 1.6
+          },
+          {
+            "direction": "111",
+            "zeta": 0.6,
+            "branch": "L",
+            "frequency": 4.0
+          },
+          {
+            "direction": "111",
+            "zeta": 0.6,
+            "branch": "T1",
+            "frequency": 1.8
+          },
+          {
+            "direction": "111",
+            "zeta": 0.6,
+            "branch": "T2",
+            "frequency": 1.8
+          },
+          {
+            "direction": "111",
+            "zeta": 0.8,
+            "branch": "L",
+            "frequency": 4.4
+          },
+          {
+            "direction": "111",
+            "zeta": 0.8,
+            "branch": "T1",
+            "frequency": 1.7
+          },
+          {
+            "direction": "111",
+            "zeta": 0.8,
+            "branch": "T2",
+            "frequency": 1.7
+          },
+          {
+            "direction": "111",
+            "zeta": 1.0,
+            "branch": "L",
+            "frequency": 4.7
+          },
+          {
+            "direction": "111",
+            "zeta": 1.0,
+            "branch": "T1",
+            "frequency": 1.65
+          },
+          {
+            "direction": "111",
+            "zeta": 1.0,
+            "branch": "T2",
+            "frequency": 1.65
+          }
+        ]
+      }
+    }
+  ]
+}

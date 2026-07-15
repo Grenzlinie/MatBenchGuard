@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute power-law (β) and variance-energy extrapolated energy (E_SE) directly from the raw CSV data; compare to paper-reported values with appropriate tolerances. Monotonicity of variational energies is also verified.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_scaling_data.csv": "metric_recompute",
+    "step_02_fit_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for benzene scaling law: β=0.52, E_SE=-232.2510 Ha.",
+      "source_provenance": "Paper Supplementary Table S5 and main text Fig. 2a (LAVA-SE = -232.2510 Ha, power-law exponent 0.52).",
+      "generation_method": "Extracted directly from the published paper's reported numbers.",
+      "why_not_fabricated": "Traceable to the source paper's reported results."
+    }
+  ],
+  "gold": {
+    "e_se": -232.251,
+    "beta": 0.52,
+    "beta_tolerance": 0.05,
+    "e_se_full_credit_threshold": -232.25,
+    "e_se_decay_width": 0.001
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_scaling_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "network_config",
+            "N_p",
+            "total_energy",
+            "var_local_energy"
+          ],
+          "units": {
+            "total_energy": "Hartree",
+            "var_local_energy": "Ha²"
+          }
+        },
+        "description": "Raw energy and variance results from LAVA for different network sizes, used to recompute scaling law fits."
+      },
+      {
+        "file": "step_02_fit_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "power_law": "object",
+            "variance_energy": "object"
+          },
+          "items": {
+            "power_law.alpha": "float",
+            "power_law.beta": "float",
+            "power_law.E_SE": "float (Hartree)",
+            "variance_energy.slope": "float",
+            "variance_energy.intercept": "float (Hartree)"
+          }
+        },
+        "description": "Fitted scaling law parameters (power-law and variance-energy) reported by the agent. The checker recomputes these from the CSV for scoring."
+      }
+    ],
+    "notes": "The primary scoring is based on recomputing the power-law fit and variance-energy extrapolation from the CSV data. The JSON is a supplementary report; its structure must match the schema but the actual numbers are verified by recomputation."
+  },
+  "steps": [
+    {
+      "id": "step_01_csv",
+      "output_file": "step_01_scaling_data.csv",
+      "kind": "rubric",
+      "weight": 0.9,
+      "description": "Recompute power-law and variance-energy fits, score β and E_SE, verify monotonicity",
+      "config": {}
+    },
+    {
+      "id": "step_02_json",
+      "output_file": "step_02_fit_results.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify JSON structure and required keys",
+      "config": {}
+    }
+  ]
+}

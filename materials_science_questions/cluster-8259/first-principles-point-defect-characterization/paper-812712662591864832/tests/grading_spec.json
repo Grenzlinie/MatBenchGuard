@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Full recompute of DFT/STEM simulations infeasible in verifier sandbox; compare reported ratios and defect levels against paper-derived gold values with tolerances and trend check.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_qstem_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "P_Se_intensity_ratio": "float",
+            "V_Se_intensity_ratio": "float"
+          }
+        },
+        "description": "ADF-STEM intensity ratios (defect‑site intensity divided by Mo‑site intensity) for the P_Se and V_Se defects."
+      },
+      {
+        "file": "step_02_dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "N_defect_level_above_VBM_eV": "float",
+            "P_defect_level_above_VBM_eV": "float",
+            "As_defect_level_above_VBM_eV": "float"
+          }
+        },
+        "description": "Acceptor defect level energies (above VBM) for N, P, and As substitutional dopants in MoSe₂."
+      }
+    ],
+    "notes": ""
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for QSTEM intensity ratios and DFT defect levels, extracted from the paper.",
+      "source_provenance": "Paper main text and supporting info: P_Se ratio 86% (Figure 2d), V_Se 66% (Figure 2e); N level 0.66 eV (Ref 6, cited in text); P level ≈0.3 eV (experimental STS and DFT); As level shallower trend from supporting info (value 0.10 eV as extracted from paper's DFT SI).",
+      "generation_method": "Direct transcription from paper's reported numbers.",
+      "why_not_fabricated": "These are the actual numbers reported in the paper, ensuring that only an agent who correctly computes or accurately reconstructs the quantities matches them."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_qstem_results.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "checks": {
+        "P_Se_intensity_ratio": {
+          "gold": 0.86,
+          "tolerance_abs": 0.05
+        },
+        "V_Se_intensity_ratio": {
+          "gold": 0.66,
+          "tolerance_abs": 0.05
+        },
+        "trend": "P_Se_intensity_ratio > V_Se_intensity_ratio"
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_dft_results.json",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "checks": {
+        "N_defect_level_above_VBM_eV": {
+          "gold": 0.66,
+          "tolerance_abs": 0.15
+        },
+        "P_defect_level_above_VBM_eV": {
+          "gold": 0.3,
+          "tolerance_abs": 0.15
+        },
+        "As_defect_level_above_VBM_eV": {
+          "gold": 0.1,
+          "tolerance_abs": 0.15
+        },
+        "trend": "N_defect_level_above_VBM_eV > P_defect_level_above_VBM_eV > As_defect_level_above_VBM_eV"
+      }
+    }
+  ]
+}

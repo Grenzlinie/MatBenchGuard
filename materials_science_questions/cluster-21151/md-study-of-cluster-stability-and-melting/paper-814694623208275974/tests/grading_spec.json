@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: peak positions and amplitudes are recomputed from raw CSV data; bond angle amplitude and Voronoi fractions are recomputed from raw JSON/CSV. These are compared against paper‑reported gold values (peak positions at 300 K, required fraction range) and required temperature trends, with tolerances that account for implementation spread.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "partial_pdfs.csv": "metric_recompute",
+    "bond_angle_dist.csv": "metric_recompute",
+    "voronoi_fractions.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold peak positions for Co‑B and B‑B partial PDFs at 300 K, and gold Voronoi fraction at 300 K; required trends for high‑temperature broadening and fraction decrease. All derived from the paper's Fig. 3 and Fig. 4 (right) and associated text.",
+      "source_provenance": "paper Fig. 3 and Fig. 4, and results text (Co‑B first shell 1.98 Å, B‑B first 1.85 Å, B‑B second 2.9 Å; fraction of Frank‑Kasper polyhedra 50 % at 300 K decreasing to 35 % at 1600 K).",
+      "generation_method": "taken directly from the paper; linear interpolation formula for Voronoi fraction as a function of temperature is derived from the two reported endpoints.",
+      "why_not_fabricated": "these are the paper's own reported structural metrics, not fabricated. They are the exact quantities the reproduction must produce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "partial_pdfs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "Co_B_g_300K",
+            "B_B_g_300K",
+            "Co_B_g_highT",
+            "B_B_g_highT"
+          ],
+          "units": {
+            "r": "Å",
+            "Co_B_g_300K": "dimensionless",
+            "B_B_g_300K": "dimensionless",
+            "Co_B_g_highT": "dimensionless",
+            "B_B_g_highT": "dimensionless"
+          }
+        },
+        "description": "Partial pair distribution functions g(r) for Co-B and B-B pairs at 300 K and a higher temperature chosen by the solver (≥600 K). The checker will detect local maxima in specified r windows and compare extracted peak positions to hidden paper-reported values."
+      },
+      {
+        "file": "bond_angle_dist.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "angle_degrees",
+            "probability_300K",
+            "probability_highT"
+          ],
+          "units": {
+            "angle_degrees": "degrees",
+            "probability_300K": "dimensionless",
+            "probability_highT": "dimensionless"
+          }
+        },
+        "description": "B-Co-B bond angle distribution at 300 K and the same higher temperature. The checker will identify the amplitude of the peak near 90° and verify that it decreases (broadens) with temperature."
+      },
+      {
+        "file": "voronoi_fractions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Frank_Kasper_fraction_300K": "float",
+            "Frank_Kasper_fraction_highT": "float"
+          },
+          "items": {},
+          "units": {}
+        },
+        "description": "Fraction of Frank-Kasper-like Voronoi polyhedra at 300 K and the higher temperature. The checker will verify that fractions are between 0 and 1, that the high-temperature fraction is lower than 300 K, and that the values match hidden paper-reported fractions within tolerances."
+      }
+    ],
+    "notes": "The solver must choose the higher temperature (e.g., 1000 K or 1600 K) and clearly label columns/keys accordingly. The checker recomputes structural features from the raw CSV/JSON files and compares them to hidden gold values derived from the paper. No experimental XRD comparison or elastic limit discussion is required."
+  },
+  "steps": [
+    {
+      "id": "pdf_peaks",
+      "output_file": "partial_pdfs.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "config": {
+        "gold_peaks": {
+          "Co_B_first": 1.98,
+          "B_B_first": 1.85,
+          "B_B_second": 2.9
+        },
+        "tolerance_abs": 0.05
+      }
+    },
+    {
+      "id": "pdf_trend",
+      "output_file": "partial_pdfs.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "config": {}
+    },
+    {
+      "id": "bond_angle_trend",
+      "output_file": "bond_angle_dist.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "config": {}
+    },
+    {
+      "id": "voronoi_fractions",
+      "output_file": "voronoi_fractions.json",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "config": {
+        "gold_frac_300K": 0.5,
+        "tolerance_abs_300K": 0.05,
+        "frac_high_expected_range": [
+          0.25,
+          0.45
+        ]
+      }
+    }
+  ]
+}

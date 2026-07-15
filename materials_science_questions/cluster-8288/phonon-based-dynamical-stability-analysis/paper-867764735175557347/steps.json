@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build structures and set DFT parameters",
+    "role": "process",
+    "action": "Construct primitive cells for all required phases (CaO₂ candidates, CaO reference phases, O₂ reference phases) using the provided lattice constants and atomic coordinates. Set up DFT convergence parameters: PBE exchange-correlation, plane-wave cutoff, k‑point sampling. Write a structure manifest file.",
+    "output_file": "",
+    "evidence": "structure_manifest.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run static-lattice DFT relaxations",
+    "role": "process",
+    "action": "For each phase, perform variable‑cell geometry relaxation and total‑energy calculations at a grid of pressures: 0, 10, 20, 30, 38, 50, 65, 100, 150, 200 GPa using Quantum ESPRESSO. Record the final enthalpy and volume for each run.",
+    "output_file": "",
+    "evidence": "dft_logs/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compile static enthalpies",
+    "role": "scored",
+    "action": "Aggregate the computed static‑lattice enthalpies into a single table. Write /app/outputs/static_enthalpies.csv with one row per (pressure, phase).",
+    "output_file": "static_enthalpies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Static‑lattice enthalpy (eV/f.u.) of every relevant phase at each pressure.",
+    "output_schema": "pressure(GPa):float, phase:string, enthalpy(eV/f.u.):float"
+  },
+  {
+    "id": "step_04",
+    "title": "Perform quasiharmonic phonon calculations",
+    "role": "process",
+    "action": "For the six CaO₂ phases (C2/c‑I, C2/c‑II, Pna2₁, I4/mcm, P2₁/c‑L, P2₁/c‑H) and the reference phases (rocksalt CaO, CsCl CaO, lowest‑enthalpy O₂ phase at each pressure), construct supercells and compute phonon frequencies via finite‑displacement using Quantum ESPRESSO + PhonoPy at pressures 0, 20, 30, 38, 50, 65, 100 GPa. Use the quasiharmonic approximation to obtain the Gibbs free energy at temperatures 0, 300, 600, 1000 K, and at 2500 K for the mantle condition (65 GPa).",
+    "output_file": "",
+    "evidence": "phonon_logs/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compile Gibbs free energies",
+    "role": "scored",
+    "action": "Assemble the Gibbs free energies into a table. Write /app/outputs/gibbs_free_energies.csv with one row per (pressure, temperature, phase).",
+    "output_file": "gibbs_free_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Quasiharmonic Gibbs free energy (eV/f.u.) of each phase at each (P,T) point.",
+    "output_schema": "pressure(GPa):float, temperature(K):int, phase:string, gibbs_free_energy(eV/f.u.):float"
+  },
+  {
+    "id": "step_06",
+    "title": "Electronic bandgap of P2₁/c‑L at 50 GPa",
+    "role": "scored",
+    "action": "For the relaxed P2₁/c‑L structure at 50 GPa, compute the band structure and density of states with Quantum ESPRESSO, and extract the thermal and optical bandgaps. Write /app/outputs/bandgap.json containing the two values.",
+    "output_file": "bandgap.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Thermal and optical bandgap of P2₁/c‑L CaO₂ at 50 GPa.",
+    "output_schema": "{thermal_bandgap_eV: number, optical_bandgap_eV: number}"
+  }
+]

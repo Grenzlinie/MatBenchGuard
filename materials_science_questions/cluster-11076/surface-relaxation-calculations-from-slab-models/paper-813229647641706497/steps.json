@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_bulk",
+    "title": "Bulk MgO DFT calculation",
+    "role": "process",
+    "action": "Perform a DFT calculation on bulk MgO (rock-salt) using PBE exchange-correlation, obtaining the equilibrium lattice parameter a_DFT and total energy per formula unit E_bulk. Save the lattice parameter and total energy to a text file.",
+    "output_file": "",
+    "evidence": "bulk_results.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Bulk reference calculation providing DFT lattice constant and bulk total energy for later scaling and energy analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_flat_slab",
+    "title": "Flat MgO(001) slab relaxation",
+    "role": "process",
+    "action": "Construct a symmetric 7-layer MgO(001) slab using the DFT equilibrium lattice parameter, with at least 10 Å vacuum. Perform ionic relaxation (cell fixed) with the same functional, cutoff and an ~11x11x1 k-point mesh. Save the relaxed total energy E_flat and the relaxed atomic structure (e.g., CIF format).",
+    "output_file": "",
+    "evidence": "flat_slab_energy.txt, flat_slab_structure.cif",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Flat surface slab relaxation used to obtain flat surface energy and structure for step energy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_unrelaxed_stepped",
+    "title": "Unrelaxed stepped slab total energy",
+    "role": "process",
+    "action": "Build a MgO(107) slab with monoatomic steps: 7 atomic layers, step spacing of 7 interatomic distances along [100], vacuum ~10 Å. Without ionic relaxation, compute the total energy E_stepped_unrelaxed using the same DFT parameters. Save this total energy.",
+    "output_file": "",
+    "evidence": "step_slab_unrelaxed_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Single-point calculation on the unrelaxed stepped slab, needed for unrelaxed step formation energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_relaxed_stepped",
+    "title": "Relaxed stepped MgO(107) slab relaxation",
+    "role": "process",
+    "action": "Using the same stepped slab model, relax all ionic positions (cell fixed). Save the relaxed total energy E_stepped_relaxed and the relaxed atomic structure (e.g., CIF).",
+    "output_file": "",
+    "evidence": "step_slab_relaxed_energy.txt, step_slab_structure.cif",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxation of the stepped slab, producing the relaxed geometry and total energy needed for all scored step properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_bond_lengths_angles",
+    "title": "Compute step-edge bond lengths and angles",
+    "role": "scored",
+    "action": "From the relaxed stepped slab structure, identify Mg and O atoms at low-coordination step-edge sites (positions 1–8). Compute projected bond lengths and angles for the specific pairs and triplets described in the paper: Mg8–O1, O8–Mg1, Mg1–O2, O1–Mg2, Mg2–O3, O2–Mg3 (bond lengths) and Mg8–O1–Mg2, O8–Mg1–O2, Mg1–O2–Mg3, O1–Mg2–O3 (bond angles). Write results as a CSV file.",
+    "output_file": "bond_lengths_angles.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "DFT-computed bond lengths (Å) and bond angles (°) at monoatomic step edges, to be compared with hidden reference values within tolerance.",
+    "output_schema": "columns: parameter (string), value (float), unit (string)"
+  },
+  {
+    "id": "step_rumpling",
+    "title": "Compute in-plane and out-of-plane rumpling",
+    "role": "scored",
+    "action": "Using the relaxed stepped slab structure, for each step-site position 1–8 compute out-of-plane rumpling = (z_O - z_Mg)/d_b and in-plane rumpling = (y_Mg - y_O)/d_b, where d_b is the bulk {200} interlayer spacing (a_DFT/2). Output results as a CSV file with rumpling in Å.",
+    "output_file": "rumpling.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Out-of-plane and in-plane atomic rumpling at each step site (positions 1–8), to be compared with hidden reference values within tolerance.",
+    "output_schema": "columns: position (int), out_of_plane_rumpling (float, Å), in_plane_rumpling (float, Å)"
+  },
+  {
+    "id": "step_step_energies",
+    "title": "Compute step formation energies",
+    "role": "scored",
+    "action": "From the total energies E_bulk (per formula unit), E_flat, E_stepped_relaxed, and E_stepped_unrelaxed, compute relaxed and unrelaxed step formation energies per unit step length γ = (E_stepped - E_flat) / l, where l is the total step length in the supercell (2 steps of length a_0 along [010]). Convert to meV/Å. Write a CSV with energy_type and gamma.",
+    "output_file": "step_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Relaxed and unrelaxed step formation energies (meV/Å), to be compared with hidden paper-reported values within tolerance.",
+    "output_schema": "columns: energy_type (string, 'relaxed' or 'unrelaxed'), gamma (float, meV/Å)"
+  }
+]

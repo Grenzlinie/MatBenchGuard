@@ -1,0 +1,133 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes CEF eigenvalues from the cubic Hamiltonian and C55(T) from the full model, then compares agent's reported values with tolerance.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "cef_levels.json": "reference_match",
+    "c55_curve.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold CEF level energies in Kelvin from paper",
+      "source_provenance": "paper text: singlet at 0 K, triplet at 203 K, doublet at 347 K, triplet at 781 K",
+      "generation_method": "copied verbatim from paper",
+      "why_not_fabricated": "values are explicitly reported in the paper as the derived level scheme from the fitted B4 parameter."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cef_levels.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "energy_K",
+              "degeneracy",
+              "irrep"
+            ],
+            "properties": {
+              "energy_K": {
+                "type": "number"
+              },
+              "degeneracy": {
+                "type": "integer"
+              },
+              "irrep": {
+                "type": "string"
+              }
+            }
+          },
+          "minItems": 9,
+          "maxItems": 9
+        },
+        "description": "CEF energy levels (nine entries) with energies in Kelvin, degeneracy, and irrep label. The checker recomputes the eigenvalues from the same Hamiltonian and compares within tolerance."
+      },
+      {
+        "file": "c55_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "C55_GPa"
+          ],
+          "units": {
+            "T_K": "K",
+            "C55_GPa": "GPa"
+          }
+        },
+        "description": "Modeled C55(T) at specified temperatures (50,100,150,200,250,300 K). The checker recomputes C55 using the same model and parameters and compares within tolerance."
+      }
+    ],
+    "notes": "Parameters are as reported in the paper: B4 = −20.8×10⁻³ meV, η3 = 21 meV, N = 1.227×10²⁸ m⁻³, C0 = 73.9 GPa, s = 18.3 GPa, TE = 783 K. The agent must compute the results from these parameters; no experimental data fitting is required."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "cef_levels.json",
+      "weight": 0.5,
+      "kind": "cef_levels_compare",
+      "description": "Compare CEF level energies and irreps to recomputed values from the cubic Hamiltonian.",
+      "parameters": {
+        "B4_meV": -0.0208,
+        "tolerance_K": 2.0,
+        "gold_levels": [
+          {
+            "energy_K": 0.0,
+            "degeneracy": 1,
+            "irrep": "Γ1"
+          },
+          {
+            "energy_K": 203.0,
+            "degeneracy": 3,
+            "irrep": "Γ4"
+          },
+          {
+            "energy_K": 347.0,
+            "degeneracy": 2,
+            "irrep": "Γ3"
+          },
+          {
+            "energy_K": 781.0,
+            "degeneracy": 3,
+            "irrep": "Γ5"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "c55_curve.csv",
+      "weight": 0.5,
+      "kind": "c55_curve_compare",
+      "description": "Recompute C55(T) from model and compare to agent's values at the specified temperatures.",
+      "parameters": {
+        "temp_points": [
+          50,
+          100,
+          150,
+          200,
+          250,
+          300
+        ],
+        "B4_meV": -0.0208,
+        "eta3_meV": 21.0,
+        "N": 1.227e+28,
+        "C0_GPa": 73.9,
+        "s_GPa": 18.3,
+        "TE_K": 783.0,
+        "finite_diff_h": 1e-06,
+        "tolerance_rel": 0.001,
+        "tolerance_abs_GPa": 0.5
+      }
+    }
+  ]
+}

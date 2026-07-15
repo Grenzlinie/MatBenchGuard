@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The scored artifacts are final reported values (alpha and directional Compton profiles); the raw intermediate grids (n_QMC, n_LDA) are not part of the scored output contract, so recomputing from raw is infeasible. Comparison to paper gold with tolerances is used.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "alpha.json": "threshold_or_better",
+    "compton_profiles_qmc.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference alpha value (0.8) and Compton profile anchor points digitized from Fig.6 of the paper.",
+      "source_provenance": "Paper Fig.6; digitized using positions reported in the reference solve.sh anchor points.",
+      "generation_method": "Manual digitization from the published figure; values are approximate but sufficient for tolerance-based scoring.",
+      "why_not_fabricated": "These values are directly based on the paper's published results; they are not invented. The reference solution oracle reproduces them from the same digitization."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "alpha.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "alpha": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Optimal scaling factor α obtained by minimising the discontinuity cost function for Δn^α. Evaluated using reference_match: your α must be within a hidden tolerance of the reference."
+      },
+      {
+        "file": "compton_profiles_qmc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required": {
+            "p": "float (atomic units)",
+            "J_100": "float (atomic units)",
+            "J_110": "float (atomic units)",
+            "J_111": "float (atomic units)"
+          },
+          "items": {},
+          "required_columns": [
+            "p",
+            "J_100",
+            "J_110",
+            "J_111"
+          ],
+          "units": {
+            "p": "atomic units",
+            "J_100": "atomic units",
+            "J_110": "atomic units",
+            "J_111": "atomic units"
+          }
+        },
+        "description": "Directional valence Compton profiles J(p) in the [100], [110], [111] crystallographic directions. Evaluated using reference_match: at selected momentum points, absolute deviation from the hidden reference must be within tolerance."
+      }
+    ],
+    "notes": "Both scored artifacts use reference_match (closeness within a tolerance window). The verifier first validates format/schema; missing or ill‑formed files receive zero reward."
+  },
+  "steps": [
+    {
+      "id": "step_05_alpha",
+      "output_file": "alpha.json",
+      "kind": "json_field",
+      "field": "alpha",
+      "weight": 0.3,
+      "target": 0.8,
+      "tolerance_abs": 0.05,
+      "tolerance_rel": 0.05,
+      "description": "Check that the reported alpha is within tolerance of the paper's optimum 0.8."
+    },
+    {
+      "id": "step_07_compton",
+      "output_file": "compton_profiles_qmc.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "test_points": [
+        {
+          "p": 0.0,
+          "J_100": 1.32,
+          "J_110": 1.42,
+          "J_111": 1.52
+        },
+        {
+          "p": 0.5,
+          "J_100": 0.82,
+          "J_110": 0.88,
+          "J_111": 0.94
+        },
+        {
+          "p": 0.6,
+          "J_100": 0.55,
+          "J_110": 0.6,
+          "J_111": 0.65
+        },
+        {
+          "p": 0.7,
+          "J_100": 0.22,
+          "J_110": 0.25,
+          "J_111": 0.28
+        },
+        {
+          "p": 1.0,
+          "J_100": 0.12,
+          "J_110": 0.13,
+          "J_111": 0.14
+        },
+        {
+          "p": 2.0,
+          "J_100": 0.01,
+          "J_110": 0.01,
+          "J_111": 0.01
+        }
+      ],
+      "tolerance_abs": 0.1,
+      "tolerance_rel": 0.1,
+      "description": "Compare directional Compton profiles at selected momentum points to digitized gold values from Fig.6."
+    }
+  ]
+}

@@ -1,0 +1,289 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The agent's artifacts are the final computed quantities (enthalpy, phonon frequencies, fitted parameters). The verifier cannot re-run DFT or re-fit the model; it compares the agent's submitted values to the paper's reported values with realistic tolerances. Surface energies are scored by structural ordering because the paper does not give explicit numeric gold for each termination.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "enthalpy_difference.json": "exact_match",
+    "surface_energies.json": "structural_audit",
+    "phonon_frequencies.json": "exact_match",
+    "fitted_parameters.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for enthalpy difference, phonon soft mode frequency, fitted parameters, and the inferred dislocation mean free path λ.",
+      "source_provenance": "Enthalpy range (5.3–6.0 ×10⁴ J/kg) converted to eV/fu using the formula unit mass. Soft mode at M from Figure 5 (≈ -35 cm⁻¹). Fitted parameters (T_c, k_a, k₀, ω, q, h_min) taken directly from the paper text. λ is derived from the model equation using the paper's stated parameters and h_min ≈ 20 nm, yielding λ ≈ 10 nm (self‑consistent with the reference solve.sh).",
+      "generation_method": "Conversion: 5.5×10⁴ J/kg × 0.21797 kg/mol = 11988 J/mol ≈ 0.124 eV/fu. Soft mode value approximated from the DFPT Figure. For λ, solving the condition that the model yields blocking at h_min=20 nm with the paper's other parameters gives λ≈10 nm.",
+      "why_not_fabricated": "All gold values are rooted in the paper's own reported numbers, figures, or the logical consequence of the paper's model and reported h_min. λ is not a free parameter; it follows from the model's structure and the paper's stated results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "enthalpy_difference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_E_B2_to_B19_ev_per_fu"
+          ],
+          "properties": {
+            "delta_E_B2_to_B19_ev_per_fu": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Total energy difference per formula unit (eV) between austenite B2 and martensite B19. Expected to be positive if B19 is more stable."
+      },
+      {
+        "file": "surface_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "B2_NiCu",
+            "B2_Ti",
+            "B19_NiCu1",
+            "B19_NiCu2",
+            "B19_Ti1",
+            "B19_Ti2"
+          ],
+          "properties": {
+            "B2_NiCu": {
+              "type": "number"
+            },
+            "B2_Ti": {
+              "type": "number"
+            },
+            "B19_NiCu1": {
+              "type": "number"
+            },
+            "B19_NiCu2": {
+              "type": "number"
+            },
+            "B19_Ti1": {
+              "type": "number"
+            },
+            "B19_Ti2": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Surface energies (J/m²) for the six (001) terminations of Ti₂NiCu."
+      },
+      {
+        "file": "phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Gamma",
+            "M",
+            "R",
+            "X"
+          ],
+          "properties": {
+            "Gamma": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "M": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "R": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "X": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Phonon frequencies (cm⁻¹) at high-symmetry k-points for B2 Ti₂NiCu. Imaginary modes appear as negative numbers."
+      },
+      {
+        "file": "fitted_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Tc_K",
+            "ka",
+            "k0",
+            "lambda_nm",
+            "omega_nm3",
+            "q_J_per_kg",
+            "h_min_nm"
+          ],
+          "properties": {
+            "Tc_K": {
+              "type": "number"
+            },
+            "ka": {
+              "type": "number"
+            },
+            "k0": {
+              "type": "number"
+            },
+            "lambda_nm": {
+              "type": "number"
+            },
+            "omega_nm3": {
+              "type": "number"
+            },
+            "q_J_per_kg": {
+              "type": "number"
+            },
+            "h_min_nm": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Fitted parameters of the dislocation-kinetic model (Eq. 9) and the predicted critical blocking thickness h_min (nm). λ is the dislocation mean free path."
+      }
+    ],
+    "notes": "All outputs are compared to the paper's reported values with realistic tolerances that account for methodological differences in DFT codes/pseudopotentials and numerical fitting. The agent must execute the ordered steps to compute these quantities."
+  },
+  "steps": [
+    {
+      "id": "scored_enthalpy_difference",
+      "output_file": "enthalpy_difference.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target": 0.124,
+      "tolerance": 0.03,
+      "max_dev": 0.08,
+      "description": "Check total energy difference B2–B19 within tolerance"
+    },
+    {
+      "id": "scored_surface_energies",
+      "output_file": "surface_energies.json",
+      "weight": 0.2,
+      "kind": "structural",
+      "rules": "B2_NiCu < B2_Ti AND B2_NiCu < all B19 terminations",
+      "description": "Verify that NiCu‑terminated B2 has the lowest surface energy, as reported in the paper."
+    },
+    {
+      "id": "scored_phonon_frequencies",
+      "output_file": "phonon_frequencies.json",
+      "weight": 0.3,
+      "kind": "composite",
+      "checks": [
+        {
+          "id": "soft_mode_exists",
+          "weight": 0.4,
+          "field": "M",
+          "check": "has_negative",
+          "target": true,
+          "description": "At least one imaginary (negative) frequency at M – soft mode"
+        },
+        {
+          "id": "soft_mode_value",
+          "weight": 0.4,
+          "field": "M",
+          "check": "value",
+          "target": -34.7,
+          "tolerance": 20.0,
+          "max_dev": 35.0,
+          "description": "Soft mode frequency at M within 20 cm⁻¹ of the paper's value"
+        },
+        {
+          "id": "other_points_nonnegative",
+          "weight": 0.2,
+          "fields": [
+            "Gamma",
+            "R",
+            "X"
+          ],
+          "check": "all_nonnegative",
+          "target": true,
+          "description": "All frequencies at Γ, R, X must be ≥ 0 (no extra instabilities)"
+        }
+      ],
+      "description": "Phonon spectrum checks: soft mode at M and absence of unexpected instabilities"
+    },
+    {
+      "id": "scored_fitted_parameters",
+      "output_file": "fitted_parameters.json",
+      "weight": 0.3,
+      "kind": "composite",
+      "checks": [
+        {
+          "id": "Tc",
+          "field": "Tc_K",
+          "target": 310.0,
+          "tolerance": 10.0,
+          "max_dev": 25.0,
+          "weight": 0.15
+        },
+        {
+          "id": "ka",
+          "field": "ka",
+          "target": 1.0,
+          "tolerance": 0.1,
+          "max_dev": 0.25,
+          "weight": 0.1
+        },
+        {
+          "id": "k0",
+          "field": "k0",
+          "target": 0.22,
+          "tolerance": 0.03,
+          "max_dev": 0.08,
+          "weight": 0.1
+        },
+        {
+          "id": "lambda",
+          "field": "lambda_nm",
+          "target": 10.0,
+          "tolerance": 3.0,
+          "max_dev": 7.0,
+          "weight": 0.15
+        },
+        {
+          "id": "omega",
+          "field": "omega_nm3",
+          "target": 4100.0,
+          "tolerance": 400.0,
+          "max_dev": 800.0,
+          "weight": 0.15
+        },
+        {
+          "id": "q",
+          "field": "q_J_per_kg",
+          "target": 55000.0,
+          "tolerance": 8000.0,
+          "max_dev": 15000.0,
+          "weight": 0.15
+        },
+        {
+          "id": "h_min",
+          "field": "h_min_nm",
+          "target": 20.0,
+          "tolerance": 3.0,
+          "max_dev": 6.0,
+          "weight": 0.2
+        }
+      ],
+      "description": "Check fitted dislocation‑kinetic model parameters against the paper's values"
+    }
+  ]
+}

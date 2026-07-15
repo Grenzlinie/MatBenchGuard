@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "T0 result-level compare",
+  "scoring_justification": "Recomputing barriers and charges from raw DFT outputs in the verifier sandbox is infeasible due to heavy computational cost and dependency on DFT codes. Therefore, a result-level comparison against the paper's published values with appropriate tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for ethane C-H activation barriers (eV) and Pt charge sums (e) from the paper 'Promoter-poison partnership protects platinum performance in coked cluster catalysts'",
+      "source_provenance": "Paper main text and figures: Pt4 barrier 0.29 eV (Fig.2), Pt4C2 barrier 0.64 eV (Fig.2), Pt4GeC2 barrier 0.53 eV (Fig.4b); Pt charge sum in Pt4C2 -0.10 e (Fig.3a), Pt charge sum in Pt4GeC2 -0.50 e (Fig.3b). These are the lowest transition state energies reported relative to the global minimum of each composition.",
+      "generation_method": "extracted directly from the paper text and figures",
+      "why_not_fabricated": "These are the actual values reported in the paper; they serve as the reference for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pt4": "object with key ethane_barrier (eV)",
+            "Pt4C2": "object with keys ethane_barrier (eV) and Pt_charge_sum (e)",
+            "Pt4GeC2": "object with keys ethane_barrier (eV) and Pt_charge_sum (e)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "ethane_barrier": "eV",
+            "Pt_charge_sum": "e"
+          }
+        },
+        "description": "Reproduced ethane C–H activation barriers and Pt charge sums. The checker compares each numeric field against the paper‑reported values within hidden tolerances and verifies the ordering Pt4.ethane_barrier < Pt4C2.ethane_barrier and Pt4GeC2.ethane_barrier < Pt4C2.ethane_barrier."
+      }
+    ],
+    "notes": "The checker will also enforce the monotonic trend constraints. No gold values or tolerances are disclosed publicly."
+  },
+  "steps": [
+    {
+      "id": "step_results_check",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "numeric",
+      "targets": {
+        "Pt4.ethane_barrier": {
+          "value": 0.29,
+          "tolerance": 0.05
+        },
+        "Pt4C2.ethane_barrier": {
+          "value": 0.64,
+          "tolerance": 0.05
+        },
+        "Pt4C2.Pt_charge_sum": {
+          "value": -0.1,
+          "tolerance": 0.03
+        },
+        "Pt4GeC2.ethane_barrier": {
+          "value": 0.53,
+          "tolerance": 0.05
+        },
+        "Pt4GeC2.Pt_charge_sum": {
+          "value": -0.5,
+          "tolerance": 0.03
+        }
+      },
+      "trend_checks": [
+        "Pt4.ethane_barrier < Pt4C2.ethane_barrier",
+        "Pt4GeC2.ethane_barrier < Pt4C2.ethane_barrier"
+      ]
+    }
+  ]
+}

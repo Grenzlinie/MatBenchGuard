@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the structure label for each grid point using the analytic energy expressions and the transition threshold from the formula; no external gold needed.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stability_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "stability_map",
+            "transition_threshold"
+          ],
+          "properties": {
+            "stability_map": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "D_A",
+                  "D_B",
+                  "structure"
+                ],
+                "properties": {
+                  "D_A": {
+                    "type": "number"
+                  },
+                  "D_B": {
+                    "type": "number"
+                  },
+                  "structure": {
+                    "type": "string",
+                    "enum": [
+                      "AB",
+                      "ABA"
+                    ]
+                  }
+                }
+              }
+            },
+            "transition_threshold": {
+              "type": "object",
+              "required": [
+                "formula_D_A_sq",
+                "computed_D_A_sq"
+              ],
+              "properties": {
+                "formula_D_A_sq": {
+                  "type": "string"
+                },
+                "computed_D_A_sq": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Reproduced multilayer film stability map (which structure is thermodynamically preferred for each pair of layer thicknesses) and the analytic transition threshold D_A^2 in the limit of large B-layer thickness."
+      }
+    ],
+    "notes": "The hidden checker holds a gold stability map recomputed from the same energy expressions and a gold transition threshold. The agent's structure labels are compared point-by-point (fraction of matches must be high); the threshold is compared with a 1% relative tolerance. No gold values are revealed in this contract."
+  },
+  "steps": [
+    {
+      "id": "step_01_map",
+      "output_file": "stability_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.8,
+      "description": "Fraction of grid points with correct structure (AB or ABA) compared to recomputed gold."
+    },
+    {
+      "id": "step_01_threshold",
+      "output_file": "stability_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "Numeric threshold D_A^2 matches analytic formula within tolerance, and formula string is plausible."
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute DFT from raw artifacts; compare reported lattice parameters, energy trends, and metallicity flags to paper's published values.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "computed_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice parameters, expected metallicity, energy ordering constraints for LiAlSi and Li2AlSi.",
+      "source_provenance": "Paper Tables 3 and 4, and text descriptions.",
+      "generation_method": "Direct transcription from paper.",
+      "why_not_fabricated": "These are the exact paper values, traceable, used only for hidden grading."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "arrangement",
+            "space_group",
+            "optimized_a",
+            "total_energy_ev",
+            "band_gap_ev",
+            "is_metallic"
+          ],
+          "units": {
+            "optimized_a": "Angstrom",
+            "total_energy_ev": "eV",
+            "band_gap_ev": "eV"
+          }
+        },
+        "description": "Reproduction of DFT-computed properties for Li-Al-Si compounds. The checker compares values against hidden paper-reported references with tolerances."
+      }
+    ],
+    "notes": "The checker uses reference_match policy: compares extracted values (lattice parameters within tolerance, relative energy ordering, metallicity flags) to the paper's reported values. The agent must produce the table; no hidden holdout is required."
+  },
+  "steps": [
+    {
+      "id": "csv_shape_gate",
+      "output_file": "computed_properties.csv",
+      "kind": "rubric",
+      "weight": 0.05,
+      "params": {
+        "required_columns": [
+          "compound",
+          "arrangement",
+          "space_group",
+          "optimized_a",
+          "total_energy_ev",
+          "band_gap_ev",
+          "is_metallic"
+        ],
+        "expected_compounds": [
+          "LiAlSi",
+          "Li2AlSi",
+          "Li7Al3Si4",
+          "Li5AlSi2",
+          "Li9AlSi3"
+        ]
+      }
+    },
+    {
+      "id": "lattice_accuracy",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "params": {
+        "tolerance_relative": 0.02,
+        "expected": [
+          {
+            "compound": "LiAlSi",
+            "arrangement": "I",
+            "optimized_a": 5.9433
+          },
+          {
+            "compound": "LiAlSi",
+            "arrangement": "II",
+            "optimized_a": 5.9577
+          },
+          {
+            "compound": "LiAlSi",
+            "arrangement": "III",
+            "optimized_a": 5.7626
+          },
+          {
+            "compound": "Li2AlSi",
+            "arrangement": "non-centrosymmetric",
+            "optimized_a": 6.253
+          },
+          {
+            "compound": "Li2AlSi",
+            "arrangement": "centrosymmetric",
+            "optimized_a": 6.148
+          },
+          {
+            "compound": "Li7Al3Si4",
+            "arrangement": "ordered",
+            "optimized_a": 12.23
+          },
+          {
+            "compound": "Li5AlSi2",
+            "arrangement": "ordered",
+            "optimized_a": 13.075
+          },
+          {
+            "compound": "Li9AlSi3",
+            "arrangement": "ordered",
+            "optimized_a": 12.357
+          }
+        ]
+      }
+    },
+    {
+      "id": "lialsi_energy_ordering",
+      "output_file": "computed_properties.csv",
+      "kind": "ordering",
+      "weight": 0.2,
+      "params": {
+        "compound": "LiAlSi",
+        "arrangement_order": [
+          "I",
+          "II",
+          "III"
+        ],
+        "energy_column": "total_energy_ev",
+        "relation": "increasing"
+      }
+    },
+    {
+      "id": "li2alsi_energy_equality",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "params": {
+        "compound": "Li2AlSi",
+        "arrangement_keys": [
+          "non-centrosymmetric",
+          "centrosymmetric"
+        ],
+        "energy_column": "total_energy_ev",
+        "max_abs_diff": 0.1
+      }
+    },
+    {
+      "id": "metallic_flags",
+      "output_file": "computed_properties.csv",
+      "kind": "exact_match",
+      "weight": 0.3,
+      "params": {
+        "expected": [
+          {
+            "compound": "LiAlSi",
+            "arrangement": "I",
+            "is_metallic": false
+          },
+          {
+            "compound": "LiAlSi",
+            "arrangement": "II",
+            "is_metallic": false
+          },
+          {
+            "compound": "LiAlSi",
+            "arrangement": "III",
+            "is_metallic": true
+          },
+          {
+            "compound": "Li2AlSi",
+            "arrangement": "non-centrosymmetric",
+            "is_metallic": true
+          },
+          {
+            "compound": "Li2AlSi",
+            "arrangement": "centrosymmetric",
+            "is_metallic": true
+          },
+          {
+            "compound": "Li7Al3Si4",
+            "arrangement": "ordered",
+            "is_metallic": false
+          },
+          {
+            "compound": "Li5AlSi2",
+            "arrangement": "ordered",
+            "is_metallic": true
+          },
+          {
+            "compound": "Li9AlSi3",
+            "arrangement": "ordered",
+            "is_metallic": true
+          }
+        ]
+      }
+    }
+  ]
+}

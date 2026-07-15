@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T3 structural: the paper's claims are qualitative trends (higher CB-MC average energy, moderate tail increase, energy broadening) and exact numeric match is not reported. Structural checks on ordering, tail ratio, and residual variance reflect the paper's conclusions.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "average_energy.csv": "structural_audit",
+    "energy_histogram_10kVcm.csv": "structural_audit",
+    "dispersion_scatter_10kVcm.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "average_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_kVcm",
+            "avg_energy_traditional",
+            "avg_energy_CBMC"
+          ],
+          "units": {
+            "field_kVcm": "kV/cm",
+            "avg_energy_traditional": "eV",
+            "avg_energy_CBMC": "eV"
+          }
+        },
+        "description": "Average electron energy for traditional and CB‑MC simulations at each applied field. Used to check that CB‑MC energy > traditional and both increase monotonically with field."
+      },
+      {
+        "file": "energy_histogram_10kVcm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_low",
+            "energy_high",
+            "count_traditional",
+            "count_CBMC"
+          ],
+          "units": {
+            "energy_low": "eV",
+            "energy_high": "eV",
+            "count_traditional": "count",
+            "count_CBMC": "count"
+          }
+        },
+        "description": "Energy distribution histogram at 10 kV/cm. Used to verify a moderate high‑energy tail increase (CB/traditional tail ratio in [1.0,2.0]) and absence of a runaway peak."
+      },
+      {
+        "file": "dispersion_scatter_10kVcm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "momentum",
+            "energy",
+            "algorithm"
+          ],
+          "units": {
+            "momentum": "a.u.",
+            "energy": "eV",
+            "algorithm": "string"
+          }
+        },
+        "description": "Scatter data of electron energy vs |p| at 10 kV/cm. Used to check that CB‑MC shows energy broadening (variance > 1e-6 in several momentum bins) while traditional does not."
+      }
+    ],
+    "notes": "Structural scoring tier T3: ordering, tail ratio, and variance checks only; no exact numeric gold values are required. The agent must run both MC simulations to obtain realistic statistics; fabricated data that happens to pass the structural audits cannot be ruled out, but the workflow design forces genuine execution through the load‑bearing average‑energy step."
+  },
+  "steps": [
+    {
+      "id": "avg_energy_ordering",
+      "output_file": "average_energy.csv",
+      "kind": "structural_audit",
+      "weight": 0.34,
+      "description": "Verify CB-MC average energy strictly exceeds traditional at each field and both sequences increase monotonically with field."
+    },
+    {
+      "id": "energy_histogram_tail",
+      "output_file": "energy_histogram_10kVcm.csv",
+      "kind": "structural_audit",
+      "weight": 0.33,
+      "description": "Verify tail ratio of CB-MC to traditional energy distribution at 10 kV/cm is in [1.0,2.0] with partial credit for extended range."
+    },
+    {
+      "id": "dispersion_broadening",
+      "output_file": "dispersion_scatter_10kVcm.csv",
+      "kind": "structural_audit",
+      "weight": 0.33,
+      "description": "Verify CB-MC shows significant broadening (energy residuals >100x traditional) at 10 kV/cm."
+    }
+  ]
+}

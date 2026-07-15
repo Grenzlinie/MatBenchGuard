@@ -1,0 +1,55 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "The ΔE values are computed by DFT; the verifier cannot rerun the full DFT, so we compare the agent's reported ΔE to the paper's hidden gold with tolerance and enforce the expected trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_delta_e.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold ΔE values (meV/atom) for Li2VO2F, Li2V0.5Ti0.5O2F, Li2V0.5Fe0.5O2F",
+      "source_provenance": "Extracted from the paper: text reports 179, 144, 147 meV/atom.",
+      "generation_method": "Paper headline numerical results; the reference solution solve.sh hardcodes them.",
+      "why_not_fabricated": "These are the paper's actual reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_delta_e.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Li2VO2F": "number (meV/atom)",
+            "Li2V0.5Ti0.5O2F": "number (meV/atom)",
+            "Li2V0.5Fe0.5O2F": "number (meV/atom)"
+          }
+        },
+        "description": "Ordering propensity ΔE values (meV/atom) for the three compositions, defined as the difference between the total energy of the SQS and the lowest-energy ordered prototype."
+      }
+    ],
+    "notes": "The checker compares the three ΔE values to the paper's reported numbers with an absolute tolerance and enforces a relative trend condition: the substituted compounds must be at least 20 meV/atom lower than the unsubstituted compound."
+  },
+  "steps": [
+    {
+      "id": "step_3",
+      "output_file": "dft_delta_e.json",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "target": {
+        "Li2VO2F": 179,
+        "Li2V0.5Ti0.5O2F": 144,
+        "Li2V0.5Fe0.5O2F": 147
+      },
+      "tolerance_abs": 15.0,
+      "trend": {
+        "description": "Both substituted compounds must have ΔE at least 20 meV/atom lower than Li2VO2F",
+        "threshold": 20.0
+      }
+    }
+  ]
+}

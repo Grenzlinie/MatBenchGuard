@@ -1,0 +1,383 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Full recompute from raw artifacts is infeasible in the verifier sandbox because DFT calculations are required. Instead the checker compares agent's computed values to hidden paper-reported reference values with tolerances and verifies structural consistency for derived descriptors.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "computed_ir_frequencies.csv": "reference_match",
+    "computed_homo_lumo_gaps.csv": "reference_match",
+    "computed_binding_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for IR frequencies, HOMO-LUMO energies, and binding energies extracted from the paper's Tables 2, 7, and 8.",
+      "source_provenance": "Paper's published DFT results: Table 2 (theoretical rows for ligands, experimental rows for complexes), Table 7 (HOMO, LUMO, gap), Table 8 (binding energy, dipole moment).",
+      "generation_method": "Manually transcribed from the accepted manuscript markdown.",
+      "why_not_fabricated": "These are the paper's own reported DFT results; a correct reproduction with a comparable functional and basis set should approximately match these values, and the tolerances are set wide enough to accommodate expected methodological variation while still requiring a genuine re-computation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_ir_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "band_label",
+            "frequency_cm1",
+            "present"
+          ],
+          "units": {
+            "frequency_cm1": "cm⁻¹",
+            "present": "boolean"
+          }
+        },
+        "description": "DFT-computed harmonic frequencies and presence flags for IR bands of ligands and complexes."
+      },
+      {
+        "file": "computed_homo_lumo_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "homo_eV",
+            "lumo_eV",
+            "gap_eV",
+            "electronegativity_eV",
+            "hardness_eV",
+            "softness_eV_recip",
+            "electrophilicity_eV"
+          ],
+          "units": {
+            "homo_eV": "eV",
+            "lumo_eV": "eV",
+            "gap_eV": "eV",
+            "electronegativity_eV": "eV",
+            "hardness_eV": "eV",
+            "softness_eV_recip": "eV⁻¹",
+            "electrophilicity_eV": "eV"
+          }
+        },
+        "description": "HOMO and LUMO energies and derived global reactivity descriptors."
+      },
+      {
+        "file": "computed_binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "binding_energy_kcal_per_mol",
+            "dipole_moment_debye"
+          ],
+          "units": {
+            "binding_energy_kcal_per_mol": "kcal/mol",
+            "dipole_moment_debye": "Debye"
+          }
+        },
+        "description": "Binding energies and dipole moments for Cr(III) complexes."
+      }
+    ],
+    "notes": "The hidden checker compares the agent's computed values to paper-reported references using appropriate tolerances (e.g., ±30 cm⁻¹ for frequencies, ±0.2 eV for orbital energies, ±5 kcal/mol for binding energies, ±0.5 D for dipole moments). Presence flags must match expected disappearance patterns for certain bands."
+  },
+  "steps": [
+    {
+      "id": "ir_freq",
+      "output_file": "computed_ir_frequencies.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "tolerance_cm1": 30.0,
+      "gold_entries": [
+        {
+          "compound": "H2PAPS",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": 1721.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPS",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1667.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPS",
+          "band_label": "ν(C=O)³",
+          "expected_frequency": 1636.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPS",
+          "band_label": "ν(C=N)",
+          "expected_frequency": 1562.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPS",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1041.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": 1711.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1687.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "band_label": "ν(C=O)³",
+          "expected_frequency": null,
+          "expected_present": false
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "band_label": "ν(C=N)",
+          "expected_frequency": 1565.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1051.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPT",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": 1794.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPT",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1671.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPT",
+          "band_label": "ν(C=N)",
+          "expected_frequency": null,
+          "expected_present": false
+        },
+        {
+          "compound": "H2PAPT",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1105.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PAPT",
+          "band_label": "ν(C=S)",
+          "expected_frequency": 1362.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": null,
+          "expected_present": false
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1631.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "band_label": "ν(C=N)",
+          "expected_frequency": 1582.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1075.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "band_label": "ν(C=S)",
+          "expected_frequency": 1363.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": 1663.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1616.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(C=O)³",
+          "expected_frequency": 1654.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(C=N)",
+          "expected_frequency": 1574.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1028.0,
+          "expected_present": true
+        },
+        {
+          "compound": "H2PABT",
+          "band_label": "ν(SH)",
+          "expected_frequency": 2241.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(C=O)¹",
+          "expected_frequency": null,
+          "expected_present": false
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(C=O)²",
+          "expected_frequency": 1658.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(C=O)³",
+          "expected_frequency": 1673.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(C=N)",
+          "expected_frequency": 1577.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(N-N)",
+          "expected_frequency": 1027.0,
+          "expected_present": true
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "band_label": "ν(SH)",
+          "expected_frequency": null,
+          "expected_present": false
+        }
+      ]
+    },
+    {
+      "id": "homo_lumo",
+      "output_file": "computed_homo_lumo_gaps.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "tolerance_eV": 0.2,
+      "gold_entries": [
+        {
+          "compound": "H2PAPS Keto",
+          "homo_eV": -4.937,
+          "lumo_eV": -2.094,
+          "gap_eV": 2.843
+        },
+        {
+          "compound": "H2PAPS Enol",
+          "homo_eV": -4.915,
+          "lumo_eV": -2.037,
+          "gap_eV": 2.878
+        },
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "homo_eV": -4.755,
+          "lumo_eV": -3.604,
+          "gap_eV": 1.151
+        },
+        {
+          "compound": "H2PAPT Thione",
+          "homo_eV": -5.165,
+          "lumo_eV": -2.319,
+          "gap_eV": 2.846
+        },
+        {
+          "compound": "H2PAPT Thiol",
+          "homo_eV": -4.948,
+          "lumo_eV": -2.413,
+          "gap_eV": 2.535
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "homo_eV": -4.855,
+          "lumo_eV": -3.187,
+          "gap_eV": 1.668
+        },
+        {
+          "compound": "H2PABT Thiol",
+          "homo_eV": -5.196,
+          "lumo_eV": -2.653,
+          "gap_eV": 2.543
+        },
+        {
+          "compound": "H2PABT Thione",
+          "homo_eV": -5.021,
+          "lumo_eV": -2.784,
+          "gap_eV": 2.237
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "homo_eV": -3.985,
+          "lumo_eV": -3.825,
+          "gap_eV": 0.159
+        }
+      ]
+    },
+    {
+      "id": "binding",
+      "output_file": "computed_binding_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "tolerance_kcal": 5.0,
+      "tolerance_dipole": 0.5,
+      "gold_entries": [
+        {
+          "compound": "[Cr(H2PAPS)Cl3]",
+          "binding_energy_kcal_per_mol": -4362.0,
+          "dipole_moment_debye": 5.51823
+        },
+        {
+          "compound": "[Cr(HPAPT)Cl2(H2O)2]",
+          "binding_energy_kcal_per_mol": -4713.0,
+          "dipole_moment_debye": 2.58328
+        },
+        {
+          "compound": "[Cr(HPABT)Cl2(H2O)]",
+          "binding_energy_kcal_per_mol": -5089.0,
+          "dipole_moment_debye": 1.7778
+        }
+      ]
+    }
+  ]
+}

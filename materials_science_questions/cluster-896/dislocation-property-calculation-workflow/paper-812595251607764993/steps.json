@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_0",
+    "title": "Supercell construction",
+    "role": "process",
+    "action": "Construct a non-orthogonal supercell containing a quadrupolar arrangement of ±½[111] screw dislocations in bcc Be using the Bravais vectors defined in the paper with integer parameters m=30, n=18, giving a 540-atom supercell. Generate the initial atomic positions in the bcc structure with the inserted dislocation dipole. Output a supercell configuration file suitable for ABINIT input.",
+    "output_file": "",
+    "evidence": "supercell_input.in",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "Relax bcc screw dislocation dipole",
+    "role": "process",
+    "action": "Perform DFT ionic relaxation of the constructed 540-atom supercell using ABINIT with PBE functional, plane-wave cutoff 20 Ha, 1×1×16 k-point grid, and the JTH Be PAW potential. Converge forces to <5×10⁻⁴ Ha/bohr. This yields the relaxed atomic positions for the bcc phase containing a locally relaxed screw dislocation dipole.",
+    "output_file": "",
+    "evidence": "relaxed_bcc_positions.xsf",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Dislocation-free MEP calculation",
+    "role": "scored",
+    "action": "For each lattice parameter a0 = 3.592, 3.786, 4.110 bohrs, use a conventional 2-atom bcc cell and apply the tensorial Burgers transformation interpolation (shear s and shuffle η) with ideal c/a=√(8/3). For a grid of s ∈ [0,1], minimize the total energy with respect to η using ABINIT relaxations. Record the optimized η and the corresponding energy (relative to bcc), pressure, and von Mises stress along the MEP.",
+    "output_file": "dislocation_free_MEP.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the minimum-energy path data for three lattice parameters, with columns a0, s, eta, energy (meV/atom), pressure (GPa), von Mises stress (GPa).",
+    "output_schema": "columns: a0 (float), s (float), eta (float), energy_meV_per_atom (float), pressure_GPa (float), von_Mises_stress_GPa (float)"
+  },
+  {
+    "id": "step_3",
+    "title": "Shear-induced transformation with dislocations",
+    "role": "scored",
+    "action": "Take the relaxed bcc supercell from step_1 at a0=3.592 bohrs. Apply a stepwise global shear deformation (s from 0 to 1) on the (1-10) plane at constant volume using the Burgers interpolation. For each s, relax all ionic positions with ABINIT. After each relaxation, record the total energy, pressure, and the fraction of atoms identified as hcp via an appropriate structure analysis (e.g., adaptive common neighbor analysis).",
+    "output_file": "shear_transformation_energy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with one row per shear step (forward direction). Columns: s, total_energy (eV), pressure (GPa), hcp_fraction.",
+    "output_schema": "columns: s (float), total_energy_eV (float), pressure_GPa (float), hcp_fraction (float)"
+  },
+  {
+    "id": "step_4",
+    "title": "Pressure-induced transformation with dislocations",
+    "role": "scored",
+    "action": "Starting from the relaxed bcc supercell from step_1 at a0=3.592 bohrs, simulate the pressure-induced transformation by varying the lattice parameter a0 from 3.592 to 4.740 bohrs in steps (forward) and then back to 3.592 bohrs (reverse). At each volume, fully relax ionic positions with ABINIT. Record the pressure and label the overall phase (bcc, hcp, or mixed) based on local structure analysis.",
+    "output_file": "pressure_volume_hysteresis.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with one row per volume step for the full cycle. Columns: volume (bohr^3/atom), pressure (GPa), phase_label.",
+    "output_schema": "columns: volume_bohr3_per_atom (float), pressure_GPa (float), phase_label (string: 'bcc', 'hcp', or 'mixed')"
+  }
+]

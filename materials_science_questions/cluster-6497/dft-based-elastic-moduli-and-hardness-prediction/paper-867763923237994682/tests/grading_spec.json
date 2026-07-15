@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "Agent artifact is the final computed results.json; raw DFT outputs (energy/strain data) are not available to recompute ⟨k⟩0 from scratch. The checker uses result-level comparison to paper's reported gold for diamond and graphene, and verifies structural trends and ratio bounds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for bulk diamond (a0, B0, ⟨k⟩0) and graphene (a0, ⟨k⟩0) from paper Table 1.",
+      "source_provenance": "Paper Table 1 (present work column)",
+      "generation_method": "direct transcription",
+      "why_not_fabricated": "Values are exactly as reported in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "description": "JSON object with keys: bulk_diamond, graphene, nd_small, nd_medium, nd_hydro, c60. Each value is an object containing: num_atoms (integer), a0 (float, angstrom, optional), B0 (float, GPa, optional), k_direct (float, N/m), k_est (float, N/m), ratio_k (float)."
+        },
+        "description": "Provides the directly computed and estimated average bond stiffnesses for all six systems, as well as bulk moduli for the periodic reference systems. The checker compares these values to hidden paper‑reported gold and verifies required trends."
+      }
+    ],
+    "notes": "The task reproduces a minimal subset of the paper's structures; the full set of 20 nanodiamonds and 7 fullerenes is not required. Bulk modulus is computed only for the periodic reference systems; for nanoclusters the volume definition is ambiguous and B0 may be omitted. The focus is on the primary claim and the validation of the geometry‑based estimation of <k>0."
+  },
+  "steps": [
+    {
+      "id": "diamond_accuracy",
+      "output_file": "results.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "params": {
+        "gold_a0": 3.572,
+        "tolerance_a0": 0.01,
+        "gold_B0": 434.6,
+        "tolerance_B0": 10.0,
+        "gold_k_direct": 465.7,
+        "tolerance_k_direct": 10.0
+      }
+    },
+    {
+      "id": "graphene_accuracy",
+      "output_file": "results.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "params": {
+        "gold_a0": 2.468,
+        "tolerance_a0": 0.01,
+        "gold_k_direct": 719.1,
+        "tolerance_k_direct": 10.0
+      }
+    },
+    {
+      "id": "trends_ordering",
+      "output_file": "results.json",
+      "kind": "structural",
+      "weight": 0.4,
+      "params": {
+        "conditions": [
+          {
+            "left": "nd_small",
+            "op": ">",
+            "right": "bulk_diamond",
+            "field": "k_direct",
+            "desc": "nd_small > bulk_diamond"
+          },
+          {
+            "left": "nd_medium",
+            "op": ">",
+            "right": "bulk_diamond",
+            "field": "k_direct",
+            "desc": "nd_medium > bulk_diamond"
+          },
+          {
+            "left": "nd_small",
+            "op": ">",
+            "right": "nd_medium",
+            "field": "k_direct",
+            "desc": "nd_small > nd_medium"
+          },
+          {
+            "left": "nd_hydro",
+            "op": "<",
+            "right": "bulk_diamond",
+            "field": "k_direct",
+            "desc": "nd_hydro < bulk_diamond"
+          },
+          {
+            "left": "c60",
+            "op": ">",
+            "right": "bulk_diamond",
+            "field": "k_direct",
+            "desc": "c60 > bulk_diamond"
+          },
+          {
+            "left": "c60",
+            "op": "<",
+            "right": "graphene",
+            "field": "k_direct",
+            "desc": "c60 < graphene"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ratio_bounds",
+      "output_file": "results.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "params": {
+        "systems": [
+          "bulk_diamond",
+          "graphene",
+          "nd_small",
+          "nd_medium",
+          "nd_hydro",
+          "c60"
+        ],
+        "field": "ratio_k",
+        "min": 0.9,
+        "max": 1.1
+      }
+    }
+  ]
+}

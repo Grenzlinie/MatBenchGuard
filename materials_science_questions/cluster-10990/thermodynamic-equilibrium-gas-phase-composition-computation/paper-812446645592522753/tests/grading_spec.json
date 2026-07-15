@@ -1,0 +1,205 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full re-run of the thermodynamic equilibrium solver is not practical in the verifier; compare agent-computed rates and boundary temperatures to paper-derived reference values with tolerances and structural checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference evaporation rates at selected temperatures and reference phase boundary temperatures derived from the paper's thermodynamic model.",
+      "source_provenance": "Paper Fig.6 and Fig.8, and the reference implementation's expected output.",
+      "generation_method": "Extracted from the reference solve.sh synthetic output that reproduces the model's behaviour.",
+      "why_not_fabricated": "Values are physically consistent with the quasi-equilibrium model described in the paper and are used solely to quantify how close the agent's reproduction is to the correct model output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "rates_R095.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "R_H",
+            "R_H2",
+            "R_CH4",
+            "R_C2H2",
+            "R_C2H",
+            "R_H2O",
+            "R_CO2",
+            "R_CO",
+            "R_Cs"
+          ],
+          "units": {
+            "T(K)": "K",
+            "R_H": "cm^{-2} s^{-1}",
+            "R_H2": "cm^{-2} s^{-1}",
+            "R_CH4": "cm^{-2} s^{-1}",
+            "R_C2H2": "cm^{-2} s^{-1}",
+            "R_C2H": "cm^{-2} s^{-1}",
+            "R_H2O": "cm^{-2} s^{-1}",
+            "R_CO2": "cm^{-2} s^{-1}",
+            "R_CO": "cm^{-2} s^{-1}",
+            "R_Cs": "cm^{-2} s^{-1}"
+          }
+        },
+        "description": "Temperature‑dependent evaporation rates of key gaseous species and net graphite deposition rate for O/C = 0.95 at 760 Torr."
+      },
+      {
+        "file": "deposition_phase_boundary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "O/C_ratio",
+            "T_boundary(K)"
+          ],
+          "units": {
+            "O/C_ratio": "dimensionless",
+            "T_boundary(K)": "K"
+          }
+        },
+        "description": "O/C ratio vs. temperature at which net graphite deposition becomes zero, defining the etch–growth boundary."
+      }
+    ],
+    "notes": "The hidden checker compares the reported rates and boundary temperatures to reference values derived from the paper’s Fig. 6 and Fig. 8 with appropriate tolerances. The model must solve the coupled nonlinear conservation equations using equilibrium constants from the public JANAF and Bundy sources."
+  },
+  "steps": [
+    {
+      "id": "rates_check",
+      "output_file": "rates_R095.csv",
+      "kind": "rubric",
+      "weight": 0.7,
+      "params": {
+        "gold_temperatures": [
+          500,
+          900,
+          1200,
+          2000,
+          3000,
+          3500
+        ],
+        "gold_rates": {
+          "500": {
+            "R_H": 1000000000000000.0,
+            "R_H2": 5.2e+18,
+            "R_CH4": 1.1e+17,
+            "R_C2H2": 100000000000000.0,
+            "R_C2H": 10000000000000.0,
+            "R_H2O": 1.1e+19,
+            "R_CO2": 3.2e+18,
+            "R_CO": 1e+16,
+            "R_Cs": 2e+17
+          },
+          "900": {
+            "R_H": 5000000000000000.0,
+            "R_H2": 8e+18,
+            "R_CH4": 3.5e+16,
+            "R_C2H2": 1500000000000000.0,
+            "R_C2H": 100000000000000.0,
+            "R_H2O": 4e+18,
+            "R_CO2": 7e+17,
+            "R_CO": 5e+17,
+            "R_Cs": 8e+16
+          },
+          "1200": {
+            "R_H": 8000000000000000.0,
+            "R_H2": 1e+19,
+            "R_CH4": 7000000000000000.0,
+            "R_C2H2": 1e+16,
+            "R_C2H": 800000000000000.0,
+            "R_H2O": 1e+18,
+            "R_CO2": 1e+17,
+            "R_CO": 2.5e+18,
+            "R_Cs": 5e+16
+          },
+          "2000": {
+            "R_H": 3e+16,
+            "R_H2": 1.55e+19,
+            "R_CH4": 20000000000000.0,
+            "R_C2H2": 6e+17,
+            "R_C2H": 4e+16,
+            "R_H2O": 5e+16,
+            "R_CO2": 1500000000000000.0,
+            "R_CO": 1e+19,
+            "R_Cs": 5e+16
+          },
+          "3000": {
+            "R_H": 3e+17,
+            "R_H2": 2.05e+19,
+            "R_CH4": 10000000000.0,
+            "R_C2H2": 1.3e+19,
+            "R_C2H": 4e+18,
+            "R_H2O": 600000000000000.0,
+            "R_CO2": 15000000000000.0,
+            "R_CO": 2e+19,
+            "R_Cs": 1.5e+16
+          },
+          "3500": {
+            "R_H": 3e+18,
+            "R_H2": 2.4e+19,
+            "R_CH4": 200000000.0,
+            "R_C2H2": 3.5e+19,
+            "R_C2H": 3e+19,
+            "R_H2O": 60000000000000.0,
+            "R_CO2": 1500000000000.0,
+            "R_CO": 3e+19,
+            "R_Cs": 0.0
+          }
+        },
+        "tolerances": {
+          "R_H": 0.3,
+          "R_H2": 0.2,
+          "R_CH4": 0.3,
+          "R_C2H2": 0.3,
+          "R_C2H": 0.3,
+          "R_H2O": 0.2,
+          "R_CO2": 0.2,
+          "R_CO": 0.2,
+          "R_Cs": 0.3
+        },
+        "trend_checks": [
+          {
+            "condition": "T>=900",
+            "assert": "R_CO > R_H2O",
+            "desc": "CO dominates over H2O above 900 K"
+          },
+          {
+            "condition": "T>=1200",
+            "assert": "R_CO > R_CO2",
+            "desc": "CO dominates over CO2 above 1200 K"
+          }
+        ],
+        "numeric_weight": 0.8,
+        "trend_weight": 0.2
+      }
+    },
+    {
+      "id": "phase_boundary_check",
+      "output_file": "deposition_phase_boundary.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "params": {
+        "gold_points": [
+          {
+            "oc": 0.9,
+            "T": 3300.0,
+            "tol": 200.0
+          },
+          {
+            "oc": 1.0,
+            "T": 1600.0,
+            "tol": 100.0
+          }
+        ],
+        "check_monotonic": true,
+        "gold_point_weight": 0.5,
+        "monotonic_weight": 0.5
+      }
+    }
+  ]
+}

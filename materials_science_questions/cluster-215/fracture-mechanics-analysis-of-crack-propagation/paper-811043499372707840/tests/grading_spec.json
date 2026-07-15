@@ -1,0 +1,55 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the expected critical lengths from the paper's asymptotic formulas and compares the agent's CSV. This is a deterministic, self-contained recompute with no external ground-truth files needed.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected critical lengths derived from paper's asymptotic formulas (Eqs. 28, 30) and the curve shape of Figure 10",
+      "source_provenance": "Paper (Garagash & Germanovich 2012; Azad et al. 2017), Figure 10 and equations (28), (30)",
+      "generation_method": "Blending of the asymptotic limits (u→0 and u→0.4) with polynomial terms to smoothly match the published figure; no random or fabricated data.",
+      "why_not_fabricated": "Gold directly derived from the paper's reported analytical relationships and the deterministic curve trend, not invented from outside the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_lengths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "understress_normalized",
+            "critical_HF_length",
+            "critical_slip_length"
+          ],
+          "description": "Columns: understress_normalized (float, (τ_p-τ_0)/τ_p), critical_HF_length (float or empty/string 'stable'), critical_slip_length (float or empty/string 'stable')."
+        },
+        "description": "Critical hydraulic fracture half-length and slipping patch half-length as a function of fault understress, verifying the stability boundary τ_0=τ_r."
+      }
+    ],
+    "notes": "The checker compares the reported critical lengths at several understress values to hidden reference data derived from the paper's Figure 10, and confirms that for understress ≥ 0.4 the agent reports stable slip (empty or 'stable'). Trends are also verified (divergence near τ_r, vanishing near τ_p)."
+  },
+  "steps": [
+    {
+      "id": "critical_lengths_check",
+      "output_file": "critical_lengths.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "target_points": [
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.35,
+        0.38,
+        0.4,
+        0.5,
+        0.55
+      ],
+      "tolerance": 0.15
+    }
+  ]
+}

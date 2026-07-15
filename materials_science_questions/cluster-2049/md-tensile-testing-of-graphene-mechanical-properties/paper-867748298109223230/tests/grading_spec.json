@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Analytical polygon constants recomputed from formula; simulation values compared to paper reference with tolerances because full simulation re-run in verifier is impossible (T0 fallback).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.json": "reference_match",
+    "analytical_result.json": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "flat": "object with keys sigma_inf (number), C (number), r_crit (number), data (array of [number,number] pairs)",
+            "buckled": "object with same structure"
+          },
+          "items": {},
+          "units": {
+            "sigma_inf": "eV/Å",
+            "C": "Å",
+            "r_crit": "Å",
+            "data[0]": "Å",
+            "data[1]": "eV/Å"
+          }
+        },
+        "description": "Simulation‑derived line tension scaling parameters σ∞ and C, and critical radius r_crit for both flat and buckled amorphous graphene, together with the raw (r_v, σ) pairs used for fitting."
+      },
+      {
+        "file": "analytical_result.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "sigma_constant": "number",
+            "coefficient_1_over_r": "number",
+            "computed_at_r_p": "number",
+            "sigma_at_r_p": "number"
+          },
+          "items": {},
+          "units": {
+            "sigma_constant": "eV/Å",
+            "coefficient_1_over_r": "eV·Å",
+            "computed_at_r_p": "Å",
+            "sigma_at_r_p": "eV/Å"
+          }
+        },
+        "description": "Analytical line‑tension constant and 1/r coefficient from the polygon model, evaluated for a chosen large r_p."
+      }
+    ],
+    "notes": "The simulation_results.json will be compared against the paper’s reported values (flat: σ∞≈6.95 eV/Å, C≈-30.70 Å, r_crit≈3.48 Å; buckled: σ∞≈6.61 eV/Å, C≈-33.67 Å, r_crit≈3.31 Å) with appropriate tolerances. The analytical_result.json will be checked by recomputing the deterministic constants from the published formula and comparing within a tight absolute tolerance."
+  },
+  "steps": [
+    {
+      "id": "simulation_flat_buckled",
+      "output_file": "simulation_results.json",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "description": "Score σ∞, C, r_crit for flat and buckled amorphous graphene against paper values.",
+      "cases": {
+        "flat": {
+          "sigma_inf": {
+            "value": 6.95,
+            "rel_tol": 0.05
+          },
+          "C": {
+            "value": -30.7,
+            "rel_tol": 0.1
+          },
+          "r_crit": {
+            "value": 3.48,
+            "rel_tol": 0.05
+          }
+        },
+        "buckled": {
+          "sigma_inf": {
+            "value": 6.61,
+            "rel_tol": 0.05
+          },
+          "C": {
+            "value": -33.67,
+            "rel_tol": 0.1
+          },
+          "r_crit": {
+            "value": 3.31,
+            "rel_tol": 0.05
+          }
+        }
+      }
+    },
+    {
+      "id": "analytical_polygon",
+      "output_file": "analytical_result.json",
+      "kind": "recompute_exact",
+      "weight": 0.3,
+      "description": "Recompute analytical constants and compare with agent's values.",
+      "parameters": {
+        "beta": 5.511,
+        "d": 1.42,
+        "n_for_rp": 100
+      },
+      "absolute_tolerance": 1e-06
+    }
+  ]
+}

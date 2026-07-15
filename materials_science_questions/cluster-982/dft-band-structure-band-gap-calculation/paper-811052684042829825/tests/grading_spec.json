@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute band gaps, formation energies and diffusion barriers vary with the DFT toolchain; scoring uses physically robust structural trends that any correct DFT reproduction must exhibit, as mandated by the approved plan.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.txt": "structural_audit",
+    "defect_formation_energies.csv": "structural_audit",
+    "diffusion_barriers.csv": "structural_audit",
+    "conductivity_summary.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Two lines with keys 'PBE_bandgap_eV' and 'HSE06_bandgap_eV' followed by ' = ' and a float value."
+        },
+        "description": "Semiconductor band gap values from PBE and HSE06 functionals."
+      },
+      {
+        "file": "defect_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_type",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Formation energies of charged native defects and polarons."
+      },
+      {
+        "file": "diffusion_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_type",
+            "orientation",
+            "barrier_eV"
+          ],
+          "units": {
+            "barrier_eV": "eV"
+          }
+        },
+        "description": "Diffusion barrier energies for defects and polarons along different crystallographic directions."
+      },
+      {
+        "file": "conductivity_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "charge_carrier",
+            "mobility_cm2_Vs",
+            "conductivity_S_cm",
+            "temperature_K"
+          ],
+          "units": {
+            "mobility_cm2_Vs": "cm²/(V·s)",
+            "conductivity_S_cm": "S/cm",
+            "temperature_K": "K"
+          }
+        },
+        "description": "Mobility and conductivity estimates for the main charge carriers at 300 K."
+      }
+    ],
+    "notes": "Scoring is based on structural trends (T3): PBE band gap < HSE06 band gap and both > 1.0 eV; VLi− and p+ have lowest formation energies (≤1.5 eV) and neutral vacancies are higher; p+ barriers ≤0.1 eV, VLi− barriers <1 eV, VS22+ barriers >0.4 eV, and p+ is the smallest; p+ mobility >> VLi− mobility (factor ≥10⁸) and electronic conductivity >> ionic conductivity at 300 K. Exact values are not required."
+  },
+  "steps": [
+    {
+      "id": "check_bandgaps_trend",
+      "output_file": "band_gaps.txt",
+      "weight": 0.2,
+      "kind": "rubric",
+      "description": "Verify PBE gap < HSE gap and both > 1.0 eV",
+      "target": null
+    },
+    {
+      "id": "check_formation_energies_trend",
+      "output_file": "defect_formation_energies.csv",
+      "weight": 0.2,
+      "kind": "rubric",
+      "description": "Verify V_Li- and p+ formation energies ≤ 1.5 eV and are lower than V_S2_2+ and p-",
+      "target": null
+    },
+    {
+      "id": "check_diffusion_barriers_trend",
+      "output_file": "diffusion_barriers.csv",
+      "weight": 0.25,
+      "kind": "rubric",
+      "description": "Verify p+ barriers ≤ 0.1 eV and are the smallest; V_Li- barriers < 1.0 eV; V_S2_2+ barriers > 0.4 eV",
+      "target": null
+    },
+    {
+      "id": "check_conductivity_summary_trend",
+      "output_file": "conductivity_summary.csv",
+      "weight": 0.35,
+      "kind": "rubric",
+      "description": "Verify p+ mobility >> V_Li- mobility (ratio ≥ 10^8) and electronic conductivity >> ionic conductivity (ratio ≥ 10^8)",
+      "target": null
+    }
+  ]
+}

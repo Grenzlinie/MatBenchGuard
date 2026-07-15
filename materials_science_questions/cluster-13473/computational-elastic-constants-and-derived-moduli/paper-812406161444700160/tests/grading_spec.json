@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputing isotropic moduli and directional moduli from the agent's raw stiffness tensor; compute-driven paper supports T1 with Hill averages and compliance inversion.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_pure_matrix_properties.json": "reference_match",
+    "step_02_reinforced_properties.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold pure matrix moduli and tolerances",
+      "source_provenance": "Paper Table 3 (E=2.6 GPa, G=0.92 GPa, B=4.933 GPa, ν=0.412)",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the paper's own computed values used as hidden reference to validate reproducibility."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reinforced E33 range gold",
+      "source_provenance": "Taskability verification method (E33 between 4–8 GPa for 100 Å rod)",
+      "generation_method": "from plan's structural check",
+      "why_not_fabricated": "Derived from paper's Table 2c and simulated E33=5.62 GPa; range accommodates implementation spread."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_pure_matrix_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "stiffness_tensor": "6x6 list of floats, GPa",
+            "E": "float, GPa",
+            "G": "float, GPa",
+            "B": "float, GPa",
+            "nu": "float, dimensionless",
+            "lambda": "float, GPa",
+            "mu": "float, GPa"
+          },
+          "description": "Isotropic moduli must be derived from the stiffness tensor using standard continuum formulas."
+        },
+        "description": "Elastic stiffness tensor and derived mechanical moduli for pure amorphous polyarylate."
+      },
+      {
+        "file": "step_02_reinforced_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "stiffness_tensor": "6x6 list of floats, GPa",
+            "E33": "float, GPa",
+            "E11": "float, GPa",
+            "G44": "float, GPa"
+          },
+          "description": "The checker will also verify the structural relation E33 > E11."
+        },
+        "description": "Elastic stiffness tensor and directional moduli for polyarylate reinforced with a 100 Å poly(p‑phenylene) rod."
+      }
+    ],
+    "notes": "The checker recomputes derived moduli from the submitted stiffness tensor and compares them to paper‑reported reference values with appropriate tolerances. It also verifies tensor symmetry, positive definiteness, and the required trend E33 > E11. The task uses a reference‑match policy; the gold values are the experimentally valid ranges and trends reported in the paper."
+  },
+  "steps": [
+    {
+      "id": "pure_matrix_symmetry",
+      "output_file": "step_01_pure_matrix_properties.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "tolerance": 0.5
+    },
+    {
+      "id": "pure_matrix_positive_definite",
+      "output_file": "step_01_pure_matrix_properties.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "eigenvalue_min": 0.0
+    },
+    {
+      "id": "pure_matrix_moduli",
+      "output_file": "step_01_pure_matrix_properties.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "gold": {
+        "B": 4.933,
+        "G": 0.92,
+        "E": 2.6,
+        "nu": 0.412
+      },
+      "tolerances": {
+        "B": 1.0,
+        "G": 0.2,
+        "E": 0.5,
+        "nu": 0.05
+      },
+      "use_hill_averages": true
+    },
+    {
+      "id": "reinforced_symmetry",
+      "output_file": "step_02_reinforced_properties.json",
+      "kind": "rubric",
+      "weight": 0.02,
+      "tolerance": 0.5
+    },
+    {
+      "id": "reinforced_positive_definite",
+      "output_file": "step_02_reinforced_properties.json",
+      "kind": "rubric",
+      "weight": 0.02,
+      "eigenvalue_min": 0.0
+    },
+    {
+      "id": "reinforced_E33_E11_trend",
+      "output_file": "step_02_reinforced_properties.json",
+      "kind": "rubric",
+      "weight": 0.12,
+      "check": "E33 > E11"
+    },
+    {
+      "id": "reinforced_E33_range",
+      "output_file": "step_02_reinforced_properties.json",
+      "kind": "rubric",
+      "weight": 0.24,
+      "min": 4.0,
+      "max": 8.0
+    }
+  ]
+}

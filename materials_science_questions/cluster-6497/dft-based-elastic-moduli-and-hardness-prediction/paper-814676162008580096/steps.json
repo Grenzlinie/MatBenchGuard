@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step01_initial_structure",
+    "title": "Prepare initial crystal structures",
+    "role": "process",
+    "action": "Define the hexagonal beta (P6_3/m) and cubic spinel gamma (Fd-3m) structures of Ge3N4 using published lattice parameters and atomic positions as initial guesses. Write these structures to input files for the DFT code.",
+    "output_file": "",
+    "evidence": "initial_structures.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Create the initial atomic coordinates for both phases. This step is a prerequisite for all subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_dft_multivolume",
+    "title": "DFT geometry optimization at multiple volumes",
+    "role": "process",
+    "action": "For each phase, perform LDA plane-wave DFT structural relaxations at a set of at least seven fixed unit-cell volumes spanning the equilibrium region. At each volume, relax internal coordinates and lattice shape while preserving space-group symmetry. Record the total energy (E) and volume (V) for each relaxed structure.",
+    "output_file": "",
+    "evidence": "ev_data.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the E(V) data needed for the equation-of-state fit. This is the core first-principles step that produces the raw energetic input for the headline properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_eos_fit",
+    "title": "Birch-Murnaghan EOS fitting",
+    "role": "scored",
+    "action": "Fit the computed E(V) data to the Birch-Murnaghan equation of state to extract the equilibrium binding energy (E0), equilibrium volume (V0), bulk modulus (K), and pressure derivative (K′). Report these four parameters for both phases in JSON.",
+    "output_file": "eos_data.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This artifact provides the equilibrium equation-of-state parameters. The checker compares the reported K, K′, E0, and V0 to the paper’s LDA values with tolerance.",
+    "output_schema": "JSON object with keys 'beta' and 'gamma', each containing E0 (eV/atom), V0 (Å³/atom), K (GPa), K_prime (dimensionless)."
+  },
+  {
+    "id": "step04_equilibrium_structure",
+    "title": "Extract optimized equilibrium structure",
+    "role": "scored",
+    "action": "From the relaxed geometry at the volume closest to the fitted V0, collect the lattice constants and all fractional internal coordinates (including the Wyckoff positions as given in the paper). Report them as structured JSON.",
+    "output_file": "structural_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The optimized zero-pressure crystal structure. Comparison to paper’s LDA-optimized values verifies the DFT relaxation. This is load-bearing because the coordinates cannot be guessed without actually running the DFT geometry optimization.",
+    "output_schema": "JSON object with keys 'beta' and 'gamma', each containing 'lattice_constants' (object: a, c for beta; a for gamma) and 'internal_coordinates' (list of objects with atom, site_label, fractional_coordinates x,y,z)."
+  },
+  {
+    "id": "step05_band_gap",
+    "title": "LDA band gap calculation",
+    "role": "scored",
+    "action": "Using the optimized equilibrium structure, compute the electronic band structure along high-symmetry paths. Extract the LDA band gap at the Gamma point. Report the direct band gap for each phase in a JSON file.",
+    "output_file": "band_gap.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The LDA band gap is a headline electronic property. The checker compares the reported values to the paper’s LDA gaps within a tolerance.",
+    "output_schema": "JSON object with keys 'beta' and 'gamma', each containing 'LDA_gap' (float in eV)."
+  },
+  {
+    "id": "step06_phonon_frequencies",
+    "title": "Gamma-point phonon calculation",
+    "role": "scored",
+    "action": "At the equilibrium geometry, compute the Gamma-point phonon frequencies using finite-displacement method (or phonopy). List all modes with their irreducible representation labels, and indicate Raman/IR activity. Report in JSON.",
+    "output_file": "phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The phonon spectrum is a key vibrational fingerprint used for phase identification and mode assignment. The checker compares frequencies and symmetries to the paper’s values within tolerance.",
+    "output_schema": "JSON object with keys 'beta' and 'gamma'. Each value is an array of objects with keys 'frequency_cm-1' (number), 'symmetry_label' (string), 'ir_active' (boolean), 'raman_active' (boolean)."
+  },
+  {
+    "id": "step07_transition_pressure",
+    "title": "Beta→gamma phase transition pressure",
+    "role": "scored",
+    "action": "Using the fitted EOS or directly from the E(V) data, compute the enthalpy H = E + pV as a function of pressure for both phases. Determine the pressure at which the enthalpies cross, i.e., the equilibrium beta→gamma transition pressure. Report this value in a text file.",
+    "output_file": "transition_pressure.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The transition pressure is a central result linking structure, stability, and pressure. The checker compares the reported number to the paper’s LDA value with a tolerance.",
+    "output_schema": "A single line containing the transition pressure in GPa (e.g., '5.2')."
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_build_models",
+    "title": "Prepare simulation-ready structures",
+    "role": "process",
+    "action": "Obtain the crystal structures of DICRO-3-Ni-i and DICRO-3-Cu-i from the CSD (deposition numbers 1448216 and 1448217). Assign Lennard-Jones parameters (UFF) and partial charges to all framework atoms consistently (e.g., DDEC or QEq). Use TraPPE parameters for CO₂. Create the input files needed by a GCMC code for CO₂ adsorption simulations of both materials at 273 K, 283 K, and 293 K over 0–1 bar.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build atomistic models with force-field assignment from public crystal structures. No scored output; required to enable downstream GCMC simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_ni",
+    "title": "Run GCMC simulations for DICRO-3-Ni-i",
+    "role": "process",
+    "action": "Perform Grand Canonical Monte Carlo simulations of CO₂ adsorption in DICRO-3-Ni-i at 273 K, 283 K, and 293 K over a range of fugacities approximately 0–1 bar. Collect the per-state-point absolute CO₂ loading (mmol/g) and potential energy data from the raw simulation outputs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate; the raw GCMC outputs for DICRO-3-Ni-i are used to construct the scored isotherm CSV.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_cu",
+    "title": "Run GCMC simulations for DICRO-3-Cu-i",
+    "role": "process",
+    "action": "Perform Grand Canonical Monte Carlo simulations of CO₂ adsorption in DICRO-3-Cu-i at 273 K, 283 K, and 293 K over a range of fugacities approximately 0–1 bar. Collect the per-state-point absolute CO₂ loading (mmol/g) and potential energy data from the raw simulation outputs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate; the raw GCMC outputs for DICRO-3-Cu-i are used to construct the scored isotherm CSV.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_isotherm_ni",
+    "title": "Generate DICRO-3-Ni-i isotherm file",
+    "role": "scored",
+    "action": "Extract CO₂ loading (mmol/g) as a function of fugacity (bar) from the raw GCMC output for DICRO-3-Ni-i at each temperature (273, 283, 293 K). Write a CSV file with one row per state point and columns Temperature_K, Fugacity_bar, Loading_mmol_g. Cover enough points to define the isotherm shape over 0–1 bar.",
+    "output_file": "step_01_isotherms_Ni.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compiled CO₂ adsorption isotherm data for DICRO-3-Ni-i. The checker validates physical plausibility and uses the data to recompute the zero-loading isosteric heat of adsorption.",
+    "output_schema": "CSV with header row and columns: Temperature_K (float, 273 / 283 / 293), Fugacity_bar (float, 0 to ~1), Loading_mmol_g (float, non-negative). One row per (temperature, fugacity) state point."
+  },
+  {
+    "id": "step_isotherm_cu",
+    "title": "Generate DICRO-3-Cu-i isotherm file",
+    "role": "scored",
+    "action": "Extract CO₂ loading (mmol/g) as a function of fugacity (bar) from the raw GCMC output for DICRO-3-Cu-i at each temperature (273, 283, 293 K). Write a CSV file with one row per state point and columns Temperature_K, Fugacity_bar, Loading_mmol_g. Cover enough points to define the isotherm shape over 0–1 bar.",
+    "output_file": "step_02_isotherms_Cu.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compiled CO₂ adsorption isotherm data for DICRO-3-Cu-i. The checker validates physical plausibility and uses the data to recompute the zero-loading isosteric heat of adsorption.",
+    "output_schema": "CSV with header row and columns: Temperature_K (float, 273 / 283 / 293), Fugacity_bar (float, 0 to ~1), Loading_mmol_g (float, non-negative). One row per (temperature, fugacity) state point."
+  },
+  {
+    "id": "step_qst",
+    "title": "Compute zero-loading isosteric heat of adsorption",
+    "role": "scored",
+    "action": "From the three-temperature isotherm data in the previous two steps, fit a virial equation to the low-loading region of each material's isotherms and apply the Clausius-Clapeyron relation to derive the zero-loading isosteric heat of adsorption (Qst, kJ/mol) for DICRO-3-Ni-i and DICRO-3-Cu-i. Output a JSON file containing the two values.",
+    "output_file": "step_03_Qst_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derived zero-loading Qst values for both materials from the simulated isotherms. The checker recomputes Qst independently from the submitted isotherm CSVs and compares the derived values to hidden gold.",
+    "output_schema": "JSON object with numeric fields: \"DICRO-3-Ni-i_zero_loading_Qst_kJmol\" (float, positive), and \"DICRO-3-Cu-i_zero_loading_Qst_kJmol\" (float, positive)."
+  }
+]

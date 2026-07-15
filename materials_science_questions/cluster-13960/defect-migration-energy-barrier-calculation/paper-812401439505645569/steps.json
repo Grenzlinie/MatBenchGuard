@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_prepare_structures",
+    "title": "Generate initial supercell structures",
+    "role": "process",
+    "action": "Create 4x4x1 AB-stacked graphite supercells for the perfect unsheared cell, perfect sheared cells (ABC-like and AA-like shifts of 0.71 Å), and defect configurations: grafted interstitial (unsheared), spiro interstitial (ABC-sheared), threefold interstitial (AA-sheared), V2^1(ββ) and V2^2(ββ) divacancies, the intimate Frenkel pair (interstitial adjacent to a vacancy in adjacent layers), and a separated interstitial+vacancy pair. Write the coordinate files for subsequent DFT steps.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step to prepare all required supercell coordinate files.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_perfect_reference",
+    "title": "Compute perfect unsheared reference energy",
+    "role": "process",
+    "action": "Run DFT relaxation of the perfect AB-stacked supercell to obtain the total energy E_perfect_AB and the number of atoms N. This energy serves as the reference for formation energy calculations.",
+    "output_file": "",
+    "evidence": "reference_energy.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference calculation required for all formation energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_stack_fault",
+    "title": "Compute stacking fault energies",
+    "role": "scored",
+    "action": "Perform DFT relaxation of defect-free sheared supercells (ABC-like and AA-like) to obtain total energies E_perfect_ABC and E_perfect_AA. Compute stacking fault energies γ(3) = (E_perfect_ABC - E_perfect_AB) / A and γ(4) = (E_perfect_AA - E_perfect_AB) / A, where A = 82.64 Å².",
+    "output_file": "step_02_stack_fault_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stacking fault energies for the two shear directions.",
+    "output_schema": "columns: stacking_type (string, one of 'threefold (AA-type)', 'fourfold (ABC-type)'), energy_meV_per_Ang2 (float)"
+  },
+  {
+    "id": "step_interstitials",
+    "title": "Compute interstitial formation energies",
+    "role": "scored",
+    "action": "Perform DFT relaxation of interstitial-containing supercells: (i) grafted two-bond interstitial in the unsheared AB cell, (ii) spiro interstitial in the ABC-sheared cell, (iii) threefold interstitial in the AA-sheared cell. Compute formation energies Ei = E(defect) - E_perfect_AB - μ_C, where μ_C = E_perfect_AB / N.",
+    "output_file": "step_01_interstitial_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation energies of the three interstitial configurations.",
+    "output_schema": "columns: defect_name (string, one of 'grafted', 'spiro', 'threefold'), formation_energy_eV (float)"
+  },
+  {
+    "id": "step_divacancies",
+    "title": "Compute interlayer divacancy formation energies",
+    "role": "scored",
+    "action": "Perform DFT relaxation of the V2^1(ββ) and V2^2(ββ) supercells. Compute formation energies Ef = E(defect) - E_perfect_AB + 2μ_C.",
+    "output_file": "step_04_divacancy_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation energies of the two interlayer divacancies.",
+    "output_schema": "columns: defect_name (string, one of 'V2^1(beta beta)', 'V2^2(beta beta)'), formation_energy_eV (float)"
+  },
+  {
+    "id": "step_frenkel_barrier",
+    "title": "Compute intimate Frenkel pair break-up barrier",
+    "role": "scored",
+    "action": "Construct the intimate Frenkel pair structure and a separated state. Perform a nudged elastic band (NEB) calculation to locate the minimum energy path and transition state. Report the energy barrier as the difference between the transition state energy and the intimate pair energy.",
+    "output_file": "step_03_intimate_frenkel_barrier.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Break-up barrier of the intimate Frenkel pair.",
+    "output_schema": "columns: barrier_eV (float)"
+  },
+  {
+    "id": "step_stabilization",
+    "title": "Compute shear stabilization energies",
+    "role": "scored",
+    "action": "Using the formation energies from step_interstitials and stacking fault energies from step_stack_fault, compute the shear-conferred stabilization energy for the threefold interstitial: E_stab(3) = (E_grafted - E_threefold) + A * γ(3). Similarly for the spiro interstitial: E_stab(4) = (E_grafted - E_spiro) + A * γ(4).",
+    "output_file": "step_05_stabilization_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Shear-conferred stabilization energies for the threefold and spiro interstitials.",
+    "output_schema": "columns: interstitial_type (string, one of 'threefold', 'spiro'), stabilization_energy_eV (float)"
+  }
+]

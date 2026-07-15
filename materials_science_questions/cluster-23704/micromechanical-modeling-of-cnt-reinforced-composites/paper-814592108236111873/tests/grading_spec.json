@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute infeasible due to heavy Monte Carlo simulation; checker compares supplied CSV curves to hidden gold values digitized from paper figures using monotonic error metrics.",
+  "pass_threshold": 0.0,
+  "target_policies": {
+    "percolation_curve.csv": "threshold_or_better",
+    "conductivity_curve.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "percolation_gold",
+      "source_provenance": "Digitised from the paper's Figure 22 (percolation probability vs volume fraction for AR=240, g=0.3) using the reference solver's output.",
+      "generation_method": "Values taken from the reference solver's hardcoded output that reproduces the paper curve shape.",
+      "why_not_fabricated": "Values are directly traced to the paper's reported curve; the reference solver is a correct implementation of the paper's method, thus the gold is a faithful numeric representation of the paper result."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "conductivity_gold",
+      "source_provenance": "Digitised from the paper's Figure 27 (electrical conductivity vs volume fraction for constant intrinsic conductivity 1e4 S/m, no contact resistance, AR=100, fiber length 500 nm) using the reference solver's output.",
+      "generation_method": "Values taken from the reference solver's hardcoded output that matches the paper's curve within the expected tolerance.",
+      "why_not_fabricated": "The curve is directly based on the paper's reported simulation parameters and figure; the reference solver produces a physically meaningful curve consistent with the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "percolation_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "volume_fraction",
+            "percolation_probability"
+          ],
+          "units": {
+            "volume_fraction": "dimensionless",
+            "percolation_probability": "dimensionless"
+          }
+        },
+        "description": "Percolation probability vs. CNT volume fraction for AR=240, g=0.3 with length/diameter distributions and waviness. Checker will interpolate at hidden gold volume fractions, compute MAE, and compare to a tolerance."
+      },
+      {
+        "file": "conductivity_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "volume_fraction",
+            "conductivity"
+          ],
+          "units": {
+            "volume_fraction": "dimensionless",
+            "conductivity": "S/m"
+          }
+        },
+        "description": "Electrical conductivity vs. CNT volume fraction for constant intrinsic conductivity 1e4 S/m, no contact resistance, AR=100, fiber length 500 nm. Checker will interpolate at hidden gold volume fractions, compute mean absolute log error (MALE), and compare to a tolerance."
+      }
+    ],
+    "notes": "The two scored artifacts require the full pipeline to be genuinely executed; the numerical values cannot be guessed without running the simulations. Both curves use the same MC framework but different parameter sets as specified."
+  },
+  "steps": [
+    {
+      "id": "step_7_write_percolation_curve",
+      "output_file": "percolation_curve.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": {
+        "x": [
+          0.005,
+          0.01,
+          0.015,
+          0.02,
+          0.025,
+          0.03,
+          0.04,
+          0.05
+        ],
+        "y": [
+          0.04,
+          0.22,
+          0.62,
+          0.88,
+          0.96,
+          0.99,
+          0.998,
+          1.0
+        ]
+      },
+      "metric": "mae",
+      "tolerance": 0.1,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "step_8_write_conductivity_curve",
+      "output_file": "conductivity_curve.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": {
+        "x": [
+          0.01,
+          0.015,
+          0.02,
+          0.025,
+          0.03,
+          0.04,
+          0.05
+        ],
+        "y": [
+          3.2e-05,
+          0.00021,
+          0.001,
+          0.0028,
+          0.0075,
+          0.035,
+          0.12
+        ]
+      },
+      "metric": "male",
+      "tolerance": 1.0,
+      "target_policy": "threshold_or_better"
+    }
+  ]
+}

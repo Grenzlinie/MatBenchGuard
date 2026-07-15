@@ -1,0 +1,67 @@
+[
+  {
+    "id": "phonon_calc",
+    "title": "Phonon frequency calculation (ground and excited state)",
+    "role": "process",
+    "action": "Perform DFT phonon calculations for a 96‑atom diamond silicon supercell using the finite‑displacement method. Compute the dynamical matrix and obtain orthonormal eigenvectors and eigenfrequencies for (i) the ground state (no electronic smearing) and (ii) the laser‑excited state at an electronic temperature of 50 mhartree.",
+    "output_file": "",
+    "evidence": "phonon_frequencies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference phonon modes needed for initial condition sampling and zero‑point variance computation.",
+    "output_schema": ""
+  },
+  {
+    "id": "init_conditions",
+    "title": "Initialize atomic velocities and displacements",
+    "role": "process",
+    "action": "Using the ground‑state phonon eigenvectors and frequencies, sample atomic velocities and displacements from a Maxwell–Boltzmann distribution at a lattice temperature of 1 mhartree (316 K) via inverse transform sampling. Generate a set of initial atomic configurations and velocities.",
+    "output_file": "",
+    "evidence": "initial_positions.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial conditions for MD simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "md_simulation",
+    "title": "Ab initio molecular dynamics at 50 mhartree",
+    "role": "process",
+    "action": "Run a microcanonical (NVE) molecular dynamics simulation for the 96‑atom Si supercell instantaneously excited to an electronic temperature of 50 mhartree. Use a 2 fs timestep and total simulation time of at least 200 fs. Employ electronic‑temperature‑dependent DFT with Fermi–Dirac smearing at 50 mhartree. Record atomic coordinates every timestep.",
+    "output_file": "",
+    "evidence": "md_trajectory.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Primary trajectory data; required to compute any squeezing observable.",
+    "output_schema": ""
+  },
+  {
+    "id": "rms_displacement",
+    "title": "Compute RMS displacement time series",
+    "role": "scored",
+    "action": "From the recorded MD trajectory, compute the root‑mean‑square atomic displacement from equilibrium positions as a function of time (averaged over all atoms). Output a CSV file with columns time_fs, rms_displacement_AA, and zero_point_variance_AA2 (constant column from excited‑state phonons).",
+    "output_file": "rms_displacement_50mH.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Time series of the root‑mean‑square atomic displacement; central observable for oscillatory squeezing behaviour.",
+    "output_schema": "CSV with columns: time_fs (float, time in femtoseconds), rms_displacement_AA (float, √⟨u²⟩ in Å), zero_point_variance_AA2 (float, constant zero-point variance in Å²)."
+  },
+  {
+    "id": "peak_variance_analysis",
+    "title": "Peak time and zero‑point variance ratio",
+    "role": "scored",
+    "action": "From the RMS displacement time series and the excited‑state phonon frequencies, determine the time of the first maximum of the RMS displacement within the first 200 fs (peak time). Compute the quantum zero‑point variance ⟨u²⟩₀ = (1/Nm) Σ ℏ/(2ωᵢ) using the excited‑state phonon frequencies. For the mean‑square displacement ⟨u²⟩ time series, identify its minimum and maximum values within the first 200 fs and calculate their ratios to the zero‑point variance. Save a JSON object containing peak_time_fs_50mH, zero_point_variance_AA2, variance_min_ratio_50mH, variance_max_ratio_50mH.",
+    "output_file": "peak_and_variance.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of the key squeezing indicators: peak time and the relative amplitude of displacement variance to zero‑point motion.",
+    "output_schema": "JSON object with keys: peak_time_fs_50mH (float), zero_point_variance_AA2 (float), variance_min_ratio_50mH (float), variance_max_ratio_50mH (float)."
+  }
+]

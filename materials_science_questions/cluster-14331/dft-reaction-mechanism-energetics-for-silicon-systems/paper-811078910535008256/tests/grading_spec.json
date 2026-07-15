@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the four headline energy differences from the agent's submitted total energies (raw artifact) and compares each to the paper's reported value within tolerant thresholds; additionally a structural consistency check ensures the correlated formation energy is lower than HF, confirming correlation stabilization.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for the four derived energy quantities (formation energy, pseudorotation barrier, inversion barrier, reaction energy) used as gold targets",
+      "source_provenance": "Paper Table 2 and section 4.2 of the source paper, specifically the reported values in kcal/mol",
+      "generation_method": "Extracted directly from the paper's text and table; formation energy gold uses the consistent comparison via supermolecule at 200 au as per eq. (7).",
+      "why_not_fabricated": "These are the actual computational results reported by the original authors for the same quantities."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energies": "object",
+            "reaction_energies": "object"
+          },
+          "items": {
+            "total_energies.<species>.hf": "number (au)",
+            "total_energies.<species>.correlated": "number (au)",
+            "reaction_energies.<key>": "number (kcal/mol)"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Total energies for all species (HF and correlated) and derived reaction energies/barriers. The checker recomputes the four headline quantities from 'total_energies' and compares each to a paper-reported reference within a hidden tolerance."
+      }
+    ],
+    "notes": "The agent should use the basis set and geometries provided in the instruction. The correlated method can be MP2 or CCSD; scoring tolerances account for the method difference from the original PNO-CI/CEPA calculations."
+  },
+  "steps": [
+    {
+      "id": "reaction1_hf",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "hf",
+      "target": -13.8,
+      "tolerance_abs": 2.0,
+      "weight": 0.15
+    },
+    {
+      "id": "reaction1_corr",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "correlated",
+      "target": -19.7,
+      "tolerance_abs": 4.0,
+      "weight": 0.15
+    },
+    {
+      "id": "pseudorotation_hf",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "hf",
+      "target": 3.24,
+      "tolerance_abs": 1.0,
+      "weight": 0.1
+    },
+    {
+      "id": "pseudorotation_corr",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "correlated",
+      "target": 2.87,
+      "tolerance_abs": 1.0,
+      "weight": 0.1
+    },
+    {
+      "id": "inversion_hf",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "hf",
+      "target": 27.3,
+      "tolerance_abs": 2.0,
+      "weight": 0.1
+    },
+    {
+      "id": "inversion_corr",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "correlated",
+      "target": 26.2,
+      "tolerance_abs": 2.0,
+      "weight": 0.1
+    },
+    {
+      "id": "reaction3_hf",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "hf",
+      "target": 5.6,
+      "tolerance_abs": 2.0,
+      "weight": 0.1
+    },
+    {
+      "id": "reaction3_corr",
+      "output_file": "results.json",
+      "kind": "derived_energy",
+      "level": "correlated",
+      "target": 6.3,
+      "tolerance_abs": 2.0,
+      "weight": 0.1
+    },
+    {
+      "id": "consistency_correlation_formation",
+      "output_file": "results.json",
+      "kind": "structural_trend",
+      "weight": 0.1
+    }
+  ]
+}

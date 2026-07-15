@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent outputs final computed adsorption energies and correction; no raw artifacts exist from which the checker could independently recompute the DFT results. Comparison against paper-reported values with tolerances is the strongest feasible check.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "para": "float (kJ/mol)",
+            "meta": "float (kJ/mol)",
+            "ortho": "float (kJ/mol)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "DFT adsorption energies of para-xylene, meta-xylene, and ortho-xylene on H-MOR."
+      },
+      {
+        "file": "van_der_waals_correction.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_VdW": "float (kJ/mol)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Van der Waals dispersion correction for xylene adsorption on H-MOR."
+      },
+      {
+        "file": "corrected_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "para": "float (kJ/mol)",
+            "meta": "float (kJ/mol)",
+            "ortho": "float (kJ/mol)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Force-field corrected adsorption energies of xylene isomers."
+      }
+    ],
+    "notes": "The scorer compares each value to the paper-reported reference with per-file tolerances (hidden)."
+  },
+  "target_policies": {
+    "dft_adsorption_energies.json": "exact_match",
+    "van_der_waals_correction.json": "exact_match",
+    "corrected_adsorption_energies.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference adsorption energies and van der Waals correction from paper",
+      "source_provenance": "transcribed from paper text (Rozanska et al., Theoretical Aspects of Heterogeneous Catalysis, 2001)",
+      "generation_method": "manual extraction from paper conclusion and discussion",
+      "why_not_fabricated": "values are exactly as published; tolerances set to absorb DFT toolchain differences while remaining discriminative"
+    }
+  ],
+  "steps": [
+    {
+      "id": "dft_adsorption_energies",
+      "output_file": "dft_adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "gold": {
+        "para": -37,
+        "meta": -30,
+        "ortho": -33
+      },
+      "tolerance": 10.0,
+      "fields": [
+        "para",
+        "meta",
+        "ortho"
+      ]
+    },
+    {
+      "id": "van_der_waals_correction",
+      "output_file": "van_der_waals_correction.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "E_VdW": -95
+      },
+      "tolerance": 2.0,
+      "fields": [
+        "E_VdW"
+      ]
+    },
+    {
+      "id": "corrected_adsorption_energies",
+      "output_file": "corrected_adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold": {
+        "para": -132,
+        "meta": -125,
+        "ortho": -128
+      },
+      "tolerance": 5.0,
+      "fields": [
+        "para",
+        "meta",
+        "ortho"
+      ]
+    }
+  ]
+}

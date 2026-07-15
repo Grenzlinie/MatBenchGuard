@@ -1,0 +1,244 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T0 result-level comparison: the raw stress-strain data and force constants are not available to recompute from; thus the checker compares the agent's reported elastic constants, derived moduli, and phonon frequencies to the paper's reference values with appropriate tolerances. The output contract declares target_policy 'reference_match'.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "elastic_properties.json": "reference_match",
+    "phonon_gamma_frequencies.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "V3Fe",
+            "V3Co",
+            "V3Ni"
+          ],
+          "properties": {
+            "V3Fe": {
+              "type": "object",
+              "required": [
+                "C11",
+                "C12",
+                "C44",
+                "B",
+                "G",
+                "E",
+                "B/G",
+                "Cp",
+                "Born_stable"
+              ],
+              "properties": {
+                "C11": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "C12": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "C44": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "B": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "G": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "E": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "B/G": {
+                  "type": "number",
+                  "unit": "dimensionless"
+                },
+                "Cp": {
+                  "type": "number",
+                  "unit": "GPa"
+                },
+                "Born_stable": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "V3Co": {
+              "$ref": "#/properties/V3Fe"
+            },
+            "V3Ni": {
+              "$ref": "#/properties/V3Fe"
+            }
+          }
+        },
+        "description": "Computed elastic constants and derived mechanical parameters for all three compounds. Scores are assigned by comparing the agent's values to hidden paper-reported reference values with appropriate tolerances."
+      },
+      {
+        "file": "phonon_gamma_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "V3Fe",
+            "V3Co",
+            "V3Ni"
+          ],
+          "properties": {
+            "V3Fe": {
+              "type": "object",
+              "required": [
+                "frequencies_THz",
+                "all_positive"
+              ],
+              "properties": {
+                "frequencies_THz": {
+                  "type": "array",
+                  "minItems": 8,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "number",
+                    "unit": "THz"
+                  }
+                },
+                "all_positive": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "V3Co": {
+              "$ref": "#/properties/V3Fe"
+            },
+            "V3Ni": {
+              "$ref": "#/properties/V3Fe"
+            }
+          }
+        },
+        "description": "Gamma-point phonon frequencies (8 values) and an all_positive flag for each compound. Scores are assigned by comparing the agent's frequencies to hidden paper-reported values with an absolute tolerance, and checking that all_positive is true."
+      }
+    ],
+    "notes": "The agent's computed values will be compared against hidden gold values from the source paper (elastic constants from Table 2, phonon frequencies from Table 7) using relative tolerances for elastic quantities and absolute tolerance for phonon frequencies. All values are treated as 'reference_match' because the instruction does not reveal the target numbers; the agent must compute them from first principles."
+  },
+  "steps": [
+    {
+      "id": "elastic_properties",
+      "output_file": "elastic_properties.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "description": "Check elastic constants, derived moduli, and Born stability for V3Fe, V3Co, V3Ni against paper Table 2.",
+      "gold": {
+        "V3Fe": {
+          "C11": 404.42,
+          "C12": 123.76,
+          "C44": 78.93,
+          "B": 217.31,
+          "G": 99.58,
+          "E": 259.16,
+          "B/G": 2.18,
+          "Cp": 44.83,
+          "Born_stable": true
+        },
+        "V3Co": {
+          "C11": 419.65,
+          "C12": 118.34,
+          "C44": 94.88,
+          "B": 218.78,
+          "G": 114.28,
+          "E": 292.0,
+          "B/G": 1.91,
+          "Cp": 23.46,
+          "Born_stable": true
+        },
+        "V3Ni": {
+          "C11": 394.16,
+          "C12": 121.42,
+          "C44": 80.7,
+          "B": 212.33,
+          "G": 99.71,
+          "E": 258.64,
+          "B/G": 2.13,
+          "Cp": 40.72,
+          "Born_stable": true
+        }
+      },
+      "tolerances": {
+        "C11": 0.05,
+        "C12": 0.05,
+        "C44": 0.05,
+        "B": 0.05,
+        "G": 0.05,
+        "E": 0.05,
+        "B/G": 0.03,
+        "Cp": 0.03
+      }
+    },
+    {
+      "id": "phonon_gamma_frequencies",
+      "output_file": "phonon_gamma_frequencies.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "description": "Check Gamma-point phonon frequencies and all_positive flag for V3Fe, V3Co, V3Ni against paper Table 7.",
+      "gold": {
+        "V3Fe": {
+          "frequencies_THz": [
+            5.38,
+            6.432,
+            6.504,
+            7.306,
+            7.635,
+            8.588,
+            10.602,
+            11.11
+          ],
+          "all_positive": true
+        },
+        "V3Co": {
+          "frequencies_THz": [
+            4.898,
+            5.637,
+            6.778,
+            7.033,
+            8.33,
+            8.601,
+            10.784,
+            11.264
+          ],
+          "all_positive": true
+        },
+        "V3Ni": {
+          "frequencies_THz": [
+            4.998,
+            3.932,
+            5.643,
+            6.608,
+            7.616,
+            8.538,
+            9.691,
+            9.904
+          ],
+          "all_positive": true
+        }
+      },
+      "tolerance_abs": 0.2
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for elastic properties and phonon frequencies from the paper's Tables 2 and 7.",
+      "source_provenance": "Paper Table 2 (elastic constants and derived moduli) and Table 7 (Gamma-point phonon frequencies).",
+      "generation_method": "Direct transcription from the paper's published tables.",
+      "why_not_fabricated": "These are the paper's own reported numbers, not invented."
+    }
+  ]
+}

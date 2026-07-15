@@ -1,0 +1,163 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Schottky disorder energies from raw lattice and defect calculations and check variation ≤0.3 eV; formation energies checked structurally because paper gold not explicit.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported SrO partial Schottky disorder energies for Cormack potential set, used to verify agent’s recomputed values.",
+      "source_provenance": "Table 3 of the source paper (Cormack row).",
+      "generation_method": "Extracted directly from the paper’s published values.",
+      "why_not_fabricated": "These are the paper’s actual published reference values; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "compound",
+              "energy"
+            ]
+          },
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Lattice energies of bulk phases SrO, TiO2, SrTiO3, and R-P phases 1p-4p."
+      },
+      {
+        "file": "defect_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "V_Sr",
+            "V_O"
+          ],
+          "properties": {
+            "V_Sr": {
+              "type": "object",
+              "required": [
+                "energy"
+              ]
+            },
+            "V_O": {
+              "type": "object",
+              "required": [
+                "energy"
+              ]
+            }
+          },
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Formation energies of Sr and O vacancies in SrTiO3."
+      },
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "compound",
+              "Delta_U_p+r"
+            ]
+          },
+          "units": {
+            "Delta_U_p+r": "eV"
+          }
+        },
+        "description": "Formation energies of R-P phases via the perovskite+rock-salt reaction."
+      },
+      {
+        "file": "schottky_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "n",
+              "U_Sch"
+            ]
+          },
+          "units": {
+            "U_Sch": "eV"
+          }
+        },
+        "description": "SrO partial Schottky disorder energies for different precipitate choices n=0-4."
+      }
+    ],
+    "notes": "All energies in eV. The checker compares each value to hidden paper-reported references with appropriate tolerances. The formation and Schottky energies are the primary scored quantities; lattice and defect energies serve as supporting consistency checks."
+  },
+  "checks": [
+    {
+      "id": "s1_lattice_struct",
+      "output_file": "lattice_energies.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "target_policy": "structural_audit",
+      "expected_compounds": [
+        "SrO",
+        "TiO2",
+        "SrTiO3",
+        "1_p",
+        "2_p",
+        "3_p",
+        "4_p"
+      ]
+    },
+    {
+      "id": "s2_defect_struct",
+      "output_file": "defect_energies.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "s3_formation_struct",
+      "output_file": "formation_energies.json",
+      "kind": "rubric",
+      "weight": 0.15,
+      "target_policy": "structural_audit",
+      "value_range": [
+        -1.0,
+        1.0
+      ],
+      "diff_max": 0.5
+    },
+    {
+      "id": "s4_schottky_recompute",
+      "output_file": "schottky_energies.json",
+      "kind": "recompute",
+      "weight": 0.75,
+      "target_policy": "reference_match",
+      "gold_u_sch": [
+        4.89,
+        4.78,
+        4.76,
+        4.76,
+        4.76
+      ],
+      "tolerance": 0.5,
+      "variation_max": 0.3
+    }
+  ]
+}

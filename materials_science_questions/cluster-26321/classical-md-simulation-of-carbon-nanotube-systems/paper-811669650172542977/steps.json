@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Construct functionalized NT-polymer system",
+    "role": "process",
+    "action": "Generate the initial atomic configuration and LAMMPS input for a (10,10) carbon nanotube embedded in crystalline polyethylene with three covalent attachments (links) to one polymer chain, using the AIREBO potential for covalent bonds and Lennard-Jones for non-bonded interactions.",
+    "output_file": "",
+    "evidence": "system.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run MD pull-out simulation",
+    "role": "process",
+    "action": "Run LAMMPS molecular dynamics at 300 K with a timestep of 0.05 fs. Apply an incremental axial force to all nanotube atoms over 210,000 steps, following the force schedule from the paper. Output the nanotube center-of-mass velocity and displacement.",
+    "output_file": "",
+    "evidence": "pullout.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Extract force-velocity data",
+    "role": "scored",
+    "action": "Parse the simulation log to extract the applied force on the nanotube and the nanotube center-of-mass axial velocity for every recorded timestep after sliding onset. Save as a CSV with columns: step, force_nN, velocity_A_per_ps.",
+    "output_file": "force_velocity_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Time-series data of force and velocity for fitting the interfacial friction model.",
+    "output_schema": "step:int, force_nN:float, velocity_A_per_ps:float"
+  },
+  {
+    "id": "step_04",
+    "title": "Fit interfacial friction model",
+    "role": "scored",
+    "action": "Perform a linear regression of velocity (Å/ps) versus force (nN) on the data points where sliding has occurred. Extract the intercept f0 (critical pull-out force) and the slope 1/χeff, then compute the effective viscosity coefficient χeff. Compute the effective interfacial viscosity μeff using the provided interfacial area and van der Waals separation. Output a JSON file with f0_nN, chi_eff_nN_ps_per_A, mu_eff_cP, and R_squared.",
+    "output_file": "fitted_parameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted parameters from the force-velocity relation, including R-squared as a quality measure.",
+    "output_schema": "{\"f0_nN\": number, \"chi_eff_nN_ps_per_A\": number, \"mu_eff_cP\": number, \"R_squared\": number}"
+  },
+  {
+    "id": "step_05",
+    "title": "Identify velocity peaks after linkage breakage",
+    "role": "scored",
+    "action": "From the velocity profile (force_velocity_data.csv or simulation log), locate all local maxima in the nanotube velocity after step 141,000. Save each peak as an object with step and velocity_A_per_ps in a JSON array.",
+    "output_file": "velocity_peaks.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Velocity peaks occurring after the breakage of Link 2, indicating discrete acceleration events.",
+    "output_schema": "[{\"step\": int, \"velocity_A_per_ps\": float}, ...]"
+  }
+]

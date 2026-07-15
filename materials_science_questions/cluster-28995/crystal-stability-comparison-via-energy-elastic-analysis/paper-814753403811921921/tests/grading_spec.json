@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected melting temperatures from the paper's analytic fit and verifies phase labels against the paper's reported stable phases; scoring via tolerance and trend for melting curves, and exact match for inverse Z results.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "melting_curves.csv": "reference_match",
+    "inverse_z_results.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference melting temperatures from paper formulas and expected inverse Z phases.",
+      "source_provenance": "Paper formulas: fcc-Pt Tm(P)=2042(1+P/44.3)^0.85, 9R-Pt Tm(P)=1500(1+P/20.0)^0.79; inverse Z results from paper's phase diagram: at (20 GPa,2500 K) fcc, at (40 GPa,2500 K) 9R, at (100 GPa,3000 K) 9R.",
+      "generation_method": "Analytic evaluation of paper's formulas and direct extraction from paper text.",
+      "why_not_fabricated": "Values derived from the paper, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "melting_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "phase",
+            "melting_temperature_K"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "melting_temperature_K": "K"
+          }
+        },
+        "description": "Melting temperatures of fcc and 9R platinum at 0, 50, and 100 GPa computed via the direct Z method."
+      },
+      {
+        "file": "inverse_z_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "temperature_K",
+            "solid_phase"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "temperature_K": "K"
+          }
+        },
+        "description": "Most stable solid phase identified via inverse Z solidification at three (P,T) conditions."
+      }
+    ],
+    "notes": "The direct Z method requires running multiple AIMD simulations to bracket the melting point. The inverse Z method requires liquid preparation, supercooling, and an NVT solidification run. The agent may use Quantum ESPRESSO or another open-source AIMD code with appropriate pseudopotentials."
+  },
+  "steps": [
+    {
+      "id": "check_melting",
+      "output_file": "melting_curves.csv",
+      "weight": 0.7,
+      "kind": "custom",
+      "description": "Score melting temperatures against paper formulas with 15% tolerance and verify trend."
+    },
+    {
+      "id": "check_inverse_z",
+      "output_file": "inverse_z_results.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "description": "Score inverse Z phase identification against paper's reported phases."
+    }
+  ]
+}

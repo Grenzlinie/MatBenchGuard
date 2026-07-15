@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Bandgap values are compared to paper‑reported golds (T0); CBM/VBM internal consistency is recomputed from both artifacts (T1); zero‑strain straddle is a structural check (T3). The combination verifies the main claims.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "bandgap_vs_strain.csv": "reference_match",
+    "band_edges_vs_strain.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for bandgap ranges and specific strain points, used for result‑level comparison.",
+      "source_provenance": "Paper text (Section 3, Fig. 7 discussion). HPSi range 1.628–2.056 eV; HSiP at η=8,9,10% values 3.111,2.857,2.613 eV, compression range 1.866–3.136 eV; HSiPbp compression range 1.862–3.129 eV, tensile range 2.556–3.117 eV.",
+      "generation_method": "Direct extraction of author‑stated numbers.",
+      "why_not_fabricated": "These are the paper’s own published numeric results, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bandgap_vs_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "strain",
+            "bandgap"
+          ],
+          "units": {
+            "strain": "percent",
+            "bandgap": "eV"
+          }
+        },
+        "description": "Bandgap vs strain data for the three monolayer H-Si-P structures, used to verify the bandgap ranges and trends reported in the paper."
+      },
+      {
+        "file": "band_edges_vs_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "strain",
+            "CBM",
+            "VBM"
+          ],
+          "units": {
+            "strain": "percent",
+            "CBM": "eV",
+            "VBM": "eV"
+          }
+        },
+        "description": "Absolute band edge positions (CBM and VBM) vs strain, used to verify alignment with water redox potentials and strain-tunability."
+      }
+    ],
+    "notes": "The checker will compare selected values and trends against the paper's reported data with appropriate tolerances. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "bandgap_check",
+      "output_file": "bandgap_vs_strain.csv",
+      "kind": "rubric",
+      "weight": 0.5,
+      "gold": {
+        "hpsi_range": [
+          1.628,
+          2.056
+        ],
+        "hsip_points": {
+          "8": 3.111,
+          "9": 2.857,
+          "10": 2.613
+        },
+        "hsip_compression_range": [
+          1.866,
+          3.136
+        ],
+        "hsipbp_compression_range": [
+          1.862,
+          3.129
+        ],
+        "hsipbp_tensile_range": [
+          2.556,
+          3.117
+        ],
+        "tolerance": 0.1
+      }
+    },
+    {
+      "id": "bandedge_check",
+      "output_file": "band_edges_vs_strain.csv",
+      "kind": "rubric",
+      "weight": 0.5,
+      "gold": {
+        "consistency_tolerance": 0.01,
+        "redox_h": -4.44,
+        "redox_o": -5.67,
+        "straddle_tol": 0.0001
+      }
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot rerun DFT calculations in the verifier; compare reported numbers to paper reference values (Tables 3 and 4) with generous tolerances. The VB statement is checked structurally.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "adsorption_energies.json": "reference_match",
+    "mulliken_charges.json": "reference_match",
+    "vb_dominance.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference adsorption energies and Mulliken charges from the paper (Ca-Mt pure system).",
+      "source_provenance": "Paper Table 3 (adsorption energies; pure Ca-Mt rows) and Table 4 (Mulliken charges for pure Ca-Mt, <10 ps columns).",
+      "generation_method": "Copied directly from the published tables.",
+      "why_not_fabricated": "Exact values from the paper; verified against the paper's text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "Glycine": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "Serine": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "Glutamate": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "Arginine": {
+              "type": "number",
+              "unit": "kJ/mol"
+            }
+          },
+          "required": [
+            "Glycine",
+            "Serine",
+            "Glutamate",
+            "Arginine"
+          ]
+        },
+        "description": "Computed adsorption energies for glycine, serine, glutamate, and arginine on pure Ca-montmorillonite in kJ/mol."
+      },
+      {
+        "file": "mulliken_charges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amino_acid": {
+                "type": "string"
+              },
+              "COO_charge": {
+                "type": "number"
+              },
+              "NH3_charge": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "amino_acid",
+              "COO_charge",
+              "NH3_charge"
+            ]
+          }
+        },
+        "description": "Mulliken charges for terminal -COO⁻(H) and -NH₃⁺ groups of each amino acid, in elementary charge units."
+      },
+      {
+        "file": "vb_dominance.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "A text statement identifying the dominant orbital character at the valence band maximum and the derived principal adsorption driver."
+      }
+    ],
+    "notes": "Adsorption energies and Mulliken charges are compared to reference values from the original study within specified tolerances. The valence band dominance statement is checked for correctness of the conclusion."
+  },
+  "steps": [
+    {
+      "id": "adsorption_energies",
+      "output_file": "adsorption_energies.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "reference": {
+        "Glycine": -3515.05,
+        "Serine": -3980.74,
+        "Glutamate": -4882.87,
+        "Arginine": -5562.87
+      },
+      "tolerance": {
+        "absolute": 200.0,
+        "relative": 0.15
+      }
+    },
+    {
+      "id": "mulliken_charges",
+      "output_file": "mulliken_charges.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "reference": [
+        {
+          "amino_acid": "Glycine",
+          "COO_charge": -0.39,
+          "NH3_charge": -0.33
+        },
+        {
+          "amino_acid": "Serine",
+          "COO_charge": -0.41,
+          "NH3_charge": -0.21
+        },
+        {
+          "amino_acid": "Glutamate",
+          "COO_charge": -0.31,
+          "NH3_charge": -0.24
+        },
+        {
+          "amino_acid": "Arginine",
+          "COO_charge": -0.41,
+          "NH3_charge": -0.31
+        }
+      ],
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "vb_dominance",
+      "output_file": "vb_dominance.txt",
+      "weight": 0.3,
+      "kind": "rubric",
+      "rubric": {
+        "required_keywords": [
+          "o-2p",
+          "valence band",
+          "principal adsorption driver"
+        ]
+      }
+    }
+  ]
+}

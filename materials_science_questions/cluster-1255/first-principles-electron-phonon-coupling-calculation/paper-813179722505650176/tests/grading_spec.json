@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw DFT output files is infeasible in the verifier sandbox; result-level comparison against paper gold with code-tolerant percentage windows is appropriate.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference λ, ω_log, T_c for A15, P4_2/mmc, Cccm; enthalpy ordering expectation.",
+      "source_provenance": "Paper Figure 4 caption and text: A15 λ=1.82, ω_log=989 K; P4_2/mmc λ=1.56, ω_log=737 K; Cccm λ=1.60, ω_log=793 K. Tc values from text: 140 K, 90 K, 100 K at μ*=0.13. Enthalpy ordering from Figure 2 (Cccm most stable).",
+      "generation_method": "Extracted directly from published numerical values; tolerances chosen to absorb DFT code differences (15% for λ, 10% for ω_log, 20% for T_c).",
+      "why_not_fabricated": "These are the paper's own reported quantities for the exact conditions being reproduced; they are the authoritative ground truth for reproduction correctness."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A15": "object",
+            "P4_2/mmc": "object",
+            "Cccm": "object"
+          },
+          "items": {
+            "static_energy_per_atom_Ry": "float",
+            "zpe_per_atom_Ry": "float",
+            "enthalpy_per_atom_Ry": "float",
+            "lambda": "float",
+            "omega_log_K": "float",
+            "Tc_K_mu0.13": "float",
+            "dynamically_stable": "bool"
+          }
+        },
+        "description": "Computed physical properties for the three GeH3 crystal structures at r_s=1.52."
+      }
+    ],
+    "notes": "The submitted file will be checked for structural correctness and compared against hidden reference values."
+  },
+  "steps": [
+    {
+      "id": "check_stability",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "description": "All three structures must be dynamically stable (no imaginary phonon modes)."
+    },
+    {
+      "id": "check_enthalpy_ordering",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "description": "Enthalpy per atom must satisfy Cccm < P4_2/mmc < A15."
+    },
+    {
+      "id": "check_superconducting_properties",
+      "output_file": "results.json",
+      "weight": 0.73,
+      "description": "For at least two structures, λ, ω_log, and T_c must all be within tolerance of the paper’s values.",
+      "reference_values": {
+        "A15": {
+          "lambda": 1.82,
+          "omega_log_K": 989.0,
+          "Tc_K_mu0.13": 140.0
+        },
+        "P4_2/mmc": {
+          "lambda": 1.56,
+          "omega_log_K": 737.0,
+          "Tc_K_mu0.13": 90.0
+        },
+        "Cccm": {
+          "lambda": 1.6,
+          "omega_log_K": 793.0,
+          "Tc_K_mu0.13": 100.0
+        }
+      },
+      "tolerance_lambda": 0.15,
+      "tolerance_omegalog": 0.1,
+      "tolerance_Tc": 0.2
+    },
+    {
+      "id": "check_enthalpy_sum",
+      "output_file": "results.json",
+      "weight": 0.02,
+      "description": "For each structure, static_energy + zpe must equal enthalpy within 0.001 Ry."
+    }
+  ]
+}

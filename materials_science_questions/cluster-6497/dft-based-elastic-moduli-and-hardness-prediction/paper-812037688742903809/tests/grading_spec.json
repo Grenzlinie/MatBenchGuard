@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the Birch-Murnaghan EOS fit from the raw eos_data.csv and compares lattice parameters to the paper's reported DFT values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold DFT lattice parameters and equation-of-state parameters for Ti2SC",
+      "source_provenance": "Paper reported ab initio calculation values: a=3.21 Å, c=11.29 Å, K0=183 GPa, K0'=4.1. V0 derived from hexagonal volume formula: V0 = (sqrt(3)/2)*a^2*c.",
+      "generation_method": "Extracted from paper text and computed via hexagonal volume formula.",
+      "why_not_fabricated": "All values are the exact DFT results reported in the paper; V0 follows from the reported lattice constants."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_optimized_lattice.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "a",
+            "c"
+          ],
+          "units": {
+            "a": "Angstrom",
+            "c": "Angstrom"
+          }
+        },
+        "description": "CSV file with one header row and one data row giving the DFT-optimized lattice parameters a and c of Ti2SC at zero pressure. Checked against the paper's hidden ab initio values within tolerances appropriate for code/pseudopotential differences."
+      },
+      {
+        "file": "step_02_eos_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V0": "float",
+            "K0": "float",
+            "K0_prime": "float"
+          },
+          "units": {
+            "V0": "Angstrom^3",
+            "K0": "GPa",
+            "K0_prime": "dimensionless"
+          }
+        },
+        "description": "JSON object containing the agent's Birch-Murnaghan EOS fit from volume-energy data. The hidden checker recomputes the fit from the raw eos_data.csv evidence file and compares the resulting V0, K0, K0' to the paper's ab initio values; this reported JSON is used as a redundant cross-check."
+      }
+    ],
+    "notes": "The process step eos_calc must output a CSV with columns 'Volume' and 'Energy' as evidence. The checker uses that file for independent recomputation of the EOS parameters."
+  },
+  "steps": [
+    {
+      "id": "step_extract_lattice",
+      "output_file": "step_01_optimized_lattice.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold_a": 3.21,
+      "gold_c": 11.29,
+      "tol_a": 0.02,
+      "tol_c": 0.1
+    },
+    {
+      "id": "step_fit_eos",
+      "output_file": "step_02_eos_fit.json",
+      "weight": 0.5,
+      "kind": "recompute",
+      "gold_V0": 100.74,
+      "gold_K0": 183.0,
+      "gold_K0p": 4.1,
+      "tol_V0": 2.0,
+      "tol_K0": 10.0,
+      "tol_K0p": 1.0
+    }
+  ]
+}

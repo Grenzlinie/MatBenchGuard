@@ -1,0 +1,136 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT energy calculations cannot be recomputed in the lightweight verifier; result-level comparison to paper-reported gold with tolerances is the highest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold structural parameters and transition pressures from paper Tables",
+      "source_provenance": "Paper Table 1 (structural params) and text (transition pressures GGA: 12.4, 22.1 GPa; LDA: 10.1, 18.3 GPa)",
+      "generation_method": "direct transcription of reported values",
+      "why_not_fabricated": "Values are the paper's published reference results; no synthetic labels needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "rutile_LDA": "object with a (Angstrom), c (Angstrom), u (dimensionless)",
+            "rutile_GGA": "object with a, c, u",
+            "CaCl2_LDA": "object with a, b, c, u, v (all Angstrom except u,v dimensionless)",
+            "CaCl2_GGA": "object with a, b, c, u, v",
+            "cubic_LDA": "object with a (Angstrom), u",
+            "cubic_GGA": "object with a, u"
+          },
+          "items": null,
+          "required_columns": null,
+          "units": {
+            "a": "Angstrom",
+            "b": "Angstrom",
+            "c": "Angstrom",
+            "u": "dimensionless",
+            "v": "dimensionless"
+          }
+        },
+        "description": "Equilibrium structural parameters from EOS fitting. Each top-level key corresponds to a phase/functional combination with the listed fields."
+      },
+      {
+        "file": "transition_pressures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LDA": "object with rutile_cacl2 (GPa), cacl2_cubic (GPa)",
+            "GGA": "object with rutile_cacl2 (GPa), cacl2_cubic (GPa)"
+          },
+          "items": null,
+          "required_columns": null,
+          "units": {
+            "rutile_cacl2": "GPa",
+            "cacl2_cubic": "GPa"
+          }
+        },
+        "description": "Transition pressures determined from common tangent of enthalpy curves."
+      }
+    ],
+    "notes": "Both LDA and GGA results must be provided. Tolerances accommodate systematic differences between DFT implementations."
+  },
+  "steps": [
+    {
+      "id": "extract_equilibrium_params",
+      "output_file": "structural_params.json",
+      "weight": 0.6,
+      "kind": "compare_fields",
+      "config": {
+        "gold": {
+          "rutile_LDA": {
+            "a": 4.58,
+            "c": 3.08,
+            "u": 0.3044
+          },
+          "rutile_GGA": {
+            "a": 4.825,
+            "c": 3.245,
+            "u": 0.3065
+          },
+          "CaCl2_LDA": {
+            "a": 4.506,
+            "b": 4.371,
+            "c": 3.02,
+            "u": 0.317,
+            "v": 0.275
+          },
+          "CaCl2_GGA": {
+            "a": 4.855,
+            "b": 4.737,
+            "c": 3.258,
+            "u": 0.3273,
+            "v": 0.2853
+          },
+          "cubic_LDA": {
+            "a": 5.872,
+            "u": 0.342
+          },
+          "cubic_GGA": {
+            "a": 5.079,
+            "u": 0.346
+          }
+        },
+        "tolerances": {
+          "a": 0.02,
+          "b": 0.02,
+          "c": 0.02,
+          "u": 0.005,
+          "v": 0.005
+        }
+      }
+    },
+    {
+      "id": "determine_transition_pressures",
+      "output_file": "transition_pressures.json",
+      "weight": 0.4,
+      "kind": "compare_fields",
+      "config": {
+        "gold": {
+          "LDA": {
+            "rutile_cacl2": 10.1,
+            "cacl2_cubic": 18.3
+          },
+          "GGA": {
+            "rutile_cacl2": 12.4,
+            "cacl2_cubic": 22.1
+          }
+        },
+        "tolerance": 2.0
+      }
+    }
+  ]
+}

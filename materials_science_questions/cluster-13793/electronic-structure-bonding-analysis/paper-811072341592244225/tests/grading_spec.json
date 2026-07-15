@@ -1,0 +1,52 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recomputation (T1) requires running SCF cluster calculations which is not feasible in the verifier sandbox. The checker compares the agent's reported net charges to hidden paper gold with tolerance and verifies the required trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "net_charges.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold net Mulliken charges of Li for tetrahedral and octahedral sites from the paper",
+      "source_provenance": "paper Table 1, ionicity column for Li: 0.76 (tet) and 0.65 (oct). The paper explicitly reports net charge of Li(tet)=0.76 and Li(oct)=0.65 from Mulliken population analysis.",
+      "generation_method": "Directly taken from Table 1 second row ionicities: Li(tet)=0.76, Li(oct)=0.65.",
+      "why_not_fabricated": "Values are the paper's own reported result; used as hidden reference for result-level comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "net_charges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "tetrahedral_Li_charge": "number",
+            "octahedral_Li_charge": "number"
+          }
+        },
+        "description": "Net Mulliken charges for lithium at tetrahedral and octahedral sites. The hidden checker compares these values to paper‑reported references and verifies tetrahedral charge > octahedral charge."
+      }
+    ],
+    "notes": "The task reproduces the Mulliken charge analysis; DOS and overlap population are not scored because they are qualitative supporting results. The agent may use any open‑source quantum chemistry or DFT code capable of cluster calculations with point‑charge embedding."
+  },
+  "steps": [
+    {
+      "id": "mulliken_charges",
+      "output_file": "net_charges.json",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "gold_tet": 0.76,
+      "gold_oct": 0.65,
+      "tolerance": 0.05,
+      "sub_weights": {
+        "tet_charge": 0.3,
+        "oct_charge": 0.3,
+        "ordering": 0.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of the cluster‑variation simulation is infeasible; scoring uses consistency between heat‑capacity peak and phase boundaries (T1) and result‑level comparison of transition properties and phase‑diagram points against paper gold (T0).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_diagram.csv": "reference_match",
+    "transition_properties.json": "reference_match",
+    "heat_capacity_data.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase_type",
+            "composition_c_A",
+            "T_c_lower",
+            "T_c_upper"
+          ],
+          "units": {
+            "composition_c_A": "mole fraction (dimensionless)",
+            "T_c_lower": "k_B T / v (dimensionless)",
+            "T_c_upper": "k_B T / v (dimensionless)"
+          }
+        },
+        "description": "Phase boundaries of L1₂ and L1₀ ordered phases: for each ordered‑phase composition the lower and upper reduced transition temperatures. Compared to hidden gold values within a relative tolerance."
+      },
+      {
+        "file": "transition_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "max_Tc_L12": "number",
+            "max_Tc_L10": "number",
+            "composition_at_max_L12": "number",
+            "shift_from_AB3": "number",
+            "v_over_kTc_L12": "number",
+            "v_over_kTc_L10": "number",
+            "entropy_jump_L12_at_0_25": "number",
+            "energy_jump_L12_at_0_25": "number",
+            "entropy_jump_L10_at_0_5": "number",
+            "energy_jump_L10_at_0_5": "number"
+          },
+          "units": {
+            "max_Tc_L12": "k_B T / v",
+            "max_Tc_L10": "k_B T / v",
+            "composition_at_max_L12": "c_A",
+            "shift_from_AB3": "difference in c_A",
+            "v_over_kTc_L12": "dimensionless",
+            "v_over_kTc_L10": "dimensionless",
+            "entropy_jump_L12_at_0_25": "units of R",
+            "energy_jump_L12_at_0_25": "units of N v",
+            "entropy_jump_L10_at_0_5": "units of R",
+            "energy_jump_L10_at_0_5": "units of N v"
+          }
+        },
+        "description": "Aggregate transition properties computed from the cluster‑variation solutions. Each numeric key is compared to a hidden gold value with absolute or relative tolerance."
+      },
+      {
+        "file": "heat_capacity_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_c_A",
+            "reduced_temperature_t",
+            "C_v_per_Nk"
+          ],
+          "units": {
+            "composition_c_A": "mole fraction (dimensionless)",
+            "reduced_temperature_t": "k_B T / v (dimensionless)",
+            "C_v_per_Nk": "units of k (dimensionless)"
+          }
+        },
+        "description": "Configuration heat capacity per atom as functions of temperature for c_A=0.25 and 0.5. Checked against hidden gold curve points and a self‑consistency requirement: the integral of C_v/T over the transition region must match the submitted entropy jump."
+      }
+    ],
+    "notes": "All scored outputs derive entirely from the agent's own implementation of the Kikuchi cluster‑variation formalism. No pre‑computed equilibrium data are supplied."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values extracted from the paper",
+      "source_provenance": "Paper text (Section 6): phase‑boundary T_c values at c_A=0.25,0.265,0.5; entropy/energy jumps; v/kTc correlations; displaced maximum composition.",
+      "generation_method": "Exact numbers as stated in the paper (e.g., \"T_c^{(1)}(0.25)=0.4829 v/k\", \"S^{(1)}‑S^{(2)}=0.2463 R\").",
+      "why_not_fabricated": "These are the precise target values the agent aims to reproduce; they are not synthetic."
+    }
+  ],
+  "steps": [
+    {
+      "id": "phase_diagram_check",
+      "output_file": "phase_diagram.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "description": "Validate phase boundaries at key compositions and structural max positions",
+      "gold": {
+        "points": [
+          {
+            "composition": 0.25,
+            "phase_type": "L12",
+            "T_c_lower": 0.478,
+            "T_c_upper": 0.4829,
+            "tol_rel": 0.05
+          },
+          {
+            "composition": 0.265,
+            "phase_type": "L12",
+            "T_c_lower": 0.4857,
+            "T_c_upper": 0.4857,
+            "tol_rel": 0.02
+          },
+          {
+            "composition": 0.5,
+            "phase_type": "L10",
+            "T_c_lower": 0.4733,
+            "T_c_upper": 0.4733,
+            "tol_rel": 0.05
+          }
+        ],
+        "max_L12_composition_range": [
+          0.26,
+          0.27
+        ],
+        "max_L10_composition_range": [
+          0.495,
+          0.505
+        ]
+      }
+    },
+    {
+      "id": "transition_properties_check",
+      "output_file": "transition_properties.json",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "description": "Compare each transition property to paper gold with appropriate tolerances",
+      "gold": {
+        "max_Tc_L12": {
+          "value": 0.4857,
+          "tol_rel": 0.01
+        },
+        "max_Tc_L10": {
+          "value": 0.4733,
+          "tol_rel": 0.01
+        },
+        "composition_at_max_L12": {
+          "value": 0.265,
+          "tol_abs": 0.005
+        },
+        "shift_from_AB3": {
+          "value": 0.015,
+          "tol_abs": 0.005
+        },
+        "v_over_kTc_L12": {
+          "value": 2.059,
+          "tol_abs": 0.01
+        },
+        "v_over_kTc_L10": {
+          "value": 2.113,
+          "tol_abs": 0.01
+        },
+        "entropy_jump_L12_at_0_25": {
+          "value": 0.2463,
+          "tol_rel": 0.05
+        },
+        "energy_jump_L12_at_0_25": {
+          "value": 0.1185,
+          "tol_rel": 0.05
+        },
+        "entropy_jump_L10_at_0_5": {
+          "value": 0.2683,
+          "tol_rel": 0.05
+        },
+        "energy_jump_L10_at_0_5": {
+          "value": 0.1268,
+          "tol_rel": 0.05
+        }
+      }
+    },
+    {
+      "id": "heat_capacity_structural",
+      "output_file": "heat_capacity_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Check heat capacity data has expected structure and peak near transition temperatures",
+      "gold": {
+        "compositions": [
+          0.25,
+          0.5
+        ],
+        "peak_window": 0.1,
+        "transition_temperatures": {
+          "0.25": 0.478,
+          "0.5": 0.4733
+        }
+      }
+    }
+  ]
+}

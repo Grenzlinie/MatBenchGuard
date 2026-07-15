@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing DFT total energies in the verifier is infeasible; scoring relies on structural ordering of formation energies, plus a loose absolute value tolerance check against paper-reported values.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_defect_energies.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold paper-reported Frenkel formation energies for absolute tolerance check",
+      "source_provenance": "Paper Supporting Information Table S10 and main text: CdSe Cd-Frenkel 3.16 eV, Se-Frenkel 6.00 eV; PbSe Pb-Frenkel 3.30 eV, Se-Frenkel 3.80 eV.",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These are the exact formation energies reported in the paper; used as reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_defect_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CdSe_Frenkel_Cd",
+            "CdSe_Frenkel_Se",
+            "PbSe_Frenkel_Pb",
+            "PbSe_Frenkel_Se"
+          ],
+          "properties": {
+            "CdSe_Frenkel_Cd": {
+              "type": "number",
+              "units": "eV"
+            },
+            "CdSe_Frenkel_Se": {
+              "type": "number",
+              "units": "eV"
+            },
+            "PbSe_Frenkel_Pb": {
+              "type": "number",
+              "units": "eV"
+            },
+            "PbSe_Frenkel_Se": {
+              "type": "number",
+              "units": "eV"
+            }
+          }
+        },
+        "description": "Frenkel defect formation energies for cation and anion vacancies in CdSe and PbSe."
+      }
+    ],
+    "notes": "The hidden checker will evaluate the reported defect formation energies against undisclosed physics-based criteria."
+  },
+  "steps": [
+    {
+      "id": "step_01_ordering",
+      "output_file": "step_01_defect_energies.json",
+      "weight": 0.7,
+      "kind": "structural",
+      "description": "Verify structural ordering: CdSe_Frenkel_Se > CdSe_Frenkel_Cd and PbSe_Frenkel_Se > PbSe_Frenkel_Pb.",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "step_01_absolute",
+      "output_file": "step_01_defect_energies.json",
+      "weight": 0.3,
+      "kind": "numeric_comparison",
+      "description": "Check absolute formation energy values within ±1.0 eV of paper-reported gold.",
+      "target_policy": "exact_match",
+      "gold": {
+        "CdSe_Frenkel_Cd": 3.16,
+        "CdSe_Frenkel_Se": 6.0,
+        "PbSe_Frenkel_Pb": 3.3,
+        "PbSe_Frenkel_Se": 3.8
+      },
+      "tolerance_abs": 1.0
+    }
+  ]
+}

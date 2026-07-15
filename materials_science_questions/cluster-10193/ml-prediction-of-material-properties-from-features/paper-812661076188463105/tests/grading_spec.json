@@ -1,0 +1,61 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "MAE cannot be recomputed because the checker does not possess the agent's generated morphology dataset and labels; feature importance ranking is checked structurally.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "regression_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "regression_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "test_mae": "float",
+            "feature_importance": "object"
+          },
+          "properties": {
+            "feature_importance": {
+              "type": "object",
+              "required": {
+                "v": "float",
+                "s": "float",
+                "h": "float",
+                "g": "float"
+              }
+            }
+          }
+        },
+        "description": "The regression result is scored by checking that the reported test MAE meets a hidden reference threshold (lower is better) and that the feature importance ranking corresponds to the expected order of importance."
+      }
+    ],
+    "notes": "The workflow must re‑derive the complete pipeline; no pre‑made morphological dataset or pre‑trained model is provided. The random forest hyperparameters and exact implementation are the agent's choice. The checker verifies only the final regression_results.json."
+  },
+  "steps": [
+    {
+      "id": "check_mae",
+      "output_file": "regression_results.json",
+      "title": "MAE threshold check",
+      "description": "Reported test MAE must be ≤ 0.03 D₀ (the paper's reported threshold). Full credit for ≤0.03; partial credit decays for higher values.",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target": 0.03,
+      "tolerance": 0.0,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "check_feature_importance",
+      "output_file": "regression_results.json",
+      "title": "Feature importance ranking",
+      "description": "The two most important features must be v (pore volume) and h (integrated mean curvature).",
+      "weight": 0.5,
+      "kind": "structural",
+      "target_policy": "structural_audit"
+    }
+  ]
+}

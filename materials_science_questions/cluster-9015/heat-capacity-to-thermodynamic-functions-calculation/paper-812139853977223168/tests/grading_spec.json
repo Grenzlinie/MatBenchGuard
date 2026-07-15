@@ -1,0 +1,207 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible without DFT; T2 consistency not applicable. Checks use structural constraints (bond distances, trend) supplemented by result-level comparison to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for all scored artifacts: Hg–C/–S distances, thermodynamic table, beta_mu, electronic transitions.",
+      "source_provenance": "Paper Table I (experimental bond lengths), Table III (thermodynamic data), Nonlinear Optical Properties section (beta_mu), TD-DFT results (wavelengths, oscillator strengths).",
+      "generation_method": "Copied verbatim from the published paper.",
+      "why_not_fabricated": "These are the paper's own reported values that a faithful reproduction must reproduce within tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_geometry.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "XYZ format atomic coordinates"
+        },
+        "description": "Optimized molecular geometry from DFT, compared to experimental X-ray bond lengths via root-mean-square deviation."
+      },
+      {
+        "file": "bond_orders.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "bond",
+            "order"
+          ]
+        },
+        "description": "Bond orders for Hg-C and Hg-S bonds."
+      },
+      {
+        "file": "thermodynamic_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Cp",
+            "S",
+            "H"
+          ],
+          "units": {
+            "T": "K",
+            "Cp": "J mol⁻¹ K⁻¹",
+            "S": "J mol⁻¹ K⁻¹",
+            "H": "kJ mol⁻¹"
+          }
+        },
+        "description": "Standard thermodynamic functions computed from scaled vibrational frequencies; compared to hidden reference values with tolerances."
+      },
+      {
+        "file": "nlo_result.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ]
+        },
+        "description": "First hyperpolarizability β_μ from PM3 calculation; compared to hidden reference value with tolerance."
+      },
+      {
+        "file": "electronic_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "oscillator_strength"
+          ]
+        },
+        "description": "TD-DFT electronic absorption wavelengths and oscillator strengths; compared to hidden reference values with tolerances."
+      }
+    ],
+    "notes": "All scored outputs are compared against hidden gold values derived from the paper (tolerances set to absorb legitimate computational variation). The load-bearing thermodynamic step ensures that the frequency calculation (process step) was genuinely executed."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "optimized_geometry.xyz",
+      "weight": 0.05,
+      "target_policy": "structural_audit",
+      "gold": {
+        "Hg_C_distance": 2.049,
+        "Hg_S_distance": 2.401,
+        "tolerance_abs": 0.1
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "bond_orders.csv",
+      "weight": 0.05,
+      "target_policy": "structural_audit",
+      "gold": null
+    },
+    {
+      "id": "step_04",
+      "output_file": "thermodynamic_functions.csv",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "gold": {
+        "rows": [
+          {
+            "T": 200.0,
+            "Cp": 192.4,
+            "S": 506.53,
+            "H": 24.93
+          },
+          {
+            "T": 298.1,
+            "Cp": 252.1,
+            "S": 594.46,
+            "H": 46.74
+          },
+          {
+            "T": 300.0,
+            "Cp": 253.22,
+            "S": 596.02,
+            "H": 47.21
+          },
+          {
+            "T": 400.0,
+            "Cp": 310.45,
+            "S": 676.88,
+            "H": 75.45
+          },
+          {
+            "T": 500.0,
+            "Cp": 358.62,
+            "S": 751.51,
+            "H": 108.99
+          },
+          {
+            "T": 600.0,
+            "Cp": 397.6,
+            "S": 820.46,
+            "H": 146.87
+          },
+          {
+            "T": 700.0,
+            "Cp": 429.27,
+            "S": 884.21,
+            "H": 188.27
+          },
+          {
+            "T": 800.0,
+            "Cp": 455.39,
+            "S": 943.29,
+            "H": 232.54
+          }
+        ],
+        "tolerances": {
+          "Cp": 5.0,
+          "S": 10.0,
+          "H": 2.0
+        }
+      }
+    },
+    {
+      "id": "step_05",
+      "output_file": "nlo_result.csv",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "gold": {
+        "beta_mu": 4.747e-30,
+        "relative_tolerance": 0.2
+      }
+    },
+    {
+      "id": "step_06",
+      "output_file": "electronic_spectrum.csv",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "gold": {
+        "transitions": [
+          {
+            "wavelength": 206.34,
+            "oscillator": 0.4008
+          },
+          {
+            "wavelength": 225.62,
+            "oscillator": 0.1457
+          }
+        ],
+        "wavelength_tol": 5.0,
+        "oscillator_tol": 0.1
+      }
+    }
+  ]
+}

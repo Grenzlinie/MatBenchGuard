@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "Compute elastic displacement fields for seven loading cases",
+    "role": "process",
+    "action": "Build a linear elastic finite element model of the five‑storey building frame using the geometry and material properties described in the paper (steel 200 GPa, concrete 30 GPa, masonry 3 GPa). Apply the seven loading cases and record vertical displacement fields at beam centreline nodes.",
+    "output_file": "",
+    "evidence": "elastic_displacements.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate displacement fields needed for effective deflection calculation.",
+    "output_schema": "JSON object mapping load case identifier to an array of node displacements (e.g., \"case\": [ { \"node\": ..., \"displacement\": ... } ])."
+  },
+  {
+    "id": "step2",
+    "title": "Effective long‑term beam deflections",
+    "role": "scored",
+    "action": "Using the displacement fields from the previous step, apply the superposition formulas (accounting for construction sequence and service load factors) and multiply by the long‑term creep amplification factor to obtain effective long‑term vertical beam centre deflections for each floor. Compute total displacement and effective deflection for floors 1–5. Output effective_deflections.csv.",
+    "output_file": "effective_deflections.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Effective long‑term vertical deflections for floors 1‑5; checked against paper‑reported value and monotonicity.",
+    "output_schema": "CSV with columns: floor (int), total_displacement_mm (float), effective_displacement_mm (float), effective_deflection_mm (float). One row per floor."
+  },
+  {
+    "id": "step3",
+    "title": "Parametric maximum crack width simulation",
+    "role": "scored",
+    "action": "For the first‑floor masonry panel, impose boundary displacements proportional to the effective deflection profile at displacement levels from 0 to at least 2.9 mm in steps of 0.1 mm. For each combination of tensile strength f_t and elastic modulus E from Table 1 (G_F = 100 N/m), run a cohesive crack finite element simulation with exponential softening and record the maximum crack width w_max at each displacement step. Output parametric_curves.csv covering all nine material combinations.",
+    "output_file": "parametric_curves.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Maximum crack width vs imposed displacement for all nine material combinations; slopes and threshold displacements are recomputed to validate the crack‑width evolution relationship.",
+    "output_schema": "CSV with columns: lambda_ch_mm (float), u_mm (float), w_max_mm (float). One row per displacement step per material combination."
+  }
+]

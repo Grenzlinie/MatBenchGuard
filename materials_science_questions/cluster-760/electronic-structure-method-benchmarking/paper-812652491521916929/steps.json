@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build initial molecular geometries",
+    "role": "process",
+    "action": "Generate initial Cartesian coordinates for PANI‑L, PANI‑E, and the four polyaniline‑fullerene adducts (C60‑L1, C60‑L2, C60‑E1, C60‑E2) in their neutral, cationic, and anionic forms from known chemical structures. The structures must be chemically reasonable starting points for DFT optimization.",
+    "output_file": "",
+    "evidence": "initial_geometries.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides starting geometries for all subsequent quantum chemistry calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Geometry optimization and frequency calculation",
+    "role": "process",
+    "action": "For each of the six compounds (neutral, cation, and anion) perform DFT geometry optimization and vibrational frequency calculation at the B3LYP‑GD3/6‑31G(d) level using an open‑source quantum chemistry package. Extract the optimized total energies and zero‑point corrections.",
+    "output_file": "",
+    "evidence": "opt_freq_logs.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain minimum‑energy structures and harmonic vibrational frequencies needed to compute zero‑point energies and to define the geometry for the single‑point step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Single‑point energies and orbital analysis",
+    "role": "process",
+    "action": "Run single‑point energy calculations at the B3LYP‑GD3/6‑311++G(d,p) level on the geometries optimized in step 02 to obtain accurate total energies, as well as HOMO and LUMO eigenvalues (in eV).",
+    "output_file": "",
+    "evidence": "sp_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Provides high‑level energies and frontier orbital energies needed for the antioxidant property derivation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute antioxidant properties (BDE, IE, EA, orbital energies)",
+    "role": "scored",
+    "action": "From the energies and zero‑point corrections of the parent, radical, cation, and anion species (step 02 and step 03) compute for each compound: all N‑H bond dissociation enthalpies (BDE in kcal/mol at 298 K), adiabatic ionization energy (IE in kcal/mol), adiabatic electron affinity (EA in kcal/mol), HOMO energy (eV), and LUMO energy (eV). Write the results to a JSON file.",
+    "output_file": "antioxidant_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The file contains for each of the six compounds (PANI‑L, PANI‑E, C60‑L1, C60‑L2, C60‑E1, C60‑E2) the list of N‑H BDE values (kcal/mol), adiabatic ionization energy (kcal/mol), adiabatic electron affinity (kcal/mol), HOMO energy (eV), and LUMO energy (eV).",
+    "output_schema": "{ \"<compound_name>\": {\"bde\": [float, ...], \"adiabatic_IE\": float, \"adiabatic_EA\": float, \"HOMO_energy\": float, \"LUMO_energy\": float}, ... }"
+  },
+  {
+    "id": "step_05",
+    "title": "Construct FEDAM and identify best antioxidant",
+    "role": "scored",
+    "action": "Using the adiabatic IE and EA from step 04 and the public reference values IE_Na = 118.5 kcal/mol, EA_F = 78.4 kcal/mol, compute the electron‑donor index RIE = IE_compound / IE_Na and electron‑acceptor index REA = EA_compound / EA_F for every compound. Identify the one compound that simultaneously satisfies RIE < 1 and REA > 1 (the best antioxidant sector). Write the results to a JSON file.",
+    "output_file": "fedor_analysis.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The file lists each compound’s RIE and REA indices and specifically names the compound that falls into the best antioxidant sector.",
+    "output_schema": "{ \"compounds\": {\"<compound>\": {\"RIE\": float, \"REA\": float}, ...}, \"best_antioxidant\": \"<compound_name>\" }"
+  }
+]

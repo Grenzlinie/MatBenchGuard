@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate supercell structures",
+    "role": "process",
+    "action": "For each alloy composition Ni0.6Co0.2X0.2 (X=Co, Fe, Mn), generate a 120-atom FCC supercell that approximates the atomic distribution of a random solid solution (use SAE or SQS). For the universality test, generate supercells for at least three pure metals (select from Cu, Fe, V, Ti, Cr, Zn, Al, Ta, W) and for the corresponding binary alloys with 20 at.% Mn, employing the appropriate Bravais lattice (FCC/BCC/HCP) and supercell sizes (typically 64–120 atoms).",
+    "output_file": "",
+    "evidence": "supercell_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Create the crystal structures that will host the vacancy and diffusion paths.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Create vacancy end-point configurations",
+    "role": "process",
+    "action": "For each supercell, remove an atom to introduce a vacancy. Identify the nearest-neighbor (1nn) atoms. For each chosen diffusing atom (for NiCoX systems: at least two 1nn Ni and two 1nn Co paths; for universality systems: at least two paths of the host metal type), construct the initial (atom in original site, vacancy present) and final (atom moved into vacancy) images as end-points for CI-NEB.",
+    "output_file": "",
+    "evidence": "endpoint_configurations.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Prepare the initial and final structures for all diffusion paths to be studied with CI-NEB.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute migration barriers for NiCoX alloys",
+    "role": "scored",
+    "action": "Using DFT (Quantum ESPRESSO with PAW-PBE pseudopotentials) and the climbing-image nudged elastic band (CI-NEB) method with three intermediate images, calculate the minimum-energy path and migration barrier (Ed = E_saddle − E_initial) for each diffusion path in the Ni0.6Co0.2X0.2 (X=Co, Fe, Mn) alloys. Output results in a CSV file with one row per path.",
+    "output_file": "migration_barriers_NiCoX.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Perform CI-NEB for the NiCoX alloy systems and output the migration barriers. The checker will verify relative trends.",
+    "output_schema": "CSV with header: alloy,atom_type,migration_barrier_eV. alloy: string (e.g., 'Ni0.6Co0.2Mn0.2'); atom_type: string, 'Ni' or 'Co'; migration_barrier_eV: float. One row per path."
+  },
+  {
+    "id": "step4",
+    "title": "Compute migration barriers for universality set",
+    "role": "scored",
+    "action": "Perform CI-NEB calculations for the chosen pure metals and their Mn-containing binary alloys (20 at.% Mn). For each system, compute Ed for at least two migration paths involving the host metal atom. For the Fe-based system, apply DFT+U with an effective Hubbard Ueff = 2 eV. Output results in a CSV file.",
+    "output_file": "migration_barriers_universality.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Perform CI-NEB for the universality systems and output the migration barriers.",
+    "output_schema": "CSV with header: system,atom_type,migration_barrier_eV. system: string (e.g., 'pure Cu', 'Cu0.8Mn0.2'); atom_type: string (e.g., 'Cu'); migration_barrier_eV: float. One row per path."
+  }
+]

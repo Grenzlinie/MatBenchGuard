@@ -1,0 +1,93 @@
+[
+  {
+    "id": "prepare_inputs",
+    "title": "Prepare DFT input structures",
+    "role": "process",
+    "action": "Generate DFT input files (pw.x input) for fcc Pd, fcc Ni, N2 molecule, and the antiperovskite (Pd0.7Ni0.3)NNi3 bulk unit cell using the lattice constant of 3.79 Å and A-site occupancy of 70% Pd.",
+    "output_file": "",
+    "evidence": "input_files_generated.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must create input files for Quantum ESPRESSO pw.x calculations for the necessary structures. The required structures are fcc Pd (1 atom per unit cell), fcc Ni (1 atom per unit cell), an isolated N2 molecule in a box, and the antiperovskite bulk unit cell.",
+    "output_schema": ""
+  },
+  {
+    "id": "reference_energies",
+    "title": "Compute elemental reference total energies",
+    "role": "process",
+    "action": "Run DFT total energy calculations (self-consistent) for fcc Pd, fcc Ni, and the isolated N2 molecule using Quantum ESPRESSO with SSSP pseudopotentials.",
+    "output_file": "",
+    "evidence": "reference_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must perform SCF calculations for the elemental references to obtain total energies per simulation cell.",
+    "output_schema": ""
+  },
+  {
+    "id": "bulk_energy",
+    "title": "Compute antiperovskite bulk total energy",
+    "role": "process",
+    "action": "Relax the antiperovskite bulk unit cell (volume relaxation) and compute its total energy using Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "bulk_relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must perform variable-cell relaxation of the antiperovskite unit cell and extract the final total energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "formation_energy",
+    "title": "Write formation energy raw data",
+    "role": "scored",
+    "action": "Collect the final total energies from the previous steps and write them to total_energies.json.",
+    "output_file": "total_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The file must contain the total energies per simulation cell for the antiperovskite, fcc Pd, fcc Ni, and N2 molecule.",
+    "output_schema": "Object with keys: antiperovskite (eV, float), Pd_fcc (eV, float), Ni_fcc (eV, float), N2_gas (eV, float)."
+  },
+  {
+    "id": "slab_build",
+    "title": "Build Pd-terminated (100) slab model",
+    "role": "process",
+    "action": "Using the optimized bulk antiperovskite structure, build a (100) surface slab model with a Pd monolayer termination (Pd/ae-PdNNi).",
+    "output_file": "",
+    "evidence": "slab_structure.pdb",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The agent must construct a slab model with a vacuum region and a Pd monolayer on one side of the slab.",
+    "output_schema": ""
+  },
+  {
+    "id": "slab_dos",
+    "title": "Relax slab and compute projected DOS",
+    "role": "process",
+    "action": "Relax the slab (fix bottom layers, relax top layers) and compute the projected density of states (PDOS) for surface Pd atoms.",
+    "output_file": "",
+    "evidence": "pdos_data.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must perform a constrained relaxation and a subsequent non-self-consistent calculation to obtain PDOS for Pd d-states.",
+    "output_schema": ""
+  },
+  {
+    "id": "dband_center",
+    "title": "Calculate d-band center",
+    "role": "scored",
+    "action": "Compute the d-band center (eV) of Pd surface atoms from the PDOS using the integral of energy times density divided by total density, and save the result to dband_center.json.",
+    "output_file": "dband_center.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The d-band center relative to the Fermi level must be computed from the PDOS of the surface Pd atoms.",
+    "output_schema": "Object with key d_band_center (eV, float)."
+  }
+]

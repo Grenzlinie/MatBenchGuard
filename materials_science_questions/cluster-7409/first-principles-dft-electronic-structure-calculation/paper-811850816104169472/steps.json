@@ -1,0 +1,41 @@
+[
+  {
+    "id": "build_slab",
+    "title": "Construct the (111)-Ti slab model",
+    "role": "process",
+    "action": "Build a symmetric 13-layer slab of cubic PbTiO₃ (111) terminated by a Ti layer, with a 12 Å vacuum gap, using the in-plane lattice constant a=3.968 Å. The central layer is treated as bulk-like and fixed. Output the atomic coordinates in a format suitable for Quantum ESPRESSO input.",
+    "output_file": "",
+    "evidence": "slab_structure.pwi",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate the initial atomic structure of the slab, which is the starting point for the subsequent relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "relax",
+    "title": "Perform DFT ionic relaxation of the slab",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO (pw.x) with GGA-PBE PAW pseudopotentials for Pb, Ti, O, perform full ionic relaxation of the slab. Use a plane-wave energy cutoff of at least 400 eV, a 11×11×1 Monkhorst–Pack k-point grid, and a force convergence threshold of 0.02 eV/Å or better. All atoms except the central layer may move. Save the final relaxed atomic coordinates.",
+    "output_file": "",
+    "evidence": "relaxed_coordinates.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The ionic relaxation produces the geometry from which the structural metrics are calculated; it must be executed before the analysis step.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_metrics",
+    "title": "Compute structural relaxation metrics",
+    "role": "scored",
+    "action": "From the relaxed atomic positions obtained in the previous step, compute the following quantities for the (111)-Ti termination: (i) atomic displacements along the surface normal for Ti, Pb, and O atoms in each layer (negative = inward); (ii) interlayer relaxation percentages Δd₁₂ and Δd₂₃ defined as the percent change of the distance between consecutive layer centroids relative to the bulk interlayer spacing; (iii) percentage change of the outermost Ti–O bond length and of the subsurface Ti–O bond length relative to the bulk Ti–O bond length (1.984 Å); (iv) rumpling amplitude of the second PbO₃ layer (absolute value). Report all numbers in a single JSON file.",
+    "output_file": "relaxation_metrics.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Quantitative assessment of the surface relaxation. The JSON file must contain the required keys and arrays; its values are compared by the checker against the paper's reported reference values.",
+    "output_schema": "{\n  \"surface_Ti_displacement\": <float>,\n  \"interlayer_relaxation_d12\": <float>,\n  \"interlayer_relaxation_d23\": <float>,\n  \"outermost_Ti-O_bond_contraction\": <float>,\n  \"subsurface_Ti-O_bond_expansion\": <float>,\n  \"rumpling_second_PbO3_layer\": <float>,\n  \"layer_displacements\": [\n    { \"layer\": <int>, \"atom_type\": \"Ti\"|\"Pb\"|\"O\", \"displacement\": <float> },\n    ...\n  ]\n}"
+  }
+]

@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "C' is recomputed from the agent's CSV (using (C11-C12)/2 for cubic prototypes) and compared to the paper-reported CASTEP values. Phonon stability flags are compared to the paper's classification derived from Fig. 2. T1 is feasible because the required artifacts contain the raw quantities to verify sign and magnitude.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "elastic_constants.csv": "reference_match",
+    "phonon_stability.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference elastic constants (C') and phonon stability classification from the paper (Table I, CASTEP column; Sec. III B, Fig. 2).",
+      "source_provenance": "Paper Phys. Rev. B 72, 024209 (2005), Table I (CASTEP rows) and phonon description in Section III B.",
+      "generation_method": "Extracted the CASTEP C' values and the boolean flags from the published values and textual classification (e.g., 'L12 and D019 AgRu3 phases are relatively stable').",
+      "why_not_fabricated": "Values are exactly as reported in the published paper; no synthesis or alteration."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "stoichiometry",
+            "prototype",
+            "C11",
+            "C12",
+            "C13",
+            "C33",
+            "C44",
+            "C_prime"
+          ],
+          "units": {
+            "C11": "GPa",
+            "C12": "GPa",
+            "C13": "GPa",
+            "C33": "GPa",
+            "C44": "GPa",
+            "C_prime": "GPa"
+          }
+        },
+        "description": "Computed elastic stiffness constants and the derived shear stability parameter C' for six Ag-Ru prototypes. The checker verifies sign and magnitude of C' against the paper's reference values."
+      },
+      {
+        "file": "phonon_stability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "stoichiometry": "string",
+            "prototype": "string",
+            "has_imaginary_frequencies": "boolean"
+          }
+        },
+        "description": "Per‑structure boolean indicating the presence of imaginary phonon frequencies. The checker expects exact agreement with the paper's reported classification."
+      }
+    ],
+    "notes": "The workflow uses open-source DFT (Quantum ESPRESSO, GGA-PBE pseudopotentials) and does not depend on any proprietary code or private data. The output elastic constants are expected to differ slightly from the paper's CASTEP values; the scorer tolerates reasonable method-dependent spread while requiring correct mechanical stability trends."
+  },
+  "steps": [
+    {
+      "id": "elastic_c_prime_sign_and_magnitude",
+      "output_file": "elastic_constants.csv",
+      "weight": 0.6,
+      "reference_c_prime": {
+        "Ag3Ru_D03": -10.81,
+        "Ag3Ru_L12": 22.43,
+        "Ag3Ru_D019": 33.06,
+        "AgRu3_D03": -41.78,
+        "AgRu3_L12": 65.91,
+        "AgRu3_D019": 15.47
+      },
+      "tolerance": 30.0
+    },
+    {
+      "id": "phonon_stability_match",
+      "output_file": "phonon_stability.json",
+      "weight": 0.4,
+      "reference_flags": [
+        {
+          "stoichiometry": "Ag3Ru",
+          "prototype": "D03",
+          "has_imaginary_frequencies": true
+        },
+        {
+          "stoichiometry": "Ag3Ru",
+          "prototype": "L12",
+          "has_imaginary_frequencies": true
+        },
+        {
+          "stoichiometry": "Ag3Ru",
+          "prototype": "D019",
+          "has_imaginary_frequencies": true
+        },
+        {
+          "stoichiometry": "AgRu3",
+          "prototype": "D03",
+          "has_imaginary_frequencies": true
+        },
+        {
+          "stoichiometry": "AgRu3",
+          "prototype": "L12",
+          "has_imaginary_frequencies": false
+        },
+        {
+          "stoichiometry": "AgRu3",
+          "prototype": "D019",
+          "has_imaginary_frequencies": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent outputs only predicted G_IRs; no raw intermediate artifacts available for recompute. Compare predicted values to hidden experimental gold (Table 5) with tolerance-based reward for Kevlar (threshold_or_better), directional check for carbon, and monotonic trend verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental steady-state G_IRs from paper Table 5 used as hidden gold for scoring the agent's predicted values",
+      "source_provenance": "Paper Table 5",
+      "generation_method": "Copied directly from paper Table 5 values (mean values), rounded to two decimals as reported.",
+      "why_not_fabricated": "These are the actual published experimental measurements the paper claims the model should reproduce. They provide the authentic gold standard."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predicted_G_IRs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "thread_type",
+            "stitch_density",
+            "G_IRs_predicted"
+          ],
+          "columns": {
+            "thread_type": {
+              "type": "string"
+            },
+            "stitch_density": {
+              "type": "float",
+              "unit": "stitches per cm²"
+            },
+            "G_IRs_predicted": {
+              "type": "float",
+              "unit": "kJ/m²"
+            }
+          },
+          "units": {
+            "stitch_density": "stitches per cm²",
+            "G_IRs_predicted": "kJ/m²"
+          }
+        },
+        "description": "Predicted steady-state mode I delamination toughness values for stitched laminate configurations listed in the paper's Table 6. The values are compared to experimental measurements (hidden) with a tolerance on relative error for Kevlar threads, and a directional check for carbon threads. Monotonic trends with stitch density and thread diameter are also verified."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "file_shape",
+      "output_file": "predicted_G_IRs.csv",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "description": "File exists with required columns and exactly 8 rows"
+    },
+    {
+      "id": "kevlar_error",
+      "output_file": "predicted_G_IRs.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target_policy": "threshold_or_better",
+      "params": {
+        "kevlar_targets": [
+          {
+            "thread_type": "2-ply Kevlar",
+            "stitch_density": 4,
+            "G_IRs_exp": 2.03
+          },
+          {
+            "thread_type": "2-ply Kevlar",
+            "stitch_density": 8,
+            "G_IRs_exp": 2.82
+          },
+          {
+            "thread_type": "2-ply Kevlar",
+            "stitch_density": 12,
+            "G_IRs_exp": 4.1
+          },
+          {
+            "thread_type": "3-ply Kevlar",
+            "stitch_density": 4,
+            "G_IRs_exp": 2.59
+          },
+          {
+            "thread_type": "4-ply Kevlar",
+            "stitch_density": 4,
+            "G_IRs_exp": 2.9
+          },
+          {
+            "thread_type": "4-ply Kevlar",
+            "stitch_density": 8,
+            "G_IRs_exp": 4.54
+          }
+        ]
+      },
+      "description": "Score Kevlar configurations by relative error against experimental gold; full credit if relative error <= 20%, linear decay to 0 at 100% error"
+    },
+    {
+      "id": "carbon_direction",
+      "output_file": "predicted_G_IRs.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "reference_match",
+      "params": {
+        "carbon_targets": [
+          {
+            "thread_type": "T900 carbon",
+            "stitch_density": 4,
+            "G_IRs_exp": 4.02
+          },
+          {
+            "thread_type": "T900 carbon",
+            "stitch_density": 8,
+            "G_IRs_exp": 6.42
+          }
+        ]
+      },
+      "description": "For carbon threads, predicted G_IRs must be lower than experimental (underprediction)"
+    },
+    {
+      "id": "monotonic_trends",
+      "output_file": "predicted_G_IRs.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Check monotonic trends: within each thread family, higher stitch density gives higher G_IRs; at fixed density 4 st/cm², larger thread diameter gives higher G_IRs"
+    }
+  ]
+}

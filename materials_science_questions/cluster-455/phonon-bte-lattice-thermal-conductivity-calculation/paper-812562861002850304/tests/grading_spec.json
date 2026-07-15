@@ -1,0 +1,234 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline K_L and branch-averaged properties are computed via a full DFT+BTE pipeline that cannot be re-run in the verifier sandbox; the agent's reported results are compared to the paper's published values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for PL-B4 and PL-B8 lattice thermal conductivity, scattering rates, and group velocities",
+      "source_provenance": "Paper Table 1, Table 2, and text (K_L 5.89 W/mK for PL-B4, 13.94 W/mK for PL-B8)",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "These are the paper's own reported results, verified against the paper markdown."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pl_b4_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "K_L_300K": "float (W/mK)",
+            "branch_scattering_rates": "object",
+            "branch_group_velocities": "object"
+          },
+          "items": {
+            "branch_scattering_rates.TA1": "float (ps⁻¹)",
+            "branch_scattering_rates.TA2": "float",
+            "branch_scattering_rates.LA": "float",
+            "branch_scattering_rates.Optical": "float",
+            "branch_group_velocities.TA1": "float (km/s)",
+            "branch_group_velocities.TA2": "float",
+            "branch_group_velocities.LA": "float",
+            "branch_group_velocities.Optical": "float"
+          },
+          "units": {
+            "K_L_300K": "W/mK",
+            "branch_scattering_rates.TA1": "ps⁻¹",
+            "branch_scattering_rates.TA2": "ps⁻¹",
+            "branch_scattering_rates.LA": "ps⁻¹",
+            "branch_scattering_rates.Optical": "ps⁻¹",
+            "branch_group_velocities.TA1": "km/s",
+            "branch_group_velocities.TA2": "km/s",
+            "branch_group_velocities.LA": "km/s",
+            "branch_group_velocities.Optical": "km/s"
+          }
+        },
+        "description": "Computed lattice thermal conductivity and branch-averaged properties for PL-B4 at 300 K. Checker compares against paper values."
+      },
+      {
+        "file": "pl_b8_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "K_L_300K": "float (W/mK)",
+            "branch_scattering_rates": "object",
+            "branch_group_velocities": "object"
+          },
+          "items": {
+            "branch_scattering_rates.TA1": "float (ps⁻¹)",
+            "branch_scattering_rates.TA2": "float",
+            "branch_scattering_rates.LA": "float",
+            "branch_scattering_rates.Optical": "float",
+            "branch_group_velocities.TA1": "float (km/s)",
+            "branch_group_velocities.TA2": "float",
+            "branch_group_velocities.LA": "float",
+            "branch_group_velocities.Optical": "float"
+          },
+          "units": {
+            "K_L_300K": "W/mK",
+            "branch_scattering_rates.TA1": "ps⁻¹",
+            "branch_scattering_rates.TA2": "ps⁻¹",
+            "branch_scattering_rates.LA": "ps⁻¹",
+            "branch_scattering_rates.Optical": "ps⁻¹",
+            "branch_group_velocities.TA1": "km/s",
+            "branch_group_velocities.TA2": "km/s",
+            "branch_group_velocities.LA": "km/s",
+            "branch_group_velocities.Optical": "km/s"
+          }
+        },
+        "description": "Computed lattice thermal conductivity and branch-averaged properties for PL-B8 at 300 K. Checker compares against paper values."
+      }
+    ],
+    "notes": "The two output files capture the main thermal conductivity result and the branch-averaged scattering rates/group velocities from Tables 1 and 2 of the paper. The agent must extract after completing the full DFT+BTE workflow. Tolerances and paper reference values are stored in the hidden grading spec."
+  },
+  "steps": [
+    {
+      "id": "b4_kappa",
+      "kind": "numeric_field",
+      "output_file": "pl_b4_results.json",
+      "weight": 0.2,
+      "config": {
+        "path": "K_L_300K",
+        "target": 5.89,
+        "tolerance_frac": 0.2,
+        "unit": "W/mK"
+      }
+    },
+    {
+      "id": "b8_kappa",
+      "kind": "numeric_field",
+      "output_file": "pl_b8_results.json",
+      "weight": 0.2,
+      "config": {
+        "path": "K_L_300K",
+        "target": 13.94,
+        "tolerance_frac": 0.2,
+        "unit": "W/mK"
+      }
+    },
+    {
+      "id": "b4_scattering",
+      "kind": "composite_numeric",
+      "output_file": "pl_b4_results.json",
+      "weight": 0.15,
+      "config": {
+        "fields": [
+          "TA1",
+          "TA2",
+          "LA",
+          "Optical"
+        ],
+        "base_path": "branch_scattering_rates",
+        "targets": {
+          "TA1": 3.4,
+          "TA2": 3.1,
+          "LA": 4.32,
+          "Optical": 15.23
+        },
+        "tolerance_frac": 0.3,
+        "aggregation": "mean_score"
+      }
+    },
+    {
+      "id": "b8_scattering",
+      "kind": "composite_numeric",
+      "output_file": "pl_b8_results.json",
+      "weight": 0.15,
+      "config": {
+        "fields": [
+          "TA1",
+          "TA2",
+          "LA",
+          "Optical"
+        ],
+        "base_path": "branch_scattering_rates",
+        "targets": {
+          "TA1": 0.14,
+          "TA2": 0.38,
+          "LA": 0.61,
+          "Optical": 2.6
+        },
+        "tolerance_frac": 0.3,
+        "aggregation": "mean_score"
+      }
+    },
+    {
+      "id": "b4_groupvel",
+      "kind": "composite_numeric",
+      "output_file": "pl_b4_results.json",
+      "weight": 0.05,
+      "config": {
+        "fields": [
+          "TA1",
+          "TA2",
+          "LA",
+          "Optical"
+        ],
+        "base_path": "branch_group_velocities",
+        "targets": {
+          "TA1": 6.38,
+          "TA2": 4.52,
+          "LA": 3.33,
+          "Optical": 3.93
+        },
+        "tolerance_frac": 0.1,
+        "aggregation": "mean_score"
+      }
+    },
+    {
+      "id": "b8_groupvel",
+      "kind": "composite_numeric",
+      "output_file": "pl_b8_results.json",
+      "weight": 0.05,
+      "config": {
+        "fields": [
+          "TA1",
+          "TA2",
+          "LA",
+          "Optical"
+        ],
+        "base_path": "branch_group_velocities",
+        "targets": {
+          "TA1": 3.18,
+          "TA2": 5.64,
+          "LA": 5.37,
+          "Optical": 2.69
+        },
+        "tolerance_frac": 0.1,
+        "aggregation": "mean_score"
+      }
+    },
+    {
+      "id": "trend_scattering",
+      "kind": "trend",
+      "output_file": "pl_b4_results.json",
+      "weight": 0.1,
+      "config": {
+        "artifact_a": "pl_b4_results.json",
+        "artifact_b": "pl_b8_results.json",
+        "path": "branch_scattering_rates",
+        "trend": "a > b",
+        "threshold_ratio": 2.0
+      }
+    },
+    {
+      "id": "trend_kappa",
+      "kind": "trend",
+      "output_file": "pl_b4_results.json",
+      "weight": 0.1,
+      "config": {
+        "artifact_a": "pl_b4_results.json",
+        "artifact_b": "pl_b8_results.json",
+        "path": "K_L_300K",
+        "trend": "a < b"
+      }
+    }
+  ]
+}

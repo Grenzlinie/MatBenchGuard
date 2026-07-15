@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible: checker cannot run DFT. T3 structural used: verify energetics against paper’s known values (within tolerance) and DOS peak features.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper Table 1 values for adsorption energetics.",
+      "source_provenance": "Paper Table 1 from Advanced Functional Materials (2019) DOI: 10.1002/adfm.201906556",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "These are the paper’s reported values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energetics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pristine": "object",
+            "defect": "object"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Computed thermodynamic quantities for O2, H2O, CO on pristine and Te-defected PdTe2 surfaces. Nested per surface and species with fields for physisorption ΔH, ΔG, and decomposition ΔH; for O2 additionally oxygenation ΔH and TeO2 formation ΔH. All values in kJ mol⁻¹."
+      },
+      {
+        "file": "step_02_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "Configuration",
+            "Energy_eV",
+            "DOS_arb_units"
+          ],
+          "units": {}
+        },
+        "description": "Total density of states (DOS) for pristine, O2 decomposed, fully oxygenated, and TeO2-covered surfaces. The structural audit verifies the presence/absence of the O-2s peak near -18 eV."
+      }
+    ],
+    "notes": "HER/OER free energy diagrams (step_3) are process-only and not scored because precise numeric gold values are not available. The main scored targets are the adsorption/decomposition energetics and the DOS features supporting the electronic structure interpretation."
+  },
+  "steps": [
+    {
+      "id": "step_01_energetics",
+      "output_file": "step_01_energetics.json",
+      "kind": "structural_audit",
+      "weight": 0.8,
+      "target_policy": "reference_match",
+      "tolerance_kJmol": 2.0,
+      "gold": {
+        "pristine": {
+          "O2": {
+            "physisorption_Delta_H_kJmol": -66.79,
+            "physisorption_Delta_G_kJmol": -55.49,
+            "decomposition_Delta_H_kJmol": -94.4,
+            "oxygenation_Delta_H_kJmol": -32.98,
+            "TeO2_formation_Delta_H_kJmol": -295.27
+          },
+          "H2O": {
+            "physisorption_Delta_H_kJmol": -19.38,
+            "physisorption_Delta_G_kJmol": 11.92,
+            "decomposition_Delta_H_kJmol": 131.49
+          },
+          "CO": {
+            "physisorption_Delta_H_kJmol": -9.9,
+            "physisorption_Delta_G_kJmol": 9.45,
+            "decomposition_Delta_H_kJmol": null
+          }
+        },
+        "defect": {
+          "O2": {
+            "physisorption_Delta_H_kJmol": -53.74,
+            "physisorption_Delta_G_kJmol": -52.44,
+            "decomposition_Delta_H_kJmol": -92.28,
+            "oxygenation_Delta_H_kJmol": -39.11,
+            "TeO2_formation_Delta_H_kJmol": -336.44
+          },
+          "H2O": {
+            "physisorption_Delta_H_kJmol": -20.25,
+            "physisorption_Delta_G_kJmol": 11.05,
+            "decomposition_Delta_H_kJmol": 167.68
+          },
+          "CO": {
+            "physisorption_Delta_H_kJmol": -9.41,
+            "physisorption_Delta_G_kJmol": 9.94,
+            "decomposition_Delta_H_kJmol": null
+          }
+        }
+      }
+    },
+    {
+      "id": "step_02_dos",
+      "output_file": "step_02_dos.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "peak_energy_eV": -18.0,
+      "peak_window_eV": 1.0,
+      "peak_detect_threshold_factor": 2.0,
+      "expected_peak_configs": [
+        "full_oxygenation",
+        "TeO2_layer"
+      ],
+      "expected_no_peak_configs": [
+        "pristine",
+        "O2_decomp"
+      ]
+    }
+  ]
+}

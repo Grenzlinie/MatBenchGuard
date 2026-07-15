@@ -1,0 +1,184 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent reports computed quantities (formation energy components, lattice constants, phonon DOS, Fe vacancy energy). Full recompute from raw artifacts is not possible because the raw DFT output files are not in the output contract; thus result-level comparison against paper-extracted gold values is the appropriate validation.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for formation energy decomposition, lattice constants, Fe vacancy energy, and phonon structural conditions.",
+      "source_provenance": "Paper Figure 1 (formation energy), Figure 3 (lattice constants), Figure 2a (Fe vacancy).",
+      "generation_method": "Values estimated from the published figures and confirmed by the reference solve.sh.",
+      "why_not_fabricated": "These are the paper's own reported numerical results; they are the reproduction target for this task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "Delta_E_I",
+            "Delta_E_K_ion_layers",
+            "Delta_E_e_doping",
+            "Delta_E_FeSe_deformation",
+            "Delta_E_C"
+          ],
+          "units": {
+            "x": "dimensionless",
+            "Delta_E_I": "eV per unit cell",
+            "Delta_E_K_ion_layers": "eV per unit cell",
+            "Delta_E_e_doping": "eV per unit cell",
+            "Delta_E_FeSe_deformation": "eV per unit cell",
+            "Delta_E_C": "eV per unit cell"
+          }
+        },
+        "description": "Formation energy decomposition for K intercalation. Rows for K content x=0.25, 0.5, 0.6."
+      },
+      {
+        "file": "step_02_lattice_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "a_Angstrom",
+            "c_Angstrom"
+          ],
+          "units": {
+            "x": "dimensionless",
+            "a_Angstrom": "Å",
+            "c_Angstrom": "Å"
+          }
+        },
+        "description": "Optimized lattice parameters a and c for x=0.25 and 0.5."
+      },
+      {
+        "file": "step_03_phonon_DOS_x020.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "frequencies_cm-1": "list of floats",
+            "dos": "list of floats"
+          }
+        },
+        "description": "Phonon density of states for K0.2Fe2Se2. Imaginary modes are indicated by negative frequencies."
+      },
+      {
+        "file": "step_04_phonon_DOS_x025.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "frequencies_cm-1": "list of floats",
+            "dos": "list of floats"
+          }
+        },
+        "description": "Phonon density of states for K0.25Fe2Se2. Should contain no negative frequencies."
+      },
+      {
+        "file": "step_05_Fe_vacancy_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "Delta_E_Fe_vacancy"
+          ],
+          "units": {
+            "x": "dimensionless",
+            "Delta_E_Fe_vacancy": "eV (relative)"
+          }
+        },
+        "description": "Relative Fe vacancy formation energy at x=0.8, referenced to zero at x=0.125."
+      }
+    ],
+    "notes": "All energies are in eV per unit cell formulation. The phonon DOS files must contain frequency (cm^{-1}) and DOS lists of equal length. The checker will verify presence/absence of imaginary modes and compare numerical values against hidden reference tolerances."
+  },
+  "steps": [
+    {
+      "id": "formation_energy",
+      "output_file": "step_01_formation_energy.csv",
+      "kind": "numeric_rubric",
+      "weight": 0.5,
+      "tolerance": 0.3,
+      "trend_weight": 0.3,
+      "gold_values": {
+        "0.25": {
+          "Delta_E_I": -0.43,
+          "Delta_E_K_ion_layers": 0.22,
+          "Delta_E_e_doping": 1.8,
+          "Delta_E_FeSe_deformation": 0.15,
+          "Delta_E_C": -2.6
+        },
+        "0.5": {
+          "Delta_E_I": -0.75,
+          "Delta_E_K_ion_layers": 0.45,
+          "Delta_E_e_doping": 3.1,
+          "Delta_E_FeSe_deformation": 0.2,
+          "Delta_E_C": -4.5
+        },
+        "0.6": {
+          "Delta_E_I": -0.96,
+          "Delta_E_K_ion_layers": 0.54,
+          "Delta_E_e_doping": 3.6,
+          "Delta_E_FeSe_deformation": 0.2,
+          "Delta_E_C": -5.3
+        }
+      }
+    },
+    {
+      "id": "lattice_constants",
+      "output_file": "step_02_lattice_constants.csv",
+      "kind": "numeric_check",
+      "weight": 0.15,
+      "gold": {
+        "0.25": {
+          "a_Angstrom": 3.65,
+          "c_Angstrom": 14.42
+        },
+        "0.5": {
+          "a_Angstrom": 3.69,
+          "c_Angstrom": 13.92
+        }
+      },
+      "tolerances": {
+        "a_Angstrom": 0.05,
+        "c_Angstrom": 0.1
+      }
+    },
+    {
+      "id": "phonon_x020",
+      "output_file": "step_03_phonon_DOS_x020.json",
+      "kind": "structural_audit",
+      "weight": 0.1
+    },
+    {
+      "id": "phonon_x025",
+      "output_file": "step_04_phonon_DOS_x025.json",
+      "kind": "structural_audit",
+      "weight": 0.1
+    },
+    {
+      "id": "fe_vacancy",
+      "output_file": "step_05_Fe_vacancy_energy.csv",
+      "kind": "numeric_check",
+      "weight": 0.15,
+      "gold": -1.5,
+      "tolerance": 0.5
+    }
+  ]
+}

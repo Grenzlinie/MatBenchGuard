@@ -1,0 +1,175 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Headline quantities (diffusion barriers, bulk moduli, site preference) are computed from DFT; the verifier cannot recompute them from raw NEB/equation-of-state data but can compare reported values to paper's published numbers within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "site_preference.json": "exact_match",
+    "bulk_moduli.json": "exact_match",
+    "diffusion_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported intercalation site preference and interlayer distances",
+      "source_provenance": "Paper section 3.1 and Figure 2",
+      "generation_method": "Extracted from the text and figure: Li: different_layers, 6.2 Å; Na: same_layer, 6.8 Å; Mg: different_layers, 6.5 Å",
+      "why_not_fabricated": "Directly taken from the paper's reported values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported bulk moduli",
+      "source_provenance": "Paper section 3.3, Figure S3, and text",
+      "generation_method": "Extracted from the paper's reported values: pristine BP 46 GPa, Li2P 26 GPa, Na2P 24 GPa, Mg2P 53 GPa",
+      "why_not_fabricated": "Direct paper values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported diffusion barriers",
+      "source_provenance": "Paper section 3.4 and Figure 6",
+      "generation_method": "Extracted from the text: zigzag Li 0.02, Na 0.18, Mg 0.41; armchair Li 0.12, Na 0.76, Mg 1.50 eV",
+      "why_not_fabricated": "Direct paper values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "site_preference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "metal": "string (one of 'Li','Na','Mg')",
+            "preferred_site": "string (one of 'same_layer' or 'different_layers')",
+            "interlayer_distance_A": "number"
+          }
+        },
+        "description": "Intercalation site preference and interlayer distance for Li, Na, Mg in black phosphorus. Verified with tolerances: preferred_site exact match, interlayer_distance ±0.2 Å."
+      },
+      {
+        "file": "bulk_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "system": "string (one of 'pristine_BP', 'Li2P', 'Na2P', 'Mg2P')",
+            "bulk_modulus_GPa": "number"
+          }
+        },
+        "description": "Bulk moduli of pristine BP and M2P. Tolerances: ±5 GPa."
+      },
+      {
+        "file": "diffusion_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "metal": "string (one of 'Li', 'Na', 'Mg')",
+            "path": "string (one of 'zigzag', 'armchair')",
+            "barrier_eV": "number"
+          }
+        },
+        "description": "Diffusion barriers for single atoms along zigzag and armchair channels. Tolerances: ±0.05 eV for barriers ≤0.2 eV, ±0.2 eV for higher. Also check Li zigzag < 0.5 eV."
+      }
+    ],
+    "notes": "All values compared against published DFT results with tolerances as described. Site preference exact match for the preferred_site field; interlayer distance, bulk moduli, and barriers use thresholds."
+  },
+  "steps": [
+    {
+      "id": "site_pref",
+      "output_file": "site_preference.json",
+      "kind": "numeric_compare",
+      "weight": 0.3,
+      "tolerance_interlayer": 0.2,
+      "expected": [
+        {
+          "metal": "Li",
+          "preferred_site": "different_layers",
+          "interlayer_distance_A": 6.2
+        },
+        {
+          "metal": "Na",
+          "preferred_site": "same_layer",
+          "interlayer_distance_A": 6.8
+        },
+        {
+          "metal": "Mg",
+          "preferred_site": "different_layers",
+          "interlayer_distance_A": 6.5
+        }
+      ]
+    },
+    {
+      "id": "bulk_moduli",
+      "output_file": "bulk_moduli.json",
+      "kind": "numeric_compare",
+      "weight": 0.3,
+      "tolerance_GPa": 5,
+      "expected": [
+        {
+          "system": "pristine_BP",
+          "bulk_modulus_GPa": 46
+        },
+        {
+          "system": "Li2P",
+          "bulk_modulus_GPa": 26
+        },
+        {
+          "system": "Na2P",
+          "bulk_modulus_GPa": 24
+        },
+        {
+          "system": "Mg2P",
+          "bulk_modulus_GPa": 53
+        }
+      ]
+    },
+    {
+      "id": "diffusion_barriers",
+      "output_file": "diffusion_barriers.json",
+      "kind": "numeric_compare",
+      "weight": 0.4,
+      "expected": [
+        {
+          "metal": "Li",
+          "path": "zigzag",
+          "barrier_eV": 0.02
+        },
+        {
+          "metal": "Li",
+          "path": "armchair",
+          "barrier_eV": 0.12
+        },
+        {
+          "metal": "Na",
+          "path": "zigzag",
+          "barrier_eV": 0.18
+        },
+        {
+          "metal": "Na",
+          "path": "armchair",
+          "barrier_eV": 0.76
+        },
+        {
+          "metal": "Mg",
+          "path": "zigzag",
+          "barrier_eV": 0.41
+        },
+        {
+          "metal": "Mg",
+          "path": "armchair",
+          "barrier_eV": 1.5
+        }
+      ],
+      "tolerances": {
+        "barrier_le_02": 0.05,
+        "barrier_gt_02": 0.2
+      }
+    }
+  ]
+}

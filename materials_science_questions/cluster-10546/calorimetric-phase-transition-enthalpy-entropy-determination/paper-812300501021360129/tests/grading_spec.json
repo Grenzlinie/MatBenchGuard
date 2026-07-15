@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Transition enthalpy/entropy, glass transition parameters, and residual configurational entropy are recomputed from agent's raw JSON values and compared to paper-reported values with tolerances. Configurational entropy curve is verified by structural checks and endpoint agreement, which serves as a recompute of key points from the curve.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_enthalpy_entropy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_H_kJ_per_mol": "number",
+            "delta_S_J_per_K_per_mol": "number"
+          }
+        },
+        "description": "Transition enthalpy (kJ/mol) and entropy (J/K/mol) for the ordered‑to‑plastic phase transition."
+      },
+      {
+        "file": "glass_transition_deltaCp.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T_g_K": "number",
+            "delta_Cp_J_per_K_per_mol": "number"
+          }
+        },
+        "description": "Glass transition temperature (K) and heat capacity jump (J/K/mol) of cyanoadamantane."
+      },
+      {
+        "file": "configurational_entropy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "S_c"
+          ],
+          "units": {
+            "T": "K",
+            "S_c": "J/K/mol"
+          }
+        },
+        "description": "Temperature dependence of the configurational entropy; must exhibit a monotonic decrease and plateau near Tg."
+      },
+      {
+        "file": "residual_configurational_entropy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "S_c_residual_J_per_K_per_mol": "number",
+            "T_g_K": "number"
+          }
+        },
+        "description": "Residual configurational entropy (J/K/mol) at the glass transition temperature."
+      }
+    ],
+    "notes": "The target_policy for the S_c curve uses structural audit to verify monotonic decrease and plateau near Tg, while scalar quantities are evaluated by exact match with the paper‑reported values within appropriate tolerances."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for transition enthalpy, entropy, glass transition temperature, heat capacity jump, and residual configurational entropy targets and tolerances",
+      "source_provenance": "Paper Table I and text: ΔH_trs=5.209 kJ/mol, ΔS_trs=19.16 J/K/mol, T_g=163 K, ΔC_p≈25 J/K/mol, residual S_c=2.7 J/K/mol",
+      "generation_method": "Direct extraction from the published paper",
+      "why_not_fabricated": "Values are the paper's actual reported numbers; tolerances set to accommodate legitimate computation variations while excluding random guesses."
+    }
+  ],
+  "steps": [
+    {
+      "id": "scored_transition_enthalpy",
+      "output_file": "transition_enthalpy_entropy.json",
+      "weight": 0.35,
+      "kind": "multi_numeric",
+      "fields": [
+        {
+          "field": "delta_H_kJ_per_mol",
+          "target": 5.209,
+          "tolerance_abs": 0.1,
+          "unit": "kJ/mol"
+        },
+        {
+          "field": "delta_S_J_per_K_per_mol",
+          "target": 19.16,
+          "tolerance_abs": 0.5,
+          "unit": "J/K/mol"
+        }
+      ]
+    },
+    {
+      "id": "scored_glass_transition",
+      "output_file": "glass_transition_deltaCp.json",
+      "weight": 0.15,
+      "kind": "multi_numeric",
+      "fields": [
+        {
+          "field": "T_g_K",
+          "target": 163,
+          "tolerance_abs": 2.0,
+          "unit": "K"
+        },
+        {
+          "field": "delta_Cp_J_per_K_per_mol",
+          "target": 25,
+          "tolerance_abs": 5.0,
+          "unit": "J/K/mol"
+        }
+      ]
+    },
+    {
+      "id": "scored_config_entropy",
+      "output_file": "configurational_entropy.csv",
+      "weight": 0.35,
+      "kind": "csv_structural",
+      "params": {
+        "T_g": 163,
+        "T_trs": 273,
+        "S_c_at_Tg": 2.7,
+        "S_c_at_Ttrs": 19.16,
+        "tolerance_endpoint_abs": 0.5,
+        "max_variation_plateau": 0.05
+      }
+    },
+    {
+      "id": "scored_residual_entropy",
+      "output_file": "residual_configurational_entropy.json",
+      "weight": 0.15,
+      "kind": "multi_numeric",
+      "fields": [
+        {
+          "field": "S_c_residual_J_per_K_per_mol",
+          "target": 2.7,
+          "tolerance_abs": 0.5,
+          "unit": "J/K/mol"
+        },
+        {
+          "field": "T_g_K",
+          "target": 163,
+          "tolerance_abs": 2.0,
+          "unit": "K"
+        }
+      ]
+    }
+  ]
+}

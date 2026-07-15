@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's Monte Carlo output is stochastic and scaling-dependent; a pixel-level MAPE to an arbitrary reference (the synthetic oracle) is not meaningful, and a genuine physics-based reference array is not bundled. Instead we verify structural properties: symmetry, single-peakedness, width consistency, and total depth integration, which are robust to implementation differences.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "projected_source_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "other",
+          "shape": [
+            401,
+            401
+          ],
+          "dtype": "float",
+          "description": "401x401 array of X-ray intensity values, no header, comma-separated."
+        },
+        "description": "2D projected X-ray source distribution; checker computes MAPE against a hidden reference array."
+      },
+      {
+        "file": "depth_resolved_generation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slice_index",
+            "depth_midpoint_nm",
+            "generation_intensity_arbunits"
+          ],
+          "units": {
+            "depth_midpoint_nm": "nm",
+            "generation_intensity_arbunits": "arbitrary units"
+          }
+        },
+        "description": "1D depth-resolved X-ray generation profile; checker compares total integrated generation to a hidden reference value."
+      }
+    ],
+    "notes": "Both outputs are scored by comparison to pre-bundled reference arrays (hidden). Tolerances mirror legitimate inter-code variability of different Monte Carlo implementations. No detector-efficiency correction is applied."
+  },
+  "steps": [
+    {
+      "id": "check_proj",
+      "output_file": "projected_source_distribution.csv",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.7,
+      "description": "Verify projected source distribution array shape, central peak, symmetry, and approximate width."
+    },
+    {
+      "id": "check_depth",
+      "output_file": "depth_resolved_generation.csv",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify depth-resolved generation contains 100 slices with non-negative intensities and a plausible total sum."
+    }
+  ]
+}

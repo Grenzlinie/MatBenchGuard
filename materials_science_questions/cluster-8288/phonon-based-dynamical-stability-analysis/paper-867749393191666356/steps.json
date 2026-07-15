@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_geometry",
+    "title": "DFT geometry optimization for B2 and B19 bulk phases",
+    "role": "process",
+    "action": "Perform full geometry optimization (variable-cell relaxation) of B2 (cubic, Pm‑3m) and B19 (orthorhombic, Pmmb) Ti₂NiCu using DFT (Quantum Espresso or equivalent). Obtain optimized lattice constants and ground-state structures required for subsequent energy and phonon calculations.",
+    "output_file": "",
+    "evidence": "bulk_relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate to obtain relaxed structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_enthalpy",
+    "title": "B2–B19 total energy difference",
+    "role": "scored",
+    "action": "Compute the total energy of the relaxed B2 and B19 bulk structures. Report the difference E(B2) – E(B19) in eV per formula unit (four atoms).",
+    "output_file": "enthalpy_difference.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Total energy difference between the austenite and martensite phases; used as an estimate of transformation enthalpy and compared to the paper's DFT value.",
+    "output_schema": "{\"delta_E_B2_to_B19_ev_per_fu\": number}"
+  },
+  {
+    "id": "step_03_surface_relax",
+    "title": "Surface energy DFT calculations",
+    "role": "process",
+    "action": "Build slab models for B2 (001) with NiCu and Ti terminations, and for B19 (001) with NiCu-1, NiCu-2, Ti-1, Ti-2 terminations. Use a vacuum gap of at least 10 Å. Perform relaxations allowing the top few layers to move. Compute surface energies using the standard formula referencing the bulk total energies from step_01.",
+    "output_file": "",
+    "evidence": "surface.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate to calculate surface energy values reported in the next step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_surface_report",
+    "title": "Surface energies report",
+    "role": "scored",
+    "action": "Collect the computed surface energies into a structured JSON file for all six terminations.",
+    "output_file": "surface_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Surface energies for B2_NiCu, B2_Ti, B19_NiCu1, B19_NiCu2, B19_Ti1, B19_Ti2 in J/m².",
+    "output_schema": "{\"B2_NiCu\": number, \"B2_Ti\": number, \"B19_NiCu1\": number, \"B19_NiCu2\": number, \"B19_Ti1\": number, \"B19_Ti2\": number}"
+  },
+  {
+    "id": "step_05_phonon_proc",
+    "title": "DFPT phonon dispersion of B2",
+    "role": "process",
+    "action": "Using density-functional perturbation theory (DFPT), compute the phonon frequencies of the relaxed B2 structure along a high-symmetry path including Gamma, M, R, X points. Use the virtual crystal approximation (VCA) to model the alloy.",
+    "output_file": "",
+    "evidence": "phonon.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Phonon dispersion reveals dynamical instability (soft mode); required to obtain frequencies for the report.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_phonon_report",
+    "title": "Phonon frequencies at high-symmetry points",
+    "role": "scored",
+    "action": "Extract phonon frequencies (in cm⁻¹) at the Gamma, M, R, and X points from the DFPT calculation. Report soft (imaginary) modes as negative values.",
+    "output_file": "phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Presence of a soft mode at M indicates dynamical instability of B2. The checker compares frequencies to the paper's reported values.",
+    "output_schema": "{\"Gamma\": [number,...], \"M\": [number,...], \"R\": [number,...], \"X\": [number,...]}"
+  },
+  {
+    "id": "step_07_fit",
+    "title": "Fit dislocation-kinetic model to T(h) data",
+    "role": "scored",
+    "action": "Using the provided experimental T(h) data (CSV file), fit the dislocation‑kinetic model formula T(h) = T_c / [1 − B ln( 2 k₀ / ((1 − kₐ/3) + λ/h) − 1 ) ] with B = ω q / (k_B T_c) and k_B = 1.38×10⁻²³ J/K to determine the best‑fit parameters T_c, kₐ, k₀, ω, q, and the mean free path λ. From the fitted model, compute the minimum thickness h_min at which T(h) = 0 (or the smallest value defined by the model). Report all parameters and h_min in SI/nanometer units.",
+    "output_file": "fitted_parameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The fitted parameters are the core of the predictive dislocation‑kinetic model. The checker compares them to the paper's reported values within tolerances.",
+    "output_schema": "{\"Tc_K\": number, \"ka\": number, \"k0\": number, \"lambda_nm\": number, \"omega_nm3\": number, \"q_J_per_kg\": number, \"h_min_nm\": number}"
+  }
+]

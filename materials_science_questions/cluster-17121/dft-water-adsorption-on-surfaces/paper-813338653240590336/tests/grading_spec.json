@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Agent runs a classical MD simulation and reports hydrogen bond statistics; the hidden checker compares the reported numeric values to the paper's gold within tolerances. Recomputing from raw MD trajectories is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "hydrogen_bond_statistics.csv": "exact_match",
+    "goethite_021_hbond_summary.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference hydrogen bond statistics from the paper",
+      "source_provenance": "Paper section 3.2: lepidocrocite (010) μ-OH site density 8.4 sites nm^{-2}; (001) median donor-H-acceptor angle 8°, donor fraction 12%; goethite (110) -OH···-OH angle ca. 25°, donor fraction about every second -OH (0.5); μ₃,ᵣ-OH···HO- angle 11-12°, donor fraction virtually all (0.95).",
+      "generation_method": "Values extracted from the paper's reported hydrogen-bond statistics.",
+      "why_not_fabricated": "These are the exact numbers given in the paper for the computed properties."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "hydrogen_bond_statistics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "plane",
+            "species_or_interaction",
+            "property",
+            "value",
+            "unit"
+          ],
+          "description": "Each row contains one hydrogen-bond statistic. See step description for the required properties."
+        },
+        "description": "Numerical hydrogen-bond statistics for lepidocrocite (010), (001) and goethite (110) planes."
+      },
+      {
+        "file": "goethite_021_hbond_summary.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "A qualitative statement that the hydrogen-bond network on goethite (021) is extensive and prevents discrete band assignment."
+        },
+        "description": "Qualitative summary of hydrogen bonding on the goethite (021) plane."
+      }
+    ],
+    "notes": "The quantitative CSV is checked against hidden paper gold with tolerances; the text file is checked for existence and presence of the expected statement."
+  },
+  "steps": [
+    {
+      "id": "step3",
+      "output_file": "hydrogen_bond_statistics.csv",
+      "kind": "numeric",
+      "weight": 0.8,
+      "targets": [
+        {
+          "plane": "lepidocrocite_010",
+          "species_or_interaction": "μ-OH",
+          "property": "site_density",
+          "value": 8.4,
+          "unit": "sites_per_nm2",
+          "tolerance": 0.5
+        },
+        {
+          "plane": "lepidocrocite_001",
+          "species_or_interaction": "-OH",
+          "property": "median_donor_acceptor_angle",
+          "value": 8.0,
+          "unit": "deg",
+          "tolerance": 2.0
+        },
+        {
+          "plane": "lepidocrocite_001",
+          "species_or_interaction": "-OH",
+          "property": "donor_fraction",
+          "value": 0.12,
+          "unit": "fraction",
+          "tolerance": 0.05
+        },
+        {
+          "plane": "goethite_110",
+          "species_or_interaction": "-OH···-OH",
+          "property": "donor_acceptor_angle",
+          "value": 25.0,
+          "unit": "deg",
+          "tolerance": 2.0
+        },
+        {
+          "plane": "goethite_110",
+          "species_or_interaction": "-OH···-OH",
+          "property": "donor_fraction",
+          "value": 0.5,
+          "unit": "fraction",
+          "tolerance": 0.05
+        },
+        {
+          "plane": "goethite_110",
+          "species_or_interaction": "μ₃,ᵣ-OH···HO–",
+          "property": "donor_acceptor_angle",
+          "value": 11.5,
+          "unit": "deg",
+          "tolerance": 2.0
+        },
+        {
+          "plane": "goethite_110",
+          "species_or_interaction": "μ₃,ᵣ-OH···HO–",
+          "property": "donor_fraction",
+          "value": 0.95,
+          "unit": "fraction",
+          "tolerance": 0.05
+        }
+      ]
+    },
+    {
+      "id": "step4",
+      "output_file": "goethite_021_hbond_summary.txt",
+      "kind": "text_contains",
+      "weight": 0.2,
+      "required_strings": [
+        "extensive",
+        "hydrogen bond",
+        "preclud"
+      ]
+    }
+  ]
+}

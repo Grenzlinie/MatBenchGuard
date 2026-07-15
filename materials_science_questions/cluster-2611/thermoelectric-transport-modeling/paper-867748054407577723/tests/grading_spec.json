@@ -1,0 +1,164 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recompute from raw artifacts is infeasible: the agent reports only the final lattice parameters, band gaps, and ZeT values as numeric aggregates; the required raw DFT eigenvalues and transport coefficient grids are not part of the output contract and cannot be recomputed in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference lattice parameters, band gaps, and ZeT values from the paper's Table I and abstract",
+      "source_provenance": "Paper Table I and abstract values; confirmed to match the reference solve.sh.",
+      "generation_method": "Extracted directly from the paper's published Tables I and abstract.",
+      "why_not_fabricated": "These are the paper's actual reported results, traceable to Table I and the abstract text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_lattice_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T9A": {
+              "a": "float (Å)",
+              "b": "float (Å)",
+              "c": "float (Å)",
+              "alpha": "float (deg)",
+              "beta": "float (deg)",
+              "gamma": "float (deg)"
+            },
+            "T11A": {
+              "a": "float (Å)",
+              "b": "float (Å)",
+              "c": "float (Å)",
+              "alpha": "float (deg)",
+              "beta": "float (deg)",
+              "gamma": "float (deg)"
+            },
+            "T14A": {
+              "a": "float (Å)",
+              "b": "float (Å)",
+              "c": "float (Å)",
+              "alpha": "float (deg)",
+              "beta": "float (deg)",
+              "gamma": "float (deg)"
+            }
+          }
+        },
+        "description": "Relaxed lattice parameters from DFT structural optimization; compared against published experimental data within tolerances."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T9A": "float (eV)",
+            "T11A": "float (eV)",
+            "T14A": "float (eV)"
+          }
+        },
+        "description": "Direct band gaps at the Γ‑point computed from the electronic structure; compared against paper‑reported values within a tolerance."
+      },
+      {
+        "file": "electronic_ZT.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T9A": {
+              "temperature": "float (K)",
+              "carrier_concentration": "float (cm⁻³)",
+              "Z_eT": "float (dimensionless)"
+            },
+            "T11A": {
+              "temperature": "float (K)",
+              "carrier_concentration": "float (cm⁻³)",
+              "Z_eT": "float (dimensionless)"
+            },
+            "T14A": {
+              "temperature": "float (K)",
+              "carrier_concentration": "float (cm⁻³)",
+              "Z_eT": "float (dimensionless)"
+            }
+          }
+        },
+        "description": "Electronic figure of merit at the claimed optimal doping and temperature conditions; meeting or exceeding the paper's value earns full credit."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "lattice_params",
+      "output_file": "relaxed_lattice_parameters.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "references": {
+        "T9A": {
+          "a": 11.19,
+          "b": 7.32,
+          "c": 9.53,
+          "alpha": 99.47,
+          "beta": 92.27,
+          "gamma": 90.6
+        },
+        "T11A": {
+          "a": 6.83,
+          "b": 7.48,
+          "c": 22.72,
+          "alpha": 90.45,
+          "beta": 90.01,
+          "gamma": 123.13
+        },
+        "T14A": {
+          "a": 6.8,
+          "b": 7.43,
+          "c": 28.0,
+          "alpha": 89.94,
+          "beta": 90.03,
+          "gamma": 123.93
+        }
+      },
+      "tolerances": {
+        "length_relative": 0.01,
+        "angle_absolute": 0.5
+      }
+    },
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "references": {
+        "T9A": 4.52,
+        "T11A": 4.1,
+        "T14A": 4.04
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "electronic_zeT",
+      "output_file": "electronic_ZT.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "references": {
+        "T9A": {
+          "Z_eT": 0.983
+        },
+        "T11A": {
+          "Z_eT": 0.985
+        },
+        "T14A": {
+          "Z_eT": 1.2
+        }
+      }
+    }
+  ]
+}

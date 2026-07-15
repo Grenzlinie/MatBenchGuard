@@ -1,0 +1,199 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "T1 recompute infeasible: binding energy and tensile stiffness depend on agent-specific DFT calculations not reproducible in the verifier sandbox. Scoring uses threshold/reference comparison with tolerances (T0 result-level compare).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for binding energy difference threshold and tensile stiffness references, derived from the paper.",
+      "source_provenance": "Paper-reported numbers: binding energy difference 1.55 meV/atom; tensile stiffness 94.669 eV/Å (cumulene) and 94.939 eV/Å (polyyne).",
+      "generation_method": "Extracted from paper text.",
+      "why_not_fabricated": "Directly correspond to the paper's computed results; used for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "cumulene",
+            "polyyne",
+            "binding_energy_difference_polyyne_minus_cumulene",
+            "cumulene_band_gap_eV",
+            "polyyne_band_gap_eV",
+            "cumulene_static_epsilon_real",
+            "polyyne_static_epsilon_real",
+            "supercell_optimal_N",
+            "supercell_energy_at_optimal_N_eV",
+            "supercell_energy_at_N4_eV"
+          ],
+          "properties": {
+            "cumulene": {
+              "type": "object",
+              "required": [
+                "total_energy_cell",
+                "binding_energy_per_atom"
+              ],
+              "properties": {
+                "total_energy_cell": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "binding_energy_per_atom": {
+                  "type": "number",
+                  "unit": "eV/atom"
+                }
+              }
+            },
+            "polyyne": {
+              "type": "object",
+              "required": [
+                "total_energy_cell",
+                "binding_energy_per_atom"
+              ],
+              "properties": {
+                "total_energy_cell": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "binding_energy_per_atom": {
+                  "type": "number",
+                  "unit": "eV/atom"
+                }
+              }
+            },
+            "binding_energy_difference_polyyne_minus_cumulene": {
+              "type": "number",
+              "unit": "meV/atom"
+            },
+            "cumulene_band_gap_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "polyyne_band_gap_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "cumulene_static_epsilon_real": {
+              "type": "number"
+            },
+            "polyyne_static_epsilon_real": {
+              "type": "number"
+            },
+            "supercell_optimal_N": {
+              "type": "integer"
+            },
+            "supercell_energy_at_optimal_N_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "supercell_energy_at_N4_eV": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Crystal binding energies, binding-energy difference, band gaps, static dielectric constants, and supercell stability analysis."
+      },
+      {
+        "file": "tensile_stiffness.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "cumulene_tensile_stiffness",
+            "polyyne_tensile_stiffness"
+          ],
+          "properties": {
+            "cumulene_tensile_stiffness": {
+              "type": "number",
+              "unit": "eV/Å"
+            },
+            "polyyne_tensile_stiffness": {
+              "type": "number",
+              "unit": "eV/Å"
+            }
+          }
+        },
+        "description": "Tensile stiffness values for cumulene and polyyne."
+      },
+      {
+        "file": "phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "minimum_frequency",
+            "has_imaginary_frequencies",
+            "frequencies_at_high_symmetry",
+            "units"
+          ],
+          "properties": {
+            "minimum_frequency": {
+              "type": "number",
+              "unit": "THz"
+            },
+            "has_imaginary_frequencies": {
+              "type": "boolean"
+            },
+            "frequencies_at_high_symmetry": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "unit": "THz"
+            },
+            "units": {
+              "type": "string",
+              "const": "THz"
+            }
+          }
+        },
+        "description": "Phonon frequencies of cumulene highlighting presence of imaginary modes."
+      }
+    ],
+    "notes": "Band gap, dielectric constant, and supercell stability results are folded into total_energies.json to keep the output surface count unchanged while covering all headline findings."
+  },
+  "steps": [
+    {
+      "id": "step_total_energies",
+      "output_file": "total_energies.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "target": {
+        "binding_energy_difference_min_meV": 0.5
+      },
+      "tolerance": {}
+    },
+    {
+      "id": "step_tensile_stiffness",
+      "output_file": "tensile_stiffness.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "target": {
+        "cumulene_stiffness_eV_per_A": 94.669,
+        "polyyne_stiffness_eV_per_A": 94.939,
+        "tolerance_relative": 0.15
+      }
+    },
+    {
+      "id": "step_phonon",
+      "output_file": "phonon_frequencies.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "target": {
+        "min_frequency_negative_threshold_THz": -0.001,
+        "expect_imaginary": true
+      }
+    }
+  ]
+}

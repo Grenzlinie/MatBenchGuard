@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_simulation",
+    "title": "Setup system and run MD simulations",
+    "role": "process",
+    "action": "Set up a 2D hexagonal lattice of 256 atoms with Lennard-Jones potential (σ_A=1, atomic size ratio α=0.75, ε_AA=ε_AB=ε_BB) at temperature T=0.25 (reduced units) and pressure P=0.0. For each solute concentration X_B in {0.10, 0.148, 0.172, 0.25}, generate random initial configurations and perform constant-T, constant-P molecular dynamics until equilibrium. Output the trajectories or final configurations needed for correlation analysis.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Core MD simulation stage that produces the atomic trajectories required by all subsequent scored steps. The agent must implement the described binary LJ system and run simulations for four compositions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_correlations_xb_0_10",
+    "title": "Compute correlation functions for X_B=0.10",
+    "role": "scored",
+    "action": "From the MD trajectory for X_B=0.10, compute the translational order correlation function ρ_G(r) and bond-orientational correlation function Ψ(r). Write the results as a CSV file with columns: r, rho_G, Psi.",
+    "output_file": "correlation_functions_XB_0.100.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the raw correlation function curves for X_B=0.10. Checked for structural trends (e.g., at large r both correlations remain high).",
+    "output_schema": "CSV with three numeric columns: r (reduced distance), rho_G (translational correlation, dimensionless), Psi (orientational correlation, dimensionless). No header."
+  },
+  {
+    "id": "step_03_correlations_xb_0_148",
+    "title": "Compute correlation functions for X_B=0.148",
+    "role": "scored",
+    "action": "From the MD trajectory for X_B=0.148, compute the translational order correlation function ρ_G(r) and bond-orientational correlation function Ψ(r). Write the results as a CSV file with columns: r, rho_G, Psi.",
+    "output_file": "correlation_functions_XB_0.148.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the raw correlation function curves for X_B=0.148. Checked for structural trends (transitional behaviour: ρ_G short-ranged, Ψ still quasi-long-ranged).",
+    "output_schema": "CSV with three numeric columns: r (reduced distance), rho_G (translational correlation, dimensionless), Psi (orientational correlation, dimensionless). No header."
+  },
+  {
+    "id": "step_04_correlations_xb_0_172",
+    "title": "Compute correlation functions for X_B=0.172",
+    "role": "scored",
+    "action": "From the MD trajectory for X_B=0.172, compute the translational order correlation function ρ_G(r) and bond-orientational correlation function Ψ(r). Write the results as a CSV file with columns: r, rho_G, Psi.",
+    "output_file": "correlation_functions_XB_0.172.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Key load-bearing artifact: the intermediate hexatic-like phase at X_B=0.172. The checker verifies that ρ_G decays rapidly but Ψ remains quasi-long-ranged. This step cannot be bypassed without genuinely running the MD simulation.",
+    "output_schema": "CSV with three numeric columns: r (reduced distance), rho_G (translational correlation, dimensionless), Psi (orientational correlation, dimensionless). No header."
+  },
+  {
+    "id": "step_05_correlations_xb_0_25",
+    "title": "Compute correlation functions for X_B=0.25",
+    "role": "scored",
+    "action": "From the MD trajectory for X_B=0.25, compute the translational order correlation function ρ_G(r) and bond-orientational correlation function Ψ(r). Write the results as a CSV file with columns: r, rho_G, Psi.",
+    "output_file": "correlation_functions_XB_0.250.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the raw correlation function curves for X_B=0.25. Checked for structural trends (both correlations decay exponentially at short distances).",
+    "output_schema": "CSV with three numeric columns: r (reduced distance), rho_G (translational correlation, dimensionless), Psi (orientational correlation, dimensionless). No header."
+  },
+  {
+    "id": "step_06_window",
+    "title": "Determine compositional window of hexatic-like phase",
+    "role": "scored",
+    "action": "From the computed correlation functions for all four compositions, identify the compositional range where translational order is short-ranged (ρ_G decays to near zero over the sample) while orientational order remains quasi-long-ranged. Output a JSON file with the lower and upper bounds.",
+    "output_file": "compositional_window.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Synthesizes the correlation function data into the reported compositional window. The checker compares the bounds to the paper-reported window with tolerance.",
+    "output_schema": "JSON object with numeric keys: \"lower_bound\" (float) and \"upper_bound\" (float)."
+  }
+]

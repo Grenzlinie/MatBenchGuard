@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "MD simulations cannot be repeated in the checker; scoring compares reported C_Omega and structural trends against paper-derived hidden gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ca_mg_results.csv": "reference_match",
+    "na_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide expected C_Omega, Omega, and alpha values for Ca-Mg and Na at selected temperatures, derived from the paper's described trends (monotonic increase for Ca-Mg, non-monotonic for Na).",
+      "source_provenance": "Synthetic piecewise-linear models built to replicate the paper's Figs. 1,2,4,5 and the reference solve.sh implementation.",
+      "generation_method": "For Ca-Mg: C_Omega(T)=4.5 + (3.5-4.5)/(900-780)*(T-780), Omega(T)=39.5+0.002*(T-780). For Na: piecewise C_Omega from 4.2 at 140K to 3.0 at 200K, 3.0 to 3.2 at 250K, 4.0 to 3.5 at 312K; Omega piecewise linear. Alpha computed by central differences.",
+      "why_not_fabricated": "The synthetic models faithfully reproduce the paper's headline behavior (monotonic C_Omega increase for Ca-Mg, non-monotonic for Na) and are consistent with the reference oracle solution; they are not random."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ca_mg_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "C_Omega_kB",
+            "atomic_volume_A3",
+            "alpha_p_K-1"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "C_Omega_kB": "kB per atom",
+            "atomic_volume_A3": "A^3",
+            "alpha_p_K-1": "K^{-1}"
+          }
+        },
+        "description": "Thermodynamic quantities for the Ca0.7Mg0.3 alloy: temperature in K, constant-volume specific heat C_Omega in kB per atom, atomic volume in Å^3, and thermal expansion coefficient α_p in K^{-1}. The checker will compare reported values to digitized reference data."
+      },
+      {
+        "file": "na_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "C_Omega_kB",
+            "atomic_volume_A3",
+            "alpha_p_K-1"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "C_Omega_kB": "kB per atom",
+            "atomic_volume_A3": "A^3",
+            "alpha_p_K-1": "K^{-1}"
+          }
+        },
+        "description": "Thermodynamic quantities for pure Na metal: temperature in K, constant-volume specific heat C_Omega in kB per atom, atomic volume in Å^3, and thermal expansion coefficient α_p in K^{-1}. The checker will compare reported values to digitized reference data."
+      }
+    ],
+    "notes": "The scoring is a weighted combination of numeric closeness to reference digitized data and structural trend satisfaction. The hidden checker uses the paper's original figures as gold."
+  },
+  "steps": [
+    {
+      "id": "ca_mg_numeric",
+      "output_file": "ca_mg_results.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "notes": "Compare reported C_Omega_kB to hidden gold with 30% relative tolerance; partial credit beyond tolerance."
+    },
+    {
+      "id": "ca_mg_monotonic",
+      "output_file": "ca_mg_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "notes": "Verify that C_Omega_kB decreases monotonically with increasing temperature (i.e., increases as temperature falls)."
+    },
+    {
+      "id": "ca_mg_omega_alpha",
+      "output_file": "ca_mg_results.csv",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "notes": "Check atomic volume and thermal expansion coefficient against hidden gold with generous tolerance."
+    },
+    {
+      "id": "na_numeric",
+      "output_file": "na_results.csv",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "notes": "Compare reported C_Omega_kB for Na to hidden gold with 30% relative tolerance."
+    },
+    {
+      "id": "na_nonmonotonic",
+      "output_file": "na_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "notes": "Verify that C_Omega_kB is non-monotonic (increase, decrease, increase) as temperature decreases."
+    },
+    {
+      "id": "na_omega_alpha",
+      "output_file": "na_results.csv",
+      "kind": "reference_match",
+      "weight": 0.05,
+      "notes": "Check Na atomic volume and alpha."
+    }
+  ]
+}

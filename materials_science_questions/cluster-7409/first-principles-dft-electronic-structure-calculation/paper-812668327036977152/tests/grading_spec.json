@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT calculations cannot be rerun in checker sandbox; result-level compare against paper-reported gold with tolerances ±0.05 Å displacements, ±0.1 μ_B magnetic moment, ±0.2 eV formation energies.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for displacements, magnetic moment, Fermi level position, formation energies, and ordering from the paper.",
+      "source_provenance": "Paper-reported values: displacements ~0.3 Å and ~0.12 Å, total magnetic moment 6.80 μB, Fermi level inside gap, and formation energy ordering derived from Fig.6 and DFT+U calculations using PBE+U (U=5 eV).",
+      "generation_method": "Extracted from paper text and figures; consistent with the reference DFT+U protocol.",
+      "why_not_fabricated": "All gold values are directly traceable to the paper's reported results or its DFT+U reference calculations, ensuring a correct reproduction can match them within the stated tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "single_gd_O_displacement": "float (Å)",
+            "single_gd_Ce_displacement": "float (Å)",
+            "single_gd_magnetic_moment": "float (μ_B)",
+            "fermi_level_in_gap": "boolean",
+            "formation_energies": {
+              "type": "object",
+              "properties": {
+                "O-rich": {
+                  "Gd": "float (eV)",
+                  "Gd_V_O": "float (eV)",
+                  "Gd_V_O_Gd": "float (eV)"
+                },
+                "O-poor": {
+                  "Gd": "float (eV)",
+                  "Gd_V_O": "float (eV)",
+                  "Gd_V_O_Gd": "float (eV)"
+                }
+              }
+            },
+            "ordering": "string"
+          }
+        },
+        "description": "Contains all scored physical quantities: atomic displacements, magnetic moment, Fermi level position, formation energies under two oxygen chemical potential conditions, and the stability ordering of defect complexes."
+      }
+    ],
+    "notes": "The hidden checker compares each numeric value to the paper-reported gold with appropriate tolerances and verifies that the ordering declares Gd-V_O-Gd as the most stable configuration under both O-rich and O-poor conditions. The form of the results.json must exactly match the declared schema."
+  },
+  "steps": [
+    {
+      "id": "displacements",
+      "output_file": "results.json",
+      "kind": "displacements_check",
+      "weight": 0.25,
+      "o_target": 0.3,
+      "o_tolerance": 0.05,
+      "ce_target": 0.12,
+      "ce_tolerance": 0.05
+    },
+    {
+      "id": "magnetic_moment",
+      "output_file": "results.json",
+      "kind": "scalar_check",
+      "weight": 0.15,
+      "field": "single_gd_magnetic_moment",
+      "target": 6.8,
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "fermi_level",
+      "output_file": "results.json",
+      "kind": "boolean_check",
+      "weight": 0.1,
+      "field": "fermi_level_in_gap",
+      "target": true
+    },
+    {
+      "id": "formation_energies",
+      "output_file": "results.json",
+      "kind": "formation_energies_check",
+      "weight": 0.3,
+      "rich_targets": {
+        "Gd": 2.1,
+        "Gd_V_O": 1.2,
+        "Gd_V_O_Gd": -0.3
+      },
+      "poor_targets": {
+        "Gd": 3.0,
+        "Gd_V_O": -0.5,
+        "Gd_V_O_Gd": -0.3
+      },
+      "tolerance_abs": 0.2
+    },
+    {
+      "id": "ordering",
+      "output_file": "results.json",
+      "kind": "ordering_check",
+      "weight": 0.2
+    }
+  ]
+}

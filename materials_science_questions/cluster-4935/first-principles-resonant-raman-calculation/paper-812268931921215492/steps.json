@@ -1,0 +1,80 @@
+[
+  {
+    "id": "collect_params",
+    "title": "Collect input parameters",
+    "role": "process",
+    "action": "Gather all necessary physical constants for GaAs: effective masses m* for each carrier density, static and optical dielectric constants ε0, ε∞, LO and TO phonon frequencies ωℓ, ωt, reduced mass density M̄, Raman tensor magnitudes |a|, |b|, interference factor D, complex refractive index data (N, K) at each laser wavelength (5145, 4880, 4765 Å), and experimental parameters (carrier densities, incident angle θ0=80°, mean wavevectors <q> and spreads Δq from Table I, reduction factors I(θ0) from Table II). Record these in a machine-readable format for later use.",
+    "output_file": "",
+    "evidence": "input_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Record the collected input parameters in a JSON file for documentation and downstream steps.",
+    "output_schema": "object containing fields for effective masses, dielectric constants, phonon frequencies, Raman tensors, carrier densities, wavelengths, mean wavevectors, spreads, and reduction factors."
+  },
+  {
+    "id": "compute_epsilon",
+    "title": "Compute RPA dielectric function and screening",
+    "role": "process",
+    "action": "Implement the random-phase approximation (RPA) dielectric function for a 3D free electron gas at T=0 K using the Lindhard formula. Discretize wavevectors q and frequencies ω on a grid covering the experimental range (q up to ~2×10^6 cm^{-1}, ω up to ~500 cm^{-1}). For each carrier density, compute ε(q,ω), the screening function χ(q,ω) = (q²ε∞/(4πe²))(1/ε - 1), and the Landau damping width Γ(q,ω). Store the results.",
+    "output_file": "",
+    "evidence": "rpa_results.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "RPA dielectric function arrays saved in a NumPy archive for downstream processing.",
+    "output_schema": "npy archive containing arrays for ε(q,ω), χ(q,ω), and Γ(q,ω)."
+  },
+  {
+    "id": "compute_j",
+    "title": "Compute phonon spectral density J(q,ω)",
+    "role": "process",
+    "action": "For each carrier density, compute the Fröhlich electron–LO phonon coupling vertex V(q) using ε∞, ε0, ωℓ, and the polarization vector. Evaluate the phonon spectral density J(q,ω) using the phonon Green function formula (neglecting anharmonicity, Γ_A=0) and the previously computed χ(q,ω) and Γ(q,ω). Store the J(q,ω) arrays.",
+    "output_file": "",
+    "evidence": "J_q_omega.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Phonon spectral density arrays required for line shape calculation.",
+    "output_schema": "npy archive containing arrays of J(q,ω) for each carrier density."
+  },
+  {
+    "id": "compute_g",
+    "title": "Compute Raman line shape g(ω)",
+    "role": "process",
+    "action": "For each (carrier density, laser wavelength) combination, compute the line shape function g(ω) by convolving J(q,ω) with a Lorentzian momentum distribution 1/[(q - <q>)² + (Δq)²] (using the <q> and Δq values from Table I), multiplying by the interference factor (1 + D (ω_t² - ω²)/ω_t²)², and including the Bose factor (n_q+1, equal to 1 at T=0 K). Store the (ω, g(ω)) arrays.",
+    "output_file": "",
+    "evidence": "g_omega.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Line shape arrays used to compute integrated efficiency and peak positions.",
+    "output_schema": "npy archive containing arrays of g(ω) for each condition."
+  },
+  {
+    "id": "integrated_efficiencies",
+    "title": "Compute integrated Raman efficiencies",
+    "role": "scored",
+    "action": "Numerically integrate g(ω) over frequency and multiply by the prefactor (4ħ a² ω0³ ωs / (M̄ ωℓ c^4)) * (2 vF / (π ωℓ²)) * I(θ0) to obtain the integrated Raman scattering efficiency S (in units of 10^{-11}) for each of the 9 (density, wavelength) combinations. Output the results as integrated_efficiencies.json.",
+    "output_file": "integrated_efficiencies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON mapping carrier density keys to wavelength keys with efficiency values (in units of 10^{-11}).",
+    "output_schema": "object with keys 'density_8.4e17', 'density_2e18', 'density_4.5e18', each mapping to an object with keys '5145', '4880', '4765' (strings) and values of type number (float)."
+  },
+  {
+    "id": "peak_positions",
+    "title": "Extract L- branch peak positions",
+    "role": "scored",
+    "action": "For the carrier density n=8.4×10^17 cm^{-3}, identify the frequency ω at which the phonon spectral density J(q=⟨q⟩, ω) (or g(ω)) is maximum for the lower branch (L-) at each of the three wavelengths (5145, 4880, 4765 Å). Convert to Raman shift in cm^{-1}. Output a CSV file peak_positions.csv with three rows.",
+    "output_file": "peak_positions.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with L- mode peak frequencies for n=8.4×10^17 cm^{-3} at three wavelengths.",
+    "output_schema": "CSV with columns 'wavelength' (string, e.g. '5145') and 'peak_frequency' (number, in cm^{-1}). Three rows."
+  }
+]

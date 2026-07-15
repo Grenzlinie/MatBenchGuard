@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_0",
+    "title": "Geometry optimization of pristine haeckelite unit cells",
+    "role": "process",
+    "action": "Construct the unit cells of haeckelites h567, r57, and o567 using the known carbon ring arrangements and lattice parameters from the literature. Perform DFT structure relaxation to obtain equilibrium lattice constants and atomic positions. Use the PBE functional with van der Waals corrections, and converge forces.",
+    "output_file": "",
+    "evidence": "pristine_relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate step to produce relaxed haeckelite structures used in all subsequent binding, diffusion, and capacity calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "Compute Li binding energies",
+    "role": "scored",
+    "action": "For each relaxed haeckelite, place a single Li atom in the hollow site of each distinct ring type (pentagon, hexagon where present, heptagon). Compute total energies and calculate the binding energy as E_b = E(Li+hae) - E(hae) - E(Li). Report binding energies for all ring sites.",
+    "output_file": "binding_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Li binding energies on hollow sites of haeckelites h567, r57, and o567.",
+    "output_schema": "JSON object: keys 'h567', 'r57', 'o567'. Each value is an object mapping ring type ('pentagon', 'hexagon', 'heptagon') to binding energy in eV (float). Hexagon is only present when applicable."
+  },
+  {
+    "id": "step_2",
+    "title": "Compute Li migration energy barriers via CI-NEB",
+    "role": "scored",
+    "action": "Identify characteristic Li migration paths between adjacent hollow sites for each haeckelite. For the high state-of-charge condition (using the unit cell), run climbing-image nudged elastic band calculations to determine minimum energy barriers. Compute the following: h567: E_a(6→5) and E_a(5→6); r57: E_a(5→5), E_a(5→7), E_a(7→5); o567: E_a(5→5), E_a(5→7), E_a(7→5). Report the energy barriers in eV.",
+    "output_file": "diffusion_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Li migration energy barriers for the lowest-barrier paths at high SOC. This is load-bearing because the result requires a correct CI-NEB pipeline that builds on the preceding relaxation and binding results.",
+    "output_schema": "JSON object: keys 'h567', 'r57', 'o567'. Each value is an object mapping path identifier (e.g., 'Ea_6-5', 'Ea_5-6', 'Ea_5-5', 'Ea_5-7', 'Ea_7-5') to barrier in eV (float)."
+  },
+  {
+    "id": "step_3",
+    "title": "Determine maximum Li storage capacity of h567",
+    "role": "scored",
+    "action": "For haeckelite h567, sequentially add Li atoms to hollow sites on both sides of the unit cell, relaxing the structure at each composition. Continue until the binding energy of the last added Li atom becomes positive. From the maximum stable Li content, compute the specific capacity using the standard formula for Li_xC6. Report the capacity and the lithiation condition.",
+    "output_file": "specific_capacity.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Maximum Li storage capacity of haeckelite h567.",
+    "output_schema": "JSON object with key 'h567', value an object with 'capacity_mAh_per_g' (float) and 'condition' (string, e.g., 'both sides lithiation')."
+  },
+  {
+    "id": "step_4",
+    "title": "Compute average open-circuit voltage",
+    "role": "scored",
+    "action": "Using total energies of lithiated h567 configurations at intermediate Li concentrations, compute formation energies relative to pristine h567 and bulk Li metal. Construct the convex hull to identify stable intermediate phases and calculate voltage plateaus. Compute the average open-circuit voltage over the full lithiation range and report it in volts.",
+    "output_file": "average_ocv.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Average open-circuit voltage of h567.",
+    "output_schema": "JSON object with key 'h567', value is the average OCV in V (float)."
+  }
+]

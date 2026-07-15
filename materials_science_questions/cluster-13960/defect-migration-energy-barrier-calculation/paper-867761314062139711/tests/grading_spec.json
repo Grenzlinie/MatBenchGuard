@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full KMC simulation cannot be re-run in the verifier (T1 infeasible). We verify the agent's reported results by (a) comparing lifetime and migration distance at three key charges (0, -4e, -12e) to the paper's approximate values within a factor‑2 tolerance, and (b) checking that both quantities increase monotonically with charge magnitude across all seven charges. This combination provides a robust verification of the reproduction.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "charge_e",
+              "lifetime_s",
+              "migration_distance_m"
+            ],
+            "properties": {
+              "charge_e": {
+                "type": "integer"
+              },
+              "lifetime_s": {
+                "type": "number"
+              },
+              "migration_distance_m": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Agent-reported adatom lifetime and migration distance for each charge state. Checker will compare to hidden reference values for selected charges and verify monotonic increase."
+      }
+    ],
+    "notes": "The DFT and NEB steps are computationally intensive and expected to run on external/HPC resources. The KMC simulation must cover all seven charge states with 400k trajectories each. The checker applies tolerance-based comparison to paper-reported values (factor 2) and checks monotonic trend."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "golden reference values for lifetime and migration distance at charges 0, -4e, -12e",
+      "source_provenance": "paper Fig. 3 and text: lifetime ≈10 μs (0), ≈27 μs (-4e), ≈160 ms (-12e); migration distance ≈25 nm (0), ≈100 nm (-4e), ≈13 μm (-12e)",
+      "generation_method": "converted to SI units and embedded as gold map",
+      "why_not_fabricated": "these numbers are directly read from the paper's reported approximate values; used as tolerance check"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_validation",
+      "output_file": "results.json",
+      "weight": 0.01,
+      "kind": "shape",
+      "description": "Validate that results.json is an array of 7 objects covering all required charges with correct keys and numeric types."
+    },
+    {
+      "id": "key_charge_agreement",
+      "output_file": "results.json",
+      "weight": 0.79,
+      "kind": "reference_match",
+      "description": "For charges 0, -4e, -12e, check that lifetime_s and migration_distance_m lie within [gold/2, gold*2] of the paper-reported approximate values. Score is the fraction of the 6 quantities that satisfy the tolerance.",
+      "target_policy": "reference_match",
+      "references": {
+        "0": {
+          "lifetime_s": 1e-05,
+          "migration_distance_m": 2.5e-08
+        },
+        "-4": {
+          "lifetime_s": 2.7e-05,
+          "migration_distance_m": 1e-07
+        },
+        "-12": {
+          "lifetime_s": 0.16,
+          "migration_distance_m": 1.3e-05
+        }
+      }
+    },
+    {
+      "id": "monotonic_trend",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "description": "Verify that lifetime_s and migration_distance_m are non‑decreasing as charge magnitude increases (most negative to zero). Score is 0.5 per quantity if monotonic."
+    }
+  ],
+  "target_policies": {
+    "results.json": "reference_match"
+  }
+}

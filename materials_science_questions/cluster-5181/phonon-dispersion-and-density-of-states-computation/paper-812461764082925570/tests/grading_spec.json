@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute expected phonon frequencies from the paper's dielectric matrix equations using the given parameters; compare agent's frequencies via RMSD. Fields are checked structurally as a full recompute of field amplitudes in the checker is excessively complex but the shapes are verifiable.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Model parameters and calibrated B0 constant used to recompute reference frequencies.",
+      "source_provenance": "Derived from the paper's Section 4.2.2 (dispersion parameters, epsilon_inf, effective charges, spatial charge parameter eta) and calibrated to match the paper's Figure 1 (right panel) frequency of the highest Γ1 mode (~384 cm⁻¹).",
+      "generation_method": "The constant B0 = sqrt(Delta) was computed by requiring the highest Γ1 mode frequency Omega_z^2 + B_k^2 to equal ~384 cm⁻¹, using the paper's formulas for B_k and the given short-range dispersion with k=2, d_z=22 a0, eta=1.7 a0.",
+      "why_not_fabricated": "All parameters are pulled from the paper's explicit statements and the calibration is anchored to the paper's own reported figure."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "frequencies": "array of objects",
+            "fields": "array of objects"
+          },
+          "items": {
+            "frequency_item": {
+              "theta_deg": "number",
+              "mode_index": "integer",
+              "frequency_cm-1": "number"
+            },
+            "field_item": {
+              "mode_index": "integer",
+              "z_monolayer": "integer",
+              "Ez_meV_per_A": "number",
+              "Ex_meV_per_A": "number"
+            }
+          },
+          "units": {
+            "frequency_cm-1": "cm⁻¹",
+            "Ez_meV_per_A": "meV/Å",
+            "Ex_meV_per_A": "meV/Å"
+          }
+        },
+        "description": "Computed phonon eigenfrequencies and local electrostatic field profiles for the (GaAs)10(AlAs)10 superlattice. The checker will recompute the RMSD of frequencies and the mean absolute relative error of field amplitudes compared to hidden reference values digitized from the paper."
+      }
+    ],
+    "notes": "The agent must implement the non-local dielectric eigenvalue problem using the supplied parameters. The output JSON must contain the full set of frequencies for all AlAs-like modes over θ=0..90° and the field profiles at θ=0° and θ=90°."
+  },
+  "steps": [
+    {
+      "id": "check_frequencies",
+      "output_file": "phonon_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "description": "Recompute phonon frequencies from the dielectric matrix and compare agent's frequencies via RMSD; full credit for RMSD <= 2 cm⁻¹, linear decay to 0 at 10 cm⁻¹.",
+      "target": 2.0,
+      "tolerance_decay": 10.0,
+      "metric": "rmsd",
+      "params": {}
+    },
+    {
+      "id": "check_fields_structure",
+      "output_file": "phonon_results.json",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify that field profiles are present, finite, have correct parity/confinement properties, and are of expected magnitude.",
+      "params": {}
+    }
+  ]
+}

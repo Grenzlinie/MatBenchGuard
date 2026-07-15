@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MAPE of agent-computed thermodynamic descriptors against paper-reported Table 1 values, a direct recompute comparison.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Alloy",
+            "Cr_content",
+            "Delta_H_mix_kJ_mol",
+            "Delta_S_mix_J_K_mol",
+            "Omega",
+            "delta_percent",
+            "VEC"
+          ],
+          "description": "Columns: Alloy (string), Cr_content (float), Delta_H_mix_kJ_mol (float), Delta_S_mix_J_K_mol (float), Omega (float), delta_percent (float), VEC (float)."
+        },
+        "description": "Scored artifact: the computed thermodynamic descriptors for the six HEA compositions. The hidden checker recomputes the mean absolute relative error (MAPE) against the paper-reported values and awards partial credit based on MAPE."
+      }
+    ],
+    "notes": "Scoring compares the agent's computed values to hidden paper reference values using mean absolute relative error (MAPE). Higher error reduces credit; the exact tolerance band is defined in the hidden grading specification."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported reference values for thermodynamic descriptors (Table 1)",
+      "source_provenance": "Paper Table 1 in (CuFeMnNi)1−xCrx HEAs paper",
+      "generation_method": "Extracted directly from the paper's Table 1; these are the paper's published results for the same composition and formulas.",
+      "why_not_fabricated": "These are the exact published numerical values from the paper's Table 1, serving as authoritative gold for the reproduction task."
+    }
+  ],
+  "steps": [
+    {
+      "id": "map_recompute",
+      "output_file": "thermodynamic_parameters.csv",
+      "kind": "map_recompute",
+      "weight": 1.0,
+      "target_policy": "metric_recompute",
+      "description": "Compute mean absolute percentage error (MAPE) across all alloys and all five thermodynamic columns against hidden reference.",
+      "columns": [
+        "Delta_H_mix_kJ_mol",
+        "Delta_S_mix_J_K_mol",
+        "Omega",
+        "delta_percent",
+        "VEC"
+      ],
+      "reference": {
+        "0%Cr": {
+          "Cr_content": 0.0,
+          "Delta_H_mix_kJ_mol": 2.75,
+          "Delta_S_mix_J_K_mol": 11.53,
+          "Omega": 6.72,
+          "delta_percent": 3.4,
+          "VEC": 9.0
+        },
+        "5%Cr": {
+          "Cr_content": 0.05,
+          "Delta_H_mix_kJ_mol": 2.77,
+          "Delta_S_mix_J_K_mol": 12.6,
+          "Omega": 7.41,
+          "delta_percent": 3.36,
+          "VEC": 8.85
+        },
+        "10%Cr": {
+          "Cr_content": 0.1,
+          "Delta_H_mix_kJ_mol": 2.76,
+          "Delta_S_mix_J_K_mol": 13.08,
+          "Omega": 7.85,
+          "delta_percent": 3.31,
+          "VEC": 8.7
+        },
+        "15%Cr": {
+          "Cr_content": 0.15,
+          "Delta_H_mix_kJ_mol": 2.75,
+          "Delta_S_mix_J_K_mol": 13.31,
+          "Omega": 8.14,
+          "delta_percent": 3.26,
+          "VEC": 8.55
+        },
+        "20%Cr": {
+          "Cr_content": 0.2,
+          "Delta_H_mix_kJ_mol": 2.72,
+          "Delta_S_mix_J_K_mol": 13.38,
+          "Omega": 8.41,
+          "delta_percent": 3.2,
+          "VEC": 8.4
+        },
+        "25%Cr": {
+          "Cr_content": 0.25,
+          "Delta_H_mix_kJ_mol": 2.67,
+          "Delta_S_mix_J_K_mol": 13.32,
+          "Omega": 8.66,
+          "delta_percent": 3.13,
+          "VEC": 8.25
+        }
+      },
+      "mape_threshold": 0.02,
+      "mape_decay_limit": 0.1,
+      "score_method": "linear_decay"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Build defective supercell",
+    "role": "process",
+    "action": "Construct a 2×2 supercell of monolayer g-C3N4 in its hexagonal phase. Remove the carbon atom that is the next-nearest neighbour to the central nitrogen atom. Set a vacuum gap of at least 15 Å along the out-of-plane direction. Generate the input geometry file for Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "initial.in",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the geometry with the specific carbon vacancy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Relax defective supercell",
+    "role": "process",
+    "action": "Perform a spin-polarized geometry relaxation of the defective supercell using Quantum ESPRESSO (pw.x) with the PBE functional. Use an appropriate k-point mesh for relaxation and converge forces to a typical threshold. Keep the cell dimensions fixed.",
+    "output_file": "",
+    "evidence": "relax.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimize atomic positions of the vacancy-containing supercell.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Run spin-polarized SCF and extract magnetic moment",
+    "role": "scored",
+    "action": "Perform a spin-polarized self-consistent field (SCF) calculation on the relaxed structure using Quantum ESPRESSO (pw.x) with a finer k-point mesh. Use the same functional and pseudopotentials. Read the total magnetization from the QE output and write the net magnetic moment as a single float (in μB) to magnetic_moment.txt under /app/outputs.",
+    "output_file": "magnetic_moment.txt",
+    "evidence": "scf.out",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Compute the total magnetic moment of the defective supercell.",
+    "output_schema": "Single floating-point number in Bohr magnetons (μB)."
+  },
+  {
+    "id": "step4",
+    "title": "Compute band structure and output CSV",
+    "role": "scored",
+    "action": "Perform a non-self-consistent (NSCF) band structure calculation using Quantum ESPRESSO (pw.x) on the SCF charge density, then use bands.x to extract the spin-resolved band energies along a standard high-symmetry path (e.g., Γ–M–K–Γ). Write the data to band_structure.csv under /app/outputs with columns: kpoint_index (int), kx (float), ky (float), kz (float), energy_spin_up (eV), energy_spin_down (eV). Energies must be referenced to the Fermi level (E_F = 0 eV).",
+    "output_file": "band_structure.csv",
+    "evidence": "bands.out",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Spin-resolved band structure along a high-symmetry path. Energies referenced to Fermi level (0 eV).",
+    "output_schema": "CSV with no header. Columns: kpoint_index (int), kx (float), ky (float), kz (float), energy_spin_up (eV), energy_spin_down (eV). Energies referenced to Fermi level (0 eV)."
+  }
+]

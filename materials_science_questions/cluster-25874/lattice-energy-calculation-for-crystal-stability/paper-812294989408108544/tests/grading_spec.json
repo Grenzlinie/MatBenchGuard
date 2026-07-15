@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing ppe and pc from raw crystal coordinates would require the full crystal structure files and potential parameter sets, which are not present in the sandbox and would be computationally heavy. Instead we compare the agent's reported values against the paper's reference with tolerances.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "results_table.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected packing coefficient and ppe values for crystals A, B, C from paper Table 3",
+      "source_provenance": "paper Table 3 and text in Organometallics 1994",
+      "generation_method": "transcribed from paper",
+      "why_not_fabricated": "these are the paper's reported values; they are used as reference against which the agent's computed reproduction is compared."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results_table.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "crystal_A": {
+              "packing_coefficient": "number",
+              "ppe_MRK": "number (kcal mol⁻¹)",
+              "ppe_GVF": "number (kcal mol⁻¹)"
+            },
+            "crystal_B": {
+              "packing_coefficient": "number",
+              "ppe_MRK": "number (kcal mol⁻¹)",
+              "ppe_GVF": "number (kcal mol⁻¹)"
+            },
+            "crystal_C": {
+              "packing_coefficient": "number",
+              "ppe_MRK_mean": "number (kcal mol⁻¹)",
+              "ppe_GVF_mean": "number (kcal mol⁻¹)"
+            }
+          }
+        },
+        "description": "Packing coefficient and packing potential energy values for the three crystals A, B, C computed using the given atom-atom potential parameters. The checker compares these to the paper's reference values with appropriate tolerances."
+      }
+    ],
+    "notes": "All needed crystal coordinates and potential parameter files are public. The agent must perform the volume integration and atom–atom summations from scratch. Tolerances are set to accept typical numerical variation from different implementations."
+  },
+  "steps": [
+    {
+      "id": "results_table",
+      "output_file": "results_table.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Check packing coefficients and ppe values within tolerance, and verify energetic ordering",
+      "hidden_gold": {
+        "pc_expected": {
+          "A": 0.72,
+          "B": 0.72,
+          "C": 0.72
+        },
+        "ppe_MRK_expected": {
+          "A": -92.4,
+          "B": -94.2,
+          "C": -93.1
+        },
+        "ppe_GVF_expected": {
+          "A": -110.9,
+          "B": -112.0,
+          "C": -111.3
+        },
+        "tolerance_pc": 0.01,
+        "tolerance_ppe": 1.0
+      }
+    }
+  ]
+}

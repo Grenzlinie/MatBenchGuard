@@ -1,0 +1,136 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "IB energy window and dominant orbitals are recomputed from the raw total/site‑projected DOS CSV; effective masses are compared to paper‑reported values with monotonic tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_dos_data.csv": "metric_recompute",
+    "dos_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Effective mass gold values for Au2Cs2I6, Ag2GeBaS4, Ag2ZnSnS4",
+      "source_provenance": "Paper Table 3 (narrow‑band gap) and Table 4 (wide‑band gap)",
+      "generation_method": "Direct transcript of paper‑reported effective masses (in units of electron mass) for the three compounds.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's quantitative results, establishing authoritative ground truth for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_dos_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "energy_ev",
+            "total_dos"
+          ],
+          "description": "Required columns plus any number of per‑orbital columns named as <element>_<orbital> (float). The checker recomputes the IB energy range from this data."
+        },
+        "description": "Raw total and site‑projected DOS for all three compounds, used by the checker to independently recalculate the intermediate‑band energy window and verify dominant orbital contributions."
+      },
+      {
+        "file": "dos_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "ib_energy_range",
+              "dominant_orbitals",
+              "effective_masses"
+            ],
+            "properties": {
+              "ib_energy_range": {
+                "type": "string"
+              },
+              "dominant_orbitals": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "effective_masses": {
+                "type": "object",
+                "required": [
+                  "m_lh",
+                  "m_hh",
+                  "m_e"
+                ],
+                "properties": {
+                  "m_lh": {
+                    "type": "number"
+                  },
+                  "m_hh": {
+                    "type": "number"
+                  },
+                  "m_e": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Keys are the three compound names. Each value contains the IB energy range, list of dominant orbitals, and effective masses. The checker compares these reported values to recomputed/predicted gold values with monotonic tolerance."
+        },
+        "description": "Agent's analysed results: IB energy window, dominant orbital contributions, and effective masses for the three representative intermediate‑band compounds. The checker will recompute the IB window from the raw DOS and compare, and verify effective masses against the paper‑reported values."
+      }
+    ],
+    "notes": "The checker recomputes the intermediate‑band energy range from total_dos_data.csv and compares it to the agent's reported range; it also checks that the reported dominant orbitals are the ones with highest integrated PDOS in that window, and compares effective masses to paper‑reported values with appropriate tolerances. All comparisons are monotonic (meeting or beating the reference earns full credit)."
+  },
+  "steps": [
+    {
+      "id": "check_csv_valid",
+      "output_file": "total_dos_data.csv",
+      "weight": 0.05,
+      "kind": "recompute",
+      "description": "Validate CSV structure and non‑empty data"
+    },
+    {
+      "id": "check_ib_range_recompute",
+      "output_file": "dos_results.json",
+      "weight": 0.35,
+      "kind": "recompute",
+      "description": "Recompute IB energy window from total_dos_data.csv and compare to agent's reported range (tolerance ±0.2 eV)"
+    },
+    {
+      "id": "check_dominant_orbitals",
+      "output_file": "dos_results.json",
+      "weight": 0.2,
+      "kind": "recompute",
+      "description": "Recompute dominant orbital contributions from site‑projected DOS in the IB window and compare to agent's list"
+    },
+    {
+      "id": "check_effective_masses",
+      "output_file": "dos_results.json",
+      "weight": 0.4,
+      "kind": "recompute",
+      "description": "Compare agent‑reported effective masses to paper‑reported gold values (tolerance ±0.1 m_e)",
+      "gold_masses": {
+        "Au2Cs2I6": {
+          "m_lh": 0.096,
+          "m_hh": 0.265,
+          "m_e": 0.095
+        },
+        "Ag2GeBaS4": {
+          "m_lh": 0.059,
+          "m_hh": 0.114,
+          "m_e": 0.021
+        },
+        "Ag2ZnSnS4": {
+          "m_lh": 0.237,
+          "m_hh": 0.033,
+          "m_e": 0.025
+        }
+      },
+      "tolerance_abs": 0.1
+    }
+  ]
+}

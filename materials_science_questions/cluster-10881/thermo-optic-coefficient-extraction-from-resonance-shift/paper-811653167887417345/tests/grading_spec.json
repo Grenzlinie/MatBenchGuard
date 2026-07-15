@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Headline quantities are deterministic outputs of a complex finite‑element / ray‑tracing simulation pipeline. Full recompute of the entire pipeline inside the verifier is infeasible, so we compare the agent's reported scalar values against paper‑reported references with tolerances. This is a valid T0 approach per D4.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for all scored artifacts",
+      "source_provenance": "Paper Tables/Fig.8, Fig.9, Eq.8, Eq.20; reference solution solve.sh reproduces the same numbers.",
+      "generation_method": "Extracted from the paper's reported numerical results (GT = 4.03e-5 mm⁻¹, nodes retained = 65.7%, correlation = 0.97, validation peak = 24.0 mm, rms original = 0.552 waves, rms reconstructed = 0.543 waves, relative error = 1.63%).",
+      "why_not_fabricated": "These are the exact values reported in the paper, verified against the reference solver, and used only for comparison against the agent's reproduced output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "threshold_GT.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": "mm⁻¹"
+        },
+        "description": "Harmonic-mean refractive index gradient magnitude threshold."
+      },
+      {
+        "file": "reconstruction_stats.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "nodes_retained_percent": "number (percentage)",
+            "correlation_coefficient": "number"
+          }
+        },
+        "description": "Percentage of original refractive index nodes retained and correlation coefficient between original and reconstructed fields."
+      },
+      {
+        "file": "validation_peak.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": "mm"
+        },
+        "description": "X-coordinate of the PSF peak from the gradient-index slab ray-tracing validation."
+      },
+      {
+        "file": "wave_aberration_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "rms_original": "number (waves)",
+            "rms_reconstructed": "number (waves)",
+            "relative_error_percent": "number (percent)"
+          }
+        },
+        "description": "RMS wave aberration of original and reconstructed refractive index fields, and the relative error between them."
+      }
+    ],
+    "notes": "All output files must be placed under /app/outputs. The finite-element simulation step is not scored directly; only its downstream optical products are verified. The ray-tracing algorithm must be implemented according to the described recursive grid-based method; no external ray-tracing library is assumed."
+  },
+  "steps": [
+    {
+      "id": "threshold_gt",
+      "output_file": "threshold_GT.txt",
+      "weight": 0.1,
+      "kind": "custom",
+      "description": "Harmonic-mean threshold GT (mm⁻¹). Compare to paper value 4.03e-05 within ±10% relative.",
+      "gold_threshold": 4.03e-05,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "reconstruction_stats",
+      "output_file": "reconstruction_stats.json",
+      "weight": 0.35,
+      "kind": "custom",
+      "description": "Nodes retained percent and correlation coefficient. nodes_retained_percent within ±5% absolute of 65.7; correlation_coefficient ≥ 0.95.",
+      "gold_nodes_retained": 65.7,
+      "tolerance_abs_nodes": 0.05,
+      "gold_correlation": 0.95,
+      "sub_weights": {
+        "nodes_retained": 0.3,
+        "correlation": 0.7
+      }
+    },
+    {
+      "id": "validation_peak",
+      "output_file": "validation_peak.txt",
+      "weight": 0.1,
+      "kind": "custom",
+      "description": "PSF peak x-coordinate (mm). Compare to 24.0 mm within ±0.1 mm.",
+      "gold_peak": 24.0,
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "wave_aberration",
+      "output_file": "wave_aberration_results.json",
+      "weight": 0.45,
+      "kind": "custom",
+      "description": "RMS wave aberrations and relative error. rms_original and rms_reconstructed within 10% relative of paper values (0.552, 0.543). relative_error_percent computed from submitted values must be ≤ 5% (lower is better).",
+      "gold_rms_original": 0.552,
+      "gold_rms_reconstructed": 0.543,
+      "tolerance_rel_rms": 0.1,
+      "max_relative_error_percent": 5.0,
+      "sub_weights": {
+        "rms_original": 0.2,
+        "rms_reconstructed": 0.2,
+        "relative_error": 0.6
+      }
+    }
+  ]
+}

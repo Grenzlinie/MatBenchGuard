@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "PDOS enhancement recomputed via integration; lattice parameters and binding energies compared to paper values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported DFT values: lattice parameters, band gap, binding energies, bond lengths",
+      "source_provenance": "Paper text: a=7.35, b=7.60, c=7.76 Ang; band gap 1.42 eV; Ag binding 0.72 eV; glucose binding on WO3 -1.12 eV; glucose on Ag-WO3 -1.3 eV; bond lengths 2.39, 2.43 Ang",
+      "generation_method": "Extracted directly from the paper's DFT results section.",
+      "why_not_fabricated": "Values are the actual reported by the authors; used as tolerance targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "b",
+            "c",
+            "band_gap",
+            "total_dos_at_fermi"
+          ],
+          "units": {
+            "a": "Angstrom",
+            "b": "Angstrom",
+            "c": "Angstrom",
+            "band_gap": "eV",
+            "total_dos_at_fermi": "states/eV/unit cell"
+          }
+        },
+        "description": "Optimized bulk monoclinic WO3 lattice parameters, GGA band gap, and total DOS at the Fermi level; validates the DFT setup."
+      },
+      {
+        "file": "surface_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "binding_energy_Ag_on_WO3",
+            "binding_energy_glucose_on_WO3",
+            "binding_energy_glucose_on_Ag_WO3",
+            "bond_length_glucose_O_W",
+            "bond_length_glucose_O_Ag"
+          ],
+          "units": {
+            "binding_energy_Ag_on_WO3": "eV",
+            "binding_energy_glucose_on_WO3": "eV",
+            "binding_energy_glucose_on_Ag_WO3": "eV",
+            "bond_length_glucose_O_W": "Angstrom",
+            "bond_length_glucose_O_Ag": "Angstrom"
+          }
+        },
+        "description": "DFT-computed binding energies of Ag on WO3, glucose on WO3, and glucose on Ag-WO3, together with the relevant surface bond lengths."
+      },
+      {
+        "file": "pdos_comparison.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "pdos_W_d_bare",
+            "pdos_W_d_Ag_doped"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "pdos_W_d_bare": "states/eV",
+            "pdos_W_d_Ag_doped": "states/eV"
+          }
+        },
+        "description": "Projected density of states for the W d orbital on bare and Ag-doped WO3(100) surfaces, aligned with the Fermi level at 0 eV. Used to recompute the integrated density of states near the Fermi level and verify enhancement upon Ag doping."
+      }
+    ],
+    "notes": "The original paper used VASP; the reproduction package uses open-source Quantum ESPRESSO with PW91 GGA pseudopotentials. The experimental synthesis, characterization, and electrochemical sensing parts are excluded because they are wet-lab procedures that cannot be reproduced by code. This plan covers only the DFT electronic structure simulations that provide theoretical insight."
+  },
+  "steps": [
+    {
+      "id": "bulk_properties",
+      "output_file": "bulk_properties.json",
+      "kind": "json_field_match",
+      "weight": 0.2,
+      "fields": [
+        {
+          "field": "a",
+          "target": 7.35,
+          "tolerance_type": "relative",
+          "tolerance": 0.01
+        },
+        {
+          "field": "b",
+          "target": 7.6,
+          "tolerance_type": "relative",
+          "tolerance": 0.01
+        },
+        {
+          "field": "c",
+          "target": 7.76,
+          "tolerance_type": "relative",
+          "tolerance": 0.01
+        },
+        {
+          "field": "band_gap",
+          "target": 1.42,
+          "tolerance_type": "absolute",
+          "tolerance": 0.2
+        },
+        {
+          "field": "total_dos_at_fermi",
+          "target": 0.0,
+          "tolerance_type": "absolute",
+          "tolerance": 1e-06
+        }
+      ]
+    },
+    {
+      "id": "surface_results",
+      "output_file": "surface_results.json",
+      "kind": "surface_binding",
+      "weight": 0.5,
+      "targets": {
+        "binding_energy_Ag_on_WO3": 0.72,
+        "binding_energy_glucose_on_WO3": -1.12,
+        "binding_energy_glucose_on_Ag_WO3": -1.3,
+        "bond_length_glucose_O_W": 2.39,
+        "bond_length_glucose_O_Ag": 2.43
+      },
+      "tol_abs": {
+        "binding_energy": 0.15,
+        "bond_length": 0.1
+      }
+    },
+    {
+      "id": "pdos_comparison",
+      "output_file": "pdos_comparison.csv",
+      "kind": "recompute_pdos_enhancement",
+      "weight": 0.3,
+      "energy_range": [
+        -0.5,
+        0.0
+      ],
+      "enhancement_factor": 1.1,
+      "required_energy_range": [
+        -2.0,
+        2.0
+      ]
+    }
+  ]
+}

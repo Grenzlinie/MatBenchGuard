@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Checker compares agent's computed equilibrium gas composition against paper's Table 2 values; recompute from raw intermediate is infeasible because repacking the full thermodynamic minimization in the verifier sandbox is prohibitive and the raw inputs (thermochemical database) are not embedded.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference equilibrium gas composition values from Table 2 of the paper",
+      "source_provenance": "paper Table 2",
+      "generation_method": "Extracted from paper markdown",
+      "why_not_fabricated": "These are the published numbers the paper claims; the reproduction must match them within tolerances to verify correctness."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gas_composition.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature",
+            "WaterWoodRatio",
+            "TotalMoles",
+            "H2",
+            "CO",
+            "H2O",
+            "CO2",
+            "CH4",
+            "N2",
+            "H2S",
+            "LiquidPresent"
+          ],
+          "units": {
+            "Temperature": "°C",
+            "TotalMoles": "moles per 100 g wood",
+            "H2": "mole fraction",
+            "CO": "mole fraction",
+            "H2O": "mole fraction",
+            "CO2": "mole fraction",
+            "CH4": "mole fraction",
+            "N2": "mole fraction",
+            "H2S": "mole fraction",
+            "LiquidPresent": "boolean"
+          }
+        },
+        "description": "Equilibrium gas composition and liquid phase presence for aspen wood gasification at nine condition combinations. The checker compares the TotalMoles and species mole fractions against the paper's reported values using tolerances, and the LiquidPresent boolean against the paper's finding (no liquid at 600°C/700°C; presence at 800°C for the 0.75/1 ratio)."
+      }
+    ],
+    "notes": "Liquid phase presence is merged into gas_composition.csv instead of a separate artifact, avoiding the need for an additional solve block."
+  },
+  "steps": [
+    {
+      "id": "scored_composition",
+      "output_file": "gas_composition.csv",
+      "weight": 1.0,
+      "kind": "result_compare",
+      "expected": [
+        {
+          "Temperature": 800,
+          "WaterWoodRatio": "0.5/1",
+          "TotalMoles": 9.535,
+          "H2": 0.479,
+          "CO": 0.361,
+          "H2O": 0.069,
+          "CO2": 0.057,
+          "CH4": 0.032,
+          "N2": 0.0018,
+          "H2S": 0.00069
+        },
+        {
+          "Temperature": 700,
+          "WaterWoodRatio": "0.5/1",
+          "TotalMoles": 8.057,
+          "H2": 0.419,
+          "CO": 0.209,
+          "H2O": 0.166,
+          "CO2": 0.135,
+          "CH4": 0.069,
+          "N2": 0.0021,
+          "H2S": 9.5e-05
+        },
+        {
+          "Temperature": 600,
+          "WaterWoodRatio": "0.5/1",
+          "TotalMoles": 6.819,
+          "H2": 0.304,
+          "CO": 0.075,
+          "H2O": 0.295,
+          "CO2": 0.196,
+          "CH4": 0.128,
+          "N2": 0.0024,
+          "H2S": 0.00011
+        },
+        {
+          "Temperature": 800,
+          "WaterWoodRatio": "0.75/1",
+          "TotalMoles": 11.202,
+          "H2": 0.484,
+          "CO": 0.285,
+          "H2O": 0.131,
+          "CO2": 0.085,
+          "CH4": 0.014,
+          "N2": 0.0015,
+          "H2S": 6.8e-05
+        },
+        {
+          "Temperature": 700,
+          "WaterWoodRatio": "0.75/1",
+          "TotalMoles": 10.038,
+          "H2": 0.415,
+          "CO": 0.211,
+          "H2O": 0.166,
+          "CO2": 0.138,
+          "CH4": 0.068,
+          "N2": 0.0017,
+          "H2S": 7.7e-05
+        },
+        {
+          "Temperature": 600,
+          "WaterWoodRatio": "0.75/1",
+          "TotalMoles": 8.495,
+          "H2": 0.301,
+          "CO": 0.076,
+          "H2O": 0.295,
+          "CO2": 0.201,
+          "CH4": 0.125,
+          "N2": 0.002,
+          "H2S": 9.1e-05
+        },
+        {
+          "Temperature": 800,
+          "WaterWoodRatio": "1/1",
+          "TotalMoles": 12.699,
+          "H2": 0.47,
+          "CO": 0.229,
+          "H2O": 0.191,
+          "CO2": 0.102,
+          "CH4": 0.0068,
+          "N2": 0.0013,
+          "H2S": 6.1e-05
+        },
+        {
+          "Temperature": 700,
+          "WaterWoodRatio": "1/1",
+          "TotalMoles": 11.78,
+          "H2": 0.423,
+          "CO": 0.175,
+          "H2O": 0.212,
+          "CO2": 0.143,
+          "CH4": 0.046,
+          "N2": 0.0014,
+          "H2S": 6.5e-05
+        },
+        {
+          "Temperature": 600,
+          "WaterWoodRatio": "1/1",
+          "TotalMoles": 10.171,
+          "H2": 0.299,
+          "CO": 0.076,
+          "H2O": 0.295,
+          "CO2": 0.203,
+          "CH4": 0.124,
+          "N2": 0.0016,
+          "H2S": 0.00076
+        }
+      ],
+      "tolerances": {
+        "major_species_relative": 0.1,
+        "major_species_absolute_floor": 0.005,
+        "minor_species_absolute": 0.001,
+        "total_moles_relative": 0.05,
+        "total_moles_absolute_floor": 0.5,
+        "slope_factor": 1.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "The ionization energy values are final computed results; recomputation from raw DFT artifacts is not feasible in the verifier sandbox, so result-level comparison with paper gold is used. The convergence table is scored structurally.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "V_N_IE_15A.dat": "reference_match",
+    "C_N_IE_15A.dat": "reference_match",
+    "C_N_convergence.dat": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported defect ionization energies for V_N and C_N in monolayer h-BN.",
+      "source_provenance": "Paper Table I: V_N+1 = 2.01 eV; C_N-1 = 1.39 eV.",
+      "generation_method": "Extracted directly from the published Table I.",
+      "why_not_fabricated": "These are the published reference values; the reproduction target is to match them within expected DFT variability."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "V_N_IE_15A.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line containing a floating-point value representing the V_N ionization energy in eV."
+        },
+        "description": "Ionization energy of the nitrogen vacancy at 15 Å vacuum."
+      },
+      {
+        "file": "C_N_IE_15A.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line containing a floating-point value representing the C_N ionization energy in eV."
+        },
+        "description": "Ionization energy of the carbon-on-nitrogen substitution at 15 Å vacuum."
+      },
+      {
+        "file": "C_N_convergence.dat",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "vacuum_thickness",
+            "IE"
+          ],
+          "units": {
+            "vacuum_thickness": "Å",
+            "IE": "eV"
+          }
+        },
+        "description": "Convergence test: IE(C_N) computed at vacuum thicknesses 10, 20, and 30 Å; the IE values must not vary by more than 0.05 eV across rows."
+      }
+    ],
+    "notes": "The first two artifacts are single-value floats compared to hidden reference values with a tolerance (±0.10 eV). The convergence table is checked for structural consistency (max variation ≤0.05 eV)."
+  },
+  "steps": [
+    {
+      "id": "check_vn_ie",
+      "output_file": "V_N_IE_15A.dat",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "target": 2.01,
+      "tolerance": 0.1,
+      "max_diff": 0.5,
+      "description": "Compare submitted V_N ionization energy to paper gold (2.01 eV)"
+    },
+    {
+      "id": "check_cn_ie",
+      "output_file": "C_N_IE_15A.dat",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "target": 1.39,
+      "tolerance": 0.1,
+      "max_diff": 0.5,
+      "description": "Compare submitted C_N ionization energy to paper gold (1.39 eV)"
+    },
+    {
+      "id": "check_cn_convergence",
+      "output_file": "C_N_convergence.dat",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "max_variation": 0.05,
+      "description": "Verify that the IE(C_N) values across vacuum thicknesses vary by no more than 0.05 eV, indicating convergence."
+    }
+  ]
+}

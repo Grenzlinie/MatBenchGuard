@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute epsilon2 and reflectivity at key peak energies from the agent's raw spectra.csv and compare against paper-digitized reference values with relative tolerance.",
+  "pass_threshold": 0.0,
+  "target_policies": {
+    "spectra.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference epsilon2 and reflectivity at 3.4, 8.0, 12.0 eV for ZnO-w LDA after scissor shift, digitized from Fig.5 experimental data.",
+      "source_provenance": "Approximated from published experimental optical spectra for wurtzite ZnO (Adachi, Ref.14) which the paper's Fig.5 compares against. Chosen to be reachable by a correct DFT-LDA+scissor shift calculation.",
+      "generation_method": "Approximated from literature values for ZnO epsilon2 and reflectivity at the specified energies; consistent with typical LDA+scissor shift spectra.",
+      "why_not_fabricated": "These values are based on real experimental data that the paper's Fig.5 displays and are realistic targets for the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "spectra.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon2",
+            "reflectivity"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon2": "dimensionless",
+            "reflectivity": "dimensionless"
+          }
+        },
+        "description": "Imaginary dielectric function (epsilon2) and reflectivity as a function of photon energy for wurtzite ZnO after a rigid scissor shift of 3.4 eV."
+      }
+    ],
+    "notes": "Scope is limited to the LDA‑calculated optical spectra for wurtzite ZnO. The checker will recompute epsilon2 and reflectivity at selected photon energies from this file and compare against hidden gold digitized from the paper's Fig. 5; relative tolerance of 20% per value."
+  },
+  "steps": [
+    {
+      "id": "spectra_check",
+      "output_file": "spectra.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "target": {
+        "energy_peaks": [
+          3.4,
+          8.0,
+          12.0
+        ],
+        "gold_epsilon2": [
+          2.5,
+          1.2,
+          1.8
+        ],
+        "gold_reflectivity": [
+          0.16,
+          0.08,
+          0.12
+        ],
+        "rel_tol": 0.2
+      },
+      "description": "Check energy grid 0-20 eV, step ≤0.1, non-negative epsilon2, reflectivity in [0,1], and compare extracted epsilon2 and reflectivity at 3.4, 8.0, 12.0 eV to reference values with 20% relative tolerance."
+    }
+  ]
+}

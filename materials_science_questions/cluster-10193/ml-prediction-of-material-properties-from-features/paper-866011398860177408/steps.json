@@ -1,0 +1,54 @@
+[
+  {
+    "id": "data_prep",
+    "title": "Data preparation and train/test split",
+    "role": "process",
+    "action": "Download the XANESNET training data. For each first-row transition metal (Ti, V, Cr, Mn, Fe, Co, Ni, Cu, Zn), set aside 250 randomly selected samples as the held-out test set; use the remaining samples for training.",
+    "output_file": "",
+    "evidence": "split_indices.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Create element-wise train/holdout splits. The optional evidence file records which sample indices belong to the held-out set.",
+    "output_schema": ""
+  },
+  {
+    "id": "bootstrap_training",
+    "title": "Bootstrap-resampled MLP training",
+    "role": "process",
+    "action": "For each element, create 15 bootstrap-resampled training sets (each same size as the original training set, sampled with replacement). Train an MLP model on each resampled set using random weight initialization. Save the 15 trained models per element.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Train the ensemble of 15 MLP models per element. The trained models are required for the next prediction stage.",
+    "output_schema": ""
+  },
+  {
+    "id": "ensemble_prediction",
+    "title": "Ensemble prediction of held-out spectra",
+    "role": "process",
+    "action": "For each element, evaluate the 15 trained MLP models on the 250 held-out samples. Compute per-energy-point predicted mean (μ_predicted) and empirical standard deviation (σ) from the ensemble of 15 predictions.",
+    "output_file": "",
+    "evidence": "predictions.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Obtain predicted spectra and uncertainties for all held-out samples. The optional evidence file stores the per-sample μ and σ arrays.",
+    "output_schema": ""
+  },
+  {
+    "id": "uq_metrics",
+    "title": "Compute uncertainty quantification metrics",
+    "role": "scored",
+    "action": "For each element, using the true held-out spectra and the predicted μ, σ, compute the following metrics and write them to the CSV: median coverage (percentage of spectral points where |μ_predicted - μ_true| ≤ 3σ), P90 (fraction of held-out samples with ≥90% points within ±3σ), P80 (fraction with ≥80% within ±3σ), median percentage error Δμ (median over held-out spectra of the mean percentage error), Pearson correlation between per-energy-point MSE and σ (ρ_energy), and Pearson correlation between per-spectrum MSE and σ (ρ_spectrum). Output one row per element.",
+    "output_file": "metrics_summary.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final quantification table of uncertainty quality for each transition metal.",
+    "output_schema": "element: string; median_coverage: float; P90: float; P80: float; median_DeltaMu: float; pearson_rho_energy: float; pearson_rho_spectrum: float"
+  }
+]

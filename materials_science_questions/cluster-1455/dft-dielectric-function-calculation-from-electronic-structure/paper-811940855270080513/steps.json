@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_load_ham",
+    "title": "Load effective Hamiltonian and set up the supercell",
+    "role": "process",
+    "action": "Retrieve the effective Hamiltonian parameters for BaTiO3 from the published paper, construct the effective Hamiltonian model (local soft-mode and strain variables), and define the 14×14×14 supercell system.",
+    "output_file": "",
+    "evidence": "effective_hamiltonian_summary.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Preliminary data‑loading step that sets up the model; not scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_md_run",
+    "title": "Run MD simulations to generate dipole moment trajectories",
+    "role": "process",
+    "action": "For each target temperature (440 K and 470 K): equilibrate in the NPT ensemble for 20 000 steps (1 fs timestep) using an Evans‑Hoover thermostat and the PV barostat term, then switch to the NVE ensemble with frozen homogeneous strain (5 000 equilibration steps + 2 975 000 production steps). Record the total dipole moment time series M(t) at every 4 fs.",
+    "output_file": "",
+    "evidence": "dipole_trajectory_440K.npy, dipole_trajectory_470K.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core molecular‑dynamics production; the dipole trajectories are required for the subsequent dielectric calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_epsilon",
+    "title": "Compute complex dielectric function",
+    "role": "scored",
+    "action": "From the dipole moment time series, compute the dipole autocorrelation function ⟨M(t)·M(0)⟩ via the overlap approach (10 000 individual functions, time range 0–8.2 ps, step 4 fs). Perform the numerical Fourier transform and apply the fluctuation–dissipation formula to obtain ε'(ν) and ε''(ν) for frequencies 1–150 cm⁻¹ at both temperatures. Write the spectra to epsilon_spectra.csv.",
+    "output_file": "epsilon_spectra.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Complex dielectric function spectra at 440 K and 470 K, required to verify the two‑mode structure.",
+    "output_schema": "Columns: temperature (K), frequency (cm⁻¹), epsilon_real (dimensionless), epsilon_imag (dimensionless). One row per frequency point."
+  },
+  {
+    "id": "step_fit",
+    "title": "Fit two damped harmonic oscillators to ε(ν)",
+    "role": "scored",
+    "action": "Fit the simulated ε(ν) (from epsilon_spectra.csv) to the sum of two classical damped harmonic oscillators for both temperatures. Extract the mode frequencies (ν₁, ν₂), damping constants (γ₁, γ₂), oscillator strengths (S₁, S₂), and compute the peak positions ν₁' and ν₂' of the imaginary part. Write all fitted parameters to mode_parameters.csv.",
+    "output_file": "mode_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Fitted oscillator parameters from the two‑mode model.",
+    "output_schema": "Columns: temperature (K), nu1 (cm⁻¹), gamma1 (cm⁻¹), S1 (dimensionless), nu2 (cm⁻¹), gamma2 (cm⁻¹), S2 (dimensionless), nu1_prime (cm⁻¹), nu2_prime (cm⁻¹). One row per temperature."
+  }
+]

@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the monotonic trend and directly verifies PRDF first-peak distances against published reference values, achieving T1 recompute for both artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "prdf_results.csv": "exact_match_with_tolerance",
+    "tensile_strength_results.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "PRDF first-peak reference distances for Si-O, O-O, Si-Si pairs.",
+      "source_provenance": "Vashishta et al., Phys. Rev. B 41, 12197 (1990) and Mozzi & Warren, J. Appl. Crystallogr. 2, 164 (1969), as cited in the paper.",
+      "generation_method": "Distances taken directly from the paper's description: Si-O ~1.61 Å, O-O ~2.6 Å, Si-Si ~3.1 Å.",
+      "why_not_fabricated": "These are established interatomic distances for amorphous silica, independently verified by prior simulation and X-ray diffraction experiments and explicitly referenced in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "prdf_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pair",
+            "r_first_peak"
+          ],
+          "units": {
+            "r_first_peak": "Å"
+          }
+        },
+        "description": "First-peak positions of the partial radial distribution functions for Si-O, O-O, and Si-Si pairs. These are compared to known interatomic distances from prior simulation and experiment."
+      },
+      {
+        "file": "tensile_strength_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cooling_rate",
+            "tensile_strength"
+          ],
+          "units": {
+            "cooling_rate": "K/ps",
+            "tensile_strength": "GPa"
+          }
+        },
+        "description": "Tensile strength (maximum stress) for each cooling rate. The relation that higher cooling rate leads to lower tensile strength is verified by checking monotonic decreasing order in the submitted rows."
+      }
+    ],
+    "notes": "The agent must generate amorphous samples at multiple cooling rates and perform full tensile loading simulations, not merely report a guessed trend. The structural audit on tensile strength checks monotonic decrease; the reference match on PRDF checks proximity to established distances (within a hidden tolerance). At least two cooling rates must appear in the tensile strength output."
+  },
+  "steps": [
+    {
+      "id": "prdf_peaks",
+      "output_file": "prdf_results.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "description": "Verify PRDF first-peak distances match Si-O≈1.61 Å, O-O≈2.60 Å, Si-Si≈3.10 Å within ±0.1 Å.",
+      "params": {
+        "gold": {
+          "Si-O": 1.61,
+          "O-O": 2.6,
+          "Si-Si": 3.1
+        },
+        "tolerance": 0.1
+      }
+    },
+    {
+      "id": "tensile_trend",
+      "output_file": "tensile_strength_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.7,
+      "description": "Check that tensile strength decreases monotonically with increasing cooling rate (at least two distinct rates must be present).",
+      "params": {}
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Limiting potentials are recomputed from the free energy table (the raw artifact) and compared to paper-reported reference values with monotonic threshold-or-better scoring.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported NO reduction limiting potential, HER limiting potential, and rate-determining step",
+      "source_provenance": "Paper's Supporting Information, Table S2 and discussion (Gibbs free energy diagram and derived limiting potentials)",
+      "generation_method": "Extracted from the paper’s reported values: NO reduction limiting potential -0.33 V, HER limiting potential -0.60 V, rate-determining step *HNO -> *HNOH.",
+      "why_not_fabricated": "These are explicit quantities reported in the paper, used as hidden gold for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energies_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "total_energy_eV",
+            "ZPE_eV",
+            "TS_eV",
+            "free_energy_eV"
+          ],
+          "units": {
+            "total_energy_eV": "eV",
+            "ZPE_eV": "eV",
+            "TS_eV": "eV",
+            "free_energy_eV": "eV"
+          }
+        },
+        "description": "DFT total energies, zero-point energies, entropy contributions (at 298 K), and Gibbs free energies for all NORR intermediates, HER intermediate, and gas-phase reference species, referenced to the clean Cu@g-C3N4 catalyst and gas-phase molecules via the CHE model."
+      },
+      {
+        "file": "limiting_potentials.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "NO_reduction_limiting_potential_V": "number",
+            "HER_limiting_potential_V": "number",
+            "rate_determining_step": "string"
+          },
+          "units": {
+            "NO_reduction_limiting_potential_V": "V",
+            "HER_limiting_potential_V": "V"
+          }
+        },
+        "description": "Derived thermodynamic onset potentials for the NO electroreduction reaction and the hydrogen evolution reaction, along with the identifier of the rate-determining step (e.g., '*HNO -> *HNOH')."
+      }
+    ],
+    "notes": "The task focuses exclusively on the DFT thermodynamics of NORR and HER on Cu@g-C3N4. Stages from the full paper workflow that are not required for the main catalytic claim (TM screening, Bader charge analysis, band structure, N-O bond lengths across TMs, and AIMD thermal stability) are omitted."
+  },
+  "steps": [
+    {
+      "id": "csv_structure",
+      "output_file": "free_energies_table.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify CSV shape and that all required species are present"
+    },
+    {
+      "id": "recompute_NORR",
+      "output_file": "free_energies_table.csv",
+      "kind": "metric_recompute",
+      "weight": 0.5,
+      "description": "Recompute NO reduction limiting potential from the free energy table using the *HNO -> *HNOH step",
+      "target": -0.33,
+      "tolerance": 0.15,
+      "direction": "greater_is_better",
+      "units": "V"
+    },
+    {
+      "id": "recompute_HER",
+      "output_file": "free_energies_table.csv",
+      "kind": "metric_recompute",
+      "weight": 0.3,
+      "description": "Recompute HER limiting potential from the free energy table (*H adsorption free energy)",
+      "target": -0.6,
+      "tolerance": 0.15,
+      "direction": "less_is_better",
+      "units": "V"
+    },
+    {
+      "id": "check_rds",
+      "output_file": "limiting_potentials.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify that the rate-determining step in the JSON matches the paper (*HNO -> *HNOH)"
+    },
+    {
+      "id": "json_consistency",
+      "output_file": "limiting_potentials.json",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Check that the JSON limiting potentials are consistent with the values recomputed from the free energy table"
+    }
+  ]
+}

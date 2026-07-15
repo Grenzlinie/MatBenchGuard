@@ -1,0 +1,156 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "D and E/D are the computed quantities; comparing agent's reported values to hidden paper reference values with tolerances, as direct recomputation from raw wavefunction is infeasible within verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "d_values_complexes.csv": "reference_match",
+    "dihedral_scan.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference D and E/D values for complexes 1-3 from Table 1 of the paper",
+      "source_provenance": "paper Table 1, SA-CASSCF/NEVPT2 computed values",
+      "generation_method": "extracted from the paper's reported computed values",
+      "why_not_fabricated": "These are the actual published computed results; they are not invented."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference D and E/D values for dihedral scan from Figure 2 and paper text",
+      "source_provenance": "paper Figure 2 and related text, values from the dihedral scan model series",
+      "generation_method": "extracted from the paper's dihedral scan values as presented in the figure and described in the text",
+      "why_not_fabricated": "These are the known computed results reported in the paper for the model geometries; not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "d_values_complexes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Complex",
+            "D_cm⁻¹",
+            "E_over_D"
+          ],
+          "optional_columns": [
+            "g_x",
+            "g_y",
+            "g_z",
+            "spin_flip_contribution_D_cm⁻¹",
+            "Delta_E_dxz_dyz_cm⁻¹"
+          ],
+          "units": {
+            "Complex": "integer (1,2,3)",
+            "D_cm⁻¹": "cm^-1",
+            "E_over_D": "dimensionless",
+            "g_x": "dimensionless",
+            "g_y": "dimensionless",
+            "g_z": "dimensionless",
+            "spin_flip_contribution_D_cm⁻¹": "cm^-1",
+            "Delta_E_dxz_dyz_cm⁻¹": "cm^-1"
+          }
+        },
+        "description": "Zero-field splitting D and rhombicity E/D for complexes 1-3. The checker compares reported D and E/D to hidden reference values from the paper."
+      },
+      {
+        "file": "dihedral_scan.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta_d_deg",
+            "D_cm⁻¹",
+            "E_over_D"
+          ],
+          "optional_columns": [
+            "spin_flip_contribution_D_cm⁻¹"
+          ],
+          "units": {
+            "theta_d_deg": "degrees",
+            "D_cm⁻¹": "cm^-1",
+            "E_over_D": "dimensionless",
+            "spin_flip_contribution_D_cm⁻¹": "cm^-1"
+          }
+        },
+        "description": "ZFS parameters for the dihedral angle scan (θd from ~30° to 90°). The checker verifies D values within a hidden window for the experimental range, detects D sign change, and checks E/D behavior."
+      }
+    ],
+    "notes": "The primary scored quantities are D and E/D. The optional columns provide supporting evidence but do not affect scoring. Tolerances are set to absorb legitimate method/implementation spread while requiring a genuine CASSCF/NEVPT2 run."
+  },
+  "steps": [
+    {
+      "id": "check_complex_zfs",
+      "output_file": "d_values_complexes.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "tolerance": {
+        "D_cm⁻¹": 0.5,
+        "E_over_D": 0.05
+      },
+      "gold_table": {
+        "1": {
+          "D_cm⁻¹": 6.12,
+          "E_over_D": 0.02
+        },
+        "2": {
+          "D_cm⁻¹": 6.07,
+          "E_over_D": 0.11
+        },
+        "3": {
+          "D_cm⁻¹": 6.01,
+          "E_over_D": 0.24
+        }
+      }
+    },
+    {
+      "id": "check_dihedral_scan",
+      "output_file": "dihedral_scan.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "tolerance": {
+        "D_cm⁻¹": 0.5,
+        "E_over_D": 0.05
+      },
+      "gold_table": {
+        "30": {
+          "D_cm⁻¹": 14.0,
+          "E_over_D": 0.2
+        },
+        "40": {
+          "D_cm⁻¹": 0.0,
+          "E_over_D": 0.4
+        },
+        "50": {
+          "D_cm⁻¹": -1.5,
+          "E_over_D": 0.35
+        },
+        "60": {
+          "D_cm⁻¹": -3.0,
+          "E_over_D": 0.3
+        },
+        "64.7": {
+          "D_cm⁻¹": -2.5,
+          "E_over_D": 0.28
+        },
+        "70": {
+          "D_cm⁻¹": 6.01,
+          "E_over_D": 0.24
+        },
+        "80": {
+          "D_cm⁻¹": 6.07,
+          "E_over_D": 0.11
+        },
+        "90": {
+          "D_cm⁻¹": 6.12,
+          "E_over_D": 0.02
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Extract waveguide structure parameters",
+    "role": "process",
+    "action": "Retrieve the layer thicknesses and refractive indices of the waveguide structure from Butler et al., J. Lightwave Technol. 16, 1038 (1998).",
+    "output_file": "",
+    "evidence": "waveguide_params.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must obtain the physical dimensions and material refractive indices of the waveguide cross‑section that hosts the DBR grating. These parameters are not provided in the task materials; they must be read from the reference paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute propagation constant and 2π length",
+    "role": "process",
+    "action": "Solve the waveguide eigenvalue problem for the fundamental mode at free‑space wavelength 1550 nm using the extracted waveguide parameters to obtain the propagation constant β. Compute the characteristic 2π length L = 2π/β.",
+    "output_file": "",
+    "evidence": "beta.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This yields the propagation constant needed for the grating simulation and the characteristic length reported in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Simulate double-input DBR grating",
+    "role": "process",
+    "action": "Implement RCWA (or an equivalent transfer‑matrix/coupled‑mode method) for the double‑input DBR grating with period 0.23886 μm, using the waveguide structure and propagation constant from previous steps. Sweep grating lengths in the range of interest (e.g., 0–500 μm) and input phase differences (0° to 360°) for equal‑amplitude counter‑propagating inputs, and record the reflected and transmitted powers at both ends. Save the simulation data for later processing.",
+    "output_file": "",
+    "evidence": "simulation_output.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Performs the electromagnetic simulation that generates the raw power efficiency data used to extract the headline metrics.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute key performance metrics",
+    "role": "scored",
+    "action": "From the simulation data and the propagation constant, extract the following quantities: (a) output power efficiencies at left and right ends for a 50 μm grating at 0° and 180° phase difference; (b) the grating length L that causes a 2π phase shift (L = 2π/β); (c) for a 200 μm grating, find the phase differences that yield 100% transmission and 100% reflection, and report the corresponding power efficiencies at the right and left ends, respectively. Write these values to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated results corresponding to the paper’s main quantitative findings.",
+    "output_schema": "{\"efficiency_50um_0deg_left\": float, \"efficiency_50um_0deg_right\": float, \"efficiency_50um_180deg_left\": float, \"efficiency_50um_180deg_right\": float, \"L_2pi_um\": float, \"phase_200um_transmission_deg\": float, \"efficiency_200um_transmission_right\": float, \"phase_200um_reflection_deg\": float, \"efficiency_200um_reflection_left\": float}"
+  }
+]

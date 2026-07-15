@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01_mc_fem",
+    "title": "Monte-Carlo RVE generation and FEM simulations",
+    "role": "process",
+    "action": "Generate 2D square RVEs (160×160) containing randomly oriented and positioned rectilinear microcracks with half-lengths sampled from N(10, 2.5²). For each crack density ρ₂ ∈ {0.1, 0.2, …, 1.0} and connectivity φ ∈ {0.0, 0.1, …, 0.8}, use Monte-Carlo algorithm to create 10 crack network realizations per (ρ₂, φ) satisfying target connectivity. For each realization, mesh matrix and crack elements, impose unit potential gradient along x and null flux on top/bottom boundaries, and solve Laplace equation via FEM to obtain effective permeability components Sₓ, Sᵧ. Compute isotropic average S = (Sₓ+Sᵧ)/2 and the relative permeability S/S₀, averaging over 10 realizations for each (ρ₂, φ). Output summary evidence of simulation runs.",
+    "output_file": "",
+    "evidence": "simulation_summary.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate execution; the FEM results are used by downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_idd_isolated",
+    "title": "Compute IDD analytical predictions for isolated cracks",
+    "role": "process",
+    "action": "Using the analytical formulas for the 2D isotropic case (the IDD method with elliptical matrix atmosphere), compute the IDD-predicted relative permeability S/S₀ for each crack density ρ₂ considered (ρ₂ = 0.1, 0.2, …, 1.0).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate step; the IDD predictions are used in the scored outputs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_isolated_csv",
+    "title": "Output isolated permeability table",
+    "role": "scored",
+    "action": "Write a CSV file with columns: crack_density, S_over_S0_numerical (the FEM-averaged relative permeability for isolated cracks, i.e., φ=0), S_over_S0_IDD (the IDD analytical prediction), num_realizations (the number of realizations used, default 10). One row per crack density from 0.1 to 1.0.",
+    "output_file": "effective_permeability_isolated.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact for isolated cracks; compares numerical simulation to IDD prediction.",
+    "output_schema": "Columns: crack_density (float), S_over_S0_numerical (float), S_over_S0_IDD (float), num_realizations (int). One row per density."
+  },
+  {
+    "id": "step04_connected_csv",
+    "title": "Output connected permeability and beta table",
+    "role": "scored",
+    "action": "For each pair of crack density ρ₂ (0.1 to 1.0) and connectivity φ (0.0 to 0.8) that was simulated, write a CSV with columns: crack_density, connectivity, S_over_S0_numerical (the FEM-averaged relative permeability for that pair), S_over_S0_IDD (the IDD prediction for the same density without connectivity), ratio_numerical_to_IDD (computed as S_over_S0_numerical / S_over_S0_IDD), beta (the geometry coefficient β computed by solving the extended IDD relation with ρ₂′ = (1+βφ)ρ₂ so that the extended IDD prediction matches the numerical S/S₀).",
+    "output_file": "effective_permeability_connected.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main scored artifact capturing connectivity effects and the geometry coefficient β. Load-bearing because β depends on the full FEM simulation results.",
+    "output_schema": "Columns: crack_density (float), connectivity (float), S_over_S0_numerical (float), S_over_S0_IDD (float), ratio_numerical_to_IDD (float), beta (float). One row per (density, connectivity) pair."
+  },
+  {
+    "id": "step05_beta_csv",
+    "title": "Output beta summary table",
+    "role": "scored",
+    "action": "From the results of step04, extract the β values for each (ρ₂, φ) pair and write a CSV with columns: crack_density, connectivity, beta.",
+    "output_file": "beta_vs_connectivity.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Supplemental table of β as function of density and connectivity.",
+    "output_schema": "Columns: crack_density (float), connectivity (float), beta (float). One row per combination."
+  }
+]

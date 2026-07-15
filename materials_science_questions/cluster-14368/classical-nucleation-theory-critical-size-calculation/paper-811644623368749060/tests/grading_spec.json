@@ -1,0 +1,81 @@
+{
+  "pass_threshold": 0.6,
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The four final quantities are produced by a complex numerical pipeline (plasma sheath ODEs, surface reaction-diffusion equation, heat balance root-finding, nucleation algebra) that is computationally heavy and cannot be rerun in the lightweight verifier sandbox; therefore the strongest feasible method is to compare the agent's reported values against the paper's reported values within relative tolerances.",
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for T_d, Delta_H_N_star, R_t, d_c at Th=500 °C for the PECVD case with GT effect. Sourced from Figure 2(a)-(d) of the paper.",
+      "source_provenance": "Paper Figure 2 (a)-(d), for the PECVD curves with the GT effect included, at substrate holder temperature T_h = 500 °C and the parameters given in the figure caption (n_e0=5e12 cm⁻³, T_e=1.5 eV, T_i=0.05 eV, p_0=50 mTorr, r_d=5 nm, φ_s=-100 V, gas composition r_Ar=70%, r_SiH=20%, r_H=10%).",
+      "generation_method": "Values were read from the published figure axes and rounded; they match the reference oracle values that are consistent with the paper.",
+      "why_not_fabricated": "These are the actual reported results of the paper for the identical reproduction target, serving as the authoritative benchmark."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "T_d",
+            "Delta_H_N_star",
+            "R_t",
+            "d_c"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "T_d": "K",
+            "Delta_H_N_star": "J",
+            "R_t": "cm/s",
+            "d_c": "nm"
+          }
+        },
+        "description": "Computed droplet temperature (T_d), monolayer nucleation energy barrier (ΔH_N*), early-stage growth rate (R_t), and Gibbs‑Thomson critical diameter (d_c) for the specified PECVD input parameters."
+      }
+    ],
+    "notes": "All four values are compared to the paper’s computed results for the identical parameter set using hidden relative tolerances. The agent must produce these values by running the full coupled submodels (sheath → surface/heat → nucleation) as described in the public instruction."
+  },
+  "steps": [
+    {
+      "id": "check_T_d",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "field": "T_d",
+      "target": 873.0,
+      "tolerance_rel": 0.05
+    },
+    {
+      "id": "check_Delta_H_N_star",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "field": "Delta_H_N_star",
+      "target": 1.44e-19,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "check_R_t",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "field": "R_t",
+      "target": 1e-08,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "check_d_c",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "field": "d_c",
+      "target": 7.0,
+      "tolerance_rel": 0.1
+    }
+  ]
+}

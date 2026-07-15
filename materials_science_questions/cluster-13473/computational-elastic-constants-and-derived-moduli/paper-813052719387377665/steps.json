@@ -1,0 +1,54 @@
+[
+  {
+    "id": "prepare_experimental_data",
+    "title": "Prepare experimental dataset for gold microbeams",
+    "role": "process",
+    "action": "Extract gold microbeam experimental data (beam geometry, boundary conditions, applied point load, measured midpoint deflection) for freestanding thin films from the published article Espinosa et al. (J. Mech. Phys. Solids 51, 47–72, 2003). The data serve as calibration targets.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Extract the experimental load-deflection data needed to calibrate the length-scale parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "implement_fe_codes",
+    "title": "Finite-element implementation of MSGT and MCST for Euler–Bernoulli beams",
+    "role": "process",
+    "action": "Implement a finite-element solver for static deflection of Euler–Bernoulli beams. The implementation must include the Modified Strain Gradient Theory (MSGT) formulation with three length-scale parameters (l0, l1, l2) and the Modified Couple Stress Theory (MCST) reduction (l0=l1=0, only l2). Use the variational internal energy expression that includes Cauchy stress, dilatation gradient, deviatoric stretch gradient, and rotation gradient contributions, together with the constitutive relations linking higher-order stress metrics to length scales (p = 2μ l0^2 ∇tr(ε), τ^S(1) = 2μ l1^2 η^S(1), m^S = 2μ l2^2 δχ^S). The code should assemble and solve the linear system for given beam geometry, load, and length-scale parameters to compute midpoint deflection.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Develop FE solvers for MSGT and MCST beam theories, which will be reused for calibration and simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "calibrate_length_scales",
+    "title": "Calibrate length-scale parameters for gold",
+    "role": "scored",
+    "action": "Using the experimental data and the FE codes, calibrate the length-scale parameters for gold microbeams under MSGT and MCST at an elastic modulus E = 80 GPa. For MSGT, set l0 = l1 = l2 and perform a parameter sweep for l0 with a step size ≤ 0.05 µm; for MCST, set l0 = l1 = 0 and sweep l2. At each trial, compute the L2-norm error between computed and measured deflections. Identify the length-scale values that minimize the error. Save the best-fit parameters as a JSON file.",
+    "output_file": "length_scale_params.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Identified length-scale parameters for gold microbeams at E = 80 GPa.",
+    "output_schema": "{ \"l0_MSGT_μm\": float, \"l2_MCST_μm\": float }"
+  },
+  {
+    "id": "simulate_deflection_ratios",
+    "title": "Simulate deflection ratios and quantify size effects",
+    "role": "scored",
+    "action": "Using the calibrated length-scale parameters from the previous step, simulate a double-cantilevered gold microbeam with an aspect ratio thickness:width:length = 1:5:20 under a point load applied at midpoint. For a set of beam thicknesses covering the range 1–50 µm (at least 10 points, including values around 30 µm), compute the midpoint deflection using MSGT, MCST, and classical Euler–Bernoulli beam theory. Calculate the deflection ratio w_higher_order / w_classical for each theory. Save the results as a CSV file with columns thickness_µm, ratio_MSGT, ratio_MCST.",
+    "output_file": "deflection_ratios.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of deflection ratios demonstrating the size effect and error thresholds.",
+    "output_schema": "Columns: thickness_μm, ratio_MSGT, ratio_MCST. One row per thickness value."
+  }
+]

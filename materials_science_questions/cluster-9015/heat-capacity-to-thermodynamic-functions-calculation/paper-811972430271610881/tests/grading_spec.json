@@ -1,0 +1,190 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Fitted coefficients are validated via hard constraint satisfaction (H(298.15)=0, Cp(298.15)=Cp298) and compared to paper reference values with generous tolerances; phase transformation properties are compared to paper reference values. The constraint checks ensure the agent genuinely performed the constrained fitting procedure.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "fitted_coefficients.csv": "reference_match",
+    "phase_transformations.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference fitted coefficients from Table 3 and phase transformation properties from Table 4 of the paper, plus Cp298 and S298 boundary conditions used in the constrained fitting.",
+      "source_provenance": "Paper Tables 3 and 4; Cp298 and S298 from paper text (values determined by adiabatic calorimetry at low temperatures, cited in the paper).",
+      "generation_method": "Coefficients: A = published_A_milli / 1000, D = -published_negD, E = -published_negE, b = -published_negB; keeping published sign conventions for B, C, a as-is. Transformation values copied directly from Table 4 with their published uncertainty brackets. Cp298 and S298 values transcribed from paper text.",
+      "why_not_fabricated": "These are the actual published numerical results of the calorimetric measurements and fitting procedure reported in the paper; they serve as the authoritative reference for the computational reproduction task. The constraint checks are derived from the well-defined boundary conditions stated in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fitted_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "a",
+            "b"
+          ],
+          "units": {}
+        },
+        "description": "Fitted coefficients of the Mayer-Kelly equation for solid phases and linear equation for liquid phases, and the entropy integration constant E."
+      },
+      {
+        "file": "phase_transformations.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "transformation_type",
+            "temperature_K",
+            "deltaH_kJ_per_mol",
+            "deltaS_J_per_K_per_mol"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "deltaH_kJ_per_mol": "kJ/mol",
+            "deltaS_J_per_K_per_mol": "J/(K·mol)"
+          }
+        },
+        "description": "Phase transformation properties (melting and polymorphic) for the three compounds."
+      }
+    ],
+    "notes": "The task reproduces the computational derivation of thermodynamic coefficients and phase transformation properties from published experimental enthalpy data. All required numerical constants (Cp298, S298) are provided in the instruction. The scored artifacts correspond to Tables 3 and 4 of the source, but the agent must compute them from the provided experimental data and boundary conditions, not extract them from the paper text."
+  },
+  "steps": [
+    {
+      "id": "fit_coefficients",
+      "output_file": "fitted_coefficients.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "config": {
+        "T0": 298.15,
+        "cp298": {
+          "Gd5Ge3_solid": 213.5,
+          "GdGe_solid": 48.87,
+          "alpha_GdGe1.5": 61.9,
+          "beta_GdGe1.5": 61.9,
+          "gamma_GdGe1.5": 61.9
+        },
+        "s298": {
+          "Gd5Ge3_solid": 443.8,
+          "GdGe_solid": 89.9,
+          "alpha_GdGe1.5": 98.3,
+          "beta_GdGe1.5": 98.3,
+          "gamma_GdGe1.5": 98.3
+        },
+        "reference_coefficients": {
+          "Gd5Ge3_solid": {
+            "A": 0.001436,
+            "B": 234.67,
+            "C": 1958350,
+            "D": -76664,
+            "E": -905.22
+          },
+          "Gd5Ge3_liquid": {
+            "a": 371.77,
+            "b": -110843
+          },
+          "GdGe_solid": {
+            "A": 0.005774,
+            "B": 45.87,
+            "C": 34755,
+            "D": -14305,
+            "E": -174.41
+          },
+          "GdGe_liquid": {
+            "a": 87.67,
+            "b": -26139
+          },
+          "alpha_GdGe1.5": {
+            "A": 0.000182,
+            "B": 64.17,
+            "C": 211039,
+            "D": -19855,
+            "E": -268.64
+          },
+          "beta_GdGe1.5": {
+            "A": 0.00168,
+            "B": 61.75,
+            "C": -376500,
+            "D": -17298,
+            "E": -253.64
+          },
+          "gamma_GdGe1.5": {
+            "A": 0.005159,
+            "B": 52.38,
+            "C": -2855310,
+            "D": -6498,
+            "E": -108.58
+          },
+          "GdGe1.5_liquid": {
+            "a": 107.9,
+            "b": -32169
+          }
+        }
+      }
+    },
+    {
+      "id": "phase_transformations",
+      "output_file": "phase_transformations.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "config": {
+        "reference_transformations": [
+          {
+            "compound": "Gd5Ge3",
+            "transformation_type": "melting",
+            "temperature_K": 2051,
+            "deltaH_kJ_per_mol": 240.0,
+            "deltaS_J_per_K_per_mol": 117.0,
+            "T_tolerance": 40
+          },
+          {
+            "compound": "GdGe",
+            "transformation_type": "melting",
+            "temperature_K": 1841,
+            "deltaH_kJ_per_mol": 45.5,
+            "deltaS_J_per_K_per_mol": 24.7,
+            "T_tolerance": 40
+          },
+          {
+            "compound": "GdGe1.5",
+            "transformation_type": "polymorphic",
+            "temperature_K": 1114,
+            "deltaH_kJ_per_mol": 1.2,
+            "deltaS_J_per_K_per_mol": 1.1,
+            "T_tolerance": 15
+          },
+          {
+            "compound": "GdGe1.5",
+            "transformation_type": "polymorphic",
+            "temperature_K": 1442,
+            "deltaH_kJ_per_mol": 2.8,
+            "deltaS_J_per_K_per_mol": 1.9,
+            "T_tolerance": 20
+          },
+          {
+            "compound": "GdGe1.5",
+            "transformation_type": "melting",
+            "temperature_K": 1719,
+            "deltaH_kJ_per_mol": 56.3,
+            "deltaS_J_per_K_per_mol": 32.8,
+            "T_tolerance": 45
+          }
+        ]
+      }
+    }
+  ]
+}

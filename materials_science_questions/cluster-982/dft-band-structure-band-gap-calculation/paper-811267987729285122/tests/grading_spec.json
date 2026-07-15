@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The only artifact is a JSON file of computed values from DFT; the checker cannot recompute DFT, so result-level comparison to paper gold with tolerances and trend checks is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper gold values for magnetic moments and ferromagnetic stabilization energies",
+      "source_provenance": "Paper Table 1, Table 3, and Section 3.3. Total moments: Ti solo 0.546 μB; VO1 1.0, VO2 0.66, VO3 0.97 μB. Local Ti moments: VO1 0.74, VO2 0.56, VO3 0.74 μB. ΔE: A0-A2 85.28702 meV, A0-A2+VO3 273.9263 meV. Two-Ti total moments: 1.50111 μB, 1.96658 μB.",
+      "generation_method": "Direct transcription from paper text and tables.",
+      "why_not_fabricated": "All values are exact paper-reported numbers for the same configurations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_moment_Ti_Ga_A": "float",
+            "total_moment_VO1_Ti": "float",
+            "total_moment_VO2_Ti": "float",
+            "total_moment_VO3_Ti": "float",
+            "local_moment_Ti_VO1": "float",
+            "local_moment_Ti_VO2": "float",
+            "local_moment_Ti_VO3": "float",
+            "Delta_E_A0_A2_no_vacancy": "float",
+            "Delta_E_A0_A2_VO3": "float",
+            "total_moment_A0_A2_no_vacancy": "float",
+            "total_moment_A0_A2_VO3": "float"
+          },
+          "units": {
+            "total_moment_Ti_Ga_A": "μB",
+            "total_moment_VO1_Ti": "μB",
+            "total_moment_VO2_Ti": "μB",
+            "total_moment_VO3_Ti": "μB",
+            "local_moment_Ti_VO1": "μB",
+            "local_moment_Ti_VO2": "μB",
+            "local_moment_Ti_VO3": "μB",
+            "Delta_E_A0_A2_no_vacancy": "meV",
+            "Delta_E_A0_A2_VO3": "meV",
+            "total_moment_A0_A2_no_vacancy": "μB",
+            "total_moment_A0_A2_VO3": "μB"
+          }
+        },
+        "description": "JSON file containing the computed total magnetic moments, local Ti moments, and FM stabilization energies for the Ti-doped and Ti‑VO co‑doped β‑Ga₂O₃ configurations. The hidden checker compares these values to the paper‑reported reference numbers with appropriate tolerances."
+      }
+    ],
+    "notes": "Results are compared against the paper's values; no gold values are revealed here. The agent must perform all DFT stages to obtain these quantities."
+  },
+  "steps": [
+    {
+      "id": "compare_numeric_values",
+      "output_file": "computed_results.json",
+      "kind": "numeric",
+      "weight": 0.72,
+      "target": {
+        "fields": {
+          "total_moment_Ti_Ga_A": {
+            "gold": 0.546,
+            "tol_abs": 0.2
+          },
+          "total_moment_VO1_Ti": {
+            "gold": 1.0,
+            "tol_abs": 0.2
+          },
+          "total_moment_VO2_Ti": {
+            "gold": 0.66,
+            "tol_abs": 0.2
+          },
+          "total_moment_VO3_Ti": {
+            "gold": 0.97,
+            "tol_abs": 0.2
+          },
+          "local_moment_Ti_VO1": {
+            "gold": 0.74,
+            "tol_abs": 0.2
+          },
+          "local_moment_Ti_VO2": {
+            "gold": 0.56,
+            "tol_abs": 0.2
+          },
+          "local_moment_Ti_VO3": {
+            "gold": 0.74,
+            "tol_abs": 0.2
+          },
+          "Delta_E_A0_A2_no_vacancy": {
+            "gold": 85.28702,
+            "tol_abs": 30.0
+          },
+          "Delta_E_A0_A2_VO3": {
+            "gold": 273.9263,
+            "tol_abs": 30.0
+          },
+          "total_moment_A0_A2_no_vacancy": {
+            "gold": 1.50111,
+            "tol_abs": 0.2
+          },
+          "total_moment_A0_A2_VO3": {
+            "gold": 1.96658,
+            "tol_abs": 0.2
+          }
+        }
+      }
+    },
+    {
+      "id": "verify_trends",
+      "output_file": "computed_results.json",
+      "kind": "trend",
+      "weight": 0.28,
+      "trends": [
+        {
+          "type": "greater_than",
+          "a": "total_moment_VO1_Ti",
+          "b": "total_moment_Ti_Ga_A"
+        },
+        {
+          "type": "greater_than",
+          "a": "total_moment_VO2_Ti",
+          "b": "total_moment_Ti_Ga_A"
+        },
+        {
+          "type": "greater_than",
+          "a": "total_moment_VO3_Ti",
+          "b": "total_moment_Ti_Ga_A"
+        },
+        {
+          "type": "greater_than",
+          "a": "Delta_E_A0_A2_VO3",
+          "b": "Delta_E_A0_A2_no_vacancy"
+        },
+        {
+          "type": "factor_greater_than",
+          "a": "Delta_E_A0_A2_VO3",
+          "b": "Delta_E_A0_A2_no_vacancy",
+          "factor": 2.0
+        }
+      ]
+    }
+  ]
+}

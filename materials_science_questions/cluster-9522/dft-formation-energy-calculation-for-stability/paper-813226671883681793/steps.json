@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "DFT relaxation and total energy calculation",
+    "role": "process",
+    "action": "Retrieve crystal structures for diamond Ge, hcp Ti, Ge3Ti5 (Mn5Si3-type), Ge4Ti5 (Ge4Sm5-type), Ge5Ti6 (Si5V6-type), and Ge2Ti (TiSi2-type) from public databases. Set up and run DFT calculations using the PW91 GGA functional with PAW pseudopotentials, a plane-wave cutoff of at least 300 eV, and a k-point mesh rule: (number of k-points in irreducible Brillouin zone) × (number of atoms in cell) > 500. Perform full relaxation of cell volume and atomic positions for each system. Record the final total energy per cell, number of atoms, and relaxed lattice parameters for each system.",
+    "output_file": "",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step that runs DFT to produce total energies and lattice parameters needed for formation enthalpy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Formation enthalpies and lattice parameters",
+    "role": "scored",
+    "action": "From the relaxed DFT total energies, compute formation enthalpy per atom for each compound using the standard composition-weighted subtraction: E(compound) − x_Ge * E(Ge_A4) − (1−x_Ge) * E(Ti_A3), with energies per atom. Convert results to kJ per mol of atoms. Assemble a JSON file containing for each system: compound name, prototype designation, total energy per cell in eV, number of atoms, relaxed lattice parameters (a, b, c in Å), and the computed formation enthalpy in kJ/mol-atom. Include pure Ge and Ti as references.",
+    "output_file": "formation_enthalpies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Dataset of formation enthalpies and relaxed lattice parameters for the target compounds and elemental references.",
+    "output_schema": "Array of objects with keys: compound (string), prototype (string), total_energy_per_cell_eV (number), natoms (integer), lattice_parameters (object with a, b, c in Å), formation_enthalpy_kJ_mol_atom (number). Must contain entries for 'Ge A4', 'Ti A3', 'Ge3Ti5', 'Ge4Ti5', 'Ge5Ti6', 'Ge2Ti'."
+  },
+  {
+    "id": "step3",
+    "title": "Convex hull analysis",
+    "role": "scored",
+    "action": "Using the formation enthalpies from step2, construct the zero‑K convex hull of formation enthalpy vs Ge atomic fraction. Determine which compounds lie on the hull. Output a JSON object with the list of stable compound names on the hull and a boolean indicating whether Ge4Ti5 is on the hull.",
+    "output_file": "convex_hull_analysis.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Zero‑K convex hull and Ge4Ti5 stability classification.",
+    "output_schema": "Object with keys: on_hull (array of compound name strings that lie on the convex hull), ge4ti5_on_hull (boolean, true if Ge4Ti5 lies on the hull)."
+  }
+]

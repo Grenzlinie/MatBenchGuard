@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the per-site Mulliken overlap populations submitted by the agent against the paper-reported reference values with tolerance ±0.05, and checks ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mop_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference Mulliken overlap populations (Total, M-M, M-P) for each metal site M1-M6 from the paper's Table 7 (Hf5.08Mo0.92P3 section, Hf1..M6 rows).",
+      "source_provenance": "Paper Table 7, columns Tot, M-M, M-P for entries Hf1, Hf2, Hf3, Hf4, M5, M6.",
+      "generation_method": "Extracted directly from the paper's published Table 7; values transcribed into the grading spec.",
+      "why_not_fabricated": "These are the exact published numerical results; they are not invented. The checker compares the agent's computed values to these reference numbers to verify correct reproduction of the paper's main bonding analysis."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mop_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "total_MOP",
+            "M_M_MOP",
+            "M_P_MOP"
+          ]
+        },
+        "description": "Mulliken Overlap Populations per metal site for the hypothetical M2P structure. The checker compares each site's MOP values to reference values within a tolerance, and verifies that the total MOP ordering across sites is correct (checked against a hidden reference)."
+      }
+    ],
+    "notes": "The scored output includes the total, M–M, and M–P MOPs for the six metal sites. The target policy is reference_match for numerical values; the ordering check is performed as a secondary structural audit within the grading tier."
+  },
+  "steps": [
+    {
+      "id": "check_numeric",
+      "output_file": "mop_values.csv",
+      "kind": "numeric",
+      "weight": 0.8,
+      "description": "Check total_MOP, M_M_MOP, M_P_MOP values against paper gold with tolerance 0.05",
+      "gold_values": {
+        "M1": [
+          2.32,
+          1.01,
+          1.31
+        ],
+        "M2": [
+          2.22,
+          1.27,
+          0.95
+        ],
+        "M3": [
+          2.12,
+          0.99,
+          1.13
+        ],
+        "M4": [
+          2.38,
+          1.29,
+          1.09
+        ],
+        "M5": [
+          2.46,
+          2.0,
+          0.46
+        ],
+        "M6": [
+          2.62,
+          1.79,
+          0.83
+        ]
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "check_ordering",
+      "output_file": "mop_values.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify total_MOP ordering M6 > M5 > M4 > M1 > M2 > M3",
+      "expected_order": [
+        "M6",
+        "M5",
+        "M4",
+        "M1",
+        "M2",
+        "M3"
+      ]
+    }
+  ]
+}

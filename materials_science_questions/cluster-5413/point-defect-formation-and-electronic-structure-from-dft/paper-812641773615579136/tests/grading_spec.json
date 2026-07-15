@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT energies depend on pseudopotentials/functional; exact numerical match is infeasible. Scoring by verifying sign convention and qualitative trends (ordering between defect/dopant configurations) as reported in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "structural_audit",
+    "adsorption_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "trend rules derived from paper's reported DFT results",
+      "source_provenance": "Paper text and figures",
+      "generation_method": "Extracted from the paper's description of observed trends",
+      "why_not_fabricated": "These are the trends reported in the paper; they are used to check the agent's reproduced results and no fabricated labels are involved."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "E_form_eV"
+          ],
+          "optional_columns": [
+            "Li_number"
+          ],
+          "units": {
+            "E_form_eV": "eV"
+          }
+        },
+        "description": "The checker verifies that the formation energies exhibit internally consistent and physically plausible behavior across the different configurations."
+      },
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface_type",
+            "adsorbate",
+            "E_ads_eV"
+          ],
+          "optional_columns": [
+            "Li_number"
+          ],
+          "units": {
+            "E_ads_eV": "eV"
+          }
+        },
+        "description": "The checker verifies that the adsorption energies exhibit internally consistent and physically plausible behavior across the different configurations."
+      }
+    ],
+    "notes": "Absolute formation/adsorption energies may differ from the original paper due to use of a different DFT code (Quantum ESPRESSO vs. VASP) and pseudopotentials; only the relative trends are scored."
+  },
+  "steps": [
+    {
+      "id": "check_formation",
+      "output_file": "formation_energies.csv",
+      "weight": 0.6,
+      "kind": "structural_audit",
+      "description": "Verify oxygen vacancy formation energies: positive values, trend Mn vacancy lowers E_form, surface Li series non-monotonic and defect surface lower than perfect."
+    },
+    {
+      "id": "check_adsorption",
+      "output_file": "adsorption_energies.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "description": "Verify adsorption energies: negative values, O3 binding enhancement on V_O, weakening with V_Mn, restoration with Li, and weaker H2O/O2 binding."
+    }
+  ]
+}

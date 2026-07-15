@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_00_potential_setup",
+    "title": "Potential model setup",
+    "role": "process",
+    "action": "Construct the Buckingham interatomic potential for GaN using the parameters from Zapol et al. (1997) and a short‑range cut‑off of approximately 10 Å. Create a GULP input library that can be used for all subsequent calculations.",
+    "output_file": "",
+    "evidence": "potential_setup.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Set up the potential model for GULP.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01_energy_minimization",
+    "title": "Energy minimisation and equilibrium structures",
+    "role": "process",
+    "action": "For each of the four GaN crystal structures (wurtzite, zinc‑blende, rocksalt, NiAs), perform total‑energy calculations at varying volumes using GULP with the Buckingham potential. Determine the equilibrium lattice parameters (a, c, u) for each phase. Also calculate enthalpy as a function of pressure and estimate the transition pressures from wurtzite to the high‑pressure phases.",
+    "output_file": "",
+    "evidence": "equilibrium_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain equilibrium structures and stability information required for elastic and phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_structural_elastic",
+    "title": "Structural and elastic constants of high‑pressure phases",
+    "role": "scored",
+    "action": "Using the equilibrium structures for rocksalt and NiAs, compute the equilibrium lattice parameters (a, c, u) and evaluate the full set of elastic constants (C11, C12, C13, C33, C44, C66) plus the bulk modulus B with GULP.",
+    "output_file": "step_01_structural_elastic.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'rocksalt' and 'nias' containing structural and elastic properties.",
+    "output_schema": "{ rocksalt: { a (Å), B (GPa), C11, C12, C13, C44 (GPa) }; nias: { a (Å), c (Å), u (dimensionless), B (GPa), C11, C12, C13, C33, C44, C66 (GPa) } }"
+  },
+  {
+    "id": "step_03_phonon_frequencies",
+    "title": "Phonon frequencies at ambient pressure",
+    "role": "scored",
+    "action": "For all four structures (wurtzite, zinc‑blende, rocksalt, NiAs), compute the Γ‑point optic phonon frequencies at zero pressure using GULP with the equilibrium structures from the energy minimisation.",
+    "output_file": "step_02_phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Γ‑point optic phonon frequencies for all four GaN phases.",
+    "output_schema": "{ wurtzite: { E2_low, A1_TO, E1_TO, E2_high, A1_LO, E1_LO } (cm⁻¹); zinc_blende: { TO, LO } (cm⁻¹); rocksalt: { TO, LO } (cm⁻¹); nias: { TO, LO } (cm⁻¹) }"
+  },
+  {
+    "id": "step_04_pressure_properties",
+    "title": "Pressure coefficients and Grüneisen parameters",
+    "role": "scored",
+    "action": "Compute phonon frequencies for all four structures at several hydrostatic pressures from 0 GPa up to the respective phase transition pressure. For each optic mode, perform a linear fit to obtain the pressure coefficient dω/dP. Using the zero‑pressure frequency and the bulk modulus, calculate the mode Grüneisen parameter γ = (B₀/ω₀) (dω/dP).",
+    "output_file": "step_03_pressure_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Pressure derivatives and mode Grüneisen parameters for all four GaN phases.",
+    "output_schema": "{ wurtzite: { gamma_E2_low, gamma_A1_TO, gamma_E1_TO, gamma_E2_high, gamma_A1_LO, gamma_E1_LO, domega_dP_E2_low, domega_dP_A1_TO, domega_dP_E1_TO, domega_dP_E2_high, domega_dP_A1_LO, domega_dP_E1_LO } (dimensionless, cm⁻¹/GPa); zinc_blende: { gamma_TO, gamma_LO, domega_dP_TO, domega_dP_LO }; rocksalt: same; nias: same }"
+  }
+]

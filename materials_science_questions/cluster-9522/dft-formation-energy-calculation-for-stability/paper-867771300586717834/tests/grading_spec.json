@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Reaction energy is recomputed from agent's submitted formation energies; formation energies compared to paper gold because DFT total energies are not available to verifier. Recompute of the headline decomposition energy achieves T1.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_formation_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported formation energies and decomposition reaction energy used as hidden gold comparison targets.",
+      "source_provenance": "Paper text: 'formation energy of the Fe₂CrSi compound with L2₁ structure to be -0.93 eV/f.u. (-0.98 eV/f.u. for the A15 structure)', 'formation energy for the above reaction is -1.31 eV/f.u.', 'Thus, the system gains 0.38 eV/f.u. by decomposing Fe₂CrSi into Fe₃Si and Cr₃Si.' Fe₃Si formation energy derived as -1.12 eV/f.u. from reaction energy and given values, Cr₃Si -1.84 eV/f.u. from same source.",
+      "generation_method": "Quoted directly from paper sentences; Fe₃Si and Cr₃Si energies inferred from the published reaction energy and Fe₂CrSi energies.",
+      "why_not_fabricated": "These are the paper's actual reported DFT formation energies and reaction energy, guaranteeing consistency with the paper's main claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Fe2CrSi_L21",
+            "Fe2CrSi_A15",
+            "Fe3Si",
+            "Cr3Si",
+            "reaction_energy_per_fu"
+          ],
+          "properties": {
+            "Fe2CrSi_L21": {
+              "type": "number",
+              "units": "eV per formula unit"
+            },
+            "Fe2CrSi_A15": {
+              "type": "number",
+              "units": "eV per formula unit"
+            },
+            "Fe3Si": {
+              "type": "number",
+              "units": "eV per formula unit"
+            },
+            "Cr3Si": {
+              "type": "number",
+              "units": "eV per formula unit"
+            },
+            "reaction_energy_per_fu": {
+              "type": "number",
+              "units": "eV per formula unit"
+            }
+          }
+        },
+        "description": "Contains the formation energies of the four studied crystalline phases and the decomposition reaction energy, derived from DFT total energies. The checker compares these values against the paper-reported hidden gold within a hidden tolerance."
+      }
+    ],
+    "notes": "The reaction energy must be positive. The agent must compute the formation energies from their own DFT total energies; the checker will compare against the paper's reported values. Internal consistency is checked by recomputing the reaction energy from the submitted formation energies using the lower Fe2CrSi value."
+  },
+  "steps": [
+    {
+      "id": "step_01_formation_energies",
+      "output_file": "step_01_formation_energies.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "target": {
+        "Fe2CrSi_L21": -0.93,
+        "Fe2CrSi_A15": -0.98,
+        "Fe3Si": -1.12,
+        "Cr3Si": -1.84,
+        "reaction_energy_per_fu": 0.38
+      },
+      "tolerance_abs": 0.05
+    }
+  ]
+}

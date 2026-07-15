@@ -1,0 +1,80 @@
+[
+  {
+    "id": "s1",
+    "title": "Acquire OQMD-ICSD band gap dataset",
+    "role": "process",
+    "action": "Obtain the OQMD database and filter to the ~25,085 compound entries that are also present in the ICSD. Extract the composition and DFT-computed band gap energy for each compound.",
+    "output_file": "",
+    "evidence": "dataset_info.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: acquire and filter the public dataset.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Compute compositional attributes",
+    "role": "process",
+    "action": "For each of the 25,085 compositions, compute the set of 145 compositional attributes using the Magpie (or matminer) library.",
+    "output_file": "",
+    "evidence": "features.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: generate the input features for machine learning.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Train single global regression model",
+    "role": "process",
+    "action": "Split the dataset randomly into 90% training and 10% test sets. Train a Random Subspace + REPTree (or equivalent decision tree ensemble) regression model on the training portion to predict the band gap energy from the computed attributes.",
+    "output_file": "",
+    "evidence": "global_model.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: train the baseline single global model.",
+    "output_schema": ""
+  },
+  {
+    "id": "s4",
+    "title": "Select top-30 solar cell candidates using single global model",
+    "role": "scored",
+    "action": "For each compound in the withheld 10% test set, use the single global model to predict the band gap. Select the 30 compounds with the highest predicted probability of having a band gap in the solar-cell-relevant range 0.9–1.7 eV. Save the selected compositions, their predicted band gaps, and their actual DFT-calculated band gaps.",
+    "output_file": "single_model_top30.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Top 30 compounds selected by the single global model as most likely to have a band gap in 0.9–1.7 eV.",
+    "output_schema": "Columns: composition (string, chemical formula), predicted_band_gap (float, eV), actual_band_gap (float, eV). Exactly 30 rows."
+  },
+  {
+    "id": "s5",
+    "title": "Train hierarchical partitioned model",
+    "role": "process",
+    "action": "On the same 90% training split, first train a classifier to predict the band gap interval (e.g., 0–1.5 eV, >1.5 eV). Partition the training data by the predicted interval and then by the presence of halogen, chalcogen, or pnictogen elements. Within each resulting chemical subgroup, train a separate Random Subspace + REPTree regression model.",
+    "output_file": "",
+    "evidence": "partitioned_model_structure.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step: train the hierarchical partitioned model.",
+    "output_schema": ""
+  },
+  {
+    "id": "s6",
+    "title": "Select top-30 solar cell candidates using partitioned model",
+    "role": "scored",
+    "action": "For each compound in the withheld 10% test set, use the hierarchical partitioned model to predict the band gap (route the compound through the interval classifier and the appropriate chemical subgroup model). Select the 30 compounds with the highest predicted probability of being in the 0.9–1.7 eV range. Save the selected compositions, predicted band gaps, and actual band gaps.",
+    "output_file": "partitioned_model_top30.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Top 30 compounds selected by the hierarchical partitioned model as most likely to have a band gap in 0.9–1.7 eV.",
+    "output_schema": "Columns: composition (string, chemical formula), predicted_band_gap (float, eV), actual_band_gap (float, eV). Exactly 30 rows."
+  }
+]

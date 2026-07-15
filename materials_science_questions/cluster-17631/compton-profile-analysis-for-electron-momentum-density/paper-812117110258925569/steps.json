@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_geom",
+    "title": "Generate cluster geometries",
+    "role": "process",
+    "action": "Create atomic coordinate files for all model clusters required for the sensitivity demonstration. Use the water monomer geometry (O-H 0.970 Å, H-O-H 106.06°), the symmetry constraints (O_h for Cl⁻ hydration, T_d for Li⁺ hydration), and the distances specified below. Build the following classes of clusters: (a) pairwise Li⁺–H₂O at 2.0 Å and 2.5 Å, Cl⁻–H₂O at 3.0 Å and 4.0 Å, Li⁺–Cl⁻ at 2.0, 2.5, and 3.0 Å; (b) Cl⁻(H₂O)ₙ hydration shells with n=0..6 for model 1A (R_OCl^short=3.0 Å) and model 1B (R_OCl^short=4.0 Å), with the far oxygen at 8.0 Å; (c) Li⁺(H₂O)ₙ hydration shells with n=0..4 for model 2A (R_OLi^short=2.0 Å) and model 2B (R_OLi^short=2.5 Å), far oxygen at 8.0 Å; (d) Li⁺Cl⁻(H₂O)ₙ ion-pair clusters (n=8,9,10) for the three models 3A, 3B, 3C (see Table II for distances), with O-O distance 3.0 Å. This process step produces the geometry inputs needed for all subsequent DFT calculations.",
+    "output_file": "",
+    "evidence": "geom_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the input coordinate files for all model clusters; no scored output here.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_ref",
+    "title": "Compute reference Compton profiles",
+    "role": "process",
+    "action": "Perform DFT calculations with STOBE-DEMON for isolated Li⁺, Cl⁻, and H₂O monomer using the gradient-corrected exchange-correlation functional (Hammer-Hansen-Norskov/Perdew-Burke-Ernzerhof) and the prescribed basis sets. From each calculation, compute the isotropic Compton profile J_ref(q) via the spherically averaged projection of the ground-state electron momentum density (obtained as sum of squared Fourier transforms of Kohn-Sham orbitals). Save the profiles as plain text files.",
+    "output_file": "",
+    "evidence": "ref_profiles_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtains the reference Compton profiles needed to subtract the non-interacting background.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_cluster",
+    "title": "Compute Compton profiles for all model clusters",
+    "role": "process",
+    "action": "Run STOBE-DEMON DFT calculations for every model cluster defined in step_geom, using the same functional and basis sets as step_ref. For each cluster, extract the isotropic Compton profile J(q).",
+    "output_file": "",
+    "evidence": "cluster_profiles_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the Compton profiles that will be differenced against references to obtain J_bond(q).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_scored",
+    "title": "Bond-induced Compton profile differences",
+    "role": "scored",
+    "action": "For each model cluster, compute the bond-induced Compton profile difference J_bond(q) = J(q) - J_ref(q) using the appropriate reference (free ions and water monomers). Combine all curves into a single CSV file with columns: model, q, J_bond. Include also the pure reference profiles for free Li⁺, Cl⁻, and H₂O monomer labeled as 'ref_Li', 'ref_Cl', 'ref_H₂O'. Model names must follow the naming convention: 'pair_' for pairwise interactions (e.g., 'pair_Li_H2O_d2.0'), 'Cl_shell_<model>_n<N>' for chloride hydration shells, 'Li_shell_<model>_n<N>' for lithium hydration shells, and 'LiCl_<model>_n<N>' for ion-pair clusters. Cover q from -5 to +5 a.u. with spacing ≤0.1 a.u. Use atomic units (a.u.) for q and J_bond.",
+    "output_file": "j_bond_all_models.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The main scored artifact containing the bond-induced Compton profile differences for all specified model clusters, enabling verification of the paper's sensitivity claims.",
+    "output_schema": "Columns: model (string), q (float, a.u.), J_bond (float, a.u.). One row per (model, q) point. Model names: 'pair_*' (pairwise), 'Cl_shell_1A_n0'..'Cl_shell_1A_n6', 'Cl_shell_1B_n0'..'n6', 'Li_shell_2A_n0'..'n4', 'Li_shell_2B_n0'..'n4', 'LiCl_3A_n8','LiCl_3A_n9','LiCl_3A_n10', 'LiCl_3B_n8','LiCl_3B_n9','LiCl_3B_n10', 'LiCl_3C_n8','LiCl_3C_n9','LiCl_3C_n10', 'ref_Li', 'ref_Cl', 'ref_H2O'."
+  }
+]

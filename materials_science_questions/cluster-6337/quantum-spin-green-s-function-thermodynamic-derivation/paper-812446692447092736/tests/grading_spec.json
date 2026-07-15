@@ -1,0 +1,147 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute compensation temperatures, curve shapes, and disorder features from submitted magnetization CSVs and compare against paper-reported values with tolerances",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetization_curves.csv": "reference_match",
+    "magnetization_vs_delta.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold compensation temperatures, peak delta, and zero crossing values",
+      "source_provenance": "Paper Fig.2 and Fig.3 numerical values extracted from text: Tcomp=0.29 J for δ=0.0, peak at δ=0.26 for T=0.1, zero at δ=0.456 for T=0.1, zero at δ=0.245 for T=0.35",
+      "generation_method": "Taken directly from paper text and figure captions",
+      "why_not_fabricated": "Values are the paper's own reported numbers for the same conditions, not invented"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetization_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "δ",
+            "T",
+            "M_z",
+            "M_x"
+          ],
+          "units": {
+            "δ": "dimensionless",
+            "T": "energy (J)",
+            "M_z": "per‑site magnetization",
+            "M_x": "per‑site magnetization"
+          }
+        },
+        "description": "Magnetization curves as functions of temperature for δ=0.0, 0.2, 0.4. The checker reads these curves and extracts physically meaningful features (compensation temperature, curve shape, monotonicity) to compare against paper‑derived hidden gold values with tolerance."
+      },
+      {
+        "file": "magnetization_vs_delta.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "δ",
+            "M_z",
+            "M_x"
+          ],
+          "units": {
+            "T": "energy (J)",
+            "δ": "dimensionless",
+            "M_z": "per‑site magnetization",
+            "M_x": "per‑site magnetization"
+          }
+        },
+        "description": "Magnetization vs disorder strength δ at fixed temperatures T=0.1 J and 0.35 J. The checker verifies the non‑monotonic shape and crossing features against paper‑reported reference values within tolerance."
+      }
+    ],
+    "notes": "The hidden checker recomputes compensation temperatures, monotonicity, and characteristic values from the submitted CSVs and compares them against paper‑reported numbers within tolerance. The tolerance is set to absorb typical numerical differences from different solver implementations."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "magnetization_curves.csv",
+      "weight": 0.6,
+      "kind": "rubric",
+      "hidden_gold": {
+        "compensation": [
+          {
+            "delta": 0.0,
+            "tcomp": 0.29,
+            "tolerance": 0.02,
+            "exists": true
+          },
+          {
+            "delta": 0.2,
+            "exists": true,
+            "tcomp_min": 0.3
+          },
+          {
+            "delta": 0.4,
+            "exists": false
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "comp_0",
+          "description": "δ=0.0 has compensation point near 0.29 J",
+          "weight_in_step": 0.4
+        },
+        {
+          "id": "comp_2",
+          "description": "δ=0.2 has compensation point with T > Tcomp(δ=0.0)",
+          "weight_in_step": 0.3
+        },
+        {
+          "id": "comp_4",
+          "description": "δ=0.4 has no compensation point",
+          "weight_in_step": 0.3
+        }
+      ]
+    },
+    {
+      "id": "step_02",
+      "output_file": "magnetization_vs_delta.csv",
+      "weight": 0.4,
+      "kind": "rubric",
+      "hidden_gold": {
+        "T01": {
+          "max_delta": 0.26,
+          "max_tol": 0.03,
+          "zero_delta": 0.456,
+          "zero_tol": 0.02
+        },
+        "T035": {
+          "zero_delta": 0.245,
+          "zero_tol": 0.02,
+          "monotonic": true
+        }
+      },
+      "checks": [
+        {
+          "id": "delta_T01_max",
+          "description": "At T=0.1 J, M_z has a maximum near δ=0.26",
+          "weight_in_step": 0.3
+        },
+        {
+          "id": "delta_T01_zero",
+          "description": "At T=0.1 J, M_z crosses zero near δ=0.456",
+          "weight_in_step": 0.3
+        },
+        {
+          "id": "delta_T035",
+          "description": "At T=0.35 J, M_z decreases monotonically and zero at δ=0.245",
+          "weight_in_step": 0.4
+        }
+      ]
+    }
+  ]
+}

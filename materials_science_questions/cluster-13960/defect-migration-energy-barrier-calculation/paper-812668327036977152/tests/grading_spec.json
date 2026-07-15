@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute formation energies and migration barriers are strongly method-dependent (pseudopotentials, code, Ueff); verify the robust relative stability ordering of defects as reported in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.json": "structural_audit",
+    "migration_barriers.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "single_Gd",
+            "Gd_V_O",
+            "Gd_V_O_Gd"
+          ],
+          "value_type": "object with numeric fields O_rich and O_poor (eV)"
+        },
+        "description": "Formation energies of Gd defects under O-rich and O-poor conditions. The relative ordering among the three defects is scored to verify thermodynamic stability (Gd-V_O-Gd should be lowest)."
+      },
+      {
+        "file": "migration_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "defect",
+              "barrier_eV"
+            ]
+          },
+          "description": "Array of objects with defect name (single_Gd, Gd_V_O, Gd_V_O_Gd) and migration barrier in eV."
+        },
+        "description": "Minimum migration barriers for the three defect types. The relative ordering is scored to verify kinetic stability (Gd-V_O-Gd should have the highest barrier)."
+      }
+    ],
+    "notes": "The checker verifies that under both O-rich and O-poor conditions, Gd_V_O_Gd has the lowest formation energy and the highest migration barrier, using appropriate tolerances for numeric values."
+  },
+  "steps": [
+    {
+      "id": "step_formation_energies",
+      "output_file": "formation_energies.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "description": "Verify that Gd_V_O_Gd has the lowest formation energy under O_rich and O_poor conditions."
+    },
+    {
+      "id": "step_migration_barriers",
+      "output_file": "migration_barriers.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "description": "Verify that Gd_V_O_Gd has the highest migration barrier (strictly greater than single_Gd and Gd_V_O)."
+    }
+  ]
+}

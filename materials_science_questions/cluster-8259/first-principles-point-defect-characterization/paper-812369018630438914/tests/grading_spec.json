@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Agent computes binding energies and vibrational frequencies independently; the checker compares each value to the paper's reported gold with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies.json": "exact_match",
+    "vibrational_frequencies.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Binding energy and vibrational frequency gold values",
+      "source_provenance": "Paper Sec. III B 1-3 (binding energies) and Tables II, III (vibrational modes).",
+      "generation_method": "Copied directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the exact target values the reproduction must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "B_H_binding_energy_eV": "float",
+            "B_B_binding_energy_eV": "float",
+            "B2H1_binding_energy_eV": "float",
+            "B2H2_binding_energy_eV": "float"
+          },
+          "units": {
+            "B_H_binding_energy_eV": "eV",
+            "B_B_binding_energy_eV": "eV",
+            "B2H1_binding_energy_eV": "eV",
+            "B2H2_binding_energy_eV": "eV"
+          }
+        },
+        "description": "Binding energies for B-H, B-B pair, first H to B₂, and B₂H₂ complexes. Compared to paper's reported values within a tolerance."
+      },
+      {
+        "file": "vibrational_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect",
+            "isotope",
+            "mode_frequency_cm-1"
+          ],
+          "units": {
+            "mode_frequency_cm-1": "cm^{-1}"
+          }
+        },
+        "description": "Highest-frequency local vibrational modes for B-H and B₂H₁ defects in specified isotopic combinations. Frequencies are compared to paper's reported values within a tolerance."
+      }
+    ],
+    "notes": "The task covers only the computational DFT part of the paper. Experimental diffusion data are excluded."
+  },
+  "steps": [
+    {
+      "id": "binding_energies",
+      "output_file": "binding_energies.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold": {
+        "B_H_binding_energy_eV": 2.7,
+        "B_B_binding_energy_eV": 0.7,
+        "B2H1_binding_energy_eV": 3.3,
+        "B2H2_binding_energy_eV": 4.8
+      },
+      "tolerance": 0.2
+    },
+    {
+      "id": "vibrational_frequencies",
+      "output_file": "vibrational_frequencies.csv",
+      "kind": "csv_match",
+      "weight": 0.5,
+      "gold_rows": [
+        {
+          "defect": "B1H1",
+          "isotope": "11BH",
+          "mode_frequency_cm-1": 2657,
+          "tolerance": 20
+        },
+        {
+          "defect": "B1H1",
+          "isotope": "11BD",
+          "mode_frequency_cm-1": 1965,
+          "tolerance": 20
+        },
+        {
+          "defect": "B1H1",
+          "isotope": "10BH",
+          "mode_frequency_cm-1": 2668,
+          "tolerance": 20
+        },
+        {
+          "defect": "B1H1",
+          "isotope": "10BD",
+          "mode_frequency_cm-1": 1984,
+          "tolerance": 20
+        },
+        {
+          "defect": "B2H1_neutral",
+          "isotope": "11BH11B",
+          "mode_frequency_cm-1": 2739,
+          "tolerance": 20
+        },
+        {
+          "defect": "B2H1_neutral",
+          "isotope": "10BH11B",
+          "mode_frequency_cm-1": 2746,
+          "tolerance": 20
+        }
+      ]
+    }
+  ]
+}

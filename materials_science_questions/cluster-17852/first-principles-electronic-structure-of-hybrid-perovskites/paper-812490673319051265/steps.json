@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Bulk electronic structure and reference phase calculations",
+    "role": "process",
+    "action": "Obtain the orthorhombic CsPbBr3 crystal structure (Materials Project mp-1087555). Perform HSE+SOC DFT calculation with 35% exact-exchange mixing and screening parameter 0.1 Å⁻¹ to reproduce the experimental band gap of ~2.3 eV. Also compute total energies of reference phases (Cs, Pb, Br, CsBr, PbBr2, etc.) to determine chemical potential ranges for Pb-rich and Br-rich conditions.",
+    "output_file": "",
+    "evidence": "bulk_reference.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides validated bulk band gap, total energy, and chemical potential limits.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Construction and DFT total energy calculations of defect supercells",
+    "role": "process",
+    "action": "Construct supercells for all enumerated native point defects (vacancies, interstitials, antisites) and hydrogen impurities (Hi, H_Br, H_Pb, H_Cs) in relevant charge states, and for the pristine supercell. Perform HSE+SOC DFT total energy calculations for each defect supercell and the pristine supercell. Record total energies E[X^q] and E[bulk].",
+    "output_file": "",
+    "evidence": "defect_total_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw DFT total energies for all defect charge states and pristine bulk.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute defect formation energies at charge-neutrality",
+    "role": "scored",
+    "action": "Using total energies from step2, chemical potentials from step1, and the Freysoldt finite-size correction (SXDEFECTCORR), compute defect formation energies E^f[X^q] as a function of Fermi level. Determine the equilibrium Fermi level E_F0 by solving charge neutrality. For the dominant defects in the defect hull at Pb-rich and Br-rich extremes, report their formation energies evaluated at E_F0. Write the results to formation_energies_at_charge_neutrality.json.",
+    "output_file": "formation_energies_at_charge_neutrality.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with Pb_rich and Br_rich keys, each containing E_F0 (float, eV from VBM) and a list of dominant defects with their formation energies (float, eV).",
+    "output_schema": "{\"Pb_rich\": {\"E_F0\": <float>, \"defects\": [{\"defect\": \"<string>\", \"formation_energy\": <float>}, ...]}, \"Br_rich\": {\"E_F0\": <float>, \"defects\": [{\"defect\": \"<string>\", \"formation_energy\": <float>}, ...]}}"
+  },
+  {
+    "id": "step4",
+    "title": "Compute thermodynamic charge-state transition levels",
+    "role": "scored",
+    "action": "From the defect formation energies evaluated at E_F=0 (obtained during step3), compute the charge-state transition levels ε(q/q') using the formula ε = (E^f(q; E_F=0) - E^f(q'; E_F=0)) / (q' - q). Report the values for the key deep-level defects: Br_i (−/+), H_i (−/+), and H_Br (0/+). Write to defect_transition_levels.json.",
+    "output_file": "defect_transition_levels.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys Br_i_(-/+), H_i_(-/+), H_Br_(0/+), each a float representing the transition level in eV relative to the VBM.",
+    "output_schema": "{\"Br_i_(-/+)\": <float>, \"H_i_(-/+)\": <float>, \"H_Br_(0/+)\": <float>}"
+  }
+]

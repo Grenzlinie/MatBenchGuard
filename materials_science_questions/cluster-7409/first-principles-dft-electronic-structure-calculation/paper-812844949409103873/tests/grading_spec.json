@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The band gap is recomputed from the raw eigenvalues in band_structure.dat, which is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_distance",
+            "eigenvalue"
+          ],
+          "units": {
+            "k_distance": "1/Å",
+            "eigenvalue": "eV"
+          }
+        },
+        "description": "Electronic band structure eigenvalues along a high-symmetry path. The checker will recompute the direct band gap from this file."
+      },
+      {
+        "file": "dos.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_DOS"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_DOS": "states/eV"
+          }
+        },
+        "description": "Total density of states. The checker will audit the presence of a band gap region (zero DOS between valence and conduction bands)."
+      },
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "unit": "eV"
+        },
+        "description": "Agent-reported direct band gap value. The checker will compare this value against the hidden gold value with tolerance."
+      }
+    ],
+    "notes": "The primary scoring weight is on the direct band gap recomputed from band_structure.dat. The DOS file carries a small structural audit weight."
+  },
+  "steps": [
+    {
+      "id": "band_gap_recompute",
+      "output_file": "band_structure.dat",
+      "weight": 0.7,
+      "gold_value": 3.894,
+      "tolerance": 0.2,
+      "decay_range": 1.0
+    },
+    {
+      "id": "band_gap_text",
+      "output_file": "band_gap.txt",
+      "weight": 0.15,
+      "gold_value": 3.894,
+      "tolerance": 0.2,
+      "decay_range": 1.0
+    },
+    {
+      "id": "dos_gap_check",
+      "output_file": "dos.dat",
+      "weight": 0.15,
+      "energy_fermi_window": [
+        -0.2,
+        0.2
+      ],
+      "dos_threshold": 1e-06
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "direct_bandgap_gold",
+      "source_provenance": "paper Fig. 4 caption: 'The calculated band structure in Fig. 4 reveals that monoclinic La2GeO5 host is an insulator with a direct bandgap (Eg) of 3.894 eV'",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "It is the paper's reported value."
+    }
+  ]
+}

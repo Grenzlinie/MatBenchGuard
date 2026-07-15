@@ -1,0 +1,182 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: spectral_width is recomputed from phonon_dispersions.json; flat-band regions validated by checking small frequency variance over 3 consecutive q-points.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference table of properties from the paper's Table 1 for compositions Si46, Na8Si46, K8Si46, Ge46, K8Ge44□2.",
+      "source_provenance": "paper-reported Table 1 (DOI: 10.1039/c9tc04023d).",
+      "generation_method": "Extracted directly from the paper; values are the paper's own computed properties.",
+      "why_not_fabricated": "These are the paper's actual published results; used as hidden gold for reference_match scoring."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": [
+            "name",
+            "gamma_300",
+            "gamma_TA",
+            "gamma_LA",
+            "v_TA",
+            "v_LA",
+            "v_s",
+            "theta_TA",
+            "theta_LA",
+            "theta_D",
+            "kappa_l_300",
+            "spectral_width",
+            "rattler_freq"
+          ],
+          "items": {
+            "name": "string",
+            "gamma_300": "number",
+            "gamma_TA": "number",
+            "gamma_LA": "number",
+            "v_TA": "number (km/s)",
+            "v_LA": "number (km/s)",
+            "v_s": "number (km/s)",
+            "theta_TA": "number (K)",
+            "theta_LA": "number (K)",
+            "theta_D": "number (K)",
+            "kappa_l_300": "number (W/m·K)",
+            "spectral_width": "number (cm⁻¹)",
+            "rattler_freq": "number or null (cm⁻¹)"
+          }
+        },
+        "description": "Computed phonon properties and lattice thermal conductivity for all clathrate compositions, compared against hidden reference values from the paper’s Table 1."
+      },
+      {
+        "file": "phonon_dispersions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [],
+          "items": {
+            "<composition_name>": {
+              "qpoints": "list of [kx,ky,kz]",
+              "frequencies": "list of list of floats (cm⁻¹)",
+              "high_symmetry_labels": "object { label: index }"
+            }
+          }
+        },
+        "description": "Raw phonon band structure data used by the checker to recompute spectral width and verify the existence of localized flat bands."
+      }
+    ],
+    "notes": "Only the compositions Si46, Na8Si46, K8Si46, Ge46, and K8Ge44□2 are required. Ba8Ge43□3 is excluded because its Grüneisen parameter diverges and κ_l was not computed in the paper."
+  },
+  "steps": [
+    {
+      "id": "props_table",
+      "output_file": "computed_properties.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "gold_table": {
+        "Si46": {
+          "kappa_l_300": 16.0,
+          "theta_TA": 125,
+          "theta_LA": 145,
+          "theta_D": 522,
+          "v_TA": 4.5,
+          "v_LA": 7.8,
+          "v_s": 5.0,
+          "gamma_300": 0.95,
+          "gamma_TA": 0.5,
+          "gamma_LA": 0.9
+        },
+        "Na8Si46": {
+          "kappa_l_300": 2.7,
+          "theta_TA": 92,
+          "theta_LA": 94,
+          "theta_D": 535,
+          "v_TA": 4.4,
+          "v_LA": 7.3,
+          "v_s": 4.8,
+          "gamma_300": 1.1,
+          "gamma_TA": 0.4,
+          "gamma_LA": 1.2
+        },
+        "K8Si46": {
+          "kappa_l_300": 5.2,
+          "theta_TA": 100,
+          "theta_LA": 102,
+          "theta_D": 481,
+          "v_TA": 4.0,
+          "v_LA": 6.4,
+          "v_s": 4.4,
+          "gamma_300": 1.1,
+          "gamma_TA": 0.5,
+          "gamma_LA": 1.3
+        },
+        "Ge46": {
+          "kappa_l_300": 14.5,
+          "theta_TA": 75,
+          "theta_LA": 87,
+          "theta_D": 300,
+          "v_TA": 2.7,
+          "v_LA": 4.6,
+          "v_s": 3.0,
+          "gamma_300": 1.0,
+          "gamma_TA": 0.2,
+          "gamma_LA": 1.1
+        },
+        "K8Ge44□2": {
+          "kappa_l_300": 1.1,
+          "theta_TA": 51,
+          "theta_LA": 57,
+          "theta_D": 264,
+          "v_TA": 2.3,
+          "v_LA": 3.7,
+          "v_s": 2.5,
+          "gamma_300": 1.2,
+          "gamma_TA": 0.6,
+          "gamma_LA": 1.6
+        }
+      },
+      "tolerances": {
+        "kappa": 0.2,
+        "theta": 0.1,
+        "v": 0.1,
+        "gamma_abs": 0.2
+      }
+    },
+    {
+      "id": "spectral_width_reduction",
+      "output_file": "phonon_dispersions.json",
+      "weight": 0.3,
+      "kind": "metric_recompute",
+      "target_reduction_Si": 0.3,
+      "tolerance_Si": 0.05,
+      "target_reduction_Ge": 0.1,
+      "tolerance_Ge": 0.03
+    },
+    {
+      "id": "ordering_and_flatbands",
+      "output_file": "phonon_dispersions.json",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "flatband_regions": {
+        "Si46": [
+          [
+            140,
+            180
+          ],
+          [
+            450,
+            480
+          ]
+        ]
+      },
+      "ordering_check": true
+    }
+  ]
+}

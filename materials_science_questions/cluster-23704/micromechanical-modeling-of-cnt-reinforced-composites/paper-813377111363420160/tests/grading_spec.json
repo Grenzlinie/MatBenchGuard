@@ -1,0 +1,179 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step 01 recomputes RMSE from raw curve; steps 02-04 compare reported scalars to paper gold within monotonic tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_stress_strain_25_CNTs.csv": "metric_recompute",
+    "step_02_young_modulus_aggregates.csv": "reference_match",
+    "step_03_order_parameter.csv": "reference_match",
+    "step_04_density_study.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold stress-strain reference curve (linear, E=8.6 GPa)",
+      "source_provenance": "Paper Fig. 4 shows linear stress-strain with Young's modulus 8.6 GPa for 25 CNTs; slope 8.6 GPa.",
+      "generation_method": "Analytical line y = 8.6 * x for x in [0, 0.05].",
+      "why_not_fabricated": "Value taken from paper's reported Young's modulus for CNT aggregates (8.6 GPa) and linear behavior up to 5% strain."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Young's modulus for aggregates at 0.08 g/cm³",
+      "source_provenance": "Paper text: 'Young's modulus ... is approximately 8.6 GPa for CNT aggregates with 1,000 nanotubes' and Fig. 7.",
+      "generation_method": "Single value 8.6 GPa for all CNT counts.",
+      "why_not_fabricated": "Direct paper value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold order parameters from Table 2",
+      "source_provenance": "Table 2 in paper.",
+      "generation_method": "Exact values: 50: -0.0577, 200: 0.0197, 800: 0.0171, 1000: 0.0078.",
+      "why_not_fabricated": "Paper's reported order parameters."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold density-modulus values from Table 3",
+      "source_provenance": "Table 3 in paper.",
+      "generation_method": "Exact pairs: (0.10, 10.87), (0.12, 12.96), (0.14, 15.28), (0.16, 17.55).",
+      "why_not_fabricated": "Paper's reported density study."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_stress_strain_25_CNTs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress": "GPa"
+          }
+        },
+        "description": "Stress-strain curve for a 25-CNT aggregate under incremental constrained minimization. The verifier computes the root-mean-square deviation against the expected reference curve; a lower RMSE is better."
+      },
+      {
+        "file": "step_02_young_modulus_aggregates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "num_cnts",
+            "young_modulus_gpa",
+            "coefficient_of_variance"
+          ],
+          "units": {
+            "young_modulus_gpa": "GPa",
+            "coefficient_of_variance": "fraction"
+          }
+        },
+        "description": "Mean Young's modulus and directional coefficient of variance for CNT aggregates with 50, 200, 800, and 1000 nanotubes at constant density 0.08 g/cm³. Compared to paper reference values."
+      },
+      {
+        "file": "step_03_order_parameter.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "num_cnts",
+            "order_parameter"
+          ],
+          "units": {
+            "order_parameter": "dimensionless"
+          }
+        },
+        "description": "Orientational order parameter for each CNT count, indicating the randomness of the CNT dispersion. Compared to reference values."
+      },
+      {
+        "file": "step_04_density_study.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "density_g_cm3",
+            "young_modulus_gpa"
+          ],
+          "units": {
+            "density_g_cm3": "g/cm³",
+            "young_modulus_gpa": "GPa"
+          }
+        },
+        "description": "Young's modulus for 800-CNT aggregates at four different densities, demonstrating the linear density–modulus relation. Compared to reference values."
+      }
+    ],
+    "notes": "All outputs are re-derived from the agent's own LAMMPS simulations. The verifier uses hidden gold values extracted from the paper's Fig. 4, Table 2, Table 3, and text. No MD validation runs or computational time comparisons are required."
+  },
+  "steps": [
+    {
+      "id": "step_stress_strain",
+      "output_file": "step_01_stress_strain_25_CNTs.csv",
+      "kind": "metric_recompute",
+      "weight": 0.4,
+      "target_policy": "threshold_or_better",
+      "metric": "rmse_stress",
+      "reference_slope_gpa": 8.6,
+      "max_strain": 0.05,
+      "threshold_rmse_gpa": 0.5,
+      "decay_cutoff_factor": 1.0,
+      "description": "RMSE between agent's stress-strain curve and linear reference (E=8.6 GPa) must be ≤ 0.5 GPa; partial credit decays linearly for RMSE in (0.5, 1.0]."
+    },
+    {
+      "id": "step_young_modulus",
+      "output_file": "step_02_young_modulus_aggregates.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "reference_modulus_gpa": 8.6,
+      "relative_tolerance": 0.15,
+      "expected_counts": [
+        50,
+        200,
+        800,
+        1000
+      ],
+      "description": "Compare each reported young_modulus_gpa to 8.6 GPa with relative tolerance 15%; monotonic scoring."
+    },
+    {
+      "id": "step_order_param",
+      "output_file": "step_03_order_parameter.csv",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "target_policy": "reference_match",
+      "absolute_tolerance": 0.02,
+      "gold_order": {
+        "50": -0.0577,
+        "200": 0.0197,
+        "800": 0.0171,
+        "1000": 0.0078
+      },
+      "description": "Compare order parameter to paper Table 2; absolute tolerance 0.02."
+    },
+    {
+      "id": "step_density_study",
+      "output_file": "step_04_density_study.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "relative_tolerance": 0.1,
+      "gold_density_moduli": {
+        "0.10": 10.87,
+        "0.12": 12.96,
+        "0.14": 15.28,
+        "0.16": 17.55
+      },
+      "description": "Compare young_modulus_gpa for each density to Table 3; relative tolerance 10%."
+    }
+  ]
+}

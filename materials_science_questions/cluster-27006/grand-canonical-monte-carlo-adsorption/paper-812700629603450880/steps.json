@@ -1,0 +1,93 @@
+[
+  {
+    "id": "stage0_zif",
+    "title": "Obtain ZIF crystal structures",
+    "role": "process",
+    "action": "Retrieve CIF files for ZIF-1, ZIF-3, ZIF-7, and ZIF-9 from public crystallographic databases (e.g., Cambridge Structural Database, rcsr.net). Prepare the periodic unit cell coordinates as required by the GCMC engine.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the periodic unit cell coordinates for each ZIF.",
+    "output_schema": ""
+  },
+  {
+    "id": "stage1_dft",
+    "title": "Compute DFT atomic charges",
+    "role": "process",
+    "action": "Perform periodic DFT calculations on each ZIF framework using a standard functional and basis set (e.g., B3LYP/6-31G*) and compute atomic partial charges via ChelpG or similar population analysis. Output the charges in a format ready for force field assignment.",
+    "output_file": "",
+    "evidence": "dft_charges.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required to reproduce the electrostatic contribution of the force field, as described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "stage2_forcefield",
+    "title": "Assemble force field parameter files",
+    "role": "process",
+    "action": "Create simulation input files by combining UFF Lennard‑Jones parameters for framework atoms, the computed DFT atomic charges, TraPPE united‑atom parameters for ethanol, and TIP3P parameters for water. Consolidate all force field terms into a format readable by the selected GCMC code.",
+    "output_file": "",
+    "evidence": "force_field_params.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Consolidated force field definitions for the simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "stage3_ethanol",
+    "title": "GCMC simulation of pure ethanol adsorption",
+    "role": "scored",
+    "action": "Run grand‑canonical Monte Carlo simulations for ethanol in ZIF‑1, ‑3, ‑7, ‑9 at 323 K and 373 K, pressures 0–100 kPa. Use appropriate supercells, rigid framework, LJ cutoff 12 Å with long-range corrections, Ewald summation, and a simulation length of 2×10⁷ moves with the first half for equilibration. Write the resulting adsorption loadings to the output file.",
+    "output_file": "ethanol_isotherms.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Absolute ethanol uptake isotherms for the four ZIFs.",
+    "output_schema": "ZIF (string), Temperature (K), Pressure (kPa), Loading (mmol/g)"
+  },
+  {
+    "id": "stage4_water",
+    "title": "GCMC simulation of pure water adsorption",
+    "role": "scored",
+    "action": "Run GCMC simulations for pure water in the same four ZIFs, temperatures, and pressure range using the TIP3P model. Write the water loading isotherms to the output file.",
+    "output_file": "water_isotherms.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Absolute water uptake isotherms to assess hydrophobicity/hydrophilicity.",
+    "output_schema": "ZIF (string), Temperature (K), Pressure (kPa), Loading (mmol/g)"
+  },
+  {
+    "id": "stage5_mixture",
+    "title": "GCMC simulation of ethanol–water mixture",
+    "role": "process",
+    "action": "Run GCMC simulations for an equimolar ethanol/water mixture in the four ZIFs at 323 K and 373 K, pressures 0–100 kPa, using the same force field and simulation parameters. Output the adsorbed amounts of each component.",
+    "output_file": "",
+    "evidence": "mixture_uptakes.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate for calculating adsorption selectivity.",
+    "output_schema": ""
+  },
+  {
+    "id": "stage6_selectivity",
+    "title": "Calculate adsorption selectivity",
+    "role": "scored",
+    "action": "From the mixture simulation results, compute the ethanol‑over‑water adsorption selectivity S = (Y_ethanol / Y_water) / (X_ethanol / X_water) with X_ethanol / X_water = 1. Write the selectivity to the output file.",
+    "output_file": "mixture_selectivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Mixture selectivity values used to verify the reported ordering trends.",
+    "output_schema": "ZIF (string), Temperature (K), Pressure (kPa), Selectivity (dimensionless)"
+  }
+]

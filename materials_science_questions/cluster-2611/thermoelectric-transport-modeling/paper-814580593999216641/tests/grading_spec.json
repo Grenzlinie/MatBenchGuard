@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot recompute ZT from raw DFT/NEGF outputs within verifier sandbox; score agent's reported ZT_max against paper values and validate ordering trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_properties.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ZT_max values and ordering expectations for WSe2 geometries",
+      "source_provenance": "Paper: J. Phys. Chem. C 2015, Figure 4 and text, WSe2 series",
+      "generation_method": "Extracted from paper's reported maximum ZT values for WSe2 monolayer (0.91), zigzag (10,0) nanotube (0.47), armchair (6,6) nanotube (0.33) and ordering statements for sigma_ph and band gap.",
+      "why_not_fabricated": "These are the exact paper-reported numbers for the same systems; needed for threshold comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "geometry",
+            "ZT_max",
+            "sigma_ph_300K",
+            "band_gap"
+          ]
+        },
+        "description": "CSV file with one row per geometry. The checker compares ZT_max, sigma_ph_300K, and band_gap values against hidden references using threshold_or_better and also verifies the ordering trends (ZT_monolayer > ZT_zigzag > ZT_armchair; sigma_ph zigzag < monolayer < armchair; band gap monolayer > zigzag > armchair)."
+      }
+    ],
+    "notes": "The agent must implement a ballistic NEGF solver; no specific code is provided. The scoring uses the paper-reported ZT values as hidden references with tolerance and structural ordering checks."
+  },
+  "steps": [
+    {
+      "id": "zt_magnitudes",
+      "output_file": "step_01_properties.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "params": {
+        "targets": {
+          "monolayer": 0.91,
+          "zigzag_10_0": 0.47,
+          "armchair_6_6": 0.33
+        },
+        "tolerance": 0.15
+      }
+    },
+    {
+      "id": "zt_ordering",
+      "output_file": "step_01_properties.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "params": {}
+    },
+    {
+      "id": "sigma_ph_ordering",
+      "output_file": "step_01_properties.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "params": {}
+    },
+    {
+      "id": "band_gap_ordering",
+      "output_file": "step_01_properties.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "params": {}
+    }
+  ]
+}

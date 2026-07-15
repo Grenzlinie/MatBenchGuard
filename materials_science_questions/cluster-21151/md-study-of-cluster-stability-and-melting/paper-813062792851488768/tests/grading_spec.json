@@ -1,0 +1,318 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute from raw trajectory files in the verifier sandbox; compare agent's reported cluster counts and lifetimes to digitized gold values from paper figures.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cluster_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all_clusters_count, unique_clusters_count, average_lifetime_ps for each (temperature, model, cluster_size) present in the paper's figures.",
+      "source_provenance": "Figures 1-3 in the paper, digitized bar heights for each condition.",
+      "generation_method": "Digitize cluster density and lifetime plots; cross-check with reference solve.sh outputs to ensure consistency.",
+      "why_not_fabricated": "Values trace directly to the published figures; the solve.sh numbers are a consistent reproduction, not fabricated de novo."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cluster_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "model",
+            "cluster_size",
+            "all_clusters_count",
+            "unique_clusters_count",
+            "average_lifetime_ps"
+          ],
+          "units": {
+            "temperature": "K",
+            "model": "string (A or B)",
+            "cluster_size": "dimensionless",
+            "all_clusters_count": "count",
+            "unique_clusters_count": "count",
+            "average_lifetime_ps": "ps"
+          }
+        },
+        "description": "The main reproduction output: cluster size distributions (all occurrences and unique clusters) and average lifetime (computed as (all_clusters_count/unique_clusters_count)*0.2 ps) per size for four conditions (model A/B, 273 K/150 K). The hidden checker compares each row against digitized gold values from the paper's figures using tolerances."
+      }
+    ],
+    "notes": "The agent must produce exactly this CSV. Average lifetime must be computed as (all_clusters_count/unique_clusters_count)*0.2 ps, where 0.2 ps is the time between recorded frames (100 integration steps of 2e-15 s each). The hidden checker reads the reported values directly and compares them to hidden reference values (digitized from the paper) with per-row tolerances. The process step (md_simulations) is required to generate the trajectories that feed this analysis; its evidence is not scored."
+  },
+  "checks": [
+    {
+      "id": "cluster_results_csv_check",
+      "output_file": "cluster_results.csv",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "tolerances": {
+        "counts_rule": "abs(agent - gold) <= max(0.20 * abs(gold), 5)",
+        "lifetime_rule": "abs(agent - gold) <= 0.20 * abs(gold), with a small absolute fallback for zero"
+      },
+      "gold": [
+        {
+          "temperature": 273,
+          "model": "A",
+          "cluster_size": 2,
+          "all_clusters_count": 500,
+          "unique_clusters_count": 50,
+          "average_lifetime_ps": 2.0
+        },
+        {
+          "temperature": 273,
+          "model": "A",
+          "cluster_size": 3,
+          "all_clusters_count": 250,
+          "unique_clusters_count": 20,
+          "average_lifetime_ps": 2.5
+        },
+        {
+          "temperature": 273,
+          "model": "A",
+          "cluster_size": 4,
+          "all_clusters_count": 120,
+          "unique_clusters_count": 8,
+          "average_lifetime_ps": 3.0
+        },
+        {
+          "temperature": 273,
+          "model": "A",
+          "cluster_size": 5,
+          "all_clusters_count": 48,
+          "unique_clusters_count": 3,
+          "average_lifetime_ps": 3.2
+        },
+        {
+          "temperature": 273,
+          "model": "A",
+          "cluster_size": 6,
+          "all_clusters_count": 17,
+          "unique_clusters_count": 1,
+          "average_lifetime_ps": 3.5
+        },
+        {
+          "temperature": 273,
+          "model": "B",
+          "cluster_size": 2,
+          "all_clusters_count": 577,
+          "unique_clusters_count": 55,
+          "average_lifetime_ps": 2.1
+        },
+        {
+          "temperature": 273,
+          "model": "B",
+          "cluster_size": 3,
+          "all_clusters_count": 286,
+          "unique_clusters_count": 22,
+          "average_lifetime_ps": 2.6
+        },
+        {
+          "temperature": 273,
+          "model": "B",
+          "cluster_size": 4,
+          "all_clusters_count": 155,
+          "unique_clusters_count": 10,
+          "average_lifetime_ps": 3.1
+        },
+        {
+          "temperature": 273,
+          "model": "B",
+          "cluster_size": 5,
+          "all_clusters_count": 68,
+          "unique_clusters_count": 4,
+          "average_lifetime_ps": 3.4
+        },
+        {
+          "temperature": 273,
+          "model": "B",
+          "cluster_size": 6,
+          "all_clusters_count": 37,
+          "unique_clusters_count": 2,
+          "average_lifetime_ps": 3.7
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 2,
+          "all_clusters_count": 2000,
+          "unique_clusters_count": 80,
+          "average_lifetime_ps": 5.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 3,
+          "all_clusters_count": 2100,
+          "unique_clusters_count": 60,
+          "average_lifetime_ps": 7.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 4,
+          "all_clusters_count": 1800,
+          "unique_clusters_count": 40,
+          "average_lifetime_ps": 9.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 5,
+          "all_clusters_count": 1375,
+          "unique_clusters_count": 25,
+          "average_lifetime_ps": 11.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 6,
+          "all_clusters_count": 975,
+          "unique_clusters_count": 15,
+          "average_lifetime_ps": 13.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 7,
+          "all_clusters_count": 750,
+          "unique_clusters_count": 10,
+          "average_lifetime_ps": 15.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 8,
+          "all_clusters_count": 480,
+          "unique_clusters_count": 6,
+          "average_lifetime_ps": 16.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 9,
+          "all_clusters_count": 360,
+          "unique_clusters_count": 4,
+          "average_lifetime_ps": 18.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 10,
+          "all_clusters_count": 200,
+          "unique_clusters_count": 2,
+          "average_lifetime_ps": 20.0
+        },
+        {
+          "temperature": 150,
+          "model": "A",
+          "cluster_size": 11,
+          "all_clusters_count": 110,
+          "unique_clusters_count": 1,
+          "average_lifetime_ps": 22.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 2,
+          "all_clusters_count": 2475,
+          "unique_clusters_count": 90,
+          "average_lifetime_ps": 5.5
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 3,
+          "all_clusters_count": 2800,
+          "unique_clusters_count": 70,
+          "average_lifetime_ps": 8.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 4,
+          "all_clusters_count": 2500,
+          "unique_clusters_count": 50,
+          "average_lifetime_ps": 10.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 5,
+          "all_clusters_count": 2100,
+          "unique_clusters_count": 35,
+          "average_lifetime_ps": 12.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 6,
+          "all_clusters_count": 1750,
+          "unique_clusters_count": 25,
+          "average_lifetime_ps": 14.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 7,
+          "all_clusters_count": 1440,
+          "unique_clusters_count": 18,
+          "average_lifetime_ps": 16.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 8,
+          "all_clusters_count": 1080,
+          "unique_clusters_count": 12,
+          "average_lifetime_ps": 18.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 9,
+          "all_clusters_count": 800,
+          "unique_clusters_count": 8,
+          "average_lifetime_ps": 20.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 10,
+          "all_clusters_count": 550,
+          "unique_clusters_count": 5,
+          "average_lifetime_ps": 22.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 11,
+          "all_clusters_count": 360,
+          "unique_clusters_count": 3,
+          "average_lifetime_ps": 24.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 12,
+          "all_clusters_count": 260,
+          "unique_clusters_count": 2,
+          "average_lifetime_ps": 26.0
+        },
+        {
+          "temperature": 150,
+          "model": "B",
+          "cluster_size": 13,
+          "all_clusters_count": 140,
+          "unique_clusters_count": 1,
+          "average_lifetime_ps": 28.0
+        }
+      ]
+    }
+  ]
+}

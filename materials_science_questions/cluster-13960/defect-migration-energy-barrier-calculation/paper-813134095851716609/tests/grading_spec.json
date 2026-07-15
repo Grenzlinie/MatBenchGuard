@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The task uses open-source DFT yielding values that differ from the paper; scoring uses paper-reported gold values with generous tolerances and checks ordering/differences, which is a result-level compare.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.json": "structural_audit",
+    "migration_barriers.json": "result-level compare"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Formation energy ordering and difference constraints",
+      "source_provenance": "Paper Fig. 1 and text",
+      "generation_method": "Extracted from paper description of ordering and energy differences",
+      "why_not_fabricated": "These are the paper's actual reported relative stability trends and quantitative gaps"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Migration barrier gold values and tolerances",
+      "source_provenance": "Paper text and Fig. 2",
+      "generation_method": "Extracted barrier values from the paper (0.07 eV for 1D in NiCo, 0.17 eV for Ni 3D, etc.)",
+      "why_not_fabricated": "These are the paper's reported barrier energies"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {},
+          "units": {
+            "energy": "eV"
+          },
+          "description": "Top-level keys: \"Ni\", \"Ni3Fe\", \"Ni3Co\". Each value is an object with orientation keys (\"<100>\", \"<110>\", \"<111>\"), each containing composition keys (e.g., \"Ni-Ni\", \"Ni-Fe\", \"Fe-Ni\", \"Fe-Fe\", \"Ni-Co\", \"Co-Co\", \"Co-Ni\") with numeric formation energy in eV."
+        },
+        "description": "Formation energies of interstitial dumbbells in Ni and alloys. Verifier checks relative stability ordering and key energy differences."
+      },
+      {
+        "file": "migration_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {},
+          "units": {
+            "barrier": "eV"
+          },
+          "description": "Top-level keys: \"Ni\", \"Ni3Co\", \"Ni3Fe\". Each value is an object with path_description keys (e.g., \"1D_<110>_translation\", \"3D_<111>_to_<110>\", \"3D_<100>_trans_rot\") and numeric barrier energy in eV."
+        },
+        "description": "Migration barrier energies for key interstitial migration paths. Verifier checks threshold conditions (e.g., barrier ≤0.01 eV in Ni, ~0.07 eV in NiCo, and ≥0.10 eV in NiFe)."
+      }
+    ],
+    "notes": "The verifier recomputes ordering and energy differences from formation_energies.json and applies threshold checks on barriers. Tolerances absorb legitimate toolchain spread from using Quantum ESPRESSO instead of VASP."
+  },
+  "steps": [
+    {
+      "id": "check_formation_energies",
+      "output_file": "formation_energies.json",
+      "kind": "custom",
+      "weight": 0.6,
+      "params": {
+        "expected_lowest_systems": {
+          "Ni": "Ni-Ni",
+          "Ni3Fe": "Ni-Ni",
+          "Ni3Co": "Ni-Co"
+        },
+        "diff_checks": [
+          {
+            "system": "Ni3Fe",
+            "orientation": "<100>",
+            "comp1": "Ni-Ni",
+            "comp2": "Ni-Fe",
+            "min_diff": 0.15,
+            "max_diff": 0.5,
+            "abs": false
+          },
+          {
+            "system": "Ni3Co",
+            "orientation": "<100>",
+            "comp1": "Ni-Co",
+            "comp2": "Co-Co",
+            "max_diff": 0.15,
+            "abs": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "check_migration_barriers",
+      "output_file": "migration_barriers.json",
+      "kind": "custom",
+      "weight": 0.4,
+      "params": {
+        "barrier_checks": [
+          {
+            "system": "Ni",
+            "path": "3D_<111>_to_<110>",
+            "target": 0.17,
+            "tolerance": 0.05
+          },
+          {
+            "system": "Ni",
+            "path": "3D_<100>_trans_rot",
+            "target": 0.14,
+            "tolerance": 0.05
+          },
+          {
+            "system": "Ni3Co",
+            "path": "1D_<110>_translation",
+            "target": 0.07,
+            "tolerance": 0.03
+          },
+          {
+            "system": "Ni3Co",
+            "path": "3D_<111>_to_<110>",
+            "target": 0.08,
+            "tolerance": 0.03
+          },
+          {
+            "system": "Ni3Co",
+            "path": "3D_<100>_trans_rot",
+            "target": 0.21,
+            "tolerance": 0.05
+          },
+          {
+            "system": "Ni3Fe",
+            "path": "3D_<111>_to_<110>",
+            "target": 0.12,
+            "tolerance": 0.03
+          },
+          {
+            "system": "Ni3Fe",
+            "path": "3D_<100>_trans_rot",
+            "target": 0.39,
+            "tolerance": 0.1
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The PCF and pDOS checks verify re-derivable structural properties (disappearance of long-range peaks, peak merging) without recomputing absolute metrics, and the amorphization status is exact-match. T1 recompute of the full DFT-MD is not feasible in the lightweight checker environment.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "amorphization status reference for summary_check",
+      "source_provenance": "paper text: LiSi, Li1.71Si, Li3.25Si amorphize (true), Li3.75Si remains crystalline (false) under N_e=2 at 300 K.",
+      "generation_method": "extracted from paper conclusions",
+      "why_not_fabricated": "this is the paper's reported result, not fabricated."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "PCF structural thresholds: rmsd from 1.0 beyond 6 Å",
+      "source_provenance": "derived from the paper's description: sharp peaks beyond 6 Å at 40 fs, disappearance at 140 fs and later.",
+      "generation_method": "set empirically from synthetic data matching the paper's qualitative behavior",
+      "why_not_fabricated": "thresholds are set to separate expected ordered vs. disordered states as described in the paper; verified against oracle data."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "pDOS structural thresholds: peak count and separation",
+      "source_provenance": "paper's description: 'multi-peaks of 3s and 3p states merge into one peak'",
+      "generation_method": "peak detection logic modeled after the paper's qualitative claim",
+      "why_not_fabricated": "based on the paper's explicit statement and oracle-generated data that reproduces that statement."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "li171si_pcf_ne2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_fs",
+            "r",
+            "g_r"
+          ],
+          "units": {
+            "time_fs": "fs",
+            "r": "angstrom",
+            "g_r": "dimensionless"
+          }
+        },
+        "description": "Pair correlation function blocks for Li1.71Si at N_e=2; checker verifies disappearance of sharp peaks beyond 6 Å in later time steps."
+      },
+      {
+        "file": "li171si_pdos_ne2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "pdos_s_initial",
+            "pdos_p_initial",
+            "pdos_s_final",
+            "pdos_p_final"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "pdos_s_initial": "arb.units",
+            "pdos_p_initial": "arb.units",
+            "pdos_s_final": "arb.units",
+            "pdos_p_final": "arb.units"
+          }
+        },
+        "description": "Projected density of states on Si 3s/3p orbitals at t=0 and t=2.5 ps for Li1.71Si at N_e=2; checker verifies peak merging upon amorphization."
+      },
+      {
+        "file": "summary_amorphization.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LiSi": "boolean",
+            "Li1.71Si": "boolean",
+            "Li3.25Si": "boolean",
+            "Li3.75Si": "boolean"
+          }
+        },
+        "description": "Amorphization status of the four alloys under N_e=2 at 300 K; checker validates boolean assignments against the expected amorphization pattern."
+      }
+    ],
+    "notes": "Scoring uses T3 structural checks: PCF long-range order loss, PDOS peak merging, and exact amorphization status pattern."
+  },
+  "steps": [
+    {
+      "id": "pcf_check",
+      "output_file": "li171si_pcf_ne2.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "description": "Check long-range order disappearance in PCF beyond 6 Å: at 40 fs sharp peaks exist, at 140 and 2500 fs g(r)≈1."
+    },
+    {
+      "id": "pdos_check",
+      "output_file": "li171si_pdos_ne2.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "description": "Check initial pDOS has multi-peak features and final pDOS merges into single broad peak."
+    },
+    {
+      "id": "summary_check",
+      "output_file": "summary_amorphization.json",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target": {
+        "LiSi": true,
+        "Li1.71Si": true,
+        "Li3.25Si": true,
+        "Li3.75Si": false
+      },
+      "description": "Amorphization status must match expected pattern."
+    }
+  ]
+}

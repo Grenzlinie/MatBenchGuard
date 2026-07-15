@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main result is a structural trend (d_break increases with Q for each metal) and a boolean LAC formation indicator, which can be verified directly from the reported results.json without recomputing individual d_break values from raw simulation outputs.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "metal",
+              "temperature_K",
+              "Q_eV",
+              "d_break_Angstrom",
+              "LAC_formed"
+            ],
+            "properties": {
+              "metal": {
+                "type": "string"
+              },
+              "temperature_K": {
+                "type": "integer",
+                "unit": "K"
+              },
+              "Q_eV": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "d_break_Angstrom": {
+                "type": "number",
+                "unit": "angstrom"
+              },
+              "LAC_formed": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Contains entries for all requested metals and conditions. The checker verifies the relative trend of d_break with Q and the LAC formation status."
+      }
+    ],
+    "notes": "The checker compares the relative trend of d_break between Q=0 and Q=1.0 eV for each metal, and checks the LAC_formed flag for the specified Ag condition. Absolute d_break values are not required to match exact numbers from the source."
+  },
+  "steps": [
+    {
+      "id": "verify_structural",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Verify structural trends and LAC condition: for each metal Ag/Au/Pd/Pt at T=300K, d_break(Q=1.0eV) - d_break(Q=0eV) >= 1.0 Å; for Ag at T=100K, Q=0.4eV, LAC_formed must be True."
+    }
+  ]
+}

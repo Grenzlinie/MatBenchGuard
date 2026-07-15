@@ -1,0 +1,80 @@
+[
+  {
+    "id": "geom_opt_freq",
+    "title": "Geometry optimization and frequency analysis at B3PW91*/TZV",
+    "role": "process",
+    "action": "Construct initial structures for Fe(CO)₅ (D₃h), singlet Fe(CO)₄ (C₂v), triplet Fe(CO)₄ (C₂v), and CO. Perform geometry optimization and harmonic vibrational frequency calculation using the B3PW91* functional (modified B3PW91 with 15% exact exchange) and the Ahlrichs TZV basis set (augmented with diffuse p and f functions on Fe and d polarization on C and O). Extract optimized geometries, harmonic vibrational frequencies, and zero‑point energy (ZPE) corrections.",
+    "output_file": "",
+    "evidence": "geom_freq_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates equilibrium geometries and ZPE corrections needed for all subsequent single‑point and MECP calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "ccsd_t_energies",
+    "title": "CCSD(T) single-point energies with BP86 orbitals",
+    "role": "process",
+    "action": "For each species (Fe(CO)₅ singlet, Fe(CO)₄ singlet, Fe(CO)₄ triplet, CO) using the B3PW91*/TZV optimized geometry, first perform a DFT calculation with the BP86 functional to obtain molecular orbitals, then carry out single‑point CCSD(T) calculations with the VQZ‑VDZ basis set (large Fe [6s5p6d3f2g1h] basis, cc‑pVDZ on C and O with additional polarization). Record the total electronic energies.",
+    "output_file": "",
+    "evidence": "ccsdt_raw_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the electronic energies that will be combined with ZPE corrections to obtain the final headline energetic benchmarks.",
+    "output_schema": ""
+  },
+  {
+    "id": "zpe_corrected_energetics",
+    "title": "Compute ZPE-corrected ΔE(1,3) and BDE(3)",
+    "role": "scored",
+    "action": "From the CCSD(T) electronic energies and the B3PW91* ZPE corrections, calculate the singlet–triplet electronic energy splitting ΔE(1,3) = E(singlet Fe(CO)₄) – E(triplet Fe(CO)₄), the bond dissociation energy referenced to triplet fragments BDE(3) = E(triplet Fe(CO)₄) + E(CO) – E(Fe(CO)₅), and the corresponding values after adding ZPE corrections. Write all four numbers to the output file.",
+    "output_file": "step_01_energetics.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored step that provides the ZPE‑corrected key energetics; the checker compares these values to the paper's calibrated best estimates within tolerances.",
+    "output_schema": "{\"deltaE13_electronic_kcalmol\": float, \"deltaE13_withZPE_kcalmol\": float, \"BDE3_electronic_kcalmol\": float, \"BDE3_withZPE_kcalmol\": float}"
+  },
+  {
+    "id": "mecp_optimization",
+    "title": "Locate and characterize the Cₛ MECP",
+    "role": "process",
+    "action": "Using the B3PW91*/TZV method, employ a gradient‑based algorithm to locate the minimum energy crossing point (MECP) between the singlet and triplet surfaces of the Fe(CO)₄ + CO system, starting from a geometry near the expected Cₛ side‑on approach. At the converged MECP, compute the vibrational frequencies within the crossing seam, the effective reduced mass μ_H for the direction orthogonal to the seam, the norms of the gradients ΔF and F on the two surfaces, and run a CASSCF(12,12)/VDZ calculation to obtain the root‑mean‑square spin‑orbit coupling V₁₂ between singlet and triplet states. Store all raw data.",
+    "output_file": "",
+    "evidence": "mecp_full_properties.json",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Supplies the MECP geometry, energy, and dynamical parameters required for the NA‑TST rate calculation. This is load‑bearing because the downstream rate coefficient cannot be correctly computed without these values.",
+    "output_schema": ""
+  },
+  {
+    "id": "mecp_summary",
+    "title": "Produce MECP summary and spin‑orbit coupling",
+    "role": "scored",
+    "action": "Extract from the MECP optimization the atomic coordinates (geometry), the MECP relative energy (with respect to the separated triplet Fe(CO)₄ and CO, without ZPE), and the spin‑orbit coupling matrix element V₁₂. Also include the gradient differences ΔF, geometric mean F, and reduced mass μ_H needed for rate recomputation. Write all data to the output file.",
+    "output_file": "step_02_MECP.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored step whose relative energy and V₁₂ are compared to the paper's reported values. The additional gradient/mass fields enable the checker to recompute the NA‑TST rate in the next step.",
+    "output_schema": "{\"geometry\": {\"Fe\": [x,y,z], \"C1\": [x,y,z], \"O1\": [x,y,z], ...}, \"relative_energy_kcalmol\": float, \"V12_cm1\": float, \"deltaF\": float, \"F\": float, \"mu_H_reduced_mass\": float}"
+  },
+  {
+    "id": "na_tst_rate",
+    "title": "Compute NA‑TST rate coefficient at 300 K",
+    "role": "scored",
+    "action": "Using the reactant partition function data (rotational constants, vibrational frequencies, electronic degeneracies from the geometry/frequency step) and the MECP properties (energy, frequencies, ΔF, F, μ_H, V₁₂) from the MECP summary, compute the bimolecular rate coefficient k(T) at T = 300 K using both the Landau–Zener and the WKB (Delos) surface‑hopping probabilities as described in the paper. Output the two rate values.",
+    "output_file": "step_03_rate_coefficient.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored step that reports the final rate coefficient. The checker independently recomputes the rate from the MECP parameters submitted in step_02_MECP.json and compares the agent's value to the recomputed value within 20%; then the recomputed rate is compared to the paper's reported room‑temperature rate within a factor‑of‑10 tolerance.",
+    "output_schema": "{\"T\": 300, \"k_LZ_cm3_molecule-1_s-1\": float, \"k_WKB_cm3_molecule-1_s-1\": float}"
+  }
+]

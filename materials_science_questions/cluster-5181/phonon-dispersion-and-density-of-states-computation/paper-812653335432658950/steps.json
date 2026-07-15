@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_1_reference_properties",
+    "title": "Collect reference properties",
+    "role": "process",
+    "action": "Obtain the bulk reference properties for pure Au and Ni: lattice constant a0 (Å), 0 K compressibility K (10^-12 cm²/dyn), and vacancy formation energy Efv (eV) from standard literature.",
+    "output_file": "",
+    "evidence": "reference_properties.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Record the used reference properties for traceability.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_fit_morse",
+    "title": "Fit Morse potential parameters for Au-Au and Ni-Ni",
+    "role": "process",
+    "action": "From the reference properties, determine the three Morse potential parameters D, alpha, r0 for Au-Au and Ni-Ni interactions such that the potential reproduces a0, K, and Efv.",
+    "output_file": "",
+    "evidence": "morse_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Save the fitted pure-element Morse parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_cross_parameters",
+    "title": "Derive Au-Ni cross-interaction parameters",
+    "role": "process",
+    "action": "Compute the Au-Ni Morse parameters using the combination rules D_AuNi = sqrt(D_Au * D_Ni), α_AuNi = 0.5*(α_Au + α_Ni), r0_AuNi = sqrt(α_Au * α_Ni) + ln(2)/α_AuNi.",
+    "output_file": "",
+    "evidence": "morse_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Add the Au-Ni parameters to the parameters file.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_build_models",
+    "title": "Build superlattice models",
+    "role": "process",
+    "action": "Generate initial atomic coordinates for five FCC(111)-textured Au/Ni superlattices with layer periodicities 1/1, 3/3, 5/5, 7/7, 9/9 in cylindrical cells of radius ~20 Å containing ~2000 atoms, with periodic boundary conditions applied along the stacking [111] direction.",
+    "output_file": "",
+    "evidence": "initial_structures.extxyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Save initial geometries for all five structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5_relax_structures",
+    "title": "Relax structures by molecular dynamics",
+    "role": "process",
+    "action": "Relax all five superlattice models using molecular dynamics under the full Morse potential set (Au-Au, Ni-Ni, Au-Ni) to obtain equilibrium atomic positions and interplanar spacings.",
+    "output_file": "",
+    "evidence": "relaxed_structures.extxyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Save relaxed coordinates for each structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6_youngs_modulus",
+    "title": "Compute Young's modulus",
+    "role": "scored",
+    "action": "For each relaxed superlattice, apply a series of small uniaxial strains ε along [111], recompute the potential energy W, and extract Young's modulus Y[111] from the quadratic fit W = 0.5 Y[111] ε². Create a CSV with modulation wavelength and corresponding Y[111] for all five layer sequences.",
+    "output_file": "youngs_modulus_per_lambda.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Young's modulus along [111] for each modulation wavelength.",
+    "output_schema": "Columns: modulation_wavelength (Å), Y111 (10^12 dyn/cm^2). One row per layer sequence (1/1, 3/3, 5/5, 7/7, 9/9)."
+  },
+  {
+    "id": "step_7_ldos",
+    "title": "Compute vibrational LDOS",
+    "role": "scored",
+    "action": "Using the relaxed (3/3) structure and the Morse potential force constants, apply the recursion method (at least 10 recursion levels) to compute the vibrational local density of states (LDOS) for an Au atom at the interface, an Ni atom at the interface, and the corresponding interior atoms. Write a CSV with frequency and LDOS for all four sites.",
+    "output_file": "ldos_data.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Vibrational LDOS spectra for interface and interior atoms.",
+    "output_schema": "Columns: frequency (Hz), LDOS_Au_interface, LDOS_Ni_interface, LDOS_Au_interior, LDOS_Ni_interior. Rows cover the frequency range from 0 to at least 10^13 Hz."
+  }
+]

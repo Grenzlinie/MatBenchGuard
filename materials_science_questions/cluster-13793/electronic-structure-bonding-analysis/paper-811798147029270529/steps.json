@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Build interface models",
+    "role": "process",
+    "action": "Construct atomic models for all required systems: 6-layer Pt(111) slab (3 atoms per layer), 2×2 graphene supercell, Pt slab with adatom X at hollow site (X = Co, Ni, V, Ti), graphene with adatom X at hollow site, pristine Pt/graphene interface, and Pt/graphene+X interfaces with adatom placed between hollow site of graphene and top site of Pt using registry (111)[1̄21]Pt || (0001)[01̄0]C. Set in-plane dimensions to approximately match (Pt ~4.87 Å, graphene ~4.92 Å; 1% strain accepted) and add 15 Å vacuum in the z-direction.",
+    "output_file": "",
+    "evidence": "model_structures.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Atomic coordinate files for all subsystems; used as input for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT total-energy calculations",
+    "role": "process",
+    "action": "Perform spin-polarized DFT geometry relaxations using PAW-PBE (or an equivalent GGA functional) for all systems from step1. Use a k-point grid equivalent to 10×10×1 and a plane-wave cutoff equivalent to 500 eV. Converge forces to <0.05 eV/Å and electronic self-consistency to 10⁻⁵ eV. Record the final relaxed total energies: E_Pt, E_Pt+X (for each X), E_graphene, E_graphene+X, E_Pt/graphene (pristine), and E_Pt/graphene+X.",
+    "output_file": "",
+    "evidence": "dft_total_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "File storing the converged total energies of all relaxed systems; consumed by the Wsep and Bader steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Work of separation calculation",
+    "role": "scored",
+    "action": "Using the total energies from step2 and the interface area A (the xy cross-sectional area of the supercell), compute W_sep^Pt-X and W_sep^C-X according to the two-channel decomposition (energetics of breaking Pt-X bond and C-X bond) for each adatom. Also compute the reference W_sep for the pristine Pt/graphene interface. Write the results to work_of_separation.csv with one row per system; include a row with adatom='None' for the pure interface.",
+    "output_file": "work_of_separation.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Work of separation values (J/m^2) for Pt-X and C-X cleavage channels for each adatom.",
+    "output_schema": "Columns: adatom (str), W_sep_Pt_X (float, J/m^2), W_sep_C_X (float, J/m^2)."
+  },
+  {
+    "id": "step4",
+    "title": "Bader charge analysis",
+    "role": "scored",
+    "action": "Perform Bader charge analysis on the relaxed charge densities of the Pt/graphene+X interfaces and the pristine interface (from step2). For each system, compute the charge transferred from the adatom to the Pt slab (total Bader charge on Pt minus the charge of the isolated Pt slab) and to the graphene (total on C minus isolated graphene), in units of elementary charge |e|. Write the results to charge_transfer.csv with rows for each adatom and a row for 'None' (pure interface, charge transfer zero).",
+    "output_file": "charge_transfer.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Charge donated from adatom to Pt and to carbon, in elementary charge units.",
+    "output_schema": "Columns: adatom (str), charge_to_Pt (float, |e|), charge_to_C (float, |e|)."
+  }
+]

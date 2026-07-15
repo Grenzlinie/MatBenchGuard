@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All quantities are fixed analytic results of the Debye model; the checker recomputes them from the same formulas and compares with exact-match tolerance, no trust in agent-reported values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Exact analytic Mori parameters and Laplace transforms for Debye isotropic solid",
+      "source_provenance": "Debye model formulas from the paper: spectral moments, recurrence for Δ_i², Φ̂₀(0)=π/(2ω_D), recurrence for γ_i; displacement Laplace=π/(2ω_D), velocity Laplace=0.",
+      "generation_method": "Computed from formulas: Δ₁²/ω_D²=1/3, Δ₂²=4/15, Δ₃²=9/35, Δ₄²=16/63; γ₁/ω_D=π/6, γ₂=8/(5π), γ₃=9π/56, γ₄=128/(81π); displacement Laplace/ω_D=π/2, velocity Laplace/ω_D=0.",
+      "why_not_fabricated": "All values are fixed deterministic quantities derived from the public Debye model; a correct re-derivation yields exactly these numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_mori_chain_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta1_sq_over_wD2": "float",
+            "delta2_sq_over_wD2": "float",
+            "delta3_sq_over_wD2": "float",
+            "delta4_sq_over_wD2": "float",
+            "gamma1_over_wD": "float",
+            "gamma2_over_wD": "float",
+            "gamma3_over_wD": "float",
+            "gamma4_over_wD": "float"
+          },
+          "items": {}
+        },
+        "description": "Dimensionless Mori chain coupling coefficients Δ_i²/ω_D² and damping coefficients γ_i/ω_D for the displacement operator."
+      },
+      {
+        "file": "step_02_correlation_laplace.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Phi0_laplace_over_wD": "float",
+            "Phi0_vel_laplace_over_wD": "float"
+          },
+          "items": {}
+        },
+        "description": "Zero-frequency Laplace transforms of the displacement and velocity autocorrelation functions, expressed as dimensionless ratios relative to ω_D."
+      }
+    ],
+    "notes": "All quantities are dimensionless ratios derived from the Debye model within the high-temperature classical limit. The values are uniquely determined by the public problem definition; exact analytic comparison is performed by the hidden checker."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_mori_chain_params.json",
+      "kind": "json_field",
+      "weight": 0.8,
+      "target": "computed analytically",
+      "tolerance_abs": 1e-06,
+      "fields_to_check": [
+        "delta1_sq_over_wD2",
+        "delta2_sq_over_wD2",
+        "delta3_sq_over_wD2",
+        "delta4_sq_over_wD2",
+        "gamma1_over_wD",
+        "gamma2_over_wD",
+        "gamma3_over_wD",
+        "gamma4_over_wD"
+      ],
+      "note": "Each field compared to exact rational/pi-based gold within 1e-6"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_correlation_laplace.json",
+      "kind": "json_field",
+      "weight": 0.2,
+      "target": "computed analytically",
+      "tolerance_abs": 1e-06,
+      "fields_to_check": [
+        "Phi0_laplace_over_wD",
+        "Phi0_vel_laplace_over_wD"
+      ],
+      "note": "Phi0_laplace_over_wD = π/2, Phi0_vel_laplace_over_wD = 0 (within machine precision)"
+    }
+  ]
+}

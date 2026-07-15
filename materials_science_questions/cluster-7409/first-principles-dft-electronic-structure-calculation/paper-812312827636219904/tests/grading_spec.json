@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute feasible: band gaps and Fermi level position are recomputed from the raw DOS CSV files; migration barriers compared to paper reference with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dos_LTO.csv": "metric_recompute",
+    "dos_LMTZO_Ov.csv": "metric_recompute",
+    "migration_barriers.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "LTO band gap reference range 1.7-2.3 eV",
+      "source_provenance": "Paper text: 'according to the density of states of LTO, its band gap is about 2.0 eV' and 'previous literature shows that calculated values of the band gap for LTO are between 1.7eV and 2.3eV'.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Directly cited from the paper's own reported range."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Li+ migration barriers reference values (LMTZO: 0.415 eV, LMTZO_Ov: 0.345 eV)",
+      "source_provenance": "Paper text: 'the energy barrier decreased from 0.415eV of the LMTZO sample to 0.345eV of the LMTZO-Ov sample' (Fig. 4c).",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Values are explicitly stated in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_LTO.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos_total"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos_total": "states/eV"
+          }
+        },
+        "description": "Total density of states for pristine Li4Ti5O12; used by the checker to recompute the band gap."
+      },
+      {
+        "file": "dos_LMTZO_Ov.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos_total"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos_total": "states/eV"
+          }
+        },
+        "description": "Total density of states for Mg/Zr co-doped Li4Ti5O12 with one oxygen vacancy; used to recompute the band gap and Fermi level position."
+      },
+      {
+        "file": "migration_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "LMTZO",
+            "LMTZO_Ov"
+          ],
+          "items": {
+            "LMTZO": "float (eV)",
+            "LMTZO_Ov": "float (eV)"
+          }
+        },
+        "description": "NEB-computed Li+ migration barriers (eV) for LMTZO and LMTZO-Ov; compared against paper-reported values within tolerance."
+      }
+    ],
+    "notes": "All output files are machine-readable. The checker recomputes the band gap from the DOS CSV files and compares migration barriers to the paper’s hidden reference values."
+  },
+  "steps": [
+    {
+      "id": "dos_LTO",
+      "output_file": "dos_LTO.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "description": "Validate DOS file and recompute band gap of pristine LTO. Band gap should lie within the plausible range (1.7 – 2.3 eV) reported in the paper and literature.",
+      "check": {
+        "dos_threshold": 0.01,
+        "band_gap_range": [
+          1.7,
+          2.3
+        ]
+      }
+    },
+    {
+      "id": "dos_LMTZO_Ov",
+      "output_file": "dos_LMTZO_Ov.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "description": "Recompute band gap of LMTZO-Ov and check that it is at least 0.1 eV narrower than the LTO band gap, and that the Fermi level (E=0) lies in the conduction band (DOS > 0.01 states/eV).",
+      "check": {
+        "dos_threshold": 0.01,
+        "band_gap_narrowing": 0.1,
+        "fermi_dos_threshold": 0.01
+      }
+    },
+    {
+      "id": "migration_barriers",
+      "output_file": "migration_barriers.json",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "description": "Compare the computed Li+ migration barriers to the paper-reported values (LMTZO: 0.415 eV, LMTZO_Ov: 0.345 eV) within a tolerance of ±0.05 eV, and verify that the barrier for LMTZO-Ov is lower than for LMTZO.",
+      "reference": {
+        "LMTZO": 0.415,
+        "LMTZO_Ov": 0.345
+      },
+      "tolerance": 0.05,
+      "require_ordering": true
+    }
+  ]
+}

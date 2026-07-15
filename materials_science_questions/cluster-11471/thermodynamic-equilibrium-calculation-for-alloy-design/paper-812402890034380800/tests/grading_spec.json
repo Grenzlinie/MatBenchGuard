@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The partition coefficient step can be recomputed from metastable_data_alloy1.json if present; for other steps and as fallback we compare the agent's reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_phase_fractions.json": "reference_match",
+    "step_02_partition_coefficient.json": "reference_match",
+    "step_03_silicon_effect.txt": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phase_fractions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "alloy1_vol_frac_ferrite_850C": "float",
+            "alloy1_vol_frac_M7C3_850C": "float",
+            "alloy2_stable_phase_at_800C": "string",
+            "alloy1_vol_frac_austenite_1300C": "float"
+          }
+        },
+        "description": "Extracted equilibrium volume fractions and stable phases from thermodynamic calculations."
+      },
+      {
+        "file": "step_02_partition_coefficient.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Cr_partition_coefficient_1300C": "float"
+          }
+        },
+        "description": "Computed chromium partition coefficient between M7C3 and austenite at 1300°C."
+      },
+      {
+        "file": "step_03_silicon_effect.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "description": "Single-line string stating whether silicon removal stabilizes austenite."
+        },
+        "description": "Statement of the silicon effect on austenite stability in alloy 2."
+      }
+    ],
+    "notes": "All comparisons are against paper-reported reference values with appropriate tolerances. Volume fractions and partition coefficient are checked within a tolerance; the silicon effect string must match the expected answer."
+  },
+  "steps": [
+    {
+      "id": "step03_phase_fractions",
+      "output_file": "step_01_phase_fractions.json",
+      "weight": 0.35,
+      "kind": "numeric_field",
+      "target": {
+        "alloy1_vol_frac_ferrite_850C": {
+          "min": 0.44,
+          "max": 0.54
+        },
+        "alloy1_vol_frac_M7C3_850C": {
+          "min": 0.46,
+          "max": 0.56
+        },
+        "alloy2_stable_phase_at_800C": {
+          "expected": "ferrite+M7C3"
+        },
+        "alloy1_vol_frac_austenite_1300C": {
+          "min": 0.52,
+          "max": 0.62
+        }
+      }
+    },
+    {
+      "id": "step04_partition_coefficient",
+      "output_file": "step_02_partition_coefficient.json",
+      "weight": 0.45,
+      "kind": "recompute_or_numeric",
+      "target": {
+        "Cr_partition_coefficient_1300C": {
+          "min": 2.5,
+          "max": 3.5
+        }
+      },
+      "evidence_file": "metastable_data_alloy1.json"
+    },
+    {
+      "id": "step06_silicon_effect",
+      "output_file": "step_03_silicon_effect.txt",
+      "weight": 0.2,
+      "kind": "exact_text",
+      "target": {
+        "expected": "Yes, austenite appears at high temperature after removing silicon"
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported equilibrium phase fractions, Cr partition coefficient, and Si effect on austenite stability",
+      "source_provenance": "Paper (Materials Science and Engineering A, 1990): text and figures (Fig. 11, Fig. 7, Fig. 12, Section 3.5)",
+      "generation_method": "Extracted from the paper: ferrite 0.49 ±0.05, M7C3 0.51 ±0.05, austenite volume fraction 0.57 at 1300°C, k_Cr ≈ 3.0 ±0.5, Si removal stabilises austenite.",
+      "why_not_fabricated": "Values are directly quoted from the paper's own thermodynamic analysis and used as reference for tolerance-based scoring."
+    }
+  ]
+}

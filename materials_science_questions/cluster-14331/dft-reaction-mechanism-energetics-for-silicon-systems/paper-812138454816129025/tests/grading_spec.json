@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "The output contract provides only final summary values (torsion, HFC constants, barrier, averaged coupling) without raw scan data needed for recomputation. Result-level comparison against paper-reported gold with tolerances is acceptable.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_geometry.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Optimized XYZ coordinates followed by a line giving the HNSiH torsion angle. The checker parses the final line for the angle value and compares it to the hidden gold within a tolerance."
+        },
+        "description": "Optimized geometry and HNSiH torsion angle."
+      },
+      {
+        "file": "step_02_hfc_equilibrium.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a_iso_Si",
+            "a_iso_N",
+            "a_iso_H"
+          ],
+          "properties": {
+            "a_iso_Si": {
+              "type": "number",
+              "unit": "Gauss"
+            },
+            "a_iso_N": {
+              "type": "number",
+              "unit": "Gauss"
+            },
+            "a_iso_H": {
+              "type": "number",
+              "unit": "Gauss"
+            }
+          }
+        },
+        "description": "Equilibrium isotropic hyperfine coupling constants for ²⁹Si, ¹⁴N, and ¹H (in Gauss)."
+      },
+      {
+        "file": "step_03_rotation_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line 'barrier: <value>'. The checker extracts the barrier value (kcal/mol) and compares it to the hidden gold within a tolerance."
+        },
+        "description": "NH2 internal rotation barrier height (kcal/mol)."
+      },
+      {
+        "file": "step_04_average_a_iso_14N_300K.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line 'a_iso_N_300K: <value>'. The checker extracts the averaged ¹⁴N isotropic coupling (Gauss) and compares it to the hidden gold within a tolerance."
+        },
+        "description": "Temperature‑averaged a_iso(¹⁴N) at 300 K (Gauss)."
+      }
+    ],
+    "notes": "All quantities are compared to the reference DFT‑computed values from the paper. Tolerances absorb legitimate toolchain spread. The load‑bearing step (step_04) forces genuine execution of the full workflow."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold target values for HNSiH torsion, equilibrium HFC constants, rotation barrier bound, and temperature-averaged 14N coupling.",
+      "source_provenance": "Paper Table 1 and accompanying text (Radtsig, 2005). HNSiH torsion 145.2°, a_iso(29Si) -391.4 G, a_iso(14N) 8.8 G, a_iso(1H) -3.8 G, barrier ≤2 kcal/mol, averaged a_iso(14N) at 300 K = 11.2 G.",
+      "generation_method": "Extracted directly from the paper; barrier upper bound translated to threshold.",
+      "why_not_fabricated": "Values are the paper's own computed DFT results used to support the radical assignment; they are the target of the reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_geometry.txt",
+      "kind": "numeric_exact_match",
+      "weight": 0.1,
+      "target": {
+        "torsion": 145.2,
+        "tolerance_abs": 2.0
+      },
+      "description": "HNSiH torsion angle extraction"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_hfc_equilibrium.json",
+      "kind": "numeric_exact_match_fields",
+      "weight": 0.25,
+      "targets": {
+        "a_iso_Si": {
+          "value": -391.4,
+          "tol_abs": 2.0,
+          "tol_rel": 0.05
+        },
+        "a_iso_N": {
+          "value": 8.8,
+          "tol_abs": 2.0,
+          "tol_rel": 0.05
+        },
+        "a_iso_H": {
+          "value": -3.8,
+          "tol_abs": 2.0,
+          "tol_rel": 0.05
+        }
+      },
+      "description": "Equilibrium isotropic HFC constants"
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_rotation_barrier.txt",
+      "kind": "threshold_or_better",
+      "weight": 0.2,
+      "target": {
+        "max_barrier": 2.0,
+        "slack": 0.5
+      },
+      "description": "NH2 rotation barrier: must be <= ~2 kcal/mol",
+      "better_direction": "lower"
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_average_a_iso_14N_300K.txt",
+      "kind": "numeric_exact_match",
+      "weight": 0.45,
+      "target": {
+        "value": 11.2,
+        "tolerance_abs": 2.0
+      },
+      "description": "Boltzmann-averaged a_iso(14N) at 300 K"
+    }
+  ]
+}

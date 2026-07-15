@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute equilibrium energies and bulk moduli from raw energy-volume data via 4th-order polynomial fit; verify relative stability ordering and pseudocubic bulk modulus highest within ±15% of 230 GPa.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_vs_volume.csv": "metric_recompute",
+    "properties.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported total energies and bulk moduli (Table 2) used solely to set tolerances and reference values.",
+      "source_provenance": "Table 2 of the paper: total energies per C3P4 unit and bulk moduli.",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "Values are from the published paper, serving as reference for the main claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_vs_volume.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "volume_ang3",
+            "total_energy_eV"
+          ],
+          "units": {
+            "volume_ang3": "cubic Angstrom",
+            "total_energy_eV": "eV per C3P4 unit"
+          }
+        },
+        "description": "Raw DFT total energy vs. volume data for all C3P4 phases. Checker refits to derive equilibrium properties."
+      },
+      {
+        "file": "properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "equilibrium_energy_eV",
+            "equilibrium_volume_ang3",
+            "bulk_modulus_GPa"
+          ],
+          "units": {
+            "equilibrium_energy_eV": "eV per C3P4 unit",
+            "equilibrium_volume_ang3": "cubic Angstrom",
+            "bulk_modulus_GPa": "GPa"
+          }
+        },
+        "description": "Fitted equilibrium properties from 4th-order polynomial E(V) fit. Checker recomputes from raw data and verifies stability ordering and bulk modulus value."
+      }
+    ],
+    "notes": "The checker will refit the raw E(V) data to verify that pseudocubic-C3P4 has the lowest total energy (most stable) and the highest bulk modulus among the five phases, within acceptable tolerance."
+  },
+  "gold": {
+    "energies": {
+      "alpha": -1184.92463,
+      "beta": -1183.90798,
+      "cubic": -1183.51366,
+      "pseudocubic": -1186.78941,
+      "graphitic": -1184.16285
+    },
+    "bulk_moduli": {
+      "alpha": 174,
+      "beta": 160,
+      "cubic": 171,
+      "pseudocubic": 230
+    }
+  },
+  "steps": [
+    {
+      "id": "evv_check",
+      "output_file": "energy_vs_volume.csv",
+      "weight": 0.8,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "description": "Recompute equilibrium energies and bulk moduli from energy-volume points; verify stability ordering and pseudocubic B0 highest within ±15% of 230 GPa.",
+      "tolerances": {
+        "pseudocubic_bulk_modulus_GPa": 230,
+        "tolerance_relative": 0.15
+      }
+    },
+    {
+      "id": "properties_check",
+      "output_file": "properties.csv",
+      "weight": 0.2,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "description": "Cross-check reported equilibrium properties against values refitted from the raw energy-volume data.",
+      "tolerances": {
+        "energy_rel": 0.01,
+        "volume_rel": 0.05,
+        "bulk_modulus_rel": 0.1
+      }
+    }
+  ]
+}

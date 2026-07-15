@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "JSD formulas are explicit and can be recomputed from reported parameters; distribution and drift velocity are verified via structural properties and ratio derived from paper claims.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "joint_spectral_density.csv": "metric_recompute",
+    "monte_carlo_distribution.csv": "structural_audit",
+    "drift_velocity.csv": "threshold_or_better"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "joint_spectral_density.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "type",
+            "field_kVcm",
+            "initial_energy_eV",
+            "P_eV",
+            "final_energy_eV",
+            "K",
+            "model"
+          ],
+          "units": {
+            "field_kVcm": "kV/cm",
+            "initial_energy_eV": "eV",
+            "P_eV": "eV",
+            "final_energy_eV": "eV",
+            "K": "dimensionless"
+          }
+        },
+        "description": "Joint spectral density values for ICFE (exact and Lorentzian) and collisional broadening. Checker recomputes K from the same formulas and parameters and compares with a relative tolerance."
+      },
+      {
+        "file": "monte_carlo_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "energy_eV",
+            "probability_density"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "probability_density": "dimensionless"
+          }
+        },
+        "description": "Electron energy distribution histograms with and without collisional broadening. Checker verifies structural properties: the ‘without_CB’ distribution approximates a Maxwellian shape, and the ‘with_CB’ distribution shows a noticeably enhanced high‑energy tail compared to the ‘without_CB’ case."
+      },
+      {
+        "file": "drift_velocity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "drift_velocity_cm_s"
+          ],
+          "units": {
+            "drift_velocity_cm_s": "cm/s"
+          }
+        },
+        "description": "Steady‑state drift velocity for the two conditions. Checker verifies that drift velocity with CB exceeds that without CB by a meaningful margin, consistent with the physical effect of collisional broadening."
+      }
+    ],
+    "notes": "The reproducibility of the Monte Carlo distribution and drift velocity relies on the agent running the full simulation with the specified parameters. The joint spectral density is recomputed from first principles by the checker."
+  },
+  "steps": [
+    {
+      "id": "step_jsd",
+      "output_file": "joint_spectral_density.csv",
+      "weight": 0.3,
+      "kind": "recompute_jsd",
+      "tol_rel": 0.001,
+      "tol_abs": 1e-06
+    },
+    {
+      "id": "step_dist",
+      "output_file": "monte_carlo_distribution.csv",
+      "weight": 0.35,
+      "kind": "rubric"
+    },
+    {
+      "id": "step_vd",
+      "output_file": "drift_velocity.csv",
+      "weight": 0.35,
+      "kind": "custom"
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's main claim is a set of directional changes (occupancy mean shift, transport metric trends) that can be verified structurally; absolute recompute from raw trajectories is not feasible because the verifier cannot run the full MD simulation.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "occupancy_phi_0.csv": "structural_audit",
+    "occupancy_phi_1.3.csv": "structural_audit",
+    "transport_summary.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "occupancy_phi_0.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N_c",
+            "probability_density"
+          ],
+          "units": {
+            "N_c": "dimensionless",
+            "probability_density": "dimensionless"
+          }
+        },
+        "description": "Normalized probability density of the continuous occupancy N_c for flexibility parameter φ=0."
+      },
+      {
+        "file": "occupancy_phi_1.3.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N_c",
+            "probability_density"
+          ],
+          "units": {
+            "N_c": "dimensionless",
+            "probability_density": "dimensionless"
+          }
+        },
+        "description": "Normalized probability density of the continuous occupancy N_c for flexibility parameter φ=1.3."
+      },
+      {
+        "file": "transport_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi",
+            "avg_N_w",
+            "N_exit",
+            "t_tr_ps"
+          ],
+          "units": {
+            "phi": "dimensionless",
+            "avg_N_w": "dimensionless",
+            "N_exit": "count",
+            "t_tr_ps": "ps"
+          }
+        },
+        "description": "Summary table of water transport metrics for φ=0 and φ=1.3."
+      }
+    ],
+    "notes": "The checker will compute the mean N_c from each occupancy histogram and verify that mean(φ=1.3) < mean(φ=0), and from the transport summary verify that avg_N_w(1.3) < avg_N_w(0), N_exit(1.3) < N_exit(0), and t_tr(1.3) > t_tr(0). Absolute numerical agreement is not required."
+  },
+  "steps": [
+    {
+      "id": "step_occ_phi0_shape",
+      "output_file": "occupancy_phi_0.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify occupancy_phi_0.csv exists, has required columns, bin range 0-8, and is a valid normalized probability density."
+    },
+    {
+      "id": "step_occ_phi13_shape",
+      "output_file": "occupancy_phi_1.3.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Same checks for occupancy_phi_1.3.csv."
+    },
+    {
+      "id": "step_transport_shape",
+      "output_file": "transport_summary.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify transport_summary.csv exists, has required columns, and contains rows for phi=0 and phi=1.3."
+    },
+    {
+      "id": "step_occ_trend",
+      "output_file": "occupancy_phi_0.csv",
+      "kind": "structural_audit",
+      "weight": 0.35,
+      "description": "Compute weighted mean N_c from both occupancy histograms and verify that mean(phi=1.3) < mean(phi=0)."
+    },
+    {
+      "id": "step_transport_trend",
+      "output_file": "transport_summary.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "description": "Verify all three transport trends: avg_N_w(1.3) < avg_N_w(0), N_exit(1.3) < N_exit(0), t_tr(1.3) > t_tr(0)."
+    }
+  ]
+}

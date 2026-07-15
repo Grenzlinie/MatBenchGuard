@@ -1,0 +1,170 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Core claim is relative ordering of geometric and energetic properties between deprotonated and undeprotonated complexes; absolute values vary with DFT implementation, so trend is the verifiable target. No hidden gold numbers are needed.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_01_optimized_structures.xyz": "structural_audit",
+    "step_02_Fe_Fe_distances.json": "structural_audit",
+    "step_03_Fe_N_bond_lengths.json": "structural_audit",
+    "step_04_formation_energies.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_optimized_structures.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required": "Concatenated XYZ with a comment line per complex identifying deprotonated/undeprotonated and model (A1/A2/A3).",
+          "description": "Expected atom counts must match the molecular formulas of the six complexes."
+        },
+        "description": "Optimized geometries of all six complexes for structural verification and cross-check of atom counts."
+      },
+      {
+        "file": "step_02_Fe_Fe_distances.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "method",
+            "deprotonated",
+            "undeprotonated"
+          ],
+          "deprotonated": {
+            "type": "object",
+            "keys": [
+              "A1",
+              "A2",
+              "A3"
+            ],
+            "values": "array of numbers (Å)"
+          },
+          "undeprotonated": {
+            "type": "object",
+            "keys": [
+              "A1",
+              "A2",
+              "A3"
+            ],
+            "values": "array of numbers (Å)"
+          },
+          "method": {
+            "type": "string"
+          }
+        },
+        "description": "Fe-Fe distances per model and ligand type; used to check that deprotonated complexes exhibit systematically smaller distances."
+      },
+      {
+        "file": "step_03_Fe_N_bond_lengths.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "method",
+            "deprotonated",
+            "undeprotonated"
+          ],
+          "deprotonated": {
+            "type": "object",
+            "keys": [
+              "A2",
+              "A3"
+            ],
+            "values": {
+              "type": "object",
+              "keys": [
+                "deprot_ring",
+                "undeprot_ring"
+              ],
+              "values": "array of numbers (Å)"
+            }
+          },
+          "undeprotonated": {
+            "type": "object",
+            "keys": [
+              "A2",
+              "A3"
+            ],
+            "values": "array of numbers (Å)"
+          },
+          "method": {
+            "type": "string"
+          }
+        },
+        "description": "Fe-N bond lengths organized by complex and ring type; used to verify that deprotonated bonds are shorter."
+      },
+      {
+        "file": "step_04_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "method",
+            "deprotonated",
+            "undeprotonated",
+            "units"
+          ],
+          "deprotonated": {
+            "type": "object",
+            "keys": [
+              "A1",
+              "A2",
+              "A3"
+            ],
+            "values": "number (kJ/mol)"
+          },
+          "undeprotonated": {
+            "type": "object",
+            "keys": [
+              "A1",
+              "A2",
+              "A3"
+            ],
+            "values": "number (kJ/mol)"
+          },
+          "units": {
+            "type": "string",
+            "const": "kJ/mol"
+          }
+        },
+        "description": "Formation energies for each complex; used to confirm that deprotonated complexes are more stable (lower energy)."
+      }
+    ],
+    "notes": "Only the B3LYP/6-31G(d) method is required; the agent must use an open-source DFT code. The scoring of geometric trends is based on the relative ordering of deprotonated versus undeprotonated values for each model, not on exact absolute values."
+  },
+  "steps": [
+    {
+      "id": "step_01_xyz_valid",
+      "output_file": "step_01_optimized_structures.xyz",
+      "kind": "structural_audit",
+      "weight": 0.1
+    },
+    {
+      "id": "step_02_fe_fe_trend",
+      "output_file": "step_02_Fe_Fe_distances.json",
+      "kind": "structural_audit",
+      "weight": 0.35
+    },
+    {
+      "id": "step_03_fe_n_trend",
+      "output_file": "step_03_Fe_N_bond_lengths.json",
+      "kind": "structural_audit",
+      "weight": 0.25
+    },
+    {
+      "id": "step_04_energy_trend",
+      "output_file": "step_04_formation_energies.json",
+      "kind": "structural_audit",
+      "weight": 0.3
+    }
+  ]
+}

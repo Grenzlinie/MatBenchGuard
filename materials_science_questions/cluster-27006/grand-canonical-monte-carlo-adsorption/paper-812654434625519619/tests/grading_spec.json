@@ -1,0 +1,224 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The verifier cannot re-run the CBMC simulations; compare agent's reported quantities to hidden gold from the paper with domain-appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference heats of adsorption, siting fractions, hopping rates, diffusion coefficients",
+      "source_provenance": "Paper Fig.1 (heats), Table 4 (hopping rates), Table 5 (diffusion coefficients), and siting fractions deduced from text and Fig.3,4",
+      "generation_method": "Values extracted from paper tables/figures and confirmed to be consistent with reference solve.sh that reconstructs the paper's results.",
+      "why_not_fabricated": "These are the paper's own reported quantities for the identical system (silicalite, Wang force field, same temperatures) and are used as the reference to verify reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heats_of_adsorption.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Nc",
+            "heat_of_adsorption_kJ_per_mol"
+          ],
+          "units": {
+            "Nc": "integer",
+            "heat_of_adsorption_kJ_per_mol": "kJ/mol"
+          }
+        },
+        "description": "Heats of adsorption for singly branched alkanes (Nc=5-8) in silicalite at 398 K."
+      },
+      {
+        "file": "siting_distribution.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "2-methylbutane",
+            "pentane"
+          ],
+          "properties": {
+            "2-methylbutane": {
+              "type": "object",
+              "required": [
+                "straight",
+                "zigzag",
+                "intersection"
+              ],
+              "properties": {
+                "straight": "float",
+                "zigzag": "float",
+                "intersection": "float"
+              }
+            },
+            "pentane": {
+              "type": "object",
+              "required": [
+                "straight",
+                "zigzag",
+                "intersection"
+              ],
+              "properties": {
+                "straight": "float",
+                "zigzag": "float",
+                "intersection": "float"
+              }
+            }
+          }
+        },
+        "description": "Occupancy fractions in straight channels, zig-zag channels, and intersections for 2-methylbutane and pentane at 298 K."
+      },
+      {
+        "file": "diffusion_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "straight_channel",
+            "zigzag_channel",
+            "hopping_rates",
+            "diffusion_coefficients"
+          ],
+          "properties": {
+            "straight_channel": {
+              "type": "object",
+              "required": [
+                "q",
+                "free_energy"
+              ],
+              "properties": {
+                "q": "array of float",
+                "free_energy": "array of float"
+              }
+            },
+            "zigzag_channel": {
+              "type": "object",
+              "required": [
+                "q",
+                "free_energy"
+              ],
+              "properties": {
+                "q": "array of float",
+                "free_energy": "array of float"
+              }
+            },
+            "hopping_rates": {
+              "type": "object",
+              "required": [
+                "str_1_to_2",
+                "str_2_to_3",
+                "str_3_to_1",
+                "zz_1_to_2",
+                "zz_2_to_3",
+                "zz_3_to_4",
+                "zz_4_to_1"
+              ],
+              "properties": {
+                "str_1_to_2": "float (events/s)",
+                "str_2_to_3": "float",
+                "str_3_to_1": "float",
+                "zz_1_to_2": "float",
+                "zz_2_to_3": "float",
+                "zz_3_to_4": "float",
+                "zz_4_to_1": "float"
+              }
+            },
+            "diffusion_coefficients": {
+              "type": "object",
+              "required": [
+                "Dxx",
+                "Dyy",
+                "Dzz",
+                "D"
+              ],
+              "properties": {
+                "Dxx": "float (cm^2/s)",
+                "Dyy": "float",
+                "Dzz": "float",
+                "D": "float"
+              }
+            }
+          }
+        },
+        "description": "Free energy profiles, hopping rates, and anisotropic diffusion coefficients for 2-methylhexane in silicalite at 398 K."
+      }
+    ],
+    "notes": "All three outputs are compared to hidden gold values extracted from the paper with appropriate tolerances (see grading_spec, not public)."
+  },
+  "gold_heats": {
+    "5": 58.2,
+    "6": 68.3,
+    "7": 78.5,
+    "8": 88.7
+  },
+  "gold_siting": {
+    "2-methylbutane": {
+      "straight": 0.1,
+      "zigzag": 0.1,
+      "intersection": 0.8
+    },
+    "pentane": {
+      "straight": 0.33,
+      "zigzag": 0.33,
+      "intersection": 0.34
+    }
+  },
+  "gold_hopping": {
+    "str_1_to_2": 140000.0,
+    "str_2_to_3": 43000000000.0,
+    "str_3_to_1": 26000000000.0,
+    "zz_1_to_2": 50000.0,
+    "zz_2_to_3": 130000000000.0,
+    "zz_3_to_4": 100000000000.0,
+    "zz_4_to_1": 1400000000.0
+  },
+  "gold_diff": {
+    "Dxx": 1.7e-10,
+    "Dyy": 4.7e-10,
+    "Dzz": 2.1e-10,
+    "D": 8.5e-10
+  },
+  "steps": [
+    {
+      "id": "heats",
+      "output_file": "heats_of_adsorption.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "tolerance": 3.0
+    },
+    {
+      "id": "siting",
+      "output_file": "siting_distribution.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "tolerance": 0.05
+    },
+    {
+      "id": "hopping_rates",
+      "output_file": "diffusion_results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "tolerance": 3,
+      "note": "Within factor 3"
+    },
+    {
+      "id": "diffusion_coefficients",
+      "output_file": "diffusion_results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "tolerance": 3,
+      "note": "Within factor 3"
+    }
+  ]
+}

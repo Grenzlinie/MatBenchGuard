@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_prepare_structures",
+    "title": "Prepare crystal structure inputs",
+    "role": "process",
+    "action": "Download the CIF files for LBBSF (CCDC 2053035) and BBSF (CCDC 2053036) from the Cambridge Structural Database and convert them into the input geometry format required by the chosen plane-wave DFT code.",
+    "output_file": "",
+    "evidence": "geometry_inputs.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate to produce DFT input geometry files for both compounds. Evidence log records the conversion steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dft_scf_band",
+    "title": "DFT SCF and band structure calculations",
+    "role": "process",
+    "action": "For each compound, run self-consistent field (SCF) calculations with a GGA functional and appropriate pseudopotentials, then compute the band structure along the high-symmetry k-path of space group P3_1m. Keep the self-consistent charge density and the Kohn-Sham eigenvalues.",
+    "output_file": "",
+    "evidence": "dft_calculation.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core DFT step that produces the electronic structure data needed for property extraction. Evidence log captures convergence and job completion.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_compute_properties",
+    "title": "Compute band gaps, SHG tensor, and birefringence",
+    "role": "scored",
+    "action": "From the DFT results, extract the valence band maximum (VBM) and conduction band minimum (CBM) to obtain the uncorrected band gap in eV and identify whether it is quasi-direct (VBM within ~0.02 eV of the CBM k-point). Next, apply a scissor correction to the conduction bands by shifting them up by 0.062 eV for LBBSF and 1.747 eV for BBSF. Using the scissor‑corrected band structure, compute the static second-order nonlinear susceptibility tensor (d_ij) under Kleinman symmetry and select the largest element (d33 for LBBSF, d22 for BBSF). Compute the refractive index dispersion and report the birefringence Δn = n_o − n_e at 546.1 nm. Write all results to step_01_results.json.",
+    "output_file": "step_01_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the uncorrected band gap, band gap type with k-point locations, largest SHG tensor element, and birefringence. SHG tensor and birefringence are computed using the scissor-corrected eigenvalues.",
+    "output_schema": "JSON object with keys 'LBBSF' and 'BBSF'. Each value is an object with fields: 'band_gap_uncorrected_ev' (float, eV), 'band_gap_type' (string), 'cbm_kpoint' (string), 'vbm_kpoint' (string), 'shg_tensor_largest' (object with 'element' string and 'value_pm_per_V' float), 'birefringence_546nm' (float)."
+  }
+]

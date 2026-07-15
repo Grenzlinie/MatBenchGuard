@@ -1,0 +1,54 @@
+[
+  {
+    "id": "build_solvated",
+    "title": "Build solvated RGD model",
+    "role": "process",
+    "action": "Download the 1FUV PDB structure from RCSB. Using PACKMOL, construct a solvation box with a 3 Å water shell containing 155 water molecules. Write the initial coordinate file for the solvated system (600 atoms).",
+    "output_file": "",
+    "evidence": "initial_solvated_coords.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the starting structure for DFT simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "geo_opt",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "Relax the solvated structure using DFT with the PBE functional, a suitable plane-wave energy cutoff, and a single k-point. Archive the optimized atomic coordinates.",
+    "output_file": "",
+    "evidence": "optimized_geometry.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain the ground-state geometry for subsequent strain calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "elastic_tensor",
+    "title": "DFT elastic tensor calculation via stress-strain",
+    "role": "process",
+    "action": "From the optimized geometry, apply the Nielsen–Martin stress-strain protocol: apply symmetric small strains (±0.25%, ±0.50%, ±0.75%, ±1.00%, ±1.25%, ±1.50%, ±1.75%, ±2.00%, ±2.25%, ±2.50%) and compute the stress response using DFT. Repeat the entire set of strain calculations five times, with different random seeds or initial perturbations to simulate solvent variability. For each of the five independent sets and each strain magnitude, extract the elastic stiffness tensor C_ij and compliance tensor S_ij.",
+    "output_file": "",
+    "evidence": "elastic_tensors_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate the raw elastic tensors needed for moduli post-processing.",
+    "output_schema": ""
+  },
+  {
+    "id": "moduli_stats",
+    "title": "Compute VRH moduli and statistics",
+    "role": "scored",
+    "action": "For each of the five independent sets and each of the ten positive strain magnitudes, compute the compliance tensor S_ij, then the Voigt bounds (K_Voigt, G_Voigt) and Reuss bounds (K_Reuss, G_Reuss). Average them to get Hill averages K and G. Derive Young's modulus E = 9KG/(3K+G) and Poisson's ratio η = (3K-2G)/(2(3K+G)). For each strain percentage, calculate the mean and standard deviation of K, G, E, η across the five sets. Write the results to /app/outputs/elastic_moduli_results.csv.",
+    "output_file": "elastic_moduli_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Mean and standard deviation of mechanical moduli across ten strain magnitudes from five independent sets.",
+    "output_schema": "CSV with 10 rows, one per strain percentage. Columns: strain_percent (float, unit: %), bulk_modulus_mean (float, GPa), bulk_modulus_std (float, GPa), shear_modulus_mean (float, GPa), shear_modulus_std (float, GPa), youngs_modulus_mean (float, GPa), youngs_modulus_std (float, GPa), poisson_ratio_mean (float, dimensionless), poisson_ratio_std (float, dimensionless)."
+  }
+]

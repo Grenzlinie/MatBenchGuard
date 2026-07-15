@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing from full DFT outputs is infeasible in the checker sandbox; compare extracted values to paper-reported DFT results with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "critical_width.txt": "exact_match",
+    "stress_threshold.json": "exact_match",
+    "terrace_ratio.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for critical width, tensile/compressive stress thresholds, and terrace-width ratio",
+      "source_provenance": "Paper-reported DFT results: critical width ~13 carbon rows (step 4), tensile_max ~-10 kbar and compressive_max ~+10 kbar (step 5), terrace ratio ~1.5 (step 9).",
+      "generation_method": "Extracted directly from the paper's reasoning chain and results text; no fabrication.",
+      "why_not_fabricated": "Values are the paper's own computed numbers; tolerances allow minor variations due to code/pseudopotential choice while preserving the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_width.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": "A single integer or float, without additional characters or whitespace, representing the number of carbon rows."
+        },
+        "description": "The critical graphene-ribbon width (carbon rows) for the flat-to-corrugated transition, read as a plain number."
+      },
+      {
+        "file": "stress_threshold.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "tensile_max": "float (negative value, units kbar)",
+            "compressive_max": "float (positive value, units kbar)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "tensile_max": "kbar",
+            "compressive_max": "kbar"
+          }
+        },
+        "description": "Maximum tensile and compressive excess stress (in kbar) in the optimized graphene overlayer, from the ribbon and infinite-layer simulations."
+      },
+      {
+        "file": "terrace_ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": "A single float, without additional characters or whitespace, representing the ratio of staircase terrace width to moiré period."
+        },
+        "description": "The dimensionless ratio of the optimal stepped‑terrace width (9.5 a_Ni) to the moiré beating period on flat Ni(100), derived from the stepped‑surface DFT simulation."
+      }
+    ],
+    "notes": "All scored artifacts are extracted from DFT simulations. The hidden checker compares the agent’s numbers to the paper’s reported DFT values with appropriate per‑artifact tolerances; no gold values are disclosed here. Structural sanity checks are also performed (tensile_max negative, compressive_max positive, ratio > 1.0)."
+  },
+  "steps": [
+    {
+      "id": "critical_width",
+      "output_file": "critical_width.txt",
+      "kind": "numeric",
+      "target": 13,
+      "tolerance": 1,
+      "weight": 0.3
+    },
+    {
+      "id": "stress_threshold",
+      "output_file": "stress_threshold.json",
+      "kind": "numeric_json_fields",
+      "fields": [
+        {
+          "key": "tensile_max",
+          "target": -10,
+          "tolerance": 2,
+          "structural": "negative"
+        },
+        {
+          "key": "compressive_max",
+          "target": 10,
+          "tolerance": 2,
+          "structural": "positive"
+        }
+      ],
+      "weight": 0.4
+    },
+    {
+      "id": "terrace_ratio",
+      "output_file": "terrace_ratio.txt",
+      "kind": "numeric",
+      "target": 1.5,
+      "tolerance": 0.1,
+      "weight": 0.3
+    }
+  ]
+}

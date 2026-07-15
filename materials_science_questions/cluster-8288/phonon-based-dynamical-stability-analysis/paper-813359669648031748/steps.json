@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_0",
+    "title": "Generate input structures",
+    "role": "process",
+    "action": "Construct unit cells for the six VN phases (NaCl, WC, AsNi, t-VN, ZnS, CsCl) using lattice parameters from the paper. Build 64-atom supercells for NaCl-based and WC-based V_xN_x with vacancy concentrations x = 1.0, 0.96875, 0.9375, 0.90625, 0.875, and impurity supercells V32N29C3 and V32N29O3, by adding/removing atoms appropriately.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Create all required atomic configurations for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "DFT geometry optimization and total energy",
+    "role": "process",
+    "action": "For each structure (six unit cells and all supercells), perform DFT relaxation using QUANTUM ESPRESSO with Vanderbilt ultrasoft pseudopotentials, PBE GGA, plane-wave cutoff 38 Ry, and appropriate k-point meshes. Relax cell parameters and atomic positions until forces < 1 mRy/bohr and stresses < 0.025 GPa. Record equilibrium total energies and structures.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain relaxed structures and total energies for subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Total energies of stoichiometric VN phases",
+    "role": "scored",
+    "action": "Extract total energy per atom (in meV/atom) for the six stoichiometric phases (WC, AsNi, t-VN, NaCl, ZnS, CsCl) from the relaxation results and write to step_01_total_energies.csv.",
+    "output_file": "step_01_total_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total energy per atom for each stoichiometric VN phase.",
+    "output_schema": "columns: phase (string), total_energy_per_atom_meV (float)"
+  },
+  {
+    "id": "step_3",
+    "title": "DFPT phonon calculations",
+    "role": "process",
+    "action": "For the WC, AsNi, t-VN, and NaCl relaxed structures, compute phonon dispersion and density of states using DFPT with a 6x6x6 q-mesh and interpolate to obtain PHDOS. Identify imaginary (negative) frequency modes.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Determine dynamical stability of the four lowest-energy phases.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Phonon dynamical stability flags",
+    "role": "scored",
+    "action": "Write a CSV file indicating for each of the four phases whether imaginary phonon modes are present (true) or not (false).",
+    "output_file": "step_02_phonon_stability.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Dynamic stability flags for NaCl, t-VN, AsNi, WC.",
+    "output_schema": "columns: phase (string), has_imaginary_modes (boolean)"
+  },
+  {
+    "id": "step_5",
+    "title": "Electronic density of states calculations",
+    "role": "process",
+    "action": "For all NaCl-based and WC-based supercells (stoichiometric, vacancy-containing, impurity-containing), compute total DOS using fine k-point meshes and extract N(E_F), the density of states at the Fermi level.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain N(E_F) values for all compositions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6",
+    "title": "Fermi-level DOS values",
+    "role": "scored",
+    "action": "Write step_03_NofEF.csv with N(E_F) for each configuration.",
+    "output_file": "step_03_NofEF.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Density of states at the Fermi level for each composition.",
+    "output_schema": "columns: structure_type (string, 'NaCl-based' or 'WC-based'), configuration (string, e.g., V32N32, V31N31, V30N30, V29N29, V28N28, V32N29C3, V32N29O3), N_E_F (float, units states/eV per unit cell)"
+  }
+]

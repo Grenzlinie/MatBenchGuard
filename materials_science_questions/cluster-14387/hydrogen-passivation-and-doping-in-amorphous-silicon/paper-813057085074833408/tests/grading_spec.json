@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes F_DAS from agent-reported E_DS and n_f using known cell-model relation F_DAS = E_DS + s0*k_B*T*n_f, checks self-consistency within tight tolerance, and verifies sign pattern and critical size against hidden gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dass_domain_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold critical size m_F=2 at 653 K and tolerance values",
+      "source_provenance": "paper Fig.5 and conclusion text 'critical size is m_F=2 at 653 K'",
+      "generation_method": "extracted from paper's reported result",
+      "why_not_fabricated": "this is the paper's own computed value that the reproduction must match"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dass_domain_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "m_F": {
+                "type": "integer"
+              },
+              "E_DS_eV": {
+                "type": "number"
+              },
+              "n_f": {
+                "type": "number"
+              },
+              "F_DAS_eV": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "m_F",
+              "E_DS_eV",
+              "n_f",
+              "F_DAS_eV"
+            ]
+          }
+        },
+        "description": "Computed surface free energy differences for DAS domain sizes m_F=1..10 at T=653 K. The checker recomputes F_DAS from E_DS and n_f, verifies that the absolute deviation is within tolerance, and identifies the critical nucleation size."
+      }
+    ],
+    "notes": "The element energies, entropy constant, and configuration counts (CH1, CH2, CH3, n_f) for each m_F are provided in the instruction. The agent implements the cell model exactly as described and writes the resulting table."
+  },
+  "steps": [
+    {
+      "id": "step_critical_size",
+      "output_file": "dass_domain_energies.json",
+      "weight": 1.0,
+      "kind": "recompute_metric",
+      "config": {
+        "s0_kBT": 0.01401123,
+        "self_consistency_tol": 1e-06,
+        "critical_m_F": 2,
+        "initial_positive": [
+          1
+        ],
+        "negative_from": 2
+      }
+    }
+  ]
+}

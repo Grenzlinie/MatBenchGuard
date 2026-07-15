@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities are final Poisson's ratios from DFT; the checker cannot re-run the full simulation, so it compares reported values to paper's reference with tolerances and checks required trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Poisson's ratios for neutral monolayers, doping, and strain responses from Table I and Figs 5-6.",
+      "source_provenance": "paper: DOI 10.1103/PhysRevB.98.184104, Table I and Figs 5-6.",
+      "generation_method": "Transcribed from the paper's reported values; the reference solve.sh embodies them.",
+      "why_not_fabricated": "These are the exact quantities reported in the paper and a correct reproduction must match them within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "poisson_ratios_neutral.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "v_zx",
+            "v_zy",
+            "v_yx",
+            "v_xy"
+          ],
+          "units": {}
+        },
+        "description": "Poisson's ratios for charge-neutral SnS, SnSe, GeS, GeSe monolayers. The checker compares each ratio to the paper's reported values within a hidden tolerance."
+      },
+      {
+        "file": "poisson_zy_doping.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "doping_electrons_per_atom",
+            "v_zy"
+          ],
+          "units": {}
+        },
+        "description": "ν_zy of GeSe as a function of electron doping. The checker validates the trend and values against paper-reported doping response."
+      },
+      {
+        "file": "poisson_zx_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_eps_x",
+            "v_zx"
+          ],
+          "units": {}
+        },
+        "description": "ν_zx of GeSe as a function of applied uniaxial strain ε_x. The checker validates the trend and values against paper-reported strain response."
+      }
+    ],
+    "notes": "The checker compares the agent's reported Poisson's ratios to the paper-reported reference values using tolerances suitable for open-source DFT re-implementation. No gold values or tolerances are disclosed publicly."
+  },
+  "steps": [
+    {
+      "id": "step_03_poisson_neutral",
+      "output_file": "poisson_ratios_neutral.csv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "tolerance_abs": 0.02,
+      "reference": {
+        "SnS": {
+          "v_zx": -0.004,
+          "v_zy": 0.404,
+          "v_yx": 0.422,
+          "v_xy": 0.961
+        },
+        "SnSe": {
+          "v_zx": -0.21,
+          "v_zy": 0.352,
+          "v_yx": 0.423,
+          "v_xy": 0.851
+        },
+        "GeS": {
+          "v_zx": -0.208,
+          "v_zy": 0.411,
+          "v_yx": 0.42,
+          "v_xy": 1.401
+        },
+        "GeSe": {
+          "v_zx": 0.583,
+          "v_zy": -0.433,
+          "v_yx": 0.391,
+          "v_xy": 1.039
+        }
+      }
+    },
+    {
+      "id": "step_05_poisson_doping",
+      "output_file": "poisson_zy_doping.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "tolerance_abs": 0.05,
+      "reference": {
+        "doping_electrons_per_atom": [
+          0.0,
+          0.025,
+          0.05,
+          0.075,
+          0.1
+        ],
+        "v_zy": [
+          -0.433,
+          -0.1,
+          0.2,
+          0.55,
+          0.895
+        ]
+      }
+    },
+    {
+      "id": "step_07_poisson_strain",
+      "output_file": "poisson_zx_strain.csv",
+      "weight": 0.3,
+      "kind": "structural_trends",
+      "tolerance_abs": 0.05,
+      "expected_low": {
+        "eps_x": 0.0,
+        "v_zx": 0.583
+      },
+      "expected_high": {
+        "eps_x": 0.14,
+        "v_zx": -0.433
+      },
+      "sign_change_eps": 0.06
+    }
+  ]
+}

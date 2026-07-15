@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute eigenvalue from agent’s β and Dq, check internal consistency, and verify resulting energy and Δ fall within paper’s reported ranges.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "calculated_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Energy range 12000–12500 cm⁻¹ and Δ range -5000 to -4500 cm⁻¹",
+      "source_provenance": "Paper text: 'calculate the ⁴T(⁴G) state to be 12000-12500 cm⁻¹' and abstract 'Δ ≈ -4500 to -5000 cm⁻¹'",
+      "generation_method": "Directly quoted from paper",
+      "why_not_fabricated": "Exact paper-reported ranges"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "calculated_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "beta",
+            "Dq",
+            "quartet_energy_cm-1",
+            "delta_cm-1"
+          ],
+          "properties": {
+            "beta": {
+              "type": "number",
+              "description": "Nephelauxetic reduction factor (dimensionless)"
+            },
+            "Dq": {
+              "type": "number",
+              "unit": "cm⁻¹",
+              "description": "Crystal-field parameter"
+            },
+            "quartet_energy_cm-1": {
+              "type": "number",
+              "unit": "cm⁻¹",
+              "description": "Lowest eigenvalue (⁴T(⁴G) energy)"
+            },
+            "delta_cm-1": {
+              "type": "number",
+              "unit": "cm⁻¹",
+              "description": "Ligand-field parameter Δ = -10·Dq"
+            }
+          }
+        },
+        "description": "The agent's computed lowest quartet energy and Δ; the checker will reconstruct the matrix using the reported β and Dq, recompute the lowest eigenvalue, and compare within tolerance, as well as verify the result falls within the physically acceptable range."
+      }
+    ],
+    "notes": "The agent may choose any Dq within 450–500 cm⁻¹. Only one parameter set is required. The checker recomputes the eigenvalue from the provided β and Dq."
+  },
+  "steps": [
+    {
+      "id": "solve_secular",
+      "output_file": "calculated_results.json",
+      "weight": 1.0,
+      "kind": "composite",
+      "recompute_tolerance_cm1": 1.0,
+      "quartet_energy_range_cm1": [
+        12000,
+        12500
+      ],
+      "delta_range_cm1": [
+        -5000,
+        -4500
+      ]
+    }
+  ]
+}

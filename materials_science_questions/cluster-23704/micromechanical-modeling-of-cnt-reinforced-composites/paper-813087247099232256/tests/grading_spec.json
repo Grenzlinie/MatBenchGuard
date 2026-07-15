@@ -1,0 +1,188 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MCF recomputed from CSV time series; alpha_max, w_max, T0 use result-level compare with paper gold because they cannot be recomputed from the CSV alone.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "contact_force_validation.csv": "metric_recompute",
+    "contact_force_fg_cntrc.csv": "metric_recompute",
+    "summary_metrics.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for peak metrics taken from paper Table 4 (X-CNTRC, V*_CNT=0.28) and Fig 1 (validation MCF).",
+      "source_provenance": "Paper Table 4 and Fig 1. Validation MCF approximated from figure/paper statement.",
+      "generation_method": "Values read directly from paper or estimated from comparison statements.",
+      "why_not_fabricated": "These are the paper's reported numbers for the target case and validation case; they are the ground truth for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "contact_force_validation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "contact_force"
+          ],
+          "units": {
+            "time": "seconds",
+            "contact_force": "Newtons"
+          }
+        },
+        "description": "Time series of contact force for the isotropic clamped plate impact."
+      },
+      {
+        "file": "contact_force_fg_cntrc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "contact_force"
+          ],
+          "units": {
+            "time": "seconds",
+            "contact_force": "Newtons"
+          }
+        },
+        "description": "Time series of contact force for the clamped X-CNTRC plate impact."
+      },
+      {
+        "file": "summary_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "validation",
+            "fg_cntrc"
+          ],
+          "properties": {
+            "validation": {
+              "type": "object",
+              "properties": {
+                "MCF": {
+                  "type": "number",
+                  "unit": "kN"
+                },
+                "alpha_max": {
+                  "type": "number",
+                  "unit": "mm"
+                },
+                "w_max": {
+                  "type": "number",
+                  "unit": "mm"
+                },
+                "T0": {
+                  "type": "number",
+                  "unit": "µs"
+                }
+              }
+            },
+            "fg_cntrc": {
+              "type": "object",
+              "properties": {
+                "MCF": {
+                  "type": "number",
+                  "unit": "kN"
+                },
+                "alpha_max": {
+                  "type": "number",
+                  "unit": "mm"
+                },
+                "w_max": {
+                  "type": "number",
+                  "unit": "mm"
+                },
+                "T0": {
+                  "type": "number",
+                  "unit": "µs"
+                }
+              }
+            }
+          }
+        },
+        "description": "Peak impact metrics for validation and FG-CNTRC cases."
+      }
+    ],
+    "notes": "The output contract covers the three artifacts used by the checker: two contact force time series (CSV) and a summary JSON of peak metrics. The checker recomputes peak force from the CSV files and verifies consistency with the summary. All required columns and fields are declared; no hidden gold values or tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "val_csv_mcf",
+      "output_file": "contact_force_validation.csv",
+      "kind": "numeric",
+      "target": 2.8,
+      "tolerance_pct": 0.1,
+      "weight": 0.2,
+      "description": "Peak contact force from validation CSV vs paper gold (gold=2.8 kN, tol 10%)"
+    },
+    {
+      "id": "fg_csv_mcf",
+      "output_file": "contact_force_fg_cntrc.csv",
+      "kind": "numeric",
+      "target": 2.85,
+      "tolerance_pct": 0.05,
+      "weight": 0.2,
+      "description": "Peak contact force from FG-CNTRC CSV vs paper gold (gold=2.85 kN, tol 5%)"
+    },
+    {
+      "id": "val_mcf_consistency",
+      "output_file": "summary_metrics.json",
+      "kind": "consistency",
+      "csv_peak_key": "val_csv_mcf",
+      "summary_key": "MCF",
+      "tolerance_pct": 0.02,
+      "weight": 0.0,
+      "description": "Validation MCF consistency between CSV and summary (near-zero weight)"
+    },
+    {
+      "id": "fg_mcf_consistency",
+      "output_file": "summary_metrics.json",
+      "kind": "consistency",
+      "csv_peak_key": "fg_csv_mcf",
+      "summary_key": "MCF",
+      "tolerance_pct": 0.02,
+      "weight": 0.0,
+      "description": "FG-CNTRC MCF consistency between CSV and summary (near-zero weight)"
+    },
+    {
+      "id": "fg_alpha",
+      "output_file": "summary_metrics.json",
+      "kind": "numeric",
+      "target": 0.16,
+      "tolerance_pct": 0.1,
+      "weight": 0.2,
+      "field_path": "fg_cntrc.alpha_max",
+      "description": "Alpha max for FG-CNTRC vs paper gold (gold=0.160 mm, tol 10%)"
+    },
+    {
+      "id": "fg_w",
+      "output_file": "summary_metrics.json",
+      "kind": "numeric",
+      "target": 0.26,
+      "tolerance_pct": 0.1,
+      "weight": 0.2,
+      "field_path": "fg_cntrc.w_max",
+      "description": "W max for FG-CNTRC vs paper gold (gold=0.260 mm, tol 10%)"
+    },
+    {
+      "id": "fg_T0",
+      "output_file": "summary_metrics.json",
+      "kind": "numeric",
+      "target": 408,
+      "tolerance_pct": 0.05,
+      "weight": 0.2,
+      "field_path": "fg_cntrc.T0",
+      "description": "Contact duration for FG-CNTRC vs paper gold (gold=408 µs, tol 5%)"
+    }
+  ]
+}

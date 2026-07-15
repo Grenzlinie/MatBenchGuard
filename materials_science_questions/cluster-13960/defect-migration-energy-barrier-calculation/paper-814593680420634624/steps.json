@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT formation energies under strain",
+    "role": "scored",
+    "action": "Compute total energies of Fe defect configurations (tetrahedral, hexagonal, substitutional) and Si vacancy in a 64-atom Si supercell under hydrostatic, uniaxial ([100], [110], [111], [112]) and shear strains at magnitudes -5%, 0, +5%, using DFT with standard pseudopotentials. Extract formation energies from total energies using appropriate chemical potentials.",
+    "output_file": "step_01_formation_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation energies (eV) of interstitial Fe (TET, HEX) and substitutional Fe defects, and Si vacancy, for each strain type and magnitude.",
+    "output_schema": "CSV columns: strain_type, strain_value, defect_config, formation_energy_eV"
+  },
+  {
+    "id": "step_02",
+    "title": "NEB/CI-NEB migration barriers under strain",
+    "role": "scored",
+    "action": "Using the same supercell and strain states as step_01, compute the minimum energy path and energy barrier for Fe jumps between tetrahedral and hexagonal interstitial sites along each of the four <111> migration directions with the NEB and CI-NEB method, as implemented in Quantum Espresso/ASE.",
+    "output_file": "step_02_migration_barriers_uniform.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Migration energy barriers (eV) for TET->HEX and HEX->TET jumps for each strain type, magnitude, and migration direction.",
+    "output_schema": "CSV columns: strain_type, strain_value, migration_direction, barrier_TET_HEX_eV, barrier_HEX_TET_eV"
+  },
+  {
+    "id": "step_03",
+    "title": "kMC effective diffusion coefficients",
+    "role": "scored",
+    "action": "Using the computed migration barriers and fixed frequency factors (30 THz for TET->HEX, 18 THz for HEX->TET), perform lattice-based kinetic Monte Carlo simulations for each uniform strain state to obtain the effective relative diffusion coefficient D/D_bulk at temperatures 100 K and 300 K. Run sufficient kMC steps to reduce stochastic noise below 1%.",
+    "output_file": "step_03_diffusion_coeffs.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Relative diffusion coefficients D/D_bulk for each strain state at 100 K and 300 K.",
+    "output_schema": "CSV columns: strain_type, temperature_K, D_over_Dbulk"
+  },
+  {
+    "id": "step_04",
+    "title": "Polynomial fit of barrier strain-dependence",
+    "role": "scored",
+    "action": "For each strain component needed to describe dislocation strain fields (dilatational and shear components as in the relevant paper figure), fit a polynomial function e_s(epsilon) = Delta E(epsilon)/Delta E_bulk to the migration barriers obtained in step_02 for each of the four <111> migration directions. Provide the polynomial coefficients.",
+    "output_file": "step_04_barrier_fits.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Polynomial coefficients for the barrier strain-dependence functions e_s(epsilon) per strain component and migration direction.",
+    "output_schema": "JSON object mapping each strain_component to an array of four coefficient arrays (one per migration direction), where each coefficient array represents the polynomial e_s(epsilon) = c0 + c1*epsilon + c2*epsilon^2 + ..."
+  },
+  {
+    "id": "step_05",
+    "title": "Local migration barrier maps around dislocations",
+    "role": "scored",
+    "action": "Apply the parameterized barrier functions from step_04 to the linear-elastic strain fields of perfect screw, 60° mixed, 30° partial, and 90° partial dislocations (using analytical expressions from dislocation theory). For spatial positions (x,y) in the plane perpendicular to the dislocation line, excluding a core region of radius 5 Å, compute the local migration barrier Delta E for each <111> direction using the multiplicative composition rule. Save the resulting barrier values on a grid covering at least ±200 Å.",
+    "output_file": "step_05_dislocation_barriers.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Local migration barriers (eV) around dislocations for each jump direction. Excluding core r<5 Å.",
+    "output_schema": "CSV columns: dislocation_type, x_angstrom, y_angstrom, migration_direction, barrier_eV"
+  },
+  {
+    "id": "step_06",
+    "title": "Angle-averaged migration-rate ratios",
+    "role": "scored",
+    "action": "From the local barrier maps of step_05, compute the angle-averaged relative migration-rate ratio lambda(r) and the half-space integrated profiles lambda_a(r) and lambda_b(r) for the upper (a) and lower (b) regions relative to the glide plane for each dislocation type at T=100 K and T=300 K. Use the given bulk migration barrier.",
+    "output_file": "step_06_lambda_radial.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Angle-averaged migration-rate ratios lambda(r) for each dislocation, half-space, and temperature.",
+    "output_schema": "CSV columns: dislocation_type, radius_angstrom, halfspace, temperature_K, lambda"
+  }
+]

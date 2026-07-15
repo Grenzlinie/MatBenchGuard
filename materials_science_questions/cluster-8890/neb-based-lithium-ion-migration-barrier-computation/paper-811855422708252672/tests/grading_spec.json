@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes stable x position and energy barrier from the raw CSV and compares to paper reference values with tolerance; no self-reported numbers are trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_profiles.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference for stable Li positions and energy barriers for models A, B, C",
+      "source_provenance": "Figure 2 of the paper (qualitative read)",
+      "generation_method": "Values read from the published figure; approximate but within stated tolerances",
+      "why_not_fabricated": "These are the paper's actual findings; tolerances are wide enough to accommodate implementation spread."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model",
+            "x",
+            "total_energy"
+          ],
+          "units": {
+            "x": "dimensionless, fraction of lattice parameter a",
+            "total_energy": "eV"
+          }
+        },
+        "description": "Raw total electronic energy profiles for the three models. The checker will extract for each model the x position of the energy minimum and the energy barrier (E(x=0.5) - E(min)) and compare to hidden reference values."
+      }
+    ],
+    "notes": "The agent must not report the extracted minima or barriers as separate artifacts; the checker recomputes them directly from this CSV. The absolute energy zero may be arbitrary but must be consistent within each model."
+  },
+  "steps": [
+    {
+      "id": "energy_profiles_analysis",
+      "output_file": "energy_profiles.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "reference": {
+        "A": {
+          "x_min": 0.25,
+          "barrier": 0.3
+        },
+        "B": {
+          "x_min": 0.15,
+          "barrier": 0.5
+        },
+        "C": {
+          "x_min": 0.0,
+          "barrier": 0.7
+        }
+      },
+      "tolerance": {
+        "x_min": 0.05,
+        "barrier": 0.3
+      },
+      "description": "Extract stable Li position (x of minimum energy) and energy barrier (E(x=0.5)-E(min)) for each model; score by closeness to paper reference."
+    }
+  ]
+}

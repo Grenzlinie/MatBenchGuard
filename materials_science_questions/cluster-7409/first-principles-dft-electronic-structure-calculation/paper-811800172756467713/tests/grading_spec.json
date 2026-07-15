@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Absorption bands are recomputed from raw excitation list (T1); polarizabilities are compared to paper values with tolerance (T0, acceptable because only final aggregated values are available and recomputing from Cartesian components is not feasible).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "polarizability_results.csv": "reference_match",
+    "absorption_spectrum.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported polarizability values and absorption band reference wavelengths",
+      "source_provenance": "Table 1 and Section 3.4 of the source paper",
+      "generation_method": "Extracted directly from the published numerical values.",
+      "why_not_fabricated": "These are the actual reported values that the reproduction must match within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "polarizability_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "method",
+            "basis",
+            "mean_polarizability",
+            "polarizability_anisotropy",
+            "mean_hyperpolarizability"
+          ],
+          "units": {
+            "mean_polarizability": "a.u.",
+            "polarizability_anisotropy": "a.u.",
+            "mean_hyperpolarizability": "10^3 a.u."
+          }
+        },
+        "description": "Mean dipole polarizability, polarizability anisotropy, and mean second-order hyperpolarizability for MSi12 clusters (M=Sc, Ti, Fe, Cu, Zn) at B3LYP/6-311+G(2d)."
+      },
+      {
+        "file": "absorption_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "excitation_index",
+            "wavelength_nm",
+            "oscillator_strength"
+          ]
+        },
+        "description": "TD-DFT electronic excitation list for FeSi12 (B3LYP/6-311+G(2d)) containing the first 30 excitations; from this the checker recomputes the four major absorption bands and their ordering."
+      }
+    ],
+    "notes": "The agent is required to re-run the complete DFT pipeline (geometry optimizations, finite-field calculations, TD-DFT) and output the above artifacts. Only the B3LYP/6-311+G(2d) level is required for the scored outputs. The scoring uses paper-reported results as hidden reference for polarizabilities, and recomputes absorption bands from the raw excitation list for FeSi12."
+  },
+  "steps": [
+    {
+      "id": "check_polarizability",
+      "output_file": "polarizability_results.csv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "targets": {
+        "ScSi12": {
+          "mean_polarizability": 433.5,
+          "polarizability_anisotropy": 103.6,
+          "mean_hyperpolarizability": 303.6
+        },
+        "TiSi12": {
+          "mean_polarizability": 403.3,
+          "polarizability_anisotropy": 99.8,
+          "mean_hyperpolarizability": 222.4
+        },
+        "FeSi12": {
+          "mean_polarizability": 375.6,
+          "polarizability_anisotropy": 82.2,
+          "mean_hyperpolarizability": 191.2
+        },
+        "CuSi12": {
+          "mean_polarizability": 410.0,
+          "polarizability_anisotropy": 116.8,
+          "mean_hyperpolarizability": 261.8
+        },
+        "ZnSi12": {
+          "mean_polarizability": 417.6,
+          "polarizability_anisotropy": 82.5,
+          "mean_hyperpolarizability": 270.8
+        }
+      },
+      "tolerance_percent": 10.0
+    },
+    {
+      "id": "check_absorption_spectrum",
+      "output_file": "absorption_spectrum.csv",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "target_bands": [
+        {
+          "band": "I",
+          "wavelength_reference": 426.5,
+          "tolerance_nm": 5.0
+        },
+        {
+          "band": "II",
+          "wavelength_reference": 381.9,
+          "tolerance_nm": 5.0
+        },
+        {
+          "band": "III",
+          "wavelength_reference": 356.3,
+          "tolerance_nm": 5.0
+        },
+        {
+          "band": "IV",
+          "wavelength_reference": 324.1,
+          "tolerance_nm": 5.0
+        }
+      ],
+      "n_bands": 4
+    }
+  ]
+}

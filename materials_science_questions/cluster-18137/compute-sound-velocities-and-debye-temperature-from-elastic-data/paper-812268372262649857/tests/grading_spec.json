@@ -1,0 +1,229 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Phonon frequency targets compared to paper’s experimental values with absolute tolerance; Debye temperature compared to paper’s Fig. 4 values with relative tolerance. Structural checks (degeneracy, monotonicity) supplement. Recomputing the full model is heavy and not required for verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold phonon frequencies from Table I and approximate Debye temperatures from Fig. 4",
+      "source_provenance": "Paper Table I (experimental phonon frequencies) and Fig. 4 (Debye temperature curves) of J. Phys. Soc. Jpn. 48, 377 (1980)",
+      "generation_method": "Extracted directly from the paper’s reported values; Debye gold values derived by linear interpolation of approximate curve endpoints read from Fig. 4.",
+      "why_not_fabricated": "Values are the paper’s own reported experimental data and derived quantities used for validation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "qpoint_label",
+            "mode_index",
+            "frequency_THz"
+          ],
+          "columns_desc": {
+            "compound": "string, one of KCl, KBr, KI",
+            "qpoint_label": "string, one of Gamma, X, L",
+            "mode_index": "integer from 1 to 6, sorted by ascending frequency",
+            "frequency_THz": "float, phonon frequency in THz"
+          }
+        },
+        "description": "Phonon frequencies of all six branches at the high-symmetry q-points Gamma, X, and L for each potassium halide."
+      },
+      {
+        "file": "debye_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "temperature_K",
+            "debye_temperature_K"
+          ],
+          "columns_desc": {
+            "compound": "string, one of KCl, KBr, KI",
+            "temperature_K": "float, temperature in Kelvin, 0 to 300 inclusive, step ≤10 K",
+            "debye_temperature_K": "float, Debye temperature in Kelvin"
+          }
+        },
+        "description": "Debye characteristic temperature as a function of temperature for each potassium halide."
+      }
+    ],
+    "notes": "All necessary model parameters and lattice constants will be provided in the instruction document; no external data download is needed. The scoring compares the reported frequencies and Debye temperatures to hidden gold experimental references with tolerances."
+  },
+  "steps": [
+    {
+      "id": "step01_phonon_freq",
+      "output_file": "phonon_frequencies.csv",
+      "weight": 0.6,
+      "kind": "numeric",
+      "description": "Phonon frequencies at high-symmetry points",
+      "hidden_gold": {
+        "phonon_targets": [
+          {
+            "compound": "KCl",
+            "qpoint_label": "Gamma",
+            "mode_desc": "TO",
+            "gold": 4.39,
+            "tol": 0.1
+          },
+          {
+            "compound": "KCl",
+            "qpoint_label": "Gamma",
+            "mode_desc": "LO",
+            "gold": 6.39,
+            "tol": 0.1
+          },
+          {
+            "compound": "KCl",
+            "qpoint_label": "X",
+            "mode_desc": "TA",
+            "gold": 1.76,
+            "tol": 0.1
+          },
+          {
+            "compound": "KCl",
+            "qpoint_label": "X",
+            "mode_desc": "TO",
+            "gold": 4.53,
+            "tol": 0.1
+          },
+          {
+            "compound": "KBr",
+            "qpoint_label": "Gamma",
+            "mode_desc": "TO",
+            "gold": 3.6,
+            "tol": 0.1
+          },
+          {
+            "compound": "KBr",
+            "qpoint_label": "Gamma",
+            "mode_desc": "LO",
+            "gold": 5.0,
+            "tol": 0.1
+          },
+          {
+            "compound": "KBr",
+            "qpoint_label": "X",
+            "mode_desc": "TA",
+            "gold": 1.25,
+            "tol": 0.1
+          },
+          {
+            "compound": "KBr",
+            "qpoint_label": "X",
+            "mode_desc": "TO",
+            "gold": 3.72,
+            "tol": 0.1
+          },
+          {
+            "compound": "KI",
+            "qpoint_label": "Gamma",
+            "mode_desc": "TO",
+            "gold": 3.21,
+            "tol": 0.1
+          },
+          {
+            "compound": "KI",
+            "qpoint_label": "Gamma",
+            "mode_desc": "LO",
+            "gold": 4.26,
+            "tol": 0.1
+          },
+          {
+            "compound": "KI",
+            "qpoint_label": "X",
+            "mode_desc": "TA",
+            "gold": 0.94,
+            "tol": 0.1
+          },
+          {
+            "compound": "KI",
+            "qpoint_label": "X",
+            "mode_desc": "TO",
+            "gold": 3.28,
+            "tol": 0.1
+          }
+        ]
+      }
+    },
+    {
+      "id": "step02_debye",
+      "output_file": "debye_temperature.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "description": "Debye temperature curve",
+      "hidden_gold": {
+        "debye_checkpoints": [
+          {
+            "compound": "KCl",
+            "temperatures": [
+              50,
+              100,
+              150,
+              200,
+              250,
+              300
+            ],
+            "gold": [
+              229.83,
+              224.67,
+              219.5,
+              214.33,
+              209.17,
+              204.0
+            ],
+            "rel_tol": 0.05
+          },
+          {
+            "compound": "KBr",
+            "temperatures": [
+              50,
+              100,
+              150,
+              200,
+              250,
+              300
+            ],
+            "gold": [
+              171.67,
+              168.33,
+              165.0,
+              161.67,
+              158.33,
+              155.0
+            ],
+            "rel_tol": 0.05
+          },
+          {
+            "compound": "KI",
+            "temperatures": [
+              50,
+              100,
+              150,
+              200,
+              250,
+              300
+            ],
+            "gold": [
+              142.67,
+              139.33,
+              136.0,
+              132.67,
+              129.33,
+              126.0
+            ],
+            "rel_tol": 0.05
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Derived quantities (t50, density, radius, orientation mode, moment values) are recomputed from the agent's raw CSV/JSON artifacts and compared to gold thresholds/tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "initial_microstructure.csv": "structural_audit",
+    "recrystallization_kinetics.csv": "threshold_or_better",
+    "orientation_distribution.json": "reference_match",
+    "boundary_moments.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for recrystallization kinetics, orientation mode, and boundary moments",
+      "source_provenance": "Estimated from Figures 3–6 of the paper; t50 ~0.82, rho_rx_at_0.2 ~0.0015, mean_R_at_0.2 ~1.15, orientation mode ~6°, boundary moment values ~7.7° at t=0.05, etc. These are consistent with the complete mean-field model (M-F.4).",
+      "generation_method": "Read off the published curves (axis values) for the complete mean-field model (time-updated second-order Taylor). Values are rounded to two significant digits.",
+      "why_not_fabricated": "These are the paper's own reported results for the same model and conditions the agent must reproduce; they are the natural hidden gold for a reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "initial_microstructure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cell_id",
+            "radius",
+            "r1",
+            "r2",
+            "r3"
+          ],
+          "units": {
+            "radius": "normalised by mean radius R0",
+            "r1": "component of δr^{ref} (unitless)",
+            "r2": "component of δr^{ref} (unitless)",
+            "r3": "component of δr^{ref} (unitless)"
+          }
+        },
+        "description": "Initial subgrain microstructure: cell radii and reference disorientation vectors."
+      },
+      {
+        "file": "recrystallization_kinetics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "t",
+            "X",
+            "rho_rx",
+            "mean_R_rx"
+          ],
+          "units": {
+            "t": "normalised time (1/(μ_c γ_c ρ₀))",
+            "X": "dimensionless",
+            "rho_rx": "normalised by initial subgrain density ρ₀",
+            "mean_R_rx": "normalised by critical radius R_rx = 8R₀"
+          }
+        },
+        "description": "Recrystallization kinetics: fraction, grain density, and mean recrystallized radius versus time."
+      },
+      {
+        "file": "orientation_distribution.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bin_edges": "array of float (degrees)",
+            "all_grains_area_fraction": "array of float",
+            "recrystallized_area_fraction": "array of float"
+          }
+        },
+        "description": "Area‑weighted histograms of reference disorientation angles ω at ~50% recrystallized fraction."
+      },
+      {
+        "file": "boundary_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "t",
+            "mean_theta",
+            "sqrt_second_moment"
+          ],
+          "units": {
+            "t": "normalised time (1/(μ_c γ_c ρ₀))",
+            "mean_theta": "degrees",
+            "sqrt_second_moment": "degrees"
+          }
+        },
+        "description": "Time evolution of the first two moments of the boundary disorientation angle distribution (whole microstructure)."
+      }
+    ],
+    "notes": "The agent must use the model parameters as given in the paper: γ_c, μ_c, θ_c=15°, B=5, η=4, and the no‑spatial‑correlation limit α→∞. The threshold recrystallized grain radius is 8 times the mean initial radius. The simulation must include at least 5000 subgrains. All outputs are scored against hidden references derived from the paper's figures."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "initial_microstructure.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target_policy": "structural_audit",
+      "description": "Validate that the generated microstructure has mean radius ≈1 and isotropic orientation spread σ≈3.5° within tolerances.",
+      "gold": {
+        "radius_tol": 0.05,
+        "sigma_target": 3.5,
+        "sigma_tol": 0.5
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "recrystallization_kinetics.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "target_policy": "threshold_or_better",
+      "description": "Recompute t50 (time to 50% recrystallized fraction), rho_rx at t=0.2, and mean_R_rx at t=0.2 from the time series; compare against gold with directional thresholds.",
+      "gold": {
+        "t50": 0.82,
+        "t50_upper_multiplier": 1.1,
+        "rho_rx_at_02": 0.0015,
+        "rho_rx_lower_multiplier": 0.9,
+        "mean_R_at_02": 1.15,
+        "mean_R_lower_multiplier": 0.9
+      }
+    },
+    {
+      "id": "step_04",
+      "output_file": "orientation_distribution.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "description": "Extract the mode (peak) of the recrystallized area fraction histogram and compare to gold mode within ±2°.",
+      "gold": {
+        "mode": 6.0,
+        "tolerance": 2.0
+      }
+    },
+    {
+      "id": "step_05",
+      "output_file": "boundary_moments.csv",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target_policy": "exact_match",
+      "description": "Compare mean_theta and sqrt_second_moment at t=0.05 and t=0.15 against gold values with tolerance ±1°.",
+      "gold": {
+        "t_points": [
+          0.05,
+          0.15
+        ],
+        "mean_theta_gold": [
+          7.7,
+          7.55
+        ],
+        "sqrt_second_moment_gold": [
+          8.3,
+          8.1
+        ],
+        "tolerance": 1.0
+      }
+    }
+  ]
+}

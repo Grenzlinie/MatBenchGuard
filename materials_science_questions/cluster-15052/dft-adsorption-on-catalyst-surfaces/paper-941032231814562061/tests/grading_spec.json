@@ -1,0 +1,198 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute Gibbs free energies from raw DFT outputs (total energies/vibrational data are not provided by the agent); compare agent's reported values to paper's reference values with generous tolerance accounting for different DFT implementation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_free_energies.csv": "reference_match",
+    "step_01_screening_shortlist.csv": "exact_match",
+    "step_03_optimal_pathway.json": "reference_match",
+    "step_04_AIMD_result.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference free-energy values from paper Tables 3 and 4, screening shortlist, optimal pathway onset potential",
+      "source_provenance": "paper",
+      "generation_method": "extracted from paper tables",
+      "why_not_fabricated": "values are taken directly from the published paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_free_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "catalyst_id",
+            "geometry",
+            "Delta_G_N2_ads",
+            "Delta_G_first_proton",
+            "Delta_G_last_proton"
+          ],
+          "units": {
+            "Delta_G_N2_ads": "eV",
+            "Delta_G_first_proton": "eV",
+            "Delta_G_last_proton": "eV"
+          }
+        },
+        "description": "Computed Gibbs free energies for N2 adsorption and protonation steps for six catalysts. Checker compares against paper values within ±0.1 eV."
+      },
+      {
+        "file": "step_01_screening_shortlist.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "catalyst_id",
+            "passed_step1",
+            "passed_step2",
+            "passed_step3",
+            "final_shortlist"
+          ]
+        },
+        "description": "Screening outcome: pass/fail for each thermodynamic step and final shortlist membership. Checker verifies the final shortlist consists of the five catalysts from the paper."
+      },
+      {
+        "file": "step_03_optimal_pathway.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "catalyst": "string",
+            "optimal_pathway_name": "string",
+            "steps": "array of {intermediate: string, Delta_G: number}",
+            "PDS": "string",
+            "onset_potential": "number"
+          },
+          "units": {
+            "onset_potential": "eV"
+          }
+        },
+        "description": "Optimal NRR pathway details for ZrPP‑C3O including onset potential. Checker compares onset potential to paper’s 0.47 V within ±0.1 V."
+      },
+      {
+        "file": "step_04_AIMD_result.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "catalyst": "string",
+            "temperature_K": "number",
+            "total_time_ps": "number",
+            "final_N2_coverage": "number",
+            "final_H_coverage": "number",
+            "passed_step4": "boolean"
+          }
+        },
+        "description": "AIMD competition result for ZrPP‑C3O: N2 vs H⁺ coverage and passed_step4. Checker verifies passed_step4 is true and coverage ratios are plausible."
+      }
+    ],
+    "notes": "Free energies, shortlist, and optimal pathway onset potential are compared against paper‑reported reference values with tolerances. AIMD result is checked for structural consistency."
+  },
+  "steps": [
+    {
+      "id": "free_energies",
+      "output_file": "step_02_free_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "tolerance": 0.1,
+      "reference_free_energies": {
+        "ZrPP-C4,end-on": {
+          "Delta_G_N2_ads": -3.02,
+          "Delta_G_first_proton": 1.29,
+          "Delta_G_last_proton": 1.0
+        },
+        "ZrPP-C3O,end-on": {
+          "Delta_G_N2_ads": -2.27,
+          "Delta_G_first_proton": 0.84,
+          "Delta_G_last_proton": 0.31
+        },
+        "ZrPP-C3O,side-on": {
+          "Delta_G_N2_ads": -2.06,
+          "Delta_G_first_proton": 0.32,
+          "Delta_G_last_proton": 0.31
+        },
+        "ZrPP-N4,end-on": {
+          "Delta_G_N2_ads": -0.61,
+          "Delta_G_first_proton": 0.95,
+          "Delta_G_last_proton": 0.49
+        },
+        "ZrPP-N4,side-on": {
+          "Delta_G_N2_ads": -0.29,
+          "Delta_G_first_proton": 0.36,
+          "Delta_G_last_proton": 0.49
+        },
+        "ZrPP-N2C2-n,end-on": {
+          "Delta_G_N2_ads": -1.9,
+          "Delta_G_first_proton": 1.05,
+          "Delta_G_last_proton": 0.22
+        },
+        "ZrPP-N2C2-n,side-on": {
+          "Delta_G_N2_ads": -1.66,
+          "Delta_G_first_proton": 0.31,
+          "Delta_G_last_proton": 0.22
+        },
+        "ZrPP-C2O2-o,end-on": {
+          "Delta_G_N2_ads": -1.54,
+          "Delta_G_first_proton": 0.67,
+          "Delta_G_last_proton": 0.75
+        },
+        "ZrPP-C2O2-o,side-on": {
+          "Delta_G_N2_ads": -1.49,
+          "Delta_G_first_proton": 0.27,
+          "Delta_G_last_proton": 0.75
+        },
+        "ZrPP-C2O2-n,end-on": {
+          "Delta_G_N2_ads": -1.68,
+          "Delta_G_first_proton": 0.88,
+          "Delta_G_last_proton": 0.41
+        },
+        "ZrPP-C2O2-n,side-on": {
+          "Delta_G_N2_ads": -1.38,
+          "Delta_G_first_proton": 0.55,
+          "Delta_G_last_proton": 0.41
+        }
+      }
+    },
+    {
+      "id": "shortlist",
+      "output_file": "step_01_screening_shortlist.csv",
+      "kind": "exact_match",
+      "weight": 0.1,
+      "expected_final_shortlist": [
+        "ZrPP-C3O",
+        "ZrPP-N4",
+        "ZrPP-N2C2-n",
+        "ZrPP-C2O2-o",
+        "ZrPP-C2O2-n"
+      ]
+    },
+    {
+      "id": "optimal_pathway",
+      "output_file": "step_03_optimal_pathway.json",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "reference_onset_potential": 0.47,
+      "tolerance_onset": 0.1,
+      "reference_pds_substring": "*NH-*NH2 (distant) + H+ + e- -> *NH + NH3(g)"
+    },
+    {
+      "id": "aimd",
+      "output_file": "step_04_AIMD_result.json",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "require_passed_step4": true,
+      "require_n2_ge_h": true
+    }
+  ]
+}

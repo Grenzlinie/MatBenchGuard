@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Ambient properties compared to paper reference values with tolerances; pressure series structural audit via linear regression and cross-consistency, as full SMM recomputation is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ambient_properties.csv": "reference_match",
+    "pressure_dependence_KT_CP.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Ambient properties gold values from paper Table 2 'Present study' column.",
+      "source_provenance": "Paper Table 2 (Present study row)",
+      "generation_method": "extracted directly from the paper",
+      "why_not_fabricated": "These are the paper's own computed SMM results for ambient conditions (300 K, 0 GPa)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ambient_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ],
+          "units": {
+            "property": "string (one of lattice_constant_A, bulk_modulus_GPa, young_modulus_GPa, shear_modulus_GPa, specific_heat_CP_J_per_mol_K)",
+            "value": "float"
+          }
+        },
+        "description": "Ambient-condition thermo-mechanical properties of B2 FeAl at T=300 K, P=0 GPa. The checker compares each property to hidden reference values with tolerances."
+      },
+      {
+        "file": "pressure_dependence_KT_CP.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "bulk_modulus_Kt_GPa",
+            "specific_heat_CP_J_per_mol_K"
+          ],
+          "units": {
+            "pressure_GPa": "float (GPa)",
+            "bulk_modulus_Kt_GPa": "float (GPa)",
+            "specific_heat_CP_J_per_mol_K": "float (J/(mol·K))"
+          }
+        },
+        "description": "Pressure-dependent bulk modulus and specific heat at T=300 K for pressures 0–10 GPa. The checker verifies linear trends (slope, R²) and consistency with the ambient file."
+      }
+    ],
+    "notes": "The hidden checker compares each ambient property to reference values with appropriate tolerances. For the pressure series it checks that the bulk modulus data follows a linear trend with a slope in a specified range and R²>0.99, and that the specific heat decreases with pressure. It also cross-checks the zero-pressure specific heat with the ambient file for consistency."
+  },
+  "steps": [
+    {
+      "id": "ambient_properties",
+      "output_file": "ambient_properties.csv",
+      "weight": 0.7,
+      "kind": "reference_match",
+      "properties": {
+        "lattice_constant_A": {
+          "gold": 2.8821,
+          "tolerance": 0.005
+        },
+        "bulk_modulus_GPa": {
+          "gold": 166.84,
+          "tolerance": 3
+        },
+        "young_modulus_GPa": {
+          "gold": 167.17,
+          "tolerance": 5
+        },
+        "shear_modulus_GPa": {
+          "gold": 62.71,
+          "tolerance": 2
+        },
+        "specific_heat_CP_J_per_mol_K": {
+          "gold": 24.37,
+          "tolerance": 0.5
+        }
+      }
+    },
+    {
+      "id": "pressure_dependence",
+      "output_file": "pressure_dependence_KT_CP.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "checks": {
+        "bulk_modulus_slope_range": [
+          14.5,
+          15.5
+        ],
+        "bulk_modulus_r2_min": 0.99,
+        "cp_slope_sign": "negative",
+        "cp_slope_magnitude_range": [
+          0.1,
+          0.3
+        ],
+        "cp_r2_min": 0.99,
+        "cp_cross_tolerance": 0.5
+      }
+    }
+  ]
+}

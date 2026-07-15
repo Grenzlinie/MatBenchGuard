@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_mesh_generation",
+    "title": "Generate parametric 3D FE mesh",
+    "role": "process",
+    "action": "Create a parametric finite element mesh for the side-grooved M(T) specimen exploiting symmetry (1/8 model). Use 20-node hexahedral isoparametric elements, quarter-point singular elements around the crack front, a spider-web concentric ring refinement (3 rings) at the crack tip, and 50 through-thickness layers with a geometric progression (surface layer 1 μm, factor 1.1). The mesh must be parametric with respect to groove radius r, groove depth b, and reduced thickness t.",
+    "output_file": "",
+    "evidence": "mesh_info.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the FE mesh for each (r,b,t) geometry combination later used in the simulations. The mesh must faithfully reproduce the refined near-tip and through-thickness discretisation described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_finite_element_simulation",
+    "title": "Run parametric FE stress analyses",
+    "role": "process",
+    "action": "For a set of (r,b,t) combinations that minimally includes the optimal combination (r=0.5, b=1, t=10.56) and enough additional points to capture the trend (e.g., r=0.5,b=1; r=1,b=1; r=2,b=1; r=0.5,b=2 with several t values), run a linear elastic FE simulation under remote tension. Use isotropic linear elastic material (E=74 GPa, ν=0.33). Save the nodal normal stress components (σ_xx, σ_yy, σ_zz) along the crack front.",
+    "output_file": "",
+    "evidence": "simulation_log.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Execute the FE solver for each geometry case. The number of runs should be sufficient to reconstruct the portion-of-thickness trend (at least 10–15 combinations).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_triaxiality_and_pt_table",
+    "title": "Compute triaxiality parameter h and portion-of-thickness pt",
+    "role": "scored",
+    "action": "Post-process the nodal stresses from each simulation to compute the triaxiality parameter h = σ_zz / [ν(σ_xx+σ_yy)] at each through-thickness position (z/t). For each geometry, determine the portion of thickness pt where h ≥ 0.97. Compile all results into a single CSV file.",
+    "output_file": "pt_table.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "From the FE results, compute h profiles and then pt = fraction of thickness with h ≥ 0.97. The CSV must cover the required parameter ranges and include the optimal combination, enabling the checker to verify the main claim and the parametric trend.",
+    "output_schema": "CSV with header: r,b,t,pt. Columns: r (float, mm) — groove radius; b (float, mm) — groove depth; t (float, mm) — reduced thickness; pt (float, 0–1) — fraction of thickness with h ≥ 0.97."
+  }
+]

@@ -1,0 +1,168 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "ZPE-corrected barriers cannot be recomputed from the artifact because raw ZPE values are not submitted; use paper gold with tolerance. Internal consistency of raw barriers is recomputed from agent's own raw MP2 energies (T1 check).",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all activation barriers and bond enthalpies",
+      "source_provenance": "Extracted from Table 1 and Table 2 of the paper (DOI 10.1016/s0169-4332(97)80052-9): raw Ea 39.0 (TS2a) / 53.7 (TS2b); ZPE-corrected Ea 40.7 / 55.4; bond enthalpies 83.4 (Si-H) / 68.8 (Si-Si) kcal/mol.",
+      "generation_method": "Directly transcribed from paper tables.",
+      "why_not_fabricated": "All values are the published experimental results; they serve as authentic hidden comparison targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "surface",
+            "gas_phase"
+          ],
+          "properties": {
+            "surface": {
+              "type": "object",
+              "required": [
+                "ts2a_raw_MP2_energy_hartree",
+                "ts2b_raw_MP2_energy_hartree",
+                "reactants_sum_raw_MP2_energy_hartree",
+                "ts2a_MP2_Ea_kcal_mol_raw",
+                "ts2b_MP2_Ea_kcal_mol_raw",
+                "ts2a_MP2_Ea_kcal_mol_with_ZPE",
+                "ts2b_MP2_Ea_kcal_mol_with_ZPE"
+              ],
+              "properties": {
+                "ts2a_raw_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "ts2b_raw_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "reactants_sum_raw_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "ts2a_MP2_Ea_kcal_mol_raw": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                },
+                "ts2b_MP2_Ea_kcal_mol_raw": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                },
+                "ts2a_MP2_Ea_kcal_mol_with_ZPE": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                },
+                "ts2b_MP2_Ea_kcal_mol_with_ZPE": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                }
+              }
+            },
+            "gas_phase": {
+              "type": "object",
+              "required": [
+                "SiH4_MP2_energy_hartree",
+                "SiH3_MP2_energy_hartree",
+                "H_MP2_energy_hartree",
+                "Si2H6_MP2_energy_hartree",
+                "SiH_bond_enthalpy_kcal_mol",
+                "SiSi_bond_enthalpy_kcal_mol"
+              ],
+              "properties": {
+                "SiH4_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "SiH3_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "H_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "Si2H6_MP2_energy_hartree": {
+                  "type": "number",
+                  "units": "hartree"
+                },
+                "SiH_bond_enthalpy_kcal_mol": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                },
+                "SiSi_bond_enthalpy_kcal_mol": {
+                  "type": "number",
+                  "units": "kcal/mol"
+                }
+              }
+            }
+          }
+        },
+        "description": "Computed surface activation energies and gas-phase bond enthalpies for verification of bond reactivity reversal."
+      }
+    ],
+    "notes": "All quantities are computed at MP2/6-31G**//HF/6-31G** level with ZPE scaled by 0.89."
+  },
+  "steps": [
+    {
+      "id": "consistency_raw_ea_ts2a",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Recompute raw electronic barrier for TS2a from reported raw MP2 energies and compare to reported ts2a_MP2_Ea_kcal_mol_raw; tolerance 0.001 hartree"
+    },
+    {
+      "id": "consistency_raw_ea_ts2b",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Recompute raw electronic barrier for TS2b from reported raw MP2 energies and compare to reported ts2b_MP2_Ea_kcal_mol_raw; tolerance 0.001 hartree"
+    },
+    {
+      "id": "surface_raw_ea_check",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "description": "Compare reported raw activation energies (TS2a, TS2b) to paper gold (39.0, 53.7 kcal/mol) within ±3.0 kcal/mol"
+    },
+    {
+      "id": "surface_zpe_ea_check",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "description": "Compare reported ZPE-corrected activation energies (TS2a, TS2b) to paper gold (40.7, 55.4 kcal/mol) within ±3.0 kcal/mol"
+    },
+    {
+      "id": "gas_bond_enthalpy_check",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "description": "Compare reported gas-phase bond dissociation enthalpies (Si-H, Si-Si) to paper gold (83.4, 68.8 kcal/mol) within ±4.0 kcal/mol"
+    },
+    {
+      "id": "surface_ordering",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Verify that ZPE-corrected activation energy for Si-H splitting (TS2a) is lower than for Si-Si splitting (TS2b)"
+    },
+    {
+      "id": "gas_ordering",
+      "output_file": "energies.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "description": "Verify that gas-phase bond dissociation enthalpy of Si-H is greater than that of Si-Si"
+    }
+  ]
+}

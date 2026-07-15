@@ -1,0 +1,216 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of the droplet model is not feasible in the checker sandbox; T1 infeasible, so use structural trend checks plus spot numeric comparisons against paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference surface tension values at specific conditions from paper (Section 5) for spot checks",
+      "source_provenance": "Paper text: droplets of radius 100 nm (sigma=83.4 dynes/cm) and 5 nm (sigma=84.1 dynes/cm) at chi_ovl=0.2",
+      "generation_method": "Extracted from paper's description and Figures 2-6, digitized manually",
+      "why_not_fabricated": "These are the paper's own reported quantitative values, essential to verify reproduction fidelity"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "sigma_vs_R": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chi_ovl": {
+                    "type": "number"
+                  },
+                  "R_nm": {
+                    "type": "number"
+                  },
+                  "sigma_dyne_cm": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "chi_ovl",
+                  "R_nm",
+                  "sigma_dyne_cm"
+                ]
+              }
+            },
+            "Gamma_vs_R": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chi_ovl": {
+                    "type": "number"
+                  },
+                  "R_nm": {
+                    "type": "number"
+                  },
+                  "Gamma_rel": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "chi_ovl",
+                  "R_nm",
+                  "Gamma_rel"
+                ]
+              }
+            },
+            "chi_int_vs_R": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chi_ovl": {
+                    "type": "number"
+                  },
+                  "R_nm": {
+                    "type": "number"
+                  },
+                  "chi_int": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "chi_ovl",
+                  "R_nm",
+                  "chi_int"
+                ]
+              }
+            },
+            "chi_ovl_vs_R_fixed_chi_int": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chi_int": {
+                    "type": "number"
+                  },
+                  "R_nm": {
+                    "type": "number"
+                  },
+                  "chi_ovl": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "chi_int",
+                  "R_nm",
+                  "chi_ovl"
+                ]
+              }
+            },
+            "organics_effect": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "Po_Torr": {
+                    "type": "number"
+                  },
+                  "R_nm": {
+                    "type": "number"
+                  },
+                  "sigma_dyne_cm": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "Po_Torr",
+                  "R_nm",
+                  "sigma_dyne_cm"
+                ]
+              }
+            }
+          },
+          "required": [
+            "sigma_vs_R",
+            "Gamma_vs_R",
+            "chi_int_vs_R",
+            "chi_ovl_vs_R_fixed_chi_int",
+            "organics_effect"
+          ]
+        },
+        "description": "Size-dependent surface tension, excess coverage, internal mole fraction, overall mole fraction (for fixed internal composition), and organic contamination effect for aqueous HNO3 droplets at 193.15 K."
+      }
+    ],
+    "notes": "The scored artifact contains arrays covering the paper's main headline quantities. The checker will compare the computed values to hidden reference data digitized from the paper's figures, using tolerances for surface tension (±2 dyne/cm), excess coverage (±0.05 relative), and mole fractions (±0.02), along with monotonicity trend checks."
+  },
+  "steps": [
+    {
+      "id": "schema_check",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "File exists and matches JSON schema (shape gate handled by scaffold)",
+      "weight": 0.05
+    },
+    {
+      "id": "sigma_trend",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "sigma_vs_R monotonicity: for each chi_ovl, sigma must not decrease as R decreases (i.e., larger R -> smaller sigma)",
+      "weight": 0.2
+    },
+    {
+      "id": "Gamma_trend",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "Gamma_vs_R monotonicity: for each chi_ovl, Gamma_rel must not increase as R decreases (i.e., larger R -> larger coverage)",
+      "weight": 0.15
+    },
+    {
+      "id": "chi_int_trend",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "chi_int_vs_R monotonicity: for each chi_ovl, chi_int must not increase as R decreases",
+      "weight": 0.15
+    },
+    {
+      "id": "chi_ovl_trend",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "chi_ovl_vs_R_fixed_chi_int monotonicity: for each chi_int, chi_ovl must not decrease as R decreases (i.e., larger R -> smaller chi_ovl)",
+      "weight": 0.15
+    },
+    {
+      "id": "organics_trend",
+      "output_file": "step_01_results.json",
+      "kind": "structural",
+      "description": "organics_effect monotonicity: for each Po, sigma decreases with R; for each R, sigma decreases with increasing Po",
+      "weight": 0.1
+    },
+    {
+      "id": "sigma_spot",
+      "output_file": "step_01_results.json",
+      "kind": "numeric",
+      "description": "Spot-check sigma at chi_ovl=0.2: R=100 nm ~83.4, R=5 nm ~84.1 dyne/cm",
+      "weight": 0.2,
+      "target_value": null,
+      "config": {
+        "points": [
+          {
+            "chi_ovl": 0.2,
+            "R_nm": 100,
+            "target": 83.4,
+            "tolerance": 2.0
+          },
+          {
+            "chi_ovl": 0.2,
+            "R_nm": 5,
+            "target": 84.1,
+            "tolerance": 2.0
+          }
+        ]
+      }
+    }
+  ]
+}

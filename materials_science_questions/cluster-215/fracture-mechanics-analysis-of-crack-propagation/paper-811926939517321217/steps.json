@@ -1,0 +1,54 @@
+[
+  {
+    "id": "model_setup",
+    "title": "Set up finite element model of C(T) specimen",
+    "role": "process",
+    "action": "Define the 2D plane‑strain geometry (width W=50 mm, crack length a=25 mm), create a uniform mesh of four‑node elements with mesh size 0.5 mm near the crack tip, assign material properties (E=200 GPa, ν=0.3, yield stress 270 MPa, hardening curve from Chen et al. 2003), and define boundary conditions (prescribed load‑line displacement v_LL, symmetry, traction‑free crack faces). Prepare input files for the chosen FE solver.",
+    "output_file": "",
+    "evidence": "CT_model.inp",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "run_simulation",
+    "title": "Run incremental plasticity simulation",
+    "role": "process",
+    "action": "Using the FE solver, perform a large‑deformation, quasi‑static analysis with incremental loading via increasing load‑line displacement v_LL from 0 to 0.44 mm. Solve for stress, strain (total, elastic, plastic) and displacement fields at each increment. Save the results in a format suitable for post‑processing (e.g., .frd or .vtk).",
+    "output_file": "",
+    "evidence": "simulation_results.frd",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_configurational_forces",
+    "title": "Post‑process configurational body forces",
+    "role": "process",
+    "action": "From the simulation output fields, compute the configurational body force vector f at each node according to the small‑strain expression (or the finite‑strain equivalent) using f = -∇·(φ I - ∇u^T σ), where φ is the elastic strain energy density, σ is Cauchy stress, u is displacement, and the gradient is with respect to reference coordinates. Save the force field data, excluding elements on the external boundary.",
+    "output_file": "",
+    "evidence": "config_forces.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_j_integrals",
+    "title": "Compute far‑field and near‑tip J‑integrals and plasticity influence term",
+    "role": "scored",
+    "action": "For each load‑line displacement value v_LL = 0.00, 0.10, 0.20, 0.25, 0.30, 0.35, 0.40, 0.44 mm, compute J_far^ep as the negative sum over all interior elements of (ê·f) ΔA (excluding boundary elements), and J_Γ2^ep as the same sum restricted to elements within a contour 2 mm from the crack tip. Compute Cp = J_Γ2^ep - J_far^ep. Write a CSV with the columns specified below.",
+    "output_file": "C(T)_J_integrals.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the computed J‑integrals and plasticity influence term at eight prescribed load‑line displacements.",
+    "output_schema": "Header: v_LL_mm, J_far_ep_kJ_m2, J_Gamma2_ep_kJ_m2, Cp_kJ_m2. All numeric values in kJ/m²; missing values as empty cells."
+  }
+]

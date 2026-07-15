@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "Compute self-energy and form factors for PBG and FDM",
+    "role": "process",
+    "action": "Implement the isotropic photonic band-gap (PBG) dispersion relation and the frequency-dispersive medium (FDM) dispersion relation, together with the corresponding atomic form factors and self-energy formulas. Numerically compute the real and imaginary parts of the self-energy Σ'(ε) and Σ''(ε) over a dense frequency grid covering the relevant range, using gap ratio r=15%, atomic splitting ω10=Δ/10, and free-space decay rates γ20=γ21=Δ/100. Use ω20=0.95ω_c for bound-state determination and ω20=1.2ω_c for the scattering spectra. Save the resulting arrays for later steps.",
+    "output_file": "",
+    "evidence": "self_energy_data.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Intermediate computation required for downstream scored steps; produces self-energy arrays used by bound-state and spectrum calculations.",
+    "output_schema": "npz archive containing real and imaginary parts of self-energy for PBG and FDM on a frequency grid"
+  },
+  {
+    "id": "step_2",
+    "title": "Determine photon-atom bound state in PBG and FDM",
+    "role": "scored",
+    "action": "Using the real part of the self-energy Σ'(ε) for PBG (with ω20=0.95ω_c) and for FDM obtained in step_1, numerically solve the bound-state condition ω20−ε−Σ'(ε)=0 within the subinterval G' = (ω_v+ω10, ω_c). For each medium, record whether a root exists where Σ''(ε)=0 and, if so, the eigenvalue ε_d; otherwise record that no bound state exists. Save the result to bound_state_result.json.",
+    "output_file": "bound_state_result.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Determines the existence and eigenvalue of the discrete photon-atom bound state for PBG and FDM.",
+    "output_schema": "JSON object: { \"pbg_bound_state_exists\": boolean, \"pbg_eigenvalue\": float or null, \"fdm_bound_state_exists\": boolean, \"fdm_eigenvalue\": float or null }"
+  },
+  {
+    "id": "step_3",
+    "title": "Compute Rayleigh scattering spectrum for PBG",
+    "role": "scored",
+    "action": "Using the self-energy for the PBG model from step_1 with ω20=1.2ω_c, compute the Rayleigh scattering cross-section σ_R(ω) from the formula that expresses it in terms of the real and imaginary parts of the self‑energy and the atomic form factor. Evaluate σ_R over a range of detunings ω−ω20 from -0.5 to 0.5 (or a suitable window capturing the main features) for each of four Stokes transition frequencies: ω21 = 1.15ω_c, 1.05ω_c, ω_c, and ω_o = 1. Save the spectrum as a CSV.",
+    "output_file": "rayleigh_spectrum_pbg.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Rayleigh cross-section for the PBG case at four ω21 values, revealing doublet/triplet splitting when ω21 is near the band edge.",
+    "output_schema": "CSV with columns: omega_minus_omega20 (float), omega21 (float), sigma_R (float)"
+  },
+  {
+    "id": "step_4",
+    "title": "Compute Rayleigh scattering spectrum for FDM",
+    "role": "scored",
+    "action": "Using the self-energy for the FDM model from step_1 with ω20=1.2ω_c, compute the Rayleigh scattering cross-section σ_R(ω) for the same four ω21 values and the same detuning grid as in step_3. Save the result as a CSV.",
+    "output_file": "rayleigh_spectrum_fdm.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Rayleigh cross-section for the FDM case at four ω21 values; should show no spectral splitting and a 'half-Lorentzian' cut-off.",
+    "output_schema": "CSV with columns: omega_minus_omega20 (float), omega21 (float), sigma_R (float)"
+  }
+]

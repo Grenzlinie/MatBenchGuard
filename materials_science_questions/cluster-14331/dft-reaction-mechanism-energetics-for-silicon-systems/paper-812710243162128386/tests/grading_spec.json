@@ -1,0 +1,117 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the activation energy from raw electronic structure data is infeasible in the lightweight verifier; scoring relies on numeric tolerance windows against the paper's published theoretical results, augmented by the structural consistency that the computed TS bond lengths show the expected Si‑H elongation and partial bond formation.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_03_ts_geometry.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "bond",
+            "length_angstrom"
+          ]
+        },
+        "description": "Transition state bond lengths (Å) for the oxygen insertion: Si-H, Re-O6, Re-O7, Re-O8, Re-O9, O6-O9, Si-O9, O9-H."
+      },
+      {
+        "file": "step_05_activation_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "content": "a single line containing a floating-point number"
+        },
+        "description": "Gas-phase activation energy (in kcal/mol) computed from MP2 energies and thermochemical corrections at 298.15 K."
+      },
+      {
+        "file": "step_06_mulliken_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom_label",
+            "charge"
+          ]
+        },
+        "description": "Mulliken atomic charges for key atoms (Re, Si, O6, O7, O8, O9, H11) in the transition state."
+      }
+    ],
+    "notes": "All values are compared to the paper's reported theoretical transition state structure, activation energy, and Mulliken charges with appropriate tolerances."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold bond lengths, activation energy, and Mulliken charges",
+      "source_provenance": "paper Table 2 (bond lengths), Table 3 (Mulliken charges), and text (activation energy 28.5 kcal/mol)",
+      "generation_method": "extracted directly from the paper",
+      "why_not_fabricated": "these are the published theoretical results used as the verifier reference"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "step_03_ts_geometry.csv",
+      "kind": "bond_lengths",
+      "weight": 0.4,
+      "tolerance_abs": 0.02,
+      "gold": {
+        "Si-H": 1.543,
+        "Re-O6": 1.74,
+        "Re-O7": 1.663,
+        "Re-O8": 1.661,
+        "Re-O9": 2.144,
+        "O6-O9": 1.817,
+        "Si-O9": 2.732,
+        "O9-H": 1.532
+      },
+      "bond_weights": {
+        "Si-H": 2.0,
+        "Si-O9": 2.0,
+        "O9-H": 2.0,
+        "Re-O9": 2.0,
+        "Re-O6": 1.0,
+        "Re-O7": 1.0,
+        "Re-O8": 1.0,
+        "O6-O9": 1.0
+      },
+      "partial_tolerance_factor": 2.5,
+      "description": "Compare each bond length to the paper's TS geometry with tolerance ±0.02 Å (partial credit up to 0.05 Å); key bonds weighted double."
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_activation_energy.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 28.5,
+      "tolerance_abs": 2.0,
+      "unit": "kcal/mol",
+      "description": "Activation energy must be within ±2.0 kcal/mol of the paper's theoretical value 28.5 kcal/mol; partial credit within 4.0 kcal/mol."
+    },
+    {
+      "id": "step_06",
+      "output_file": "step_06_mulliken_charges.csv",
+      "kind": "mulliken_charges",
+      "weight": 0.2,
+      "tolerance_abs": 0.05,
+      "gold": {
+        "Re": 1.511,
+        "Si": 0.078,
+        "O6": -0.597,
+        "O7": -0.632,
+        "O8": -0.622,
+        "O9": -0.317,
+        "H11": -0.021
+      },
+      "partial_tolerance_factor": 3.0,
+      "description": "Compare Mulliken charges to paper's TS values with tolerance ±0.05; partial credit up to 0.15."
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute a single quantitative metric from the paper; the core claim is a structural pattern of discontinuity vs smoothness and α-modulation of Mulliken charges. T1 not feasible.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "provide thresholds for structural checks",
+      "source_provenance": "derived from paper figures (charge jumps of ~0.2-0.5 e for high-spin and negligible variation <0.02 e for low-spin)",
+      "generation_method": "conservative thresholds set based on observed paper magnitudes to ensure a genuine reproduction passes while rejecting trivial flat lines; high_thresh=0.1, low_thresh=0.05",
+      "why_not_fabricated": "thresholds are directly traceable to the paper's reported charge changes; they are not invented but loosely match the observed behaviour to act as a pass/fail gate for the structural pattern"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mulliken_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha",
+            "beta",
+            "spin_state",
+            "atom_label",
+            "mulliken_charge"
+          ],
+          "units": {
+            "alpha": "degrees",
+            "beta": "degrees",
+            "mulliken_charge": "e"
+          }
+        },
+        "description": "The compiled Mulliken net atomic charges for the key atoms in Fe(DP)(H2O)3(OOH) as a function of α, β, and spin state. The hidden checker will validate the structural pattern (discontinuity for high-spin, smooth for low-spin, and α-dependence) by computing consecutive differences."
+      }
+    ],
+    "notes": "The identity of C* is the carbon atom of the DP ligand that is closest to O2; the solver must identify it by geometry inspection. Gas-phase calculations are acceptable. The octamethyl-porphyrin model is excluded because high-spin calculations did not converge in the original work."
+  },
+  "steps": [
+    {
+      "id": "compile_charges",
+      "output_file": "mulliken_charges.csv",
+      "weight": 1.0,
+      "kind": "structural_audit",
+      "description": "Verify spin-state-dependent discontinuity pattern and α-modulation in Mulliken charges.",
+      "params": {
+        "high_spin_discontinuity_threshold": 0.1,
+        "low_spin_smooth_threshold": 0.05,
+        "atoms": [
+          "O1",
+          "O2",
+          "Fe",
+          "Cstar"
+        ],
+        "alpha_values": [
+          110,
+          120
+        ],
+        "beta_steps": 10.0
+      }
+    }
+  ]
+}

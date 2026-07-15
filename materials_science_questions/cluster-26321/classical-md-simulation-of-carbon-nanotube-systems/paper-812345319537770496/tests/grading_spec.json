@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 infeasible (checker cannot rerun MD simulations); transition aspect ratio is benchmarked against paper's reported value (12.5±3) and diameter scaling is validated via structural consistency (constant ε_S*d and monotonic decrease).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold transition aspect ratio for shell-to-Euler transition of (20,20) SWNT",
+      "source_provenance": "paper Section 4 & Fig. 4: \"we estimate a critical aspect ratio of μ_T≈12.5 for the transition from shell buckling to rod buckling.\"",
+      "generation_method": "extracted from paper's explicit statement",
+      "why_not_fabricated": "value is the paper's own reported number, not invented"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_strain_diameter.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tube_label",
+              "diameter_nm",
+              "critical_strain"
+            ],
+            "properties": {
+              "tube_label": {
+                "type": "string"
+              },
+              "diameter_nm": {
+                "type": "number"
+              },
+              "critical_strain": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Critical compressive strains for shell buckling of armchair SWNTs of different diameters at constant small aspect ratio (~5). Checker compares against hidden reference values and verifies ε_S ∝ 1/d trend."
+      },
+      {
+        "file": "critical_strain_aspect_ratio.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "curve",
+            "transition_aspect_ratio"
+          ],
+          "properties": {
+            "curve": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "aspect_ratio",
+                  "critical_strain"
+                ],
+                "properties": {
+                  "aspect_ratio": {
+                    "type": "number"
+                  },
+                  "critical_strain": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "transition_aspect_ratio": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Critical strain vs. aspect ratio curve for a (20,20) SWNT and the estimated shell-to-Euler transition aspect ratio. Checker compares to hidden gold values and verifies the curve has a minimum near the expected transition."
+      }
+    ],
+    "notes": "The wire-like folding regime is omitted because it requires aspect ratios >100 and yields only qualitative observations. The core verifiable claims are the shell buckling scaling and the shell-to-rod transition."
+  },
+  "steps": [
+    {
+      "id": "step03_score",
+      "output_file": "critical_strain_diameter.json",
+      "weight": 0.5,
+      "expected_labels": [
+        "(4,4)",
+        "(10,10)",
+        "(20,20)"
+      ],
+      "min_diameter_nm": 0.3,
+      "max_diameter_nm": 3.5,
+      "strain_range": [
+        0.01,
+        0.5
+      ]
+    },
+    {
+      "id": "step04_score",
+      "output_file": "critical_strain_aspect_ratio.json",
+      "weight": 0.5,
+      "target_transition_aspect_ratio": 12.5,
+      "tol_transition": 3.0,
+      "min_curve_points": 5,
+      "aspect_ratio_range": [
+        4.0,
+        35.0
+      ],
+      "strain_range": [
+        0.001,
+        0.5
+      ],
+      "strict_monotonic_after_peak": true
+    }
+  ]
+}

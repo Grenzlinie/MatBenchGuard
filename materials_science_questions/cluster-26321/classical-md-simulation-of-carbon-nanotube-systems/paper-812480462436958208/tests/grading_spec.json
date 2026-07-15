@@ -1,0 +1,145 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes RMSE of energy profile against paper-known points and verifies structural features; for results.json, it compares each quantity to paper-reported values with tolerances and checks cross-artifact consistency.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference energy values at specific scan steps, paper-reported barriers and thermodynamic/spectroscopic data",
+      "source_provenance": "Table 1, Table 2, and text of the paper (doi:10.1016/j.cplett.2021.138619)",
+      "generation_method": "Extracted directly from the paper's published tables and main text.",
+      "why_not_fabricated": "These are the actual quantified results reported in the paper's tables and text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "scan_step",
+            "relative_energy_kcal_per_mol"
+          ],
+          "units": {
+            "relative_energy_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Two-column CSV file with the gas-phase relative energy versus scan step number. The checker recomputes the profile error and verifies structural features such as peak location and energy decrease after the barrier."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gas_phase_barrier": "float (kcal/mol)",
+            "aqueous_barrier": "float (kcal/mol)",
+            "activation_enthalpy": "float (kcal/mol)",
+            "TdS": "float (kcal/mol)",
+            "activation_free_energy": "float (kcal/mol)",
+            "b3lyp_d3_barrier": "float (kcal/mol)",
+            "m06x_6_31g_barrier": "float (kcal/mol)",
+            "m06x_631g_d_barrier": "float (kcal/mol)",
+            "Raman_data": "array of objects [{structure: str, G_freq: float (cm^-1), D_freq: float (cm^-1), G_D_ratio: float}]",
+            "NMR_data": "array of objects [{structure: str, proton_label: str, chemical_shift: float (ppm)}]"
+          }
+        },
+        "description": "JSON file containing all reproduction targets: energy barriers, activation thermodynamics, dispersion-corrected barriers, Raman G/D ratios, and 1H NMR chemical shifts. The checker compares each numeric value against the paper's reference within specified tolerances and verifies cross-artifact consistency."
+      }
+    ],
+    "notes": "The semi-rigid scan must use the published geometry and the specified atom constraints. For the results.json, the structures to include are: for Raman – free CNTox, cDDP@CNTox, CNTox⇒cDDP(7), CNTox⇒cDDP(15), CNTox⇒cDDP(28); for NMR – free cDDP, cDDP@CNTox, CNTox⇒cDDP(7), CNTox⇒cDDP(11), CNTox⇒cDDP(15), CNTox⇒cDDP(28). The cisplatin NH3 proton labels are as used in the paper. All quantities must be in the specified units."
+  },
+  "steps": [
+    {
+      "id": "energy_profile_step",
+      "output_file": "energy_profile.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "reference_energies": {
+        "1": 0.0,
+        "2": 14.3,
+        "7": 56.8,
+        "11": 36.9,
+        "15": -45.6,
+        "28": -15.2
+      },
+      "rmse_full_credit": 3.0,
+      "rmse_zero_credit": 10.0,
+      "structural_checks": [
+        "peak_at_step_7",
+        "decrease_after_peak"
+      ]
+    },
+    {
+      "id": "results_json_step",
+      "output_file": "results.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "target_policy": "reference_match",
+      "gold_values": {
+        "gas_phase_barrier": 56.8,
+        "aqueous_barrier": 61.2,
+        "activation_enthalpy": 55.0,
+        "TdS": -3.4,
+        "activation_free_energy": 58.4,
+        "b3lyp_d3_barrier": 83.1,
+        "m06x_6_31g_barrier": 65.2,
+        "m06x_631g_d_barrier": 64.9,
+        "Raman_ref": {
+          "CNTox": {
+            "G_freq": 1580,
+            "D_freq": 1340,
+            "G_D_ratio": 0.4
+          },
+          "cDDP@CNTox": {
+            "G_freq": 1568,
+            "D_freq": 1308,
+            "G_D_ratio": 0.6
+          },
+          "CNTox⇒cDDP(7)": {
+            "G_freq": 1572,
+            "D_freq": 1311,
+            "G_D_ratio": 0.2
+          },
+          "CNTox⇒cDDP(15)": {
+            "G_freq": 1573,
+            "D_freq": 1338,
+            "G_D_ratio": 0.6
+          },
+          "CNTox⇒cDDP(28)": {
+            "G_freq": 1600,
+            "D_freq": 1350,
+            "G_D_ratio": 1.9
+          }
+        }
+      },
+      "tolerances": {
+        "barrier_abs": 3.0,
+        "thermo_abs": 3.0,
+        "sp_barrier_abs": 5.0,
+        "raman_freq_abs": 30.0,
+        "raman_ratio_abs": 0.15,
+        "nmr_trend": "trend_based"
+      },
+      "weights_internal": {
+        "gas_phase_barrier": 0.15,
+        "aqueous_barrier": 0.1,
+        "activation_enthalpy": 0.1,
+        "TdS": 0.05,
+        "activation_free_energy": 0.15,
+        "b3lyp_d3_barrier": 0.1,
+        "m06x_6_31g_barrier": 0.05,
+        "m06x_631g_d_barrier": 0.05,
+        "Raman": 0.15,
+        "NMR": 0.1
+      }
+    }
+  ]
+}

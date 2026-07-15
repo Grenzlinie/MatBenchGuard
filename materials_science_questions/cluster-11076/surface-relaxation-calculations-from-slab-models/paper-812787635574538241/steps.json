@@ -1,0 +1,67 @@
+[
+  {
+    "id": "build_cluster",
+    "title": "Build saturated Al8O12 cluster model",
+    "role": "process",
+    "action": "Construct the stoichiometric Al8O12 cluster from the bulk corundum structure by extracting the (0001)-terminated slab fragment. Attach pseudo-hydrogen saturators H' (Z=1.5) to Al dangling bonds and H'' (Z=0.5) to O dangling bonds, then replace the three H'' on O_II atoms with ordinary hydrogen (Z=1). Write the initial unrelaxed geometry to unrelaxed.xyz.",
+    "output_file": "",
+    "evidence": "unrelaxed.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the starting cluster geometry that will be used by all subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "clean_surface",
+    "title": "Clean surface relaxation and geometry",
+    "role": "scored",
+    "action": "Using DFT with a GGA functional (e.g., BP or PBE) and a triple-zeta basis for Al/O, double-zeta for H, relax the positions of the surface atoms Al_I and O_I (those not directly bonded to saturators) while keeping saturator positions fixed. Output the final relaxed geometry.",
+    "output_file": "clean_relaxed.xyz",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "XYZ file containing the final relaxed geometry of the clean Al8O12 cluster with saturators. The checker will extract atomic coordinates to compute Al_I displacement, interlayer spacing d, and Al_I-O_I bond length.",
+    "output_schema": "Standard XYZ format: number of atoms on first line, comment line, then lines with element symbol and x y z coordinates in Angstrom."
+  },
+  {
+    "id": "clean_energies",
+    "title": "Clean surface electronic energies",
+    "role": "scored",
+    "action": "Perform single-point calculations on the unrelaxed and relaxed clean clusters to obtain total energies and LUMO energies. Write a JSON file containing these values and the fixed surface area used for energy density conversion.",
+    "output_file": "clean_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the required energy quantities. The checker will recompute the relaxation energy and LUMO shift.",
+    "output_schema": "{\"unrelaxed_total_energy\": \"float (Hartree)\", \"relaxed_total_energy\": \"float (Hartree)\", \"unrelaxed_LUMO_energy\": \"float (eV)\", \"relaxed_LUMO_energy\": \"float (eV)\", \"surface_area_A2\": 19.55}"
+  },
+  {
+    "id": "co_adsorption",
+    "title": "CO adsorption geometry optimization",
+    "role": "scored",
+    "action": "Starting from the relaxed clean cluster, place a CO molecule above the Al_I surface atom in a C-down orientation. Perform a geometry optimization of the CO molecule, Al_I, and O_I atoms. Include basis set superposition error (BSSE) correction using ghost-fragment calculations. Output the final geometry.",
+    "output_file": "co_adsorbed_C_down.xyz",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "XYZ file containing the optimized geometry of CO adsorbed atop Al_I in the C-down orientation. The checker may extract the C-O bond length and the Al-C distance for verification.",
+    "output_schema": "Standard XYZ format."
+  },
+  {
+    "id": "adsorption_results",
+    "title": "CO adsorption properties report",
+    "role": "scored",
+    "action": "Compute the BSSE-corrected adsorption enthalpy, C-O bond length, and harmonic C-O stretching frequency from the optimized CO-adsorbed cluster. Write these quantities to a JSON file.",
+    "output_file": "adsorption_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the computed adsorption enthalpy, C-O bond length, and C-O stretching frequency. The checker compares these values to reference data.",
+    "output_schema": "{\"adsorption_enthalpy_kcal_per_mol\": \"float (with BSSE correction)\", \"C_O_bond_length_A\": \"float\", \"C_O_stretching_frequency_cm-1\": \"float\"}"
+  }
+]

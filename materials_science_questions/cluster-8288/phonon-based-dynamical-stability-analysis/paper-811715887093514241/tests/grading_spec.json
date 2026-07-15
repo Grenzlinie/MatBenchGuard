@@ -1,0 +1,392 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute DFT calculations; verification falls back to comparing agent's reported structure, phonon frequencies, and dielectric constants to the paper's hidden gold within defined tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_relaxed_structure.json": "reference_match",
+    "step_02_phonon_frequencies.json": "reference_match",
+    "step_03_dielectric_constants.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold for relaxed Pna2_1 structure coordinates and lattice constants from Table II",
+      "source_provenance": "Paper Table II, and lattice constants from text",
+      "generation_method": "Extracted directly from the paper: fractional coordinates of unique ions and lattice constants a=7.33340 Å, b=10.37100 Å, c=7.33340 Å (implied, same as a). All values are as reported in the paper.",
+      "why_not_fabricated": "These are the paper's own reported values, used as hidden reference for verification."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold for IR-active phonon frequencies and irreducible representations from Table V",
+      "source_provenance": "Paper Table V listing IR-active modes for Pna2_1 structure",
+      "generation_method": "Copied values from Table V, including frequencies, irreducible representations, and relative intensities; only modes with intensity >0.1 are included as gold matches.",
+      "why_not_fabricated": "These are the paper's own reported values, used as hidden reference for verification."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold for dielectric constant tensor diagonal components from text",
+      "source_provenance": "Paper text: 'The phonon contribution to the diagonal elements of the dielectric tensor, when all modes are taken into account, is ε_aa=101.7, ε_bb=198.3, and ε_cc=102.9.'",
+      "generation_method": "Copied directly from the paper.",
+      "why_not_fabricated": "These are the paper's own reported values, used as hidden reference for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_relaxed_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lattice_vectors_angstrom",
+            "fractional_coordinates",
+            "lattice_constants_angstrom"
+          ],
+          "properties": {
+            "lattice_vectors_angstrom": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            },
+            "fractional_coordinates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "element",
+                  "frac"
+                ],
+                "properties": {
+                  "element": {
+                    "type": "string"
+                  },
+                  "frac": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "lattice_constants_angstrom": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Final relaxed Pna2₁ structure with lattice vectors, lattice constants, and fractional coordinates for all unique atoms."
+      },
+      {
+        "file": "step_02_phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "modes",
+            "unit"
+          ],
+          "properties": {
+            "modes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "mode_number",
+                  "frequency_cm1",
+                  "irreducible_representation",
+                  "relative_intensity"
+                ],
+                "properties": {
+                  "mode_number": {
+                    "type": "integer"
+                  },
+                  "frequency_cm1": {
+                    "type": "number"
+                  },
+                  "irreducible_representation": {
+                    "type": "string"
+                  },
+                  "relative_intensity": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Γ‑point phonon frequencies (cm⁻¹) with symmetry labels and relative IR intensities."
+      },
+      {
+        "file": "step_03_dielectric_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "epsilon_aa",
+            "epsilon_bb",
+            "epsilon_cc",
+            "unit"
+          ],
+          "properties": {
+            "epsilon_aa": {
+              "type": "number"
+            },
+            "epsilon_bb": {
+              "type": "number"
+            },
+            "epsilon_cc": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Phonon contribution to the diagonal components of the static dielectric constant tensor (dimensionless)."
+      }
+    ],
+    "notes": "The checker compares the agent’s submitted structure, phonon frequencies, and dielectric constants against hidden reference values with appropriate tolerances to account for code/pseudopotential differences."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_relaxed_structure.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "config": {
+        "gold_structure": {
+          "lattice_vectors_angstrom": [
+            [
+              7.3334,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              10.371,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              7.3334
+            ]
+          ],
+          "lattice_constants_angstrom": [
+            7.3334,
+            10.371,
+            7.3334
+          ],
+          "fractional_coordinates": [
+            {
+              "element": "Bi1",
+              "frac": [
+                0.46821,
+                0.02436,
+                0.01883
+              ]
+            },
+            {
+              "element": "Bi2",
+              "frac": [
+                0.22034,
+                0.2387,
+                0.71964
+              ]
+            },
+            {
+              "element": "Ti1",
+              "frac": [
+                0.49128,
+                0.4933,
+                0.99697
+              ]
+            },
+            {
+              "element": "Ti2",
+              "frac": [
+                0.25941,
+                0.7604,
+                0.75377
+              ]
+            },
+            {
+              "element": "O1",
+              "frac": [
+                0.30771,
+                0.62654,
+                0.5568
+              ]
+            },
+            {
+              "element": "O2",
+              "frac": [
+                0.79348,
+                0.11688,
+                0.06149
+              ]
+            },
+            {
+              "element": "O3",
+              "frac": [
+                0.71201,
+                0.6219,
+                0.95715
+              ]
+            },
+            {
+              "element": "O4",
+              "frac": [
+                0.17647,
+                0.13538,
+                0.44955
+              ]
+            },
+            {
+              "element": "O5",
+              "frac": [
+                0.51184,
+                0.81992,
+                0.74272
+              ]
+            },
+            {
+              "element": "O6",
+              "frac": [
+                0.99726,
+                0.92673,
+                0.25312
+              ]
+            },
+            {
+              "element": "O'",
+              "frac": [
+                0.52092,
+                0.87681,
+                0.24008
+              ]
+            }
+          ]
+        },
+        "coord_tolerance": 0.005,
+        "lattice_tolerance_rel": 0.001
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_phonon_frequencies.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "config": {
+        "gold_modes": [
+          {
+            "frequency_cm1": 54.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.15
+          },
+          {
+            "frequency_cm1": 91.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.38
+          },
+          {
+            "frequency_cm1": 122.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.17
+          },
+          {
+            "frequency_cm1": 131.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.12
+          },
+          {
+            "frequency_cm1": 286.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.21
+          },
+          {
+            "frequency_cm1": 336.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.13
+          },
+          {
+            "frequency_cm1": 356.0,
+            "irreducible_representation": "A1",
+            "relative_intensity": 0.1
+          },
+          {
+            "frequency_cm1": 40.0,
+            "irreducible_representation": "B1",
+            "relative_intensity": 0.48
+          },
+          {
+            "frequency_cm1": 95.0,
+            "irreducible_representation": "B1",
+            "relative_intensity": 0.21
+          },
+          {
+            "frequency_cm1": 113.0,
+            "irreducible_representation": "B1",
+            "relative_intensity": 0.88
+          },
+          {
+            "frequency_cm1": 281.0,
+            "irreducible_representation": "B1",
+            "relative_intensity": 0.34
+          },
+          {
+            "frequency_cm1": 116.0,
+            "irreducible_representation": "B2",
+            "relative_intensity": 1.0
+          },
+          {
+            "frequency_cm1": 267.0,
+            "irreducible_representation": "B2",
+            "relative_intensity": 0.11
+          },
+          {
+            "frequency_cm1": 285.0,
+            "irreducible_representation": "B2",
+            "relative_intensity": 0.13
+          },
+          {
+            "frequency_cm1": 334.0,
+            "irreducible_representation": "B2",
+            "relative_intensity": 0.12
+          }
+        ],
+        "freq_tolerance": 10.0
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_dielectric_constants.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "config": {
+        "gold_dielectric": {
+          "epsilon_aa": 101.7,
+          "epsilon_bb": 198.3,
+          "epsilon_cc": 102.9
+        },
+        "rel_tolerance": 0.2
+      }
+    }
+  ]
+}

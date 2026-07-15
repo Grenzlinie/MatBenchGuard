@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T0 result-level compare is used because recompute from raw DFT artifacts inside the checker is infeasible; structural audit for edge states and strain trends complements numeric comparisons.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for cleavage energy/strength, SOC gap, Z2 invariant, and strain trend expectations.",
+      "source_provenance": "Paper: Fig. 2(b) for cleavage, text for SOC gap (50.7 meV), Fig. 5 for Z2=1, Fig. 7 for strain trend description.",
+      "generation_method": "Extracted directly from the paper's reported numbers and qualitative descriptions.",
+      "why_not_fabricated": "Values are the paper's own published results; any correct reproduction with reasonable toolchain variation should lie within the specified tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cleavage_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "cleavage_energy_Jm2": "float",
+            "cleavage_strength_GPa": "float"
+          }
+        },
+        "description": "Cleavage energy and strength for exfoliation feasibility."
+      },
+      {
+        "file": "band_gap_soc.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "SOC‑induced band gap at the Dirac point (PBE value)."
+      },
+      {
+        "file": "z2_invariant.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Z₂ topological invariant (0 or 1)."
+      },
+      {
+        "file": "edge_states_bandstructure.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Nanoribbon band structure showing helical edge states."
+      },
+      {
+        "file": "strain_gap_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_percent",
+            "direction",
+            "gap_eV"
+          ]
+        },
+        "description": "Band gap evolution under uniaxial strain along x and y directions."
+      }
+    ],
+    "notes": "Phonon spectrum omitted as per approved plan; HSE band gap is optional; scoring uses PBE gap only. Edge states are checked for Dirac‑like crossing inside the gap; strain trend checks monotonic/ordering of gap under strain."
+  },
+  "steps": [
+    {
+      "id": "step_03_cleavage",
+      "output_file": "cleavage_results.json",
+      "weight": 0.35,
+      "kind": "numeric_compare",
+      "hidden_target": {
+        "cleavage_energy_Jm2": 0.22,
+        "cleavage_strength_GPa": 2.65
+      },
+      "tolerance": {
+        "energy_rel": 0.15,
+        "strength_rel": 0.15
+      }
+    },
+    {
+      "id": "step_04_soc_gap",
+      "output_file": "band_gap_soc.txt",
+      "weight": 0.25,
+      "kind": "numeric_compare",
+      "hidden_target": {
+        "PBE_SOC_gap_meV": 50.7
+      },
+      "tolerance": {
+        "rel": 0.2
+      }
+    },
+    {
+      "id": "step_05_z2",
+      "output_file": "z2_invariant.txt",
+      "weight": 0.15,
+      "kind": "exact_match",
+      "hidden_target": 1
+    },
+    {
+      "id": "step_06_edge_states",
+      "output_file": "edge_states_bandstructure.dat",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "check": "dirac_crossing_present"
+    },
+    {
+      "id": "step_07_strain",
+      "output_file": "strain_gap_results.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "check": "strain_trend_monotonic",
+      "expected_trend": {
+        "x": "non_decreasing",
+        "y": "non_increasing"
+      }
+    }
+  ]
+}

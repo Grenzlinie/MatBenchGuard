@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Key activation barriers and formation energy of Fe active site are compared to paper-reported values within ±0.15 eV tolerance; volcano optimum verified by structural ordering check (Fe formation energy is larger than Cr, Mn, Co).",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energy_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "radical_barrier_eV": "float",
+            "concerted_barrier_eV": "float",
+            "forming_energy_OFeN4O_eV": "float"
+          }
+        },
+        "description": "Activation energy barriers for radical hydrogen‑abstraction and concerted hydroxylation on O–FeN4–O, and the formation energy of the O–FeN4–O site, compared to paper‑reported values with tolerance; ordering check (radical < concerted) is also applied."
+      },
+      {
+        "file": "step_02_volcano_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "formation_energies": {
+              "Cr": "float",
+              "Mn": "float",
+              "Fe": "float",
+              "Co": "float"
+            }
+          }
+        },
+        "description": "Formation energies of O–MN4–O for Cr, Mn, Fe, Co; the hidden checker verifies that Fe has an intermediate formation energy (volcano optimum) among them."
+      }
+    ],
+    "notes": "All DFT calculations are performed with the open‑source Quantum ESPRESSO code and the SSSP PBE pseudopotentials. The CI‑NEB barriers and formation energies are compared to the paper’s values within physically motivated tolerances; the volcano check enforces the relative ordering of formation energies without requiring absolute agreement with a specific reference."
+  },
+  "steps": [
+    {
+      "id": "step_01_energy_barriers",
+      "output_file": "step_01_energy_barriers.json",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "radical_barrier_gold": 0.79,
+      "radical_barrier_tolerance": 0.15,
+      "concerted_barrier_gold": 1.91,
+      "concerted_barrier_tolerance": 0.15,
+      "forming_energy_OFeN4O_gold": -2.07,
+      "forming_energy_OFeN4O_tolerance": 0.15,
+      "ordering_required": true
+    },
+    {
+      "id": "step_02_volcano_data",
+      "output_file": "step_02_volcano_data.json",
+      "weight": 0.4,
+      "kind": "structural",
+      "check_ordering": "Fe_energy > each other"
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for activation barriers and formation energies",
+      "source_provenance": "Paper's reported numbers: radical barrier 0.79 eV, concerted barrier 1.91 eV from Fig. S16; formation energy of O-FeN4-O -2.07 eV from Table S2/Figure S22; volcano formation energies for Cr, Mn, Co from same table.",
+      "generation_method": "Extracted from paper and stored inline; reference answer from solve.sh matches these values.",
+      "why_not_fabricated": "Values are the actual computed results reported in the paper; not fabricated."
+    }
+  ]
+}

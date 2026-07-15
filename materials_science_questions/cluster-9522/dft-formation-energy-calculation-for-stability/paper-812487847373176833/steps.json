@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate nanoparticle atomic models",
+    "role": "process",
+    "action": "Build 201-atom truncated octahedral fcc nanoparticle models for all required compositions: monometallic references (Pd₂₀₁, Ru₂₀₁, M₂₀₁ for M=Ir, Pt, Rh, Ag, Au), binary PdRu at multiple ratios, and ternary PdₓRuₓM₁₋₂ₓ for each M with x=0.33, 0.40, 0.45, 0.50. For each composition create at least 16 solid-solution configurations with random atomic occupations and low pairwise short-range order, plus one phase-segregated model.",
+    "output_file": "",
+    "evidence": "np_models_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Run DFT energy calculations",
+    "role": "process",
+    "action": "For every generated NP model and monometallic reference, run a DFT single-point energy calculation using PBE, PAW pseudopotentials, plane-wave cutoff 400 eV, Γ‑point k‑sampling, SCF convergence 1e‑5 eV. Extract the total energy of each cell.",
+    "output_file": "",
+    "evidence": "dft_total_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute configurational entropy",
+    "role": "scored",
+    "action": "Using the Bragg–Williams formula, calculate configurational entropy per atom for compositions PdₓRuₓM₁₋₂ₓ with x = 0.50, 0.45, 0.40, 0.33, with total atoms N=201.",
+    "output_file": "configurational_entropy.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON array of objects with fields 'x' and 'entropy_per_atom_eV'.",
+    "output_schema": "array of {x: float, entropy_per_atom_eV: float}"
+  },
+  {
+    "id": "step4",
+    "title": "Calculate excess energies",
+    "role": "scored",
+    "action": "From DFT total energies, compute excess energy per atom for each composition as average over solid-solution configurations and segregated model, using monometallic references. Report for solid-solution and segregated states.",
+    "output_file": "excess_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with system keys (e.g. 'PdRuIr_x33') each containing arrays of excess energy values (eV/atom).",
+    "output_schema": "object with system keys, each an object with 'solid_solution' and 'segregated' arrays of floats"
+  },
+  {
+    "id": "step5",
+    "title": "Determine critical temperatures",
+    "role": "scored",
+    "action": "From excess energies and configurational entropy, compute Gibbs free energy difference; find temperature Tc where solid-solution becomes favoured over segregated for binary PdRu and each ternary PdRuM (M=Ir, Pt, Rh, Ag, Au) at equiatomic composition (Pd:Ru:M=1:1:1).",
+    "output_file": "critical_temperatures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'PdRu', 'PdRuIr', 'PdRuPt', 'PdRuRh', 'PdRuAg', 'PdRuAu', each a float Tc in Kelvin.",
+    "output_schema": "object with system name keys and numeric Tc values"
+  }
+]

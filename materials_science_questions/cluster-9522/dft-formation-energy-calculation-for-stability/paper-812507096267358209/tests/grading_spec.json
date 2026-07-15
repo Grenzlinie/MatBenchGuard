@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energy recomputed from raw total energies; d-band center compared to paper gold because recompute from PDOS is infeasible in verifier, but result-level compare with tolerance is accepted.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energy per formula unit (-1.05 eV) and d-band center (-1.43 eV) reported in the paper.",
+      "source_provenance": "Paper text: Formation energy of antiperovskite is -1.05 eV; d-band center of Pd/ae-PdNNi termination is -1.43 eV.",
+      "generation_method": "Manually extracted from the paper (section 2.3, Figures 4a and 4e).",
+      "why_not_fabricated": "Directly quoted from the paper's reported values, consistent with public figures."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "antiperovskite": "number (eV)",
+            "Pd_fcc": "number (eV)",
+            "Ni_fcc": "number (eV)",
+            "N2_gas": "number (eV)"
+          }
+        },
+        "description": "Total energies of the reference phases and the antiperovskite bulk per simulation cell, used to recompute the formation energy."
+      },
+      {
+        "file": "dband_center.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d_band_center": "number (eV)"
+          }
+        },
+        "description": "The d-band center of the surface Pd atoms relative to the Fermi level."
+      }
+    ],
+    "notes": "The hidden checker recomputes the formation energy from total_energies.json and compares to a hidden reference value. The d-band center is compared directly. Tolerances are set to absorb DFT-implementation spread."
+  },
+  "steps": [
+    {
+      "id": "formation_energy_check",
+      "output_file": "total_energies.json",
+      "weight": 0.5,
+      "target": -1.05,
+      "tolerance": 0.15,
+      "policy": "reference_match",
+      "description": "Recompute formation energy from total_energies.json and compare to paper gold (-1.05 eV) with tolerance 0.15 eV"
+    },
+    {
+      "id": "dband_center_check",
+      "output_file": "dband_center.json",
+      "weight": 0.5,
+      "target": -1.43,
+      "tolerance": 0.15,
+      "policy": "reference_match",
+      "description": "Compare reported d-band center to paper gold (-1.43 eV) with tolerance 0.15 eV"
+    }
+  ]
+}

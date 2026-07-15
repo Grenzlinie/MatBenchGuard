@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible because agent submits final computed distances, energy, Keq/ΔG without raw AIMD trajectories; scoring uses paper-reported values with tolerances and a structural ordering check of ΔG across doping conditions.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for Tc-O distances, energy difference, Keq, ΔG, and ΔG ordering",
+      "source_provenance": "paper Table 1 and Fig. 2",
+      "generation_method": "values extracted from the paper",
+      "why_not_fabricated": "paper-reported reference values are the only available benchmarks for reproduction"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tc_o_distances.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "tc_o_distance_25C": "float (Å)",
+            "tc_o_distance_600C": "float (Å)"
+          }
+        },
+        "description": "Average Tc–O distances from AIMD simulations at 25°C and 600°C for undoped magnetite."
+      },
+      {
+        "file": "energy_difference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energy_difference_subsurface_surface": "float (eV)"
+          }
+        },
+        "description": "Static energy difference between subsurface and surface Tc configurations in magnetite."
+      },
+      {
+        "file": "doping_thermodynamics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "keq_undoped": "float (dimensionless)",
+            "deltaG_undoped": "float (kJ/mol)",
+            "keq_Ni": "float",
+            "deltaG_Ni": "float (kJ/mol)",
+            "keq_Zn": "float",
+            "deltaG_Zn": "float (kJ/mol)",
+            "keq_Co": "float",
+            "deltaG_Co": "float (kJ/mol)"
+          }
+        },
+        "description": "Equilibrium constants and Gibbs free energies for Tc(IV)/Tc(VII) equilibrium in undoped and Co/Zn/Ni-doped magnetite, quantifying doping effect on Tc retention."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_tc_o",
+      "output_file": "tc_o_distances.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "target": {
+        "tc_o_distance_25C": 1.98,
+        "tc_o_distance_600C": 1.79
+      },
+      "tolerance": 0.05,
+      "tolerance_type": "absolute"
+    },
+    {
+      "id": "step_energy_diff",
+      "output_file": "energy_difference.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "target": {
+        "energy_difference_subsurface_surface": 2.5
+      },
+      "tolerance": 0.5,
+      "tolerance_type": "absolute"
+    },
+    {
+      "id": "step_doping",
+      "output_file": "doping_thermodynamics.json",
+      "kind": "reference_match_and_order",
+      "weight": 0.6,
+      "target": {
+        "keq_undoped": 0.15,
+        "deltaG_undoped": 14.2,
+        "keq_Ni": 0.56,
+        "deltaG_Ni": 4.3,
+        "keq_Zn": 2.79,
+        "deltaG_Zn": -7.7,
+        "keq_Co": 21.8,
+        "deltaG_Co": -23.1
+      },
+      "tolerance": {
+        "keq_factor": 2.0,
+        "deltaG_abs": 5.0
+      },
+      "order_check": {
+        "field": "deltaG",
+        "expected_order": [
+          "Co",
+          "Zn",
+          "Ni",
+          "undoped"
+        ]
+      }
+    }
+  ]
+}

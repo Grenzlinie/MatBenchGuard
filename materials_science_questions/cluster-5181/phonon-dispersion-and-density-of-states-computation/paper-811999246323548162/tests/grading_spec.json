@@ -1,0 +1,177 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Structural parameters are self-reported from a fit to total-energy data not submitted; band gaps and phonon frequencies are recomputed from raw eigenvalue/frequency arrays, enabling recompute checks for those stages.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "structural_params.json": "exact_match",
+    "band_structure.json": "exact_match",
+    "phonon_dispersion.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold structural parameters (lattice constant, bulk modulus, pressure derivative) from paper Table",
+      "source_provenance": "Paper reported values in table (Present row)",
+      "generation_method": "Copied directly from paper",
+      "why_not_fabricated": "These are the paper's explicitly reported values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap values (indirect and direct) estimated from Fig. 2",
+      "source_provenance": "Graphical extraction from Fig. 2 of paper; approximate due to no explicit numerical values given",
+      "generation_method": "Estimated band edges from band structure plot yielding indirect gap ~0.8 eV, direct gap at Γ ~1.2 eV.",
+      "why_not_fabricated": "Reasonable estimate from the paper's figure; tolerances large enough to accommodate estimation uncertainty and toolchain spread."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold phonon frequencies at high-symmetry points Γ, X, W, L estimated from Fig. 3",
+      "source_provenance": "Approximate values read from phonon dispersion plot Fig.3; tolerance of 1 THz allows for re-run variation.",
+      "generation_method": "Approximate reading of acoustic and optical branch frequencies at Γ, X, W, L from the published figure.",
+      "why_not_fabricated": "Values are derived directly from the paper's figure, not invented; tolerances absorb estimation imprecision."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_A": "float",
+            "bulk_modulus_Mbar": "float",
+            "bulk_modulus_pressure_derivative": "float"
+          },
+          "units": {
+            "lattice_constant_A": "angstrom",
+            "bulk_modulus_Mbar": "Mbar",
+            "bulk_modulus_pressure_derivative": "dimensionless"
+          }
+        },
+        "description": "Equilibrium structural parameters extracted from the total-energy equation of state fit."
+      },
+      {
+        "file": "band_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "kpoint": [
+              "float",
+              "float",
+              "float"
+            ],
+            "eigenvalues": [
+              "float"
+            ]
+          },
+          "units": {
+            "kpoint": "crystal coordinates",
+            "eigenvalues": "eV"
+          }
+        },
+        "description": "Electronic band energies along high-symmetry k-points. The array contains one object per k-point with its coordinates and a list of band eigenvalues."
+      },
+      {
+        "file": "phonon_dispersion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "kpoint": [
+              "float",
+              "float",
+              "float"
+            ],
+            "frequencies_cm1": [
+              "float"
+            ]
+          },
+          "units": {
+            "kpoint": "crystal coordinates",
+            "frequencies_cm1": "cm^-1"
+          }
+        },
+        "description": "Phonon frequencies along high-symmetry q-points. The array contains one object per q-point with its coordinates and a list of phonon mode frequencies."
+      }
+    ],
+    "notes": "Scoring compares the equilibrium lattice constant, bulk modulus, pressure derivative, selected band gaps, and phonon frequencies at high-symmetry points against hidden reference values with tolerances that accommodate typical toolchain variations (pseudopotential choice, convergence settings). No explicit gold values or tolerances are revealed to the solver."
+  },
+  "steps": [
+    {
+      "id": "structural_params",
+      "output_file": "structural_params.json",
+      "weight": 0.3,
+      "gold": {
+        "lattice_constant_A": 6.041,
+        "bulk_modulus_Mbar": 0.534,
+        "bulk_modulus_pressure_derivative": 4.66
+      },
+      "tolerances": {
+        "lattice_constant_A_tol": 0.030205,
+        "bulk_modulus_Mbar_tol": 0.0267,
+        "bulk_modulus_pressure_derivative_tol": 0.466
+      }
+    },
+    {
+      "id": "band_structure",
+      "output_file": "band_structure.json",
+      "weight": 0.3,
+      "gold": {
+        "indirect_gap_eV": 0.8,
+        "direct_gap_Gamma_eV": 1.2
+      },
+      "tolerances": {
+        "gap_tol_eV": 0.2
+      }
+    },
+    {
+      "id": "phonon_dispersion",
+      "output_file": "phonon_dispersion.json",
+      "weight": 0.4,
+      "gold": {
+        "Gamma": [
+          0.0,
+          0.0,
+          0.0,
+          4.5,
+          4.5,
+          5.2
+        ],
+        "X": [
+          1.8,
+          2.2,
+          2.6,
+          4.0,
+          4.5,
+          4.8
+        ],
+        "W": [
+          1.8,
+          2.2,
+          2.7,
+          4.1,
+          4.5,
+          4.8
+        ],
+        "L": [
+          1.9,
+          2.1,
+          2.7,
+          4.2,
+          4.6,
+          5.0
+        ]
+      },
+      "tolerances": {
+        "freq_tol_THz": 1.0
+      }
+    }
+  ]
+}

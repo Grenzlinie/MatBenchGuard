@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes S_CC(0) from the substitutional alloy model (Eq. 50) and mass-action law using given parameters; no trust on agent’s reported values.",
+  "pass_threshold": 0.99,
+  "target_policies": {
+    "scc_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold S_CC(0) values for c=0.1 and c=2/3 under frozen-in and equilibrium conditions, recomputed from the model with N=1000, μ=2, ν=1, G_M/RT=-3",
+      "source_provenance": "paper Equation (50) and mass-action law with K=exp((μ+ν)*G_M/RT)",
+      "generation_method": "numerical solution using bisection with 100 iterations, identical to reference solve.sh",
+      "why_not_fabricated": "These values are deterministically derived from the model and parameters; they are the correct answers for this reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "scc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "frozen_in_c0p1",
+            "equilibrium_c0p1",
+            "frozen_in_c2p3",
+            "equilibrium_c2p3"
+          ],
+          "properties": {
+            "frozen_in_c0p1": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "equilibrium_c0p1": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "frozen_in_c2p3": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "equilibrium_c2p3": {
+              "type": "number",
+              "unit": "dimensionless"
+            }
+          }
+        },
+        "description": "S_CC(0) values for two concentrations under frozen-in and equilibrium states computed from the substitutional alloy model."
+      }
+    ],
+    "notes": "The values are deterministic given the stated parameters. The checker recomputes them independently and compares with a tight relative tolerance."
+  },
+  "steps": [
+    {
+      "id": "compute_scc",
+      "output_file": "scc_results.json",
+      "weight": 1.0,
+      "kind": "recompute_SCC",
+      "parameters": {
+        "N": 1000,
+        "mu": 2,
+        "nu": 1,
+        "G_MRT": -3.0
+      },
+      "tolerance_rel": 1e-06,
+      "fields": [
+        "frozen_in_c0p1",
+        "equilibrium_c0p1",
+        "frozen_in_c2p3",
+        "equilibrium_c2p3"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute epsilon from raw DFT outputs; compare reported values and nonmonotonic trend against hidden reference from paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dielectric_constants.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference epsilon values for BCZ compositions from paper Figure 1 (DFT-LDA, 2x2x2 supercells, directionally averaged, T=0 K).",
+      "source_provenance": "Paper DOI:10.1021/cm800929e, Figure 1 black circles: BaZrO3 epsilon=50, x=0.125 peak ~68, x=0.25 ~58, x=0.5 ~42. These values are read from the figure and from the solve.sh baseline.",
+      "generation_method": "Extracted from paper Figure 1 and from solve.sh hardcoded values that approximate the paper's computed data points.",
+      "why_not_fabricated": "Values are taken directly from the paper's published results; they represent the target dielectric constants for the specified compositions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dielectric_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_x",
+            "epsilon"
+          ],
+          "description": "composition_x (float): Ca mole fraction. epsilon (float): directionally averaged static dielectric constant (dimensionless)."
+        },
+        "description": "Static dielectric constant (directionally averaged) for each specified BCZ composition (x=0, 0.125, 0.25, 0.5). The checker compares the values and their trend to a hidden reference from the paper."
+      }
+    ],
+    "notes": "Only the dielectric constants are scored; phonon frequencies and structural parameters are not evaluated. The compositions are x = 0, 0.125, 0.25, and 0.5."
+  },
+  "steps": [
+    {
+      "id": "dielectric_constants_evaluate",
+      "output_file": "dielectric_constants.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold": {
+        "0": 50.0,
+        "0.125": 68.0,
+        "0.25": 58.0,
+        "0.5": 42.0
+      },
+      "tolerance": 0.2,
+      "trend_required": "nonmonotonic_peak_at_low_x"
+    }
+  ]
+}

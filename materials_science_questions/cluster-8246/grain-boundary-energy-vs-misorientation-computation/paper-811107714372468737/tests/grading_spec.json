@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recomputation of grain-boundary energies from raw simulation artifacts is infeasible in the verifier sandbox due to the heavy computational cost of EAM lattice statics. Scoring instead uses a result-level comparison of reported energies against paper-based gold values (±0.1 J/m² tolerance) combined with a structural audit of the energy–misorientation curve (convexity and cusp presence).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "predicted_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold grain-boundary energies for the 13 test boundaries, extracted from the paper.",
+      "source_provenance": "Paper Figure 5A and the paper text for Σ13 (0.96 J/m²).",
+      "generation_method": "Values digitised from the paper’s reported virtual-screening results and used as the reference oracle in solve.sh.",
+      "why_not_fabricated": "These are the actual quantities the paper reports for the virtual screening prediction; they are the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predicted_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "boundary_name",
+            "misorientation_angle_deg",
+            "predicted_energy_Jm2"
+          ],
+          "units": {
+            "predicted_energy_Jm2": "J/m²"
+          }
+        },
+        "description": "Grain-boundary energies for the 13 test boundaries, obtained after virtual screening and a single relaxation. The checker compares these values to hidden reference energies from the paper and performs a structural audit on the energy vs misorientation curve (convex shape and cusps at characteristic angles)."
+      }
+    ],
+    "notes": "The checker also verifies that the reported energies produce a convex profile with cusps at misorientation angles 16.26°, 28.07°, 36.87°, 53.13°, 67.38° within ±1°, but these structural constraints are encoded in the scoring logic and do not require an additional output file."
+  },
+  "steps": [
+    {
+      "id": "energy_match",
+      "output_file": "predicted_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.75,
+      "tolerance": 0.1,
+      "gold_energies": [
+        {
+          "boundary_name": "Sigma13/(230)",
+          "misorientation_angle_deg": 67.38,
+          "predicted_energy_Jm2": 0.96
+        },
+        {
+          "boundary_name": "Sigma25/(430)",
+          "misorientation_angle_deg": 73.74,
+          "predicted_energy_Jm2": 0.98
+        },
+        {
+          "boundary_name": "Sigma25/(710)",
+          "misorientation_angle_deg": 16.26,
+          "predicted_energy_Jm2": 0.91
+        },
+        {
+          "boundary_name": "Sigma29/(520)",
+          "misorientation_angle_deg": 43.6,
+          "predicted_energy_Jm2": 1.0
+        },
+        {
+          "boundary_name": "Sigma29/(730)",
+          "misorientation_angle_deg": 46.4,
+          "predicted_energy_Jm2": 1.01
+        },
+        {
+          "boundary_name": "Sigma37/(610)",
+          "misorientation_angle_deg": 18.92,
+          "predicted_energy_Jm2": 0.94
+        },
+        {
+          "boundary_name": "Sigma37/(750)",
+          "misorientation_angle_deg": 71.08,
+          "predicted_energy_Jm2": 0.97
+        },
+        {
+          "boundary_name": "Sigma41/(910)",
+          "misorientation_angle_deg": 12.68,
+          "predicted_energy_Jm2": 0.93
+        },
+        {
+          "boundary_name": "Sigma41/(540)",
+          "misorientation_angle_deg": 77.32,
+          "predicted_energy_Jm2": 0.99
+        },
+        {
+          "boundary_name": "Sigma53/(720)",
+          "misorientation_angle_deg": 31.89,
+          "predicted_energy_Jm2": 0.97
+        },
+        {
+          "boundary_name": "Sigma53/(950)",
+          "misorientation_angle_deg": 58.11,
+          "predicted_energy_Jm2": 0.99
+        },
+        {
+          "boundary_name": "Sigma61/(11 1 0)",
+          "misorientation_angle_deg": 10.39,
+          "predicted_energy_Jm2": 0.92
+        },
+        {
+          "boundary_name": "Sigma125/(11 2 0)",
+          "misorientation_angle_deg": 20.61,
+          "predicted_energy_Jm2": 0.95
+        }
+      ]
+    },
+    {
+      "id": "structure_audit",
+      "output_file": "predicted_energies.csv",
+      "kind": "structural",
+      "weight": 0.25
+    }
+  ]
+}

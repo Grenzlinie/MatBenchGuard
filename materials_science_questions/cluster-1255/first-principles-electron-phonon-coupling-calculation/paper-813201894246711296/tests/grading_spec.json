@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Headline quantities are computed from DFT/DFPT calculations; recomputing from raw logs is infeasible in the verifier, so the checker compares the agent's reported numeric results to the paper's reported values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference phonon frequencies (representative values from the paper's calculated ranges) and electron-phonon coupling parameters (from Table I) and SCDFT Tc for factor-of-two check.",
+      "source_provenance": "Paper Table II (Hg frequencies) and Table I (λ, ωln), plus headline SCDFT Tc values from the text.",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These numbers are the ground-truth reference from the original paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "mode",
+            "frequency_cm1"
+          ],
+          "units": {
+            "frequency_cm1": "cm⁻¹"
+          }
+        },
+        "description": "Γ-point frequencies of the eight Hg-derived modes for each compound. The checker compares each frequency to the paper's reported ranges (Table II) within a tolerance and verifies the alkali-metal dependence."
+      },
+      {
+        "file": "ep_coupling.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "lambda_N0",
+            "lambda_Nxi",
+            "omega_ln_N0",
+            "omega_ln_Nxi",
+            "Tc_MAD_K"
+          ],
+          "units": {
+            "lambda_N0": "dimensionless",
+            "lambda_Nxi": "dimensionless",
+            "omega_ln_N0": "K",
+            "omega_ln_Nxi": "K",
+            "Tc_MAD_K": "K"
+          }
+        },
+        "description": "Electron-phonon coupling coefficients and Allen-Dynes Tc. The checker compares λ and ωln values to paper Table I within a relative tolerance and verifies that Tc_MAD_K increases monotonically from K3C60 to Rb3C60 to Cs3C60 and lies within a factor of 2 of the paper's SCDFT Tc."
+      }
+    ],
+    "notes": "The full SCDFT gap equation solver is omitted from the reproduction scope because it relies on a non-public custom code. The essential alkali-metal dependence of Tc is captured by the Allen-Dynes formula using the energy-dependent coupling parameters λ_N(ξ) and ω_ln,N(ξ), which are derived from the DFT/DFPT results. The electron-electron kernel K^el and the full SCDFT Tc are not required."
+  },
+  "steps": [
+    {
+      "id": "step04_hg_freq",
+      "output_file": "phonon_frequencies.csv",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "description": "Score Hg phonon frequencies (±10 cm⁻¹ tolerance)",
+      "kind": "numeric",
+      "tolerance_cm1": 10,
+      "gold_frequencies": {
+        "K3C60": {
+          "Hg(1)": 267,
+          "Hg(2)": 422,
+          "Hg(3)": 687,
+          "Hg(4)": 779,
+          "Hg(5)": 1114,
+          "Hg(6)": 1271,
+          "Hg(7)": 1406,
+          "Hg(8)": 1535
+        },
+        "Rb3C60": {
+          "Hg(1)": 265,
+          "Hg(2)": 421,
+          "Hg(3)": 687,
+          "Hg(4)": 780,
+          "Hg(5)": 1114,
+          "Hg(6)": 1271,
+          "Hg(7)": 1404,
+          "Hg(8)": 1534
+        },
+        "Cs3C60": {
+          "Hg(1)": 266,
+          "Hg(2)": 420,
+          "Hg(3)": 688,
+          "Hg(4)": 781,
+          "Hg(5)": 1117,
+          "Hg(6)": 1273,
+          "Hg(7)": 1407,
+          "Hg(8)": 1535
+        }
+      }
+    },
+    {
+      "id": "step06_coupling_tc",
+      "output_file": "ep_coupling.csv",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "description": "Score coupling parameters (±5% relative) and Tc monotonic+factor check",
+      "kind": "numeric",
+      "gold_coupling": {
+        "K3C60": {
+          "lambda_N0": 0.562,
+          "lambda_Nxi": 0.489,
+          "omega_ln_N0": 1071,
+          "omega_ln_Nxi": 932
+        },
+        "Rb3C60": {
+          "lambda_N0": 0.57,
+          "lambda_Nxi": 0.542,
+          "omega_ln_N0": 1054,
+          "omega_ln_Nxi": 944
+        },
+        "Cs3C60": {
+          "lambda_N0": 0.603,
+          "lambda_Nxi": 0.652,
+          "omega_ln_N0": 1052,
+          "omega_ln_Nxi": 940
+        }
+      },
+      "tolerance_rel": 0.05,
+      "scdft_tc": {
+        "K3C60": 7.5,
+        "Rb3C60": 9.0,
+        "Cs3C60": 15.7
+      },
+      "tc_factor_low": 0.5,
+      "tc_factor_high": 2.0
+    }
+  ]
+}

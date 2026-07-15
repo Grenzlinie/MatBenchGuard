@@ -1,0 +1,54 @@
+[
+  {
+    "id": "generate_geometry",
+    "title": "Generate nanotube geometries",
+    "role": "process",
+    "action": "For armchair nanotubes (n=m, n=4..19) and zigzag nanotubes (m=0, n=5..19), compute the chiral vector and lattice vectors, construct the cylindrical unit cell, and generate the Cartesian atomic positions of all carbon atoms in the unit cell using the graphene lattice constant (≈0.246 nm).",
+    "output_file": "",
+    "evidence": "geometry_check.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Creates the structural input needed for the force-field calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "curvature_correction",
+    "title": "Apply curvature correction to force constants",
+    "role": "process",
+    "action": "Obtain the 2D graphite force-constant tensor parameters from Jishi et al. (1993). For each tube, for each pair of interacting atoms (18 nearest neighbours), determine the local cylindrical coordinate frame and apply the sequence of five rotations to the 3×3 force-constant tensor to adapt it to the curved surface.",
+    "output_file": "",
+    "evidence": "rotated_force_constants.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Curvature-adapted force constants are the key model ingredient; this step implements the core physical correction.",
+    "output_schema": ""
+  },
+  {
+    "id": "phonon_calculation",
+    "title": "Build dynamical matrix and diagonalize",
+    "role": "process",
+    "action": "For each tube, construct the dynamical matrix at the Γ point (wavevector k=0) using the curvature-corrected force constants and the atomic masses. Diagonalize the matrix to obtain the phonon eigenfrequencies (in cm⁻¹) and the corresponding eigenvectors (displacement patterns).",
+    "output_file": "",
+    "evidence": "raw_eigensolutions.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The core numerical diagonalization that yields the vibrational frequencies and atomic displacement patterns.",
+    "output_schema": ""
+  },
+  {
+    "id": "symmetry_and_output",
+    "title": "Classify modes by symmetry and write scored output",
+    "role": "scored",
+    "action": "For each tube, classify every Γ‑point mode into an irreducible representation of the D₂ₙₕ point group using the computed eigenvectors and the character table of D₂ₙₕ; determine whether each mode is Raman‑active, IR‑active, or silent; identify the radial breathing mode as the lowest‑frequency A₁₉ mode; compute the tube diameter from the chiral indices. Write the complete structured results to step_01_phonon_results.json.",
+    "output_file": "step_01_phonon_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This is the sole scored artifact containing all quantitative results needed to verify the main claims of the paper.",
+    "output_schema": "{\"armchair\": [{\"n\": int, \"m\": int, \"diameter_nm\": float, \"rbm_frequency_cm-1\": float, \"gamma_modes\": [{\"frequency_cm-1\": float, \"irrep\": string, \"raman_active\": bool, \"ir_active\": bool}], \"raman_active_total\": int, \"ir_active_total\": int}], \"zigzag\": [same structure]}"
+  }
+]

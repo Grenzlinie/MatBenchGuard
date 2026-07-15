@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Geometry optimization and equation-of-state data",
+    "role": "scored",
+    "action": "Perform DFT geometry optimization using PBEsol-GGA. Compute total energy for 8-12 unit-cell volumes around equilibrium, covering compression and expansion. Fit the Murnaghan equation of state to obtain equilibrium lattice constants and bulk modulus. Save the energy-volume pairs.",
+    "output_file": "step_01_e_v_data.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw DFT energy-volume data for equation of state fitting.",
+    "output_schema": "CSV with columns: volume (bohr^3), energy (Ry)."
+  },
+  {
+    "id": "step02",
+    "title": "Self-consistent field calculation at equilibrium geometry",
+    "role": "process",
+    "action": "Run a self-consistent DFT calculation at the equilibrium lattice constants to obtain converged ground-state charge density, Kohn-Sham eigenvalues and wavefunctions, required for optical property calculation.",
+    "output_file": "",
+    "evidence": "scf_convergence.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Optical dielectric function calculation",
+    "role": "scored",
+    "action": "From the ground-state wavefunctions obtained in step02, calculate the frequency-dependent imaginary part of the dielectric tensor (epsilon2) for photon energies from 0 to 40 eV, including a sufficient number of empty bands. Output epsilon2 for the xx, yy, zz components on a dense energy grid.",
+    "output_file": "step_02_dielectric_function.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Imaginary dielectric function components used to derive optical constants and locate characteristic peaks.",
+    "output_schema": "CSV with columns: energy_eV, eps2_xx, eps2_yy, eps2_zz."
+  },
+  {
+    "id": "step04",
+    "title": "Thermodynamic property simulation (quasi-harmonic Debye model)",
+    "role": "scored",
+    "action": "Implement the quasi-harmonic Debye model using the E-V data from step01. Compute thermodynamic properties (unit-cell volume, bulk modulus, Debye temperature, thermal expansion coefficient, heat capacities Cv and Cp, entropy, internal energy) for the temperature range 0-5000 K at pressures 0, 20, and 50 GPa. Write all computed properties for each (T,P) point.",
+    "output_file": "step_03_thermal_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Complete thermodynamic table covering the paper's reported temperature/pressure range.",
+    "output_schema": "CSV with columns: temperature_K, pressure_GPa, volume_bohr3, bulk_modulus_GPa, debye_temp_K, alpha_1e5_perK, cv_J_molK, cp_J_molK, entropy_J_molK, internal_energy_kJ_mol."
+  },
+  {
+    "id": "step05",
+    "title": "Extract final scored target quantities",
+    "role": "scored",
+    "action": "From the computed E-V data and the dielectric and thermal CSV files, extract the following quantities: (1) equilibrium lattice constants a, b, c from the Murnaghan fit; (2) the three principal peaks of epsilon2 (their values and corresponding energies for xx, yy, zz polarizations); (3) the plasma frequency (energy of the maximum in the loss function derived from the dielectric data); (4) the high-temperature limiting value of Cv (Dulong-Petit limit) and the Debye temperature at 300 K and 0 GPa. Write a JSON file with these values.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated key reproduction targets for validation.",
+    "output_schema": "JSON with keys: lattice_params (object with a,b,c in Å), epsilon2_peaks (object with xx_peak_val, xx_peak_energy, yy_peak_val, yy_peak_energy, zz_peak_val, zz_peak_energy), plasma_frequency (eV), cv_dulong_petit (J/mol·K), debye_temperature_0GPa_300K (K)."
+  }
+]

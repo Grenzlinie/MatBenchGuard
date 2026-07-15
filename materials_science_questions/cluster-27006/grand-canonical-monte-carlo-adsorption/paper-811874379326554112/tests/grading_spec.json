@@ -1,0 +1,176 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The headline quantities are outputs of a full MD simulation workflow; the verifier cannot recompute them from raw trajectories, so it compares the agent's reported values against paper gold with appropriate tolerances and a trend check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported interaction energies (UFF ~1 kcal/mol, DREIDING ~0.5), adsorption densities (Tables 2,3), and self-diffusion coefficients (Table 4)",
+      "source_provenance": "Paper Tables 2, 3, 4 and text Section 3.1",
+      "generation_method": "Copied directly from the published paper",
+      "why_not_fabricated": "These are the actual published values that a correct reproduction should approximately match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "interaction_energy_UFF": "number (kcal/mol)",
+            "interaction_energy_DREIDING": "number (kcal/mol)",
+            "adsorption_density_IRMOF1": "object with keys \"1wt%\", \"2wt%\", \"5wt%\", \"liquid\", each containing {A: number, B: number, Total: number}",
+            "adsorption_density_IRMOF13": "object with keys \"1wt%\", \"2wt%\", \"5wt%\", \"liquid\", each containing {A′: number, B′: number, C: number, E: number, Total: number}",
+            "self_diffusion_IRMOF10": "object with keys \"1wt%\", \"2wt%\", \"5wt%\", \"liquid\", each a number (Å²/ps)",
+            "self_diffusion_IRMOF13": "object with keys \"1wt%\", \"2wt%\", \"5wt%\", \"liquid\", each a number (Å²/ps)"
+          },
+          "units": {
+            "interaction_energy_UFF": "kcal/mol",
+            "interaction_energy_DREIDING": "kcal/mol",
+            "adsorption_densities": "1/Å³ × 10⁻²",
+            "self_diffusion_coefficients": "Å²/ps"
+          }
+        },
+        "description": "Single JSON file containing all scored quantities: force‑field interaction energies, pore‑resolved adsorbed hydrogen densities, and H₂ self‑diffusion coefficients."
+      }
+    ],
+    "notes": "All adsorption densities are per available pore volume. The liquid‑density equivalent loading corresponds to filling every pore volume with 0.09 g/cm³ liquid hydrogen (1 H₂ per 47.48 Å³). D pore is excluded from analysis. Tolerances and relative ordering checks are defined in the hidden checker and are not part of the public contract."
+  },
+  "steps": [
+    {
+      "id": "interaction_energies",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "numeric_comparison",
+      "gold": {
+        "interaction_energy_UFF": 1.0,
+        "interaction_energy_DREIDING": 0.5
+      },
+      "tolerance": {
+        "type": "abs",
+        "value": 0.2
+      },
+      "description": "UFF and DREIDING interaction energies with ordering check"
+    },
+    {
+      "id": "ads_density_irmof1",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "numeric_comparison",
+      "gold": {
+        "1wt%": {
+          "A": 0.11,
+          "B": 0.1,
+          "Total": 0.11
+        },
+        "2wt%": {
+          "A": 0.2,
+          "B": 0.22,
+          "Total": 0.21
+        },
+        "5wt%": {
+          "A": 0.45,
+          "B": 0.63,
+          "Total": 0.54
+        },
+        "liquid": {
+          "A": 0.68,
+          "B": 1.22,
+          "Total": 0.94
+        }
+      },
+      "tolerance": {
+        "rel": 0.2,
+        "abs_floor": 0.02
+      },
+      "description": "Adsorbed hydrogen density in IRMOF-1 A and B pores"
+    },
+    {
+      "id": "ads_density_irmof13",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "numeric_comparison",
+      "gold": {
+        "1wt%": {
+          "A′": 0.06,
+          "B′": 0.09,
+          "C": 0.98,
+          "E": 0.18,
+          "Total": 0.22
+        },
+        "2wt%": {
+          "A′": 0.14,
+          "B′": 0.24,
+          "C": 1.5,
+          "E": 0.41,
+          "Total": 0.41
+        },
+        "5wt%": {
+          "A′": 0.51,
+          "B′": 0.8,
+          "C": 2.16,
+          "E": 1.01,
+          "Total": 0.92
+        },
+        "liquid": {
+          "A′": 0.68,
+          "B′": 1.2,
+          "C": 2.49,
+          "E": 1.25,
+          "Total": 1.15
+        }
+      },
+      "tolerance": {
+        "rel": 0.2,
+        "abs_floor": 0.02
+      },
+      "description": "Adsorbed hydrogen density in IRMOF-13 A′, B′, C, E pores"
+    },
+    {
+      "id": "diffusion_irmof10",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "numeric_comparison",
+      "gold": {
+        "1wt%": 7.92,
+        "2wt%": 7.21,
+        "5wt%": 6.7,
+        "liquid": 3.62
+      },
+      "tolerance": {
+        "rel": 0.2,
+        "abs_floor": 0.5
+      },
+      "description": "Self-diffusion coefficients in IRMOF-10"
+    },
+    {
+      "id": "diffusion_irmof13",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "numeric_comparison",
+      "gold": {
+        "1wt%": 0.2,
+        "2wt%": 0.33,
+        "5wt%": 0.8,
+        "liquid": 0.72
+      },
+      "tolerance": {
+        "rel": 0.2,
+        "abs_floor": 0.5
+      },
+      "description": "Self-diffusion coefficients in IRMOF-13"
+    },
+    {
+      "id": "pore_ordering",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "structural",
+      "description": "C pore densities must be higher than A′, B′, E",
+      "parameters": {}
+    }
+  ]
+}

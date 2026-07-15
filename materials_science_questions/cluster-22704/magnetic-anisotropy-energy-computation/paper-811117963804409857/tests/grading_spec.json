@@ -1,0 +1,188 @@
+{
+  "scoring_tier": "result-level compare with structural reinforcement",
+  "scoring_justification": "T0 result-level compare is acceptable because the agent's raw DFT total energies are large and the checker cannot recompute MA from them; comparing the agent's reported MA values to paper gold with tolerance, combined with structural trend checks, is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "MA_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold MA values for each cap material and thickness, and structural trend rules.",
+      "source_provenance": "Extracted from paper Fig.3(a), text description, and cross-matched with the reference solve.sh that represents a correct reproduction.",
+      "generation_method": "Digitised from reported data and rounded to two decimal places; verified against oracle values.",
+      "why_not_fabricated": "Values are grounded in the published paper and are consistent with the reference oracle that achieves full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "MA_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cap_material",
+            "thickness_ML",
+            "MA_erg_per_cm2"
+          ]
+        },
+        "description": "CSV containing computed magnetic anisotropy per unit area (erg/cm²) for Cu/FeCo/Hf(n) (n=0-10) and Cu/FeCo/Ta(n) (n=0-4). The checker compares each entry to hidden reference values within a tolerance and also evaluates structural consistency."
+      }
+    ],
+    "notes": "The MA values must be computed from total-energy differences of SOC-DFT calculations on the specified slab systems. The shape anisotropy estimate (approx -0.6 erg/cm²) is for context only and not scored."
+  },
+  "steps": [
+    {
+      "id": "numeric_ma",
+      "output_file": "MA_values.csv",
+      "weight": 0.7,
+      "kind": "numeric_reference",
+      "tolerance": 0.15,
+      "reference": [
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 0,
+          "MA_erg_per_cm2": 1.49
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 1,
+          "MA_erg_per_cm2": 0.62
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 2,
+          "MA_erg_per_cm2": 0.75
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 3,
+          "MA_erg_per_cm2": 0.92
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 4,
+          "MA_erg_per_cm2": 0.72
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 5,
+          "MA_erg_per_cm2": 0.95
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 6,
+          "MA_erg_per_cm2": 0.75
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 7,
+          "MA_erg_per_cm2": 0.98
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 8,
+          "MA_erg_per_cm2": 0.78
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 9,
+          "MA_erg_per_cm2": 1.0
+        },
+        {
+          "cap_material": "Hf",
+          "thickness_ML": 10,
+          "MA_erg_per_cm2": 0.8
+        },
+        {
+          "cap_material": "Ta",
+          "thickness_ML": 0,
+          "MA_erg_per_cm2": 1.49
+        },
+        {
+          "cap_material": "Ta",
+          "thickness_ML": 1,
+          "MA_erg_per_cm2": 1.0
+        },
+        {
+          "cap_material": "Ta",
+          "thickness_ML": 2,
+          "MA_erg_per_cm2": -0.2
+        },
+        {
+          "cap_material": "Ta",
+          "thickness_ML": 3,
+          "MA_erg_per_cm2": -0.32
+        },
+        {
+          "cap_material": "Ta",
+          "thickness_ML": 4,
+          "MA_erg_per_cm2": -0.3
+        }
+      ]
+    },
+    {
+      "id": "trend_ma",
+      "output_file": "MA_values.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "rules": {
+        "hf_alternating": [
+          {
+            "high": 3,
+            "low": 2
+          },
+          {
+            "high": 3,
+            "low": 4
+          },
+          {
+            "high": 5,
+            "low": 4
+          },
+          {
+            "high": 5,
+            "low": 6
+          },
+          {
+            "high": 7,
+            "low": 6
+          },
+          {
+            "high": 7,
+            "low": 8
+          },
+          {
+            "high": 9,
+            "low": 8
+          },
+          {
+            "high": 9,
+            "low": 10
+          }
+        ],
+        "ta_sign": [
+          {
+            "thickness_ML": 1,
+            "expected": "positive"
+          },
+          {
+            "thickness_ML": 2,
+            "expected": "negative"
+          },
+          {
+            "thickness_ML": 3,
+            "expected": "negative"
+          },
+          {
+            "thickness_ML": 4,
+            "expected": "negative"
+          }
+        ]
+      }
+    }
+  ]
+}

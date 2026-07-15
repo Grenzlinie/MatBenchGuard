@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "All scored quantities are computed HSE06/LDA values; recomputing from raw DFT outputs is infeasible without full workflow re-execution. Result-level comparison against paper-reported gold with generous tolerances is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_p4o4_band_gap.json": "reference_match",
+    "step_02_p4o4_effective_mass.json": "reference_match",
+    "step_03_p4o4_band_edges.json": "reference_match",
+    "step_04_p2o3_polarization.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for all scored quantities",
+      "source_provenance": "Paper main text and figures: band gap 2.24 eV (Fig 3a), effective mass 0.58 m₀ (LDA), vacuum-referenced CBM -3.67 eV / VBM -5.61 eV (Fig 4a), polarizations 2.4e-12 C/m (P2O3-I) and 1.2e-12 C/m (P2O3-II)",
+      "generation_method": "Direct extraction from published paper and its reported HSE06/LDA results",
+      "why_not_fabricated": "Every gold value is traceable to a specific figure/sentence in the source paper; no synthetic or guessed numbers are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_p4o4_band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "method": "string",
+            "functional": "string",
+            "band_gap": "float (eV)",
+            "direct": "boolean"
+          }
+        },
+        "description": "HSE06 direct band gap of P4O4‑I."
+      },
+      {
+        "file": "step_02_p4o4_effective_mass.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "method": "string",
+            "functional": "string",
+            "carrier_type": "string",
+            "effective_mass": "float (units: m₀)",
+            "reference": "string"
+          }
+        },
+        "description": "LDA electron effective mass of P4O4‑I."
+      },
+      {
+        "file": "step_03_p4o4_band_edges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CBM_vs_vacuum": "float (eV)",
+            "VBM_vs_vacuum": "float (eV)",
+            "HER_potential": "float (eV)",
+            "OER_potential": "float (eV)",
+            "pH": 0
+          }
+        },
+        "description": "Vacuum‑referenced VBM and CBM energies of P4O4‑I."
+      },
+      {
+        "file": "step_04_p2o3_polarization.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "structure": "string",
+            "polarization": "float (C/m)",
+            "direction": "string"
+          }
+        },
+        "description": "Spontaneous polarisation of the P2O3 ferroelectric phases."
+      }
+    ],
+    "notes": "All output files contain computed quantities compared against hidden reference values derived from the paper. The HER and OER potentials are at pH=0."
+  },
+  "steps": [
+    {
+      "id": "step-01-bandgap",
+      "output_file": "step_01_p4o4_band_gap.json",
+      "weight": 0.2,
+      "target_band_gap": 2.24,
+      "tolerance_band_gap": 0.1,
+      "required_functional": "HSE06",
+      "required_direct": true
+    },
+    {
+      "id": "step-02-effmass",
+      "output_file": "step_02_p4o4_effective_mass.json",
+      "weight": 0.3,
+      "target_effmass": 0.58,
+      "tolerance_effmass": 0.05,
+      "required_functional": "LDA"
+    },
+    {
+      "id": "step-03-bandedges",
+      "output_file": "step_03_p4o4_band_edges.json",
+      "weight": 0.2,
+      "target_CBM": -3.67,
+      "target_VBM": -5.61,
+      "tolerance_CBM_VBM": 0.2,
+      "target_HER": -4.44,
+      "target_OER": -5.67,
+      "tolerance_HER_OER": 0.1,
+      "required_pH": 0
+    },
+    {
+      "id": "step-04-polarization",
+      "output_file": "step_04_p2o3_polarization.json",
+      "weight": 0.3,
+      "targets": [
+        {
+          "structure": "P2O3-I",
+          "polarization": 2.4e-12,
+          "tolerance": 5e-13,
+          "direction": "out-of-plane"
+        },
+        {
+          "structure": "P2O3-II",
+          "polarization": 1.2e-12,
+          "tolerance": 5e-13,
+          "direction": "in-plane"
+        }
+      ]
+    }
+  ]
+}

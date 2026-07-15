@@ -1,0 +1,80 @@
+[
+  {
+    "id": "opt_structure",
+    "title": "Geometry optimization of Co-MIL-88A",
+    "role": "process",
+    "action": "Construct the Co-MIL-88A unit cell by replacing Fe with Co in the Fe-MIL-88A crystal structure obtained from the public resource. Perform DFT geometry optimization (variable-cell relaxation) using the revPBE+vdW-DF functional to determine the optimized lattice parameters and atomic positions.",
+    "output_file": "",
+    "evidence": "optimized_structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Writes the optimized structure to an evidence file for subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "ads_energy",
+    "title": "H2 adsorption energies",
+    "role": "scored",
+    "action": "Place H2 molecule at the four sites (hollow, ligand, metal side-on, metal end-on) on the optimized Co-MIL-88A structure; perform DFT geometry relaxations (H2 coordinates relaxed, framework fixed) using revPBE+vdW-DF. Compute the adsorption energy for each site using E_ads = E(MOF+H2) – (E(MOF) + E(H2)). Save the binding energies (E_ads) as negative values to the output file.",
+    "output_file": "binding_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the site labels and the corresponding adsorption energies in kJ/mol.",
+    "output_schema": "columns: site (string), E_ads_kJmol (float)"
+  },
+  {
+    "id": "ddec_charge",
+    "title": "DDEC charge calculation",
+    "role": "process",
+    "action": "Using the DFT electron density of the optimized Co-MIL-88A framework, compute DDEC net atomic charges for all atom types. Save the charge assignments to a file for GCMC input.",
+    "output_file": "",
+    "evidence": "ddec_charges.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes point charges for the MOF atoms; evidence file saved for provenance.",
+    "output_schema": ""
+  },
+  {
+    "id": "gcmc_77k",
+    "title": "H2 adsorption isotherm at 77 K",
+    "role": "scored",
+    "action": "Run GCMC simulations using RASPA for Co-MIL-88A at 77 K with the full Lennard-Jones plus Coulomb potential (using the DDEC charges and LJ parameters from the generic MOF force field). Compute absolute and excess gravimetric H2 loadings (wt%) for pressures up to 100 bar and save the isotherm data.",
+    "output_file": "isotherms_77K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing pressure, excess uptake, and absolute uptake at 77 K.",
+    "output_schema": "columns: pressure_bar (float), exc_wt (float), abs_wt (float)"
+  },
+  {
+    "id": "gcmc_298k",
+    "title": "H2 adsorption isotherm at 298 K",
+    "role": "scored",
+    "action": "Run GCMC simulations using RASPA for Co-MIL-88A at 298 K with the full potential and save absolute and excess H2 loadings.",
+    "output_file": "isotherms_298K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing pressure, excess uptake, and absolute uptake at 298 K.",
+    "output_schema": "columns: pressure_bar (float), exc_wt (float), abs_wt (float)"
+  },
+  {
+    "id": "electrostatic_77k",
+    "title": "Electrostatic contribution at 77 K",
+    "role": "scored",
+    "action": "Run GCMC simulations using RASPA for Co-MIL-88A at 77 K without electrostatic interactions (LJ only). Using the absolute loadings from the LJ-only run and from the full-potential 77 K run, compute the electrostatic contribution (difference) and its percentage for each pressure. Save the table.",
+    "output_file": "electrostatic_contrib_77K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file listing pressure, full-potential absolute uptake, LJ-only absolute uptake, electrostatic contribution, and electrostatic percentage.",
+    "output_schema": "columns: pressure_bar (float), abs_wt_LJplusCoulomb (float), abs_wt_LJonly (float), coulomb_wt (float), electrostatic_pct (float)"
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Pearson R² and MAE against hidden experimental pKa values from the paper's Table 5; full recompute of agreement metrics from agent's raw CSV without trusting self-reported numbers.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden experimental pKa values for 12 halogenated pyridines (molecule order per paper Scheme 2) used as gold reference.",
+      "source_provenance": "Paper Table 5, 'Experimental' column: values taken from Ref. [34] with exception of compound 1 taken from Ref. [35].",
+      "generation_method": "Copied directly from the published paper's Table 5 under the 'Experimental' heading.",
+      "why_not_fabricated": "These are the exact experimental reference values the paper used to compute its reported correlations; fabricating them would break the task semantics."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pKa_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "pKa_HF",
+            "pKa_B3LYP"
+          ]
+        },
+        "description": "Computed absolute pKa values for 12 halogenated pyridine derivatives at HF/6-31G(d) and B3LYP/6-31G(d) levels. The checker will recompute Pearson R² and mean absolute error (MAE) against hidden experimental pKa values for each method."
+      }
+    ],
+    "notes": "The agent may use any consistent ΔG_s(H⁺) value within the stated range; the checker tolerates different choices. The experimental pKa values are used only as hidden gold for metric recomputation."
+  },
+  "steps": [
+    {
+      "id": "pKa_HF",
+      "output_file": "pKa_results.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "description": "Score HF pKa values against experimental pKa",
+      "method_column": "pKa_HF",
+      "hidden_experimental_pKa": [
+        5.17,
+        0.75,
+        -0.85,
+        -2.86,
+        -5.5,
+        -6.02,
+        0.45,
+        -1.07,
+        -3.81,
+        -2.47,
+        -4.9,
+        -5.23
+      ],
+      "r2_threshold": 0.95,
+      "mae_threshold": 0.5
+    },
+    {
+      "id": "pKa_B3LYP",
+      "output_file": "pKa_results.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "description": "Score B3LYP pKa values against experimental pKa",
+      "method_column": "pKa_B3LYP",
+      "hidden_experimental_pKa": [
+        5.17,
+        0.75,
+        -0.85,
+        -2.86,
+        -5.5,
+        -6.02,
+        0.45,
+        -1.07,
+        -3.81,
+        -2.47,
+        -4.9,
+        -5.23
+      ],
+      "r2_threshold": 0.95,
+      "mae_threshold": 0.5
+    }
+  ]
+}

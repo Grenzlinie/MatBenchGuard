@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_generate_candidates",
+    "title": "Generate FeN2 candidate structures",
+    "role": "process",
+    "action": "Construct at least 10 candidate FeN2 structures derived from known AB2 prototypes (e.g., ThC2, CaC2, TiO2) with both pernitride (N2²⁻/N2⁴⁻) and dinitride (2×N³⁻) motifs.",
+    "output_file": "",
+    "evidence": "candidate_structures.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare input files for DFT relaxation of multiple hypothetical FeN2 phases.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft_relax_select",
+    "title": "DFT relax and select lowest-energy FeN2",
+    "role": "process",
+    "action": "Perform spin-polarized DFT relaxations (PBE functional, with sufficient cutoff energy and k-point sampling) for all candidate FeN2 cells. For the lowest-energy structure, compute additional energies at volumes around equilibrium to obtain energy–volume points.",
+    "output_file": "",
+    "evidence": "lowest_energy_relaxation.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core structure search and energy-volume data generation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_reference_energies",
+    "title": "Compute reference total energies",
+    "role": "process",
+    "action": "Calculate the total energy of FeN (zincblende) and solid α-N2 using the same DFT parameters.",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference energies needed for formation enthalpy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_write_cif",
+    "title": "Write equilibrium FeN2 CIF",
+    "role": "scored",
+    "action": "Extract the fully relaxed lowest-energy FeN2 structure from the DFT relaxation and save it as a CIF file containing lattice parameters, space group, and fractional coordinates.",
+    "output_file": "relaxed_structure.cif",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "CIF file of the DFT-optimized FeN2 structure; must include cell dimensions, symmetry, and atom sites.",
+    "output_schema": "CIF with _cell_length_a, _cell_length_b, _cell_length_c, _cell_angle_alpha, _cell_angle_beta, _cell_angle_gamma, _symmetry_space_group_name_H-M, and loop of _atom_site_* fields."
+  },
+  {
+    "id": "step_05_compute_properties",
+    "title": "Compute FeN2 properties",
+    "role": "scored",
+    "action": "From the data of steps 02 and 03: (a) fit a Murnaghan equation of state to the energy–volume points to obtain bulk modulus and its derivative; (b) extract the magnetic moment from the spin-polarized calculation; (c) compute the N–N bond length; (d) calculate the formation enthalpy at 0 K relative to FeN + 0.5 N2; (e) record lattice parameters a, c, Wyckoff sites, and N z-parameter. Write all results into a JSON file.",
+    "output_file": "computed_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON containing bulk modulus, derivative, magnetic moment, N–N bond length, formation enthalpy, lattice parameters, and Wyckoff information.",
+    "output_schema": "{\"bulk_modulus_GPa\": <number>, \"bulk_modulus_derivative\": <number>, \"magnetic_moment_muB\": <number>, \"N_N_bond_length_A\": <number>, \"formation_enthalpy_0K_kJ_mol\": <number>, \"lattice_a_A\": <number>, \"lattice_c_A\": <number>, \"Fe_Wyckoff\": \"3a\", \"N_Wyckoff\": \"6c\", \"N_z_parameter\": <number>}"
+  },
+  {
+    "id": "step_06_phonon_calculations",
+    "title": "Phonon calculations for thermal effects",
+    "role": "process",
+    "action": "Perform density-functional perturbation theory (DFPT) phonon calculations for the lowest-energy FeN2 and for FeN to obtain the vibrational free energies at T=1000 K within the quasi-harmonic approximation.",
+    "output_file": "",
+    "evidence": "phonon_dos_FeN2.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides temperature-dependent Gibbs free energies needed for the synthesis pressure prediction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_transition_pressure",
+    "title": "Compute transition pressure at 1000 K",
+    "role": "scored",
+    "action": "Combine the DFT-computed Gibbs free energies of FeN2 and FeN at 1000 K with a classical estimate of the N2 Gibbs free energy to compute ΔG(P) for a set of pressures from 0 to 25 GPa. Write a CSV with columns pressure_GPa and deltaG_kJ_mol. Identify the pressure where ΔG changes sign as the predicted synthesis pressure.",
+    "output_file": "transition_pressure_1000K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with pressure (GPa) and relative Gibbs free energy (kJ/mol); checker interpolates the zero-crossing.",
+    "output_schema": "pressure_GPa (float), deltaG_kJ_mol (float)"
+  }
+]

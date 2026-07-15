@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_1",
+    "title": "Acquire benchmark geometries and reference energies",
+    "role": "process",
+    "action": "Clone/download the conformer-benchmark GitHub repository. Extract the optimized molecular geometries (XYZ files) and the DLPNO-CCSD(T)/cc-pVTZ atomization energy CSV for all conformers.",
+    "output_file": "",
+    "evidence": "benchmark_data_inventory.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Compute force field energies",
+    "role": "process",
+    "action": "For each provided conformer geometry, compute single-point energies using GAFF, MMFF94, and UFF force fields with Open Babel. Extract atomization energies.",
+    "output_file": "",
+    "evidence": "force_field_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Compute semiempirical and GFN energies",
+    "role": "process",
+    "action": "For each conformer, run PM7 with OpenMOPAC and GFN0, GFN1, GFN2 with xtb. Extract atomization energies.",
+    "output_file": "",
+    "evidence": "semiempirical_gfn_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Compute DFT and ab initio energies",
+    "role": "process",
+    "action": "Using a suitable quantum chemistry package (e.g., ORCA), perform single-point energy calculations for all conformers with the following methods and basis sets: B97-3c, PBEh-3c, B3LYP-D3BJ/def2-SVP, B3LYP-D3BJ/def2-TZVP, PBE-D3BJ/def2-SVP, PBE-D3BJ/def2-TZVP, ωB97X-D3/def2-TZVP, RI-MP2/cc-pVTZ. Additionally, run B3LYP/def2-TZVP without dispersion correction and PBE/def2-TZVP without dispersion. Extract atomization energies (e.g., with cclib).",
+    "output_file": "",
+    "evidence": "dft_ab_initio_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5",
+    "title": "Compute ANI machine learning energies",
+    "role": "process",
+    "action": "Use TorchANI with the official pre-trained models ANI-1x, ANI-1ccx, and ANI-2x to predict atomization energies for each conformer.",
+    "output_file": "",
+    "evidence": "ani_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6",
+    "title": "Train and predict bag-of-features models",
+    "role": "process",
+    "action": "Generate BOB, BAT, and BATTY descriptors for all conformers using chemreps. For each molecule, randomly select 5 conformers for training and the rest for testing. Train kernel ridge regression models to predict DLPNO-CCSD(T) atomization energy from descriptors. Predict energies for the test set. For the BATTY descriptor, also create a variant normalized by the number of atoms (BATTY/n).",
+    "output_file": "",
+    "evidence": "bag_of_features_predictions.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_7",
+    "title": "Compute per-molecule metrics and output results",
+    "role": "scored",
+    "action": "For each molecule and each method (including all ablated variants), compute the mean absolute relative energy (MARE), Pearson R², and Spearman ρ rank correlation against the DLPNO-CCSD(T) reference energies. Output a CSV file.",
+    "output_file": "per_molecule_metrics.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The CSV contains the per-molecule reproduction metrics for all benchmarked methods, enabling the checker to recompute median values and compare them to the paper's reported benchmarks.",
+    "output_schema": "Columns: molecule (string), method (string), MARE (float, kcal/mol), R2 (float), Spearman_rho (float). One row per molecule per method."
+  }
+]

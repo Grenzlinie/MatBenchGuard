@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute stress-strain curves from raw MD data; paper's digitised reference points not available; structural checks (peak yield range, drop, non-negative, size ordering) verify the core mechanical behaviour.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_04a_stress_strain_8nm.csv": "structural_audit",
+    "step_04b_stress_strain_20nm.csv": "structural_audit",
+    "step_05_yield_strengths.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference yield strength values and acceptable ranges for 8 nm and 20 nm",
+      "source_provenance": "Paper text and conclusion: yield stress ~5 GPa for 8 nm, ~3 GPa for 20 nm; range tolerance ±1 GPa as per plan",
+      "generation_method": "extracted from paper conclusions and text",
+      "why_not_fabricated": "values are explicitly reported or clearly implied by the paper's quantitative statements"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_04a_stress_strain_8nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress_GPa"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress_GPa": "GPa"
+          }
+        },
+        "description": "Stress–strain curve for 8 nm sample under uniaxial tension at 10^{-3} s^{-1}. Scored via structural audit of curve shape (non‑negative stress, elastic rise, peak, load drop, etc.)."
+      },
+      {
+        "file": "step_04b_stress_strain_20nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress_GPa"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress_GPa": "GPa"
+          }
+        },
+        "description": "Stress–strain curve for 20 nm sample under uniaxial tension at 10^{-3} s^{-1}. Scored via structural audit of curve shape (non‑negative stress, elastic rise, peak, load drop, etc.)."
+      },
+      {
+        "file": "step_05_yield_strengths.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "8nm",
+            "20nm"
+          ],
+          "properties": {
+            "8nm": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "20nm": {
+              "type": "number",
+              "units": "GPa"
+            }
+          }
+        },
+        "description": "Yield strengths for 8 nm and 20 nm samples. Scored by checking that the values fall within hidden reference ranges and that the size ordering is physically plausible."
+      }
+    ],
+    "notes": "The scored artifacts verify the paper's main mechanical response claim. The stress–strain CSVs are load‑bearing and evaluated by structural audit; the yield strengths are derived from those curves and provide an additional size‑ordering check."
+  },
+  "steps": [
+    {
+      "id": "check_stress_8nm",
+      "output_file": "step_04a_stress_strain_8nm.csv",
+      "kind": "rubric",
+      "weight": 0.35,
+      "params": {
+        "size": 8,
+        "yield_range_min": 4.0,
+        "yield_range_max": 7.0,
+        "early_strain_cutoff": 0.02,
+        "early_stress_max": 2.5,
+        "drop_ratio": 0.7
+      }
+    },
+    {
+      "id": "check_stress_20nm",
+      "output_file": "step_04b_stress_strain_20nm.csv",
+      "kind": "rubric",
+      "weight": 0.35,
+      "params": {
+        "size": 20,
+        "yield_range_min": 2.0,
+        "yield_range_max": 5.0,
+        "early_strain_cutoff": 0.02,
+        "early_stress_max": 1.5,
+        "drop_ratio": 0.7
+      }
+    },
+    {
+      "id": "check_yield_strengths",
+      "output_file": "step_05_yield_strengths.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "params": {
+        "ref_yield_8nm": 5.0,
+        "tolerance_8nm": 1.0,
+        "ref_yield_20nm": 3.0,
+        "tolerance_20nm": 1.0
+      }
+    }
+  ]
+}

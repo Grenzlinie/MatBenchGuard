@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Geometry optimization of V3Co",
+    "role": "process",
+    "action": "Using an open-source plane-wave DFT code and PBE pseudopotentials, perform a full geometry optimization of V3Co in the A15 Pm-3n crystal structure. Start from the standard atomic positions and an initial lattice constant of approximately 4.675 Å. Relax both atomic positions and cell volume until forces and stress are below reasonable convergence thresholds.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Compute elastic constants",
+    "role": "scored",
+    "action": "From the optimized structure, compute the three independent cubic elastic constants C11, C12, C44 (in GPa) for V3Co using a stress-strain approach. Apply small strain deformations and extract the stress tensor from DFT total-energy derivatives. Write the constants as a JSON object to the output file.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Elastic constants C11, C12, C44 for V3Co in GPa.",
+    "output_schema": "{\"type\": \"object\", \"properties\": {\"C11\": {\"type\": \"number\", \"description\": \"GPa\"}, \"C12\": {\"type\": \"number\", \"description\": \"GPa\"}, \"C44\": {\"type\": \"number\", \"description\": \"GPa\"}}, \"required\": [\"C11\", \"C12\", \"C44\"]}"
+  },
+  {
+    "id": "step03",
+    "title": "Derive polycrystalline moduli and check stability/ductility",
+    "role": "scored",
+    "action": "From the elastic constants C11, C12, C44, compute the bulk modulus B = (C11+2C12)/3, Voigt shear modulus G_V = (C11-C12+3C44)/5, Reuss shear modulus G_R = 5(C11-C12)C44/(C44+3(C11-C12)), averaged shear modulus G = (G_V+G_R)/2, B/G ratio, and Cauchy pressure C_P = C12−C44. Verify the Born mechanical stability criteria (C11−C12>0, C11+2C12>0, C44>0) and the Pugh ductility criterion (B/G>1.75 and C_P>0). Write the derived quantities and the boolean verdicts as a JSON object.",
+    "output_file": "derived_moduli.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derived polycrystalline moduli and stability/ductility indicators for V3Co.",
+    "output_schema": "{\"type\": \"object\", \"properties\": {\"B\": {\"type\": \"number\", \"description\": \"GPa\"}, \"G\": {\"type\": \"number\", \"description\": \"GPa\"}, \"B/G\": {\"type\": \"number\"}, \"C_P\": {\"type\": \"number\", \"description\": \"GPa\"}, \"mechanical_stable\": {\"type\": \"boolean\"}, \"ductile\": {\"type\": \"boolean\"}}, \"required\": [\"B\", \"G\", \"B/G\", \"C_P\", \"mechanical_stable\", \"ductile\"]}"
+  },
+  {
+    "id": "step04",
+    "title": "Phonon calculation for V3Co",
+    "role": "process",
+    "action": "Using the optimized structure, build a supercell (e.g., 2×2×2) and compute the phonon dispersion via a finite-displacement (frozen-phonon) approach or density-functional perturbation theory (DFPT). Obtain the phonon dispersion curves along high-symmetry lines and the phonon density of states. This step is computationally intensive and produces the raw data for gamma-point frequency extraction.",
+    "output_file": "",
+    "evidence": "phonon_dispersion.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step05",
+    "title": "Extract Gamma-point phonon frequencies",
+    "role": "scored",
+    "action": "From the phonon calculation results, extract the eight phonon frequencies (in THz) at the Gamma (Γ) point. Verify that all frequencies are positive (allowing a small tolerance of -0.1 THz for numerical noise) and set a boolean flag all_real accordingly. Write the frequency list and the flag as a JSON object.",
+    "output_file": "phonon_gamma_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gamma-point phonon frequencies and vibrational stability check for V3Co.",
+    "output_schema": "{\"type\": \"object\", \"properties\": {\"frequencies_THz\": {\"type\": \"array\", \"items\": {\"type\": \"number\"}, \"minItems\": 8, \"maxItems\": 8, \"description\": \"phonon frequencies in THz\"}, \"all_real\": {\"type\": \"boolean\"}}, \"required\": [\"frequencies_THz\", \"all_real\"]}"
+  }
+]

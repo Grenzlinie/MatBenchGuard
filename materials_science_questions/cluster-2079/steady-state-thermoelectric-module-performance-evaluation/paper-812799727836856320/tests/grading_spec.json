@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The agent provides a raw sweep CSV; the checker can recompute the maximum efficiency and output power for each material-geometry combination and compare to paper-reported gold values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "sweep_data.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for eta_max (%) and Pout_max (mW) for each material-geometry combination",
+      "source_provenance": "Table 2 of the paper: 'Comparison of maximum values of efficiency and output power at ΔT = 560 K'",
+      "generation_method": "Directly transcribed from the published table in the paper.",
+      "why_not_fabricated": "These are the paper's reported numbers; they are the target to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sweep_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "geometry",
+            "RL",
+            "eta",
+            "Pout"
+          ],
+          "units": {
+            "RL": "Ω",
+            "eta": "%",
+            "Pout": "mW"
+          }
+        },
+        "description": "Full sweep of efficiency and output power vs. load resistance for four combinations (material × geometry) at ΔT = 560 K. The checker will extract the maximum η and maximum Pout for each combination and compare to the paper’s reported values."
+      }
+    ],
+    "notes": "The simulation must use the material property polynomials exactly as given in the paper (Table 1) and must cover a load resistance range dense enough to resolve the maxima. No external dataset is required; the workflow is entirely compute-driven."
+  },
+  "steps": [
+    {
+      "id": "sweep_eval",
+      "output_file": "sweep_data.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "description": "Recompute maximum eta and Pout from sweep data and compare to gold references",
+      "gold_references": {
+        "4% SrTe_rectangular": {
+          "eta_max": 16.071,
+          "Pout_max": 35.093
+        },
+        "4% SrTe_trapezoidal": {
+          "eta_max": 15.233,
+          "Pout_max": 26.199
+        },
+        "2% SrTe_rectangular": {
+          "eta_max": 7.873,
+          "Pout_max": 14.357
+        },
+        "2% SrTe_trapezoidal": {
+          "eta_max": 7.347,
+          "Pout_max": 10.501
+        }
+      },
+      "tolerances": {
+        "eta_abs": 0.3,
+        "Pout_abs": 1.0
+      }
+    }
+  ]
+}

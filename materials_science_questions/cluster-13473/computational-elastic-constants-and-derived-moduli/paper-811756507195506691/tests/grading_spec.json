@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker independently recomputes the field-induced shear modulus ΔG from the agent's raw results.csv using the same model (direct dipole summation) and compares values within tolerances; it also verifies monotonicity trends, both fully recomputed without trusting the agent's self-reported metrics.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition_id",
+            "L",
+            "sigma",
+            "b",
+            "H0",
+            "gamma",
+            "Delta_G"
+          ],
+          "units": {
+            "H0": "MA/m",
+            "Delta_G": "MPa"
+          }
+        },
+        "description": "Field-induced shear modulus ΔG computed from the Gaussian distribution model for the specified parameter sweeps. The checker will recompute ΔG independently and compare values within predefined tolerances."
+      }
+    ],
+    "notes": "The agent must implement the complete model as described in the workflow steps. All input constants are public and no external data are required."
+  },
+  "steps": [
+    {
+      "id": "value_match",
+      "output_file": "results.csv",
+      "kind": "recompute_with_tolerance",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "tolerance_desc": "relative 5% for ΔG >= 0.2 MPa, absolute 0.02 MPa for ΔG < 0.2 MPa; linear decay beyond tolerance",
+      "notes": "Recomputes ΔG for every row using independent model implementation and compares to agent's reported Delta_G column."
+    },
+    {
+      "id": "trend_check",
+      "output_file": "results.csv",
+      "kind": "trend",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "notes": "Verifies monotonicity trends: ΔG increases with L, decreases with b, increases with H0, decreases with γ."
+    }
+  ]
+}

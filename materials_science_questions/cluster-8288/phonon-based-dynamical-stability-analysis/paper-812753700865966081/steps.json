@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare initial structures and DFT input files",
+    "role": "process",
+    "action": "Construct initial crystal structures for the candidate phases (AuF₂ Pnma, AuF₃ P6₁22 and Cmc2₁, AuF₄ C2/c, AuF₆ R-3) from their space-group descriptions and the paper's bonding motifs. Generate Quantum ESPRESSO input files for each structure at a set of target pressures (e.g., 0, 5, 10, 15, 20, 25, 30, 40 GPa). Select appropriate pseudopotentials, k-point grids, and energy cutoffs.",
+    "output_file": "",
+    "evidence": "prepared_inputs_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step: manually build unit cells and prepare all QE input files before running DFT.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run DFT structural optimizations",
+    "role": "process",
+    "action": "For each phase and each pressure, perform full variable-cell relaxation using Quantum ESPRESSO. Ensure convergence of forces and stress. Save final relaxed structures (total energies and geometries).",
+    "output_file": "",
+    "evidence": "relaxation_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step: heavy DFT relaxations across the pressure grid; outputs feed into enthalpy and Bader analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Thermodynamic stability and Bader analysis",
+    "role": "scored",
+    "action": "From the relaxed structures and total energies, compute enthalpy per formula unit at each pressure. Determine the ground-state phase at each pressure and identify transition pressures. Calculate the volume collapse at the AuF₃ P6₁22 → Cmc2₁ transition. For structures relaxed at 20 GPa, perform Bader charge analysis and extract the net charge on Au atoms. Assemble all results into a single JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing derived properties: ground-state phases, transition pressures, volume collapse, and Bader charges for AuF₂, AuF₃, AuF₄, AuF₆.",
+    "output_schema": "{\"AuF2\": {\"ground_state_phase\": \"string\", \"transition_pressure_lower\": null or number, \"transition_pressure_upper\": number, \"Bader_charge_au\": number}, \"AuF3\": {\"ground_state_phase\": \"string\", \"transition_pressure\": number, \"volume_collapse_percent\": number, \"Bader_charge_au\": number}, \"AuF4\": {\"ground_state_phase\": \"string\", \"transition_pressure_lower\": null or number, \"transition_pressure_upper\": number, \"Bader_charge_au\": number}, \"AuF6\": {\"ground_state_phase\": \"string\", \"Bader_charge_au\": number}}"
+  },
+  {
+    "id": "step_04",
+    "title": "Phonon dispersion calculations",
+    "role": "process",
+    "action": "For each claimed stable phase at a representative pressure within its stability range (e.g., AuF₃ Cmc2₁ at 10 GPa, AuF₂ Pnma at 20 GPa, AuF₄ C2/c at 20 GPa, AuF₆ R-3 at 20 GPa), construct supercells and compute phonon dispersions using PHONOPY with a finite-displacement approach, obtaining Hellmann–Feynman forces from Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "phonon_calculations_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step: heavy phonon calculations; outputs phonon dispersion data to be checked for imaginary modes.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Dynamical stability check",
+    "role": "scored",
+    "action": "Inspect the phonon dispersion curves for each phase. Verify that no imaginary (negative) frequencies exist across the entire Brillouin zone. Report a boolean 'true' if the phase is dynamically stable. Save results to a JSON file.",
+    "output_file": "phonon_stability.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact indicating whether each phase is dynamically stable (no imaginary phonon modes).",
+    "output_schema": "{\"AuF2_Pnma\": {\"no_imaginary_modes\": boolean}, \"AuF3_Cmc2_1\": {\"no_imaginary_modes\": boolean}, \"AuF4_C2c\": {\"no_imaginary_modes\": boolean}, \"AuF6_R-3\": {\"no_imaginary_modes\": boolean}}"
+  }
+]

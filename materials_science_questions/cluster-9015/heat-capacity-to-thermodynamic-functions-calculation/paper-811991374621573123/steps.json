@@ -1,0 +1,41 @@
+[
+  {
+    "id": "prepare_residual_array",
+    "title": "Prepare volume residual array from PVT data",
+    "role": "process",
+    "action": "Obtain experimental PVT data for neopentane from Dawson et al. (1973). For each data point (P, V, T), compute the volume residual γ = RT/P − V using the gas constant R = 0.14874 (psi·ft³)/(°R·lb). Smooth and interpolate the γ values onto an evenly spaced grid of temperature and pressure using least‑squares smoothing.",
+    "output_file": "",
+    "evidence": "residual_array.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Smoothed and interpolated volume residual γ on a regular (T,P) grid.",
+    "output_schema": ""
+  },
+  {
+    "id": "fit_localized_eos",
+    "title": "Fit localized equation of state for volume residual",
+    "role": "process",
+    "action": "Fit the polynomial function γ = C1 + C2·P + C3·P² + C4·T + C5·P·T + C6·P²·T + C7·T² + C8·P·T² + C9·P²·T² to the smoothed γ grid using least‑squares regression. Save the fitted coefficients.",
+    "output_file": "",
+    "evidence": "eos_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted coefficients C1–C9 of the localized volume‑residual equation of state.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_thermodynamic_properties",
+    "title": "Compute thermodynamic properties of gaseous neopentane",
+    "role": "scored",
+    "action": "Using the fitted γ equation of state, the ideal gas heat capacity equation Cp° = 15.4496 + 92.6474·exp(−571.7382/T) (T in K), the gas constant R = 0.14874, the dimensional constant J = 0.00256644, and the reference state (saturated liquid at 620 °R and 87.61 psia; heat of vaporization and entropy of vaporization from the companion PVT paper), compute: (1) ideal‑state enthalpy and entropy changes via analytical integration of Cp°; (2) pressure corrections H_P and S_P via numerical integration over 5‑psi subintervals; (3) total enthalpy H and entropy S; (4) specific volume V = RT/P − γ; (5) fugacity coefficient ν via pressure integration. Produce a table for the temperature‑pressure grid described in the output schema.",
+    "output_file": "thermodynamic_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final computed gaseous thermodynamic properties.",
+    "output_schema": "CSV file with columns: T (temperature in °R), P (pressure in psia), V (specific volume in ft³/lb), H (enthalpy in Btu/lb), S (entropy in Btu/(lb·°R)), nu (fugacity coefficient, dimensionless). The grid covers: T=620 °R at P = 5,10,15,20,25,30,35,40,50,60,70,80 psia; T=900 °R at P = 10,20,40,60,80,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,1100,1200,1300,1400,1500,1600,1800,2000,2200,2400,2600,2800,3000,3200,3400,3600,3800,4000,4200,4400,4500 psia. Use at least 4 decimal places for H, S, nu and 5 for V."
+  }
+]

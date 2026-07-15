@@ -1,0 +1,220 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw strain/energy data infeasible; agent outputs only final computed moduli. Scoring compares reported values to paper gold with tolerances and verifies size-dependent trends.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_ZnO_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Property",
+            "Value",
+            "Units",
+            "Method"
+          ],
+          "units": {
+            "Value": "varies (Å for a, dimensionless for c/a and u, J/m^2 for surface energies, GPa for Young's modulus)"
+          }
+        },
+        "description": "Bulk ZnO validation properties: lattice constant a, c/a ratio, internal parameter u, surface energies of (10-10) and (11-20), and axial Young's modulus from energy and virial methods."
+      },
+      {
+        "file": "NW_young_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Structure",
+            "Radius",
+            "Young_modulus_energy",
+            "Young_modulus_virial"
+          ],
+          "units": {
+            "Radius": "Å",
+            "Young_modulus_energy": "GPa",
+            "Young_modulus_virial": "GPa"
+          }
+        },
+        "description": "Young's modulus of ZnO nanowires NW-1, NW-3, NW-5 computed by energy-strain and virial stress methods."
+      },
+      {
+        "file": "NT_young_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Structure",
+            "Type",
+            "Outer_radius",
+            "Inner_radius",
+            "Wall_thickness",
+            "Young_modulus_energy",
+            "Young_modulus_virial"
+          ],
+          "units": {
+            "Outer_radius": "Å",
+            "Inner_radius": "Å",
+            "Wall_thickness": "Å",
+            "Young_modulus_energy": "GPa",
+            "Young_modulus_virial": "GPa"
+          }
+        },
+        "description": "Young's modulus of ZnO nanotubes NT-A-1, NT-A-3, NT-B-1, NT-B-4 computed by energy-strain and virial stress methods."
+      }
+    ],
+    "notes": "Per-layer Young's moduli (for NW-1 and NT-A-1) are optional and not scored. The checker verifies numeric values and monotonic trends (NW modulus decreases with increasing radius, NT modulus decreases with increasing wall thickness)."
+  },
+  "steps": [
+    {
+      "id": "bulk_properties",
+      "output_file": "bulk_ZnO_properties.csv",
+      "weight": 0.2,
+      "gold": {
+        "rows": [
+          {
+            "Property": "lattice constant a",
+            "Value": 3.265,
+            "Units": "Å",
+            "tolerance": 0.02
+          },
+          {
+            "Property": "c/a ratio",
+            "Value": 1.579,
+            "Units": "-",
+            "tolerance": 0.02
+          },
+          {
+            "Property": "internal parameter u",
+            "Value": 0.3882,
+            "Units": "-",
+            "tolerance": 0.005
+          },
+          {
+            "Property": "surface energy (10-10)",
+            "Value": 1.14,
+            "Units": "J/m^2",
+            "tolerance": 0.05
+          },
+          {
+            "Property": "surface energy (11-20)",
+            "Value": 1.19,
+            "Units": "J/m^2",
+            "tolerance": 0.05
+          },
+          {
+            "Property": "Young's modulus energy",
+            "Value": 173.86,
+            "Units": "GPa",
+            "tolerance": 5.0
+          },
+          {
+            "Property": "Young's modulus virial",
+            "Value": 173.27,
+            "Units": "GPa",
+            "tolerance": 5.0
+          }
+        ],
+        "internal_consistency": {
+          "max_diff_gpa": 1.0
+        }
+      }
+    },
+    {
+      "id": "nanowire_moduli",
+      "output_file": "NW_young_moduli.csv",
+      "weight": 0.4,
+      "gold": {
+        "structures": [
+          {
+            "Structure": "NW-1",
+            "Radius": 8.707,
+            "Young_modulus": 213.0
+          },
+          {
+            "Structure": "NW-3",
+            "Radius": 28.297,
+            "Young_modulus": 196.0
+          },
+          {
+            "Structure": "NW-5",
+            "Radius": 47.887,
+            "Young_modulus": 183.0
+          }
+        ],
+        "tolerance_radius": 1.0,
+        "tolerance_modulus_percent": 5.0,
+        "tolerance_modulus_abs": 10.0,
+        "trend_check": true
+      }
+    },
+    {
+      "id": "nanotube_moduli",
+      "output_file": "NT_young_moduli.csv",
+      "weight": 0.4,
+      "gold": {
+        "structures": [
+          {
+            "Structure": "NT-A-1",
+            "Type": "A",
+            "Outer_radius": 15.237,
+            "Inner_radius": 7.618,
+            "Wall_thickness": 7.619,
+            "Young_modulus": 255.0
+          },
+          {
+            "Structure": "NT-A-3",
+            "Type": "A",
+            "Outer_radius": 34.827,
+            "Inner_radius": 7.618,
+            "Wall_thickness": 27.209,
+            "Young_modulus": 198.0
+          },
+          {
+            "Structure": "NT-B-1",
+            "Type": "B",
+            "Outer_radius": 54.417,
+            "Inner_radius": 46.798,
+            "Wall_thickness": 7.619,
+            "Young_modulus": 253.0
+          },
+          {
+            "Structure": "NT-B-4",
+            "Type": "B",
+            "Outer_radius": 54.417,
+            "Inner_radius": 17.413,
+            "Wall_thickness": 37.004,
+            "Young_modulus": 190.0
+          }
+        ],
+        "tolerance_radius": 1.0,
+        "tolerance_thickness": 1.0,
+        "tolerance_modulus_percent": 5.0,
+        "tolerance_modulus_abs": 10.0,
+        "trend_check": true
+      }
+    }
+  ],
+  "target_policies": {
+    "bulk_ZnO_properties.csv": "exact_match",
+    "NW_young_moduli.csv": "reference_match",
+    "NT_young_moduli.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide gold values for bulk ZnO properties, nanowire and nanotube Young's moduli from the paper.",
+      "source_provenance": "Paper tables and figures: bulk lattice constants, surface energies, Young's moduli from paper text and Table 1/Figure 4, NW and NT moduli from Figures 4 and 7.",
+      "generation_method": "Extracted directly from the paper's reported values: a=3.265, c/a=1.579, u=0.3882, surface energies 1.14 and 1.19, bulk Y=173.86/173.27, NW Y from Figure 4 (NW-1=213, NW-3=196, NW-5=183), NT Y from Figure 7 (approximate values for selected structures).",
+      "why_not_fabricated": "Values are the paper's own reported results; no fabrication."
+    }
+  ]
+}

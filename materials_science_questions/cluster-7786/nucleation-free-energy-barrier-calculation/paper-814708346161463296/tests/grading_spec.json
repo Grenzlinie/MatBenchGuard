@@ -1,0 +1,127 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step_01 thermodynamic parameters are recomputed from material constants (T1). Step_02 nucleation rate logarithms are compared against paper-reported gold with tolerance (T0) because a full recompute of the nucleation rate from raw artifacts would require extensive code not suitable for the checker sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Material constants for recomputing step_01 and paper-reported ln_J_n for step_02",
+      "source_provenance": "Paper Tables 2,3,5,6",
+      "generation_method": "Extracted from paper values and formulas (step_01), and directly from Table 6 (step_02).",
+      "why_not_fabricated": "Values are the paper's published results and are the correct reference for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_thermodynamic_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pd43Ni10Cu27P20": "object with fields epsilon_ls0, epsilon_lgs0, delta_epsilon_0, T_0m, T_0g, Delta_Cp_Tg, T_K (all numeric)",
+            "indomethacin": "object (same fields)",
+            "As2Se3": "object (same fields)"
+          },
+          "items": {
+            "epsilon_ls0": "float",
+            "epsilon_lgs0": "float",
+            "delta_epsilon_0": "float",
+            "T_0m": "float (K)",
+            "T_0g": "float (K)",
+            "Delta_Cp_Tg": "float (J/mol/K)",
+            "T_K": "float (K)"
+          }
+        },
+        "description": "Thermodynamic parameters predicted by the enthalpy saving model for three glass-forming melts."
+      },
+      {
+        "file": "step_02_nucleation_rates.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pd43Ni10Cu27P20": "object with field ln_J_n_at_TK",
+            "indomethacin": "object (same field)",
+            "As2Se3": "object (same field)"
+          },
+          "items": {
+            "ln_J_n_at_TK": "float (natural log)"
+          }
+        },
+        "description": "Steady-state nucleation rate logarithm at the Kauzmann temperature."
+      }
+    ],
+    "notes": "The hidden checker compares submitted values to the paper-reported gold using tolerances. Units are Kelvin for temperatures, J/mol/K for specific heat jump, and dimensionless for logarithms."
+  },
+  "steps": [
+    {
+      "id": "step_01_thermodynamic",
+      "output_file": "step_01_thermodynamic_params.json",
+      "weight": 0.5,
+      "kind": "recompute",
+      "description": "Recompute thermodynamic parameters from material constants and compare",
+      "constants": {
+        "materials": {
+          "Pd43Ni10Cu27P20": {
+            "Tm": 802.0,
+            "Tg": 576.0,
+            "Delta_Hm": 7010.0,
+            "a": 1.0
+          },
+          "indomethacin": {
+            "Tm": 432.0,
+            "Tg": 318.0,
+            "Delta_Hm": 39400.0,
+            "a": 1.0
+          },
+          "As2Se3": {
+            "Tm": 645.0,
+            "Tg": 462.0,
+            "Delta_Hm": 15600.0,
+            "a": 0.753
+          }
+        }
+      },
+      "tolerances": {
+        "epsilon": {
+          "rel": 0.01
+        },
+        "delta_epsilon": {
+          "rel": 0.01
+        },
+        "T_0m": {
+          "abs": 5.0
+        },
+        "T_0g": {
+          "abs": 5.0
+        },
+        "Delta_Cp_Tg": {
+          "rel": 0.01
+        },
+        "T_K": {
+          "abs": 5.0
+        }
+      }
+    },
+    {
+      "id": "step_02_nucleation",
+      "output_file": "step_02_nucleation_rates.json",
+      "weight": 0.5,
+      "kind": "result_compare",
+      "description": "Compare ln J_n at T_K against paper-reported gold with absolute tolerance",
+      "gold": {
+        "Pd43Ni10Cu27P20": 47.1,
+        "indomethacin": 44.5,
+        "As2Se3": 47.8
+      },
+      "tolerance": {
+        "abs": 1.0
+      }
+    }
+  ]
+}

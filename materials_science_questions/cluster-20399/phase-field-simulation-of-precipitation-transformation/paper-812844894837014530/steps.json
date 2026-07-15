@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s0",
+    "title": "Setup benchmark configuration",
+    "role": "process",
+    "action": "Define simulation parameters: domain 64³ grid cells, grid spacing dx=3 nm, time step dt=1 s, temperature T=473 K. Set material parameters: matrix elastic constants C11=107.11 GPa, C12=62.86 GPa, C44=28.47 GPa; precipitate elastic constants C11=139.8 GPa, C12=33.7 GPa, C44=40.8 GPa; volumetric misfit strain -0.975%. For coupling factor ϰ=0.01 at.%⁻¹ set initial precipitate radius=19.03 dx and matrix Li concentration=7.021 at.%; for ϰ=0.04 at.%⁻¹ set radius=17.71 dx and concentration=7.440 at.%. Configure composition-dependent elasticity as C^{ijkl}(c)=C₀^{ijkl}(1+ϰΔc) with Δc=c−c_ref. Freeze the precipitate by setting interface mobility L=0; for OpenPhase reduce diffuse interface width to one grid cell. Compute analytical solution parameters: matrix shear modulus Gₘ = C44 (assume isotropic), molar volume Vₘ = 1e-5 m³, and material constant b from the isotropic Eshelby relation using precipitate bulk modulus B_p and misfit strain. Log all numerical and analytical parameters.",
+    "output_file": "",
+    "evidence": "setup_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Documents the simulation and analytical parameters used.",
+    "output_schema": ""
+  },
+  {
+    "id": "s1",
+    "title": "Equilibrium concentration profile for κ=0.01",
+    "role": "scored",
+    "action": "Using either OpenPhase or DAMASK, run a coupled diffusion–mechanical equilibrium simulation for κ=0.01 at.%⁻¹ until steady state (zero net flux). Extract the radial Li concentration profile c(r) along a line from the precipitate center outward, covering the matrix region outside the precipitate. Save the profile as comma-separated values.",
+    "output_file": "concentration_profile_varkappa_0.01.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Radial concentration profile around the static precipitate at equilibrium for coupling strength κ=0.01 at.%⁻¹.",
+    "output_schema": "CSV with header row and two columns: r (distance from precipitate center, in nm), c (Li concentration, in at.%)."
+  },
+  {
+    "id": "s2",
+    "title": "Equilibrium concentration profile for κ=0.04",
+    "role": "scored",
+    "action": "Using the same solver as in s1, run a coupled diffusion–mechanical equilibrium simulation for κ=0.04 at.%⁻¹ until steady state. Extract the radial Li concentration profile c(r) and save as comma-separated values.",
+    "output_file": "concentration_profile_varkappa_0.04.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Radial concentration profile around the static precipitate at equilibrium for coupling strength κ=0.04 at.%⁻¹.",
+    "output_schema": "CSV with header row and two columns: r (distance from precipitate center, in nm), c (Li concentration, in at.%)."
+  },
+  {
+    "id": "s3",
+    "title": "Compute L²-norm deviations",
+    "role": "scored",
+    "action": "From the numerical concentration profiles, compute the analytical reference profile c_ref(r) = c₀ − g₀ κ (R/r)⁶, where g₀ = 6 Gₘ Vₘ b² / (R T) using the shear modulus Gₘ, molar volume Vₘ, temperature T, and material constant b determined in s0. For each coupling strength, evaluate the L²-norm relative deviation ζ = ||c_ref − c_num||₂ / ||c_ref||₂. Write a summary JSON containing the solver identity and the two computed ζ values.",
+    "output_file": "summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of the L²-norm deviations for both coupling strengths and the solver used.",
+    "output_schema": "JSON object with keys: solver (string, either 'OpenPhase' or 'DAMASK'), L2_0.01 (float, L² deviation for κ=0.01), L2_0.04 (float, L² deviation for κ=0.04), unit (string, value 'dimensionless')."
+  }
+]

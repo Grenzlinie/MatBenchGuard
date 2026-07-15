@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "T1 recompute is infeasible because it would require re-running full MC simulations; instead we verify consistency between reported coexistence points and isotherm data and compare critical parameters to paper's reported values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for critical temperature and density of methane in (30,30) SWNT",
+      "source_provenance": "Table 2 of the source paper (Langmuir 2006, 22, 7391-7400)",
+      "generation_method": "Read directly from paper's Table 2: Tc=169.8 K, Gammac=0.200 g/mL",
+      "why_not_fabricated": "These are the paper's reported critical parameters, used as reference for exact-match scoring with tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "isotherms_gcmc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "beta_mu_c",
+            "density"
+          ],
+          "units": {
+            "temperature": "K",
+            "beta_mu_c": "dimensionless",
+            "density": "g/mL"
+          }
+        },
+        "description": "Isotherm data from gauge-cell MC. The 180 K isotherm must be monotonic (density not decreasing as chemical potential increases)."
+      },
+      {
+        "file": "coexistence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "saturation_mu_c",
+            "vapor_density",
+            "liquid_density"
+          ],
+          "units": {
+            "temperature": "K (or string for critical rows)",
+            "saturation_mu_c": "dimensionless",
+            "vapor_density": "g/mL",
+            "liquid_density": "g/mL"
+          },
+          "notes": "Rows for subcritical temperatures provide coexistence data. Two additional rows with temperature column 'critical_temperature' and 'critical_density' respectively hold the fitted critical values in the saturation_mu_c column."
+        },
+        "description": "Coexistence parameters (saturation chemical potential, vapor/liquid densities) and fitted critical temperature and density."
+      },
+      {
+        "file": "gcmc_comparison.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "beta_mu_c",
+            "density_gcmc",
+            "density_gaugecell",
+            "difference"
+          ],
+          "units": {
+            "temperature": "K",
+            "beta_mu_c": "dimensionless",
+            "density_gcmc": "g/mL",
+            "density_gaugecell": "g/mL",
+            "difference": "g/mL"
+          }
+        },
+        "description": "Comparison of GCMC and gauge-cell MC densities in the stable/metastable regions. The absolute difference must be within tolerance."
+      }
+    ],
+    "notes": "All outputs are plain text CSV files. The agent must write them to /app/outputs. The checker reads these files and compares against hidden paper-reported values and structural checks with tolerances."
+  },
+  "steps": [
+    {
+      "id": "monotonicity",
+      "output_file": "isotherms_gcmc.csv",
+      "weight": 0.2,
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "coexistence_consistency",
+      "output_file": "coexistence.csv",
+      "weight": 0.3,
+      "target_policy": "consistency",
+      "mu_tol": 0.01,
+      "density_tol": 0.02
+    },
+    {
+      "id": "critical_params",
+      "output_file": "coexistence.csv",
+      "weight": 0.4,
+      "target_policy": "exact_match",
+      "Tc": 169.8,
+      "Tc_tol": 5.0,
+      "Gammac": 0.2,
+      "Gammac_tol": 0.01
+    },
+    {
+      "id": "gcmc_compare",
+      "output_file": "gcmc_comparison.csv",
+      "weight": 0.1,
+      "target_policy": "structural_audit",
+      "max_diff": 0.02
+    }
+  ]
+}

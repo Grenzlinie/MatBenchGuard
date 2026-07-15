@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes diffusion drop factor, density peak counts, and pressure derivative features from raw CSV data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "diffusion_results.csv": "structural_audit",
+    "density_profiles.csv": "structural_audit",
+    "isotherm_data.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "diffusion_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H_nm",
+            "diffusion_coefficient_cm2_s"
+          ],
+          "units": {
+            "H_nm": "nm",
+            "diffusion_coefficient_cm2_s": "cm^2/s"
+          }
+        },
+        "description": "Lateral diffusion coefficient as a function of plate separation. The checker will perform a structural audit."
+      },
+      {
+        "file": "density_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H_nm",
+            "z_nm",
+            "density_g_ml"
+          ],
+          "units": {
+            "H_nm": "nm",
+            "z_nm": "nm",
+            "density_g_ml": "g/ml"
+          }
+        },
+        "description": "Transverse oxygen density profiles at selected plate separations. The checker will perform a structural audit."
+      },
+      {
+        "file": "isotherm_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "A_nm2",
+            "lateral_pressure_bar",
+            "potential_energy_kJ_mol"
+          ],
+          "units": {
+            "A_nm2": "nm^2",
+            "lateral_pressure_bar": "bar",
+            "potential_energy_kJ_mol": "kJ/mol"
+          }
+        },
+        "description": "Pressure-area isotherm and energy-area data at H=0.50 nm. The checker will perform a structural audit."
+      }
+    ],
+    "notes": "Only the three specified CSV artifacts are scored. The checker performs structural audits (T3) without exact numeric match; tolerances are shape-based."
+  },
+  "steps": [
+    {
+      "id": "check_diffusion",
+      "output_file": "diffusion_results.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "params": {
+        "threshold_drop_factor": 500.0
+      }
+    },
+    {
+      "id": "check_density",
+      "output_file": "density_profiles.csv",
+      "kind": "custom",
+      "weight": 0.25,
+      "params": {
+        "unimodal_H": 0.47,
+        "bimodal_H": 0.53,
+        "smoothing_window": 5,
+        "peak_threshold_frac": 0.1
+      }
+    },
+    {
+      "id": "check_isotherm",
+      "output_file": "isotherm_data.csv",
+      "kind": "custom",
+      "weight": 0.25,
+      "params": {
+        "H_nm": 0.5,
+        "A_min": 54.0,
+        "A_max": 60.4,
+        "correlation_threshold": -0.8
+      }
+    }
+  ]
+}

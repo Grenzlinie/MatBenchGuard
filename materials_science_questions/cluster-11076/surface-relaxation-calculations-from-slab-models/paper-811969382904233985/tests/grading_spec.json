@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Headline quantities are final adsorption energies and forms, which cannot be recomputed from accessible raw outputs in the verifier sandbox. Therefore we check structural trends (perfect surface most negative, form classification) combined with tolerance-bounded value match against paper-reported reference values.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_05_dft_adsorption_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface_name",
+            "site",
+            "adsorption_energy_eV",
+            "adsorption_form"
+          ],
+          "units": {
+            "adsorption_energy_eV": "eV"
+          }
+        },
+        "description": "DFT adsorption energies and adsorption forms for each surface site. The perfect surface is expected to have the most negative energy and dissociative form; defect/impurity surfaces are expected to have less negative energies and molecular/mixed forms."
+      },
+      {
+        "file": "step_09_md_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface_name",
+            "md_adsorption_energy_kcal_per_mol",
+            "md_cohesive_energy_kcal_per_mol"
+          ],
+          "units": {
+            "md_adsorption_energy_kcal_per_mol": "kcal/mol",
+            "md_cohesive_energy_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "MD average adsorption and cohesive energies of a water cluster on each surface. The perfect surface is expected to show the most wetting behavior (most negative adsorption energy, more positive cohesive energy) compared to defective/impurity surfaces."
+      }
+    ],
+    "notes": "The checked quantities are the DFT and MD adsorption/cohesive energies and the adsorption form classification. The scorings use hidden paper-reported reference values with tolerances and trend checks."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for DFT adsorption energies and forms for perfect, VT, and TFe surfaces",
+      "source_provenance": "Paper Fig. 5 (adsorption energy bar chart) and Fig. 6 (adsorption forms); approximated values from the chart: perfect TZn -1.30, BZn -1.20; VT -0.85; TFe -1.05 eV. Forms determined from Fig. 6.",
+      "generation_method": "Digitized from figure and rounded to two decimals; solve.sh uses identical values.",
+      "why_not_fabricated": "Values are direct approximations from the paper's published figure and agree with the qualitative trend described."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for MD average adsorption and cohesive energies",
+      "source_provenance": "Paper Table 2",
+      "generation_method": "Exact values from Table 2.",
+      "why_not_fabricated": "Values are directly from the paper's Table 2."
+    }
+  ],
+  "steps": [
+    {
+      "id": "dft_adsorption",
+      "output_file": "step_05_dft_adsorption_results.csv",
+      "weight": 0.5,
+      "gold_rows": [
+        {
+          "surface_name": "perfect",
+          "site": "TZn",
+          "adsorption_energy_eV": -1.3,
+          "adsorption_form": "dissociative"
+        },
+        {
+          "surface_name": "perfect",
+          "site": "BZn",
+          "adsorption_energy_eV": -1.2,
+          "adsorption_form": "dissociative"
+        },
+        {
+          "surface_name": "VT_defect",
+          "site": "VT",
+          "adsorption_energy_eV": -0.85,
+          "adsorption_form": "molecular"
+        },
+        {
+          "surface_name": "TFe_impurity",
+          "site": "TFe",
+          "adsorption_energy_eV": -1.05,
+          "adsorption_form": "dissociative"
+        }
+      ],
+      "energy_tol": 0.3,
+      "energy_dropoff": 0.6
+    },
+    {
+      "id": "md_adsorption",
+      "output_file": "step_09_md_results.csv",
+      "weight": 0.5,
+      "gold_rows": [
+        {
+          "surface_name": "perfect",
+          "md_adsorption_energy_kcal_per_mol": -19.31,
+          "md_cohesive_energy_kcal_per_mol": 5.16
+        },
+        {
+          "surface_name": "VT_defect",
+          "md_adsorption_energy_kcal_per_mol": -10.85,
+          "md_cohesive_energy_kcal_per_mol": -2.23
+        },
+        {
+          "surface_name": "TFe_impurity",
+          "md_adsorption_energy_kcal_per_mol": -6.98,
+          "md_cohesive_energy_kcal_per_mol": -7.6
+        }
+      ],
+      "energy_tol": 3.0,
+      "energy_dropoff": 6.0
+    }
+  ]
+}

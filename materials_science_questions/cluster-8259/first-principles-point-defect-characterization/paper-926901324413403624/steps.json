@@ -1,0 +1,54 @@
+[
+  {
+    "id": "build_slab_models",
+    "title": "Build pristine and defective slab models",
+    "role": "process",
+    "action": "Construct slab supercell models of monolayer CrOCl on a few-layer NbSe₂ substrate. Build two configurations: (i) pristine heterostructure; (ii) heterostructure with two Cr vacancies, removing one Cr atom from each of the two antiferromagnetic sublattices to preserve AFM order. Generate Quantum ESPRESSO input files (structure + k-path) for band structure calculations.",
+    "output_file": "",
+    "evidence": "slab_model_files.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces coordinate and input files for DFT.",
+    "output_schema": ""
+  },
+  {
+    "id": "run_dft",
+    "title": "Run DFT band structure calculations",
+    "role": "process",
+    "action": "Run DFT self-consistent field (SCF) calculations followed by non-self-consistent band structure calculations using Quantum ESPRESSO (pw.x, bands.x) on both pristine and defective slab models. Use a suitable functional (GGA) and pseudopotentials. Collect the band energies along a high-symmetry k-path.",
+    "output_file": "",
+    "evidence": "dft_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Executes pw.x and bands.x; writes raw output files to disk. Evidence log records execution status.",
+    "output_schema": ""
+  },
+  {
+    "id": "extract_bands",
+    "title": "Extract band structures to CSV",
+    "role": "scored",
+    "action": "Parse the DFT output (bands.dat or equivalent) and write the band energies to step_01_band_structures.csv. Include rows for both pristine and defective systems, with Fermi level shifted to 0 eV.",
+    "output_file": "step_01_band_structures.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Flat CSV with columns: system (pristine|defective), k_path_index (integer), band_index (integer), energy (eV). All energies relative to the Fermi level.",
+    "output_schema": "CSV file with header: system,k_path_index,band_index,energy (eV). The 'system' column contains 'pristine' or 'defective'. All energies are in eV relative to the Fermi level set to 0."
+  },
+  {
+    "id": "analyze_overlap",
+    "title": "Analyze band overlap",
+    "role": "scored",
+    "action": "Using the extracted band data or direct DFT output, determine the energy gap between the highest occupied CrOCl valence band and the Fermi level (0 eV) for both pristine and defective systems. Compute the overlap condition (true if defective gap ≤ 0). Write results to step_02_overlap_analysis.json.",
+    "output_file": "step_02_overlap_analysis.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys: pristine_gap (eV), defective_gap (eV), overlap (boolean). The overlap key should be true if defective_gap ≤ 0 after considering a small tolerance.",
+    "output_schema": "JSON object with keys: pristine_gap (float, in eV), defective_gap (float, in eV), overlap (boolean)."
+  }
+]

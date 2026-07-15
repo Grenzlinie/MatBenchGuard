@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step1",
+    "title": "Bulk DFT calculations for Mg, Ca, and B2 MgCa",
+    "role": "process",
+    "action": "Perform DFT calculations on the bulk unit cells of Mg, Ca, and MgCa using the lattice constants from the paper (Ca: 5.52 Å, MgCa: 3.96 Å, Mg: a=3.19 Å, c/a=1.632) to obtain the total energy per atom E_bulk for each material.",
+    "output_file": "",
+    "evidence": "bulk_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Bulk reference energies needed for surface energy formula",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Relaxation of clean slab surfaces",
+    "role": "process",
+    "action": "Construct periodic slab models for Mg(0001), Ca(100)/(110)/(111), and B2 MgCa(100)/(110)/(111) surfaces with the specified layer/vacuum thicknesses and terminations (Ca- and Mg-terminated for (100) and (111)). Relax atomic positions via DFT, keeping central-layer atoms fixed. After relaxation, record the total energy of each slab, the electrostatic potential in the vacuum region V_vac, and the Fermi energy E_f.",
+    "output_file": "",
+    "evidence": "clean_relaxation_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Structural relaxation of all clean surfaces to produce relaxed geometries and energies",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute clean surface energies and work functions",
+    "role": "scored",
+    "action": "Using relaxed slab total energies from step 2 and bulk energies from step 1, compute the surface energy σ = 1/2 (E_slab - N*E_bulk) for each surface. Using V_vac and E_f from step 2, compute the work function Φ = V_vac - E_f. Write the results to the output file.",
+    "output_file": "clean_surface_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Surface energy and work function for each clean surface",
+    "output_schema": "Columns: surface (string), termination (string), surface_energy_J_per_m2 (float), work_function_eV (float). Rows: Mg(0001), Ca(100), Ca(110), Ca(111), MgCa(100)-I, MgCa(100)-II, MgCa(110), MgCa(111)-I, MgCa(111)-II."
+  },
+  {
+    "id": "step4",
+    "title": "Calculate Cl2 molecule reference energy",
+    "role": "process",
+    "action": "Perform a DFT calculation on an isolated Cl2 molecule to obtain its total energy and equilibrium bond length. Compute the energy per Cl atom E_Cl (half of Cl2 total energy).",
+    "output_file": "",
+    "evidence": "cl2_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Reference Cl energy required for adsorption energy formula",
+    "output_schema": ""
+  },
+  {
+    "id": "step5",
+    "title": "Relaxation of Cl-adsorbed slab surfaces",
+    "role": "process",
+    "action": "Construct symmetric adsorption configurations with Cl atoms at the high-symmetry sites on Mg(0001) (top, bridge, fcc, hcp), Ca(111) (top, bridge, fcc, hcp), and MgCa(110) (top Ca, top Mg, bridge, long, short). Relax the combined system via DFT, keeping central-layer atoms fixed. For sites where the Cl atom relaxes to a different final site, record the final site. After relaxation, record the total energy of each adsorbed slab, V_vac, and E_f.",
+    "output_file": "",
+    "evidence": "adsorption_relaxation_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Relaxation of Cl-adsorbed surfaces to obtain final geometries and energies",
+    "output_schema": ""
+  },
+  {
+    "id": "step6",
+    "title": "Compute Cl adsorption energies and work functions",
+    "role": "scored",
+    "action": "Using relaxed adsorption slab energies from step 5, clean slab energies from step 2, and E_Cl from step 4, compute the adsorption energy E_ads = 1/2 (E_Cl/sur - E_sur - 2*E_Cl) for each stable final site. Compute the work function Φ_ads = V_vac - E_f from step 5. Write the results to the output file.",
+    "output_file": "adsorption_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Adsorption energy and work function for each stable Cl adsorption site",
+    "output_schema": "Columns: surface (string), adsorption_site (string), adsorption_energy_eV (float), work_function_eV (float). Rows for stable final sites: Mg(0001) top, hcp, fcc; Ca(111) hcp, fcc; MgCa(110) top Ca, top Mg, long, short."
+  },
+  {
+    "id": "step7",
+    "title": "Compute Mg-Cl and Ca-Cl dimer bond energies and lengths",
+    "role": "scored",
+    "action": "Perform DFT calculations for the Mg-Cl and Ca-Cl diatomic systems over a range of bond lengths to obtain potential energy curves. Determine the equilibrium bond length (minimum-energy separation) and bond energy (depth of the potential well). Write the results to the output file.",
+    "output_file": "dimer_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium bond properties for Mg-Cl and Ca-Cl dimers",
+    "output_schema": "Columns: dimer (string), bond_length_angstrom (float), bond_energy_kJ_per_mol (float). Rows: Mg-Cl, Ca-Cl."
+  }
+]

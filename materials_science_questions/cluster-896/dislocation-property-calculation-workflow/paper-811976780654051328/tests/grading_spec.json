@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The slope of f(x) vs log10(x) for x<0.1 is recomputed from the agent's honeycomb_f_of_x.csv, providing a strong recompute verification; the critical angle is compared to a hidden reference since it is a derived scalar.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "honeycomb_f_of_x.csv": "metric_recompute",
+    "critical_angle.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference slope and critical angle",
+      "source_provenance": "Derived from paper Eq.15 (0.17 μb²/l) and the stated critical angle θ_c ≈ 0.05 rad; slope computed as - (2π³/9)*0.17 * ln(10) ≈ -2.698.",
+      "generation_method": "Computed analytically from the paper's reported asymptotic constants; not a fabricated holdout.",
+      "why_not_fabricated": "These are the physical values the paper reports; the task requires reproducing them by honest computation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "honeycomb_f_of_x.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "f_x"
+          ],
+          "units": {
+            "x": "dimensionless",
+            "f_x": "dimensionless"
+          }
+        },
+        "description": "Computed dimensionless interaction energy function f(x) for the honeycomb network; checker will recompute the logarithmic slope at small x and compare to a hidden reference."
+      },
+      {
+        "file": "critical_angle.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "radians"
+          }
+        },
+        "description": "Critical twist angle θ_c below which the honeycomb network is stable; checker will read the reported value and compare it to a hidden reference within a tolerance."
+      }
+    ],
+    "notes": "Long-range stress effects and lamellar compound analysis (Section 3 of the original paper) are omitted per task scope. Elastic constants, Burgers vector magnitude, and core cutoff assumption are to be chosen by the agent as appropriate for an f.c.c. metal."
+  },
+  "steps": [
+    {
+      "id": "step03",
+      "output_file": "honeycomb_f_of_x.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "target_policy": "metric_recompute",
+      "description": "Recompute logarithmic slope of f_x vs log10(x) for x<0.1",
+      "reference_slope": -2.698,
+      "tolerance": 0.1
+    },
+    {
+      "id": "step04",
+      "output_file": "critical_angle.txt",
+      "kind": "custom",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "description": "Compare reported critical twist angle to paper value",
+      "reference_angle": 0.05,
+      "tolerance": 0.01
+    }
+  ]
+}

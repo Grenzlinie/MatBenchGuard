@@ -1,0 +1,93 @@
+[
+  {
+    "id": "geom_opt",
+    "title": "Geometry optimization of MS monolayers",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for the unit cells of pentagonal MS (M = Fe, Mn, V) monolayers using an open-source plane-wave DFT code (e.g., Quantum Espresso) with the PBE-GGA functional. Optimize atomic positions and lattice constants to obtain relaxed structures.",
+    "output_file": "",
+    "evidence": "geom_opt.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the optimized unit cells for subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "phonon",
+    "title": "Phonon dispersion calculation",
+    "role": "process",
+    "action": "Using a supercell of each optimized monolayer, compute phonon dispersions along a high-symmetry path in the first Brillouin zone via the finite-displacement method with PHONOPY (or equivalent). Extract phonon frequencies as a function of wavevector.",
+    "output_file": "",
+    "evidence": "phonon_dispersions.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute phonon band structures to assess dynamic stability (check for imaginary modes).",
+    "output_schema": ""
+  },
+  {
+    "id": "aimd",
+    "title": "Ab initio molecular dynamics (AIMD) for thermal stability",
+    "role": "process",
+    "action": "Perform ab initio molecular dynamics on supercells of FeS and VS at a high temperature (e.g., 673 K) and MnS at room temperature. Record potential energy as a function of time and final atomic structures.",
+    "output_file": "",
+    "evidence": "aimd_potential_energy.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Evaluate thermal stability by monitoring potential energy fluctuations and structural integrity.",
+    "output_schema": ""
+  },
+  {
+    "id": "elastic",
+    "title": "Elastic constant calculation",
+    "role": "process",
+    "action": "Apply small strains to the optimized unit cells of FeS, MnS, and VS and compute total energies via DFT. Fit the energy-strain relations to extract the 2D elastic constants c11, c12, c66.",
+    "output_file": "",
+    "evidence": "elastic_constants.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute elastic moduli to verify mechanical stability (Born criteria).",
+    "output_schema": ""
+  },
+  {
+    "id": "magnetic_dos",
+    "title": "Electronic structure and magnetic ground state",
+    "role": "process",
+    "action": "Perform spin-polarized DFT calculations for each MS monolayer in nonmagnetic, ferromagnetic, and antiferromagnetic configurations. Determine the ground magnetic state and the magnetic moments on metal and S atoms.",
+    "output_file": "",
+    "evidence": "magnetic_properties.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Identify the magnetic ground state and extract magnetic moments.",
+    "output_schema": ""
+  },
+  {
+    "id": "her",
+    "title": "Hydrogen adsorption and HER Gibbs free energy",
+    "role": "process",
+    "action": "Construct a supercell of each MS monolayer, screen hydrogen adsorption sites, and compute total energies for systems with various hydrogen coverages (n = 1 to 8). Using the provided zero-point energy corrections and entropy terms, calculate the differential and average Gibbs free energies (ΔG_H) for FeS and VS.",
+    "output_file": "",
+    "evidence": "her_gibbs_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute coverage-dependent HER activity and generate ΔG_H values.",
+    "output_schema": ""
+  },
+  {
+    "id": "compile_results",
+    "title": "Compile all results into a single JSON",
+    "role": "scored",
+    "action": "Collect the computed data: phonon dispersion data (q-points, frequencies) for FeS, MnS, VS; AIMD potential energy vs time for FeS at 673 K, VS at 673 K, MnS at 300 K; elastic constants c11, c12, c66 for each material; magnetic moments for each material; and for FeS and VS, the differential and average ΔG_H for each coverage n=1..8. Write all results to a single JSON file named results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact aggregating all computable quantitative results needed for verification of stability and HER activity.",
+    "output_schema": "{\n  \"phonon\": {\n    \"FeS\": {\"q_points\": [<array of q-vectors>], \"frequencies\": [<array of frequencies in cm^-1>]},\n    \"MnS\": { ... },\n    \"VS\": { ... }\n  },\n  \"aimd_potential\": {\n    \"FeS_673K\": {\"time_ps\": [<array>], \"potential_energy_eV\": [<array>]},\n    \"VS_673K\": { ... },\n    \"MnS_300K\": { ... }\n  },\n  \"elastic_constants\": {\n    \"FeS\": {\"c11\": <float>, \"c12\": <float>, \"c66\": <float>},\n    \"MnS\": { ... },\n    \"VS\": { ... }\n  },\n  \"magnetic_moments\": {\n    \"FeS\": {\"M_moment_muB\": <float>, \"S_moment_muB\": <float>},\n    \"MnS\": { ... },\n    \"VS\": { ... }\n  },\n  \"her_gibbs\": {\n    \"FeS\": {\n      \"differential_dG_H\": [<array of 8 values for n=1..8>],\n      \"average_dG_H\": [<array of 8 values for n=1..8>]\n    },\n    \"VS\": { ... }\n  }\n}"
+  }
+]

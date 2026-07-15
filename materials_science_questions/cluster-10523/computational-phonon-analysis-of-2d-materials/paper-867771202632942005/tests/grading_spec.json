@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T1 recompute infeasible: the agent's reported spectral weight and frequency shift cannot be recomputed from raw artifacts without re‑running the full tight‑binding and charged‑phonon calculation. T0 reference match against paper‑derived theoretical values, supplemented by trend verification, is the appropriate fallback.",
+  "pass_threshold": 0.8,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "abc_trilayer_charged_phonon_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "doping",
+            "spectral_weight",
+            "frequency_shift"
+          ],
+          "units": {
+            "doping": "cm^-2",
+            "spectral_weight": "10^3 Ω^-1 cm^-1",
+            "frequency_shift": "cm^-1"
+          }
+        },
+        "description": "Computed phonon spectral weight and frequency shift for ABC trilayer graphene at five doping levels, compared to hidden reference values from the paper's theoretical curves with tolerance and trend checks."
+      }
+    ],
+    "notes": "The checker verifies the agent's reported values against reference values and checks the expected monotonic trends: spectral weight increases with doping magnitude, and frequency shift becomes more negative (red shift) with doping."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for spectral_weight and frequency_shift at each doping level, derived from the paper's theoretical curves (Fig. 4) and consistent with the reference solve.sh oracle.",
+      "source_provenance": "Paper Fig. 4 theoretical curves for ABC trilayer (charged‑phonon model).",
+      "generation_method": "Numerical values extracted from the same theoretical reference used by the paper; cross‑checked with the oracle solve.sh to ensure the reference solution achieves full reward.",
+      "why_not_fabricated": "The numbers are the actual published theoretical predictions for the specified doping levels, not invented for this task."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_02_value_match",
+      "output_file": "abc_trilayer_charged_phonon_results.csv",
+      "weight": 0.8,
+      "kind": "reference_match",
+      "config": {
+        "spectral_weight_tol_relative": 0.2,
+        "spectral_weight_tol_absolute": 0.5,
+        "frequency_shift_tol_absolute": 2.0,
+        "gold": [
+          {
+            "doping": 0,
+            "spectral_weight": 0.0,
+            "frequency_shift": 0.0
+          },
+          {
+            "doping": 1000000000000,
+            "spectral_weight": 0.3,
+            "frequency_shift": -1.5
+          },
+          {
+            "doping": 5000000000000,
+            "spectral_weight": 1.8,
+            "frequency_shift": -6.5
+          },
+          {
+            "doping": 10000000000000,
+            "spectral_weight": 3.8,
+            "frequency_shift": -12.0
+          },
+          {
+            "doping": 20000000000000,
+            "spectral_weight": 6.0,
+            "frequency_shift": -15.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_02_trend",
+      "output_file": "abc_trilayer_charged_phonon_results.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "config": {
+        "expected_trend": {
+          "spectral_weight": "non_decreasing",
+          "frequency_shift": "non_increasing"
+        }
+      }
+    }
+  ]
+}

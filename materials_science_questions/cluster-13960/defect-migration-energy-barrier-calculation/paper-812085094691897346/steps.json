@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01",
+    "title": "Relax pristine carbon substrates",
+    "role": "process",
+    "action": "Perform LDA geometry optimization of the pristine (8,8) carbon nanotube (192 atoms) and the pristine graphene sheet (128 atoms) using the chosen DFT code. Save the relaxed total energies and geometries for later use.",
+    "output_file": "",
+    "evidence": "pristine_systems_info.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain reference structures and total energies of the pristine substrates, needed to compute binding energies relative to the clean surface.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Compute isolated F₂ reference energy",
+    "role": "process",
+    "action": "Perform a single-point energy calculation of an isolated F₂ molecule in a large periodic box using the same DFT settings. Save the total energy for use in binding-energy formulas.",
+    "output_file": "",
+    "evidence": "f2_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The binding energy per F is defined relative to F₂ and the pristine carbon system, so the F₂ total energy is a prerequisite.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Compute binding energies and C–F bond lengths",
+    "role": "scored",
+    "action": "Construct the seven fluorinated configurations on the (8,8) nanotube (single F, F₂ (1,2), F₂ (1,4_cis), F₂ (1,3), C₄F, C₂F) and single F on graphene. For each, perform a full geometry optimization with the same DFT settings. Extract the binding energy per fluorine atom as (E_fluorinated − E_pristine − N_F·E_F₂/2)/N_F and the characteristic C–F bond length(s). Write a CSV file with columns: system, configuration, binding_energy_per_F_eV, C_F_bond_length_Angstrom.",
+    "output_file": "binding_energies_bond_lengths.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the main binding-energy and bond-length table for all required configurations; the results are compared to the paper’s hidden gold with tolerances, and ordering trends are checked.",
+    "output_schema": "Columns: system (string), configuration (string), binding_energy_per_F_eV (float), C_F_bond_length_Angstrom (float). Rows for 'nanotube' configurations: F, F₂(1,2), F₂(1,4_cis), F₂(1,3), C₄F, C₂F; and for 'graphene': F."
+  },
+  {
+    "id": "step04",
+    "title": "Compute fluorine pair migration barriers",
+    "role": "scored",
+    "action": "For the transitions (1,2)→(1,3) and (1,4_cis)→(1,3) on both graphene and the (8,8) nanotube, perform constrained geometry scans. Use a constraint on the difference of squared distances between the migrating F and two neighboring C atoms, varying the constraint to obtain the energy profile while relaxing other degrees of freedom. Determine the energy barrier as the maximum energy along the path. Write a CSV file with columns: system, transition, barrier_eV.",
+    "output_file": "migration_barriers.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Gives the key barriers that control the temperature-driven transition; the checker compares the reported barriers to the paper’s gold within tolerances and verifies that barriers on the nanotube are higher than those on graphene.",
+    "output_schema": "Columns: system (string, 'graphene' or 'nanotube'), transition (string, '(1,2)→(1,3)' or '(1,4_cis)→(1,3)'), barrier_eV (float)."
+  }
+]

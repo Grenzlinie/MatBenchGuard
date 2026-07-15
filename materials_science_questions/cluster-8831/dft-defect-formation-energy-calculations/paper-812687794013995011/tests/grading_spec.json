@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute average V_N formation energies from the agent's CSV and check trend thresholds; cross-check summary.json consistency with CSV and verify band gap ranges.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference thresholds for V_N formation energy trends and band gap ranges.",
+      "source_provenance": "Paper Table 5 V_N averages: ZnON -0.312 eV, Si-doped 1.516 eV; paper Fig.7 band gaps ~2.0-2.1 eV; oracle solve.sh fills consistent per-site values and averages.",
+      "generation_method": "Derived from the paper's explicit per-site formation energies and the average formula; band gap limits cover the published range and plausible variations.",
+      "why_not_fabricated": "Values are directly traceable to the paper's reported defect energies and band gaps, not invented without source; they are used to verify the reproduction's correctness."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "vacancy_type",
+            "site_label",
+            "formation_energy"
+          ],
+          "units": {
+            "formation_energy": "eV"
+          }
+        },
+        "description": "Per-site vacancy formation energies for nitrogen and oxygen vacancies in pure ZnON and Si-doped ZnON structures."
+      },
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ZnON": {
+              "E_form_V_N_avg": "float",
+              "band_gap": "float"
+            },
+            "Si_doped": {
+              "E_form_V_N_avg": "float",
+              "band_gap": "float"
+            }
+          }
+        },
+        "description": "Summary containing the average nitrogen vacancy formation energy and band gap for each material system."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "formation_energies_csv",
+      "output_file": "formation_energies.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Verify CSV schema and check V_N formation energy trends: ZnON average <= -0.1 eV, Si-doped average >= 0.5 eV, and Si-doped > ZnON.",
+      "targets": {
+        "znon_vn_avg_max": -0.1,
+        "si_vn_avg_min": 0.5
+      }
+    },
+    {
+      "id": "summary_json",
+      "output_file": "summary.json",
+      "kind": "custom",
+      "weight": 0.6,
+      "description": "Recompute average V_N from CSV and check consistency with summary.json; verify band gaps are within plausible ranges and increase upon Si doping.",
+      "targets": {
+        "znon_band_gap_range": [
+          1.8,
+          2.3
+        ],
+        "si_band_gap_range": [
+          1.9,
+          2.4
+        ],
+        "gap_increase_min": 0.05
+      }
+    }
+  ]
+}

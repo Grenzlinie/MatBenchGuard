@@ -1,0 +1,60 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: the checker recomputes every dissociation degree from the agent's raw artifact using the paper's equations and the hidden equilibrium constants, then compares row-by-row with generous tolerance.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "dissociation_degrees.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Equilibrium constants KpCO2, Kpw, KpOH at each temperature, taken from paper Table 4, plus fuel composition parameters from the paper text. Used to recompute the expected dissociation degrees.",
+      "source_provenance": "paper Table 4 and section 3.4 (fuel parameters)",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "These are the exact equilibrium constants reported in the paper; the checker uses them to generate the authoritative reference values for the dissociation degrees, ensuring that a correct re-implementation matches within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dissociation_degrees.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "p_kgcm2",
+            "n",
+            "alpha_k",
+            "alpha_w",
+            "alpha_h"
+          ],
+          "units": {
+            "T_K": "K",
+            "p_kgcm2": "kg/cm^2",
+            "n": "dimensionless",
+            "alpha_k": "dimensionless",
+            "alpha_w": "dimensionless",
+            "alpha_h": "dimensionless"
+          }
+        },
+        "description": "Dissociation degrees for JP‑4 combustion gas at all specified (T,p,n) conditions. The checker recomputes each value using the same algebraic model and provided equilibrium constants, then scores the fraction of entries that lie within tolerance."
+      }
+    ],
+    "notes": "The equilibrium constants are not directly scored; their correctness is enforced via the dependency of the scored step."
+  },
+  "steps": [
+    {
+      "id": "dissociation_degrees",
+      "output_file": "dissociation_degrees.csv",
+      "weight": 1.0,
+      "kind": "recompute_tabular",
+      "tolerance_rel": 0.05,
+      "tolerance_abs": 0.005,
+      "target_policy": "metric_recompute",
+      "description": "Check every row of dissociation_degrees.csv: for each required (T,p,n) condition, recompute alpha_k, alpha_w, alpha_h from the paper's equations and hidden equilibrium constants, then verify that the agent's values lie within max(0.05*abs(expected), 0.005) of the expected values. Score is the fraction of rows where all three alphas pass."
+    }
+  ]
+}

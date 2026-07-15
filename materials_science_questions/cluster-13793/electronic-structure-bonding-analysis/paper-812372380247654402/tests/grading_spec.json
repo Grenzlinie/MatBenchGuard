@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute metallic behavior (gap <= 0.2 eV, DOS > 0) and Cu-Te bonding sign from the agent's computed quantities; thresholds derived from paper's qualitative conclusions.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for metallic behavior and bonding sign",
+      "source_provenance": "Derived from paper's abstract and conclusions: both compounds metallic (band gap near zero) and Cu-Te interactions bonding below Fermi level.",
+      "generation_method": "Set band gap threshold <= 0.2 eV (per task description) and Cu-Te ICOHP negative.",
+      "why_not_fabricated": "These thresholds directly correspond to the paper's experimentally supported claims."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_structure_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CuTe2": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "dos_at_fermi_states_eV_cell"
+              ],
+              "units": {
+                "band_gap_eV": "eV",
+                "dos_at_fermi_states_eV_cell": "states/eV/cell"
+              }
+            },
+            "Cu7Te4": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "dos_at_fermi_states_eV_cell"
+              ],
+              "units": {
+                "band_gap_eV": "eV",
+                "dos_at_fermi_states_eV_cell": "states/eV/cell"
+              }
+            }
+          }
+        },
+        "description": "Band gap and Fermi-level DOS for both compounds; the checker verifies physical plausibility."
+      },
+      {
+        "file": "bonding_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CuTe2": {
+              "type": "object",
+              "required": [
+                "Cu_Te_ICOHP_eV_bond",
+                "Cu_Cu_ICOHP_eV_bond",
+                "Te_Te_ICOHP_eV_bond"
+              ],
+              "units": {
+                "Cu_Te_ICOHP_eV_bond": "eV/bond",
+                "Cu_Cu_ICOHP_eV_bond": "eV/bond",
+                "Te_Te_ICOHP_eV_bond": "eV/bond"
+              }
+            },
+            "Cu7Te4": {
+              "type": "object",
+              "required": [
+                "Cu_Te_ICOHP_eV_bond",
+                "Cu_Cu_ICOHP_eV_bond",
+                "Te_Te_ICOHP_eV_bond"
+              ],
+              "units": {
+                "Cu_Te_ICOHP_eV_bond": "eV/bond",
+                "Cu_Cu_ICOHP_eV_bond": "eV/bond",
+                "Te_Te_ICOHP_eV_bond": "eV/bond"
+              }
+            }
+          }
+        },
+        "description": "ICOHP values for pair interactions; the checker verifies bonding character consistency."
+      }
+    ],
+    "notes": "The agent must run the full DFT workflow: structural retrieval, SCF, band/DOS calculation, and COHP analysis. Only the final JSON artifacts are submitted for scoring."
+  },
+  "steps": [
+    {
+      "id": "check_band_dos",
+      "output_file": "electronic_structure_results.json",
+      "weight": 0.6,
+      "description": "Verify metallic behavior: band_gap_eV <= 0.2 eV and dos_at_fermi_states_eV_cell > 0 for both CuTe2 and Cu7Te4."
+    },
+    {
+      "id": "check_icoHP",
+      "output_file": "bonding_analysis.json",
+      "weight": 0.4,
+      "description": "Verify Cu-Te bonding: Cu_Te_ICOHP_eV_bond < 0 for both compounds."
+    }
+  ]
+}

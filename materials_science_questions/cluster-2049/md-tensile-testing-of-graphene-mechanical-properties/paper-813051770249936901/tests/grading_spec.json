@@ -1,0 +1,233 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing from raw DFT data is infeasible; result-level comparison against paper-reported values with tolerances is the correct tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ambient_elastic_constants.txt": "exact_match",
+    "mechanical_stability_thresholds.csv": "exact_match",
+    "ultimate_tensile_strength.csv": "exact_match",
+    "band_gap_vs_stress.csv": "exact_match",
+    "charge_analysis.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for all scored artifacts (elastic constants, stability thresholds, UTS, band gaps, charge analysis)",
+      "source_provenance": "paper (Fig. 3, Table 1, Table 2, text) and reference solve.sh",
+      "generation_method": "Extracted directly from the paper's reported numbers and the reference solution's hardcoded correct values.",
+      "why_not_fabricated": "Values are the paper's actual published results; no synthetic data is invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ambient_elastic_constants.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "columns": [],
+          "fields": []
+        },
+        "description": "Two floating-point numbers in N/m, one per line: first line C11, second line C12."
+      },
+      {
+        "file": "mechanical_stability_thresholds.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "columns": [
+            "loading_type",
+            "compressive_stability_limit_Nm",
+            "tensile_stability_limit_Nm",
+            "compressive_failure_stress_Nm"
+          ],
+          "fields": {
+            "loading_type": "string",
+            "compressive_stability_limit_Nm": "float",
+            "tensile_stability_limit_Nm": "float",
+            "compressive_failure_stress_Nm": "float"
+          }
+        },
+        "description": "Critical stress values (N/m) where mechanical stability criteria fail. Each row corresponds to one loading geometry."
+      },
+      {
+        "file": "ultimate_tensile_strength.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "columns": [
+            "loading_type",
+            "UTS_Nm"
+          ],
+          "fields": {
+            "loading_type": "string",
+            "UTS_Nm": "float"
+          }
+        },
+        "description": "Ultimate tensile strength (N/m) for each loading direction."
+      },
+      {
+        "file": "band_gap_vs_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "columns": [
+            "loading_type",
+            "stress_Nm",
+            "band_gap_eV"
+          ],
+          "fields": {
+            "loading_type": "string",
+            "stress_Nm": "float",
+            "band_gap_eV": "float"
+          }
+        },
+        "description": "Electronic band gap (eV) at selected stress levels for each loading geometry."
+      },
+      {
+        "file": "charge_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "max_charge_density_atom",
+            "max_charge_density_value"
+          ],
+          "items": {
+            "max_charge_density_atom": "string",
+            "max_charge_density_value": "float (e/Å³)"
+          }
+        },
+        "description": "Bader charge analysis result: the atom with highest charge density and its value."
+      }
+    ],
+    "notes": "All output files are scored against reference values/tolerances derived from the published results. The checker expects valid formatting and quantities in the specified units."
+  },
+  "steps": [
+    {
+      "id": "ambient_elastic_constants",
+      "output_file": "ambient_elastic_constants.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.1,
+      "expected_C11": 179.2,
+      "expected_C12": 54.5,
+      "tolerance_relative": 0.15
+    },
+    {
+      "id": "mechanical_stability_thresholds",
+      "output_file": "mechanical_stability_thresholds.csv",
+      "kind": "table_comparison",
+      "weight": 0.4,
+      "tolerance_absolute": 10.0,
+      "expected_rows": [
+        {
+          "loading_type": "zigzag",
+          "compressive_stability_limit_Nm": 35,
+          "tensile_stability_limit_Nm": null,
+          "compressive_failure_stress_Nm": 77
+        },
+        {
+          "loading_type": "armchair",
+          "compressive_stability_limit_Nm": 85,
+          "tensile_stability_limit_Nm": 19,
+          "compressive_failure_stress_Nm": null
+        },
+        {
+          "loading_type": "biaxial",
+          "compressive_stability_limit_Nm": 111,
+          "tensile_stability_limit_Nm": 16,
+          "compressive_failure_stress_Nm": 135
+        }
+      ]
+    },
+    {
+      "id": "ultimate_tensile_strength",
+      "output_file": "ultimate_tensile_strength.csv",
+      "kind": "table_comparison",
+      "weight": 0.1,
+      "tolerance_absolute": 2.0,
+      "expected_rows": [
+        {
+          "loading_type": "zigzag",
+          "UTS_Nm": 20.22
+        },
+        {
+          "loading_type": "armchair",
+          "UTS_Nm": 21.21
+        },
+        {
+          "loading_type": "biaxial",
+          "UTS_Nm": 16.05
+        }
+      ]
+    },
+    {
+      "id": "band_gap_vs_stress",
+      "output_file": "band_gap_vs_stress.csv",
+      "kind": "point_matching",
+      "weight": 0.3,
+      "tolerance_stress": 15.0,
+      "tolerance_gap": 0.2,
+      "expected_points": [
+        {
+          "loading_type": "zigzag",
+          "stress_Nm": 0,
+          "band_gap_eV": 2.35
+        },
+        {
+          "loading_type": "zigzag",
+          "stress_Nm": -77,
+          "band_gap_eV": 0
+        },
+        {
+          "loading_type": "armchair",
+          "stress_Nm": 0,
+          "band_gap_eV": 2.35
+        },
+        {
+          "loading_type": "armchair",
+          "stress_Nm": -85,
+          "band_gap_eV": 0
+        },
+        {
+          "loading_type": "armchair",
+          "stress_Nm": 19,
+          "band_gap_eV": 0.91
+        },
+        {
+          "loading_type": "biaxial",
+          "stress_Nm": 0,
+          "band_gap_eV": 2.35
+        },
+        {
+          "loading_type": "biaxial",
+          "stress_Nm": -135,
+          "band_gap_eV": 0
+        },
+        {
+          "loading_type": "biaxial",
+          "stress_Nm": 16,
+          "band_gap_eV": 0
+        }
+      ]
+    },
+    {
+      "id": "charge_analysis",
+      "output_file": "charge_analysis.json",
+      "kind": "charge_check",
+      "weight": 0.1,
+      "expected_atom": "C",
+      "min_density_value": 7.0
+    }
+  ]
+}

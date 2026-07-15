@@ -1,0 +1,138 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw property data is not feasible because the exact ionic/atomic radii and heat of vaporization are not available as a hidden asset; therefore the alloy Ev and derived coefficients are validated against the paper's reported values with tight tolerances, which is acceptable for this compute-driven task.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_Ev_results.csv": "exact_match",
+    "step_02_viscosity_eq_coefficients.json": "exact_match",
+    "step_03_viscosity_at_temps.json": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_Ev_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "Ev_kJ_per_mol"
+          ],
+          "units": {
+            "Ev_kJ_per_mol": "kJ/mol"
+          }
+        },
+        "description": "Alloy activation energy Ev for Fe‑17 at.% B under two mixing assumptions. The checker recomputes Ev from the elemental Ev values (computed from the given property constants) and the stated Fm assumptions, and compares with a tolerance of 0.1 kJ/mol."
+      },
+      {
+        "file": "step_02_viscosity_eq_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Arrhenius_case1": {
+              "a": "float (log10 mPa·s)",
+              "b": "float (K)"
+            },
+            "Arrhenius_case2": {
+              "a": "float",
+              "b": "float"
+            },
+            "Fulcher_case1": {
+              "A": "float",
+              "B": "float (K)",
+              "T0": "float (K)"
+            },
+            "Fulcher_case2": {
+              "A": "float",
+              "B": "float",
+              "T0": "float"
+            }
+          }
+        },
+        "description": "Arrhenius and Fulcher viscosity equation coefficients for Fe‑17 at.% B alloy. The checker re‑computes the coefficients from the same Ev values and the same fitting procedure (using η(Tg)=1e15 mPa·s) and compares with tolerances of ±0.001 for A/a, ±1 for b/B/T0."
+      },
+      {
+        "file": "step_03_viscosity_at_temps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "viscosity_case1_1462K": "float (mPa·s)",
+            "viscosity_case1_1562K": "float",
+            "viscosity_case2_1462K": "float",
+            "viscosity_case2_1562K": "float"
+          }
+        },
+        "description": "Liquid viscosity at 1462 K and 1562 K for Fe‑17 at.% B alloy. The checker recomputes from the Arrhenius coefficients and compares with relative tolerance 2%."
+      }
+    ],
+    "notes": "The task reproduces the viscosity calculation method for Fe‑17 at.% B. The critical cooling rate stage is omitted. The provided elemental constants now appear explicitly in the instruction, and the hidden verifier uses the same constants to recompute all scored artifacts."
+  },
+  "steps": [
+    {
+      "id": "step_02_alloy_Ev",
+      "output_file": "step_01_Ev_results.csv",
+      "kind": "comparison_to_gold",
+      "weight": 0.4,
+      "gold": {
+        "case1": 36.39,
+        "case2": 41.7
+      },
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "step_03_viscosity_eq_coefficients",
+      "output_file": "step_02_viscosity_eq_coefficients.json",
+      "kind": "comparison_to_gold",
+      "weight": 0.3,
+      "gold": {
+        "Arrhenius_case1": {
+          "a": -0.451,
+          "b": 1912
+        },
+        "Arrhenius_case2": {
+          "a": -0.664,
+          "b": 2191
+        },
+        "Fulcher_case1": {
+          "A": 0.165,
+          "B": 513,
+          "T0": 720
+        },
+        "Fulcher_case2": {
+          "A": 0.039,
+          "B": 609,
+          "T0": 713
+        }
+      },
+      "tolerances": {
+        "a_tol": 0.002,
+        "b_tol": 2.0,
+        "A_tol": 0.002,
+        "B_tol": 2.0,
+        "T0_tol": 2.0
+      }
+    },
+    {
+      "id": "step_04_viscosity_at_temps",
+      "output_file": "step_03_viscosity_at_temps.json",
+      "kind": "comparison_to_gold",
+      "weight": 0.3,
+      "gold": {
+        "viscosity_case1_1462K": 7.18,
+        "viscosity_case1_1562K": 5.93,
+        "viscosity_case2_1462K": 7.12,
+        "viscosity_case2_1562K": 5.71
+      },
+      "rel_tol": 0.02
+    }
+  ]
+}

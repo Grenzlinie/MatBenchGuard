@@ -1,0 +1,226 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "A full recompute of the lattice-energy minimization is infeasible in the lightweight verifier. Scoring uses comparison to paper reference values with tolerances, plus relative stability and hydrogen-bond strength ordering checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "observed_lattice_energy.json": "reference_match",
+    "alternative_lattice_energy.json": "reference_match",
+    "minimized_cell_parameters.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference lattice energy components and cell parameters from the paper's Tables I and II",
+      "source_provenance": "Paper's Tables I, II, and associated text",
+      "generation_method": "Extracted directly from the published minimized energies and cell parameters",
+      "why_not_fabricated": "These are the paper's own reported results; they serve as the gold standard for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "observed_lattice_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "total",
+            "van_der_Waals",
+            "Coulombic",
+            "hydrogen_bond"
+          ],
+          "properties": {
+            "total": {
+              "type": "number",
+              "description": "total lattice energy in kJ/mol"
+            },
+            "van_der_Waals": {
+              "type": "number",
+              "description": "van der Waals component in kJ/mol"
+            },
+            "Coulombic": {
+              "type": "number",
+              "description": "Coulombic component in kJ/mol"
+            },
+            "hydrogen_bond": {
+              "type": "number",
+              "description": "hydrogen bond component in kJ/mol"
+            }
+          }
+        },
+        "description": "Lattice energy and component breakdown of the observed crystal structure after minimization."
+      },
+      {
+        "file": "alternative_lattice_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "total",
+            "van_der_Waals",
+            "Coulombic",
+            "hydrogen_bond"
+          ],
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "van_der_Waals": {
+              "type": "number"
+            },
+            "Coulombic": {
+              "type": "number"
+            },
+            "hydrogen_bond": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Lattice energy and component breakdown of the alternative triclinic structure after minimization."
+      },
+      {
+        "file": "minimized_cell_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "observed",
+            "alternative"
+          ],
+          "properties": {
+            "observed": {
+              "type": "object",
+              "required": [
+                "a",
+                "b",
+                "c",
+                "alpha",
+                "beta",
+                "gamma"
+              ],
+              "properties": {
+                "a": {
+                  "type": "number",
+                  "description": "a axis length in Å"
+                },
+                "b": {
+                  "type": "number"
+                },
+                "c": {
+                  "type": "number"
+                },
+                "alpha": {
+                  "type": "number",
+                  "description": "alpha angle in degrees"
+                },
+                "beta": {
+                  "type": "number"
+                },
+                "gamma": {
+                  "type": "number"
+                }
+              }
+            },
+            "alternative": {
+              "type": "object",
+              "required": [
+                "a",
+                "b",
+                "c",
+                "alpha",
+                "beta",
+                "gamma"
+              ],
+              "properties": {
+                "a": {
+                  "type": "number"
+                },
+                "b": {
+                  "type": "number"
+                },
+                "c": {
+                  "type": "number"
+                },
+                "alpha": {
+                  "type": "number"
+                },
+                "beta": {
+                  "type": "number"
+                },
+                "gamma": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Minimized cell parameters for the observed and alternative triclinic structures."
+      }
+    ],
+    "notes": "The checker will compare the reported values against hidden reference values from the literature, apply tolerances, and verify that the observed total energy is more negative than the alternative and that the observed hydrogen‑bond term is substantially more stabilizing."
+  },
+  "steps": [
+    {
+      "id": "observed_energy",
+      "output_file": "observed_lattice_energy.json",
+      "weight": 0.4,
+      "reference": {
+        "total": -101.3,
+        "van_der_Waals": -61.2,
+        "Coulombic": -11.0,
+        "hydrogen_bond": -29.1
+      },
+      "tolerances": {
+        "total_abs": 15.2,
+        "component_rel": 0.3
+      }
+    },
+    {
+      "id": "alternative_energy",
+      "output_file": "alternative_lattice_energy.json",
+      "weight": 0.4,
+      "reference": {
+        "total": -79.1,
+        "van_der_Waals": -63.0,
+        "Coulombic": -7.0,
+        "hydrogen_bond": -9.1
+      },
+      "tolerances": {
+        "total_abs": 11.9,
+        "component_rel": 0.3
+      },
+      "ordering_check": true
+    },
+    {
+      "id": "cell_params",
+      "output_file": "minimized_cell_parameters.json",
+      "weight": 0.2,
+      "reference_observed": {
+        "a": 5.88,
+        "b": 5.41,
+        "c": 7.12,
+        "alpha": 83.6,
+        "beta": 96.9,
+        "gamma": 103.1
+      },
+      "reference_alternative": {
+        "a": 9.88,
+        "b": 7.94,
+        "c": 6.51,
+        "alpha": 90.4,
+        "beta": 154.1,
+        "gamma": 87.8
+      },
+      "tolerances": {
+        "length_rel": 0.05,
+        "angle_abs": 5.0
+      }
+    }
+  ]
+}

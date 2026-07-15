@@ -1,0 +1,41 @@
+[
+  {
+    "id": "build_supercells",
+    "title": "Supercell construction",
+    "role": "process",
+    "action": "Generate 64-atom zinc-blende ZnTe supercells (lattice constant 6.10 Å) and create Cr-doped configurations for x=1/32 and x=2/32 by replacing Zn atoms with Cr. Write atomic coordinates to a file (e.g., supercells.xyz).",
+    "output_file": "",
+    "evidence": "supercells.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build the initial crystal structures necessary for all subsequent DFT calculations. Use the experimental zinc-blende lattice constant without relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "dft_calculations",
+    "title": "LSDA and LSDA+U calculations",
+    "role": "process",
+    "action": "For each Cr concentration (x=1/32, x=2/32) run spin-polarized DFT with ferromagnetic alignment using LSDA and LSDA+U with Hubbard U = 0, 3, 6 eV. Use double-zeta polarized basis, Troullier-Martins pseudopotentials, and 18 special k-points. For x=2/32 also compute the total energy of the antiferromagnetic configuration to confirm FM ground state. Save all output files (band structure, total and projected DOS, Mulliken charges) in a directory for later parsing.",
+    "output_file": "",
+    "evidence": "dft_calculations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Execute the entire set of DFT simulations that are the core of the paper's study. The raw output will be parsed in the next step.",
+    "output_schema": ""
+  },
+  {
+    "id": "extract_results",
+    "title": "Extract numerical results",
+    "role": "scored",
+    "action": "From the DFT output, extract: VB-IB gap (Delta_E_VI, eV), IB bandwidth (Delta_E_I, eV), IB-CB gap (Delta_E_IC, eV), minority-spin VB-CB gap (Delta_E_VC, eV); the integrated number of electrons in the IB from IB bottom to Fermi energy (int_DOS_below_Fermi) and from Fermi energy to IB top (int_DOS_above_Fermi); and Mulliken orbital populations per spin (q_plus, q_minus, t_plus, t_minus, e_plus, e_minus, p_plus, p_minus) for the Cr atom. Do this for both concentrations and all U values. Write results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Parse the DFT output to compile all headline electronic properties and Mulliken populations. The JSON file must follow the specified schema exactly.",
+    "output_schema": "JSON object with top-level keys: 'x1_32_U0', 'x1_32_U3', 'x1_32_U6', 'x2_32_U0', 'x2_32_U3', 'x2_32_U6'. Each value is an object with numeric fields: 'Delta_E_VI', 'Delta_E_I', 'Delta_E_IC', 'Delta_E_VC', 'int_DOS_below_Fermi', 'int_DOS_above_Fermi', 'q_plus', 'q_minus', 't_plus', 't_minus', 'e_plus', 'e_minus', 'p_plus', 'p_minus'. Energies in eV, integrated DOS in electrons per cell, Mulliken charges in electrons."
+  }
+]

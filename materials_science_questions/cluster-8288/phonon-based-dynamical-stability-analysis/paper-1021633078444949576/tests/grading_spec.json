@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "ZT is recomputed from raw electronic transport array and lattice thermal conductivity, then max ZT and optimal carrier concentration are compared to paper values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for lattice thermal conductivity, max ZT, and optimal carrier concentration",
+      "source_provenance": "extracted from the paper's main text and Table 4",
+      "generation_method": "paper-reported quantities",
+      "why_not_fabricated": "values are the published results; they are used to compare the agent's recomputed quantities"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_lattice_thermal_conductivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kappa_l_300K": "float (W/mK)",
+            "kappa_l_800K": "float (W/mK)"
+          }
+        },
+        "description": "Lattice thermal conductivity at 300 K and 800 K for gamma-Pb2SeTe."
+      },
+      {
+        "file": "step_02_electronic_transport.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "carrier_concentration": "float",
+            "seebeck": "float",
+            "electrical_conductivity": "float",
+            "electronic_thermal_conductivity": "float"
+          }
+        },
+        "description": "Electronic transport coefficients vs. carrier concentration at 800 K for p-type doping."
+      },
+      {
+        "file": "step_03_ZT_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "max_ZT_800K_p_type": "float",
+            "optimal_carrier_concentration_800K_p_type": "float (cm^{-2})"
+          }
+        },
+        "description": "Maximum ZT and the corresponding carrier concentration for p-type gamma-Pb2SeTe at 800 K."
+      }
+    ],
+    "notes": "The lattice thermal conductivity is a fixed computed quantity (comparable within tolerance). The optimal ZT is a performance metric; meeting or exceeding the paper's value earns full credit. The electronic transport array provides the raw data from which ZT can be recomputed."
+  },
+  "steps": [
+    {
+      "id": "lattice_kappa_check",
+      "output_file": "step_01_lattice_thermal_conductivity.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "targets": {
+        "kappa_l_300K": {
+          "target": 0.163,
+          "tol_relative": 0.05
+        },
+        "kappa_l_800K": {
+          "target": 0.062,
+          "tol_relative": 0.05
+        }
+      },
+      "scoring": "For each field, score = max(0, 1 - relative_error/tol). Average across fields."
+    },
+    {
+      "id": "transport_structure_check",
+      "output_file": "step_02_electronic_transport.json",
+      "weight": 0.05,
+      "kind": "structural",
+      "expected_fields": [
+        "carrier_concentration",
+        "seebeck",
+        "electrical_conductivity",
+        "electronic_thermal_conductivity"
+      ],
+      "min_points": 5
+    },
+    {
+      "id": "zt_recompute_check",
+      "output_file": "step_03_ZT_results.json",
+      "weight": 0.75,
+      "kind": "recompute_metric",
+      "recompute_config": {
+        "T": 800,
+        "gold_max_ZT": 6.88,
+        "gold_optimal_carrier_concentration": 1400000000000.0,
+        "tol_carrier_conc_relative": 0.2
+      },
+      "scoring": "Recompute ZT from transport array and kappa_l_800K; find max ZT and optimal carrier concentration. Score max ZT threshold_or_better (>=6.88 full credit, linear decay down to 4.0). Score carrier concentration by relative tolerance. Combined score = 0.6*score_ZT + 0.4*score_conc."
+    }
+  ]
+}

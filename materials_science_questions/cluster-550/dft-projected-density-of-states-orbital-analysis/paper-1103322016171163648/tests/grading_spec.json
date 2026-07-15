@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute+structural",
+  "scoring_justification": "Band gaps compared to paper values with 10% relative tolerance; DOS structural audit (array equality, energy range, non-zero C/N contributions).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.json": "reference_match",
+    "dos.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold band gap values for HATP-COF-1 and HATP-COF-2.",
+      "source_provenance": "Paper Figure 4a,b: 'HATP-COF-1 exhibited a band gap of 1.40 eV' and 'HATP-COF-2 exhibited a lower band gap of 1.31 eV'.",
+      "generation_method": "Direct extraction from the paper text and figures.",
+      "why_not_fabricated": "These are the precise values reported in the paper; they are the target the agent must reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "HATP-COF-1": "float",
+            "HATP-COF-2": "float"
+          },
+          "description": "A JSON object with exactly two keys: 'HATP-COF-1' (float) and 'HATP-COF-2' (float), the DFT-computed band gap in eV."
+        },
+        "description": "Band gaps of HATP-COF-1 and HATP-COF-2. The verifier compares these values to the paper-reported values with a relative tolerance and also enforces that HATP-COF-2 < HATP-COF-1."
+      },
+      {
+        "file": "dos.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energy": "array of floats",
+            "total_dos": "array of floats",
+            "c_dos": "array of floats",
+            "n_dos": "array of floats"
+          },
+          "description": "All arrays must be equal length. Energy values are in eV relative to Fermi level. DOS arrays are in arbitrary units."
+        },
+        "description": "Total and projected density of states for one of the COFs (agent may choose either HATP-COF-1 or HATP-COF-2, but must state which). The verifier checks array lengths and the presence of finite C and N PDOS near the Fermi level."
+      }
+    ],
+    "notes": "The Au³⁺ binding energy calculations (Fig. 5) are excluded because their geometry is underspecified. All other computational stages (model construction, optimization, band structure, DOS) are included. The agent must use the lattice parameters and building blocks provided in the paper and reconstruct the structures without relying on pre‑built coordinates."
+  },
+  "steps": [
+    {
+      "id": "step_3_band_gaps",
+      "output_file": "band_gaps.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "gold": {
+        "HATP-COF-1": 1.4,
+        "HATP-COF-2": 1.31
+      },
+      "tolerance": 0.1,
+      "description": "Check band gap values and ordering"
+    },
+    {
+      "id": "step_4_dos",
+      "output_file": "dos.json",
+      "kind": "structural",
+      "weight": 0.3,
+      "energy_range": [
+        -5.0,
+        5.0
+      ],
+      "fermi_window": [
+        -0.5,
+        0.5
+      ],
+      "min_nonzero_threshold": 1e-06,
+      "description": "Structural audit of DOS arrays"
+    }
+  ]
+}

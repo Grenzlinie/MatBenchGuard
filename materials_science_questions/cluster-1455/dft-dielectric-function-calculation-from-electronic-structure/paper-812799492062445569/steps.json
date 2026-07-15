@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_geomopt",
+    "title": "Geometry optimization of orthorhombic unit cells",
+    "role": "process",
+    "action": "Relax the crystal structures (atomic positions and cell parameters) of MAPbI3, MAPbBr3, and MAPbCl3 in the orthorhombic Pnma phase using GGA-PBE with ultrasoft pseudopotentials. Use appropriate plane-wave cutoffs and k-point meshes for convergence.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required prerequisite for all subsequent property calculations. The relaxed structures serve as input for elastic constants, SCF, and optical response.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_elastic",
+    "title": "Elastic constants and Young’s moduli",
+    "role": "scored",
+    "action": "Compute the full elastic stiffness tensor for each relaxed compound. Derive the Young’s moduli Ex, Ey, Ez and verify that the orthorhombic mechanical stability criteria are satisfied.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This scored artifact enforces that geometry optimization was performed. Contains the tensorial constants and directional Young’s moduli.",
+    "output_schema": "{\"MAPbI3\": {\"c11\": float, \"c22\": float, \"c33\": float, \"c44\": float, \"c55\": float, \"c66\": float, \"c12\": float, \"c13\": float, \"c23\": float, \"Ex\": float, \"Ey\": float, \"Ez\": float}, \"MAPbBr3\": {...}, \"MAPbCl3\": {...}} (units: GPa)"
+  },
+  {
+    "id": "step_scf",
+    "title": "Self-consistent field calculation",
+    "role": "process",
+    "action": "Run ground-state SCF calculations for each optimized structure to obtain the self-consistent charge density and Kohn-Sham wavefunctions at the PBE level. Use the same pseudopotentials, k-point meshes, and convergence thresholds.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Basis for band structure, PDOS, and optical response. Must precede those scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_bandgap",
+    "title": "Electronic band gaps",
+    "role": "scored",
+    "action": "Perform a non-self-consistent band structure calculation along a high-symmetry k‑path for each compound using the SCF charge density. Extract the fundamental band gap at the Γ point.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Direct band gaps (eV) for the three compounds.",
+    "output_schema": "{\"MAPbI3\": float (eV), \"MAPbBr3\": float (eV), \"MAPbCl3\": float (eV)}"
+  },
+  {
+    "id": "step_pdos",
+    "title": "Partial density of states and MA+ analysis",
+    "role": "scored",
+    "action": "Compute projected density of states (PDOS) using the SCF wavefunctions and atomic orbital projections. Identify the energy position of the MA‑p peak and evaluate the relative contribution of MA‑p states at the valence band maximum and conduction band minimum.",
+    "output_file": "pdos_MA_analysis.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides quantitative evidence for the electronic inertness of the organic cation. Enforces that the SCF calculation ran correctly.",
+    "output_schema": "{\"MAPbI3\": {\"MA_p_peak_energy_eV\": float, \"dos_at_VBM_relative\": float, \"dos_at_CBM_relative\": float}, \"MAPbBr3\": {...}, \"MAPbCl3\": {...}} (dos_at_VBM_relative and dos_at_CBM_relative are ratios of MA‑p DOS to total DOS)"
+  },
+  {
+    "id": "step_absorption",
+    "title": "Optical absorption coefficient",
+    "role": "scored",
+    "action": "Run an optical response calculation (e.g., using epsilon.x) to obtain the frequency‑dependent macroscopic dielectric tensor. Extract the absorption coefficient α(ω) for the (0 0 1) polarization direction for all three compounds. The agent may perform a single optics run and extract both this artifact and the dielectric constant artifact.",
+    "output_file": "absorption_coefficient.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing absorption coefficient (cm⁻¹) versus photon energy (eV). Enforces that SCF and therefore geometry optimization were completed.",
+    "output_schema": "Columns: energy_eV (numeric, eV), alpha_MAPbI3 (numeric, cm⁻¹), alpha_MAPbBr3 (numeric, cm⁻¹), alpha_MAPbCl3 (numeric, cm⁻¹). Energy range at least 0–6 eV with step ≤ 0.05 eV."
+  },
+  {
+    "id": "step_dielectric",
+    "title": "Optical dielectric constant",
+    "role": "scored",
+    "action": "From the same optical response calculation as for absorption, extract the real (ε₁) and imaginary (ε₂) parts of the dielectric function for the (0 0 1) polarization direction. Write them to a CSV.",
+    "output_file": "dielectric_constant.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact obtained together with the absorption coefficient. Contains ε₁ and ε₂ for each compound over the same energy grid.",
+    "output_schema": "Columns: energy_eV (eV), eps1_MAPbI3 (unitless), eps2_MAPbI3 (unitless), eps1_MAPbBr3 (unitless), eps2_MAPbBr3 (unitless), eps1_MAPbCl3 (unitless), eps2_MAPbCl3 (unitless). Energy range 0–6 eV, step ≤ 0.05 eV."
+  }
+]

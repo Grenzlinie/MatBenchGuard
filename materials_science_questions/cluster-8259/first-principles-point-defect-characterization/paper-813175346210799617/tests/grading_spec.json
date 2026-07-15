@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing from raw DOS is infeasible in the verifier sandbox; direct comparison against paper gold with tolerance is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for pristine gaps, H trap energies, O2 trap energies, and magnetic moments",
+      "source_provenance": "paper (DOI:10.1039/c3cp54755h) - text and Fig. 4, Fig. 6, Table 1",
+      "generation_method": "extracted from paper's reported values",
+      "why_not_fabricated": "direct quotation from paper: ZnPc gap 2.13 eV, CuPc gap 2.18 eV; H trap ZnPc 0.75 eV, CuPc 0.80 eV; O2 trap ZnPc 0.6 eV, CuPc 0.5 eV; magnetic moments H_ZnPc 1.0 μB, H_CuPc 2.0 μB"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pristine_gaps": "object with keys ZnPc and CuPc (each a float, units eV)",
+            "H_trap_energy": "object with keys ZnPc and CuPc (each a float, units eV, measured from VBM)",
+            "O2_trap_energy": "object with keys ZnPc and CuPc (each a float, units eV, measured from CBM)",
+            "magnetic_moments": "object with keys H_ZnPc and H_CuPc (each a float, units μB)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "pristine_gaps.ZnPc": "eV",
+            "pristine_gaps.CuPc": "eV",
+            "H_trap_energy.ZnPc": "eV",
+            "H_trap_energy.CuPc": "eV",
+            "O2_trap_energy.ZnPc": "eV",
+            "O2_trap_energy.CuPc": "eV",
+            "magnetic_moments.H_ZnPc": "μB",
+            "magnetic_moments.H_CuPc": "μB"
+          }
+        },
+        "description": "All four target quantity groups as floats. VBM is set to 0 for each system. The checker compares each field to the paper‑reported reference values with a tolerance of 0.1 eV for energies and 0.2 μB for magnetic moments, and applies a threshold check for magnetic moments (≥ expected value)."
+      }
+    ],
+    "notes": "The checker recomputes nothing; it directly reads the reported numbers and compares against the hidden reference. This is an acceptable T0 result‑level comparison because recomputing from raw DOS data is not feasible in the verifier sandbox."
+  },
+  "steps": [
+    {
+      "id": "check_pristine_gaps",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field_path": "pristine_gaps",
+      "sub_fields": [
+        "ZnPc",
+        "CuPc"
+      ],
+      "target": [
+        2.13,
+        2.18
+      ],
+      "tolerance": 0.5,
+      "weight": 0.15
+    },
+    {
+      "id": "check_H_trap",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field_path": "H_trap_energy",
+      "sub_fields": [
+        "ZnPc",
+        "CuPc"
+      ],
+      "target": [
+        0.75,
+        0.8
+      ],
+      "tolerance": 0.1,
+      "deep_trap_threshold": 0.5,
+      "target_policy": "threshold_or_better",
+      "weight": 0.3
+    },
+    {
+      "id": "check_O2_trap",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field_path": "O2_trap_energy",
+      "sub_fields": [
+        "ZnPc",
+        "CuPc"
+      ],
+      "target": [
+        0.6,
+        0.5
+      ],
+      "tolerance": 0.1,
+      "target_policy": "threshold_or_better",
+      "weight": 0.3
+    },
+    {
+      "id": "check_magnetic_moments",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field_path": "magnetic_moments",
+      "sub_fields": [
+        "H_ZnPc",
+        "H_CuPc"
+      ],
+      "target": [
+        1.0,
+        2.0
+      ],
+      "tolerance": 0.2,
+      "target_policy": "threshold_or_better",
+      "weight": 0.25
+    }
+  ]
+}

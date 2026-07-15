@@ -1,0 +1,160 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw DFT artifacts is infeasible inside the lightweight verifier; we compare agent's reported values to paper gold with tolerance and enforce required physical ordering and ratio constraints.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Elastic constants and moduli for cubic and hexagonal WC0.75N0.25 from the paper's DFT calculations (Table 1).",
+      "source_provenance": "Paper Table 1: c11, c12, c13, c33, c44, c66, B, G for cubic (Fm-3m) and hexagonal (P-6m2) phases.",
+      "generation_method": "Direct transcription from the paper's published values.",
+      "why_not_fabricated": "These are the paper's own reported numbers for the DFT results the agent is expected to reproduce; they serve as hidden reference for tolerance comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "cubic": {
+              "type": "object",
+              "required_keys": [
+                "c11",
+                "c12",
+                "c44",
+                "B",
+                "G"
+              ],
+              "unit": "GPa"
+            },
+            "hexagonal": {
+              "type": "object",
+              "required_keys": [
+                "c11",
+                "c12",
+                "c13",
+                "c33",
+                "c44",
+                "c66",
+                "B",
+                "G"
+              ],
+              "unit": "GPa"
+            }
+          }
+        },
+        "description": "Computed elastic stiffness constants and derived bulk (B) and shear (G) moduli (in GPa) for cubic and hexagonal WC0.75N0.25."
+      }
+    ],
+    "notes": "The hidden checker performs a numerical comparison of each reported value against the paper's DFT results with a ±30% tolerance, and enforces structural relations: G(hex)/G(cubic) >= 1.5 and relative difference of bulk moduli <= 20%."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "elastic_constants.json",
+      "weight": 0.05,
+      "kind": "json_field_existence",
+      "required_keys": [
+        "cubic",
+        "hexagonal"
+      ],
+      "required_cubic_keys": [
+        "c11",
+        "c12",
+        "c44",
+        "B",
+        "G"
+      ],
+      "required_hexagonal_keys": [
+        "c11",
+        "c12",
+        "c13",
+        "c33",
+        "c44",
+        "c66",
+        "B",
+        "G"
+      ],
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "cubic_values",
+      "output_file": "elastic_constants.json",
+      "weight": 0.3,
+      "kind": "json_field_numeric_tolerance",
+      "tolerance_pct": 30.0,
+      "gold": {
+        "c11": 831,
+        "c12": 144,
+        "c44": 110,
+        "B": 373,
+        "G": 203
+      },
+      "fields": [
+        "c11",
+        "c12",
+        "c44",
+        "B",
+        "G"
+      ],
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "hexagonal_values",
+      "output_file": "elastic_constants.json",
+      "weight": 0.3,
+      "kind": "json_field_numeric_tolerance",
+      "tolerance_pct": 30.0,
+      "gold": {
+        "c11": 864,
+        "c12": 380,
+        "c13": 204,
+        "c33": 1249,
+        "c44": 426,
+        "c66": 242,
+        "B": 345,
+        "G": 365
+      },
+      "fields": [
+        "c11",
+        "c12",
+        "c13",
+        "c33",
+        "c44",
+        "c66",
+        "B",
+        "G"
+      ],
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "G_ratio",
+      "output_file": "elastic_constants.json",
+      "weight": 0.15,
+      "kind": "structural",
+      "condition": "G_hex / G_cubic >= 1.5",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "B_diff",
+      "output_file": "elastic_constants.json",
+      "weight": 0.15,
+      "kind": "structural",
+      "condition": "abs(B_cubic - B_hexagonal) / ((B_cubic + B_hexagonal) / 2) <= 0.20",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "consistency_moduli",
+      "output_file": "elastic_constants.json",
+      "weight": 0.05,
+      "kind": "consistency",
+      "description": "Check that agent-reported B and G are consistent with the reported elastic constants using Voigt formulas.",
+      "target_policy": "structural_audit"
+    }
+  ]
+}

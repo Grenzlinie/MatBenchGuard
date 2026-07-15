@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "Parallel Tempering Molecular Dynamics (PTMD) for Cu90",
+    "role": "process",
+    "action": "Run PTMD simulations for a Cu90 cluster using the Gupta potential in LAMMPS. Use the replica temperatures exactly as provided in the paper's Table S4 for Cu90 (37 replicas from 300 K to 800 K). Equilibrate for ~0.5 μs, then sample configurations every 125 ps after each swap attempt for a total sampling time of ~1–2 μs. Collect all local minima visited during the production run (distinct minima differing by at least 0.05 meV or different structure type).",
+    "output_file": "",
+    "evidence": "ptmd_trajectory.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "PTMD simulation produces high-temperature ensembles, the caloric curve, and a pool of local minima for HSA analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Harmonic Superposition Approximation (HSA) analysis",
+    "role": "process",
+    "action": "From the PTMD-sampled local minima, select those up to an energy cutoff of 1.2 eV above the global minimum (target ~10,000 distinct minima). Classify each minimum into a motif (Ih, Dh, fcc, twin, mix, amorphous) using Common Neighbor Analysis (CNA). For each minimum, compute normal-mode frequencies via diagonalization of the Hessian, then evaluate the HSA probability p_i(T) using Eq. (3) of the paper, summing to obtain temperature-dependent motif probabilities up to 300 K.",
+    "output_file": "",
+    "evidence": "hsa_minima_database.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "HSA provides low-temperature motif probabilities (0–300 K) that are later stitched with PTMD results.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Stitched structural distribution output",
+    "role": "scored",
+    "action": "Combine the HSA motif probabilities (valid up to 300 K) and the PTMD motif probabilities (valid above 300 K) into a single continuous curve. At the stitching temperature 300 K, use the HSA values or an average if there is a small jump. Extract the probabilities of the six motifs (Ih, Dh, fcc, twin, mix, amorphous) at the exact temperatures 300, 400, 500, 600, and 609 K. Save these as a CSV file with columns Temperature, Motif, Probability.",
+    "output_file": "structural_distribution_Cu90.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The stitched structural distribution CSV contains the equilibrium motif probabilities at the requested temperatures.",
+    "output_schema": "Columns: Temperature (float), Motif (string, one of Ih, Dh, fcc, twin, mix, amorphous), Probability (float between 0 and 1). Rows: 5 temperatures x 6 motifs = 30 rows."
+  },
+  {
+    "id": "step_4",
+    "title": "Melting point determination",
+    "role": "scored",
+    "action": "From the PTMD caloric curve (heat capacity C_V vs temperature), identify the temperature at which C_V reaches its maximum. Output this temperature (in Kelvin) to a single text file.",
+    "output_file": "melting_point.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The melting point is defined as the peak of the heat capacity curve.",
+    "output_schema": "A single floating-point number in Kelvin (e.g., 609.0)."
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_parameters",
+    "title": "Assemble thermodynamic parameters and define model equations",
+    "role": "process",
+    "action": "Implement the GBW ordering model and regular solution model for the β→β', α→α', β→α, and β'→β₁'+α transformations as detailed in the Approach section. Hardcode all thermodynamic parameters listed there and implement the provided equations for ΔU^(β→β'), ΔU^(α→α'), ΔG^(β→α), ΔG^(β→β') with the configurational entropy term, and the free energies of ordered/disordered phases.",
+    "output_file": "",
+    "evidence": "parameters_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "A log confirming all parameter values and functional forms have been assembled.",
+    "output_schema": "free text with parameter listing"
+  },
+  {
+    "id": "step_02_driving_forces",
+    "title": "Compute driving forces at tabulated temperatures",
+    "role": "scored",
+    "action": "Using the implemented model, numerically evaluate the four Gibbs free energy changes (ΔG^(β'→α'), ΔG^(β→α), ΔG^(β'→β₁'+α), ΔG^(α→α')) at ten evenly spaced temperatures T = 300, 350, 400, 450, 500, 550, 600, 650, 700, 750 K. For the diffusional reaction β'→β₁'+α, adopt the composition values from the paper (X_Zn^{β'}=0.2477, X_Al^{β'}=0.0900, X_Zn^{β₁'}=0.2480, X_Al^{β₁'}=0.0902, X_Zn^{α}=0.2218, X_Al^{α}=0.0738) and compute the full ordering free energies with configurational entropy. Write the results to driving_forces.csv.",
+    "output_file": "driving_forces.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the computed driving forces (J·mol⁻¹) at ten temperatures. Columns: T, DG_beta'_to_alpha', DG_beta_to_alpha, DG_beta'_to_beta1'_plus_alpha, DG_alpha_to_alpha'.",
+    "output_schema": "T:float, DG_beta'_to_alpha':float, DG_beta_to_alpha:float, DG_beta'_to_beta1'_plus_alpha:float, DG_alpha_to_alpha':float. 10 rows, one per temperature."
+  },
+  {
+    "id": "step_03_fit_polynomial",
+    "title": "Fit cubic polynomial for ΔG^(β'→α')",
+    "role": "scored",
+    "action": "Perform a least-squares cubic regression on the ΔG^(β'→α') values from driving_forces.csv to obtain coefficients a0, a1, a2, a3 such that ΔG^(β'→α')(T) ≈ a0 + a1·T + a2·T² + a3·T³. Write the coefficients to polynomial_coefficients.json.",
+    "output_file": "polynomial_coefficients.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys \"constant\" (a0), \"T\" (a1), \"T2\" (a2), \"T3\" (a3), representing ΔG^(β'→α') = constant + T*T_coeff + T²*T2_coeff + T³*T3_coeff (J·mol⁻¹).",
+    "output_schema": "object with keys: constant (float), T (float), T2 (float), T3 (float)."
+  }
+]

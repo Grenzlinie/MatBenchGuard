@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_setup",
+    "title": "System initialization and random configuration",
+    "role": "process",
+    "action": "Create a cuboid simulation cell of dimensions ~15×11×4 nm³ containing 47,988 SiO2 atoms with periodic boundary conditions. Initialize random atomic positions and define the two-body + three-body covalent interaction potential (Vashishta) with a cut-off of 5.5 Å.",
+    "output_file": "",
+    "evidence": "lammps_input_setup.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Log file documenting system initialization and potential parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_quench",
+    "title": "Heating–quenching MD to generate amorphous samples",
+    "role": "process",
+    "action": "Generate multiple amorphous SiO2 samples by heating the initial random configuration to 8000 K (NVT, 200 ps), quenching to 300 K with at least two different cooling rates (e.g., factor of 10 apart) under NVT, and equilibrating at 300 K for 200 ps under NPT. Save the final equilibrated configurations for each cooling rate.",
+    "output_file": "",
+    "evidence": "quench_rates.lammpstrj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Trajectory file(s) containing the final equilibrated amorphous structures for each cooling rate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_prdf",
+    "title": "Compute partial radial distribution functions",
+    "role": "process",
+    "action": "For each equilibrated sample, compute the partial radial distribution functions g_SiO(r), g_OO(r), g_SiSi(r) using the standard definition n_αβ(r)δr = 4πr² δr ρ c_β g_αβ(r) (or equivalent LAMMPS compute). Output the raw g(r) data for each pair and cooling rate.",
+    "output_file": "",
+    "evidence": "prdf_raw.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw PRDF data (r, g(r)) for each pair and cooling rate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_prdf_peak",
+    "title": "Extract first‑peak positions from PRDFs",
+    "role": "scored",
+    "action": "From each equilibrated sample's PRDF data, locate the first peak maximum (most probable nearest-neighbour distance) for each atom-type pair: Si-O, O-O, Si-Si. Report the pair and the first-peak distance in Å. If multiple cooling rates were used, report one row per pair (the peak should be cooling-rate independent).",
+    "output_file": "prdf_results.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "First-peak interatomic distances from the computed partial radial distribution functions.",
+    "output_schema": "CSV with columns: pair (one of Si-O, O-O, Si-Si) and r_first_peak (float, units of Å). At least three rows."
+  },
+  {
+    "id": "step_05_tensile",
+    "title": "Uniaxial tensile loading MD simulation",
+    "role": "process",
+    "action": "Apply uniaxial tensile deformation to each equilibrated sample at a constant strain rate of 0.001 ps⁻¹ under NPT conditions along the chosen loading axis. Compute the virial stress tensor at every time step and output the stress–strain data (engineering strain vs stress) for each cooling rate.",
+    "output_file": "",
+    "evidence": "stress_strain_data.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw stress–strain data for each cooling rate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_strength",
+    "title": "Extract tensile strength and report cooling-rate trend",
+    "role": "scored",
+    "action": "From each stress–strain curve, identify the maximum stress (tensile strength). Report the cooling rate (in K/ps) and the corresponding tensile strength (in GPa). If multiple independent samples were generated for the same cooling rate, report the average tensile strength for that rate.",
+    "output_file": "tensile_strength_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tensile strength (maximum stress) for each cooling rate. The trend (higher cooling rate → lower tensile strength) is scored.",
+    "output_schema": "CSV with columns: cooling_rate (float, units of K/ps) and tensile_strength (float, units of GPa). At least two rows with distinct cooling rates."
+  }
+]

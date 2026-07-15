@@ -1,0 +1,197 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker reads agent CSV files and compares every entry to the paper's reported DFT values within tolerance; it recomputes the per-entry score, not a self-reported metric. T1 is feasible because the task outputs are directly comparable to hidden gold without rerunning DFT.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold bond lengths, angles, rumpling, and step energies from paper Tables II, III and text",
+      "source_provenance": "Paper Table II (bond lengths and angles), Table III (rumpling), text (step formation energies -188 and -305 meV/Å)",
+      "generation_method": "Direct extraction from the published paper; no synthetic generation.",
+      "why_not_fabricated": "Values are the paper's own DFT results, exactly as the reference solve.sh writes; they are the authoritative target for a correct DFT reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bond_lengths_angles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "parameter",
+            "value",
+            "unit"
+          ]
+        },
+        "description": "Computed bond lengths (in Å) and bond angles (in degrees) for the specified step-edge atom pairs and triplets. Values will be compared to hidden reference values within tolerance."
+      },
+      {
+        "file": "rumpling.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "position",
+            "out_of_plane_rumpling",
+            "in_plane_rumpling"
+          ]
+        },
+        "description": "Out-of-plane and in-plane rumpling (in Å) for each step-site position 1–8. Values will be compared to hidden reference values within tolerance."
+      },
+      {
+        "file": "step_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_type",
+            "gamma"
+          ]
+        },
+        "description": "Relaxed and unrelaxed step formation energies (meV/Å). Values will be compared to hidden paper-reported values within tolerance."
+      }
+    ],
+    "notes": "All scored outputs are re-derivable from the agent's DFT artifacts. The checker will read these CSV files and verify values against hidden gold within appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "bond_lengths_angles",
+      "output_file": "bond_lengths_angles.csv",
+      "kind": "table_compare",
+      "weight": 0.4,
+      "config": {
+        "gold": {
+          "Mg8-O1": {
+            "value": 2.02,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "O8-Mg1": {
+            "value": 1.97,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "Mg1-O2": {
+            "value": 2.06,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "O1-Mg2": {
+            "value": 2.09,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "Mg2-O3": {
+            "value": 2.09,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "O2-Mg3": {
+            "value": 2.13,
+            "tolerance": 0.05,
+            "unit": "Å"
+          },
+          "Mg8-O1-Mg2": {
+            "value": 95.5,
+            "tolerance": 2.0,
+            "unit": "°"
+          },
+          "O8-Mg1-O2": {
+            "value": 100.1,
+            "tolerance": 2.0,
+            "unit": "°"
+          },
+          "Mg1-O2-Mg3": {
+            "value": 108.2,
+            "tolerance": 2.0,
+            "unit": "°"
+          },
+          "O1-Mg2-O3": {
+            "value": 106.3,
+            "tolerance": 2.0,
+            "unit": "°"
+          }
+        },
+        "default_tolerance": 0.0,
+        "score_mode": "linear_decay"
+      }
+    },
+    {
+      "id": "rumpling",
+      "output_file": "rumpling.csv",
+      "kind": "table_compare",
+      "weight": 0.4,
+      "config": {
+        "gold": {
+          "1": {
+            "out_of_plane": 0.071,
+            "in_plane": 0.072,
+            "tolerance": 0.02
+          },
+          "2": {
+            "out_of_plane": -0.037,
+            "in_plane": -0.023,
+            "tolerance": 0.02
+          },
+          "3": {
+            "out_of_plane": 0.056,
+            "in_plane": -0.014,
+            "tolerance": 0.02
+          },
+          "4": {
+            "out_of_plane": 0.049,
+            "in_plane": 0.004,
+            "tolerance": 0.02
+          },
+          "5": {
+            "out_of_plane": 0.05,
+            "in_plane": 0.0,
+            "tolerance": 0.02
+          },
+          "6": {
+            "out_of_plane": 0.05,
+            "in_plane": -0.001,
+            "tolerance": 0.02
+          },
+          "7": {
+            "out_of_plane": 0.053,
+            "in_plane": 0.006,
+            "tolerance": 0.02
+          },
+          "8": {
+            "out_of_plane": 0.04,
+            "in_plane": -0.025,
+            "tolerance": 0.02
+          }
+        },
+        "score_mode": "linear_decay"
+      }
+    },
+    {
+      "id": "step_energies",
+      "output_file": "step_energies.csv",
+      "kind": "table_compare",
+      "weight": 0.2,
+      "config": {
+        "gold": {
+          "relaxed": {
+            "value": -188,
+            "tolerance": 20
+          },
+          "unrelaxed": {
+            "value": -305,
+            "tolerance": 20
+          }
+        },
+        "score_mode": "linear_decay"
+      }
+    }
+  ]
+}

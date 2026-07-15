@@ -1,0 +1,67 @@
+[
+  {
+    "id": "generate_configurations",
+    "title": "Generate random hole configurations on triangular lattice",
+    "role": "process",
+    "action": "For each target matrix area fraction p (e.g., 10 values between 0.3 and 1.0) and for each of the three spring-constant sets (α,β,γ) = (1,1,1), (1,1,4), (1,6,7), generate 10 independent random configurations of overlapping circular holes of diameter 11 pixels on a 210×210 periodic triangular lattice of hexagonal pixels. Place hole centers randomly, and for each pixel mark it as matrix or hole based on whether its center lies inside any hole. Compute the actual area fraction p from pixel counts. This step provides the digital images used in later simulation and percolation steps.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "perfect_moduli",
+    "title": "Compute perfect-lattice elastic moduli analytically",
+    "role": "process",
+    "action": "For each spring-constant set (α,β,γ) = (1,1,1), (1,1,4), (1,6,7), calculate the area bulk modulus K_o, shear modulus μ_o, Young's modulus E_o, and Poisson ratio σ_o using the analytical formulas for the perfect triangular lattice with three spring types that preserve isotropy.",
+    "output_file": "",
+    "evidence": "perfect_moduli.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "simulate_response",
+    "title": "Simulate elastic response per configuration",
+    "role": "process",
+    "action": "For each hole configuration and spring set, construct the nearest-neighbor spring network: assign spring constants α, β, γ to matrix–matrix bonds according to the alternating pattern that ensures isotropy, and set force constant to zero for any bond involving a hole pixel. Apply a uniaxial strain of magnitude ~10⁻³ in the x-direction (both tensile and compressive). Relax node positions and the perpendicular unit-cell length using conjugate-gradient minimization of the total harmonic spring energy. Record the equilibrium total energy per unit area and perpendicular cell length. Average the tensile and compressive results to obtain the Young's modulus E and Poisson ratio σ for that configuration.",
+    "output_file": "",
+    "evidence": "raw_moduli.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "percolation_threshold",
+    "title": "Compute geometric percolation threshold",
+    "role": "scored",
+    "action": "Implement a lattice burning algorithm on the digital hole-matrix images generated in the configuration step. For a range of matrix area fraction p around the critical region, determine the percolation probability across multiple configurations and estimate the critical matrix area fraction p_c. Write the result to percolation_threshold.csv.",
+    "output_file": "percolation_threshold.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Estimated geometric percolation threshold p_c for the random circular hole system.",
+    "output_schema": "Columns: p_c (float, critical matrix area fraction)."
+  },
+  {
+    "id": "average_moduli",
+    "title": "Compute average elastic moduli and normalized ratios",
+    "role": "scored",
+    "action": "For each spring set and each p, compute the mean and standard error of E/E_o and σ from the 10 configuration replicates using the raw moduli from the simulation step and the perfect moduli from step 2. Write the averaged results to simulation_results.csv.",
+    "output_file": "simulation_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Averaged elastic moduli as a function of matrix area fraction p for three spring-constant sets.",
+    "output_schema": "Columns: set_id (string, one of '111','114','167'), p (float, area fraction), E_over_E0 (float, normalized Young's modulus), sigma (float, Poisson ratio)."
+  }
+]

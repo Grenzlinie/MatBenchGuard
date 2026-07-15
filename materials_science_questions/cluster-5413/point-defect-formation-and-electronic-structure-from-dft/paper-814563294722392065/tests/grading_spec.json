@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energy averages and Spearman correlation are recomputed from submitted per-site CSV data; thresholds derived from paper with tolerances that allow for different DFT implementations.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "oxygen_vacancy_formation_energies.csv": "threshold_or_better",
+    "oxygen_vacancy_displacements.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for regional formation energy averages and Spearman rank correlation",
+      "source_provenance": "Paper Fig.2 reports crystalline avg ≈ 2.6 eV, amorphous avg ≈ 0.2 eV; text states formation energy and displacement are negatively correlated.",
+      "generation_method": "Crystalline lower bound 2.0 eV (0.6 eV below paper), amorphous upper bound 0.8 eV (0.6 eV above paper), allowing toolchain spread while preserving the dramatic difference. Correlation threshold -0.5 is a conservative negative value consistent with the paper's claim.",
+      "why_not_fabricated": "Thresholds are directly derived from the paper's reported values and the expected spread of a different open-source DFT code, not arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "oxygen_vacancy_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site_id",
+            "region",
+            "distance_from_interface_A",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "distance_from_interface_A": "angstrom",
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Per-site neutral oxygen vacancy formation energy and region/location information. The checker will compute average formation energy for crystalline region (distance < -5 Å) and amorphous region (distance > 5 Å) and verify that the crystalline average is substantially higher than the amorphous average, meeting or exceeding paper-reported thresholds."
+      },
+      {
+        "file": "oxygen_vacancy_displacements.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site_id",
+            "root_sum_square_displacement_angstrom"
+          ],
+          "units": {
+            "root_sum_square_displacement_angstrom": "angstrom"
+          }
+        },
+        "description": "Root-sum-square atomic displacement for each oxygen vacancy site. The checker will merge with formation energies by site_id, compute Spearman rank correlation between formation energy and displacement, and verify it is negative (less than -0.5), indicating larger relaxations correlate with lower formation energies."
+      }
+    ],
+    "notes": "The surface model calculations (Sections 3 and 4 of the paper) are explicitly omitted from the scored scope as they are not required for the main claim. The workflow requires substantial DFT resources, including ab initio MD and 128 vacancy relaxations; the agent is expected to execute on external compute and return only the final CSVs. The checker runs lightweight statistical analyses in the CPU sandbox."
+  },
+  "steps": [
+    {
+      "id": "check_regional_formation_energies",
+      "output_file": "oxygen_vacancy_formation_energies.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compute average formation energy for crystalline sites (distance < -5 Å) and amorphous sites (distance > 5 Å). Verify crystalline avg >= 2.0 eV, amorphous avg <= 0.8 eV, and crystalline avg > amorphous avg. Score decays monotonically if thresholds are not met.",
+      "params": {
+        "crystalline_threshold": 2.0,
+        "amorphous_threshold": 0.8,
+        "require_trend": true
+      }
+    },
+    {
+      "id": "check_formation_displacement_correlation",
+      "output_file": "oxygen_vacancy_displacements.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "description": "Merge with formation_energies.csv by site_id, compute Spearman rank correlation between formation_energy_eV and root_sum_square_displacement_angstrom. Verify correlation <= -0.5 (more negative is better). Score decays linearly if correlation is higher (less negative) than the threshold.",
+      "params": {
+        "correlation_threshold": -0.5,
+        "formation_file": "oxygen_vacancy_formation_energies.csv"
+      }
+    }
+  ]
+}

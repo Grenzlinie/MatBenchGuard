@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_compute_k_constants",
+    "title": "Compute pure component equilibrium constants",
+    "role": "process",
+    "action": "Compute the equilibrium constants K_Bi2Se3 and K_Bi2S3 for temperatures from 300 K to 800 K using the published log-linear relations: log10(K) = A/T + B with A1=-6566.4 K, B1=-15.6 for Bi2Se3 and A2=-6313.1 K, B2=-14.2 for Bi2S3. Produce an intermediate table mapping temperature to each constant.",
+    "output_file": "",
+    "evidence": "k_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calculates K_Bi2Se3 and K_Bi2S3 as functions of temperature for all subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_compute_pk1",
+    "title": "Compute overall equilibrium constant pK1",
+    "role": "process",
+    "action": "For each composition x in [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13, 0.15] and temperature T in [300, 400, 500, 600, 700, 800] K, evaluate K1 = x^x * (1-x)^(1-x) * K_Bi2S3^x * K_Bi2Se3^(1-x) using the K constants from the previous step, then compute pK1 = -log10(K1).",
+    "output_file": "",
+    "evidence": "pk1_calc.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Evaluates the ideal solid solution expression for K1 and converts to pK1.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_compute_min_partial",
+    "title": "Compute minimum partial pressures",
+    "role": "process",
+    "action": "At T = 700 K and for x in [0.01, 0.05, 0.09, 0.13, 0.17], compute the minimum partial pressures p_Se2^min and p_S2^min using the formulas derived from ∂p_tot/∂p = 0, expressed in terms of the pure-component equilibrium constants at 700 K and x.",
+    "output_file": "",
+    "evidence": "min_partial_calc.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derives minimum partial pressures of Se2 and S2 over the ternary crystal at the annealing temperature.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_compute_k_r",
+    "title": "Compute defect equilibrium constant K_R",
+    "role": "process",
+    "action": "For each annealing condition, compute the carrier concentration N = 1 / (R_H * e) using the Hall coefficient after annealing and the elementary charge e = 1.602176634e-19 C. Determine the effective composition y from the ratio p_S2/p_Se2 using the pure-component equilibrium constants at 700 K. Then evaluate K_R = 1 / ( N^2 * p_Se2^((1-y)/2) * p_S2^(y/2) ), ensuring consistent units (m^6·kPa^{-1/2}). The required experimental values are:\n  - Sample 2, T2=645 K: R_H = 0.303e-6 m^3/(A·s), p_Se2 = 0.305 kPa, p_S2 = 0.480 kPa.\n  - Sample 2, T2=675 K: R_H = 0.405e-6 m^3/(A·s), p_Se2 = 0.608 kPa, p_S2 = 0.950 kPa.\n  - Sample 3, T2=645 K: R_H = 0.331e-6 m^3/(A·s), p_Se2 = 0.288 kPa, p_S2 = 2.079 kPa.\n  - Sample 3, T2=675 K: R_H = 0.364e-6 m^3/(A·s), p_Se2 = 0.570 kPa, p_S2 = 4.000 kPa.\n  - Sample 4, T2=645 K: R_H = 0.359e-6 m^3/(A·s), p_Se2 = 0.275 kPa, p_S2 = 3.300 kPa.\n  - Sample 4, T2=675 K: R_H = 0.349e-6 m^3/(A·s), p_Se2 = 0.541 kPa, p_S2 = 6.350 kPa.",
+    "output_file": "",
+    "evidence": "KR_calc.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calculates the equilibrium constant of the defect incorporation reaction from experimental transport data.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_assemble_results",
+    "title": "Assemble final results",
+    "role": "scored",
+    "action": "Combine all computed quantities into a single JSON file with the following keys: 'K_Bi2Se3' (object mapping temperature in K to float), 'K_Bi2S3' (object mapping temperature to float), 'pK1' (array of objects each with x, T, pK1_value), 'min_partial_pressures' (array of objects each with x, pS2_min, pSe2_min), 'K_R' (array of objects each with sample_no, T2, N, K_R). All numeric values must be in the same units and precision as described in the paper.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final output containing all reproduced thermodynamic quantities.",
+    "output_schema": "A JSON object with keys 'K_Bi2Se3', 'K_Bi2S3', 'pK1', 'min_partial_pressures', 'K_R' as described."
+  }
+]

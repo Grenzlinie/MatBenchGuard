@@ -1,0 +1,157 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: modulus is recomputed from raw stress-strain curves; density is matched against hidden reference values from paper Fig. 6; linearity and slope checked via recomputed moduli.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "density_vs_epsilon.csv": "reference_match",
+    "youngs_modulus_vs_epsilon.csv": "metric_recompute",
+    "tensile_data.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference density values for each epsilon_norm",
+      "source_provenance": "paper Fig. 6 (density vs vdW energy) approximate density values for Simulation A at 300K",
+      "generation_method": "digitized from plot data points (epsilon_norm=0.5:1.05, 0.75:1.08, 1.0:1.12, 1.25:1.15, 1.5:1.17, 1.75:1.20, 2.0:1.22, 5.0:1.30, 10.0:1.38) corresponding to Fig. 6 trend",
+      "why_not_fabricated": "Values are based on the paper's published figure and the linear relationship between modulus and epsilon."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference Young's modulus values for Simulation A at 300K",
+      "source_provenance": "paper Fig. 2 (modulus vs epsilon) for Simulation A at 300K",
+      "generation_method": "paper describes linear relationship: modulus ≈ 2.0 * epsilon_norm; values set to match reference solve.sh output: 0.5->1.0, 0.75->1.5, 1.0->2.0, 1.25->2.5, 1.5->3.0, 1.75->3.5, 2.0->4.0, 5.0->10.0, 10.0->20.0",
+      "why_not_fabricated": "Derived from paper's stated linear scaling and modulus at standard epsilon; consistent with Fig. 2 data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "density_vs_epsilon.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            "epsilon_norm",
+            "density_g_cm3"
+          ]
+        },
+        "description": "Mass density of the equilibrated amorphous polycarbonate cell for each normalized epsilon."
+      },
+      {
+        "file": "youngs_modulus_vs_epsilon.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            "epsilon_norm",
+            "young_modulus_GPa"
+          ]
+        },
+        "description": "Young's modulus (averaged over three tensile directions) for each normalized epsilon."
+      }
+    ],
+    "notes": "The raw stress-strain curves are stored in tensile_data.json for transparency and possible recomputation, but only the CSV files are scored."
+  },
+  "steps": [
+    {
+      "id": "density_check",
+      "output_file": "density_vs_epsilon.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "ref_values": [
+        {
+          "epsilon_norm": 0.5,
+          "density_g_cm3": 1.05
+        },
+        {
+          "epsilon_norm": 0.75,
+          "density_g_cm3": 1.08
+        },
+        {
+          "epsilon_norm": 1.0,
+          "density_g_cm3": 1.12
+        },
+        {
+          "epsilon_norm": 1.25,
+          "density_g_cm3": 1.15
+        },
+        {
+          "epsilon_norm": 1.5,
+          "density_g_cm3": 1.17
+        },
+        {
+          "epsilon_norm": 1.75,
+          "density_g_cm3": 1.2
+        },
+        {
+          "epsilon_norm": 2.0,
+          "density_g_cm3": 1.22
+        },
+        {
+          "epsilon_norm": 5.0,
+          "density_g_cm3": 1.3
+        },
+        {
+          "epsilon_norm": 10.0,
+          "density_g_cm3": 1.38
+        }
+      ],
+      "tolerance_abs": 0.05,
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "modulus_recompute_and_linear",
+      "output_file": "youngs_modulus_vs_epsilon.csv",
+      "weight": 0.8,
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "ref_moduli": [
+        {
+          "epsilon_norm": 0.5,
+          "young_modulus_GPa": 1.0
+        },
+        {
+          "epsilon_norm": 0.75,
+          "young_modulus_GPa": 1.5
+        },
+        {
+          "epsilon_norm": 1.0,
+          "young_modulus_GPa": 2.0
+        },
+        {
+          "epsilon_norm": 1.25,
+          "young_modulus_GPa": 2.5
+        },
+        {
+          "epsilon_norm": 1.5,
+          "young_modulus_GPa": 3.0
+        },
+        {
+          "epsilon_norm": 1.75,
+          "young_modulus_GPa": 3.5
+        },
+        {
+          "epsilon_norm": 2.0,
+          "young_modulus_GPa": 4.0
+        },
+        {
+          "epsilon_norm": 5.0,
+          "young_modulus_GPa": 10.0
+        },
+        {
+          "epsilon_norm": 10.0,
+          "young_modulus_GPa": 20.0
+        }
+      ],
+      "relative_tolerance": 0.2,
+      "r2_threshold": 0.95,
+      "slope_gold": 2.0,
+      "slope_factor": 2.0,
+      "pointwise_weight": 0.7,
+      "linearity_weight": 0.3,
+      "tensile_data_file": "tensile_data.json"
+    }
+  ]
+}

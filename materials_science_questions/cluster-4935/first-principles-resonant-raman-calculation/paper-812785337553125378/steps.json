@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "DFT self-consistent field calculation for GaP",
+    "role": "process",
+    "action": "Run a DFT SCF calculation for the GaP primitive cell using Quantum ESPRESSO pw.x to obtain the Kohn-Sham eigenvalues and wavefunctions on a dense k-point grid, including the Γ point. Use the PBE functional and SSSP pseudopotentials.",
+    "output_file": "",
+    "evidence": "scf.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain ground-state charge density and band energies needed for subsequent phonon and electron-phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "DFPT phonon calculation at Γ",
+    "role": "process",
+    "action": "Run ph.x to compute the dynamical matrix at the Γ point, obtaining phonon frequencies and eigenvectors for the optical modes (TO and LO).",
+    "output_file": "",
+    "evidence": "ph.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the TO(Γ) and LO(Γ) phonon frequencies and polarization vectors required for the Raman tensor evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "EPW Wannier interpolation and electron-phonon coupling",
+    "role": "process",
+    "action": "Run epw.x to perform Wannier interpolation of the electronic bands and phonon dispersions, compute the electron-phonon matrix elements on a fine k/q mesh, and evaluate the Raman tensor components using the quasistatic approximation and experimental gap parameters E0=2.78 eV, Δ0=0.082 eV.",
+    "output_file": "",
+    "evidence": "epw.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the raw Raman tensor data as a function of incident photon energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "Generate resonant Raman cross-section curves",
+    "role": "scored",
+    "action": "From the Raman tensor data produced by EPW, construct the cross-section curves for first-order TO(Γ) and second-order Γ1 and Γ15 components (in arbitrary units) and write them to a CSV file with at least 20 points spanning the energy range.",
+    "output_file": "raman_cross_sections.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: photon_energy_relative_E0 (eV), cross_section_first_order, cross_section_second_order_Gamma1, cross_section_second_order_Gamma15. Values are in consistent but arbitrary units; the curves must capture the resonant peaks at E0 and E0+Δ0.",
+    "output_schema": "Header: photon_energy_relative_E0, cross_section_first_order, cross_section_second_order_Gamma1, cross_section_second_order_Gamma15. Numeric columns; rows for ≥20 distinct photon energies between -0.4 and +0.3 eV."
+  },
+  {
+    "id": "step05",
+    "title": "Compute deformation potentials D1 and D15",
+    "role": "scored",
+    "action": "Identify the two-LO(Γ) and TO+LO(Γ) peaks in the second-order spectra, compute their integrated intensities (area under the curve) relative to the first-order TO(Γ) peak, apply the paper’s equations to extract D1 and D15, and write the results to a JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON containing intensity ratios and the deformation potentials D1 and D15 in eV.",
+    "output_schema": "Keys: intensity_ratio_two_LO (number), intensity_ratio_TO_plus_LO (number), delta2_omega0_over_delta1_omega0_Gamma1 (number), delta2_omega0_over_delta1_omega0_Gamma15 (number), D1_eV (number), D15_eV (number)."
+  }
+]

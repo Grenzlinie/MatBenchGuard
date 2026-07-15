@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step1",
+    "title": "System preparation: equilibration and block descent",
+    "role": "process",
+    "action": "Set up the simulation box for the Lennard-Jones fluid between solid plates with a movable block. Equilibrate the fluid at T=372 K and p_sat=5.33 MPa for ~1400 ps, then descend the block while reducing system pressure to p_inf=2.47 MPa to obtain a superheated metastable liquid with molecules squeezed under the block. Save the configuration for subsequent rubbing simulations.",
+    "output_file": "",
+    "evidence": "system_restart.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the initial superheated state with block in contact, necessary for the rubbing MD runs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Flat liquid-vapor interface MD simulation for surface tension",
+    "role": "process",
+    "action": "Set up a separate simulation with a flat liquid-vapor interface of the same Lennard-Jones fluid at T=372 K. Equilibrate and compute the surface tension from the difference of normal and tangential pressure components. Output the computed surface tension value.",
+    "output_file": "",
+    "evidence": "surface_tension.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Determines the surface tension of the fluid at the operating temperature, needed to compute the critical bubble radius.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute critical bubble radius",
+    "role": "scored",
+    "action": "From the surface tension value obtained in the previous step and the superheat pressure difference (p_sat - p_inf), compute the two-dimensional critical bubble radius using the formula: R_c = surface_tension / (p_sat - p_inf). Output the critical radius in nm.",
+    "output_file": "critical_radius.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computes the critical bubble radius from surface tension and pressure difference, providing a reference for judging nucleation.",
+    "output_schema": "JSON object with key: R_c_nm (float, critical radius in nm)."
+  },
+  {
+    "id": "step4",
+    "title": "Run rubbing MD simulations",
+    "role": "process",
+    "action": "Starting from the configuration produced in step 1, run LAMMPS simulations where the block is pressed with a downward pressure p and moved tangentially with velocity V=1 m/s. Conduct multiple independent runs for at least two pressure conditions (e.g., p=6.3 GPa and p=1.6 GPa), with at least 2 runs per condition. For each run, record the proto-bubble radius time series and the number of squeezed molecules under the block, continuing until all squeezed molecules are released.",
+    "output_file": "",
+    "evidence": "rubbing_runs_complete.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the raw MD trajectories needed to analyze burst events and bubble nucleation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step5",
+    "title": "Post-process trajectories: burst identification and properties",
+    "role": "scored",
+    "action": "For each rubbing run, analyze the trajectory to identify burst release events where more than several tens of molecules are released within ~10 ps and the instantaneous kinetic energy peaks. For each identified burst, compute the total kinetic energy E_burst (sum over burst duration) and the number of released molecules ΔN_burst. Collect all (E_burst, ΔN_burst) pairs from all runs.",
+    "output_file": "burst_energy_vs_molecules.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Extracts the burst energy and molecule count data from the rubbing simulations, which is the primary data for the linear relationship.",
+    "output_schema": "CSV with columns: burst_total_energy_kJ_per_mol (float), burst_molecules_count (int). One row per burst event observed across all runs."
+  },
+  {
+    "id": "step6",
+    "title": "Fit linear model E_burst vs ΔN_burst",
+    "role": "scored",
+    "action": "Read the burst_energy_vs_molecules.csv data. Fit a linear model E_burst = E_mol0 * ΔN_burst passing through the origin using least squares. Output the fitted slope E_mol0 in kJ/mol.",
+    "output_file": "fitted_slope.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Determines the per-molecule kinetic energy constant from the burst data, which is the key quantitative result of the paper.",
+    "output_schema": "JSON object with key: E_mol0_kJ_per_mol (float)."
+  },
+  {
+    "id": "step7",
+    "title": "Determine nucleation outcomes",
+    "role": "scored",
+    "action": "For each rubbing run, track the proto-bubble equivalent radius R (computed from vapor region area using a subcell density classification). Use the critical radius R_c from step 3. Classify a run as nucleating if R exceeds R_c at any time and the bubble subsequently grows. Record the nucleation outcome for each run along with the pressure and velocity conditions, and summarize per condition (pressure, velocity, whether nucleation occurred in majority of runs, and total number of runs).",
+    "output_file": "nucleation_outcomes.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Provides the nucleation classification for each simulation condition, used to assess the pressure threshold for nucleation.",
+    "output_schema": "CSV with columns: pressure_GPa (float), velocity_m_per_s (float), nucleation_occurred (boolean), number_of_runs (int). One row per condition tested (at least two pressure conditions)."
+  }
+]

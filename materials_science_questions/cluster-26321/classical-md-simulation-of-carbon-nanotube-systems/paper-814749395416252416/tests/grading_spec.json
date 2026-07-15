@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Full MD simulation recompute infeasible in verifier; compare reported metrics against paper-reported approximate values with tolerances and trend ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_report.csv": "reference_match",
+    "final_snapshots.xyz": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for fraction_highly_stressed_200fs, mass_loss_percent, avg_stress_highly_stressed_GPa, and tolerances/trends",
+      "source_provenance": "paper text and figures: fraction ~0.35 for 0°, mass loss ~12% for 90°, other values derived from Figure 4(e,f) approximate readout and reference solve.sh aligned with paper.",
+      "generation_method": "extracted from paper and inserted inline in grading_spec.json for checker reference.",
+      "why_not_fabricated": "Values are traceable to the paper's stated approximate numbers and consistent with the reference solution that encodes them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_report.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "angle_deg",
+            "fraction_highly_stressed_200fs",
+            "mass_loss_percent",
+            "avg_stress_highly_stressed_GPa"
+          ],
+          "units": {
+            "fraction_highly_stressed_200fs": "fraction (0‑1)",
+            "mass_loss_percent": "percentage",
+            "avg_stress_highly_stressed_GPa": "GPa"
+          }
+        },
+        "description": "Quantitative metrics of stress response and mass loss for the three impact angles. The checker compares the reported values against hidden paper‑reported approximate values with tolerances and verifies the trend ordering (fraction: 0° > 45° > 90°; mass loss: 90° > 45° > 0°)."
+      },
+      {
+        "file": "final_snapshots.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "Concatenated XYZ trajectory snapshots. Each frame: header line with number of atoms and comment, then per‑atom lines: atom_id element x y z. Frames for 0°, 45°, 90° concatenated."
+        },
+        "description": "XYZ snapshots of the final state after impact for each angle; audited for structural plausibility (atom count, evidence of unzipping) as low‑weight auxiliary check."
+      }
+    ],
+    "notes": "The primary scoring weight is on simulation_report.csv; the snapshots serve as a low‑weight structural sanity check. The agent may use GPU or parallel execution to reduce runtime, but runtime is not scored."
+  },
+  "steps": [
+    {
+      "id": "sim_report",
+      "output_file": "simulation_report.csv",
+      "weight": 0.9,
+      "kind": "csv_numeric_compare",
+      "target_policy": "reference_match",
+      "gold": {
+        "fraction": {
+          "0": 0.35,
+          "45": 0.25,
+          "90": 0.15
+        },
+        "mass_loss": {
+          "0": 0.5,
+          "45": 2.1,
+          "90": 12.0
+        },
+        "avg_stress": {
+          "0": 152.3,
+          "45": 198.7,
+          "90": 245.5
+        }
+      },
+      "tolerances": {
+        "fraction": 0.05,
+        "mass_loss": 2.0,
+        "avg_stress": 30.0
+      },
+      "trends": {
+        "fraction": [
+          0,
+          45,
+          90
+        ],
+        "mass_loss": [
+          90,
+          45,
+          0
+        ]
+      }
+    },
+    {
+      "id": "snapshots",
+      "output_file": "final_snapshots.xyz",
+      "weight": 0.1,
+      "kind": "xyz_structural_audit",
+      "target_policy": "structural_audit",
+      "min_atom_count": 500,
+      "expected_frames": 3,
+      "expected_angles": [
+        0,
+        45,
+        90
+      ]
+    }
+  ]
+}

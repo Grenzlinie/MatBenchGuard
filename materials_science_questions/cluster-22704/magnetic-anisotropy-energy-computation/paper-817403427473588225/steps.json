@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_generate_structures",
+    "title": "Generate CuFe2O4 configurations and reference structures",
+    "role": "process",
+    "action": "Construct atomic structures for the four inverse spinel Cu configurations (types I, II, III, IV) and the normal spinel CuFe2O4, as well as the inverse spinel Fe3O4. Use the crystal structure description: fcc lattice with Fd3m symmetry, tetrahedral A sites occupied by Fe3+, octahedral B sites occupied by the mixture of Fe2+/Fe3+ and Cu2+ according to each configuration. Write DFT input files.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepares all structure inputs required for subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_bulk_relaxation",
+    "title": "Bulk DFT+U relaxation and energy differences",
+    "role": "scored",
+    "action": "Perform GGA+U (PBE functional) DFT calculations on all generated bulk structures (types I–IV, normal, and Fe3O4). Apply Hubbard U parameters: Ueff = 3.5 eV for Fe and 4.0 eV for Cu. For each inverse spinel configuration, relax ionic positions and cell parameters (allowing tetragonal distortion). From the relaxed results, identify the ground-state configuration (type II) and record its optimized in-plane lattice constant a (Å) and c/a ratio. Compute the total energy differences ΔE (eV per formula unit) of types I, III, IV, and the normal spinel relative to type II. Store the results in bulk_results.json.",
+    "output_file": "bulk_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing structural parameters and energy differences that verify the Cu site preference and Jahn-Teller distortion.",
+    "output_schema": "JSON object with keys: a_type_II (float, Å), c_over_a_type_II (float), delta_E_type_I (float, eV/f.u.), delta_E_type_III (float, eV/f.u.), delta_E_type_IV (float, eV/f.u.), delta_E_normal (float, eV/f.u.)"
+  },
+  {
+    "id": "step_03_construct_superlattices",
+    "title": "Build superlattice heterostructure models",
+    "role": "process",
+    "action": "Using the relaxed bulk structures, build periodic superlattice cells for: (a) one-unit-cell CuFe2O4(001)/MgO with FeO interface termination, (b) one-unit-cell with CuO interface termination, (c) two-unit-cell CuFe2O4/MgO with FeO interface, (d) one-unit-cell Fe3O4/MgO with FeO interface, and (e) two-unit-cell Fe3O4/MgO with FeO interface. Align the in-plane lattice to the MgO lattice constant (4.212 Å) with appropriate matching. Write the DFT input files.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Constructs the superlattice structures required for the MAE calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_relax_superlattices",
+    "title": "Relax superlattice geometries",
+    "role": "process",
+    "action": "Relax the ionic positions of all superlattice structures built in step 03 using DFT+U (same U parameters). Keep the in-plane lattice fixed to the MgO-derived constant during relaxation. The relaxed coordinates will be used for MAE calculations.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate step to obtain optimized structures for MAE calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_mae_calculations",
+    "title": "Compute magnetic anisotropy energy (MAE)",
+    "role": "scored",
+    "action": "For the relaxed bulk CuFe2O4 type-II and each relaxed superlattice, perform non-collinear spin-orbit coupling (SOC) calculations. Compute the total energy for magnetization oriented in the xy-plane (E_parallel) and along the z-axis (E_perpendicular). Calculate MAE = E_parallel - E_perpendicular (meV/f.u.). Record the following MAE values in mae_results.json: bulk CuFe2O4, FeO-interface-terminated one-unit-cell and two-unit-cell CuFe2O4/MgO, CuO-interface-terminated one-unit-cell CuFe2O4/MgO, and one-unit-cell and two-unit-cell Fe3O4/MgO.",
+    "output_file": "mae_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing MAE values that demonstrate magnetization reorientation and thickness dependence.",
+    "output_schema": "JSON object with keys: bulk_CuFe2O4_MAE (float, meV/f.u.), FeO_int_one_unit_CuFe2O4_MgO_MAE, FeO_int_two_unit_CuFe2O4_MgO_MAE, CuO_int_one_unit_CuFe2O4_MgO_MAE, FeO_int_one_unit_Fe3O4_MgO_MAE, FeO_int_two_unit_Fe3O4_MgO_MAE"
+  }
+]

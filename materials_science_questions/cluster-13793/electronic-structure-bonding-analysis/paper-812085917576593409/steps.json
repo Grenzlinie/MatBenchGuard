@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_1",
+    "title": "Build interface supercell models",
+    "role": "process",
+    "action": "Construct 64‑atom periodic Ni/Ni3Al (002) coherent interface supercells for five substitution models: no‑add (Re‑free), Ni(1) (Re substitutes Ni in γ‑Ni block), Ni(2) (Re substitutes Ni at the coherent interfacial layer), Ni(3) (Re substitutes Ni in γ′‑Ni3Al block), and Al(4) (Re substitutes Al adjacent to the interface in the γ′ block). Generate initial atomic positions and lattice vectors based on fcc Ni and L12 Ni3Al crystal structures.",
+    "output_file": "",
+    "evidence": "initial_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Atomic positions and cell vectors for all five interface models before optimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Compute reference elemental per‑atom energies",
+    "role": "process",
+    "action": "Perform DFT total energy calculations for the elemental crystals fcc Ni, fcc Al, and hcp Re using the same exchange‑correlation functional and pseudopotential library as the interface calculations. Extract per‑atom energies E_c(Ni), E_c(Al), and E_c(Re).",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Per‑atom reference energies for Ni, Al, Re.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Geometry optimization of all interface models",
+    "role": "process",
+    "action": "Run DFT structure relaxation (atomic positions and cell parameters) for each of the five interface models. Converge forces and stress to obtain equilibrium lattice constants and total energies E_i for each model.",
+    "output_file": "",
+    "evidence": "optimized_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Optimized total energies and lattice constants for each interface model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Calculate heat of formation and determine site preference ordering",
+    "role": "scored",
+    "action": "For each interface model, compute the heat of formation per atom H = (E_i − n·E_c(Ni) − m·E_c(Al) − l·E_c(Re)) / (n+m+l) using the DFT total energies E_i and the reference per‑atom energies. Produce the list of model names ordered by decreasing stability (most negative H first) and the corresponding heat of formation values.",
+    "output_file": "site_preference_ordering.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with the site preference ordering and per‑atom heat of formation (eV).",
+    "output_schema": "{\"models\": [\"string\", ...], \"heat_per_atom\": {\"model_name\": float}}"
+  },
+  {
+    "id": "step_5",
+    "title": "Construct and compute surface slab energies",
+    "role": "process",
+    "action": "For the no‑add, Ni(1), Ni(2), and Ni(3) models, create surface slab models by cleaving the optimized interface supercell along region‑1 (between (002)γ/γ′ and (001)γ′ layers) and region‑2 (between (001)γ and (002)γ/γ′ layers). Perform single‑point DFT calculations on each slab with vacuum to obtain the total energies E_s^γ and E_s^γ′ for each model and cleavage region.",
+    "output_file": "",
+    "evidence": "surface_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Surface total energies for each model and cleavage region.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6",
+    "title": "Compute Griffith rupture work",
+    "role": "scored",
+    "action": "For each of the four models (no‑add, Ni(1), Ni(2), Ni(3)) and each region (region‑1, region‑2), calculate the Griffith rupture work W = (−1/(2·S_i))·(E_i − E_s^γ − E_s^γ′), where S_i = a·b is the lateral area of the optimized interface supercell. Compile all results into a CSV table.",
+    "output_file": "griffith_work_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns model, region, Griffith_work_J_m2. One row per (model, region) combination.",
+    "output_schema": "model (string), region (string, e.g., region‑1 or region‑2), Griffith_work_J_m2 (float)"
+  }
+]

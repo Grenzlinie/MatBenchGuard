@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "metric_recompute",
+  "scoring_justification": "The MAE is recomputed from the agent's raw frequency table and the paper's experimentally reported frequency curve (digitized from Fig. 4).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_freq_table.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference frequency values for the TO mode at discrete temperatures, digitized from the paper's Fig. 4.",
+      "source_provenance": "Digitized from Fig. 4 of the paper 'Dynamics of ions of the two-dimensional superionic conductor AgCr S 2' (Phys. Rev. B 27, 5052, 1983).",
+      "generation_method": "Manual digitization of the experimental curve, verified against the paper's quantitative discussion of the phonon frequency.",
+      "why_not_fabricated": "These values correspond to the specific physical measurement reported in the paper and are required to verify the agent's computed frequency-temperature relationship."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_freq_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "frequency_cm-1"
+          ],
+          "units": {
+            "T_K": "K",
+            "frequency_cm-1": "cm^{-1}"
+          }
+        },
+        "description": "Computed temperature-dependent frequency of the low-frequency TO mode from the anharmonic effective potential model, used to verify agreement with the experimental curve within tolerance."
+      }
+    ],
+    "notes": "Scoring uses a hidden gold curve digitized from the paper's Fig. 4. The checker computes the mean absolute error (MAE) between the agent's frequencies and the gold values at a set of reference temperatures. Full credit for MAE < 3 cm⁻¹ with linear decay to zero at MAE ≥ 10 cm⁻¹, and additionally verifies qualitative features (low-temperature decrease and slope change near 200 K) using structural_audit rules. The exact gold values and tolerance parameters are hidden."
+  },
+  "steps": [
+    {
+      "id": "s1_mae",
+      "output_file": "step_01_freq_table.csv",
+      "kind": "recompute_metric",
+      "weight": 0.8,
+      "metric": "mae",
+      "pred_column": "frequency_cm-1",
+      "id_column": "T_K",
+      "ground_truth": [
+        [
+          10,
+          29.5
+        ],
+        [
+          50,
+          29.0
+        ],
+        [
+          100,
+          28.0
+        ],
+        [
+          150,
+          26.5
+        ],
+        [
+          200,
+          24.5
+        ],
+        [
+          250,
+          23.0
+        ],
+        [
+          300,
+          21.6
+        ],
+        [
+          400,
+          19.5
+        ],
+        [
+          500,
+          18.2
+        ],
+        [
+          600,
+          17.4
+        ]
+      ],
+      "threshold_better": 3.0,
+      "threshold_worse": 10.0,
+      "notes": "Computes MAE against digitized gold values from Fig. 4. Full credit for MAE < 3 cm^{-1}, 0 credit for MAE > 10 cm^{-1}."
+    },
+    {
+      "id": "s1_structural",
+      "output_file": "step_01_freq_table.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "notes": "Verifies the low-temperature decrease (freq(10K) > freq(100K) by at least 2 cm^{-1}) and slope change near 200K (slope(100-200) more negative than slope(300-400))."
+    }
+  ]
+}

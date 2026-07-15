@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_electronic_sim",
+    "title": "Electronic band structure simulation",
+    "role": "process",
+    "action": "Perform a DFT self‑consistent calculation for zinc‑blende HgTe using an open‑source code with the HSE06 hybrid exchange‑correlation functional and spin‑orbit coupling. Use the experimental lattice constant a = 6.460 Å. Compute the electronic band structure along a high‑symmetry path that includes at least L‑Γ‑X. Output the k‑point coordinates and the band energies (in eV) for all computed bands to a CSV file `bands.csv`.",
+    "output_file": "",
+    "evidence": "bands.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Heavy DFT simulation that generates the raw band energies needed for the scored extraction step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_electronic_extraction",
+    "title": "Electronic property extraction",
+    "role": "scored",
+    "action": "From the band structure in `bands.csv`, identify the Γ6, Γ7, and Γ8 bands at the Γ point. Compute: the inverted band gap Eg = E(Γ6) – E(Γ8) (eV), the spin–orbit splitting Δ0 = E(Γ8) – E(Γ7) (eV). Determine the conduction‑band effective mass me and the top valence‑band effective mass mh along the [100] direction from the curvature of the band energies near Γ. Save the four values as a single‑row CSV with columns Eg,Delta0,me,mh.",
+    "output_file": "electronic_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Extracts the four electronic quantities that are the primary computational targets from the DFT simulation. This step is load‑bearing because the values can only be obtained after genuinely running the HSE06+SOC calculation.",
+    "output_schema": "Columns: Eg (float, eV), Delta0 (float, eV), me (float, m0), mh (float, m0)."
+  },
+  {
+    "id": "step3_phonon_thermal",
+    "title": "Phonon and lattice thermal conductivity simulation",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO, compute the harmonic phonon frequencies and group velocities via density‑functional perturbation theory on a suitable q‑grid (LDA‑PZ pseudopotentials, kinetic energy cutoff 1360 eV). With the D3Q code, compute third‑order anharmonic force constants on a coarse q‑grid. Include isotopic disorder scattering using the natural isotopic compositions of Hg and Te. Solve the phonon Boltzmann transport equation (variational method) with a dense q‑grid interpolation to obtain the lattice thermal conductivity κL as a function of temperature for T = 100, 200, 300, 400, 500 K. Save temperature (K) and κL (W/mK) pairs to `thermal_conductivity.csv`.",
+    "output_file": "",
+    "evidence": "thermal_conductivity.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Full phonon simulation pipeline that computes the temperature‑dependent lattice thermal conductivity, providing the data for the scored extraction step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_thermal_extraction",
+    "title": "Thermal conductivity extraction at 300 K",
+    "role": "scored",
+    "action": "From `thermal_conductivity.csv`, read the lattice thermal conductivity at T = 300 K. Output a JSON file `thermal_conductivity_results.json` with a single key `kappa_300K` whose value is the float number (W/mK).",
+    "output_file": "thermal_conductivity_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extracts the lattice thermal conductivity at 300 K, a key computational result, from the full phonon simulation.",
+    "output_schema": "JSON object: { 'kappa_300K': <float> } (units W/mK)."
+  }
+]

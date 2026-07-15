@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute dominant frequency from raw deflection time series and check structural trend of control effectiveness; frequency compared to paper graph reading.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold natural frequency for the specified configuration (PD-S, GPL-S, e0=0.3, Λ=1.0 wt%, h_c=10 mm, h_p=0.1 mm, PZT-G1195N, closed-circuit)",
+      "source_provenance": "Paper Fig. 9 (influence of porosity coefficient), digitized from published graph at e0=0.3",
+      "generation_method": "Digitized from graph and rounded to 260 Hz",
+      "why_not_fabricated": "Derived from published figure in the referenced paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_natural_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mode1_freq_hz": "number"
+          },
+          "units": {
+            "mode1_freq_hz": "Hz"
+          }
+        },
+        "description": "First natural frequency of the simply supported piezoelectric FG metal foam plate for the specified configuration."
+      },
+      {
+        "file": "step_02_deflection_time_series.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_s",
+            "deflection_mm",
+            "gain"
+          ],
+          "units": {
+            "time_s": "seconds",
+            "deflection_mm": "millimeters"
+          },
+          "column_types": {
+            "time_s": "float",
+            "deflection_mm": "float",
+            "gain": "string"
+          }
+        },
+        "description": "Time series of central deflection for uncontrolled (Gv0) and controlled (Gv0.01) cases under a step load. The checker recomputes peak deflection magnitude for each gain and verifies that the controlled response decays faster than the uncontrolled one."
+      }
+    ],
+    "notes": "The hidden gold for the natural frequency is the paper-reported value for the same configuration, compared with relative tolerance 1%. For the dynamic response, the checker extracts the peak deflection magnitude for each gain and compares to the paper's reference within 5% tolerance, and also checks the trend of faster decay with control."
+  },
+  "steps": [
+    {
+      "id": "freq_check",
+      "output_file": "step_01_natural_frequencies.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold_hz": 260.0,
+      "tol_rel": 0.01
+    },
+    {
+      "id": "dyn_check",
+      "output_file": "step_02_deflection_time_series.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6
+    }
+  ]
+}

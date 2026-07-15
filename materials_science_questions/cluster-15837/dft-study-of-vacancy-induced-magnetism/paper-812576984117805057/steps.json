@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build defect supercells",
+    "role": "process",
+    "action": "Construct the initial atomic structures for: (1) pristine 4×2×2 wurtzite GaN supercell (128 atoms), (2) the same supercell with a V12 vacancy cluster (removing 6 Ga and 6 N atoms according to the compact void geometry shown in the paper), and (3) a supercell containing two separated V12 clusters (double-cluster configuration) to induce spontaneous magnetization. Use the experimental lattice constants a=3.189 Å, c=5.185 Å, space group P6₃mc. Output coordinate files in ABINIT format.",
+    "output_file": "",
+    "evidence": "step_01_supercells.in",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial geometry preparation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT+U relaxation and electronic structure",
+    "role": "process",
+    "action": "For each of the three supercells (pristine, V12, double-V12), perform spin-polarized DFT+U calculations using ABINIT with GGA functional, PAW pseudopotentials, and for Gd atoms Hubbard U=6.7 eV, J=0.7 eV. Relax atomic positions while keeping cell parameters fixed. After relaxation, perform a self-consistent field calculation to obtain ground-state electron density, spin density, and magnetic moments. Produce the total energy and magnetization for the double-V12 cell. This step is required to obtain the electron density and spin density needed for positron calculations.",
+    "output_file": "",
+    "evidence": "step_02_dft_output.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "DFT relaxation and electronic structure calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Positron DBAR spectrum for pristine and V12",
+    "role": "process",
+    "action": "For the pristine supercell and the V12 supercell (from step_02), perform two-component DFT positron calculations as implemented in ABINIT. Compute the positron wave function self-consistently using the Borónski-Nieminen enhancement factor. Obtain the one-dimensional angular correlation of annihilation radiation (ACAR) spectrum. Convolve with a Gaussian resolution function (FWHM=3.92×10⁻³ m₀c) to get the DBAR spectrum. Save the raw spectra (momentum vs. intensity) for both systems.",
+    "output_file": "",
+    "evidence": "step_03_raw_dbar_pristine.csv, step_03_raw_dbar_v12.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Positron annihilation calculation for pristine and V12.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Produce DBAR ratio spectrum",
+    "role": "scored",
+    "action": "Compute the ratio spectrum N(p)/N_ref(p) using the pristine DBAR spectrum as N_ref. Interpolate onto a uniform momentum grid from 0 to ~20×10⁻³ m₀c with step ~0.1×10⁻³ m₀c. Write two columns: momentum (in units of m₀c) and ratio.",
+    "output_file": "v12_dbar_ratio.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "DBAR ratio spectrum of V12 cluster compared to pristine GaN.",
+    "output_schema": "Two columns: 'momentum' (float, unit m₀c) and 'ratio' (float, dimensionless)."
+  },
+  {
+    "id": "step_05",
+    "title": "Produce MDB differential spectrum",
+    "role": "scored",
+    "action": "For the double-V12 supercell, using the spin density from step_02, compute the spin-resolved positron annihilation spectra N+(p) and N−(p) corresponding to the majority and minority spin channels. The paper uses spin-polarized positron beam simulation; in practice, treat the positron annihilation with the spin-polarized electron density. Produce the differential spectrum N+(p) − N−(p). Output two columns: momentum (m₀c) and differential intensity.",
+    "output_file": "v12_mdb_differential.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Magnetic Doppler broadening differential spectrum for V12 cluster.",
+    "output_schema": "Two columns: 'momentum' (float, unit m₀c) and 'differential_intensity' (float)."
+  },
+  {
+    "id": "step_06",
+    "title": "Extract magnetization",
+    "role": "scored",
+    "action": "From the DFT calculation of step_02 (double-V12 cell), extract the total magnetization of the cell (in units of µB). Output this value as a single float in a text file.",
+    "output_file": "v12_magnetization.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Spontaneous magnetization of the double-V12 supercell.",
+    "output_schema": "A single floating-point number representing total magnetization in µB."
+  }
+]

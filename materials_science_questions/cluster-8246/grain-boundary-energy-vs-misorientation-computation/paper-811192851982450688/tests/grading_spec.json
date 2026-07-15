@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts peak positions, widths, and excess energy from submitted distributions and compares to paper-derived gold features using tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "local_rdf.txt": "reference_match",
+    "angular_distribution.txt": "reference_match",
+    "gb_energy_profile.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference peak positions, widths, and energy for RDF, angular distribution, GB energy profile",
+      "source_provenance": "Paper reported values: first crystalline peak at 0.433 a0 (2.35 Å), second at 0.707 a0 (3.84 Å); amorphous GB region peak excess energy ~0.20 eV/atom; GB width ~1.5-2 a0.",
+      "generation_method": "Extracted from the paper's text and figures.",
+      "why_not_fabricated": "These are the known physical properties of amorphous silicon grain boundaries as reported by the authors."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "local_rdf.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r (Angstrom)",
+            "G(r) (dimensionless)"
+          ],
+          "units": {
+            "r (Angstrom)": "Angstrom",
+            "G(r) (dimensionless)": "dimensionless"
+          }
+        },
+        "description": "Local radial distribution function for atoms within 0.5 a0 of a grain‑boundary plane."
+      },
+      {
+        "file": "angular_distribution.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cos(theta)",
+            "P(cos theta)"
+          ],
+          "units": {
+            "cos(theta)": "dimensionless",
+            "P(cos theta)": "normalized probability density"
+          }
+        },
+        "description": "Bond‑angle distribution of nearest‑neighbor vectors for atoms in the grain‑boundary region."
+      },
+      {
+        "file": "gb_energy_profile.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "distance (a0)",
+            "energy per atom (eV)"
+          ],
+          "units": {
+            "distance (a0)": "units of a0",
+            "energy per atom (eV)": "eV"
+          }
+        },
+        "description": "Plane‑by‑plane average energy per atom across a representative grain boundary, sampled in cylindrical slices."
+      }
+    ],
+    "notes": "The agent must synthesize a nanocrystalline Si sample of ~5.4 nm grain size using the Stillinger-Weber potential. The three scored artifacts are computed from the final zero-temperature structure. The checker will extract structural features (peak positions, widths, energy excess) and compare against hidden reference profiles derived from the paper's results."
+  },
+  "steps": [
+    {
+      "id": "local_rdf",
+      "output_file": "local_rdf.txt",
+      "kind": "rdf_feature_check",
+      "weight": 0.4,
+      "target": {
+        "first_peak_position": 2.35,
+        "first_peak_tol": 0.2,
+        "second_peak_position": 3.84,
+        "second_peak_tol": 0.25,
+        "min_ratio": 0.08,
+        "third_peak_ratio_max": 0.6
+      }
+    },
+    {
+      "id": "angular_distribution",
+      "output_file": "angular_distribution.txt",
+      "kind": "angular_feature_check",
+      "weight": 0.3,
+      "target": {
+        "cos_peak_position": -0.333,
+        "cos_peak_tol": 0.03,
+        "fwhm_min": 0.12,
+        "max_bin_height_max": 0.4
+      }
+    },
+    {
+      "id": "gb_energy_profile",
+      "output_file": "gb_energy_profile.txt",
+      "kind": "energy_profile_check",
+      "weight": 0.3,
+      "target": {
+        "peak_excess_energy": 0.2,
+        "excess_tol": 0.06,
+        "fwhm_distance_min": 1.0,
+        "fwhm_distance_max": 2.5
+      }
+    }
+  ]
+}

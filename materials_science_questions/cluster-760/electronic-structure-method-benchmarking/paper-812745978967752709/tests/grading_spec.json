@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes ΔE from the raw total energies (Hartree → kcal mol⁻¹) and compares it to the paper‑reported gold (8.3 kcal mol⁻¹) with a tolerance of ±2.0 kcal mol⁻¹. The binding enthalpy is compared directly to the paper‑reported gold (185.4 kcal mol⁻¹) with a tolerance of ±5.0 kcal mol⁻¹. Both quantities are fixed deterministic results of a specific computational method; no ‘better‑than’ direction applies, so a two‑sided window with linear decay is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_ordering.json": "exact_match",
+    "binding_enthalpy.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for ΔE and net binding enthalpy",
+      "source_provenance": "ΔE = 8.3 kcal mol⁻¹ at B3LYP/6‑31+G**//B3LYP/6‑31+G** (paper text: ‘…8.3 kcal/mol lower…’ and Table 1S). Net binding enthalpy = 185.4 kcal mol⁻¹ for the S₆ conformer at the same level (Table 6, footnote d).",
+      "generation_method": "direct transcription from the paper’s reported values for the exact computational level specified in the task.",
+      "why_not_fabricated": "Values are directly cited from the paper’s own tables and text; they are the original experimental/computational results that the reproduction must recover."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_ordering.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "S6_total_energy_hartree": "number",
+            "PRC_total_energy_hartree": "number",
+            "delta_E_kcal_per_mol": "number"
+          },
+          "units": {
+            "S6_total_energy_hartree": "hartree",
+            "PRC_total_energy_hartree": "hartree",
+            "delta_E_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Reports the total electronic energies of the S6 and PRC conformers and the energy difference (E(PRC)−E(S6)) in kcal·mol⁻¹, which should be positive when S6 is lower."
+      },
+      {
+        "file": "binding_enthalpy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "net_binding_enthalpy_kcal_per_mol": "number",
+            "level": "string"
+          },
+          "units": {
+            "net_binding_enthalpy_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Net binding enthalpy for Mg[H₂O]₆²⁺ + 12 H₂O → Mg[H₂O]₆²⁺·[H₂O]₁₂ (S6) at the B3LYP/6-31+G** level."
+      }
+    ],
+    "notes": "The checker compares the reported values to the paper's published results with appropriate tolerances. The supporting optimized geometries (XYZ files) produced during the process steps are not part of the scored output contract."
+  },
+  "steps": [
+    {
+      "id": "energy_ordering",
+      "output_file": "energy_ordering.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": 8.3,
+      "tolerance_abs": 2.0,
+      "metric": "delta_E_kcal_per_mol",
+      "description": "Recompute ΔE from S6_total_energy_hartree and PRC_total_energy_hartree using the conversion 627.509 kcal mol⁻¹ per Hartree, and compare to the paper’s gold (8.3 kcal mol⁻¹). Full credit if |ΔE − 8.3| ≤ 2.0 kcal mol⁻¹, linear decay to zero at 4.0 kcal mol⁻¹."
+    },
+    {
+      "id": "binding_enthalpy",
+      "output_file": "binding_enthalpy.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": 185.4,
+      "tolerance_abs": 5.0,
+      "metric": "net_binding_enthalpy_kcal_per_mol",
+      "description": "Compare the reported net binding enthalpy to the paper’s gold (185.4 kcal mol⁻¹). Full credit if |ΔH − 185.4| ≤ 5.0 kcal mol⁻¹, linear decay to zero at 10.0 kcal mol⁻¹. A small penalty (−0.05) is applied if the ‘level’ field is not exactly “B3LYP/6-31+G**”."
+    }
+  ]
+}

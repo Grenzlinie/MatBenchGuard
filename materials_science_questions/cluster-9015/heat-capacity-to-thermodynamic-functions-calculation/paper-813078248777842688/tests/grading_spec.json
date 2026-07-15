@@ -1,0 +1,345 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The paper reports final numeric results (coefficients, thermodynamic table, third-law enthalpies) that are deterministic from the provided input data; recomputing from raw artifacts in the verifier sandbox is not feasible (requires numeric integration and interpolation code). Instead we compare the agent’s reported artifacts against the paper’s gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for each scored artifact",
+      "source_provenance": "Paper tables and equations: Table 2 (EMF cell I), Table 3 (EMF cell II), Eq. 12/14, Table 4, text (cell I mean ΔfH298 -173 kJ/mol, cell II -180 kJ/mol).",
+      "generation_method": "Extracted directly from the published numerical values in the paper’s tables and caption.",
+      "why_not_fabricated": "All numbers are exact published values from the paper; no synthetic data was generated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_cellI_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "emf_intercept": "number (mV)",
+            "emf_slope": "number (mV/K)",
+            "drG_intercept": "number (kJ/mol)",
+            "drG_slope": "number (kJ/(K·mol))",
+            "dfG_intercept": "number (kJ/mol)",
+            "dfG_slope": "number (kJ/(K·mol))"
+          }
+        },
+        "description": "Regression and derived Gibbs energy coefficients for cell I."
+      },
+      {
+        "file": "step_02_cellII_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "emf_intercept": "number (mV)",
+            "emf_slope": "number (mV/K)",
+            "drG_intercept": "number (kJ/mol)",
+            "drG_slope": "number (kJ/(K·mol))",
+            "dfG_intercept": "number (kJ/mol)",
+            "dfG_slope": "number (kJ/(K·mol))"
+          }
+        },
+        "description": "Regression and derived Gibbs energy coefficients for cell II."
+      },
+      {
+        "file": "step_03_enthalpy_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "constant": "number (J/mol)",
+            "T_coefficient": "number (J/(K·mol))",
+            "T2_coefficient": "number (J/(K^2·mol))",
+            "T_inv_coefficient": "number (J·K/mol)"
+          }
+        },
+        "description": "Fitted polynomial coefficients for enthalpy increment."
+      },
+      {
+        "file": "step_04_thermo_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "H_T_H298 (kJ/mol)",
+            "Cp (J/K·mol)",
+            "S (J/K·mol)",
+            "GEF (J/K·mol)"
+          ],
+          "units": {
+            "T(K)": "K",
+            "H_T_H298 (kJ/mol)": "kJ/mol",
+            "Cp (J/K·mol)": "J/(K·mol)",
+            "S (J/K·mol)": "J/(K·mol)",
+            "GEF (J/K·mol)": "J/(K·mol)"
+          }
+        },
+        "description": "Thermodynamic functions derived from the enthalpy fit at 300-1600 K in 100 K steps."
+      },
+      {
+        "file": "step_05_third_law_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "cell_I_mean_delta_f_H298": "number (kJ/mol)",
+            "cell_II_mean_delta_f_H298": "number (kJ/mol)"
+          }
+        },
+        "description": "Third-law derived mean standard enthalpy of formation at 298 K from each cell."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_cellI_results.json",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "fields": [
+        {
+          "name": "emf_intercept",
+          "value": 654.717,
+          "tolerance": 0.5
+        },
+        {
+          "name": "emf_slope",
+          "value": 0.265,
+          "tolerance": 0.005
+        },
+        {
+          "name": "drG_intercept",
+          "value": -379.022,
+          "tolerance": 0.5
+        },
+        {
+          "name": "drG_slope",
+          "value": -0.153,
+          "tolerance": 0.005
+        },
+        {
+          "name": "dfG_intercept",
+          "value": -286.989,
+          "tolerance": 0.5
+        },
+        {
+          "name": "dfG_slope",
+          "value": 0.098,
+          "tolerance": 0.005
+        }
+      ]
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_cellII_results.json",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "fields": [
+        {
+          "name": "emf_intercept",
+          "value": 512.147,
+          "tolerance": 0.5
+        },
+        {
+          "name": "emf_slope",
+          "value": 0.162,
+          "tolerance": 0.005
+        },
+        {
+          "name": "drG_intercept",
+          "value": -296.487,
+          "tolerance": 0.5
+        },
+        {
+          "name": "drG_slope",
+          "value": -0.094,
+          "tolerance": 0.005
+        },
+        {
+          "name": "dfG_intercept",
+          "value": -287.756,
+          "tolerance": 0.5
+        },
+        {
+          "name": "dfG_slope",
+          "value": 0.102,
+          "tolerance": 0.005
+        }
+      ]
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_enthalpy_fit.json",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "fields": [
+        {
+          "name": "constant",
+          "value": -53166,
+          "tolerance": 500
+        },
+        {
+          "name": "T_coefficient",
+          "value": 124.236,
+          "tolerance": 0.5
+        },
+        {
+          "name": "T2_coefficient",
+          "value": 0.029713,
+          "tolerance": 0.001
+        },
+        {
+          "name": "T_inv_coefficient",
+          "value": 4020100,
+          "tolerance": 50000
+        }
+      ]
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_thermo_functions.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "table": [
+        {
+          "T(K)": 300,
+          "H_T_H298 (kJ/mol)": 0.18,
+          "Cp (J/K·mol)": 97.4,
+          "S (J/K·mol)": 113.82,
+          "GEF (J/K·mol)": 113.22
+        },
+        {
+          "T(K)": 400,
+          "H_T_H298 (kJ/mol)": 11.33,
+          "Cp (J/K·mol)": 122.88,
+          "S (J/K·mol)": 145.73,
+          "GEF (J/K·mol)": 117.4
+        },
+        {
+          "T(K)": 500,
+          "H_T_H298 (kJ/mol)": 24.42,
+          "Cp (J/K·mol)": 137.87,
+          "S (J/K·mol)": 174.87,
+          "GEF (J/K·mol)": 126.03
+        },
+        {
+          "T(K)": 600,
+          "H_T_H298 (kJ/mol)": 38.77,
+          "Cp (J/K·mol)": 148.73,
+          "S (J/K·mol)": 201.01,
+          "GEF (J/K·mol)": 136.39
+        },
+        {
+          "T(K)": 700,
+          "H_T_H298 (kJ/mol)": 54.1,
+          "Cp (J/K·mol)": 157.63,
+          "S (J/K·mol)": 224.62,
+          "GEF (J/K·mol)": 147.34
+        },
+        {
+          "T(K)": 800,
+          "H_T_H298 (kJ/mol)": 70.27,
+          "Cp (J/K·mol)": 165.5,
+          "S (J/K·mol)": 246.19,
+          "GEF (J/K·mol)": 158.36
+        },
+        {
+          "T(K)": 900,
+          "H_T_H298 (kJ/mol)": 87.18,
+          "Cp (J/K·mol)": 172.76,
+          "S (J/K·mol)": 266.11,
+          "GEF (J/K·mol)": 169.24
+        },
+        {
+          "T(K)": 1000,
+          "H_T_H298 (kJ/mol)": 104.8,
+          "Cp (J/K·mol)": 179.64,
+          "S (J/K·mol)": 284.67,
+          "GEF (J/K·mol)": 179.87
+        },
+        {
+          "T(K)": 1100,
+          "H_T_H298 (kJ/mol)": 123.1,
+          "Cp (J/K·mol)": 186.28,
+          "S (J/K·mol)": 302.11,
+          "GEF (J/K·mol)": 190.2
+        },
+        {
+          "T(K)": 1200,
+          "H_T_H298 (kJ/mol)": 142.06,
+          "Cp (J/K·mol)": 192.76,
+          "S (J/K·mol)": 318.59,
+          "GEF (J/K·mol)": 200.21
+        },
+        {
+          "T(K)": 1300,
+          "H_T_H298 (kJ/mol)": 161.65,
+          "Cp (J/K·mol)": 199.11,
+          "S (J/K·mol)": 334.27,
+          "GEF (J/K·mol)": 209.93
+        },
+        {
+          "T(K)": 1400,
+          "H_T_H298 (kJ/mol)": 181.87,
+          "Cp (J/K·mol)": 205.38,
+          "S (J/K·mol)": 349.26,
+          "GEF (J/K·mol)": 219.35
+        },
+        {
+          "T(K)": 1500,
+          "H_T_H298 (kJ/mol)": 202.72,
+          "Cp (J/K·mol)": 211.59,
+          "S (J/K·mol)": 363.64,
+          "GEF (J/K·mol)": 228.49
+        },
+        {
+          "T(K)": 1600,
+          "H_T_H298 (kJ/mol)": 224.19,
+          "Cp (J/K·mol)": 217.75,
+          "S (J/K·mol)": 377.49,
+          "GEF (J/K·mol)": 237.37
+        }
+      ],
+      "tolerances": {
+        "H_T_H298 (kJ/mol)": 0.5,
+        "Cp (J/K·mol)": 1.0,
+        "S (J/K·mol)": 1.0,
+        "GEF (J/K·mol)": 1.0
+      }
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_third_law_results.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "fields": [
+        {
+          "name": "cell_I_mean_delta_f_H298",
+          "value": -173.2,
+          "tolerance": 3.0
+        },
+        {
+          "name": "cell_II_mean_delta_f_H298",
+          "value": -180.2,
+          "tolerance": 3.0
+        }
+      ]
+    }
+  ]
+}

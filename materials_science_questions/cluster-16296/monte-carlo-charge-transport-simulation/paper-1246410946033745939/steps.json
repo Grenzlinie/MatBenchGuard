@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "KPM simulation of conductivity",
+    "role": "process",
+    "action": "Implement the real-space quantum transport simulation for graphene with electron-hole puddles. For each puddle height W = 50, 25, 10 meV (corresponding to epsilon_top = 1, 5.9, 20.6), run the kernel polynomial method (KPM) with Chebyshev expansion on a system of ~8 million atoms, averaging over 10 random puddle configurations and random-phase initial states. Compute the energy-dependent conductivity sigma(E).",
+    "output_file": "",
+    "evidence": "conductivity_raw.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Heavy KPM simulation producing raw conductivity data; not directly scored but required for downstream artifacts.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Derive mobility vs density",
+    "role": "scored",
+    "action": "From the energy-dependent conductivity sigma(E), compute the carrier density n(E) by integrating the density of states. Then compute the mobility as mu = (1/e) d sigma / d n for a range of carrier densities n in [10^11, 10^13] cm^-2 for each epsilon_top. Save the results to mobility_vs_density.csv.",
+    "output_file": "mobility_vs_density.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: density (cm^-2), epsilon_top (1, 5.9, 20.6), mobility (cm^2/Vs). One row per density point and dielectric environment.",
+    "output_schema": "columns: density (float, cm^-2), epsilon_top (float, dimensionless), mobility (float, cm^2/Vs)."
+  },
+  {
+    "id": "step_03",
+    "title": "Derive Seebeck coefficient vs Fermi energy",
+    "role": "scored",
+    "action": "From sigma(E), compute the Seebeck coefficient S(E) = -(1/(e T)) K1(E)/K0(E) at T=300 K, where K_j are integrals over energy using the derivative of the Fermi-Dirac distribution. Compute S for Fermi energies in the range [-0.3, 0.3] eV for each epsilon_top. Save to seebeck_vs_EF.csv.",
+    "output_file": "seebeck_vs_EF.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: Fermi_energy (eV), epsilon_top (1, 5.9, 20.6), Seebeck (muV/K). One row per Fermi energy and dielectric environment.",
+    "output_schema": "columns: Fermi_energy (float, eV), epsilon_top (float), Seebeck (float, muV/K)."
+  },
+  {
+    "id": "step_04",
+    "title": "Compile scaling summary",
+    "role": "scored",
+    "action": "Extract the mobility at n=10^12 cm^-2 for each W, and the maximum Seebeck value for each epsilon_top. Fit the mobility data to mu proportional to 1/W^gamma and record the exponent gamma. Write these values to scaling_summary.json.",
+    "output_file": "scaling_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys: W_values (list of float, meV), mobility_at_1e12 (list of float, cm^2/Vs), max_Seebeck (list of float, muV/K), scaling_exponent (float, optional).",
+    "output_schema": "object with keys: W_values [float], mobility_at_1e12 [float], max_Seebeck [float], scaling_exponent (float, nullable)."
+  }
+]

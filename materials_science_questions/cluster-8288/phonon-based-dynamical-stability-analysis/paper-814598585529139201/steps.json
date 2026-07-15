@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "PBE geometry relaxation",
+    "role": "process",
+    "action": "Construct the hexagonal monolayer Ni(OH)₂ unit cell, relax atomic positions and lattice vectors using the PBE functional, a vacuum layer >15 Å, and DFT-D3 van der Waals correction until forces and energy converge. Save the relaxed geometry.",
+    "output_file": "",
+    "evidence": "relaxed_structure.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Geometric optimization to obtain the reference structure for all subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Phonon stability verification",
+    "role": "process",
+    "action": "Build a 4×4×1 supercell from the relaxed structure, compute the phonon dispersion using Phonopy (Parlinski-Li-Kawazoe method) with forces from the same DFT settings. Verify that no imaginary phonon modes appear.",
+    "output_file": "",
+    "evidence": "phonon_dispersion.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Confirm dynamical stability of the monolayer; absence of imaginary frequencies is required.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Pristine magnetic energies and HSE06 band gap",
+    "role": "scored",
+    "action": "Using a 2×2×1 supercell of the relaxed PBE structure, compute total energies for AFM, FM, and NM spin configurations with PBE. Extract the average Ni atomic magnetic moment from the AFM calculation. Then, using the HSE06 hybrid functional on the same PBE geometry, compute the electronic band structure and determine the band gap at the Γ point and whether it is direct. Write a JSON file with the lattice constant, Ni moment, AFM-FM energy difference, HSE06 band gap, and direct-gap indicator.",
+    "output_file": "pristine_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored output containing the key pristine properties: lattice constant, magnetic moment, AFM-FM energy difference, HSE06 band gap, and direct/indirect character.",
+    "output_schema": "{\"lattice_constant_A\": float, \"Ni_magnetic_moment_muB\": float, \"AFM_FM_energy_diff_meV\": float, \"HSE06_band_gap_eV\": float, \"band_gap_direct\": true/false}"
+  },
+  {
+    "id": "step4",
+    "title": "Strain-dependent properties",
+    "role": "scored",
+    "action": "Apply biaxial strains of -10%, -4%, 0%, +4%, +10% to the relaxed unit cell. For each strain, compute PBE total energies for AFM and FM configurations to obtain the energy difference, and compute the HSE06 band gap. Write a JSON array with each strain's value, energy difference, and band gap.",
+    "output_file": "strain_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Load‑bearing scored output for the strain sweep. The energy differences and band gaps at specific strain values can only be correctly produced by running the full DFT pipeline; they are checked against paper‑reported numbers and trend constraints.",
+    "output_schema": "[{\"strain_percent\": float, \"AFM_FM_energy_diff_meV\": float, \"HSE06_band_gap_eV\": float}]"
+  }
+]

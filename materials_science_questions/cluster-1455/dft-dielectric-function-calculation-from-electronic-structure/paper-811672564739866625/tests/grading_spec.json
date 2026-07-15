@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gaps are recomputed from the agent's unshifted values by applying the paper's rigid shift and comparing to the reported fitting equation; dielectric functions use structural+consistency checks because the exact reference curves cannot be embedded.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.csv": "reference_match",
+    "epsilon2.csv": "structural_audit",
+    "epsilon1.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "band_gap_shifted_reference",
+      "source_provenance": "Paper Eq. (1): Eg(x) = 1.8367 + 0.2732*exp(-6.2*x) for the shifted theoretical band gaps, plus the stated rigid shift of +0.2 eV.",
+      "generation_method": "Extracted from the paper's description of the fitting equation and the shift. The formula is evaluated in the checker code for x = 0.0,0.1,0.3,0.5,0.9,1.0.",
+      "why_not_fabricated": "The equation and shift are explicitly reported in the paper (see Section 'Results and discussions', Equation 1 and the sentence describing the shift)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "band_gap_unshifted"
+          ],
+          "units": {
+            "band_gap_unshifted": "eV"
+          }
+        },
+        "description": "Computed unshifted band-gap energies for six alloy compositions."
+      },
+      {
+        "file": "epsilon2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon2"
+          ],
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Imaginary part of the dielectric function for SbI3."
+      },
+      {
+        "file": "epsilon1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon1"
+          ],
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Real part of the dielectric function for SbI3."
+      }
+    ],
+    "notes": "The band gap checker will apply a rigid shift and compare to the reference composition-dependent trend. The dielectric function checker will compare peak positions and overall spectral shape to reference curves. Tolerances accommodate toolchain variations."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.csv",
+      "weight": 0.6,
+      "kind": "recompute_metric"
+    },
+    {
+      "id": "epsilon2",
+      "output_file": "epsilon2.csv",
+      "weight": 0.25,
+      "kind": "structural_audit"
+    },
+    {
+      "id": "epsilon1",
+      "output_file": "epsilon1.csv",
+      "weight": 0.15,
+      "kind": "structural_audit"
+    }
+  ]
+}

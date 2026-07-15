@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Paper reports layer-resolved LDOS features and optimized geometry, which are checked via structural conditions (metallic S-layer, insulating C-layer, empty acceptor states, bridge site, tilt angle). Recomputing from raw wavefunctions is infeasible in the verifier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "geometry_summary.json": "structural_audit",
+    "ldos_CH3S.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometry_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "adsorption_site": "string",
+            "sc_tilt_angle_deg": "number",
+            "total_energy_eV": "number"
+          },
+          "description": "Final adsorption site, S–C tilt angle relative to surface normal, and total energy"
+        },
+        "description": "Geometric properties of the relaxed adsorption structure."
+      },
+      {
+        "file": "ldos_CH3S.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "LDOS_Pt",
+            "LDOS_S",
+            "LDOS_C"
+          ],
+          "units": {
+            "energy": "eV",
+            "LDOS_Pt": "states/eV",
+            "LDOS_S": "states/eV",
+            "LDOS_C": "states/eV"
+          }
+        },
+        "description": "Layer-resolved density of states around the Fermi level."
+      }
+    ],
+    "notes": ""
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for LDOS and geometry checks.",
+      "source_provenance": "Derived from the paper's qualitative description: bridge site, S–C tilt ~50°, metallic S layer, insulating C layer, empty acceptor states above Ef.",
+      "generation_method": "Set tolerances consistent with the expected DFT output (e.g., tilt within 45-55°, LDOS_S at Ef > 0.02 states/eV, LDOS_C at Ef < 0.02, max LDOS_S in (0,0.5] eV > 0.02).",
+      "why_not_fabricated": "These thresholds correspond to the physical characteristics described in the paper and are not arbitrary; they are necessary to distinguish an authentic layer-resolved DOS from a trivial artifact."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_geometry",
+      "output_file": "geometry_summary.json",
+      "weight": 0.3,
+      "checks": [
+        {
+          "id": "adsorption_site",
+          "condition": "equals",
+          "value": "bridge",
+          "weight": 0.5
+        },
+        {
+          "id": "sc_tilt_angle",
+          "condition": "range",
+          "min": 45,
+          "max": 55,
+          "weight": 0.3
+        },
+        {
+          "id": "total_energy",
+          "condition": "negative",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "id": "step_ldos",
+      "output_file": "ldos_CH3S.csv",
+      "weight": 0.7,
+      "checks": [
+        {
+          "id": "ldos_s_ef",
+          "description": "LDOS_S at energy=0 > 0.02",
+          "weight": 0.3
+        },
+        {
+          "id": "ldos_c_ef",
+          "description": "LDOS_C at energy=0 < 0.02",
+          "weight": 0.3
+        },
+        {
+          "id": "ldos_s_empty",
+          "description": "max LDOS_S in (0,0.5] > 0.02",
+          "weight": 0.4
+        }
+      ]
+    }
+  ]
+}

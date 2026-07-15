@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energies recomputed from submitted total energies using endmember energies; Bader charges checked with structural monotonicity against paper-derived trend.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Formation energy gold (Table 1) and Bader charge gold (Fig. 3c trend approximated)",
+      "source_provenance": "Paper Table 1 and Fig. 3c",
+      "generation_method": "Extracted from paper; Bader values approximated from figure trend.",
+      "why_not_fabricated": "Values match the published paper results and are used as reference for tolerance checks; not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "total_energy_eV",
+            "formation_energy_kJ_mol"
+          ],
+          "units": {
+            "total_energy_eV": "eV",
+            "formation_energy_kJ_mol": "kJ mol⁻¹"
+          }
+        },
+        "description": "Formation energies of Na2-2xSrxLi2Ti6O14 compositions. The checker verifies structural trends and internal consistency."
+      },
+      {
+        "file": "bader_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "avg_ti_bader_charge_e"
+          ],
+          "units": {
+            "avg_ti_bader_charge_e": "e"
+          }
+        },
+        "description": "Average Bader charge on Ti atoms for each composition. The checker audits structural properties."
+      }
+    ],
+    "notes": "The agent may use any open-source DFT code as an alternative to the commercial VASP. The formation energy step must report total energies from which formation energies can be recomputed. The Bader charge scoring relies on structural properties without stating the expected trend."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "formation_energies.csv",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "expected_compositions": [
+        "Na2Li2Ti6O14",
+        "Na1.5Sr0.25Li2Ti6O14",
+        "NaSr0.5Li2Ti6O14",
+        "Na0.5Sr0.75Li2Ti6O14",
+        "SrLi2Ti6O14"
+      ],
+      "tolerance_kJmol": 30.0,
+      "consistency_tol_kJmol": 0.1,
+      "description": "Recompute formation energy from total_energy_eV using endmember energies; check consistency, negative sign for mixed phases, and relative ordering where x=0.5 is most stable."
+    },
+    {
+      "id": "bader_charges",
+      "output_file": "bader_charges.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "expected_compositions": [
+        "Na2Li2Ti6O14",
+        "Na1.5Sr0.25Li2Ti6O14",
+        "NaSr0.5Li2Ti6O14",
+        "Na0.5Sr0.75Li2Ti6O14",
+        "SrLi2Ti6O14"
+      ],
+      "charge_tolerance": 0.15,
+      "gold_charges": {
+        "Na2Li2Ti6O14": 2.0,
+        "Na1.5Sr0.25Li2Ti6O14": 2.03,
+        "NaSr0.5Li2Ti6O14": 2.06,
+        "Na0.5Sr0.75Li2Ti6O14": 2.09,
+        "SrLi2Ti6O14": 2.12
+      },
+      "description": "Check strict monotonic increase of avg_ti_bader_charge_e with Sr content."
+    }
+  ]
+}

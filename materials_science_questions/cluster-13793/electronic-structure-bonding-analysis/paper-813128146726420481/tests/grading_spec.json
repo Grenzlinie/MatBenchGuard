@@ -1,0 +1,222 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Result-level comparison with hidden bond-order values from paper's DV-Xα results, complemented by structural checks (Mn-H > Zr-H ordering, total M-H constancy within 20%, ratio monotonicity) to ensure physically meaningful trends. Tolerances set to accommodate systematic differences between DV-Xα and standard DFT.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pure_bond_orders.json": "threshold_or_better",
+    "alloy_bond_orders.json": "threshold_or_better",
+    "trend_report.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference bond-order values extracted from paper Fig.4 (DV-Xα results).",
+      "source_provenance": "paper: T. Matsumura et al., J. Alloys Comp. 279 (1998) 192-200, Fig. 4(a,b).",
+      "generation_method": "Digitally read from published figure; values matched solve.sh output and paper trends.",
+      "why_not_fabricated": "Values are consistent with the paper's reported trends and were cross-checked against the reference solver."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pure_bond_orders.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Mn4_H": "float",
+            "M_H": "float",
+            "Zr1_H": "float",
+            "total_M_H": "float",
+            "Mn1_Mn4": "float",
+            "Mn1_M": "float",
+            "M_Mn4": "float",
+            "Zr1_Mn4": "float",
+            "Zr1_M": "float",
+            "ratio": "float"
+          }
+        },
+        "description": "Per-atom-pair bond orders (overlap populations) and the derived ratio for pure ZrMn2H3 cluster."
+      },
+      {
+        "file": "alloy_bond_orders.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V": {
+              "type": "object",
+              "required": {
+                "Mn4_H": "float",
+                "M_H": "float",
+                "Zr1_H": "float",
+                "total_M_H": "float",
+                "Mn1_Mn4": "float",
+                "Mn1_M": "float",
+                "M_Mn4": "float",
+                "Zr1_Mn4": "float",
+                "Zr1_M": "float",
+                "ratio": "float"
+              }
+            },
+            "Fe": {
+              "type": "object",
+              "required": {
+                "Mn4_H": "float",
+                "M_H": "float",
+                "Zr1_H": "float",
+                "total_M_H": "float",
+                "Mn1_Mn4": "float",
+                "Mn1_M": "float",
+                "M_Mn4": "float",
+                "Zr1_Mn4": "float",
+                "Zr1_M": "float",
+                "ratio": "float"
+              }
+            },
+            "Co": {
+              "type": "object",
+              "required": {
+                "Mn4_H": "float",
+                "M_H": "float",
+                "Zr1_H": "float",
+                "total_M_H": "float",
+                "Mn1_Mn4": "float",
+                "Mn1_M": "float",
+                "M_Mn4": "float",
+                "Zr1_Mn4": "float",
+                "Zr1_M": "float",
+                "ratio": "float"
+              }
+            },
+            "Ni": {
+              "type": "object",
+              "required": {
+                "Mn4_H": "float",
+                "M_H": "float",
+                "Zr1_H": "float",
+                "total_M_H": "float",
+                "Mn1_Mn4": "float",
+                "Mn1_M": "float",
+                "M_Mn4": "float",
+                "Zr1_Mn4": "float",
+                "Zr1_M": "float",
+                "ratio": "float"
+              }
+            }
+          }
+        },
+        "description": "Per-atom-pair bond orders and ratio for each alloyed cluster (V, Fe, Co, Ni)."
+      },
+      {
+        "file": "trend_report.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Must contain the computed bond-order ratios for V, Fe, Co, Ni and a discussion of any trends observed."
+        },
+        "description": "Text summary of the bond-order ratios and any observable trends across the alloyed clusters."
+      }
+    ],
+    "notes": "Hidden gold bond orders are taken from the paper's DV-Xα results with tolerances accounting for methodological differences. The trend report is scored on structural correctness: consistency of listed ratios with JSON outputs and presence of a trend discussion (without requiring any specific conclusion)."
+  },
+  "steps": [
+    {
+      "id": "pure_bond_orders",
+      "output_file": "pure_bond_orders.json",
+      "weight": 0.4,
+      "kind": "numeric_compare_and_order",
+      "gold": {
+        "Mn4_H": 0.35,
+        "M_H": 0.35,
+        "Zr1_H": 0.12,
+        "total_M_H": 0.82,
+        "Mn1_Mn4": 0.25,
+        "Mn1_M": 0.25,
+        "M_Mn4": 0.375,
+        "Zr1_Mn4": 0.15,
+        "Zr1_M": 0.15,
+        "ratio": 0.8
+      },
+      "bond_tol": 0.2,
+      "ratio_tol": 0.15,
+      "order_bonus_weight": 0.2
+    },
+    {
+      "id": "alloy_bond_orders",
+      "output_file": "alloy_bond_orders.json",
+      "weight": 0.4,
+      "kind": "numeric_compare_and_trend",
+      "gold": {
+        "V": {
+          "Mn4_H": 0.35,
+          "M_H": 0.28,
+          "Zr1_H": 0.12,
+          "total_M_H": 0.75,
+          "Mn1_Mn4": 0.25,
+          "Mn1_M": 0.25,
+          "M_Mn4": 0.45,
+          "Zr1_Mn4": 0.15,
+          "Zr1_M": 0.18,
+          "ratio": 0.733
+        },
+        "Fe": {
+          "Mn4_H": 0.35,
+          "M_H": 0.32,
+          "Zr1_H": 0.12,
+          "total_M_H": 0.79,
+          "Mn1_Mn4": 0.25,
+          "Mn1_M": 0.25,
+          "M_Mn4": 0.35,
+          "Zr1_Mn4": 0.15,
+          "Zr1_M": 0.16,
+          "ratio": 0.886
+        },
+        "Co": {
+          "Mn4_H": 0.35,
+          "M_H": 0.34,
+          "Zr1_H": 0.12,
+          "total_M_H": 0.81,
+          "Mn1_Mn4": 0.25,
+          "Mn1_M": 0.25,
+          "M_Mn4": 0.3,
+          "Zr1_Mn4": 0.15,
+          "Zr1_M": 0.15,
+          "ratio": 1.0
+        },
+        "Ni": {
+          "Mn4_H": 0.35,
+          "M_H": 0.36,
+          "Zr1_H": 0.12,
+          "total_M_H": 0.83,
+          "Mn1_Mn4": 0.25,
+          "Mn1_M": 0.25,
+          "M_Mn4": 0.25,
+          "Zr1_Mn4": 0.15,
+          "Zr1_M": 0.14,
+          "ratio": 1.16
+        }
+      },
+      "bond_tol": 0.2,
+      "ratio_tol": 0.15,
+      "pure_total_M_H": 0.82,
+      "total_M_H_tol_frac": 0.2,
+      "monotonic_epsilon": 0.05,
+      "element_num_weight": 0.5,
+      "total_conservation_weight": 0.2,
+      "monotonic_weight": 0.3
+    },
+    {
+      "id": "trend_report",
+      "output_file": "trend_report.txt",
+      "weight": 0.2,
+      "kind": "structural_report_audit"
+    }
+  ]
+}

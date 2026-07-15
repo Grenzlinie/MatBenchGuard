@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute IAM/IEM from raw coordinates inside checker sandbox because the Mn2(CO)10 crystal structure (CSD MNCO10) is not available without network access; instead we compare the agent's reported values to the paper's reference results within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "iam_breakdown.csv": "reference_match",
+    "iem_total.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "iam_breakdown.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "OO",
+            "OC",
+            "CC_rep",
+            "CC_attr",
+            "MO"
+          ],
+          "units": {
+            "OO": "kcal/mol",
+            "OC": "kcal/mol",
+            "CC_rep": "kcal/mol",
+            "CC_attr": "kcal/mol",
+            "MO": "kcal/mol"
+          }
+        },
+        "description": "Partitioned intramolecular non-bonded energies for Mn₂(CO)₁₀ and Fe₃(CO)₁₂ room-temperature structures."
+      },
+      {
+        "file": "iem_total.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster",
+            "IEM_total"
+          ],
+          "units": {
+            "IEM_total": "kcal/mol"
+          }
+        },
+        "description": "Total intermolecular packing energy for Mn₂(CO)₁₀ and Fe₃(CO)₁₂ room-temperature structures."
+      }
+    ],
+    "notes": "The checker compares submitted values to hidden reference values (paper-reported energies) with tolerances. The agent must reimplement the Buckingham potential and crystal symmetry handling; the OPEC program is not required. Additional clusters (Fe₂(CO)₉, Co₂(CO)₈, Ru₃(CO)₁₂, Ir₆(CO)₁₆) are excluded because their IAM breakdowns are not directly comparable (missing repulsive C–C components) or require more complex structural handling (bridging ligands, isomer separation) that would add disproportionate complexity without changing the core reproduction method; Mn₂(CO)₁₀ and Fe₃(CO)₁₂ are representative."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference intramolecular (IAM) and intermolecular (IEM) energies for Mn2(CO)10 room temperature from Table 1 of the paper.",
+      "source_provenance": "Paper Table 1: Mn2(CO)10 (r.t.) row. O…O = -1.64, O…C = -5.08, C…C(rep.) = 4.37, C…C(attr.) = -0.66, M…O = -1.49, IEM total = -29.2 kcal/mol. These are the directly reported quantities.",
+      "generation_method": "Extracted directly from the published table.",
+      "why_not_fabricated": "The values are the paper's own numerical results; they serve as the authoritative gold for the reproduction task."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_02_compute_iam",
+      "output_file": "iam_breakdown.csv",
+      "description": "Check IAM components against paper reference with tolerance ±0.5 kcal/mol, linear partial credit.",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "columns": {
+        "OO": {
+          "target": -1.64,
+          "tolerance": 0.5
+        },
+        "OC": {
+          "target": -5.08,
+          "tolerance": 0.5
+        },
+        "CC_rep": {
+          "target": 4.37,
+          "tolerance": 0.5
+        },
+        "CC_attr": {
+          "target": -0.66,
+          "tolerance": 0.5
+        },
+        "MO": {
+          "target": -1.49,
+          "tolerance": 0.5
+        }
+      }
+    },
+    {
+      "id": "step_03_compute_iem",
+      "output_file": "iem_total.csv",
+      "description": "Check IEM total against paper reference with tolerance ±0.5 kcal/mol, linear partial credit.",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "columns": {
+        "IEM_total": {
+          "target": -29.2,
+          "tolerance": 0.5
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_electrolyte_flux",
+    "title": "Electrolyte flux simulation",
+    "role": "process",
+    "action": "Solve the Laplace equation for the electric potential in the electrolyte with linearised Butler-Volmer boundary conditions over a range of normalized debonded patch radii ā (0.1, 1, 3, 10, 100). Use electrolyte conductivity κ and interfacial resistance Z from LLZO parameters. Save the interfacial flux distribution j/j∞ as a function of normalized radial position for each ā to a reusable file.",
+    "output_file": "",
+    "evidence": "flux_distribution.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the flux profiles needed for both the flux concentration factor and the creep boundary condition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_kj",
+    "title": "Flux concentration factor extraction",
+    "role": "scored",
+    "action": "From the flux distributions produced in step 1, compute the flux concentration factor kJ = max(j/j∞) at the edge of the debonded patch for each ā. Write results to flux_concentration_factor.csv.",
+    "output_file": "flux_concentration_factor.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Extracts the peak flux concentration factor for each normalized patch radius.",
+    "output_schema": "Columns: normalized_patch_radius (float), kJ (float). Rows for each ā ∈ [0.1, 1, 3, 10, 100]."
+  },
+  {
+    "id": "step_03_center_velocity",
+    "title": "Creep deformation and center velocity computation",
+    "role": "scored",
+    "action": "Using the interfacial flux distribution from step 1 as the prescribed normal velocity on the bonded part of the Li electrode surface, simulate the power-law creep deformation of the Li anode (incompressible, power-law exponent m, reference stress σ0=1 MPa, reference strain rate ε̇0=0.01 s⁻¹) for m=1,5,20 and normalized patch radii ā∈[0.1,1,3,10,100]. Perform simulations under both frictionless and sticking contact conditions. For each combination, extract the normalized centre velocity v0/v∞ at the centre of the debonded patch. Save all combinations to center_velocity.csv.",
+    "output_file": "center_velocity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Numerically evaluates the electrode's tendency to separate from the electrolyte (void growth) by computing the centre velocity.",
+    "output_schema": "Columns: normalized_patch_radius (float), creep_exponent_m (int), contact_type (str: 'frictionless' or 'sticking'), v0_div_v_inf (float). Provide all combinations of parameters as listed."
+  },
+  {
+    "id": "step_04_threshold",
+    "title": "Threshold patch diameter for void growth",
+    "role": "scored",
+    "action": "From the center_velocity.csv data, determine the smallest normalized patch radius ā for which v0/v∞ becomes negative for m=5 under each contact condition (if separate thresholds). Convert to physical diameter using scaling factor κZ = 20 μm (diameter = 2·ā·κZ). Report the threshold diameter for m=5. If v0/v∞ remains positive for all ā ≤ 100, report a value >2000 μm to indicate no void growth observed. Write results to threshold_patch_diameter.csv.",
+    "output_file": "threshold_patch_diameter.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Determines the physical size of a debonded patch required to initiate void growth, confirming that micron-scale defects cannot grow voids.",
+    "output_schema": "Columns: creep_exponent_m (int), threshold_diameter_um (float). For m=5."
+  }
+]

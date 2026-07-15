@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes relative energies and deprotonation energy from agent's raw total energies and compares to paper-reported values with tolerances; T1 is feasible because raw total energies are provided.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "total_energies.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference relative energies and deprotonation energy from the paper's Table 3 and text.",
+      "source_provenance": "Paper Table 3 and text (Section 'Results and discussion'): ΔE(B30/48)=0.77 eV, ΔE(B53/30)=0.95 eV, ΔE(B*)=1.29 eV; E_a=20.6 eV.",
+      "generation_method": "Extracted directly from the published values.",
+      "why_not_fabricated": "These are the actual reported numbers; the checker compares the agent's recomputed values to them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A43_43": "float (eV)",
+            "B30_48": "float (eV)",
+            "B53_30": "float (eV)",
+            "B_star": "float (eV)",
+            "B30_48_deprot": "float (eV)"
+          }
+        },
+        "description": "Raw total energies that the checker uses to recompute relative energies and deprotonation energy against hidden gold."
+      }
+    ],
+    "notes": "All energies must be reported in eV. The checker will compute ΔE(B30/48), ΔE(B53/30), ΔE(B*) relative to A43/43, and the deprotonation energy E_a = E(B30_48_deprot) - E(B30_48). Ordering and tolerances are hidden."
+  },
+  "steps": [
+    {
+      "id": "total_energies",
+      "output_file": "total_energies.json",
+      "weight": 1.0,
+      "kind": "custom",
+      "description": "Recompute relative energies and deprotonation energy from raw total energies; compare to paper gold within tolerances and check ordering.",
+      "gold": {
+        "dE_B30_48": 0.77,
+        "dE_B53_30": 0.95,
+        "dE_B_star": 1.29,
+        "E_a": 20.6,
+        "tol_relative": 0.15,
+        "tol_E_a": 1.0,
+        "require_ordering": true
+      },
+      "subweights": {
+        "dE_B30_48": 0.2,
+        "dE_B53_30": 0.2,
+        "dE_B_star": 0.2,
+        "E_a": 0.3,
+        "ordering": 0.1
+      }
+    }
+  ]
+}

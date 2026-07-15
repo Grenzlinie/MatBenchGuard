@@ -1,0 +1,161 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing DFT is infeasible in the verifier sandbox; scoring uses result-level comparison against paper-reported PBE+U+D2 values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pristine_results.json": "exact_match",
+    "mn_sub_results.json": "exact_match",
+    "mn_int_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for PBE+U+D2 calculated lattice parameters, volume, band gap of pristine V2O5, and volume change and magnetization for Mn-doped V2O5 (substitutional and interstitial).",
+      "source_provenance": "Paper Table 2 (ΔV and M for Mn); Section 3.1 (lattice parameters and band gap at U=6 eV with D2). The solve.sh hardcoded values match the paper (pristine volume 372.7 Å³, band gap 2.3 eV, c=9.014 Å, etc.)",
+      "generation_method": "Extracted from the paper and hardcoded in grading_spec.json.",
+      "why_not_fabricated": "Values are directly from the paper's reported PBE+U+D2 results; they are not random or fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pristine_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a": "float (angstrom)",
+            "b": "float (angstrom)",
+            "c": "float (angstrom)",
+            "volume": "float (angstrom^3)",
+            "band_gap": "float (eV)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "a": "angstrom",
+            "b": "angstrom",
+            "c": "angstrom",
+            "volume": "angstrom^3",
+            "band_gap": "eV"
+          }
+        },
+        "description": "Pristine V2O5 relaxed structure and band gap from PBE+U+D2 calculation."
+      },
+      {
+        "file": "mn_sub_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_volume_pct": "float (%)",
+            "magnetization_muB": "float (muB)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "delta_volume_pct": "%",
+            "magnetization_muB": "muB"
+          }
+        },
+        "description": "Volume change and magnetization for substitutional Mn-doped V2O5."
+      },
+      {
+        "file": "mn_int_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_volume_pct": "float (%)",
+            "magnetization_muB": "float (muB)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "delta_volume_pct": "%",
+            "magnetization_muB": "muB"
+          }
+        },
+        "description": "Volume change and magnetization for interstitial Mn-doped V2O5."
+      }
+    ],
+    "notes": "Scoring compares the agent's reported values for lattice parameters, band gap, volume changes, and magnetizations against the paper's reported or experimental reference values within pre-defined tolerances. The target policy is exact_match with tolerance because these physical quantities are deterministic for a given method and the goal is to match the published results."
+  },
+  "steps": [
+    {
+      "id": "step_pristine",
+      "output_file": "pristine_results.json",
+      "kind": "field_comparison",
+      "weight": 0.4,
+      "fields": {
+        "a": {
+          "type": "float",
+          "gold": 11.55,
+          "tol_abs": 0.15
+        },
+        "b": {
+          "type": "float",
+          "gold": 3.58,
+          "tol_abs": 0.15
+        },
+        "c": {
+          "type": "float",
+          "gold": 9.014,
+          "tol_abs": 0.15
+        },
+        "volume": {
+          "type": "float",
+          "gold": 372.7,
+          "tol_abs": 8.0
+        },
+        "band_gap": {
+          "type": "float",
+          "gold": 2.3,
+          "tol_abs": 0.3
+        }
+      }
+    },
+    {
+      "id": "step_mn_sub",
+      "output_file": "mn_sub_results.json",
+      "kind": "field_comparison",
+      "weight": 0.3,
+      "fields": {
+        "delta_volume_pct": {
+          "type": "float",
+          "gold": -0.6,
+          "tol_abs": 2.0
+        },
+        "magnetization_muB": {
+          "type": "float",
+          "gold": 2.0,
+          "tol_abs": 0.5
+        }
+      }
+    },
+    {
+      "id": "step_mn_int",
+      "output_file": "mn_int_results.json",
+      "kind": "field_comparison",
+      "weight": 0.3,
+      "fields": {
+        "delta_volume_pct": {
+          "type": "float",
+          "gold": 3.48,
+          "tol_abs": 2.0
+        },
+        "magnetization_muB": {
+          "type": "float",
+          "gold": 5.0,
+          "tol_abs": 0.5
+        }
+      }
+    }
+  ]
+}

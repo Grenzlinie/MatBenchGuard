@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Peak positions recomputed from submitted ε″(ν) and compared with paper-reported values; cross‑check consistency of fitted peak parameters with spectra.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper‑reported peak frequencies for ε″ at 440 K and 470 K",
+      "source_provenance": "Figure 2(a) of the paper: ν₁′≈12 cm⁻¹, ν₂′≈68 cm⁻¹ at 440 K; ν₁′≈16 cm⁻¹, ν₂′≈65 cm⁻¹ at 470 K. Also described in text.",
+      "generation_method": "Read from the paper’s Figure 2(a) and the surrounding discussion.",
+      "why_not_fabricated": "These are the paper’s own reported approximate peak positions used for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "epsilon_spectra.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "frequency",
+            "epsilon_real",
+            "epsilon_imag"
+          ],
+          "units": {
+            "temperature": "K",
+            "frequency": "cm⁻¹",
+            "epsilon_real": "dimensionless",
+            "epsilon_imag": "dimensionless"
+          }
+        },
+        "description": "Complex dielectric function spectra at 440 K and 470 K. The checker will recompute the peak positions of ε''(ν) and compare them to the paper's reported values."
+      },
+      {
+        "file": "mode_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "nu1",
+            "gamma1",
+            "S1",
+            "nu2",
+            "gamma2",
+            "S2",
+            "nu1_prime",
+            "nu2_prime"
+          ],
+          "units": {
+            "temperature": "K",
+            "nu1": "cm⁻¹",
+            "gamma1": "cm⁻¹",
+            "S1": "dimensionless",
+            "nu2": "cm⁻¹",
+            "gamma2": "cm⁻¹",
+            "S2": "dimensionless",
+            "nu1_prime": "cm⁻¹",
+            "nu2_prime": "cm⁻¹"
+          }
+        },
+        "description": "Fitted two‑oscillator parameters and peak frequencies. The checker will compare the submitted ν₁' and ν₂' against the paper's reference values."
+      }
+    ],
+    "notes": "The effective Hamiltonian parameters are from DOI 10.1103/PhysRevB.73.144105. The MD simulation is computationally heavy; the agent should run the full production using adequate compute resources."
+  },
+  "steps": [
+    {
+      "id": "check_epsilon_spectra",
+      "output_file": "epsilon_spectra.csv",
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "weight": 0.7,
+      "targets": {
+        "peak_positions_440": [
+          12.0,
+          68.0
+        ],
+        "peak_positions_470": [
+          16.0,
+          65.0
+        ],
+        "tol_rel": 0.35,
+        "min_peaks": 2,
+        "low_freq_cut": 20.0,
+        "high_freq_cut": 100.0
+      }
+    },
+    {
+      "id": "check_mode_params",
+      "output_file": "mode_parameters.csv",
+      "kind": "consistency",
+      "target_policy": "metric_recompute",
+      "weight": 0.3,
+      "tolerance_rel_peak_match": 0.15
+    }
+  ]
+}

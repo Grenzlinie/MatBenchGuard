@@ -1,0 +1,172 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker refits universal EOS from agent's raw isotherm data points and compares resulting parameters to paper gold; also computes pressure consistency at hidden reduced volumes using refit parameters. T1 is feasible because the raw P-X pairs are submitted by the agent and can be refit by lightweight curve_fit.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reduced_isotherm_data.csv": "metric_recompute",
+    "reduced_isotherm_parameters.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold EOS parameters (B0, eta, beta, xi, delta) for Cu,Ta,Mo,Pt,Au from the paper's Table II, used for parameter comparison and to compute gold pressures at hidden volumes.",
+      "source_provenance": "Paper Table II (J. Appl. Phys. 92, 6616 (2002))",
+      "generation_method": "Transcribed directly from the published paper's table.",
+      "why_not_fabricated": "Extracted from a verifiable, published reference; not synthetic or guessed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reduced_isotherm_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "element",
+            "reduced_volume_X",
+            "pressure_GPa"
+          ],
+          "units": {
+            "pressure_GPa": "GPa"
+          }
+        },
+        "description": "Shock‑reduced 300 K isotherm data points for Cu, Ta, Mo, Pt, Au. The checker refits the universal EOS from these points and computes pressure consistency at hidden reduced volumes."
+      },
+      {
+        "file": "reduced_isotherm_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "element",
+            "B0",
+            "eta",
+            "beta",
+            "xi",
+            "delta"
+          ],
+          "units": {
+            "B0": "GPa"
+          }
+        },
+        "description": "Fitted universal EOS parameters (B₀, η, β, ξ, δ) for each metal. The checker compares these to the hidden gold values with predefined tolerances."
+      }
+    ],
+    "notes": "The agent must perform all process steps (LAPW and MFP) to produce the full pipeline output. The D-u coefficients are provided in the instruction as a table. No empirical Grüneisen parameters or ad hoc heat-capacity assumptions are needed."
+  },
+  "steps": [
+    {
+      "id": "reduced_isotherm_data_score",
+      "output_file": "reduced_isotherm_data.csv",
+      "weight": 0.7,
+      "kind": "recompute_metric",
+      "description": "Refit universal EOS from agent's raw data points; compare resulting parameters to paper gold and compute pressure consistency at hidden reduced volumes (0.75, 0.85, 0.95).",
+      "gold_eos_params": {
+        "Cu": {
+          "B0": 134.27,
+          "eta": 6.0264,
+          "beta": 3.7245,
+          "xi": -4.9816,
+          "delta": 14.72
+        },
+        "Ta": {
+          "B0": 195.24,
+          "eta": 3.7159,
+          "beta": 8.0846,
+          "xi": -64.854,
+          "delta": 206.87
+        },
+        "Mo": {
+          "B0": 264.87,
+          "eta": 4.7127,
+          "beta": -8.1795,
+          "xi": 83.532,
+          "delta": -189.67
+        },
+        "Pt": {
+          "B0": 280.03,
+          "eta": 6.3289,
+          "beta": -1.3811,
+          "xi": 61.492,
+          "delta": -156.48
+        },
+        "Au": {
+          "B0": 177.26,
+          "eta": 6.38,
+          "beta": 1.9334,
+          "xi": -1.0292,
+          "delta": 33.941
+        }
+      },
+      "param_tolerances": {
+        "B0": 0.1,
+        "eta": 0.15,
+        "beta": 0.2,
+        "xi": 0.2,
+        "delta": 0.2
+      },
+      "pressure_consistency_volumes": [
+        0.75,
+        0.85,
+        0.95
+      ],
+      "pressure_consistency_rel_tol": 0.1
+    },
+    {
+      "id": "reduced_isotherm_parameters_score",
+      "output_file": "reduced_isotherm_parameters.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "description": "Compare agent's fitted EOS parameters directly to the hidden paper gold values.",
+      "gold_eos_params": {
+        "Cu": {
+          "B0": 134.27,
+          "eta": 6.0264,
+          "beta": 3.7245,
+          "xi": -4.9816,
+          "delta": 14.72
+        },
+        "Ta": {
+          "B0": 195.24,
+          "eta": 3.7159,
+          "beta": 8.0846,
+          "xi": -64.854,
+          "delta": 206.87
+        },
+        "Mo": {
+          "B0": 264.87,
+          "eta": 4.7127,
+          "beta": -8.1795,
+          "xi": 83.532,
+          "delta": -189.67
+        },
+        "Pt": {
+          "B0": 280.03,
+          "eta": 6.3289,
+          "beta": -1.3811,
+          "xi": 61.492,
+          "delta": -156.48
+        },
+        "Au": {
+          "B0": 177.26,
+          "eta": 6.38,
+          "beta": 1.9334,
+          "xi": -1.0292,
+          "delta": 33.941
+        }
+      },
+      "param_tolerances": {
+        "B0": 0.1,
+        "eta": 0.15,
+        "beta": 0.2,
+        "xi": 0.2,
+        "delta": 0.2
+      }
+    }
+  ]
+}

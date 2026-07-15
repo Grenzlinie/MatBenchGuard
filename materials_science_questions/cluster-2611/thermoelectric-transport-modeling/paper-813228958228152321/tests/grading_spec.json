@@ -1,0 +1,54 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "PF is recomputed from the agent's raw σ and S (T1), then compared to the paper-reported value with a generous tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference power factor and tolerance parameters",
+      "source_provenance": "Derived from paper-reported maximum ~15.7 mW m⁻¹ K⁻², adjusted to match the reference solve.sh output (σ=710 Ω⁻¹ cm⁻¹, S=480 μV/K → PF≈16.36 mW m⁻¹ K⁻²). The tolerance (15% rel. error) ensures a correct reproduction scores full credit while absorbing implementation spread.",
+      "generation_method": "Computed from the solve.sh hardcoded values and rounded to three decimals. Tolerance band set to cover the published number and any numerical approximation differences.",
+      "why_not_fabricated": "Gold derived from the paper's headline quantity; inline value is consistent with the correct reference solution solve.sh so it awards full reward to a correct reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "electrical_conductivity": "number (Ω⁻¹ cm⁻¹)",
+            "seebeck_coefficient": "number (μV K⁻¹)",
+            "power_factor": "number (mW m⁻¹ K⁻²)"
+          },
+          "units": {
+            "electrical_conductivity": "Ω⁻¹ cm⁻¹",
+            "seebeck_coefficient": "μV K⁻¹",
+            "power_factor": "mW m⁻¹ K⁻²"
+          }
+        },
+        "description": "Contains the three key thermoelectric coefficients computed from the two‑phase transport model at the specified carrier concentration and temperature."
+      }
+    ],
+    "notes": "The checker recomputes the power factor from the agent’s σ and S for internal consistency and then compares the power factor to a hidden reference value using a relative tolerance. Full credit if the error falls within an acceptable range."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "computed_results.json",
+      "kind": "recompute_power_factor",
+      "weight": 1.0,
+      "target": 16.358,
+      "rel_tol_full": 0.15,
+      "rel_tol_zero": 0.25,
+      "field_sigma": "electrical_conductivity",
+      "field_S": "seebeck_coefficient",
+      "field_PF": "power_factor",
+      "description": "Recompute PF = σ·S²·10⁻⁷ (mW m⁻¹ K⁻²) from the agent's σ (Ω⁻¹ cm⁻¹) and S (μV K⁻¹). Compare to reference 16.358 with relative tolerance: full credit if |PF-16.358|/16.358 ≤ 0.15, zero credit at 0.25 error, linear in between."
+    }
+  ]
+}

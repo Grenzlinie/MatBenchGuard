@@ -1,0 +1,51 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "T1 recompute is infeasible because the agent only outputs the final computed temperature, not the intermediate spectrum data or integrals; scoring the reported value against the paper's gold with generous tolerance is the intended verifier design.",
+  "pass_threshold": 0.99,
+  "target_policies": {
+    "debye_temperature.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference Debye temperature for aluminium",
+      "source_provenance": "Paper 1961 Proc. Phys. Soc. 78 1255 states: 'this yielded a value of 402°K for Θ∞(x‑ray)'",
+      "generation_method": "Directly taken from the paper text.",
+      "why_not_fabricated": "It is the paper's headline result; the hidden oracle writes exactly this value, and the agent is expected to reproduce it by recomputing from the public spectrum."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "debye_temperature.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "theta_infinity_K": "number"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "theta_infinity_K": "Kelvin"
+          }
+        },
+        "description": "The computed Debye temperature for aluminium from its vibrational spectrum."
+      }
+    ],
+    "notes": "The checker compares the reported theta_infinity_K value to a hidden gold reference within a tolerance window. The target_policy is exact_match because the Debye temperature is a fixed physical constant and 'better' is undefined."
+  },
+  "steps": [
+    {
+      "id": "step02_compute_theta",
+      "output_file": "debye_temperature.json",
+      "weight": 1.0,
+      "kind": "numeric_exact_match",
+      "target": 402.0,
+      "tolerance": 15.0,
+      "description": "Check that the computed Debye temperature matches the paper's reported value of 402 K within ±15 K."
+    }
+  ]
+}

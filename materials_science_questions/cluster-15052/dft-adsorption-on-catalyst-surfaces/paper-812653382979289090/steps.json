@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_optimize_pristine_g-c3n4",
+    "title": "Geometry optimization of pristine g-C3N4 monolayer",
+    "role": "process",
+    "action": "Using DFT (e.g., Quantum ESPRESSO), relax the atomic positions and lattice constants of a monolayer g-C3N4 supercell, starting from the known honeycomb structure (a ≈ 7.13 Å). Save the optimized geometry and log.",
+    "output_file": "",
+    "evidence": "g-C3N4_opt.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_optimize_cu_on_g-c3n4",
+    "title": "Adsorption and optimization of Cu on g-C3N4",
+    "role": "process",
+    "action": "Place a Cu single atom at a plausible hollow site on the relaxed g-C3N4 monolayer and perform a full geometry relaxation of the Cu atom and the substrate to obtain the optimized Cu@g-C3N4 catalyst structure. Save the optimization log.",
+    "output_file": "",
+    "evidence": "Cu_at_g-C3N4_opt.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_compute_free_energies_table",
+    "title": "Compute free energy data for all species",
+    "role": "scored",
+    "action": "On the optimized Cu@g-C3N4 structure, compute the total energies of the clean catalyst, all adsorbed NORR intermediates (*NO, *HNO, *NOH, *HNOH, *H2NO, *N, *H2NOH, *NH, *NH2, *NH3), the HER intermediate (*H), and gas-phase molecules (NO, H2, N2, H2O, NH3). Apply zero-point energy and entropy corrections at 298 K using the harmonic approximation. Write the full table of raw DFT data (species, total energy, ZPE, TS, and the resulting Gibbs free energy as G = E_total + ZPE - TS) to /app/outputs/free_energies_table.csv. This table is the raw thermodynamic input for subsequent CHE analysis; it does not yet compute limiting potentials.",
+    "output_file": "free_energies_table.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV table with columns: species, total_energy_eV, ZPE_eV, TS_eV, free_energy_eV (free_energy_eV = total_energy_eV + ZPE_eV - TS_eV).",
+    "output_schema": "header row: species, total_energy_eV, ZPE_eV, TS_eV, free_energy_eV (all numeric)"
+  },
+  {
+    "id": "step4_compute_limiting_potentials",
+    "title": "Derive limiting potentials and rate-determining step from the free energy table",
+    "role": "scored",
+    "action": "Using the free energies in free_energies_table.csv and the computational hydrogen electrode (CHE) model, compute the Gibbs free energy changes for each elementary step of the NORR pathway (e.g., *HNO → *HNOH) and for HER (*H adsorption). Identify the largest positive free energy step (ΔG_max) for NORR; the limiting potential is U_L = -ΔG_max. For HER, U_L_HER = -ΔG(*H). Write the NORR limiting potential (in V), the HER limiting potential (in V), and the rate-determining step string (e.g., '*HNO -> *HNOH') to /app/outputs/limiting_potentials.json.",
+    "output_file": "limiting_potentials.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys NO_reduction_limiting_potential_V (float), HER_limiting_potential_V (float), rate_determining_step (string).",
+    "output_schema": "object: NO_reduction_limiting_potential_V (float), HER_limiting_potential_V (float), rate_determining_step (string)"
+  }
+]

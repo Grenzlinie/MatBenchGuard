@@ -1,0 +1,173 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of Fermi level from DOS alone is infeasible without knowledge of the electron count; we use a reference tolerance for the Fermi level and structural peak checks for the DOS.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "provide paper-reported Fermi level, DOS peak energy windows, Mulliken charges, and V 3d orbital populations",
+      "source_provenance": "extracted from the paper's abstract, results text, Table 2, and Table 3",
+      "generation_method": "manual transcription from the published article",
+      "why_not_fabricated": "values are the actual numbers reported in the paper; no fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pure_band_dos.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "fermi_energy": "float (eV)",
+            "band_energies": "array of arrays, each sub-array [k_index, band_index, energy]",
+            "dos": "array of [energy, total_DOS] pairs"
+          }
+        },
+        "description": "Band structure and total density of states for pure VSbO4, from which the checker recomputes the Fermi level and verifies DOS peak positions."
+      },
+      {
+        "file": "doped_band_dos.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "fermi_energy": "float (eV)",
+            "band_energies": "array of arrays, each sub-array [k_index, band_index, energy]",
+            "dos": "array of [energy, total_DOS] pairs"
+          }
+        },
+        "description": "Band structure and total density of states for Ti‑doped VSbO4, used by the checker to verify doping‑induced changes."
+      },
+      {
+        "file": "mulliken_charges_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "atom_type",
+            "average_charge"
+          ],
+          "units": {
+            "average_charge": "e"
+          }
+        },
+        "description": "Average Mulliken charges for each element in pure and doped structures, compared to the paper's reference values."
+      },
+      {
+        "file": "v_orbital_populations.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "orbital",
+            "population"
+          ],
+          "units": {
+            "population": "electrons"
+          }
+        },
+        "description": "V 3d orbital populations for pure and doped structures, compared to the paper's reported depopulation trends."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "s04_pure_band_dos",
+      "output_file": "pure_band_dos.json",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "expected_fermi": -10.228,
+      "fermi_tol": 0.05,
+      "peak_windows": [
+        {
+          "low": -36.0,
+          "high": -32.0
+        },
+        {
+          "low": -21.0,
+          "high": -19.0
+        },
+        {
+          "low": -17.0,
+          "high": -14.0
+        },
+        {
+          "low": -10.5,
+          "high": -9.5
+        }
+      ]
+    },
+    {
+      "id": "s05_doped_band_dos",
+      "output_file": "doped_band_dos.json",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "peak_windows": [
+        {
+          "low": -9.5,
+          "high": -7.5
+        }
+      ]
+    },
+    {
+      "id": "s06_mulliken",
+      "output_file": "mulliken_charges_table.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "target_charges": {
+        "pure": {
+          "Sb": 2.832,
+          "V": 1.371,
+          "O": -0.965
+        },
+        "doped": {
+          "Sb": 2.828,
+          "V": 1.494,
+          "O": -1.049
+        }
+      },
+      "tolerance": 0.02
+    },
+    {
+      "id": "s07_orbital",
+      "output_file": "v_orbital_populations.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "target_populations": {
+        "pure": {
+          "3d(x^2-y^2)": 1.25,
+          "3d(z^2)": 0.39,
+          "3d(xy)": 0.39,
+          "3d(xz)": 0.38,
+          "3d(yz)": 0.39
+        },
+        "doped": {
+          "3d(x^2-y^2)": 1.15,
+          "3d(z^2)": 0.23,
+          "3d(xy)": 0.31,
+          "3d(xz)": 0.37,
+          "3d(yz)": 0.38
+        }
+      },
+      "tolerance": 0.02,
+      "depopulation": {
+        "z2_expected_diff": 0.16,
+        "z2_tol_diff": 0.04,
+        "xy_expected_diff": 0.08,
+        "xy_tol_diff": 0.03
+      }
+    }
+  ]
+}

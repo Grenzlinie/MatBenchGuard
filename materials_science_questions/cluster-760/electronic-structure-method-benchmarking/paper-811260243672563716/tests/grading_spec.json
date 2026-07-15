@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT calculations cannot be re-run in the lightweight verifier sandbox; the agent's computed final values are compared against paper-reported reference values from Table 6 with sign-validity checks, magnitude-bounds, and linear-tolerance closeness. T1 recompute is infeasible because the raw DFT outputs are large binary/wavefunction files and the verifier has no quantum-chemistry software.",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_ass_G_AI_kJ_per_mol": "float (units: kJ/mol)",
+            "delta_ass_G_AII_kJ_per_mol": "float (kJ/mol)",
+            "delta_ass_G_AIII_kJ_per_mol": "float (kJ/mol)",
+            "delta_ass_g_G_kJ_per_mol": "float (kJ/mol)"
+          }
+        },
+        "description": "Standard Gibbs free energy changes (kJ/mol) for LiBOB ion association in EC:DMC (7:3) computed under the continuum-only (AI), discrete-only (AII), mixed discrete-continuum (AIII) solvation models, and the gas-phase ion-pair formation reference."
+      }
+    ],
+    "notes": "The hidden checker compares each reported value against the paper's reference values with appropriate sign and magnitude tolerances. Compliance with the required sign patterns (AI positive large, AII negative large, AIII positive small) is expected. The gas-phase Δass(g)G° is checked within a tolerance window."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for ΔassG° from Table 6 and Table 4 of the source paper",
+      "source_provenance": "Paper Table 6: Δass(I)G298° = +212.7 kJ/mol, Δass(II)G298° = -184.1 kJ/mol, Δass(III)G298° = +28.6 kJ/mol. Table 4: Δass(g)G298° = -486.7 kJ/mol. All at B3LYP/6-31+G(2d), T=298.15 K, ε=51.0.",
+      "generation_method": "Extracted directly from Table 6 and Table 4 of Korsun et al., J. Phys. Chem. C 2016, DOI 10.1021/acs.jpcc.6b05963. These are the paper's own computed values for the identical quantities, conditions, and units.",
+      "why_not_fabricated": "These are the paper's actual reported numbers for the same quantities being reproduced. The reference solve.sh writes these exact values and the hidden checker compares the agent's reported numbers against them. An honest DFT re-run with a different code (ORCA/Psi4) will differ by 5-20 kJ/mol but land within the generous tolerances."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_results",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target_policy": "reference_match",
+      "fields": {
+        "delta_ass_G_AI_kJ_per_mol": {
+          "gold": 212.7,
+          "tolerance_abs": 40.0,
+          "sign_required": "positive",
+          "min_magnitude": 100.0,
+          "sub_weight": 0.25
+        },
+        "delta_ass_G_AII_kJ_per_mol": {
+          "gold": -184.1,
+          "tolerance_abs": 35.0,
+          "sign_required": "negative",
+          "min_magnitude": 100.0,
+          "sub_weight": 0.25
+        },
+        "delta_ass_G_AIII_kJ_per_mol": {
+          "gold": 28.6,
+          "tolerance_abs": 15.0,
+          "sign_required": "positive",
+          "max_magnitude": 50.0,
+          "sub_weight": 0.3
+        },
+        "delta_ass_g_G_kJ_per_mol": {
+          "gold": -486.7,
+          "tolerance_abs": 70.0,
+          "sign_required": "negative",
+          "min_magnitude": 300.0,
+          "sub_weight": 0.2
+        }
+      }
+    }
+  ]
+}

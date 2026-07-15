@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT workflow is too heavy to rerun in the verifier; gold is the paper's reported numbers for the specific materials/methods, and the agent's CSV outputs are compared with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_band_gap.csv": "reference_match",
+    "step_02_dielectric_constants.csv": "reference_match",
+    "step_03_birefringence.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for band gap, dielectric constants, birefringence",
+      "source_provenance": "Paper Table 2 and Table 3 and text for birefringence",
+      "generation_method": "Extracted from paper and hardcoded in solver",
+      "why_not_fabricated": "These are the exact paper-reported numbers for the specific functional and material."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_gap.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "band_gap_eV",
+            "gap_nature"
+          ],
+          "units": {
+            "band_gap_eV": "eV",
+            "gap_nature": "string (expected: Γ-Γ direct)"
+          }
+        },
+        "description": "Direct band gap and its nature for PBE-GGA and PW-LDA functionals."
+      },
+      {
+        "file": "step_02_dielectric_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "direction",
+            "epsilon_infinity"
+          ],
+          "units": {
+            "epsilon_infinity": "dimensionless"
+          }
+        },
+        "description": "High-frequency (electronic) dielectric constants for ordinary and extraordinary directions."
+      },
+      {
+        "file": "step_03_birefringence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "birefringence_633nm"
+          ],
+          "units": {
+            "birefringence_633nm": "dimensionless"
+          }
+        },
+        "description": "Optical birefringence at 633 nm (1.96 eV) computed for PBE-GGA and PW-LDA."
+      }
+    ],
+    "notes": "All scored outputs are compared to the paper's reported values with hidden tolerances. The solver must execute all process steps to produce the final scored files."
+  },
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "step_01_band_gap.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "gold_bandgap": {
+        "pbe-GGA": 2.34,
+        "pw-LDA": 2.14
+      },
+      "tolerance_bandgap_eV": 0.05,
+      "expected_gap_nature": "Γ-Γ direct",
+      "weight_bandgap_value": 0.8,
+      "weight_nature_match": 0.2
+    },
+    {
+      "id": "step_dielectric_constants",
+      "output_file": "step_02_dielectric_constants.csv",
+      "weight": 0.45,
+      "kind": "numeric",
+      "gold_dielectric": [
+        {
+          "functional": "pbe-GGA",
+          "direction": "ordinary",
+          "epsilon_infinity": 7.2
+        },
+        {
+          "functional": "pbe-GGA",
+          "direction": "extraordinary",
+          "epsilon_infinity": 8.33
+        },
+        {
+          "functional": "pw-LDA",
+          "direction": "ordinary",
+          "epsilon_infinity": 5.44
+        },
+        {
+          "functional": "pw-LDA",
+          "direction": "extraordinary",
+          "epsilon_infinity": 6.23
+        }
+      ],
+      "tolerance_epsilon": 0.15
+    },
+    {
+      "id": "step_birefringence",
+      "output_file": "step_03_birefringence.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "gold_birefringence": {
+        "pbe-GGA": 0.23,
+        "pw-LDA": 0.269
+      },
+      "tolerance_birefringence": 0.02
+    }
+  ]
+}

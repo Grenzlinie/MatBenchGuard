@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of the TB-CPA-GPM-CVM chain is computationally heavy and cannot be performed in the verifier sandbox; scoring relies on structural invariants (U0 crossing, V ratio bound, phase diagram topology) that any correct implementation reproduces.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "U0_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "U0_fcc",
+            "U0_bcc"
+          ],
+          "units": {
+            "concentration": "dimensionless fraction",
+            "U0_fcc": "canonical units (c.u.)",
+            "U0_bcc": "canonical units (c.u.)"
+          }
+        },
+        "description": "Disordered-state reference energies U0 for fcc and bcc lattices as functions of composition."
+      },
+      {
+        "file": "V_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "V1_alpha",
+            "V1_beta",
+            "V2_beta"
+          ],
+          "units": {
+            "concentration": "dimensionless fraction",
+            "V1_alpha": "canonical units (c.u.)",
+            "V1_beta": "canonical units (c.u.)",
+            "V2_beta": "canonical units (c.u.)"
+          }
+        },
+        "description": "Effective pair interactions from GPM for fcc (V1_alpha) and bcc (V1_beta, V2_beta)."
+      },
+      {
+        "file": "phase_boundaries.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "boundaries"
+          ],
+          "items": {
+            "type": "object",
+            "phase1": "string",
+            "phase2": "string",
+            "points": "list of {T: number (K), c: number (dimensionless fraction)}"
+          },
+          "units": {
+            "T": "Kelvin",
+            "c": "dimensionless fraction"
+          }
+        },
+        "description": "Phase diagram boundaries for solid-state phases, excluding liquid."
+      }
+    ],
+    "notes": "The hidden reference values are extracted from the paper's reported U0(c), V(c), and phase boundaries. Tolerances are set according to expected toolchain variation."
+  },
+  "steps": [
+    {
+      "id": "step1_u0",
+      "output_file": "U0_curves.csv",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Structural check: U0_fcc and U0_bcc cross (fcc higher than bcc at pure A side, lower at pure B side).",
+      "params": {
+        "crossing_expected": true
+      }
+    },
+    {
+      "id": "step2_v",
+      "output_file": "V_curves.csv",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Structural check: V2_beta / V1_beta ratio lies within [0, 2/3] for all valid composition points.",
+      "params": {
+        "ratio_min": 0.0,
+        "ratio_max": 0.6667
+      }
+    },
+    {
+      "id": "step3_phase",
+      "output_file": "phase_boundaries.json",
+      "kind": "rubric",
+      "weight": 0.6,
+      "description": "Topological check: phase diagram contains required miscibility gap, L1_2 region, B2 region, and high-temperature coverage.",
+      "params": {
+        "required_features": [
+          {
+            "name": "alpha_beta_miscibility",
+            "phases": [
+              "alpha",
+              "beta"
+            ],
+            "c_range": [
+              0.55,
+              0.65
+            ],
+            "min_points": 3
+          },
+          {
+            "name": "alpha_prime_L12",
+            "phases": [
+              "alpha",
+              "alpha_prime"
+            ],
+            "c_range": [
+              0.2,
+              0.35
+            ],
+            "min_points": 3
+          },
+          {
+            "name": "beta_prime_B2",
+            "phases": [
+              "beta",
+              "beta_prime"
+            ],
+            "c_range": [
+              0.45,
+              0.65
+            ],
+            "min_points": 3
+          },
+          {
+            "name": "high_temperature",
+            "min_T": 3000
+          }
+        ]
+      }
+    }
+  ]
+}

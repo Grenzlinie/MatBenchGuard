@@ -1,0 +1,244 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Scored artifacts are the final synthesized quantities from a full DFT+phonon pipeline; no raw intermediate data is available for recompute in the verifier. Compare to paper‑reported reference values with tolerances (sign, ±0.5 eV for bandgap, 50%/30 meV for exchange constants) to match the public target_policy per output.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "ground state expected rows (compound, categorical fields, formation energy sign)",
+      "source_provenance": "Paper Table II – ground‑state assignments and formation energies for the six Sr2BBO5 compounds.",
+      "generation_method": "Extracted directly from the paper's Table II: space group, B‑site ordering direction, magnetic order, and formation energy sign (negative for stable compounds).",
+      "why_not_fabricated": "Values are the paper's own reported data; the reference solve.sh writes exactly these values, ensuring a correct reproduction scores full."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "phonon stability expected map (compound : dynamically_stable)",
+      "source_provenance": "Paper Fig. 3 and text – only Sr2FeCoO5 and Sr2NiMnO5 show no imaginary modes.",
+      "generation_method": "Derived from paper's phonon spectrum figures and discussion; the reference solve.sh lists exactly these compounds as true/false.",
+      "why_not_fabricated": "Matches the unequivocal paper conclusion; a correct reproduction must output the same set of dynamically stable compounds."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "electronic summary expected rows (compound, magnetic ordering, electronic type, bandgap ±0.5 eV)",
+      "source_provenance": "Paper Section III.B, Fig. 4, and Tables III/IV – Sr2FeCoO5 G‑AFM insulator gap ~1.3 eV, Sr2NiMnO5 A‑AFM half‑metal gap ~1.0 eV.",
+      "generation_method": "Paper's explicitly stated band gaps and electronic character; tolerance ±0.5 eV absorbs code‑to‑code variation.",
+      "why_not_fabricated": "Exact values from paper; a cross‑code reproduction should yield band gaps within 0.5 eV of these numbers."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "exchange constants expected list (compound, interaction, value_meV, sign, tolerance)",
+      "source_provenance": "Paper Section III.C – Heisenberg exchange constants J_CoCo=12.2, J_FeCo=-98.1, J_FeFe=-81.0 meV for Sr2FeCoO5; J_NiNi=-56.6, J_MnMn=18.7, J_NiMn=31.4 meV for Sr2NiMnO5.",
+      "generation_method": "Taken directly from the paper's Heisenberg model analysis; tolerances (30 meV absolute or 50% relative) allow implementation differences.",
+      "why_not_fabricated": "The paper reports these exact values; an honest DFT+Heisenberg fitting should reproduce signs and approximate magnitudes within the given range."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_ground_states.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "space_group",
+            "b_site_ordering",
+            "magnetic_order",
+            "formation_energy_meV_per_fu"
+          ],
+          "units": {
+            "formation_energy_meV_per_fu": "meV"
+          }
+        },
+        "description": "Ground-state structural, magnetic, and formation energy data for all six Sr2BB'O5 compounds. The checker compares space group, B-site ordering, magnetic order exactly; formation energy sign must match paper (negative/positive)."
+      },
+      {
+        "file": "step_03_phonon_stability.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "pattern": "One line per compound: compound:dynamically_stable (true/false)"
+        },
+        "description": "Dynamical stability verdict for thermodynamically stable compounds. Exact match against paper-verified list of dynamically stable systems is required."
+      },
+      {
+        "file": "step_04_electronic_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "magnetic_ordering",
+            "electronic_type",
+            "bandgap_eV"
+          ],
+          "units": {
+            "bandgap_eV": "eV"
+          }
+        },
+        "description": "Electronic structure summary for the two dynamically stable compounds. The checker verifies magnetic ordering and electronic type exactly; bandgap is compared within a tolerance relative to paper values."
+      },
+      {
+        "file": "step_05_exchange_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "interaction",
+            "value_meV"
+          ],
+          "units": {
+            "value_meV": "meV"
+          }
+        },
+        "description": "Heisenberg exchange constants for Sr2FeCoO5 and Sr2NiMnO5. The checker compares sign and approximate magnitude (tolerances absorb cross-code differences) against paper-reported J values."
+      }
+    ],
+    "notes": "All scored artifacts are compared against paper-reported values with appropriate tolerances and sign checks to account for cross-code (Quantum ESPRESSO vs VASP) reproduction differences. Structural/magnetic assignments and dynamical stability require exact match; bandgap and exchange constants use tolerant comparison."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "step_02_ground_states.csv",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "expected_rows": [
+        {
+          "compound": "Sr2FeCoO5",
+          "space_group": "Pbcm",
+          "b_site_ordering": "010",
+          "magnetic_order": "G-AFM",
+          "sign": "negative"
+        },
+        {
+          "compound": "Sr2FeNiO5",
+          "space_group": "Pbcm",
+          "b_site_ordering": "100",
+          "magnetic_order": "G-AFM",
+          "sign": "negative"
+        },
+        {
+          "compound": "Sr2FeMnO5",
+          "space_group": "Pbcm",
+          "b_site_ordering": "100",
+          "magnetic_order": "G-AFM",
+          "sign": "positive"
+        },
+        {
+          "compound": "Sr2CoNiO5",
+          "space_group": "Pbcm",
+          "b_site_ordering": "100",
+          "magnetic_order": "G-AFM",
+          "sign": "negative"
+        },
+        {
+          "compound": "Sr2CoMnO5",
+          "space_group": "Pnma",
+          "b_site_ordering": "100",
+          "magnetic_order": "G-AFM",
+          "sign": "positive"
+        },
+        {
+          "compound": "Sr2NiMnO5",
+          "space_group": "Pbcm",
+          "b_site_ordering": "100",
+          "magnetic_order": "A-AFM",
+          "sign": "negative"
+        }
+      ]
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_phonon_stability.txt",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "expected": {
+        "Sr2FeCoO5": true,
+        "Sr2FeNiO5": false,
+        "Sr2CoNiO5": false,
+        "Sr2NiMnO5": true
+      }
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_electronic_summary.csv",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "expected_rows": [
+        {
+          "compound": "Sr2FeCoO5",
+          "magnetic_ordering": "G-AFM",
+          "electronic_type": "insulator",
+          "bandgap_eV": 1.3,
+          "bandgap_tolerance": 0.5
+        },
+        {
+          "compound": "Sr2NiMnO5",
+          "magnetic_ordering": "A-AFM",
+          "electronic_type": "half-metal",
+          "bandgap_eV": 1.0,
+          "bandgap_tolerance": 0.5
+        }
+      ]
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_exchange_constants.csv",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "expected_rows": [
+        {
+          "compound": "Sr2FeCoO5",
+          "interaction": "J_CoCo",
+          "value_meV": 12.2,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        },
+        {
+          "compound": "Sr2FeCoO5",
+          "interaction": "J_FeCo",
+          "value_meV": -98.1,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        },
+        {
+          "compound": "Sr2FeCoO5",
+          "interaction": "J_FeFe",
+          "value_meV": -81.0,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        },
+        {
+          "compound": "Sr2NiMnO5",
+          "interaction": "J_NiNi",
+          "value_meV": -56.6,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        },
+        {
+          "compound": "Sr2NiMnO5",
+          "interaction": "J_MnMn",
+          "value_meV": 18.7,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        },
+        {
+          "compound": "Sr2NiMnO5",
+          "interaction": "J_NiMn",
+          "value_meV": 31.4,
+          "tolerance_abs": 30.0,
+          "tolerance_rel": 0.5
+        }
+      ]
+    }
+  ]
+}

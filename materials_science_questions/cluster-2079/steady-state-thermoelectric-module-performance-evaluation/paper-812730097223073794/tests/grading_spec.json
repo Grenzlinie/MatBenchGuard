@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full FEM simulation from raw artifacts is infeasible in the verifier sandbox; compare agent's reported V0, Pmax against hidden paper-reported simulated values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_device_performance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Delta_T_K",
+            "V0_mV",
+            "Pmax_nW",
+            "R_int_Ohm"
+          ],
+          "units": {
+            "Delta_T_K": "K",
+            "V0_mV": "mV",
+            "Pmax_nW": "nW",
+            "R_int_Ohm": "Ohm"
+          }
+        },
+        "description": "The agent's simulated open-circuit voltage, maximum output power, and internal resistance for the p-n TEG at ΔT = 11, 17, 22, 35 K. Each value is compared against a hidden reference."
+      }
+    ],
+    "notes": "The hidden reference values are the paper's reported COMSOL simulation results for the same device and conditions. Only the columns V0_mV and Pmax_nW are scored; R_int_Ohm is required for completeness but carries negligible weight."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for V0_mV and Pmax_nW at each ΔT from Table 2 (p-n TEG simulated) and R_int from paper.",
+      "source_provenance": "Table 2 p-n TEG simulated column; V0 calculated from material Seebeck coefficients (S_n=-220 µV/K, S_p=+167 µV/K, N=15) and ΔT.",
+      "generation_method": "Extracted directly from the paper and the known formula.",
+      "why_not_fabricated": "Values are the published simulation results; V0 is derived from known material parameters."
+    }
+  ],
+  "gold": {
+    "delta_T_K": [
+      11,
+      17,
+      22,
+      35
+    ],
+    "V0_mV": [
+      63.855,
+      98.685,
+      127.71,
+      203.175
+    ],
+    "Pmax_nW": [
+      77.45,
+      189.1,
+      349.78,
+      668.38
+    ],
+    "R_int_Ohm": [
+      16368,
+      16368,
+      16368,
+      16368
+    ]
+  },
+  "steps": [
+    {
+      "id": "v0_check",
+      "output_file": "step_01_device_performance.csv",
+      "kind": "numeric",
+      "weight": 0.45,
+      "target_abs_tol": 1.0
+    },
+    {
+      "id": "pmax_check",
+      "output_file": "step_01_device_performance.csv",
+      "kind": "numeric",
+      "weight": 0.45,
+      "target_rel_tol": 0.1
+    },
+    {
+      "id": "rint_check",
+      "output_file": "step_01_device_performance.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target_rel_tol": 0.05
+    }
+  ]
+}

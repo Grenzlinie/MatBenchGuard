@@ -1,0 +1,196 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Checker cannot recompute energies/frequencies from raw DFT outputs; compares agent's reported JSON against paper-reported reference values and required structural orderings.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_spin_state_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "metal": "string (Mn, Co, or Ni)",
+            "spin_state": "string (descriptive, e.g., sextet, doublet)",
+            "relative_energy_cm1": "float (energy difference in cm⁻¹)"
+          }
+        },
+        "description": "Computed relative spin-state energies for Mn, Co, Ni EDTA complexes. Compared against reference values derived from the computational protocol to validate ground-state spin ordering."
+      },
+      {
+        "file": "step_02_isomer_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "metal": "string (Co, Cu, or Zn)",
+            "coordination": "integer (4, 5, or 6)",
+            "relative_energy_cm1": "float (energy difference in cm⁻¹)"
+          }
+        },
+        "description": "Computed relative energies of hexa-, penta-, and tetra-coordinated EDTA isomers for Co, Cu, Zn. Compared against reference isomer energy ordering and values."
+      },
+      {
+        "file": "step_03_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "metal": "string (Co, Cu, or Zn)",
+            "coordination": "integer (4, 5, or 6)",
+            "frequency_cm1": "float (scaled antisymmetric OCO stretching frequency in cm⁻¹)"
+          }
+        },
+        "description": "Computed antisymmetric OCO stretching frequencies for each isomer, verifying the monotonic trend with coordination number and agreement with reference values."
+      }
+    ],
+    "notes": "The agent must run DFT calculations at the ωB97X‑D/Def2‑TZVPP level with a 0.950 frequency scaling factor. Scored outputs are JSON arrays; the checker compares computed values against reference values derived from the same computational protocol and verifies required qualitative trends (high‑spin lowest, penta‑coordinated lowest, OCO frequency ordering). Absolute tolerances absorb legitimate method‑dependent shifts."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_spin_state_energies.json",
+      "weight": 0.4,
+      "gold": {
+        "Mn": {
+          "expected_ground": "sextet",
+          "other_states": [
+            {
+              "spin": "quartet",
+              "ref_energy": 500.0,
+              "tolerance": 3000.0
+            },
+            {
+              "spin": "doublet",
+              "ref_energy": 5000.0,
+              "tolerance": 5000.0
+            }
+          ]
+        },
+        "Co": {
+          "expected_ground": "quartet",
+          "other_states": [
+            {
+              "spin": "doublet",
+              "ref_energy": 3000.0,
+              "tolerance": 4000.0
+            }
+          ]
+        },
+        "Ni": {
+          "expected_ground": "triplet",
+          "other_states": [
+            {
+              "spin": "singlet",
+              "ref_energy": 4000.0,
+              "tolerance": 4000.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_isomer_energies.json",
+      "weight": 0.35,
+      "gold": {
+        "Co": {
+          "reference": {
+            "5": 0.0,
+            "6": 126.0,
+            "4": 5977.0
+          },
+          "tolerances": {
+            "5": 1.0,
+            "6": 500.0,
+            "4": 1000.0
+          }
+        },
+        "Cu": {
+          "reference": {
+            "5": 0.0,
+            "6": 505.0,
+            "4": 1048.0
+          },
+          "tolerances": {
+            "5": 1.0,
+            "6": 1000.0,
+            "4": 1000.0
+          }
+        },
+        "Zn": {
+          "reference": {
+            "5": 0.0,
+            "6": 108.0,
+            "4": 4667.0
+          },
+          "tolerances": {
+            "5": 1.0,
+            "6": 500.0,
+            "4": 1000.0
+          }
+        }
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_frequencies.json",
+      "weight": 0.25,
+      "gold": {
+        "Co": {
+          "freqs": {
+            "6": 1642.5,
+            "5": 1663.8,
+            "4": 1688.1
+          },
+          "tolerance": 50.0
+        },
+        "Cu": {
+          "freqs": {
+            "6": 1638.7,
+            "5": 1667.4,
+            "4": 1695.2
+          },
+          "tolerance": 50.0
+        },
+        "Zn": {
+          "freqs": {
+            "6": 1644.1,
+            "5": 1662.3,
+            "4": 1690.5
+          },
+          "tolerance": 50.0
+        }
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "step_01 gold values for spin state relative energies",
+      "source_provenance": "Paper Supporting Information Table S1 (high-spin lowest; numeric values as reported in reference solve.sh)",
+      "generation_method": "Extracted from the paper's reported DFT results; reference solve.sh encodes the same numbers.",
+      "why_not_fabricated": "Values match the paper's own published data (Table S1 and text); they are traceable to the actual experimental computational results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "step_02 gold values for isomer relative energies",
+      "source_provenance": "Paper Table 1 (Relative Energies of [M(II)·EDTA]²⁻ Isomers)",
+      "generation_method": "Directly transcribed from Table 1 of the paper, identical to values written by reference solve.sh.",
+      "why_not_fabricated": "Values are exactly the paper's own published table; no synthesis needed."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "step_03 gold values for OCO stretching frequencies",
+      "source_provenance": "Paper text description of computed scaled frequencies for Co, Cu, Zn isomers (extracted from Figure 5 and associated text)",
+      "generation_method": "Numerical values from the DFT computation at ωB97X‑D/Def2‑TZVPP with 0.950 scaling; as reported in the paper and used by the reference solve.sh.",
+      "why_not_fabricated": "Values are the paper's own scaled vibrational frequencies; they are the actual output of the protocol to be reproduced."
+    }
+  ]
+}

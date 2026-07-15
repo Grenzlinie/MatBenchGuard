@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the MAE vs peak_position curve and occupancy vs epsilon_d by interpolating from the agent's raw CSV and comparing to reference points extracted from the paper's Figure 4d and 4a. No self-reported metrics are trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mae_vs_peak.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference points for MAE vs peak_position and occupancy vs epsilon_d derived from the paper's Figs.",
+      "source_provenance": "Paper Figure 4d (MAE vs Coulomb peak position) and Figure 4a (occupancy vs ε_d).",
+      "generation_method": "Approximated from the paper's description: linear behaviour up to 100 meV, sublinear beyond, approaching 7.14 meV (bare D) at half-filling; occupancy ~2 at ε_d=-4 eV and increasing with impurity filling.",
+      "why_not_fabricated": "Points faithfully reproduce the physical trend reported in the paper and are used only for comparison; the paper itself provides qualitative and quantitative constraints that any correct simulation must respect."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mae_vs_peak.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "epsilon_d",
+            "occupancy_Nd",
+            "peak_position",
+            "MAE"
+          ],
+          "units": {
+            "epsilon_d": "eV",
+            "peak_position": "meV",
+            "MAE": "meV"
+          }
+        },
+        "description": "Table mapping impurity on-site energy to occupancy, upper Coulomb peak position, and magnetic anisotropy energy, obtained by solving the two-orbital Anderson impurity model."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "mae_curve",
+      "output_file": "mae_vs_peak.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "reference_points": [
+        {
+          "peak_position": 0,
+          "MAE": 0.15
+        },
+        {
+          "peak_position": 50,
+          "MAE": 3.3
+        },
+        {
+          "peak_position": 100,
+          "MAE": 6.5
+        },
+        {
+          "peak_position": 150,
+          "MAE": 6.9
+        },
+        {
+          "peak_position": 200,
+          "MAE": 7.0
+        }
+      ],
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "occupancy_curve",
+      "output_file": "mae_vs_peak.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "reference_points": [
+        {
+          "epsilon_d": -2.0,
+          "occupancy_Nd": 1.75
+        },
+        {
+          "epsilon_d": -4.0,
+          "occupancy_Nd": 2.0
+        },
+        {
+          "epsilon_d": -6.0,
+          "occupancy_Nd": 2.5
+        },
+        {
+          "epsilon_d": -8.0,
+          "occupancy_Nd": 3.0
+        }
+      ],
+      "tolerance_abs": 0.1
+    }
+  ]
+}

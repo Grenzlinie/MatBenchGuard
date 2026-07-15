@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_scf",
+    "title": "DFT SCF calculation",
+    "role": "process",
+    "action": "Run a DFT self-consistent field (SCF) calculation on rutile RuO2 using GGA-RPBE functional and norm-conserving pseudopotentials to obtain the ground-state charge density and Kohn-Sham wavefunctions. Use the provided crystal structure parameters (a=4.5149 Å, c=3.1156 Å, u=0.3057, space group P4_2/mnm).",
+    "output_file": "",
+    "evidence": "scf_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log of the SCF convergence and electronic structure output.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_elastic",
+    "title": "Compute elastic constants",
+    "role": "process",
+    "action": "Using the equilibrium SCF setup from step_01_scf, apply small finite strains (e.g., ±0.01) to the crystal and compute the resulting stress tensor. From the stress-strain relationship for tetragonal symmetry, determine the six independent elastic constants: c11, c33, c44, c66, c12, c13 (in GPa). Compute the bulk modulus B0 using the Voigt approximation: B0 = (2(c11+c12)+c33+4c13)/9. Record the computed values in a log file for later extraction.",
+    "output_file": "",
+    "evidence": "elastic_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Elastic constants and bulk modulus for comparison with paper Table 1.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_dielectric",
+    "title": "Compute dielectric function ε(ω)",
+    "role": "process",
+    "action": "Using the wavefunctions and band energies from the SCF step, compute the imaginary part ε2(ω) from momentum matrix elements for polarizations E⊥c and E//c over 0–30 eV. Apply the Kramers–Kronig transformation to obtain the real part ε1(ω). Save the full ε1, ε2 data.",
+    "output_file": "",
+    "evidence": "epsilon_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw dielectric function data (ε1, ε2) for both polarizations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_optical_summary",
+    "title": "Extract optical and elastic summary",
+    "role": "scored",
+    "action": "From the dielectric function, compute the static refractive indices n(0) for both polarizations using n(0) = sqrt(ε1(0)). Locate the main (highest) peak in ε2 for each polarization: record its energy position (eV) and magnitude. From the elastic constants computation (step_02_elastic), extract the elastic constants c11, c33, c44, c66, c12, c13 and the bulk modulus B0 (all in GPa). Write all these values to optical_summary.json.",
+    "output_file": "optical_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Static refractive indices, ε2 peak parameters, and elastic constants for E⊥c and E//c.",
+    "output_schema": "{\"n_perp\": float, \"n_par\": float, \"epsilon2_peak_perp_position_eV\": float, \"epsilon2_peak_perp_magnitude\": float, \"epsilon2_peak_par_position_eV\": float, \"epsilon2_peak_par_magnitude\": float, \"c11_GPa\": float, \"c33_GPa\": float, \"c44_GPa\": float, \"c66_GPa\": float, \"c12_GPa\": float, \"c13_GPa\": float, \"B0_GPa\": float}"
+  },
+  {
+    "id": "step_05_reflectivity",
+    "title": "Compute reflectivity spectrum",
+    "role": "scored",
+    "action": "Using the dielectric function, compute the reflectivity R(ω) = |(1 - N(ω))/(1 + N(ω))|^2 with N^2 = ε1 + i ε2 for both polarizations and output the full spectrum from 0 to 30 eV as a CSV with columns energy_eV, R_perp, R_par.",
+    "output_file": "reflectivity_spectrum.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Full reflectivity spectrum for both polarizations.",
+    "output_schema": "columns: energy_eV (float), R_perp (float), R_par (float)"
+  }
+]

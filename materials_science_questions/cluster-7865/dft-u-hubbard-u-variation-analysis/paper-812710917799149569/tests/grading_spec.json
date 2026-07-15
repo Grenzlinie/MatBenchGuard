@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Weyl node positions (kz, energy) from the supplied band structure CSV and compare to paper-reported reference values; no trust in self-reported nodes.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_weyl_nodes.json": "metric_recompute",
+    "step_02_band_structure.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold reference for Weyl node count, positions, and tolerances.",
+      "source_provenance": "Paper Phys. Rev. B 100, 201102(R) (2019): Weyl nodes at kz = ±0.03 × 2π/c, at Fermi level.",
+      "generation_method": "Extracted from paper text and confirmed by the reference DFT+U calculation.",
+      "why_not_fabricated": "Values are exactly the paper's reported Weyl node positions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_weyl_nodes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kz",
+              "energy",
+              "chirality"
+            ],
+            "properties": {
+              "kz": {
+                "type": "number",
+                "description": "k_z position in units of 2π/c"
+              },
+              "energy": {
+                "type": "number",
+                "description": "energy in eV relative to the Fermi level (positive above EF)"
+              },
+              "chirality": {
+                "type": "integer",
+                "enum": [
+                  1,
+                  -1
+                ],
+                "description": "chirality of the node (1 for source, -1 for sink)"
+              }
+            }
+          }
+        },
+        "description": "The primary scored artifact: a list of Weyl nodes (kz, energy, chirality) extracted from the DFT+U band structure. Checked against expected positions within tolerances."
+      },
+      {
+        "file": "step_02_band_structure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kz",
+            "band_index",
+            "energy"
+          ],
+          "units": {
+            "kz": "units of 2π/c",
+            "energy": "eV"
+          }
+        },
+        "description": "Supporting raw band structure data along Γ-A. Audited for format, column completeness, and kz range; may be used to recompute Weyl node positions for consistency."
+      }
+    ],
+    "notes": "This task reproduces the DFT+U computation of Weyl nodes in EuCd2As2. The agent must perform a spin-polarized DFT+U calculation using an open-source code, then identify Weyl nodes along Γ-A. The primary scored artifact is the list of nodes, verified against the paper's predicted positions. The band structure CSV enables recomputation of nodes for cross-check."
+  },
+  "steps": [
+    {
+      "id": "step_01_weyl_nodes",
+      "output_file": "step_01_weyl_nodes.json",
+      "kind": "recompute_nodes",
+      "weight": 0.8,
+      "target": {
+        "k0": 0.03,
+        "k_tol_abs": 0.01,
+        "energy_tol_abs": 0.05,
+        "max_energy_range": 0.2,
+        "min_nodes": 2,
+        "max_nodes": 2
+      },
+      "notes": "Recompute crossing points from step_02_band_structure.csv. Do not trust the submitted JSON beyond checking chirality symmetry."
+    },
+    {
+      "id": "step_02_band_structure",
+      "output_file": "step_02_band_structure.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "schema": {
+        "required_columns": [
+          "kz",
+          "band_index",
+          "energy"
+        ],
+        "min_rows": 100,
+        "kz_range": [
+          0.0,
+          0.5
+        ],
+        "monotonic": true
+      }
+    }
+  ]
+}

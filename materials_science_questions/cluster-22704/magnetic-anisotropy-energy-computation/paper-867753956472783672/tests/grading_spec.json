@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main claim is the nonlinear MAE trend and its reversal under electric field, not exact absolute values; structural checks on monotonicity and sign of slopes capture the essential physics without requiring precise DFT energies, which vary with pseudopotential/functional choices.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "mae_vs_field.csv": "structural_audit",
+    "noe_fe3_vs_field.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mae_vs_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_V_per_nm",
+            "mae_mJ_per_m2"
+          ],
+          "units": {
+            "field_V_per_nm": "V/nm",
+            "mae_mJ_per_m2": "mJ/m²"
+          }
+        },
+        "description": "Magnetic anisotropy energy (MAE) as a function of applied electric field, computed from total-energy differences of DFT+SOC calculations under seven charge conditions."
+      },
+      {
+        "file": "noe_fe3_vs_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "field_V_per_nm",
+            "noe_fe3"
+          ],
+          "units": {
+            "field_V_per_nm": "V/nm",
+            "noe_fe3": "electrons"
+          }
+        },
+        "description": "Number of electrons on the interfacial Fe atom Fe(3) adjacent to the right MgO layer, extracted from DFT charge density as a function of electric field."
+      }
+    ],
+    "notes": "The scoring checker verifies structural trends: for mae_vs_field.csv the MAE must increase under positive fields and exhibit a reversal (increase after an initial decrease) under negative fields; for noe_fe3_vs_field.csv the electron count must show the opposite correlated trend. Absolute values are accepted within a broad range expected from using open-source DFT, but the nonlinear pattern is the primary criterion."
+  },
+  "steps": [
+    {
+      "id": "mae_vs_field",
+      "output_file": "mae_vs_field.csv",
+      "weight": 0.6,
+      "kind": "structural_monotonicity",
+      "description": "Check that MAE vs field exhibits a single minimum with decreasing then increasing trend when sorted by field."
+    },
+    {
+      "id": "noe_fe3_vs_field",
+      "output_file": "noe_fe3_vs_field.csv",
+      "weight": 0.4,
+      "kind": "structural_monotonicity",
+      "description": "Check that NOE on Fe(3) vs field exhibits a single maximum (increase then decrease) when sorted by field."
+    }
+  ]
+}

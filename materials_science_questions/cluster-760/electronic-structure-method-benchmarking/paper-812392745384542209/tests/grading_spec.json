@@ -1,0 +1,176 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputation from raw artifacts infeasible within verifier sandbox; compare self-reported results to paper gold with tolerances and check qualitative trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for result-level compare",
+      "source_provenance": "Paper Table 2, Table 1, text sections 3.(i) and 3.(iii)",
+      "generation_method": "Extracted directly from the paper's reported B3LYP/6-31G* results",
+      "why_not_fabricated": "Values are from the published peer-reviewed paper; can be cross-checked with the paper's article"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduced_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "activation_energies": {
+              "TS1": {
+                "Ea_reactant": "float",
+                "Ea_OC": "float"
+              },
+              "TS2": {
+                "Ea_reactant": "float",
+                "Ea_OC": "float"
+              },
+              "TS3": {
+                "Ea_reactant": "float",
+                "Ea_OC": "float"
+              }
+            },
+            "synchronicity_Sy": {
+              "TS1": "float",
+              "TS2": "float",
+              "TS3": "float"
+            },
+            "Wiberg_indices": {
+              "TS1": {
+                "C2O5": "float",
+                "N1C6": "float"
+              },
+              "TS2": {
+                "C2O5": "float",
+                "N1C6": "float"
+              },
+              "TS3": {
+                "C2O5": "float",
+                "N1C6": "float"
+              }
+            },
+            "NPA_charges_beta_C": {
+              "free_CH3CN": "float",
+              "complex1": "float",
+              "complex2": "float"
+            },
+            "electron_density_BCP": {
+              "TS1": {
+                "C2O5": "float",
+                "N1C6": "float"
+              },
+              "TS3": {
+                "C2O5": "float",
+                "N1C6": "float"
+              }
+            }
+          }
+        },
+        "description": "Aggregated reproduction results: activation energies (kcal/mol), synchronicity Sy, Wiberg bond indices, NPA charges (e), and electron densities (e/Å³). Values are compared to the paper’s hidden reference with tolerances."
+      }
+    ],
+    "notes": "All energy values are in kcal/mol. NPA charges are in electrons. Electron densities are in e/Å³. The synchronicity parameter Sy is unitless."
+  },
+  "steps": [
+    {
+      "id": "activation_energies",
+      "output_file": "reproduced_results.json",
+      "weight": 0.25,
+      "kind": "numeric_comparison",
+      "reference": {
+        "activation_energies.TS1.Ea_reactant": 13.99,
+        "activation_energies.TS1.Ea_OC": 15.92,
+        "activation_energies.TS2.Ea_reactant": 3.02,
+        "activation_energies.TS2.Ea_OC": 5.68,
+        "activation_energies.TS3.Ea_reactant": -5.38,
+        "activation_energies.TS3.Ea_OC": -3.59
+      },
+      "tolerance": 2.0
+    },
+    {
+      "id": "synchronicity",
+      "output_file": "reproduced_results.json",
+      "weight": 0.1,
+      "kind": "numeric_comparison",
+      "reference": {
+        "synchronicity_Sy.TS1": 0.92,
+        "synchronicity_Sy.TS2": 0.69,
+        "synchronicity_Sy.TS3": 0.53
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "wiberg",
+      "output_file": "reproduced_results.json",
+      "weight": 0.15,
+      "kind": "numeric_comparison",
+      "reference": {
+        "Wiberg_indices.TS1.C2O5": 0.39,
+        "Wiberg_indices.TS1.N1C6": 0.38,
+        "Wiberg_indices.TS2.C2O5": 0.55,
+        "Wiberg_indices.TS2.N1C6": 0.2,
+        "Wiberg_indices.TS3.C2O5": 0.48,
+        "Wiberg_indices.TS3.N1C6": 0.11
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "npa",
+      "output_file": "reproduced_results.json",
+      "weight": 0.1,
+      "kind": "numeric_comparison",
+      "reference": {
+        "NPA_charges_beta_C.free_CH3CN": 0.29,
+        "NPA_charges_beta_C.complex1": 0.48,
+        "NPA_charges_beta_C.complex2": 0.53
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "electron_density",
+      "output_file": "reproduced_results.json",
+      "weight": 0.1,
+      "kind": "numeric_comparison",
+      "reference": {
+        "electron_density_BCP.TS1.C2O5": 0.578,
+        "electron_density_BCP.TS1.N1C6": 0.47,
+        "electron_density_BCP.TS3.C2O5": 0.793,
+        "electron_density_BCP.TS3.N1C6": 0.181
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "trends",
+      "output_file": "reproduced_results.json",
+      "weight": 0.3,
+      "kind": "structural",
+      "conditions": [
+        {
+          "path1": "activation_energies.TS1.Ea_reactant",
+          "path2": "activation_energies.TS2.Ea_reactant",
+          "op": ">"
+        },
+        {
+          "path1": "activation_energies.TS2.Ea_reactant",
+          "path2": "activation_energies.TS3.Ea_reactant",
+          "op": ">"
+        },
+        {
+          "path1": "synchronicity_Sy.TS1",
+          "path2": "synchronicity_Sy.TS2",
+          "op": ">"
+        },
+        {
+          "path1": "synchronicity_Sy.TS2",
+          "path2": "synchronicity_Sy.TS3",
+          "op": ">"
+        }
+      ]
+    }
+  ]
+}

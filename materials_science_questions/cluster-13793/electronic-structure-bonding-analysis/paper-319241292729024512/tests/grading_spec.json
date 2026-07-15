@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Agent's computed lattice parameters, bulk moduli, mismatch, enthalpy, and electron counts are compared against the paper's reported gold values with tolerances that absorb method variability. The no‑d overestimation trend is checked structurally.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "elastic_properties.json": "reference_match",
+    "charge_distribution.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for elastic properties and charge distribution",
+      "source_provenance": "Paper table and text, marked in the paper markdown: a0(Al)=4.04, B(Al)=74.5, a0(Li)=3.49, B(Li)=12.0, a0(Al3Li)=4.033, B(Al3Li)=60.8, mismatch=-0.0017, enthalpy=-0.006 Ry/atom, no‑d a0=4.05, B=65.0, electron counts as given in the table.",
+      "generation_method": "extracted from the paper's numeric data and stored inline",
+      "why_not_fabricated": "These are the actual numbers reported in the paper; they are used as reference for reproduction, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Al": "object containing numeric keys a0 and B",
+            "Li": "object containing numeric keys a0 and B",
+            "Al3Li": "object containing numeric keys a0 and B",
+            "mismatch": "number",
+            "enthalpy_formation": "number",
+            "Al3Li_no_d": "object containing numeric keys a0 and B"
+          },
+          "units": {
+            "a0": "angstrom",
+            "B": "GPa",
+            "enthalpy_formation": "Ry/atom"
+          }
+        },
+        "description": "Equilibrium lattice parameter and bulk modulus for pure Al, pure Li, Al3Li (full basis), and Al3Li (no d‑states), plus lattice mismatch and enthalpy of formation."
+      },
+      {
+        "file": "charge_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "sphere",
+            "s",
+            "p",
+            "d"
+          ]
+        },
+        "description": "Valence electron occupations inside atomic spheres for Al3Li, optionally also for pure Al and Li."
+      }
+    ],
+    "notes": "All values are to be derived from the DFT calculations. The hidden checker will compare the reported values to the paper’s gold numbers with appropriate tolerances; the no‑d values must show an overestimation trend relative to the full calculation."
+  },
+  "steps": [
+    {
+      "id": "elastic_props",
+      "output_file": "elastic_properties.json",
+      "kind": "custom",
+      "weight": 0.7,
+      "config": {
+        "gold": {
+          "Al": {
+            "a0": 4.04,
+            "B": 74.5
+          },
+          "Li": {
+            "a0": 3.49,
+            "B": 12.0
+          },
+          "Al3Li": {
+            "a0": 4.033,
+            "B": 60.8
+          },
+          "mismatch": -0.0017,
+          "enthalpy_formation": -0.006,
+          "Al3Li_no_d": {
+            "a0": 4.05,
+            "B": 65.0
+          }
+        },
+        "tolerances": {
+          "a0_rel": 0.02,
+          "B_rel": 0.1,
+          "mismatch_abs": 0.001,
+          "enthalpy_abs": 0.002
+        }
+      }
+    },
+    {
+      "id": "charge_dist",
+      "output_file": "charge_distribution.csv",
+      "kind": "custom",
+      "weight": 0.3,
+      "config": {
+        "gold": {
+          "Al3Li": {
+            "Li": {
+              "s": 0.414,
+              "p": 0.824,
+              "d": 0.255
+            },
+            "Al": {
+              "s": 1.134,
+              "p": 1.434,
+              "d": 0.268
+            }
+          }
+        },
+        "tol_abs": 0.02
+      }
+    }
+  ]
+}

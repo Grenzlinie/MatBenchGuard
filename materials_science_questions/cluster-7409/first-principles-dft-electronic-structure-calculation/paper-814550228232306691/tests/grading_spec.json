@@ -1,0 +1,175 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute feasible: annealing barriers recomputed from NEB profiles, band gaps extracted from DOS, charge density minima taken from bond profiles; formation energies compared to hidden paper reference with tolerance (the gold is the paper-reported value).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "reference_match",
+    "neb_profiles.csv": "reference_match",
+    "electronic_DOS.csv": "reference_match",
+    "charge_density_profiles.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "formation energies gold",
+      "source_provenance": "Table 2, DFT column, E_F (eV)",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "These are the paper's own reported formation energies; they serve as the hidden reference for comparison."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "annealing barriers gold",
+      "source_provenance": "Table 2, DFT column, E_A (eV)",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "These are the paper's own reported annealing barriers; they serve as the hidden reference for the recomputed barriers."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "electronic band gaps gold",
+      "source_provenance": "Section 3.2 text and Figure 6 caption: perfect 5.25, A 4.90, B 4.80, C 5.01, D 4.86 eV",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "These are the paper's reported band gaps; they are the hidden reference for the gaps extracted from DOS."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "minimum charge density gold",
+      "source_provenance": "Section 3.2 text: perfect 0.327, A 0.309, B 0.288, C 0.318, D 0.301 e/Bohr³",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "These are the paper's reported N-N bond minimum densities; they serve as the hidden reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_id",
+            "E_F_eV"
+          ],
+          "units": {
+            "E_F_eV": "eV"
+          }
+        },
+        "description": "Formation energy E_F of each orientational defect, computed as total energy difference between relaxed defect cell and relaxed perfect crystal cell."
+      },
+      {
+        "file": "neb_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_id",
+            "replica_index",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Energy of each replica along the CI-NEB minimum-energy path for each defect. The annealing barrier is recomputed from this profile as max(energy) - energy at replica 0."
+      },
+      {
+        "file": "electronic_DOS.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_id",
+            "energy_eV",
+            "dos_arbunits"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "dos_arbunits": "arbitrary units"
+          }
+        },
+        "description": "Electronic density of states for the perfect crystal and for each defect. The band gap is extracted as the HOMO–LUMO gap from this data."
+      },
+      {
+        "file": "charge_density_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_id",
+            "distance_along_NN_bond_Angstrom",
+            "charge_density_e_Bohr3"
+          ],
+          "units": {
+            "distance_along_NN_bond_Angstrom": "Å",
+            "charge_density_e_Bohr3": "e/Bohr³"
+          }
+        },
+        "description": "Electron charge density along the most charge‑deficient N–N bond for each defect. The minimum value along the bond is the scored quantity."
+      }
+    ],
+    "notes": "All scored artifacts are compared against hidden reference values derived from the original study using tolerances appropriate for a recomputation with an open‑source DFT code. The NEB profile allows the checker to recompute the annealing barrier for each defect."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "formation_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "reference": {
+        "A": 1.6,
+        "B": 1.45,
+        "C": 1.11,
+        "D": 1.23
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "neb_profiles",
+      "output_file": "neb_profiles.csv",
+      "kind": "recompute_barrier",
+      "weight": 0.3,
+      "reference": {
+        "A": 0.23,
+        "B": 0.084,
+        "C": 0.27,
+        "D": 0.11
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "electronic_DOS",
+      "output_file": "electronic_DOS.csv",
+      "kind": "recompute_gap",
+      "weight": 0.2,
+      "reference": {
+        "perfect": 5.25,
+        "A": 4.9,
+        "B": 4.8,
+        "C": 5.01,
+        "D": 4.86
+      },
+      "tolerance": 0.1,
+      "dos_cutoff": 1e-06
+    },
+    {
+      "id": "charge_density_profiles",
+      "output_file": "charge_density_profiles.csv",
+      "kind": "extract_minimum",
+      "weight": 0.2,
+      "reference": {
+        "A": 0.309,
+        "B": 0.288,
+        "C": 0.318,
+        "D": 0.301
+      },
+      "tolerance": 0.02
+    }
+  ]
+}

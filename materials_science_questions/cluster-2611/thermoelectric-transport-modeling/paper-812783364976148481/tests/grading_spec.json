@@ -1,0 +1,179 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Seebeck enhancement factors and ZT enhancements from the agent's transport_results.csv, then compares to paper-reported hidden gold values with tolerances. This is T1 (recompute).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "transport_results.csv": "metric_recompute",
+    "enhancement_factors.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for Seebeck enhancement factors, ZT enhancements, and sign-change ranges, derived from the paper's text.",
+      "source_provenance": "Paper text: Section 3, Fig.4-5 descriptions. Specific numbers: Fe max Seebeck ratio ~60 at n=1.3e27 m-3; Co max Seebeck ratio ~80 at n=0.36e27 m-3; Ni max Seebeck ratio ~130 at n=0.004e27 m-3; ZT enhancements: Co 1.21, Ni 1.13, undoped max ZT 0.15; sign change concentrations: Fe <1.23e27, Co <0.32e27, Ni <0.003e27 m-3.",
+      "generation_method": "Extracted from paper text; values are approximate as stated (e.g., nearly 60, 80, 130). Gold values used as the approximate center.",
+      "why_not_fabricated": "Directly taken from the paper's narrative description of the computed results; these are the paper's reported headline numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transport_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "carrier_concentration",
+            "Seebeck_coefficient",
+            "electrical_conductivity",
+            "power_factor",
+            "carrier_thermal_conductivity",
+            "ZT"
+          ],
+          "units": {
+            "carrier_concentration": "m^-3",
+            "Seebeck_coefficient": "μV/K",
+            "electrical_conductivity": "S/m",
+            "power_factor": "W/m·K^2",
+            "carrier_thermal_conductivity": "W/m·K",
+            "ZT": "dimensionless"
+          },
+          "rows_per_system": "at least 50"
+        },
+        "description": "Full transport curves (S, σ, λ_C, PF, ZT) vs. carrier concentration for undoped, Fe, Co, Ni at 300 K."
+      },
+      {
+        "file": "enhancement_factors.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "undoped",
+            "Fe",
+            "Co",
+            "Ni"
+          ],
+          "properties": {
+            "undoped": {
+              "type": "object",
+              "required": [
+                "peak_ZT"
+              ]
+            },
+            "Fe": {
+              "type": "object",
+              "required": [
+                "max_Seebeck_raw",
+                "carrier_concentration_at_max_S",
+                "max_Seebeck_enhancement",
+                "peak_ZT",
+                "ZT_enhancement"
+              ]
+            },
+            "Co": {
+              "type": "object",
+              "required": [
+                "max_Seebeck_raw",
+                "carrier_concentration_at_max_S",
+                "max_Seebeck_enhancement",
+                "peak_ZT",
+                "ZT_enhancement"
+              ]
+            },
+            "Ni": {
+              "type": "object",
+              "required": [
+                "max_Seebeck_raw",
+                "carrier_concentration_at_max_S",
+                "max_Seebeck_enhancement",
+                "peak_ZT",
+                "ZT_enhancement"
+              ]
+            }
+          },
+          "units": {
+            "max_Seebeck_raw": "μV/K",
+            "carrier_concentration_at_max_S": "m^-3",
+            "max_Seebeck_enhancement": "dimensionless",
+            "peak_ZT": "dimensionless",
+            "ZT_enhancement": "dimensionless"
+          }
+        },
+        "description": "Extracted maximum Seebeck enhancement factors and ZT improvements for each dopant, compared to paper-reported hidden gold values."
+      }
+    ],
+    "notes": "The checker recomputes enhancement factors and trends from transport_results.csv and compares them to hidden gold values (paper-reported numbers) with tolerances. The enhancement_factors.json provides the agent's self-reported factors for reference match (T0), but the primary scoring uses the recomputed quantities (T1)."
+  },
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "transport_results.csv",
+      "weight": 0.6,
+      "kind": "recompute_metrics",
+      "description": "Recompute Seebeck enhancement factors and ZT enhancements from the CSV and compare to paper gold; verify sign-change and ordering trends.",
+      "gold": {
+        "seebeck_enhance": {
+          "Fe": 60,
+          "Co": 80,
+          "Ni": 130
+        },
+        "zt_enhance": {
+          "Co": 1.21,
+          "Ni": 1.13,
+          "undoped_max_zt": 0.15
+        },
+        "sign_change_n": {
+          "Fe": 1.23e+27,
+          "Co": 3.2e+26,
+          "Ni": 3e+24
+        },
+        "tolerances": {
+          "seebeck_enhance_rel": 0.3,
+          "zt_enhance_abs": 0.1,
+          "sign_change_rel": 0.5
+        }
+      }
+    },
+    {
+      "id": "step_04",
+      "output_file": "enhancement_factors.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "description": "Compare agent-reported enhancement factors to hidden paper gold.",
+      "gold": {
+        "Fe": {
+          "max_Seebeck_enhancement": 60,
+          "carrier_concentration_at_max_S": 1.3e+27,
+          "peak_ZT": 0.15,
+          "ZT_enhancement": 1.0
+        },
+        "Co": {
+          "max_Seebeck_enhancement": 80,
+          "carrier_concentration_at_max_S": 3.6e+26,
+          "peak_ZT": 0.18,
+          "ZT_enhancement": 1.21
+        },
+        "Ni": {
+          "max_Seebeck_enhancement": 130,
+          "carrier_concentration_at_max_S": 4e+24,
+          "peak_ZT": 0.17,
+          "ZT_enhancement": 1.13
+        },
+        "undoped": {
+          "peak_ZT": 0.15
+        }
+      },
+      "tolerances": {
+        "max_Seebeck_enhancement_rel": 0.3,
+        "carrier_concentration_rel": 0.5,
+        "ZT_enhancement_abs": 0.1,
+        "peak_ZT_abs": 0.05
+      }
+    }
+  ]
+}

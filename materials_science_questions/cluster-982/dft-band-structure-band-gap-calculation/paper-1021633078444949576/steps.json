@@ -1,0 +1,93 @@
+[
+  {
+    "id": "s1_structure_optimization",
+    "title": "Structural optimization",
+    "role": "process",
+    "action": "Perform DFT structural relaxation for each Janus monolayer (gamma-Pb2SSe, gamma-Pb2STe, gamma-Pb2SeTe) using Quantum ESPRESSO with PBE functional and PAW pseudopotentials. Obtain equilibrium lattice constants, atomic positions, and cohesive energies. Include a vacuum layer along the z direction.",
+    "output_file": "",
+    "evidence": "relaxation_details.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides optimized structures for all subsequent phonon and transport calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2_harmonic_phonon",
+    "title": "Harmonic phonon calculation",
+    "role": "process",
+    "action": "Using the relaxed structures, compute harmonic interatomic force constants (IFCs) via finite displacement method with Phonopy. Apply rotational invariance corrections using HiPhive to ensure a strictly quadratic ZA mode. Verify the absence of imaginary phonon frequencies.",
+    "output_file": "",
+    "evidence": "harmonic_IFCs_output.hdf5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the harmonic force constants needed for the anharmonic lattice thermal conductivity calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3_lattice_thermal_conductivity",
+    "title": "Lattice thermal conductivity from anharmonic phonons",
+    "role": "process",
+    "action": "Compute third-order anharmonic IFCs with Phono3py on supercells. Solve the linearized Boltzmann transport equation (LBTE) to obtain lattice thermal conductivity κ_l(T) for temperatures 300–800 K. Apply the thickness scaling factor to obtain in-plane values.",
+    "output_file": "",
+    "evidence": "kappa_l_results.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the lattice thermal conductivity values necessary for ZT evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s4_band_structure",
+    "title": "Electronic band structure (PBE)",
+    "role": "process",
+    "action": "Perform a self-consistent DFT calculation for each monolayer with a dense k-point mesh using the PBE functional. Extract the band energies (eigenvalues) for use in BoltzTraP2.",
+    "output_file": "",
+    "evidence": "bands.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the electronic band structure needed for the semiclassical transport calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "s5_carrier_mobility",
+    "title": "Carrier mobility and relaxation time (deformation potential theory)",
+    "role": "process",
+    "action": "Calculate effective masses (electron and hole) from band edge curvatures. Perform strained DFT runs to extract the 2D elastic stiffness and deformation potential constants. Apply Bardeen-Shockley deformation potential theory to obtain carrier mobilities and relaxation times at 300 K.",
+    "output_file": "",
+    "evidence": "mobility_relaxation_times.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Yields the relaxation times that connect the electronic band structure to realistic conductivities.",
+    "output_schema": ""
+  },
+  {
+    "id": "s6_electronic_transport",
+    "title": "Electronic transport coefficients (BoltzTraP2)",
+    "role": "process",
+    "action": "Interpolate the PBE band structure with BoltzTraP2 under the constant relaxation time approximation (CRTA). Generate the Seebeck coefficient S, electrical conductivity σ/τ, and electronic thermal conductivity κ_e/τ as functions of carrier concentration and temperature. Multiply by the DP relaxation times to obtain absolute σ and κ_e, and compute the power factor PF = σ S².",
+    "output_file": "",
+    "evidence": "transport_coefficients.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the electronic transport property grids required to evaluate ZT.",
+    "output_schema": ""
+  },
+  {
+    "id": "s7_zt_optimization",
+    "title": "ZT optimization and final results",
+    "role": "scored",
+    "action": "For each monolayer, combine the lattice thermal conductivity κ_l(T) with the electronic transport coefficients. Compute ZT(T, carrier concentration) = PF·T/(κ_e + κ_l). For both n-type and p-type carriers, find the optimal ZT and the corresponding transport properties at 300 K and 800 K. Write the optimal values to optimized_zt_results.json.",
+    "output_file": "optimized_zt_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing optimal ZT and transport properties for the three monolayers at 300K and 800K.",
+    "output_schema": "Object with keys 'gamma-Pb2SSe', 'gamma-Pb2STe', 'gamma-Pb2SeTe'. Each value is an object with keys 'n-type' and 'p-type'. Each doping type object has keys '300K' and '800K'. Each temperature entry contains: ZT (float), Seebeck_coeff_muV_K (float), electrical_cond_Ohm_m (float), power_factor_W_mK2_e-3 (float), electronic_thermal_cond_W_mK (float), lattice_thermal_cond_W_mK (float), carrier_concentration_cm2 (float)."
+  }
+]

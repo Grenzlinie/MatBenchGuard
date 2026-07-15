@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Raw band gap recomputed from the agent's submitted band energies; VBM/CBM labels verified; PDOS scored by structural audit of orbital contributions.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference raw band gap and PDOS thresholds",
+      "source_provenance": "paper-reported experimental optical gap (3.51 eV) and scissor shift (0.45 eV) → raw gap = 3.06 eV; PDOS orbital statements from paper",
+      "generation_method": "derived from paper's own data (3.51 – 0.45 = 3.06); thresholds set from paper's explicit claims about orbital character",
+      "why_not_fabricated": "raw gap is traceable to the paper's reported numbers; PDOS thresholds reflect the paper's conclusion that valence bands are p-adc/water dominated and conduction bands are p-4-phpy dominated"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kpath": "array of objects with 'label' (string) and 'coordinates' (array of 3 floats)",
+            "band_energies": "2D array of float (eV), shape [n_kpoints, n_bands]",
+            "fermi_energy": "float (eV)",
+            "vbm_energy": "float (eV)",
+            "cbm_energy": "float (eV)",
+            "raw_band_gap": "float (eV)",
+            "scissor_shift_applied": "float (should be 0.45)",
+            "adjusted_band_gap": "float (eV)",
+            "vbm_kpoint": "object with 'label' and 'coordinates'",
+            "cbm_kpoint": "object with 'label' and 'coordinates'",
+            "gap_type": "string ('direct' or 'indirect')"
+          }
+        },
+        "description": "Derived band structure quantities: band energies along the k-path, VBM/CBM locations, raw and scissored band gap, and gap type."
+      },
+      {
+        "file": "pdos_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "valence_band_top_contributions": "array of objects for the three highest valence bands",
+            "conduction_band_bottom_contributions": "array of objects for the three lowest conduction bands"
+          },
+          "items": {
+            "band_index": "integer",
+            "energy": "float (eV)",
+            "contributions": {
+              "Cd": {
+                "s": "float",
+                "p": "float",
+                "d": "float"
+              },
+              "adc": {
+                "s": "float",
+                "p": "float",
+                "d": "float"
+              },
+              "4-phpy": {
+                "s": "float",
+                "p": "float",
+                "d": "float"
+              },
+              "water": {
+                "s": "float",
+                "p": "float",
+                "d": "float"
+              }
+            }
+          }
+        },
+        "description": "Fractional orbital contributions (s,p,d) per atom type for the band edges, used to audit dominant electronic states."
+      }
+    ],
+    "notes": "The workflow covers only compound 1 as specified by the minimal reproduction task. The proprietary CASTEP code is replaced by Quantum ESPRESSO with the same functional (PBE), pseudopotential type, and dispersion correction."
+  },
+  "steps": [
+    {
+      "id": "step_3",
+      "output_file": "band_structure_results.json",
+      "weight": 0.7,
+      "kind": "rubric",
+      "target_policy": "metric_recompute",
+      "hidden_raw_gap_ref": 3.06,
+      "raw_gap_tolerance": 0.3
+    },
+    {
+      "id": "step_4",
+      "output_file": "pdos_summary.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "target_policy": "structural_audit",
+      "thresholds": {
+        "valence": {
+          "Cd_d_max": 0.15,
+          "adc_water_p_min": 0.5
+        },
+        "conduction": {
+          "four_phpy_p_min": 0.4
+        }
+      }
+    }
+  ]
+}

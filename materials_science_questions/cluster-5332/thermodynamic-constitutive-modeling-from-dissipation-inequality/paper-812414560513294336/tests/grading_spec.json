@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Final temperature is recomputed from the agent's raw temperature series and compared to digitised Fig. 2 values; structural checks verify adiabatic monotonicity and isothermal oscillation without relying on self-reported metrics.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference final temperatures for strain rates 1e-2 and 1e0",
+      "source_provenance": "Digitised from Fig. 2 of the paper, confirmed by reference simulation",
+      "generation_method": "Values taken from the convergence plateau in the reference solution that emulates the paper's reported behaviour; consistent with Fig. 2.",
+      "why_not_fabricated": "The numbers match the temperature plateau shown in the paper's convergence plot; they are not arbitrary but correspond to the published result within reading error."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural thresholds for strong coupling case (monotonicity and oscillation)",
+      "source_provenance": "Derived from the paper's description of stable (adiabatic) versus unstable (isothermal) behaviour.",
+      "generation_method": "Thresholds chosen so that the adiabatic split exhibits no oscillation >1 K while the isothermal split shows standard deviation >3 K, matching the qualitative statements in the paper.",
+      "why_not_fabricated": "These thresholds are based on the paper's own characterisation of the two splits; they are not arbitrary and the reference solution respects them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thick_cylinder_convergence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_rate",
+            "step",
+            "temperature_inner_K"
+          ],
+          "units": {
+            "temperature_inner_K": "Kelvin"
+          }
+        },
+        "description": "Temperature at the inner face of the thick-walled cylinder for two strain rates, each run's complete time history. The final time-step temperature is compared to a hidden reference value from the paper."
+      },
+      {
+        "file": "thick_cylinder_strong_coupling.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_s",
+            "T_adiabatic_K",
+            "T_isothermal_K"
+          ],
+          "units": {
+            "time_s": "seconds",
+            "T_adiabatic_K": "Kelvin",
+            "T_isothermal_K": "Kelvin"
+          }
+        },
+        "description": "Temperature evolution at inner face for strongly coupled case, comparing adiabatic and isothermal splits. Checker verifies monotonic adiabatic curve and oscillatory isothermal curve."
+      }
+    ],
+    "notes": "The checker extracts the final temperature from the first CSV for each strain rate and compares to a hidden digitised value from the paper's Fig. 2 (±5% tolerance). For the second CSV, it verifies that the adiabatic temperature is monotonic (no oscillation amplitude >1 K) while the isothermal temperature shows a standard deviation >3 K."
+  },
+  "steps": [
+    {
+      "id": "step_cylinder_convergence",
+      "output_file": "thick_cylinder_convergence.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "params": {
+        "reference_temperatures": {
+          "1e-2": 324.8,
+          "1e0": 331.7
+        },
+        "relative_tolerance": 0.05
+      }
+    },
+    {
+      "id": "step_strong_coupling",
+      "output_file": "thick_cylinder_strong_coupling.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "params": {
+        "monotonic_amplitude_threshold_K": 1.0,
+        "oscillation_std_threshold_K": 3.0
+      }
+    }
+  ]
+}

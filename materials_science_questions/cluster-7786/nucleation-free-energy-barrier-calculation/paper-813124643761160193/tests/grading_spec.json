@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T0 result-level compare: critical nucleus sizes and interface energy compared to paper-reported gold with tolerances; recomputing from raw MD is infeasible in the checker sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold critical nucleus sizes and solid-liquid interface energy for pure Nb",
+      "source_provenance": "Paper, Fig. 5a and text (n* values) and text (σ = 0.367 J/m²). Digitized from the figure and cross-checked against explicitly reported values (n*=202 at 689 K, n*=2447 at 239 K, which is not directly used but confirms trend).",
+      "generation_method": "Extracted from the published paper; values verified for monotonic consistency with the reported trend.",
+      "why_not_fabricated": "These are the actual reported values from the source publication, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_nucleus_sizes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "undercooling_K",
+            "n_star"
+          ],
+          "units": {
+            "undercooling_K": "K",
+            "n_star": "atoms"
+          }
+        },
+        "description": "Critical nucleus size (number of atoms) at six specified undercoolings."
+      },
+      {
+        "file": "interface_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single float, unit J/m²"
+        },
+        "description": "Average solid-liquid interface energy σ of Niobium."
+      }
+    ],
+    "notes": "The MD verification steps (melting point and liquid density) are omitted as they only validate the potential and are not required to reproduce the main headline; the EAM potential is publicly available."
+  },
+  "steps": [
+    {
+      "id": "critical_nucleus_sizes",
+      "output_file": "critical_nucleus_sizes.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold": {
+        "n_star_by_undercooling": {
+          "200": 6182,
+          "300": 1948,
+          "400": 872,
+          "500": 474,
+          "600": 291,
+          "689": 202
+        }
+      },
+      "tolerance": {
+        "relative": 0.2,
+        "absolute": 50
+      },
+      "check_monotonic": true,
+      "required_undercoolings": [
+        200,
+        300,
+        400,
+        500,
+        600,
+        689
+      ]
+    },
+    {
+      "id": "interface_energy",
+      "output_file": "interface_energy.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": 0.367,
+      "tolerance": {
+        "absolute": 0.02,
+        "partial_max": 0.05
+      }
+    }
+  ]
+}

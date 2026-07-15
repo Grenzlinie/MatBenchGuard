@@ -1,0 +1,186 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap recomputed from DOS, dielectric peak positions and DOS sharp-peak counts recomputed from raw CSV artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dos_4x4.csv": "exact_match",
+    "dos_8x8.csv": "exact_match",
+    "epsilon2_4x4.csv": "structural_audit",
+    "epsilon2_8x8.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Band gap values for 4×4 and 8×8 wires from paper.",
+      "source_provenance": "Paper text: 'band gap is equal to 3.29, 2.5 and 2.1 eV for wires with diameter 7.68, 11.52 and 15.36 Å'.",
+      "generation_method": "Direct extraction from the paper.",
+      "why_not_fabricated": "These are the paper's own reported numbers."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Dielectric peak feature expectations: 4×4 split peak, 8×8 main peak near bulk Si ~3.4 eV.",
+      "source_provenance": "Paper text: 'splitting of the main peak into two' for 4×4; 'position of the main peak reaches the energy which corresponds to the bulk Si energy very fast, i.e. for the 8×8 case'. Bulk Si main peak ~3.4 eV from the literature.",
+      "generation_method": "Inferred from the paper's qualitative description and known bulk Si optical data.",
+      "why_not_fabricated": "Derived from the paper's qualitative claims and known reference values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Minimum sharp DOS peak counts required to confirm 1D character.",
+      "source_provenance": "Paper statement: 'presence of sharp peaks embedded in the DOS … number of sharp peaks decreases very fast as the diameter of the wire increases'.",
+      "generation_method": "Conservative thresholds chosen to differentiate 1D features from noise.",
+      "why_not_fabricated": "Based on the paper's description of 1D character; thresholds set low enough to be robust."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_4x4.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos": "arb. units"
+          }
+        },
+        "description": "Density of states for the 4×4 wire. The checker will extract the band gap and verify the presence of one‑dimensional sharp peaks."
+      },
+      {
+        "file": "dos_8x8.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos": "arb. units"
+          }
+        },
+        "description": "Density of states for the 8×8 wire. The checker will extract the band gap and verify one‑dimensional features."
+      },
+      {
+        "file": "epsilon2_4x4.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon2_parallel",
+            "epsilon2_perpendicular"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon2_parallel": "arb. units",
+            "epsilon2_perpendicular": "arb. units"
+          }
+        },
+        "description": "Dielectric function (imaginary part) for the 4×4 wire. The checker will compare main peak positions and the splitting of the main peak."
+      },
+      {
+        "file": "epsilon2_8x8.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon2_parallel",
+            "epsilon2_perpendicular"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon2_parallel": "arb. units",
+            "epsilon2_perpendicular": "arb. units"
+          }
+        },
+        "description": "Dielectric function (imaginary part) for the 8×8 wire. The checker will verify the main peak position relative to bulk Si and the merging of the split peak."
+      }
+    ],
+    "notes": "All scored artifacts are CSV tables on a fine energy grid. The checker recomputes key quantities (band gap from DOS, peak positions and splitting from dielectric function) and compares them against hidden reference values derived from the paper's reported results."
+  },
+  "steps": [
+    {
+      "id": "dos_4x4_gap",
+      "output_file": "dos_4x4.csv",
+      "weight": 0.2,
+      "kind": "extract_gap",
+      "target_gap": 3.29,
+      "tolerance": 0.15,
+      "dos_threshold_factor": 0.01
+    },
+    {
+      "id": "dos_8x8_gap",
+      "output_file": "dos_8x8.csv",
+      "weight": 0.2,
+      "kind": "extract_gap",
+      "target_gap": 2.1,
+      "tolerance": 0.15,
+      "dos_threshold_factor": 0.01
+    },
+    {
+      "id": "eps2_4x4_peak_split",
+      "output_file": "epsilon2_4x4.csv",
+      "weight": 0.15,
+      "kind": "check_peak_split",
+      "polarization": "parallel",
+      "energy_range": [
+        2.0,
+        5.0
+      ],
+      "split_threshold": 0.3,
+      "prominence_fraction": 0.05
+    },
+    {
+      "id": "eps2_8x8_main_peak",
+      "output_file": "epsilon2_8x8.csv",
+      "weight": 0.15,
+      "kind": "check_main_peak",
+      "polarization": "parallel",
+      "energy_range": [
+        2.0,
+        5.0
+      ],
+      "target_peak_energy": 3.4,
+      "tolerance": 0.4,
+      "split_absence_threshold": 0.3
+    },
+    {
+      "id": "dos_4x4_structure",
+      "output_file": "dos_4x4.csv",
+      "weight": 0.15,
+      "kind": "check_peak_count",
+      "min_peaks": 5,
+      "energy_range": [
+        -10,
+        10
+      ],
+      "prominence_fraction": 0.05
+    },
+    {
+      "id": "dos_8x8_structure",
+      "output_file": "dos_8x8.csv",
+      "weight": 0.15,
+      "kind": "check_peak_count",
+      "min_peaks": 3,
+      "energy_range": [
+        -10,
+        10
+      ],
+      "prominence_fraction": 0.05
+    }
+  ]
+}

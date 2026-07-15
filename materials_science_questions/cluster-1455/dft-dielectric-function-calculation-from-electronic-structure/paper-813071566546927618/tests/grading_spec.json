@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute ε₁(0) from ε₂(ω) via Kramers‑Kronig; compare band gaps to paper gold; verify peak positions and cross‑artifact consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "static_properties.json": "threshold_or_better",
+    "epsilon2_0pct.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported band gaps (HSE06, interpolated to requested strains) and static dielectric constants ε₁ₓ(0), ε₁ᵧ(0) from Table 2 and Table 3, plus ε₂ peak positions.",
+      "source_provenance": "Paper Tables 2, 3 and Fig. 6 peak labels; band gaps at −7%, −3%, +7% interpolated linearly from adjacent even‑strain entries in Table 2.",
+      "generation_method": "Extracted directly from the paper; interpolation uses midpoint of published values at −8%/−6% etc.",
+      "why_not_fabricated": "Values are the paper’s exact numbers or the linear interpolation of reported data points."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "static_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "strain": "string",
+            "Eg_HSE06": "float (eV)",
+            "epsilon1x0": "float",
+            "epsilon1y0": "float"
+          },
+          "required": [
+            "strain",
+            "Eg_HSE06",
+            "epsilon1x0",
+            "epsilon1y0"
+          ]
+        },
+        "description": "Strain-dependent HSE06 band gaps and static dielectric constants (ε₁ₓ(0) and ε₁ᵧ(0)) for monolayer BP at -7%, -3%, 0%, 3%, and 7% biaxial strain."
+      },
+      {
+        "file": "epsilon2_0pct.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "epsilon2_x",
+            "epsilon2_y"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "epsilon2_x": "dimensionless",
+            "epsilon2_y": "dimensionless"
+          }
+        },
+        "description": "Imaginary part of the dielectric function ε₂(ω) for x and y polarizations at 0% strain, covering 0–12 eV with dense sampling."
+      }
+    ],
+    "notes": "The static dielectric constants and band gaps are scored by comparison with hidden reference values (paper Table 2 and Table 3) within tolerances. The epsilon2 spectrum is audited for structural validity (non-negative values, energy range, monotonic energy grid)."
+  },
+  "steps": [
+    {
+      "id": "static_properties_shape",
+      "output_file": "static_properties.json",
+      "kind": "shape_audit",
+      "weight": 0.05
+    },
+    {
+      "id": "band_gap_agreement",
+      "output_file": "static_properties.json",
+      "kind": "numeric",
+      "weight": 0.35,
+      "targets": {
+        "-7%": {
+          "value": 0.331,
+          "tolerance": 0.15
+        },
+        "-3%": {
+          "value": 1.087,
+          "tolerance": 0.15
+        },
+        "0%": {
+          "value": 1.509,
+          "tolerance": 0.15
+        },
+        "3%": {
+          "value": 1.845,
+          "tolerance": 0.15
+        },
+        "7%": {
+          "value": 1.5375,
+          "tolerance": 0.15
+        }
+      }
+    },
+    {
+      "id": "epsilon2_shape",
+      "output_file": "epsilon2_0pct.csv",
+      "kind": "shape_audit",
+      "weight": 0.03
+    },
+    {
+      "id": "epsilon2_recompute_static",
+      "output_file": "epsilon2_0pct.csv",
+      "kind": "recompute_metric",
+      "weight": 0.35,
+      "recompute": {
+        "method": "kramers_kronig",
+        "target_epsilon1x0": 3.41,
+        "target_epsilon1y0": 3.13,
+        "tolerance": 0.2
+      }
+    },
+    {
+      "id": "epsilon2_peak_positions",
+      "output_file": "epsilon2_0pct.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "targets": {
+        "peaks": [
+          {
+            "energy": 2.05,
+            "tolerance": 0.2
+          },
+          {
+            "energy": 5.51,
+            "tolerance": 0.2
+          },
+          {
+            "energy": 5.94,
+            "tolerance": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "static_dielectric_consistency",
+      "output_file": "static_properties.json",
+      "kind": "consistency_check",
+      "weight": 0.07,
+      "tol": 0.1
+    }
+  ]
+}

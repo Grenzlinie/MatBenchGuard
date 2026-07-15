@@ -1,0 +1,219 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Microkinetic results are evaluated through structural trend checks (dominant pathways, peak positions, monotonic decreases, order variations) as the model's full recomputation from raw DFT inputs is infeasible within the lightweight verifier sandbox. DFT adsorption energies use result-level comparison against paper values with per-species tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_adsorption_energies.json": "reference_match",
+    "microkinetic_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold adsorption energies for DFT intermediates (ZPE-corrected, kcal/mol)",
+      "source_provenance": "Paper Table 1 (values in parentheses, after zero‑point energy corrections)",
+      "generation_method": "Directly copied from the published paper's Table 1, parenthesized ZPE-corrected values.",
+      "why_not_fabricated": "These are the actual reported numbers from the paper, needed for a result‑level comparison. They are traceable to the public paper and are not invented by the author."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CH3OH",
+            "CH3O",
+            "CH2OH",
+            "CH2O",
+            "CHOH",
+            "CHO",
+            "COH",
+            "CO",
+            "H",
+            "H2"
+          ],
+          "properties": {
+            "CH3OH": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CH3O": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CH2OH": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CH2O": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CHOH": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CHO": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "COH": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "CO": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "H": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "H2": {
+              "type": "number",
+              "unit": "kcal/mol"
+            }
+          }
+        },
+        "description": "Computed DFT adsorption energies (most stable configuration, ZPE corrected if available) for all key intermediates. Values are compared to the paper's reported adsorption energies with a per-species tolerance to account for functional/code differences."
+      },
+      {
+        "file": "microkinetic_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "dominant_pathways",
+            "coverage_vs_T_UHV",
+            "rate_vs_T_highP",
+            "apparent_activation_energy_vs_T",
+            "reaction_order_vs_p"
+          ],
+          "properties": {
+            "dominant_pathways": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "coverage_vs_T_UHV": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "T",
+                  "theta_CO",
+                  "theta_COH",
+                  "theta_vacant"
+                ]
+              }
+            },
+            "rate_vs_T_highP": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "T",
+                  "P",
+                  "rate"
+                ]
+              }
+            },
+            "apparent_activation_energy_vs_T": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "T",
+                  "H_star"
+                ]
+              }
+            },
+            "reaction_order_vs_p": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "P",
+                  "alpha"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Microkinetic simulation results including dominant reaction pathways, CO/COH coverages vs temperature under UHV, overall rate vs temperature at high pressures, apparent activation energy vs temperature, and methanol reaction order vs pressure. The checker validates structural trends and pattern matches rather than exact numeric equality."
+      }
+    ],
+    "notes": "Tolerance for DFT adsorption energies is set on a per-species basis to account for expected systematic shifts between the open-source DFT implementation and the paper's DMol³ results. The microkinetic results are evaluated on the correctness of qualitative trends (dominant pathways, peak temperatures, monotonicity of activation energy, pressure dependence of reaction order)."
+  },
+  "steps": [
+    {
+      "id": "step_dft_energies",
+      "output_file": "dft_adsorption_energies.json",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "gold": {
+        "values": {
+          "CH3OH": 13.4,
+          "CH3O": 52.8,
+          "CH2OH": 49.8,
+          "CH2O": 23.0,
+          "CHOH": 78.1,
+          "CHO": 60.8,
+          "COH": 106.8,
+          "CO": 46.5,
+          "H": 61.5,
+          "H2": 7.7
+        },
+        "tolerance_kcal_per_mol": 5.0
+      },
+      "description": "Compare each species adsorption energy to paper-reported ZPE-corrected values with ±5 kcal/mol tolerance."
+    },
+    {
+      "id": "step_microkinetic",
+      "output_file": "microkinetic_results.json",
+      "kind": "structural_audit",
+      "weight": 0.7,
+      "structural_checks": {
+        "dominant_pathways": {
+          "expected_paths": [
+            "CH3OH->CH3O->CH2O->CHO->CO",
+            "CH3OH->CH2OH->CHOH->CHO->CO",
+            "CH3OH->CH2OH->CH2O->CHO->CO",
+            "CH3OH->CH2OH->CHOH->COH->CO"
+          ],
+          "sub_weight": 0.3
+        },
+        "coverage_uhv": {
+          "co_peak_range_K": [
+            140,
+            180
+          ],
+          "sub_weight": 0.4
+        },
+        "rate_peak": {
+          "high_p_peak_range_K": [
+            850,
+            950
+          ],
+          "sub_weight": 0.15
+        },
+        "activation_energy": {
+          "must_be_decreasing": true,
+          "sub_weight": 0.15
+        },
+        "reaction_order": {
+          "must_be_decreasing_with_pressure": true,
+          "sub_weight": 0.1
+        }
+      },
+      "description": "Verify structural trends: correct dominant pathways, CO coverage maximum near 160 K under UHV, overall rate peak in 850‑950 K for pressures above 50 Torr, apparent activation energy decreasing with temperature, and methanol reaction order decreasing with pressure."
+    }
+  ]
+}

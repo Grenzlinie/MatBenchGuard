@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Numeric spin-splitting values for the tight-binding model are not reported in the paper (only a band structure plot is shown); therefore a hidden gold value table cannot be authoritatively derived from the paper. Structural checks (zero splitting at Gamma', significant splitting at M'/M'', and sign reversal between them) directly verify the g-wave altermagnetic claim.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tb_band_structure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "csv",
+          "required_columns": [
+            "k_index",
+            "kx",
+            "ky",
+            "kz",
+            "spin",
+            "band_index",
+            "energy"
+          ],
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Band structure eigenvalues for both spin channels along the M''-Γ'-M' k-path. The hidden checker verifies the spin splitting magnitude and sign reversal at specific k-points."
+      }
+    ],
+    "notes": "The scored target is the tight-binding band structure that demonstrates NRSS. The checker uses a hidden reference for spin splitting at selected k-points, with tolerance for implementation differences."
+  },
+  "steps": [
+    {
+      "id": "step_03_band_structure",
+      "output_file": "tb_band_structure.csv",
+      "kind": "structural",
+      "weight": 1.0,
+      "target_policy": "structural_audit",
+      "action": "Compute spin splitting and verify g-wave symmetry pattern",
+      "description": "The checker loads the CSV, locates the k‑points near Γ' (0,0,0.25), M' (0.45,0,0.25) and M'' (-0.45,0,0.25), computes the spin splitting (energy_up – energy_down) for each band, and scores four sub‑criteria: (1) RMS splitting at Γ' is ≤ 0.01 eV, (2) maximum absolute splitting at M' ≥ 0.05 eV, (3) maximum absolute splitting at M'' ≥ 0.05 eV, (4) the fraction of band pairs with opposite sign between M' and M'' meets a threshold (≥ 0.8). Weights: 0.2, 0.2, 0.2, 0.4 respectively.",
+      "config": {
+        "target_kpoints": {
+          "Mp": [
+            0.45,
+            0.0,
+            0.25
+          ],
+          "Mpp": [
+            -0.45,
+            0.0,
+            0.25
+          ],
+          "Gamma": [
+            0.0,
+            0.0,
+            0.25
+          ]
+        },
+        "tol_coordinate": 0.02,
+        "gamma_zero_rms": 0.01,
+        "min_magnitude": 0.05,
+        "fraction_sign_reversal": 0.8
+      }
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw MD trajectories impossible in verifier sandbox; verify structural properties of Mw curves and referentially match rate constants and activation energies to paper-reported tolerance ranges.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Rate constant ratio windows (bulk vs tubes)",
+      "source_provenance": "Paper text: polymerization 18× slower in (10,10) and 50× slower in (7,7); windows 18±9 and 50±25 per approved plan.",
+      "generation_method": "Derived from paper's factor windows",
+      "why_not_fabricated": "Directly traceable to the paper's reported relative rates."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Activation energy acceptable ranges",
+      "source_provenance": "Paper text: activation energies 65±13 (bulk), 52±8 ((10,10)), 54±5 ((7,7)) kcal/mol.",
+      "generation_method": "Exact error bars from paper.",
+      "why_not_fabricated": "Paper's own reported uncertainties."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_mw_vs_time.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "temperature_K",
+            "time_ns",
+            "Mw_g_per_mol"
+          ],
+          "units": {
+            "time_ns": "nanosecond",
+            "Mw_g_per_mol": "g/mol"
+          }
+        },
+        "description": "Weight-averaged molecular weight evolution data. The checker verifies monotonic increase, plateau in confined systems, and correct ordering (bulk > (10,10) > (7,7)) at comparable times."
+      },
+      {
+        "file": "step_02_rate_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "temperature_K",
+            "rate_constant_s_per_mol"
+          ],
+          "units": {
+            "rate_constant_s_per_mol": "s^{-1} mol^{-1}"
+          }
+        },
+        "description": "Fitted second-order polymerization rate constants. The checker checks ordering and that the ratio of bulk to tube rates falls within the paper's reported factor windows (18±9 for (10,10), 50±25 for (7,7))."
+      },
+      {
+        "file": "step_03_activation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "activation_energy_kcal_per_mol",
+            "Ea_error_kcal_per_mol"
+          ],
+          "units": {
+            "activation_energy_kcal_per_mol": "kcal/mol",
+            "Ea_error_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Activation energies from Arrhenius analysis. The checker verifies that the activation energies fall within the paper-reported error bars: 52–78 kcal/mol (bulk), 44–60 ((10,10)), 49–59 ((7,7))."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "check_mw_curves",
+      "output_file": "step_01_mw_vs_time.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify Mw vs time: monotonic increase per (system,temperature), plateau for tube systems, ordering bulk > (10,10) > (7,7) at comparable times.",
+      "parameters": {
+        "monotonic_tolerance_relative_change": 0.01,
+        "plateau_relative_change_threshold": 0.05,
+        "plateau_fraction": 0.2
+      }
+    },
+    {
+      "id": "check_rate_constants",
+      "output_file": "step_02_rate_constants.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "description": "Check rate constants ordering and ratio windows.",
+      "parameters": {
+        "ratio_windows": {
+          "bulk_10_10": [
+            9.0,
+            27.0
+          ],
+          "bulk_7_7": [
+            25.0,
+            75.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "check_activation_energies",
+      "output_file": "step_03_activation_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "description": "Check activation energies within paper-reported error bars.",
+      "parameters": {
+        "acceptable_ranges": {
+          "bulk": [
+            52.0,
+            78.0
+          ],
+          "10_10": [
+            44.0,
+            60.0
+          ],
+          "7_7": [
+            49.0,
+            59.0
+          ]
+        },
+        "out_of_range_decay_bandwidth": 20.0
+      }
+    }
+  ]
+}

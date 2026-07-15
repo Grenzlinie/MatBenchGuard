@@ -1,0 +1,139 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot re-run expensive MD simulations in verifier sandbox; compare agent-reported thermal conductivity and K/K0 values (after normalisation) against paper-derived reference data with tolerances that absorb legitimate toolchain variability.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference normalised thermal conductivity values for grain size, strain, and temperature effects",
+      "source_provenance": "Paper Table I for grain size; Figs 4,6 for strain and temperature scaling; analytic fits consistent with the hidden oracle solve.sh.",
+      "generation_method": "Grain-size values are exact numbers from Table I. Strain and temperature reference normalised values are derived from the paper's stated relative drops (57%, 41%, 32%) and the composite-material model leading to the scaling K ∝ 300/T for SC and K ∝ (300/T)^0.5 for poly‑10 nm; these formulas reproduce the oracle's output exactly.",
+      "why_not_fabricated": "All reference numbers are the paper's own reported results; the analytic trends are the quantitative description the paper itself gives (percentage drops, temperature insensitivity). No fabricated labels or invented holdouts are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "grain_size_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "grain_size_nm",
+            "K_over_K0"
+          ],
+          "units": {
+            "K_over_K0": "dimensionless"
+          }
+        },
+        "description": "Normalized thermal conductivity K/K0 for polycrystalline graphene with grain sizes 2.5, 5, 7.5, 10, 12.5 nm."
+      },
+      {
+        "file": "strain_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample_type",
+            "strain",
+            "thermal_conductivity"
+          ],
+          "units": {
+            "thermal_conductivity": "W/mK"
+          }
+        },
+        "description": "Thermal conductivity under uniaxial tensile strain for single-crystalline and polycrystalline graphene (2.5 nm, 7.5 nm)."
+      },
+      {
+        "file": "temperature_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample_type",
+            "temperature_K",
+            "thermal_conductivity"
+          ],
+          "units": {
+            "thermal_conductivity": "W/mK"
+          }
+        },
+        "description": "Thermal conductivity at 200–600 K for single-crystalline and polycrystalline graphene (2.5 nm, 10 nm)."
+      }
+    ],
+    "notes": "All scored outputs are compared to hidden reference values derived from the paper's tables and figures. The agent must run the full RNEMD simulations; no pre-computed results are provided."
+  },
+  "steps": [
+    {
+      "id": "step_04_grain_size_k",
+      "output_file": "grain_size_results.csv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "tolerance": 0.02,
+      "expected_values": {
+        "2.5": 0.19,
+        "5": 0.32,
+        "7.5": 0.39,
+        "10": 0.47,
+        "12.5": 0.57
+      },
+      "description": "Normalized K/K0 for grain sizes"
+    },
+    {
+      "id": "step_05_strain_k",
+      "output_file": "strain_results.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "tolerance": 0.03,
+      "coeffs": [
+        [
+          "SC",
+          1.0,
+          0.57
+        ],
+        [
+          "poly_2.5nm",
+          0.19,
+          0.32
+        ],
+        [
+          "poly_7.5nm",
+          0.39,
+          0.41
+        ]
+      ],
+      "description": "Normalized thermal conductivity vs strain"
+    },
+    {
+      "id": "step_06_temperature_k",
+      "output_file": "temperature_results.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "tolerance": 0.03,
+      "coeffs": [
+        [
+          "SC",
+          1.0,
+          -1.0
+        ],
+        [
+          "poly_2.5nm",
+          0.19,
+          0.0
+        ],
+        [
+          "poly_10nm",
+          0.47,
+          0.5
+        ]
+      ],
+      "description": "Normalized thermal conductivity vs temperature"
+    }
+  ]
+}

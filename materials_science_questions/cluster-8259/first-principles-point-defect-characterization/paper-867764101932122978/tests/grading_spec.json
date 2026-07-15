@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level compare. The workflow produces self-contained formation energy (eV) and magnetic state (bool) artifacts; recomputing from raw DFT logs is infeasible without the full DFT pipeline and those logs are not structured declaratively. The paper's Table II provides authoritative hidden reference values.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "defect_key": "number (eV)"
+          }
+        },
+        "description": "Defect formation energies (eV) for all 18 oxygen vacancy configurations, keyed by site and charge state identifiers."
+      },
+      {
+        "file": "magnetic_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "defect_key": "boolean"
+          }
+        },
+        "description": "Low‑energy magnetic state classification for each defect (true = LEMS, false = non‑magnetic ground state)."
+      }
+    ],
+    "notes": "The task reproduces the paper's LSDA‑based oxygen vacancy study using an open‑source DFT code. The solver must perform all DFT relaxations for the bulk, surfaces, O₂ molecule, and 18 defect supercells, then compute formation energies and magnetic state classification. The verifier compares formation energies to the paper's Table II values with a permissive tolerance and requires exact magnetic state classification."
+  },
+  "steps": [
+    {
+      "id": "step_6",
+      "output_file": "formation_energies.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Formation energies of 18 oxygen vacancy defects compared to paper Table II values within ±0.1 eV.",
+      "targets": {
+        "(001)-site1-q0": {
+          "target": 5.1378,
+          "abs_tol": 0.1
+        },
+        "(001)-site1-q1+": {
+          "target": 5.3593,
+          "abs_tol": 0.1
+        },
+        "(001)-site1-q2+": {
+          "target": 5.9628,
+          "abs_tol": 0.1
+        },
+        "(001)-site2-q0": {
+          "target": 5.2306,
+          "abs_tol": 0.1
+        },
+        "(001)-site2-q1+": {
+          "target": 5.3537,
+          "abs_tol": 0.1
+        },
+        "(001)-site2-q2+": {
+          "target": 5.9717,
+          "abs_tol": 0.1
+        },
+        "(001)-subsurface-q0": {
+          "target": 5.5779,
+          "abs_tol": 0.1
+        },
+        "(001)-subsurface-q1+": {
+          "target": 5.5137,
+          "abs_tol": 0.1
+        },
+        "(001)-subsurface-q2+": {
+          "target": 2.7874,
+          "abs_tol": 0.1
+        },
+        "(100)-bridge-q0": {
+          "target": 5.2099,
+          "abs_tol": 0.1
+        },
+        "(100)-bridge-q1+": {
+          "target": 3.6295,
+          "abs_tol": 0.1
+        },
+        "(100)-bridge-q2+": {
+          "target": 3.6239,
+          "abs_tol": 0.1
+        },
+        "(100)-metastable-ring-q0": {
+          "target": 5.3224,
+          "abs_tol": 0.1
+        },
+        "(100)-metastable-ring-q1+": {
+          "target": 3.1666,
+          "abs_tol": 0.1
+        },
+        "(100)-metastable-ring-q2+": {
+          "target": 1.2963,
+          "abs_tol": 0.1
+        },
+        "(100)-ring-2III-O-q0": {
+          "target": 3.4193,
+          "abs_tol": 0.1
+        },
+        "(100)-ring-2III-O-q1+": {
+          "target": 0.6417,
+          "abs_tol": 0.1
+        },
+        "(100)-ring-2III-O-q2+": {
+          "target": -1.1842,
+          "abs_tol": 0.1
+        }
+      }
+    },
+    {
+      "id": "step_7",
+      "output_file": "magnetic_states.json",
+      "kind": "boolean",
+      "weight": 0.3,
+      "description": "Magnetic state classification (LEMS) matching paper Table II bold entries (true if magnetic ground state).",
+      "targets": {
+        "(001)-site1-q0": false,
+        "(001)-site1-q1+": true,
+        "(001)-site1-q2+": true,
+        "(001)-site2-q0": false,
+        "(001)-site2-q1+": true,
+        "(001)-site2-q2+": true,
+        "(001)-subsurface-q0": false,
+        "(001)-subsurface-q1+": true,
+        "(001)-subsurface-q2+": false,
+        "(100)-bridge-q0": false,
+        "(100)-bridge-q1+": true,
+        "(100)-bridge-q2+": true,
+        "(100)-metastable-ring-q0": false,
+        "(100)-metastable-ring-q1+": true,
+        "(100)-metastable-ring-q2+": false,
+        "(100)-ring-2III-O-q0": false,
+        "(100)-ring-2III-O-q1+": true,
+        "(100)-ring-2III-O-q2+": false
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference formation energies and magnetic ground state classifications for 18 oxygen vacancy defects from paper Table II.",
+      "source_provenance": "Paper Table II; extracted from PDF.",
+      "generation_method": "Direct transcription of published numerical values and bold/plain formatting indicating magnetic state.",
+      "why_not_fabricated": "These are the authors' published results, the primary reproduction target."
+    }
+  ]
+}

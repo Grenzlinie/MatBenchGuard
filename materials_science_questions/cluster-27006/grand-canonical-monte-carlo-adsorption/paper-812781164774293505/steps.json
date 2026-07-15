@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Correct γ‑CaSO₄ Gibbs free energy polynomial",
+    "role": "scored",
+    "action": "Using the provided polynomial expressions for β‑CaSO₄·0.5H₂O and H₂O(g) together with the equilibrium relation ΔfG°(γ‑CaSO₄) = ΔfG°(β‑CaSO₄·0.5H₂O) – 0.5·ΔfG°(H₂O) – 0.5·R·T·ln(P_H₂O/P°), compute the standard molar Gibbs free energy of formation of γ‑CaSO₄ at 298 K and 459 K under the given experimental conditions (298 K, relative humidity 0.1%, i.e., water vapour partial pressure = 0.1% of saturation pressure; 459 K, water vapour partial pressure = 1 atm). Assume the cubic polynomial form ΔfG°(γ‑CaSO₄)/(kJ·mol⁻¹) = a + b·T + 1.1620×10⁻⁴·T² – 7.0810×10⁻⁸·T³. Set up and solve the 2×2 linear system for the coefficients a and b using the two computed ΔfG° values. Save the coefficients to a JSON file.",
+    "output_file": "gamma_caso4_gibbs_polynomial.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Corrected coefficients a and b for the cubic polynomial representing the standard molar Gibbs free energy of formation of γ‑CaSO₄.",
+    "output_schema": "JSON object with keys 'a' (float) and 'b' (float)."
+  },
+  {
+    "id": "step_02",
+    "title": "Compute equilibrium water vapour pressure curves",
+    "role": "scored",
+    "action": "Using the corrected γ‑CaSO₄ polynomial from Step 1 and the provided polynomials for CaSO₄·2H₂O, β‑CaSO₄·0.5H₂O, and H₂O(g), derive the equilibrium water vapour pressure expressions for the three dehydration reactions: gypsum ↔ hemihydrate, gypsum ↔ anhydrite, and hemihydrate ↔ anhydrite. Evaluate the pressures at a set of temperatures over the range 300‑600 K and save the results to a CSV file.",
+    "output_file": "phase_boundary_curves.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium water vapour pressures (Pa) for the three dehydration reactions as a function of temperature.",
+    "output_schema": "Columns: T_K, P_gypsum_hemihydrate_Pa, P_gypsum_anhydrite_Pa, P_hemihydrate_anhydrite_Pa. All pressure values in Pa."
+  },
+  {
+    "id": "step_03",
+    "title": "Prepare GCMC simulation system",
+    "role": "process",
+    "action": "Obtain the γ‑CaSO₄ crystal structure (ICSD 22371 or equivalent). Build a periodic 3×3×3 supercell. Assign DREIDING force field parameters for all atom types and rigid water molecules. Generate the input files required for grand canonical Monte Carlo simulations of water adsorption at 298 K and 215 K.",
+    "output_file": "",
+    "evidence": "gcmc_setup.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Mandatory preparation before running the adsorption simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "GCMC water adsorption isotherm at 298 K",
+    "role": "scored",
+    "action": "Run grand canonical Monte Carlo simulations of water adsorption in the γ‑CaSO₄ framework at 298 K over a range of relative humidities (0% to 100%). For each humidity condition, record the average cumulative water occupancy (number of H₂O molecules per CaSO₄ formula unit). Output the isotherm as a CSV file.",
+    "output_file": "mc_isotherm_298K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Cumulative H₂O occupancy per CaSO₄ formula unit as a function of relative humidity at 298 K.",
+    "output_schema": "Columns: relative_humidity_pct (percent, 0‑100), occupancy (dimensionless)."
+  },
+  {
+    "id": "step_05",
+    "title": "GCMC water adsorption isotherm at 215 K",
+    "role": "scored",
+    "action": "Run grand canonical Monte Carlo simulations at 215 K over a water vapour pressure range of 0 to 0.07 kPa. Record the average occupancy and output the isotherm as a CSV file.",
+    "output_file": "mc_isotherm_215K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Cumulative H₂O occupancy per CaSO₄ formula unit as a function of water vapour pressure at 215 K.",
+    "output_schema": "Columns: pressure_Pa (Pa), occupancy (dimensionless)."
+  }
+]

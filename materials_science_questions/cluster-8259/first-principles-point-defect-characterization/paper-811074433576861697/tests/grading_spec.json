@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw DFT output infeasible because agent only provides final values; T1/T2 not feasible. We use result-level comparison to the paper's I‑rich formation energies and defect levels with tolerances, relying on honest DFT execution.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_formation_energies.csv": "reference_match",
+    "step_02_defect_levels.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_name",
+            "termination",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Defect formation energies under I-rich conditions. The checker compares each value to the paper-reported formation energies with an appropriate tolerance."
+      },
+      {
+        "file": "step_02_defect_levels.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "termination",
+            "defect",
+            "level_eV",
+            "VBM_eV",
+            "CBM_eV"
+          ],
+          "units": {
+            "level_eV": "eV",
+            "VBM_eV": "eV",
+            "CBM_eV": "eV"
+          }
+        },
+        "description": "Defect level positions for I_i on flat and vacant terminations, with VBM and CBM references. The checker compares these values to the paper-reported defect levels and band edges with an appropriate tolerance."
+      }
+    ],
+    "notes": "The task focuses only on the I-rich chemical condition, as that supports the main claim of I_i being the dominant carrier-trapping defect. Charge density visualizations and other chemical conditions are omitted per scope. The formation energies from Table 1 and defect levels from Figure 2 of the source paper serve as hidden targets; the agent must re-compute them from first principles."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energies (I‑rich, from paper Table 1) and defect levels (from Figure 2).",
+      "source_provenance": "Paper Table 1 (I‑rich column) and Figure 2 defect level diagram.",
+      "generation_method": "Extracted directly from the paper's published values; the same numbers are used by the reference solver solve.sh.",
+      "why_not_fabricated": "These are the exact quantities the paper reports for the same defects and chemical condition; they serve as the hidden reference for result-level comparison."
+    }
+  ],
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "step_01_formation_energies.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "description": "Compare each submitted formation energy to the paper's I‑rich gold with tolerance 0.05 eV. Score per defect as max(0,1 - |delta|/0.05), then average."
+    },
+    {
+      "id": "defect_levels",
+      "output_file": "step_02_defect_levels.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Compare submitted I_i defect levels and band edges to the paper gold (level ~0.65 eV, VBM=0.0, CBM~1.55 eV) with tolerance 0.1 eV (0.02 eV for VBM). Score similarly, averaged over rows."
+    }
+  ]
+}

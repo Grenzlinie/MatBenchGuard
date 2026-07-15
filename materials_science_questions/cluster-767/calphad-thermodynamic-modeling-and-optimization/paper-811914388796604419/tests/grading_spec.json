@@ -1,0 +1,246 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes liquidus temperatures using the agent's submitted excess Gibbs parameters against the embedded experimental data, and scores the RMSD relative to the RMSD of the paper's gold parameters. This load‑bearing check requires the agent to actually perform the regression.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "excess_gibbs_parameters.csv": "exact_match",
+    "eutectic_point.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental liquidus data (Table 1) for recomputing the liquidus fit",
+      "source_provenance": "Table 1 of the paper, excluding the one outlier point (750°C, 76 at.% Bi, [40Rut]) as noted in the table footnote",
+      "generation_method": "Data points transcribed from Table 1; temperatures in °C, compositions in at.% Bi",
+      "why_not_fabricated": "These are the authentic experimental data used in the paper's least‑squares optimization"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold Redlich‑Kister parameters from the assessed thermodynamic description",
+      "source_provenance": "Thermodynamics section of the paper, enthalpy and excess entropy polynomials",
+      "generation_method": "Extracted directly from the paper: A=12350, B=1072, C=-0.57, D=-3.26",
+      "why_not_fabricated": "These are the paper's own reported values"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "excess_gibbs_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "parameter",
+            "value"
+          ],
+          "units": {
+            "parameter": "one of 'A','B','C','D'",
+            "value": "float; for A,B: J/mol; for C,D: J/(mol·K)"
+          }
+        },
+        "description": "Redlich-Kister parameters (A, B, C, D) defining the excess Gibbs energy of the Ge-Bi liquid."
+      },
+      {
+        "file": "eutectic_point.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ],
+          "units": {
+            "property": "one of 'temperature_C', 'composition_at_percent_Bi'",
+            "value": "float; temperature in °C, composition in at.% Bi"
+          }
+        },
+        "description": "Assessed eutectic temperature and composition for the Ge-Bi system."
+      }
+    ],
+    "notes": "Both artifacts are compared against hidden reference values from the assessment within prescribed tolerances. The check may also recompute liquidus points from the submitted parameters to verify internal consistency."
+  },
+  "liquidus_data": [
+    [
+      910,
+      8
+    ],
+    [
+      900,
+      13
+    ],
+    [
+      900,
+      11
+    ],
+    [
+      890,
+      19
+    ],
+    [
+      885,
+      23
+    ],
+    [
+      875,
+      26
+    ],
+    [
+      870,
+      37
+    ],
+    [
+      860,
+      34
+    ],
+    [
+      860,
+      50
+    ],
+    [
+      850,
+      45
+    ],
+    [
+      850,
+      63
+    ],
+    [
+      830,
+      58
+    ],
+    [
+      800,
+      75
+    ],
+    [
+      800,
+      79.9
+    ],
+    [
+      755,
+      84
+    ],
+    [
+      750,
+      88.2
+    ],
+    [
+      700,
+      92.72
+    ],
+    [
+      700,
+      93.44
+    ],
+    [
+      680,
+      92
+    ],
+    [
+      660,
+      94.56
+    ],
+    [
+      650,
+      95.6
+    ],
+    [
+      600,
+      97.27
+    ],
+    [
+      590,
+      96
+    ],
+    [
+      580,
+      97.63
+    ],
+    [
+      485,
+      99.254
+    ],
+    [
+      450,
+      99.457
+    ],
+    [
+      435,
+      99.501
+    ],
+    [
+      410,
+      99.702
+    ],
+    [
+      380,
+      99.783
+    ],
+    [
+      365,
+      99.843
+    ],
+    [
+      340,
+      99.885
+    ],
+    [
+      305,
+      99.942
+    ],
+    [
+      285,
+      99.954
+    ],
+    [
+      275,
+      99.97
+    ]
+  ],
+  "gold_params": {
+    "A": 12350,
+    "B": 1072,
+    "C": -0.57,
+    "D": -3.26
+  },
+  "eutectic_gold": {
+    "temperature_C": 271.35,
+    "composition_at_percent_Bi": 99.958
+  },
+  "steps": [
+    {
+      "id": "excess_gibbs_parameters",
+      "output_file": "excess_gibbs_parameters.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "tolerances": {
+        "A": 0.05,
+        "B": 0.05,
+        "C": 0.5,
+        "D": 0.5
+      }
+    },
+    {
+      "id": "liquidus_consistency",
+      "output_file": "",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "metric": "liquidus_rmsd",
+      "threshold": "relative_to_gold"
+    },
+    {
+      "id": "eutectic_point",
+      "output_file": "eutectic_point.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerances": {
+        "temperature_C": 0.1,
+        "composition_at_percent_Bi": 0.005
+      }
+    }
+  ]
+}

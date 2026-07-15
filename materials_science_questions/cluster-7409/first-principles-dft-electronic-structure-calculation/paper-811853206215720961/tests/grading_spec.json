@@ -1,0 +1,87 @@
+{
+  "pass_threshold": 0.6,
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap compared with tolerance; Eu 4f vs U linear trend recomputed via linear fit on agent's CSV (monotonicity and R²), no reliance on agent-reported metric.",
+  "target_policies": {
+    "band_gap.txt": "reference_match",
+    "ef_vs_U.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap value (6.7 eV) from paper's calculated result.",
+      "source_provenance": "Paper text: calculated DOS increase at 6.7 eV, agrees with experimental 7.1 eV.",
+      "generation_method": "Directly taken from paper.",
+      "why_not_fabricated": "Paper-reported value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected U values and linear trend check parameters for Eu 4f vs U.",
+      "source_provenance": "Paper section 3.3 and Fig. 3; U range 4.35-7.62 eV, J=0.68 eV with linear dependence and decreasing Energy_to_VBM.",
+      "generation_method": "U values from paper; reference solve.sh provides exact gold numbers that reproduce the paper's trend.",
+      "why_not_fabricated": "Derived from paper's described conditions and confirmed against oracle solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the calculated band gap in eV."
+        },
+        "description": "The GGA-computed band gap of pure Sr2MgSi2O7. Compared to a hidden reference value with tolerance."
+      },
+      {
+        "file": "ef_vs_U.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "U",
+            "Energy_to_VBM",
+            "Energy_to_CBM"
+          ],
+          "units": {
+            "U": "eV",
+            "Energy_to_VBM": "eV",
+            "Energy_to_CBM": "eV"
+          }
+        },
+        "description": "CSV file mapping Hubbard U to the energy of the occupied Eu2+ 4f ground state relative to the valence band maximum (VBM) and conduction band minimum (CBM). The linear trend and slope are recomputed and compared to a hidden reference."
+      }
+    ],
+    "notes": "Band gap compared to a hidden reference value; CSV checked for monotonic trend of Energy_to_VBM with U and slope compared to hidden reference."
+  },
+  "steps": [
+    {
+      "id": "host_band_gap",
+      "output_file": "band_gap.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 6.7,
+      "tolerance": 0.8
+    },
+    {
+      "id": "eu_4f_vs_u",
+      "output_file": "ef_vs_U.csv",
+      "kind": "recompute_metric",
+      "weight": 0.8,
+      "expected_U": [
+        4.35,
+        5.0,
+        5.5,
+        6.0,
+        6.5,
+        7.0,
+        7.62
+      ],
+      "r2_threshold": 0.95
+    }
+  ]
+}

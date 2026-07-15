@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute is infeasible because the PACHA optimization is too heavy for the checker sandbox; we instead use T0 result‑level compare for the Madelung energy and T3 structural audit for the phosphorus charges (P3 split and other P sites uniformity).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "madelung_energy.txt": "exact_match",
+    "phosphorus_charges.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference Madelung energy for the MIL‑50 PACHA‑optimised structure.",
+      "source_provenance": "Paper reports ⟨EB⟩ = –36 563.9 kJ mol⁻¹ (paragraph immediately after the simplex convergence description).",
+      "generation_method": "Copied directly from the published value.",
+      "why_not_fabricated": "Extracted from the paper's own text; it is the experimentally‑backed reference the checker must match within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "madelung_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number in kJ/mol"
+        },
+        "description": "Final Madelung lattice energy computed via the PACHA method after hydrogen optimization."
+      },
+      {
+        "file": "phosphorus_charges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "description": "JSON object with top-level keys P1, P2, P3, P4, P5; each value is an array of partial charge floats (number of entries matches site multiplicity in the pmc2_1 cell)."
+        },
+        "description": "Partial charges of phosphorus atoms showing the symmetry lowering of the P3 site."
+      }
+    ],
+    "notes": "All outputs are produced from the final optimized primitive-cell geometry. The Madelung energy is checked against a hidden paper reference with tolerance; the phosphorus charges are verified for the expected P3 charge asymmetry and uniformity of other P sites."
+  },
+  "steps": [
+    {
+      "id": "madelung_energy",
+      "output_file": "madelung_energy.txt",
+      "weight": 0.4,
+      "kind": "numeric",
+      "description": "Compare the reported Madelung energy to the paper’s value within a tolerance.",
+      "target": -36563.9,
+      "tolerance_abs": 100.0
+    },
+    {
+      "id": "phosphorus_charges",
+      "output_file": "phosphorus_charges.json",
+      "weight": 0.6,
+      "kind": "structural",
+      "description": "Verify that only the P3 site shows a charge split (0.001 ≤ spread ≤ 0.005) and that all other P sites (P1, P2, P4, P5) have internal spread ≤ 0.001."
+    }
+  ]
+}

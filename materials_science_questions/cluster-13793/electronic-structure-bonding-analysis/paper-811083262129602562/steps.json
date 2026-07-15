@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01_static_dft",
+    "title": "DFT static total energy calculations",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO with SSSP pseudopotentials, perform DFT total energy calculations for each target compound (Zr₂N, ZrN, Zr₃N₂, Zr₄N₅) and the reference states (hcp Zr, α‑N₂ or N₂ gas). Relax atomic positions and cell parameters as needed to obtain ground-state energies.",
+    "output_file": "",
+    "evidence": "dft_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute static (0 K) total energies for all required phases",
+    "output_schema": "Columns: compound (string), total_energy_eV (numeric)"
+  },
+  {
+    "id": "step02_phonon_qha",
+    "title": "Quasiharmonic phonon calculations",
+    "role": "process",
+    "action": "For each compound, perform phonon calculations using PHONOPY: create supercells, run finite-displacement DFT to obtain forces, compute phonon dispersions and vibrational free energies within the quasiharmonic approximation at 0 K and 1000 K.",
+    "output_file": "",
+    "evidence": "phonon_free_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Obtain vibrational contributions to the free energy",
+    "output_schema": "Columns: compound (string), temperature_K (numeric), vibrational_free_energy_eV (numeric)"
+  },
+  {
+    "id": "step03_formation_free_energy",
+    "title": "Formation free energies",
+    "role": "scored",
+    "action": "Combine the static energies and vibrational free energies to compute formation free energies per atom using ΔG = [G(Zr_xN_y) - xG(Zr) - yG(N)]/(x+y). Use hcp Zr as the reference for Zr; for N, use α‑N₂ at 0 K and N₂ gas at 1000 K. Write the results to formation_free_energies.csv.",
+    "output_file": "formation_free_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation free energy per atom for each compound at 0 K and 1000 K, verifying the paper's finite-temperature stability predictions",
+    "output_schema": "Columns: compound (string), temperature_K (numeric), formation_free_energy_eV_per_atom (numeric)"
+  },
+  {
+    "id": "step04_elastic_moduli",
+    "title": "Elastic moduli",
+    "role": "scored",
+    "action": "Perform DFT elastic constant calculations for each compound (e.g., stress-strain method). Use Voigt–Reuss–Hill averaging to compute the bulk modulus B and shear modulus G. Write the results to elastic_moduli.csv.",
+    "output_file": "elastic_moduli.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Bulk and shear moduli for each compound, verifying predicted mechanical properties",
+    "output_schema": "Columns: compound (string), bulk_modulus_GPa (numeric), shear_modulus_GPa (numeric)"
+  }
+]

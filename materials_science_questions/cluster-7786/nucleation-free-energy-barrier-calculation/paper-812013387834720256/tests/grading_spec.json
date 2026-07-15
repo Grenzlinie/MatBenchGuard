@@ -1,0 +1,42 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker independently implements Eq. (2.25.a) with the given parameters, evaluates the free-energy curve on a fine radius grid, and locates the maximum and minimum by sign changes of the derivative. The agent's reported extremum coordinates are compared to this recomputed reference within relative tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "extremum_points.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_max",
+            "DeltaG_max",
+            "r_min",
+            "DeltaG_min"
+          ],
+          "units": {
+            "r_max": "nm",
+            "DeltaG_max": "J",
+            "r_min": "nm",
+            "DeltaG_min": "J"
+          }
+        },
+        "description": "CSV file with the coordinates of the maximum and minimum of the nucleation free-energy curve. The hidden checker recomputes the correct extremum using the same formula and parameters, and checks agreement within relative tolerances."
+      }
+    ],
+    "notes": "The checker recomputes the nucleation curve independently and compares the extremum coordinates. Tolerances are set to allow for discretization differences but require a correct physical result."
+  },
+  "steps": [
+    {
+      "id": "step_extremum",
+      "output_file": "extremum_points.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Validate that the agent's extremum coordinates match the recomputed reference within relative tolerances: 5% for radii, 10% for free energies. Score is average of four component scores, each decaying linearly from 1.0 at tolerance to 0.0 at 2*tolerance."
+    }
+  ]
+}

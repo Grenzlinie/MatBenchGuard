@@ -1,0 +1,194 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full DFT recomputation not feasible in verifier sandbox; compare reported magnetic moments, displacement, polarizabilities, shielding factor to paper's reported gold values with tolerances, and check structural properties of transmission spectra.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetic_moments.json": "exact_match",
+    "off_center_displacement.json": "exact_match",
+    "polarizability_shielding.json": "exact_match",
+    "transmission_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for magnetic moments, displacement, polarizabilities, and shielding factor extracted from the paper.",
+      "source_provenance": "Paper text: total moment 3 μB (pristine N@C60, N@C60-C2NH5, N@C60 on Au(100)), 2 μB (anion), 4 μB (cation), 1 μB (N@C60-C3NH7). N atomic moment 3 μB (most systems), 2.84 μB (C2NH5). Displacement ~0.9 Å. Polarizability N@C60 ~10.55, C60 cage ~10.35, isolated N ~1.0. Shielding factor 80% (0.8).",
+      "generation_method": "Extracted directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the actual paper-reported results; no fabrication needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "description": "Magnetic moments for each system.",
+          "systems": [
+            "pristine_N@C60",
+            "N@C60_anion",
+            "N@C60_cation",
+            "N@C60_C2NH5",
+            "N@C60_C3NH7",
+            "N@C60_on_Au100"
+          ],
+          "fields": {
+            "total_moment": "float (μB)",
+            "n_atom_moment": "float (μB) or null",
+            "cage_moment": "float (μB) or null"
+          }
+        },
+        "description": "Spin‑polarized ground‑state total and atomic magnetic moments for all studied N@C60 systems."
+      },
+      {
+        "file": "off_center_displacement.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "displacement_A": "number"
+          }
+        },
+        "description": "Off‑center displacement of the encapsulated N atom in the C2NH5 derivative."
+      },
+      {
+        "file": "polarizability_shielding.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "polarizability_N@C60": "number",
+            "polarizability_C60": "number",
+            "polarizability_N": "number",
+            "shielding_factor": "number"
+          }
+        },
+        "description": "Polarizability components and the derived shielding factor."
+      },
+      {
+        "file": "transmission_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "format": "csv",
+          "required_columns": [
+            "energy_eV",
+            "transmission_up",
+            "transmission_down"
+          ],
+          "column_types": {
+            "energy_eV": "float",
+            "transmission_up": "float",
+            "transmission_down": "float"
+          },
+          "min_rows": 100,
+          "note": "At least 100 points covering the energy range −1 to 1 eV relative to EF."
+        },
+        "description": "Spin‑dependent transmission spectra of the N@C60 molecular junction."
+      }
+    ],
+    "notes": "The checker validates schemas and recomputes metrics from raw artifacts. Tolerances and comparison rules are hidden. The absence of spin polarization is verified by computing the mean absolute difference between transmission_up and transmission_down."
+  },
+  "steps": [
+    {
+      "id": "magnetic_moments",
+      "output_file": "magnetic_moments.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "systems": {
+        "pristine_N@C60": {
+          "total_moment": 3.0,
+          "n_atom_moment": 3.0,
+          "cage_moment": 0.0
+        },
+        "N@C60_anion": {
+          "total_moment": 2.0,
+          "n_atom_moment": 3.0,
+          "cage_moment": -1.0
+        },
+        "N@C60_cation": {
+          "total_moment": 4.0,
+          "n_atom_moment": 3.0,
+          "cage_moment": 1.0
+        },
+        "N@C60_C2NH5": {
+          "total_moment": 3.0,
+          "n_atom_moment": 2.84,
+          "cage_moment": 0.16
+        },
+        "N@C60_C3NH7": {
+          "total_moment": 1.0,
+          "n_atom_moment": 1.0,
+          "cage_moment": 0.0
+        },
+        "N@C60_on_Au100": {
+          "total_moment": 3.0,
+          "n_atom_moment": 3.0,
+          "cage_moment": 0.0
+        }
+      },
+      "tolerance": 0.2,
+      "fields": [
+        "total_moment",
+        "n_atom_moment",
+        "cage_moment"
+      ]
+    },
+    {
+      "id": "off_center",
+      "output_file": "off_center_displacement.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target": 0.9,
+      "tolerance": 0.1
+    },
+    {
+      "id": "polarizability",
+      "output_file": "polarizability_shielding.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "fields": {
+        "polarizability_N@C60": {
+          "target": 10.55,
+          "tolerance_rel": 0.1
+        },
+        "polarizability_C60": {
+          "target": 10.35,
+          "tolerance_rel": 0.1
+        },
+        "polarizability_N": {
+          "target": 1.0,
+          "tolerance_rel": 0.1
+        },
+        "shielding_factor": {
+          "target": 0.8,
+          "tolerance_abs": 0.05
+        }
+      },
+      "consistency_check": false
+    },
+    {
+      "id": "transmission",
+      "output_file": "transmission_energies.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "criteria": {
+        "shape_ok": true,
+        "min_rows": 100,
+        "energy_min": -1.0,
+        "energy_max": 1.0,
+        "non_negative": true,
+        "spin_diff_threshold": 0.01
+      }
+    }
+  ]
+}

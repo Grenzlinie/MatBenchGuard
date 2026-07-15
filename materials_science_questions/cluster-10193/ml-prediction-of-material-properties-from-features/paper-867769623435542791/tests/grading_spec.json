@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "R² and RMSE can be recomputed from the agent's raw per‑sample predictions (test_predictions.csv) without relying on self‑reported numbers. This is the strongest tier, as both headline metrics are directly derivable from the raw artifact.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "test_predictions.csv": "metric_recompute",
+    "metrics.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference R² and RMSE values from the paper",
+      "source_provenance": "paper Table I (Variational Bayesian Neural Network row: R²=0.94, RMSE=3.83 K)",
+      "generation_method": "extracted from the published numerical results in the paper",
+      "why_not_fabricated": "These are the paper's own headline evaluation metrics, measured on the same dataset and split. The solving agent does not know them as gold targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "test_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "y_true",
+            "y_pred"
+          ],
+          "units": {
+            "y_true": "Kelvin",
+            "y_pred": "Kelvin"
+          }
+        },
+        "description": "Per-sample test set predictions. The checker may recompute R² and RMSE from these values to validate the submission."
+      },
+      {
+        "file": "metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "R2": "float (coefficient of determination)",
+            "RMSE": "float (root mean squared error in Kelvin)"
+          }
+        },
+        "description": "Headline R² and RMSE metrics. The checker compares these values against hidden gold values using threshold_or_better: higher R² and lower RMSE are better, and meeting or exceeding the reference earns full credit."
+      }
+    ],
+    "notes": "The '100 hidden layers' mention in the paper is interpreted as 100 hidden units in a single hidden layer. Exact random seed and weight initialization are not specified; reproduction is expected to achieve similar performance within tolerance. The solving agent may need a GPU for reasonable training time."
+  },
+  "steps": [
+    {
+      "id": "recompute_metrics_from_csv",
+      "output_file": "test_predictions.csv",
+      "kind": "recompute_metric",
+      "weight": 0.9,
+      "metric": {
+        "R2": 0.94,
+        "RMSE": 3.83
+      },
+      "tolerance": {
+        "R2": 0.03,
+        "RMSE": 1.5
+      },
+      "description": "Recompute RMSE (lower better) and R² (higher better) from y_true and y_pred in test_predictions.csv. Score against paper‑reported reference values using threshold_or_better monotonic partial credit."
+    },
+    {
+      "id": "check_metrics_json_shape",
+      "output_file": "metrics.json",
+      "kind": "json_field",
+      "weight": 0.1,
+      "required_fields": [
+        "R2",
+        "RMSE"
+      ],
+      "description": "Verify that metrics.json exists and contains the required numeric keys R2 and RMSE. Any valid numbers pass; shape mismatch yields 0."
+    }
+  ]
+}

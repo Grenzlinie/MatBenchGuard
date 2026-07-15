@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_collect_geometries",
+    "title": "Collect molecular geometries",
+    "role": "process",
+    "action": "For every molecule listed in the study (diatomics and polyatomics from the paper’s Table 2), retrieve its experimental equilibrium bond length from the CCCBDB database (or an equivalent public source). For the interhalogen molecules BrCl⁺, ICl⁺, IBr⁺, use the bond length of ClF (1.628 Å) and treat the molecule with the appropriate heavy‑atom coupling constants as described in the original work. Store the geometries in a structured file for use in the CNDO/2 calculations.",
+    "output_file": "",
+    "evidence": "geometries.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gather bond lengths from CCCBDB for all molecules.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_closed_shell_cndo",
+    "title": "Run closed‑shell CNDO/2 calculations",
+    "role": "process",
+    "action": "For each molecule, perform a restricted closed‑shell CNDO/2 calculation using the experimental bond length. Save the molecular orbital coefficients and the charge‑density matrix (P_μν). These results are required for Procedure II of the spin‑orbit formula.",
+    "output_file": "",
+    "evidence": "closed_shell_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Closed‑shell CNDO/2 calculations needed for Procedure II.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_open_shell_cndo",
+    "title": "Run open‑shell CNDO/2 calculations",
+    "role": "process",
+    "action": "For each molecule that requires Procedure I (as indicated by the presence of open‑shell entries in the paper’s Table 2), perform an unrestricted open‑shell CNDO/2 calculation on the degenerate ²Π state. Extract the α‑spin orbital coefficients and the charge‑density matrix. For molecules that do not have an open‑shell entry (e.g., BeH), this step may be skipped or produce a note.",
+    "output_file": "",
+    "evidence": "open_shell_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Open‑shell CNDO/2 calculations needed for Procedure I.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_compute_splittings",
+    "title": "Compute spin–orbit splittings",
+    "role": "scored",
+    "action": "Using the CNDO/2 outputs and the effective atomic coupling constants, compute the spin‑orbit splitting (in cm⁻¹) for each molecule with both procedures: (a) Procedure I: substitute open‑shell net atomic charges and the singly‑occupied α‑orbital coefficients into the one‑center effective orbital coupling formula; (b) Procedure II: correct the closed‑shell charges by subtracting the orbital population of the missing electron, then apply the same formula. For molecules where one procedure is not applicable, fill the corresponding field with 'N/A'. Write the results to /app/outputs/spin_orbit_splittings.csv.",
+    "output_file": "spin_orbit_splittings.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final spin–orbit splittings from both procedures.",
+    "output_schema": "Columns: molecule (string), state (string), procedure_I_splitting (float, cm⁻¹, or 'N/A'), procedure_II_splitting (float, cm⁻¹, or 'N/A'), experimental_splitting (float, cm⁻¹, optional)."
+  }
+]

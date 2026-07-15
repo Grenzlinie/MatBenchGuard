@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full Monte Carlo simulation cannot be re‑run in the verifier; scoring compares agent‑reported absolute values and ratios against the paper’s experimental/tabulated reference, checks monotonic trend, and cross‑validates ratios against the absolute values artifact.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold absolute backward yields (experiment) and electronic stopping powers (tabulated) from the paper’s Table 1, together with derived normalized ratios.",
+      "source_provenance": "Paper’s Table 1 (experimental γ_B and tabulated dE/dx columns).",
+      "generation_method": "Values extracted directly from the published table; ratios computed according to equations (10) and (11) using the same data.",
+      "why_not_fabricated": "These are the actual published experimental/tabulated reference numbers that the paper’s CDW‑EIS model must approximate; they form the authoritative reproduction target."
+    }
+  ],
+  "gold_absolute": {
+    "H+": {
+      "gamma_B": 0.12,
+      "dE_dx": 0.00866
+    },
+    "C6+": {
+      "gamma_B": 3.6,
+      "dE_dx": 0.307
+    },
+    "Ca20+": {
+      "gamma_B": 32.1,
+      "dE_dx": 2.88
+    },
+    "Ni27+": {
+      "gamma_B": 45.0,
+      "dE_dx": 5.13
+    },
+    "Mo39+": {
+      "gamma_B": 82.3,
+      "dE_dx": 9.91
+    }
+  },
+  "tolerances": {
+    "gamma_B_tol": 0.5,
+    "dE_dx_tol": 0.3,
+    "ratio_tol": 0.5
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "absolute_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "H+": {
+              "gamma_B": "float",
+              "dE_dx": "float"
+            },
+            "C6+": {
+              "gamma_B": "float",
+              "dE_dx": "float"
+            },
+            "Ca20+": {
+              "gamma_B": "float",
+              "dE_dx": "float"
+            },
+            "Ni27+": {
+              "gamma_B": "float",
+              "dE_dx": "float"
+            },
+            "Mo39+": {
+              "gamma_B": "float",
+              "dE_dx": "float"
+            }
+          },
+          "units": {
+            "gamma_B": "electrons/ion",
+            "dE_dx": "keV/nm"
+          }
+        },
+        "description": "Total backward electron yield and electronic stopping power for each projectile computed by the CDW-EIS model."
+      },
+      {
+        "file": "normalized_ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Q_P",
+            "R_gamma",
+            "R_dE_dx"
+          ],
+          "items": {
+            "Q_P": "int",
+            "R_gamma": "float",
+            "R_dE_dx": "float"
+          },
+          "units": {
+            "R_gamma": "dimensionless",
+            "R_dE_dx": "dimensionless"
+          }
+        },
+        "description": "Normalized backward yield and stopping power ratios relative to C6+; these ratios isolate deviations from strict Q_P² scaling."
+      }
+    ],
+    "notes": "The scored artifacts are compared against hidden reference data using appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_03_absolute_values",
+      "output_file": "absolute_values.json",
+      "weight": 0.3,
+      "kind": "absolute_eval"
+    },
+    {
+      "id": "step_04_normalized_ratios",
+      "output_file": "normalized_ratios.csv",
+      "weight": 0.7,
+      "kind": "ratios_eval"
+    }
+  ]
+}

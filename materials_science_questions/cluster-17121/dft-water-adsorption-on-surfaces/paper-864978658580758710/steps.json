@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_00_slab_prep",
+    "title": "Prepare Zn-doped hematite (0001) slab model",
+    "role": "process",
+    "action": "Build a six-layer hematite (0001) slab with antiferromagnetic ordering from the bulk crystal structure. Substitute one subsurface Fe with Zn (~2% doping). Fully hydroxylate both surfaces. Relax the slab in vacuum using PBE0 with 12% exact exchange in CP2K. Output the relaxed structure.",
+    "output_file": "",
+    "evidence": "slab_relaxed.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01_interface_prep",
+    "title": "Set up hematite/water interface",
+    "role": "process",
+    "action": "Add 56 water molecules to the relaxed slab in a cell with ~19 Å water layer. Remove two hydrogen atoms from the Zn-proximal surface (double dehydrogenation) to model catalytic conditions. Prepare an initial random water configuration.",
+    "output_file": "",
+    "evidence": "interface.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_aimd",
+    "title": "Run ab initio molecular dynamics of the interface",
+    "role": "process",
+    "action": "Perform NVT AIMD at 300 K with a Nosé–Hoover thermostat and 0.5 fs time step. Run two consecutive segments: approximately 35.7 ps with PBE+D3, then approximately 14.3 ps with PBE+U+D3 (U=4.3 eV on Fe 3d). Save atomic coordinates every 200 fs (total >50 ps).",
+    "output_file": "",
+    "evidence": "aimd_trajectory.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_ds_energies",
+    "title": "Compute defect state energies and band gaps from snapshots",
+    "role": "scored",
+    "action": "For each saved snapshot, rehydrogenate the doubly dehydrogenated surface, then perform a PBE0(0.12) single-point calculation. Extract the lowest unoccupied α-spin eigenvalue (defect state energy) and the valence band maximum (VBM) and conduction band minimum (CBM). Compute the DS energy relative to VBM and the VBM–CBM gap. Write the full time series to ds_energies.csv.",
+    "output_file": "ds_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Per-snapshot defect state properties over the trajectory (≈250 snapshots).",
+    "output_schema": "Columns: time_ps (float), ds_energy_above_vbm_eV (float), vbm_cbm_gap_eV (float)."
+  },
+  {
+    "id": "step_04_ds_summary",
+    "title": "Summary statistics of defect state energies",
+    "role": "scored",
+    "action": "From the computed DS energies, calculate the mean and standard deviation of ds_energy_above_vbm_eV and vbm_cbm_gap_eV for the PBE+D3 segment (first 35.7 ps) and the PBE+U+D3 segment (last 14.3 ps). Write the result to ds_summary.csv.",
+    "output_file": "ds_summary.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Segment-wise averages and standard deviations of DS energy and band gap.",
+    "output_schema": "Columns: segment (string: 'PBE+D3' or 'PBE+U+D3'), mean_ds_energy_eV (float), std_ds_energy_eV (float), mean_vbm_cbm_gap_eV (float), std_vbm_cbm_gap_eV (float)."
+  },
+  {
+    "id": "step_05_alignment",
+    "title": "Electrochemical level alignment of the defect state",
+    "role": "scored",
+    "action": "Align the VBM to the electrochemical scale using the plane-averaged electrostatic potential from snapshots and a literature protocol for semiconductor–water interfaces at pH equal to the point-of-zero-charge. Compute the average defect state level vs RHE. Output the aligned VBM, DS level, and offset from the O₂/H₂O redox potential.",
+    "output_file": "ds_alignment.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Electrochemical alignment results.",
+    "output_schema": "Keys: vbm_vs_rhe_eV (float), ds_mean_vs_rhe_eV (float), ds_std_vs_rhe_eV (float), offset_from_oer_eV (float)."
+  },
+  {
+    "id": "step_06_hbond",
+    "title": "Analyze hydrogen bonding dynamics",
+    "role": "scored",
+    "action": "From the full AIMD trajectory, identify hydrogen bonds using the geometric criterion (O···O < 3.5 Å, O···H–O angle > 135°). Compute survival probabilities for intrasurface, surface-donating, and surface-accepting bonds on the fully protonated and doubly deprotonated surfaces. Fit exponential decays to obtain characteristic times τ and R². Write results to hbond_survival.csv.",
+    "output_file": "hbond_survival.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Hydrogen bond survival times and fit quality.",
+    "output_schema": "Columns: surface_type (string: 'fully_protonated' or 'doubly_deprotonated'), bond_type (string: 'intrasurface', 'surface_donating', 'surface_accepting'), tau_ps (float), r_squared (float)."
+  }
+]

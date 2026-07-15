@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Barrier heights are recomputed from agent-supplied PMF data; compared to paper-reported approximate values with tolerance; structural ordering enforced.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pmf_data.csv": "structural_audit",
+    "barriers.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference barrier heights for 2RSNO scenarios",
+      "source_provenance": "Paper text: 2CysNO barrier ~15 kcal/mol, 2GSNO negligible; barriers for 1RSNO and RSNO2 are small.",
+      "generation_method": "Inline constants derived from paper-reported approximate values.",
+      "why_not_fabricated": "Values are directly quoted from paper text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pmf_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "scenario",
+            "RSNO",
+            "r_CuS",
+            "PMF"
+          ],
+          "units": {
+            "r_CuS": "Angstrom",
+            "PMF": "kcal/mol"
+          },
+          "notes": "scenario must be exactly one of 1RSNO, 2RSNO, RSNO2; RSNO must be CysNO or GSNO."
+        },
+        "description": "Free-energy profiles (PMFs) for RSNO approach to copper sites in MOF-143. The checker will verify the shape (e.g., monotonic rise after minimum), trends (2GSNO barrier < 2CysNO barrier), and that 1RSNO/RSNO2 profiles are barrierless within tolerance."
+      },
+      {
+        "file": "barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "scenario",
+            "RSNO",
+            "barrier_height"
+          ],
+          "units": {
+            "barrier_height": "kcal/mol"
+          },
+          "notes": "barrier_height = 0.0 for negligible barriers."
+        },
+        "description": "Derived barrier heights from the PMF data. The checker will recompute barriers from pmf_data.csv and compare the 2RSNO barriers against paper-reported approximate values (±2.0 kcal/mol tolerance), and verify that 1RSNO and RSNO2 barriers are ≤2.0 kcal/mol."
+      }
+    ],
+    "notes": "All energies in kcal/mol, distances in Angstrom. The scored PMF data and barriers must be derived from the umbrella sampling simulations; fabricating these values will be detected by the checker's structural and trend checks."
+  },
+  "steps": [
+    {
+      "id": "pmf_recompute_barriers",
+      "output_file": "pmf_data.csv",
+      "weight": 0.85,
+      "kind": "custom",
+      "description": "Recompute barrier heights from PMF data and check against paper-reported thresholds and structural trend."
+    },
+    {
+      "id": "barriers_consistency",
+      "output_file": "barriers.csv",
+      "weight": 0.15,
+      "kind": "custom",
+      "description": "Verify that the agent's self-reported barriers match the barriers recomputed from pmf_data.csv within a small tolerance."
+    }
+  ]
+}

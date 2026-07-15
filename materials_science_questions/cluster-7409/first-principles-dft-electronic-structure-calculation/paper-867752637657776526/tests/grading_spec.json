@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Headline quantities are DFT total-energy differences, magnetic moments, and band gaps that cannot be recomputed by the checker sandbox. We compare agent-reported values to paper-reported gold with tolerances, enforce sign and structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_magnetic_properties.json": "reference_match",
+    "strained_cases_energy_differences.json": "reference_match",
+    "band_gap_values.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for relative energies, magnetic moments, energy differences, c-axis lengths, and band gaps extracted from the paper (Table I, Fig. 2, Fig. 3c).",
+      "source_provenance": "paper 'Magnetic orders of LaTiO3 under epitaxial strain: a first-principles study' (arXiv:1310.5331), Table I and text descriptions of Fig. 2 and Fig. 3c.",
+      "generation_method": "Extracted numeric values directly from the paper text; for quantities not explicitly stated, derived from described trends and approximate values listed in the paper.",
+      "why_not_fabricated": "All gold values are taken from the paper's own reported numbers or from its descriptions of the results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_magnetic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "magnetic_orders": "array of strings",
+            "relative_energies_meV_per_Ti": "array of numbers (meV/Ti)",
+            "magnetic_moments_muB_per_Ti": "array of numbers (μB/Ti)"
+          }
+        },
+        "description": "Computed relative energies and magnetic moments for the five magnetic configurations of bulk LaTiO₃."
+      },
+      {
+        "file": "strained_cases_energy_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "compressive": "array of objects with keys substrate, strain_percent, c_axis_A, E_A_AFM_minus_G_AFM_meVperTi",
+            "tensile": "array of objects with keys substrate, strain_percent, c_axis_A, E_C_AFM_minus_G_AFM_meVperTi"
+          }
+        },
+        "description": "Energy differences between competing magnetic orders and optimized c-axis values under strain."
+      },
+      {
+        "file": "band_gap_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bulk_band_gap_eV": "number (eV)",
+            "strained_band_gaps": "array of objects with keys substrate, strain_type (\"compressive\" or \"tensile\"), band_gap_eV (number)"
+          }
+        },
+        "description": "Insulating band gap for bulk and each strained film."
+      }
+    ],
+    "notes": "The hidden checker compares the agent's reported values to the paper's reference results using tolerances for energy differences, magnetic moments, and band gaps. It also enforces the expected sign and ordering of energy differences for compressive and tensile cases. No gold values or tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "bulk_magnetic",
+      "output_file": "bulk_magnetic_properties.json",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "gold": {
+        "orders": [
+          "NM",
+          "FM",
+          "A-AFM",
+          "C-AFM",
+          "G-AFM"
+        ],
+        "relative_energies_meV_per_Ti": [
+          124,
+          0,
+          -13,
+          17,
+          -18
+        ],
+        "magnetic_moments_muB_per_Ti": [
+          0,
+          0.86,
+          0.8,
+          0.77,
+          0.75
+        ],
+        "tolerances": {
+          "energy_meV_per_Ti": 5.0,
+          "moment_muB_per_Ti": 0.05
+        }
+      }
+    },
+    {
+      "id": "strained_energy",
+      "output_file": "strained_cases_energy_differences.json",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "gold": {
+        "compressive": [
+          {
+            "substrate": "LaAlO3",
+            "deltaE_meVperTi": -17,
+            "c_axis_A": 8.14
+          },
+          {
+            "substrate": "LaGaO3",
+            "deltaE_meVperTi": null,
+            "c_axis_A": 7.94
+          },
+          {
+            "substrate": "SrTiO3",
+            "deltaE_meVperTi": -1,
+            "c_axis_A": 7.93
+          }
+        ],
+        "tensile": [
+          {
+            "substrate": "BaTiO3",
+            "deltaE_meVperTi": 10,
+            "c_axis_A": 7.75
+          },
+          {
+            "substrate": "LaScO3",
+            "deltaE_meVperTi": 3,
+            "c_axis_A": 7.65
+          }
+        ],
+        "tolerances": {
+          "deltaE_meVperTi": 5.0,
+          "c_axis_A": 0.1
+        }
+      }
+    },
+    {
+      "id": "band_gap",
+      "output_file": "band_gap_values.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "gold": {
+        "bulk_band_gap_eV": 0.45,
+        "strained_band_gaps": [
+          {
+            "substrate": "LaAlO3",
+            "strain_type": "compressive",
+            "band_gap_eV": 0.3
+          },
+          {
+            "substrate": "LaGaO3",
+            "strain_type": "compressive",
+            "band_gap_eV": 0.4
+          },
+          {
+            "substrate": "SrTiO3",
+            "strain_type": "compressive",
+            "band_gap_eV": 0.4
+          },
+          {
+            "substrate": "BaTiO3",
+            "strain_type": "tensile",
+            "band_gap_eV": 0.5
+          },
+          {
+            "substrate": "LaScO3",
+            "strain_type": "tensile",
+            "band_gap_eV": 0.6
+          }
+        ],
+        "tolerance_eV": 0.1
+      }
+    }
+  ]
+}

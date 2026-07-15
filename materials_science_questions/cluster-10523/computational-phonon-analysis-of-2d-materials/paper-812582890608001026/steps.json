@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step01_generate_structures",
+    "title": "Generate atomic configurations for DWCNT",
+    "role": "process",
+    "action": "Create LAMMPS input data files for double-walled carbon nanotubes (DWCNT) with outer tube chirality (15,15) and inner tubes (17,0), (16,2), (14,5), (12,8), (10,10) corresponding to ITCAs 0.00°, 5.82°, 14.70°, 23.41°, 30.00°. For the length series, generate configurations with ITCA = 0.00° at lengths 5 nm, 10 nm, and 20 nm. For the temperature series, generate ITCA = 0.00° at length 10 nm. For the twist-angle series, generate all five ITCAs at length 10 nm. The interlayer distance must be in the range 3.4–3.57 Å. Use optimized Tersoff potential for intralayer C–C bonds, and a Lennard-Jones potential (ε_CC=0.002844 eV, σ_CC=3.4 Å) for interlayer C–C interactions only.",
+    "output_file": "",
+    "evidence": "structure_generation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_run_nemd",
+    "title": "Run NEMD simulations for DWCNT",
+    "role": "process",
+    "action": "For each DWCNT configuration from step01 and for each target temperature (200 K for the length and twist-angle series; 200 K, 300 K, and 400 K for the temperature series), perform a NEMD simulation in LAMMPS. Each simulation consists of: energy minimization, 1 ns NVE relaxation, 1 ns Langevin thermostatting of heat source (set temperature + 100 K) and sink (set temperature − 100 K) to establish a gradient, and a 5 ns NVE production run. Use a timestep of 0.001 ps, shrink-wrapped (non-periodic) boundary conditions. Record the segmented temperature profile along the nanotube and the time series of energy added/removed at the source and sink. Run at least 5 independent replicates per condition to estimate uncertainty.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_compute_conductivity",
+    "title": "Compute thermal conductivity and compile results",
+    "role": "scored",
+    "action": "For each simulation output, extract the steady-state linear region of the temperature profile; compute the temperature gradient dT/dx by linear fitting. Calculate the heat flux q from the rate of energy added/subtracted at the source/sink. Calculate the cross-sectional area A using A = π * b * (d_inner + d_outer) with single-wall thickness b = 3.4 Å. Obtain thermal conductivity k from Fourier's law q = -k A dT/dx. Aggregate results over replicates (mean and standard deviation). Output a CSV file.",
+    "output_file": "thermal_conductivity_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing thermal conductivity values for all required DWCNT conditions.",
+    "output_schema": "Required columns: system (string, must be 'DWCNT'), length_nm (float), temperature_K (float), ITCA_deg (float), thermal_conductivity_W_mK (float), uncertainty_W_mK (float; standard deviation of replicates, may be NaN if only one run). The CSV must include rows for: (a) DWCNT, ITCA=0°, lengths 5, 10, 20 nm at 200 K; (b) DWCNT, ITCA=0°, length 10 nm at 200, 300, 400 K; (c) DWCNT twist-angle series: all five ITCAs (0.00, 5.82, 14.70, 23.41, 30.00) at length 10 nm, 200 K."
+  }
+]

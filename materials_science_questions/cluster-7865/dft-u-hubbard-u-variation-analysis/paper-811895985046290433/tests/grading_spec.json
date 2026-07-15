@@ -1,0 +1,250 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Deviations of Bader charges, magnetic moments, and formation energies are recomputed from submitted JSON and compared to paper gold; trend ordering and structural consistency are verified. Full recompute from raw DFT outputs is infeasible in the checker, but metric recompute on the agent's reported values qualifies as T1.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "metric_recompute",
+    "elf_cube_files.tar.gz": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold Bader charges, magnetic moments, formation energies, and ordering from paper Table 1 and text; used as hidden reference.",
+      "source_provenance": "Paper (J. Phys. Chem. C) Table 1 and discussion; values consistent with reference solution solve.sh.",
+      "generation_method": "Extracted directly from the paper and verified against the reference oracle's hardcoded constants.",
+      "why_not_fabricated": "Every value is reported in the source paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "models": "list of model objects (see description)"
+          },
+          "description": "Each model object: { 'name': string, 'energy_per_CeO2': float or null (eV), 'formation_energy_per_Ce': float (eV), 'atoms': [ { 'element': string, 'bader_charge': float (e), 'magnetic_moment': float (μ_B) } ] }. The 'atoms' array must contain all atoms in the simulation cell for every model."
+        },
+        "description": "Reproduced Bader charges, magnetic moments, and formation energies for all ceria slab models."
+      },
+      {
+        "file": "elf_cube_files.tar.gz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "archive",
+          "required": {
+            "archive": "valid tar.gz file"
+          },
+          "items": [
+            "T1.cube",
+            "T2.cube",
+            "T3.cube",
+            "S1.cube",
+            "S2.cube",
+            "S3.cube",
+            "S4.cube",
+            "SV1.cube",
+            "SV2.cube",
+            "SV3.cube"
+          ],
+          "notes": "List of expected cube files; all must be present inside the archive."
+        },
+        "description": "Electron localization function cube files for all slab models, bundled as a tar.gz archive."
+      }
+    ],
+    "notes": "All reported quantities must be derived from the specified DFT+U workflow using Quantum ESPRESSO and the Henkelman Bader code. The checker will recompute deviations from hidden reference values and verify formation energy trends across models."
+  },
+  "steps": [
+    {
+      "id": "bader_magnetic",
+      "output_file": "results.json",
+      "weight": 0.5,
+      "kind": "numeric_scoring_custom",
+      "tolerance_bader_charge": 0.15,
+      "tolerance_magnetic_moment": 0.2,
+      "gold_model_data": {
+        "T1": {
+          "Ce_atoms_count": 3,
+          "O_atoms_count": 6,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.4,
+              "magnetic_moment": 0.0,
+              "count": 2
+            },
+            {
+              "bader_charge": 2.3,
+              "magnetic_moment": 0.0,
+              "count": 1
+            }
+          ]
+        },
+        "T2": {
+          "Ce_atoms_count": 3,
+          "O_atoms_count": 5,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.0,
+              "magnetic_moment": 1.0,
+              "count": 3
+            }
+          ]
+        },
+        "T3": {
+          "Ce_atoms_count": 6,
+          "O_atoms_count": 11,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.4,
+              "magnetic_moment": 0.0,
+              "count": 3
+            },
+            {
+              "bader_charge": 2.0,
+              "magnetic_moment": 0.6,
+              "count": 2
+            },
+            {
+              "bader_charge": 2.2,
+              "magnetic_moment": 0.4,
+              "count": 1
+            }
+          ]
+        },
+        "S1": {
+          "Ce_atoms_count": 20,
+          "O_atoms_count": 40,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.3,
+              "magnetic_moment": 0.0,
+              "count": 20
+            }
+          ]
+        },
+        "S2": {
+          "Ce_atoms_count": 20,
+          "O_atoms_count": 40,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.3,
+              "magnetic_moment": 0.0,
+              "count": 20
+            }
+          ]
+        },
+        "S3": {
+          "Ce_atoms_count": 15,
+          "O_atoms_count": 30,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.3,
+              "magnetic_moment": 0.0,
+              "count": 15
+            }
+          ]
+        },
+        "S4": {
+          "Ce_atoms_count": 15,
+          "O_atoms_count": 30,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.05,
+              "magnetic_moment": 0.48,
+              "count": 1
+            },
+            {
+              "bader_charge": 2.3,
+              "magnetic_moment": 0.0,
+              "count": 14
+            }
+          ]
+        },
+        "SV2": {
+          "Ce_atoms_count": 24,
+          "O_atoms_count": 47,
+          "Ce_expected": [
+            {
+              "bader_charge": 2.0,
+              "magnetic_moment": 0.6,
+              "count": 1
+            },
+            {
+              "bader_charge": 2.1,
+              "magnetic_moment": 0.3,
+              "count": 2
+            },
+            {
+              "bader_charge": 2.34,
+              "magnetic_moment": 0.0,
+              "count": 21
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "formation_energy",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "numeric_scoring_custom",
+      "gold_formation_energies": {
+        "T1": -9.98,
+        "T2": -8.4,
+        "T3": -8.87,
+        "S1": -9.76,
+        "S2": -9.69,
+        "S3": -9.81,
+        "S4": -9.55,
+        "SV1": -9.22,
+        "SV2": -9.25,
+        "SV3": -9.3
+      },
+      "tolerance_formation_energy": 0.2,
+      "ordering": [
+        "T1",
+        "S3",
+        "S1",
+        "S2",
+        "S4",
+        "SV3",
+        "SV2",
+        "SV1",
+        "T3",
+        "T2"
+      ]
+    },
+    {
+      "id": "structural_consistency",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "numeric_scoring_custom",
+      "bader_threshold": 2.2,
+      "magnetic_threshold": 0.01
+    },
+    {
+      "id": "elf_cube_archive",
+      "output_file": "elf_cube_files.tar.gz",
+      "weight": 0.1,
+      "kind": "file_exists",
+      "required_files": [
+        "T1.cube",
+        "T2.cube",
+        "T3.cube",
+        "S1.cube",
+        "S2.cube",
+        "S3.cube",
+        "S4.cube",
+        "SV1.cube",
+        "SV2.cube",
+        "SV3.cube"
+      ]
+    }
+  ]
+}

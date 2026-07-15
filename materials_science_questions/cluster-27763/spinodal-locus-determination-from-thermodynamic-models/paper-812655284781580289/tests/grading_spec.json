@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Scalar results are final outputs from a computationally heavy LCT simulation; recompute from raw artifacts is infeasible given the output contract. Comparison against paper-reported reference with appropriate tolerances and structural check provide reliable verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match",
+    "spinodal_structural": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Tc, excess volume, chi_eff, branching parameter r for PEP/PP blend (M=4342) from the paper",
+      "source_provenance": "Table 1 of the paper 'Influence of Short Chain Branching on the Miscibility of Binary Polymer Blends: Application to Polyolefin Mixtures' (Macromolecules 1996), row for PEP/PP with M1=M2=4342.",
+      "generation_method": "Directly transcribed from the published table: Tc=311 K, V^e/(V1+V2) reported as 0.132x10^-3 => 0.000132, chi_eff reported as 0.366x10^-3 => 0.000366, branching parameter r=0.1333.",
+      "why_not_fabricated": "These numbers are the exact published results for this specific system; any correct reproduction must produce them within numerical tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "blend": "string",
+            "M": "integer",
+            "compositions": "array of floats",
+            "spinodal_temperatures_K": "array of floats",
+            "Tc_K": "float",
+            "excess_volume_at_phi05": "float",
+            "chi_eff_at_phi05": "float",
+            "branching_parameter_r": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "Tc_K": "Kelvin",
+            "spinodal_temperatures_K": "Kelvin",
+            "excess_volume_at_phi05": "dimensionless",
+            "chi_eff_at_phi05": "dimensionless",
+            "branching_parameter_r": "dimensionless"
+          }
+        },
+        "description": "Scored artifact. The spinodal curve temperatures are checked for correct shape (UCST maximum near Φ₁=0.5, monotonic decrease toward edges); the scalars Tc, excess volume, chi_eff, and r are compared against hidden paper references with tolerances."
+      }
+    ],
+    "notes": "Scoring combines structural audit of the spinodal curve and exact-match-with-tolerance comparison of the scalars Tc, excess volume, chi_eff, and r. All values must be physically reasonable (e.g., positive temperatures)."
+  },
+  "steps": [
+    {
+      "id": "tc_check",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "numeric_compare",
+      "target_policy": "exact_match",
+      "target": 311.0,
+      "tolerance_abs": 20.0,
+      "field": "Tc_K"
+    },
+    {
+      "id": "excess_volume_check",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "numeric_compare",
+      "target_policy": "exact_match",
+      "target": 0.000132,
+      "tolerance_abs": 5e-05,
+      "field": "excess_volume_at_phi05"
+    },
+    {
+      "id": "chi_eff_check",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "numeric_compare",
+      "target_policy": "exact_match",
+      "target": 0.000366,
+      "tolerance_abs": 0.0001,
+      "field": "chi_eff_at_phi05"
+    },
+    {
+      "id": "r_check",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "numeric_compare",
+      "target_policy": "exact_match",
+      "target": 0.1333,
+      "tolerance_abs": 0.001,
+      "field": "branching_parameter_r"
+    },
+    {
+      "id": "spinodal_structural_check",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "fields": [
+        "compositions",
+        "spinodal_temperatures_K"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full DFT recompute in checker sandbox infeasible; result-level compare against paper-reported values with generous tolerances, consistent with task verification strategy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "GdN_band_gap_ev": "float",
+            "GdSb_DOS_at_Ef_states_per_Ryd_cell": "float",
+            "GdSb_spin_orbit_splitting_Ryd": "float",
+            "GdSb_hole_carriers_per_primitive_cell": "float",
+            "GdSb_electron_carriers_per_primitive_cell": "float"
+          },
+          "units": {
+            "GdN_band_gap_ev": "eV",
+            "GdSb_DOS_at_Ef_states_per_Ryd_cell": "states/Ryd.cell",
+            "GdSb_spin_orbit_splitting_Ryd": "Ryd",
+            "GdSb_hole_carriers_per_primitive_cell": "carriers per primitive cell",
+            "GdSb_electron_carriers_per_primitive_cell": "carriers per primitive cell"
+          }
+        },
+        "description": "Aggregates the reproduced band gap, density of states at Fermi level, spin–orbit splitting, and carrier numbers. The checker compares these values to the paper-reported hidden gold with generous tolerances."
+      }
+    ],
+    "notes": "The task uses Elk with LDA; the paper originally used APW with Slater exchange. Tolerances absorb these systematic differences. Only GdN and GdSb are required to demonstrate the semiconducting/metallic trend."
+  },
+  "steps": [
+    {
+      "id": "results_check",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "json_fields",
+      "fields": {
+        "GdN_band_gap_ev": {
+          "gold": 0.18,
+          "tolerance_window": [
+            0.0,
+            0.3
+          ],
+          "decay_upper": 0.5,
+          "score_type": "positive_small"
+        },
+        "GdSb_DOS_at_Ef_states_per_Ryd_cell": {
+          "gold": 4.5,
+          "relative_tolerance": 0.5,
+          "score_type": "symmetric_tolerance"
+        },
+        "GdSb_spin_orbit_splitting_Ryd": {
+          "gold": 0.065,
+          "relative_tolerance": 0.5,
+          "score_type": "symmetric_tolerance"
+        },
+        "GdSb_hole_carriers_per_primitive_cell": {
+          "gold": 0.021,
+          "relative_tolerance": 1.0,
+          "score_type": "symmetric_tolerance"
+        },
+        "GdSb_electron_carriers_per_primitive_cell": {
+          "gold": 0.021,
+          "relative_tolerance": 1.0,
+          "score_type": "symmetric_tolerance"
+        }
+      },
+      "field_weights": {
+        "GdN_band_gap_ev": 0.2,
+        "GdSb_DOS_at_Ef_states_per_Ryd_cell": 0.2,
+        "GdSb_spin_orbit_splitting_Ryd": 0.2,
+        "GdSb_hole_carriers_per_primitive_cell": 0.2,
+        "GdSb_electron_carriers_per_primitive_cell": 0.2
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for GdN band gap, GdSb DOS, spin–orbit splitting, and carrier numbers from the paper's tables/figures",
+      "source_provenance": "Paper text: band gap <0.2 eV (0.18 eV used), DOS 4.5 states/Ryd.cell, spin–orbit splitting 0.065 Ryd, carrier numbers 0.021 per Gd atom.",
+      "generation_method": "Extracted directly from the paper's self-consistent APW results as authoritative hidden reference.",
+      "why_not_fabricated": "These are the paper's own reported values to verify reproduction."
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Compute elemental activation energies Ev",
+    "role": "process",
+    "action": "Using the provided ionic radii (r*i), atomic radii (r*a), and heats of vaporization (Evap) for Fe, C, P, and B, compute the apparent activation energy of viscosity Ev for each element from the empirical size‑dependence relations. For Fe (metallic bond) apply log[(Evap/Ev)(r*i/r*a)^3] = 4.98 log(r*i/r*a) + 2.35. For C, P, B (covalent bond) apply log[(Evap/Ev)(r*i/r*a)^3] = 3.44 log(r*i/r*a) + 1.15. Store the four computed Ev values (kJ/mol).",
+    "output_file": "",
+    "evidence": "elemental_Ev.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This required intermediate computes the per‑element activation energies consumed by downstream scored steps. The evidence file is not scored but is available for inspection.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Calculate alloy activation energy Ev for Fe‑17 at.% B",
+    "role": "scored",
+    "action": "Using the elemental Ev from step‑01, compute the alloy activation energy Ev for Fe‑17 at.% B under two mixing‑energy assumptions: case1 Fm = ‑5.31 kJ/mol (half of the Fe‑C mixing energy), case2 Fm = ‑21.24 kJ/mol (twice of the Fe‑C mixing energy). Apply Ev_alloy = X(Fe)·Ev(Fe) + X(B)·Ev(B) + Fm with mole fractions X(Fe)=0.83, X(B)=0.17. Write the two Ev values (in kJ/mol) to the output CSV.",
+    "output_file": "step_01_Ev_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored alloy activation energy Ev for Fe‑17 at.% B under two mixing assumptions. The checker recomputes Ev from the same elemental Ev and Fm values and compares within tolerance.",
+    "output_schema": "columns: case (string: case1, case2), Ev_kJ_per_mol (float)"
+  },
+  {
+    "id": "step_03",
+    "title": "Derive viscosity equation coefficients and supercooled‑liquid parameters",
+    "role": "scored",
+    "action": "For each case, transform Ev to J/mol and compute the pre‑exponential factor η0 (mPa·s) from log10(η0) = -3.30·log10(Ev) + 14.6. Obtain the Arrhenius coefficients: a = log10(η0), b = Ev/(R·ln(10)) with R=8.314 J/(mol·K). Use the Arrhenius equation η(T)=η0·exp(Ev/(RT)) to evaluate the liquid viscosity at T=1462 K and T=1562 K. Then fit the Fulcher equation log10(η) = A + B/(T‑T0) to the three points (1462 K, 1562 K, Tg=760 K) under the conventional assumption that the viscosity at the glass transition is 1e15 mPa·s. Solve for A, B, T0 for each case and write all coefficients as JSON.",
+    "output_file": "step_02_viscosity_eq_coefficients.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact providing the Arrhenius and Fulcher viscosity coefficients for both mixing assumptions. The checker re‑derives the coefficients from the same Ev values and the same fitting prescription and compares with tolerance.",
+    "output_schema": "object with keys Arrhenius_case1 {a: float, b: float}, Arrhenius_case2 {a: float, b: float}, Fulcher_case1 {A: float, B: float, T0: float}, Fulcher_case2 {A: float, B: float, T0: float}"
+  },
+  {
+    "id": "step_04",
+    "title": "Compute liquid viscosity at reference temperatures",
+    "role": "scored",
+    "action": "Using the Arrhenius coefficients from step_03 (or recomputing directly from Ev), calculate the liquid viscosity η (mPa·s) for each case at T = 1462 K and T = 1562 K. Write the four values as JSON.",
+    "output_file": "step_03_viscosity_at_temps.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored liquid viscosities at the melting point and a higher temperature, which are the direct output of the temperature‑dependent viscosity calculation. The checker recomputes them from the same Ev and Arrhenius expression and compares with tolerance.",
+    "output_schema": "object with keys viscosity_case1_1462K (float, mPa·s), viscosity_case1_1562K (float), viscosity_case2_1462K (float), viscosity_case2_1562K (float)"
+  }
+]

@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes sensitivity and FOM from raw resonance data and FWHM, then compares to paper-reported values using monotonic thresholds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_resonance_angles.csv": "reference_match",
+    "step_02_sensitivity_data.csv": "metric_recompute",
+    "step_03_results_summary.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold resonance angles, FWHM, and expected sensitivity values for the three grating configurations",
+      "source_provenance": "Paper Fig.2 and Fig.5: angles 21.6°, 9.0°, 2.8°; FWHM 0.5°; sensitivities 70 and 80 deg/RIU",
+      "generation_method": "Values read directly from the paper text and figures; rounded to one decimal",
+      "why_not_fabricated": "These are the exact reported values and are needed to score the agent's recomputed resonance parameters."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_resonance_angles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "resonance_angle_deg",
+            "FWHM_deg"
+          ],
+          "units": {
+            "resonance_angle_deg": "degrees",
+            "FWHM_deg": "degrees"
+          }
+        },
+        "description": "Resonance angle and full‑width at half‑maximum for the unslant 90° (Λ=400 nm), slant 60° (Λ=400 nm), and period 500 nm (unslant 90°) grating configurations. Compared to the paper’s reported values within tight tolerances."
+      },
+      {
+        "file": "step_02_sensitivity_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "refractive_index",
+            "resonance_angle_deg"
+          ],
+          "units": {
+            "refractive_index": "dimensionless",
+            "resonance_angle_deg": "degrees"
+          }
+        },
+        "description": "Resonance angle measured at each analyte refractive index (1.00–1.05, step 0.01) for the slant 60° and unslant 90° gratings. The checker recomputes the sensitivity (slope) from this data and compares to the expected linear relation."
+      },
+      {
+        "file": "step_03_results_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "slant_sensitivity_deg_per_RIU": "float",
+            "unslant_sensitivity_deg_per_RIU": "float",
+            "slant_FWHM_deg": "float",
+            "slant_FOM": "float"
+          },
+          "units": {
+            "slant_sensitivity_deg_per_RIU": "deg/RIU",
+            "unslant_sensitivity_deg_per_RIU": "deg/RIU",
+            "slant_FWHM_deg": "degrees",
+            "slant_FOM": "dimensionless"
+          }
+        },
+        "description": "Agent‑computed sensitivities (deg/RIU) for both configurations, the FWHM of the slant configuration, and the figure of merit FOM. The checker recomputes FOM from the slant sensitivity and FWHM to confirm internal consistency, then compares slant_FOM to the paper’s value."
+      }
+    ],
+    "notes": "All outputs derive from RCWA simulations using publicly specified grating parameters and the Drude model for silver. The checker verifies internal consistency (slope recomputation, FOM recomputation) and compares key numerical results to the paper’s reported numbers within tolerances that absorb implementation‑dependent spread."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_resonance_angles.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "gold_table": [
+        {
+          "configuration": "unslant_90deg",
+          "resonance_angle_deg": 21.6,
+          "fwhm_deg": 0.5
+        },
+        {
+          "configuration": "slant_60deg",
+          "resonance_angle_deg": 9.0,
+          "fwhm_deg": 0.5
+        },
+        {
+          "configuration": "period_500nm",
+          "resonance_angle_deg": 2.8,
+          "fwhm_deg": 0.5
+        }
+      ],
+      "tolerance_angle_deg": 0.4,
+      "tolerance_fwhm_deg": 0.1
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_sensitivity_data.csv",
+      "weight": 0.3,
+      "kind": "metric_recompute",
+      "expected_slope": {
+        "slant_60deg": 70.0,
+        "unslant_90deg": 80.0
+      },
+      "tolerance_relative": 0.1
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_results_summary.json",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "slant_sens_low": 50.0,
+      "slant_sens_high": 70.0,
+      "unslant_sens_low": 60.0,
+      "unslant_sens_high": 80.0,
+      "fom_low": 100.0,
+      "fom_high": 140.0
+    }
+  ]
+}

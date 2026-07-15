@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare fcc configurations and pre-heat",
+    "role": "process",
+    "action": "Generate rock-salt (fcc) lattices for KCl clusters with 512 and 5832 ions. Heat the clusters quickly by velocity rescaling to a temperature just below the expected melting onset to provide initial configurations for the energy-controlled runs.",
+    "output_file": "",
+    "evidence": "preheated_configurations",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the starting atomic positions and velocities for the subsequent NVE simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run NVE MD for KCl 512 and collect T-E data",
+    "role": "scored",
+    "action": "For the KCl 512 cluster, perform a series of constant-energy molecular dynamics simulations at increasing total energies covering the melting transition. At each fixed total energy, allow equilibration and record the average temperature over the production phase. Write the (total_energy_kJ_mol, temperature_K) pairs to /app/outputs/kcl_512_te.csv.",
+    "output_file": "kcl_512_te.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with two columns: total_energy_kJ_mol (float, kJ/mol) and temperature_K (float, Kelvin). One row per simulated state point.",
+    "output_schema": "CSV with columns: total_energy_kJ_mol (float, kJ/mol), temperature_K (float, K)."
+  },
+  {
+    "id": "step_03",
+    "title": "Run NVE MD for KCl 5832 and collect T-E data",
+    "role": "scored",
+    "action": "For the KCl 5832 cluster, perform a series of constant-energy simulations across the melting transition. Average the temperature for each fixed total energy. Write the (total_energy_kJ_mol, temperature_K) pairs to /app/outputs/kcl_5832_te.csv.",
+    "output_file": "kcl_5832_te.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with two columns: total_energy_kJ_mol (float, kJ/mol) and temperature_K (float, K). One row per state point.",
+    "output_schema": "CSV with columns: total_energy_kJ_mol (float, kJ/mol), temperature_K (float, K)."
+  },
+  {
+    "id": "step_04",
+    "title": "Run NVE MD for KCl 5832 with velocity recording at melting state points",
+    "role": "process",
+    "action": "For the 5832-ion cluster, run additional constant-energy simulations for selected state points spanning the melting transition, storing the velocities of all ions at regular time steps to enable VACF computation. This can be done by appending velocity trajectory output to the previous runs or by running dedicated short runs at each energy.",
+    "output_file": "",
+    "evidence": "velocity_trajectories",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the velocity data needed for the VACF classification step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute VACFs and determine phase classification threshold",
+    "role": "process",
+    "action": "From the velocity trajectories of a fully solid and a fully liquid state of the 5832 cluster, compute the individual velocity autocorrelation functions for all cations. Identify a time window (e.g., between steps 32 and 40, corresponding to a time interval) where the solid and liquid VACFs do not overlap. Set a classification threshold (e.g., VACF value at a specific time step) to discriminate solid from liquid ions.",
+    "output_file": "",
+    "evidence": "vacf_threshold_params",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Determines the criteria used to label ions as solid or liquid.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Classify ions using VACF and compute liquid molar fraction",
+    "role": "scored",
+    "action": "For each saved state point of the 5832 cluster from the melting region, compute the VACF of each cation at the chosen time step. Classify an ion as liquid if its VACF value > threshold, otherwise solid. Calculate the liquid molar fraction (number of liquid ions divided by total ions). Write the (total_energy_kJ_mol, liquid_mole_fraction) pairs to /app/outputs/kcl_5832_liq_mol_frac.csv.",
+    "output_file": "kcl_5832_liq_mol_frac.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: total_energy_kJ_mol (float, kJ/mol) and liquid_mole_fraction (float, between 0 and 1). One row per state point in the coexistence region.",
+    "output_schema": "CSV with columns: total_energy_kJ_mol (float, kJ/mol), liquid_mole_fraction (float, between 0 and 1)."
+  },
+  {
+    "id": "step_07",
+    "title": "Compute melting temperature and enthalpies",
+    "role": "scored",
+    "action": "Using kcl_5832_te.csv, identify the approximate energy range where the temperature curve is flat (plateau) and compute the average melting temperature. Compute the direct enthalpy of melting as the vertical energy gap between the extrapolated solid and liquid branches at the melting temperature. From kcl_5832_liq_mol_frac.csv, fit a line to the linear portion of the liquid fraction curve and compute the energy difference between the y=0 and y=1 intercepts to obtain the VACF-based enthalpy. Write a JSON file /app/outputs/results.json containing the melting temperature (K) and both enthalpies (kJ/mol).",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys: melting_temperature_K (float), enthalpy_direct_kJ_mol (float), enthalpy_vacf_kJ_mol (float).",
+    "output_schema": "JSON object with keys: melting_temperature_K (number, K), enthalpy_direct_kJ_mol (number, kJ/mol), enthalpy_vacf_kJ_mol (number, kJ/mol)."
+  }
+]

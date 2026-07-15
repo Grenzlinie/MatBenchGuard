@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Main artifact (step02) reports computed frequencies/energy compared against paper-reported experimental values with tolerances; recomputing DFT is infeasible. Geometry is audited structurally.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step01_relaxed_geometry.xyz": "structural_audit",
+    "step02_vibrational_and_dos.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for vibrational frequencies, red-shifts, subgap energy, and gas-phase frequencies",
+      "source_provenance": "Paper: Fig. 1(c) experimental IR peak positions (1389, 1524 cm-1), calculated red-shifts (86, 92 cm-1), subgap energy ~0.4 eV above VBM; gas-phase hydride frequencies from Ref. 21 used as reference for shifts.",
+      "generation_method": "Values extracted from the published paper and reproduce the computational result the paper reports.",
+      "why_not_fabricated": "Numbers directly trace to the paper's reported experimental observations and computational analysis; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step01_relaxed_geometry.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "XYZ file: first line number of atoms, second line comment with hydrogen labeling (Ht/Hd), then element_symbol x y z (Å)."
+        },
+        "description": "Relaxed atomic geometry after DFT optimization. The checker performs a structural audit: verifies that exactly two hydrogen atoms are present, one has trigonal coordination to In, Ga, Zn, and the other has twofold coordination to Ga, Zn, within a distance cutoff of 2.5 Å."
+      },
+      {
+        "file": "step02_vibrational_and_dos.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "M_H_stretching_frequencies_cm-1",
+            "mode_characters",
+            "gas_phase_hydride_frequencies_cm-1",
+            "red_shifts_cm-1",
+            "subgap_energy_above_VBM_eV"
+          ],
+          "properties": {
+            "M_H_stretching_frequencies_cm-1": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "mode_characters": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "gas_phase_hydride_frequencies_cm-1": {
+              "type": "object"
+            },
+            "red_shifts_cm-1": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "subgap_energy_above_VBM_eV": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Computed vibrational and electronic properties. The checker compares the M-H stretching frequencies, red-shifts, and subgap energy against hidden reference values derived from the experimental data, with appropriate tolerances."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step1_relax_h",
+      "output_file": "step01_relaxed_geometry.xyz",
+      "weight": 0.4,
+      "kind": "structural_audit"
+    },
+    {
+      "id": "step2_vib_dos",
+      "output_file": "step02_vibrational_and_dos.json",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "gold": {
+        "freq_targets": [
+          1389,
+          1524
+        ],
+        "freq_tol": 75,
+        "shift_range": [
+          60,
+          120
+        ],
+        "subgap_range": [
+          0.2,
+          0.6
+        ],
+        "mode_characters_expected": [
+          "In-H stretch",
+          "Zn-H stretch"
+        ]
+      }
+    }
+  ]
+}

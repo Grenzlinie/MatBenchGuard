@@ -1,0 +1,117 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Cannot recompute from raw artifacts in verifier; compare interaction energies and free energy minima to paper's reported values with tolerance (±15 kJ/mol for interaction energies, ±60 kJ/mol for free energy minima), plus structural condition |vdW| > |Elec|.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold interaction energies (vdW, Elec, total) for six systems",
+      "source_provenance": "Table 2 in the source paper",
+      "generation_method": "Extracted directly from published data",
+      "why_not_fabricated": "Traced to specific published numerical results."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold free energy minima for PEF/COF and OFL/CNTs@COF",
+      "source_provenance": "Metadynamics results in the source paper",
+      "generation_method": "Extracted from paper's reported global minima",
+      "why_not_fabricated": "Traced to specific published numerical results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "interaction_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "vdW",
+            "Elec",
+            "total"
+          ],
+          "units": {
+            "vdW": "kJ/mol",
+            "Elec": "kJ/mol",
+            "total": "kJ/mol"
+          }
+        },
+        "description": "Average van der Waals, electrostatic, and total interaction energies (kJ/mol) for six NOP/adsorbent systems. The hidden checker compares the reported values to hidden reference values and also checks that for every system |vdW| > |Elec|."
+      },
+      {
+        "file": "free_energy_minima.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "free_energy_minimum"
+          ],
+          "units": {
+            "free_energy_minimum": "kJ/mol"
+          }
+        },
+        "description": "Global free energy minimum (kJ/mol) from metadynamics for the PEF/COF and OFL/CNTs@COF systems. The hidden checker compares to hidden reference values."
+      }
+    ],
+    "notes": "All energy quantities are in kJ/mol. The six systems for interaction energies are PEF/COFs, OFL/COFs, NOR/COFs, PEF/CNTs@COFs, OFL/CNTs@COFs, NOR/CNTs@COFs. The metadynamics systems are only PEF/COFs and OFL/CNTs@COFs."
+  },
+  "steps": [
+    {
+      "id": "interaction_energies",
+      "output_file": "interaction_energies.csv",
+      "weight": 0.6,
+      "kind": "reference_match_tolerance",
+      "tolerance": 15.0,
+      "gold": {
+        "PEF/COFs": {
+          "vdW": -177.104,
+          "Elec": -69.05,
+          "total": -246.154
+        },
+        "OFL/COFs": {
+          "vdW": -108.46,
+          "Elec": -38.83,
+          "total": -147.29
+        },
+        "NOR/COFs": {
+          "vdW": -76.95,
+          "Elec": -44.69,
+          "total": -121.64
+        },
+        "PEF/CNTs@COFs": {
+          "vdW": -133.931,
+          "Elec": -109.394,
+          "total": -243.325
+        },
+        "OFL/CNTs@COFs": {
+          "vdW": -323.306,
+          "Elec": -35.32,
+          "total": -358.626
+        },
+        "NOR/CNTs@COFs": {
+          "vdW": -285.44,
+          "Elec": -63.33,
+          "total": -348.77
+        }
+      },
+      "structural_condition": "|vdW| > |Elec|"
+    },
+    {
+      "id": "free_energy_minima",
+      "output_file": "free_energy_minima.csv",
+      "weight": 0.4,
+      "kind": "reference_match_tolerance",
+      "tolerance": 60.0,
+      "gold": {
+        "PEF/COFs": -400.41,
+        "OFL/CNTs@COFs": -734.27
+      }
+    }
+  ]
+}

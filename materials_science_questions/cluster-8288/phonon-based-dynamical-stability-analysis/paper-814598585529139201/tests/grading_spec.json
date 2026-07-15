@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible: DFT aggregate results cannot be recomputed from raw wavefunction files the verifier sandbox cannot process; use result-level comparison with paper gold values and structural trend checks.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pristine_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_A": "float",
+            "Ni_magnetic_moment_muB": "float",
+            "AFM_FM_energy_diff_meV": "float",
+            "HSE06_band_gap_eV": "float",
+            "band_gap_direct": "boolean"
+          }
+        },
+        "description": "Pristine monolayer properties: lattice constant (Å), Ni magnetic moment (μB), AFM‑FM energy difference (meV), HSE06 band gap (eV), and whether the gap is direct."
+      },
+      {
+        "file": "strain_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "strain_percent": "float",
+            "AFM_FM_energy_diff_meV": "float",
+            "HSE06_band_gap_eV": "float"
+          }
+        },
+        "description": "Array of objects for each biaxial strain (-10, -4, 0, +4, +10%), each containing the strain value, AFM‑FM energy difference (meV), and HSE06 band gap (eV)."
+      }
+    ],
+    "notes": "The solver may use any open‑source DFT code with the required functionality. The phonon stability check is mandatory but not scored. All values are compared to paper‑reported reference data with appropriate tolerances and trend checks."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for pristine properties and strain-dependent parameters from the paper (Tang et al., RSC Adv. 2015)",
+      "source_provenance": "Paper-reported values in text and figures (Table 1, Figure 3). Pristine band gap 3.15 eV, AFM-FM energy diff -45 meV, Ni moment 1.733 μB, lattice constant 3.136 Å. Strain data: values extracted from Figure 3 and text (e.g., -10% band gap 2.32 eV, AFM-FM 47 meV; +10% band gap 3.95 eV). Intermediate values approximated from the curve.",
+      "generation_method": "Extracted from paper text/figures; verified consistency with the reference oracle solve.sh.",
+      "why_not_fabricated": "All numbers are directly from the source publication's stated or plotted results."
+    }
+  ],
+  "steps": [
+    {
+      "id": "pristine",
+      "output_file": "pristine_results.json",
+      "weight": 0.4,
+      "kind": "structural",
+      "gold": {
+        "lattice_constant_A": {
+          "value": 3.136,
+          "tolerance": 0.02
+        },
+        "Ni_magnetic_moment_muB": {
+          "value": 1.733,
+          "tolerance": 0.05
+        },
+        "AFM_FM_energy_diff_meV": {
+          "value": -45.0,
+          "tolerance": 15.0
+        },
+        "HSE06_band_gap_eV": {
+          "value": 3.15,
+          "tolerance": 0.2
+        },
+        "band_gap_direct": true
+      }
+    },
+    {
+      "id": "strain",
+      "output_file": "strain_results.json",
+      "weight": 0.6,
+      "kind": "structural",
+      "gold": {
+        "entries": [
+          {
+            "strain_percent": -10.0,
+            "AFM_FM_energy_diff_meV": 47.0,
+            "HSE06_band_gap_eV": 2.32
+          },
+          {
+            "strain_percent": -4.0,
+            "AFM_FM_energy_diff_meV": 5.0,
+            "HSE06_band_gap_eV": 2.8
+          },
+          {
+            "strain_percent": 0.0,
+            "AFM_FM_energy_diff_meV": -45.0,
+            "HSE06_band_gap_eV": 3.15
+          },
+          {
+            "strain_percent": 4.0,
+            "AFM_FM_energy_diff_meV": -30.0,
+            "HSE06_band_gap_eV": 3.4
+          },
+          {
+            "strain_percent": 10.0,
+            "AFM_FM_energy_diff_meV": -60.0,
+            "HSE06_band_gap_eV": 3.95
+          }
+        ],
+        "energy_diff_tolerance": 15.0,
+        "band_gap_tolerance": 0.2,
+        "expected_signs": {
+          "-10": "positive",
+          "-4": "positive",
+          "0": "negative",
+          "4": "negative",
+          "10": "negative"
+        },
+        "band_gap_ordering": "increasing"
+      }
+    }
+  ]
+}

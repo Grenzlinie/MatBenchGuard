@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT relative energies are deterministic within the specified functional/basis; the agent reports the computed energies; the checker compares them and derived barriers to paper-reported hidden values with tolerances. Since no lower-level raw outputs exist that would allow recomputation of energies, result-level comparison is appropriate.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold DFT relative energies and activation barriers from Table 1 of the paper",
+      "source_provenance": "Table 1 of the paper (energies from DFT column: A=+0.69, B=-0.04, C=-0.76, D=-0.39, E=-0.60). Barriers derived: insertion=E(A)=0.69, H-transfer=E(D)-E(C)=0.37",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "Values are exactly as reported in the reference paper, traceable to Table 1"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "relative_energy_eV"
+          ],
+          "units": {
+            "relative_energy_eV": "eV"
+          }
+        },
+        "description": "Computed relative DFT energies of the five stationary points A-E along the dissociative insertion pathway. The reference state (RS) energy is taken as zero by convention and is not listed."
+      }
+    ],
+    "notes": "The checker will validate the CSV format, derive activation barriers (insertion barrier = E(A) - E(RS), H-transfer barrier = E(D) - E(C)), compare the five relative energies and two barriers to the hidden reference values within absolute tolerances, and verify structural ordering constraints. No MD simulation is required."
+  },
+  "steps": [
+    {
+      "id": "check_energies",
+      "output_file": "energies.csv",
+      "weight": 1.0,
+      "params": {
+        "gold_energies": {
+          "A": 0.69,
+          "B": -0.04,
+          "C": -0.76,
+          "D": -0.39,
+          "E": -0.6
+        },
+        "gold_insertion_barrier": 0.69,
+        "gold_htransfer_barrier": 0.37,
+        "energy_tol": 0.1,
+        "barrier_tol": 0.2
+      }
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The Eliashberg functions are raw curves from which peak positions can be recomputed directly, enabling a full T1 recompute against paper-reported energies and physical trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eliashberg_functions.csv": "metric_recompute",
+    "peak_positions.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold peak positions and trend constraints for the normal and pairing Eliashberg functions",
+      "source_provenance": "Paper Fig.2 and text: low-energy peak ~0.04J (≈5 meV), broad peak ~0.34J (≈40 meV) at antinode δ=0.15; doping evolution, momentum dependence, and temperature persistence described in Sec. III.",
+      "generation_method": "Extracted from the paper's quantitative statements and energy scales (J=120 meV). Tolerances chosen to absorb plausible implementation spread while excluding trivial guesses.",
+      "why_not_fabricated": "Values are directly traceable to the paper's reported quantitative results and the required physical trends; no arbitrary labels or invented holdout data are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eliashberg_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "omega",
+            "alpha2F_n",
+            "alpha2F_p"
+          ],
+          "units": {
+            "omega": "meV",
+            "alpha2F_n": "unitless",
+            "alpha2F_p": "unitless"
+          }
+        },
+        "description": "Raw Eliashberg function curves; the checker will recompute peak positions from this data and compare them against the paper-reported gold values."
+      },
+      {
+        "file": "peak_positions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {},
+          "items": {
+            "type": "object",
+            "properties": {
+              "low_peak_omega_n": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "unit": "meV"
+              },
+              "broad_peak_omega_n": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "unit": "meV"
+              },
+              "low_peak_omega_p": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "unit": "meV"
+              },
+              "broad_peak_omega_p": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "unit": "meV"
+              }
+            }
+          }
+        },
+        "description": "Agent-reported peak positions; the checker will compare these against its own recomputed peaks and the hidden paper reference values."
+      }
+    ],
+    "notes": "The Eliashberg functions must be computed for the following conditions (condition strings as examples): AN_delta0.06_T0.002J, AN_delta0.09_T0.002J, AN_delta0.12_T0.002J, AN_delta0.15_T0.002J, AN_delta0.09_T0.06J, HS_delta0.15_T0.002J, ND_delta0.15_T0.002J. The hot spot and node positions are defined on the Fermi surface as per the paper. Parameters: t=2.5J, t'=0.3t, J=120 meV. All calculations start from the t-J model formulas in Ref. [50]; no external datasets are provided."
+  },
+  "steps": [
+    {
+      "id": "recompute_peaks_and_trends",
+      "output_file": "eliashberg_functions.csv",
+      "kind": "custom",
+      "weight": 0.7,
+      "description": "Recompute peak positions from raw Eliashberg functions and verify absolute positions and physical trends.",
+      "reference": {
+        "energy_window": [
+          0,
+          60
+        ],
+        "low_window": [
+          0,
+          20
+        ],
+        "broad_window": [
+          20,
+          60
+        ],
+        "min_peak_height": 0.001,
+        "min_prominence": 0.0005,
+        "tolerances": {
+          "low_peak": 2.0,
+          "broad_peak": 5.0
+        },
+        "gold_peaks": {
+          "AN_delta0.15_T0.002J": {
+            "low_peak_n": 5.0,
+            "broad_peak_n": 40.0,
+            "low_peak_p": 5.0,
+            "broad_peak_p": 40.0
+          }
+        },
+        "condition_meta": {
+          "AN_delta0.06_T0.002J": {
+            "site": "AN",
+            "doping": 0.06,
+            "T": 0.002
+          },
+          "AN_delta0.09_T0.002J": {
+            "site": "AN",
+            "doping": 0.09,
+            "T": 0.002
+          },
+          "AN_delta0.12_T0.002J": {
+            "site": "AN",
+            "doping": 0.12,
+            "T": 0.002
+          },
+          "AN_delta0.15_T0.002J": {
+            "site": "AN",
+            "doping": 0.15,
+            "T": 0.002
+          },
+          "AN_delta0.09_T0.06J": {
+            "site": "AN",
+            "doping": 0.09,
+            "T": 0.06
+          },
+          "HS_delta0.15_T0.002J": {
+            "site": "HS",
+            "doping": 0.15,
+            "T": 0.002
+          },
+          "ND_delta0.15_T0.002J": {
+            "site": "ND",
+            "doping": 0.15,
+            "T": 0.002
+          }
+        },
+        "trends": {
+          "doping_shift_AN": "for conditions AN_delta0.06_T0.002J, AN_delta0.09_T0.002J, AN_delta0.12_T0.002J, AN_delta0.15_T0.002J: the broad peak positions (both channels) must be monotonically increasing with doping",
+          "momentum_AN_to_HS": "the low-peak amplitude (max alpha2F_n in low window) must decrease from AN_delta0.15_T0.002J to HS_delta0.15_T0.002J, and at HS both alpha2F_n and alpha2F_p must be < 0.01",
+          "pairing_at_node_zero": "for ND_delta0.15_T0.002J, max absolute value of alpha2F_p over the whole energy range must be < 1e-6",
+          "temperature_persistence": "for AN_delta0.09_T0.06J, low and broad peaks must still be detected in the normal channel, and their amplitudes must be lower than the corresponding amplitudes in AN_delta0.09_T0.002J"
+        }
+      }
+    },
+    {
+      "id": "check_reported_peaks",
+      "output_file": "peak_positions.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "description": "Check that the agent‑reported peak positions are consistent with those recomputed from the raw Eliashberg functions (CSV).",
+      "reference": {
+        "tolerance": 0.1
+      }
+    }
+  ]
+}

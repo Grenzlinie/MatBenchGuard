@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_build_slab",
+    "title": "Build Si(111)-7×7 DAS slab model",
+    "role": "process",
+    "action": "Construct a 6-layer Si(111) slab with a 7×7 supercell according to the dimer-adatom-stacking-fault (DAS) model using the provided si111_7x7_coords.xyz coordinates. The slab contains adatoms, rest atoms, dimers, corner holes, and bottom hydrogen passivation. The bottom two silicon bilayers are frozen in bulk-like positions.",
+    "output_file": "",
+    "evidence": "slab_structure.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the initial slab model for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relax_geometry",
+    "title": "Geometry optimization of the slab",
+    "role": "process",
+    "action": "Perform a DFT geometry relaxation using the PBE-GGA functional with the slab model. Relax all atoms except the bottom two bilayers (and attached H atoms) until forces are below a tight threshold. Output the relaxed atomic positions.",
+    "output_file": "",
+    "evidence": "relaxed_structure.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Optimize the atomic geometry to obtain the equilibrium DAS structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_calc_pdos",
+    "title": "Calculate projected density of states (PDOS)",
+    "role": "scored",
+    "action": "Using the relaxed geometry, perform a non-self-consistent DOS calculation with a dense k-point mesh. Extract the PDOS projected onto the four inequivalent adatom types: corner-fault (CoF), centre-fault (CeF), corner-unfault (CoU), and centre-unfault (CeU). For each energy bin relative to the Fermi level (E_F=0), output the PDOS values.",
+    "output_file": "raw_pdos.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw PDOS curves for the four adatom types, used to verify the doping-dependent adatom contrast.",
+    "output_schema": "Energy_eV (float), PDOS_CoF (float), PDOS_CeF (float), PDOS_CoU (float), PDOS_CeU (float)"
+  },
+  {
+    "id": "step_04_integrate_pdos",
+    "title": "Integrate PDOS over doping windows",
+    "role": "scored",
+    "action": "From the raw PDOS data, numerically integrate the PDOS over the following energy windows: p-type [-0.6, -0.1] eV; intrinsic [-0.5, 0.0] eV; n-type [-0.4, 0.1] eV. Report the integrated values for each adatom type.",
+    "output_file": "integrated_pdos.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Integrated PDOS values that determine the adatom brightness ordering for different doping scenarios.",
+    "output_schema": "adatom (string: CoF, CeF, CoU, CeU), window (string: p-type, intrinsic, n-type), integrated_pdos (float)"
+  }
+]

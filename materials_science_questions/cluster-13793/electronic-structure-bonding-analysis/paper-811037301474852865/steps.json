@@ -1,0 +1,93 @@
+[
+  {
+    "id": "s0",
+    "title": "Compute total energy of fcc Al reference",
+    "role": "process",
+    "action": "Perform a DFT self-consistent field calculation for fcc aluminum (space group Fm-3m, experimental lattice constant ~4.04 Å) using GGA-PBE to obtain its total electronic energy.",
+    "output_file": "",
+    "evidence": "al_energy.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reference calculation needed for formation enthalpy evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s1",
+    "title": "Compute total energy of H2 molecule",
+    "role": "process",
+    "action": "Perform a DFT calculation for an isolated H2 molecule using the same GGA-PBE functional to obtain its total electronic energy (the paper used a value from a previous study; here we recompute for consistency).",
+    "output_file": "",
+    "evidence": "h2_energy.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reference calculation needed for formation enthalpy evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Structural relaxation of AlH3 polymorphs",
+    "role": "process",
+    "action": "Starting from the initial crystal structures (α-, β-, γ-, α'-AlH3), perform full structural relaxation (lattice parameters and atomic positions) with GGA-PBE until forces on atoms are converged. Record the final total energies and relaxed geometries.",
+    "output_file": "",
+    "evidence": "relaxation_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces relaxed structures and total energies of the four polymorphs.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Report optimized lattice parameters",
+    "role": "scored",
+    "action": "Extract the optimized lattice parameters (a, b, c) and formula-unit volume for each polymorph from the relaxation output and save to a CSV file.",
+    "output_file": "lattice_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Optimized lattice constants and volumes for α-, β-, γ-, α'-AlH3.",
+    "output_schema": "Columns: polymorph (string, e.g., 'alpha'), a (float, Å), b (float, Å), c (float, Å), volume_per_fu (float, Å³). Optional notes column."
+  },
+  {
+    "id": "s4",
+    "title": "Calculate formation enthalpies",
+    "role": "scored",
+    "action": "Calculate the formation enthalpy ΔH = E_AlH3 - E_Al - 1.5*E_H2 (kJ/mol H2) for each polymorph using the total energies from the relaxation step and the reference energies from steps s0 and s1.",
+    "output_file": "formation_enthalpies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Formation enthalpies of α-, β-, γ-, α'-AlH3.",
+    "output_schema": "JSON object with keys 'alpha', 'beta', 'gamma', 'alpha_prime'. Each key maps to an object with 'total_energy_Ry' (float) and 'formation_enthalpy_kJ_per_mol_H2' (float)."
+  },
+  {
+    "id": "s5",
+    "title": "Compute band gaps",
+    "role": "scored",
+    "action": "Using the relaxed structures, perform band structure calculations with GGA-PBE and TBmBJ functionals. Determine the band gap (eV) for each polymorph from the resulting band structures.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Band gaps for α-, β-, γ-, α'-AlH3 computed with GGA-PBE and with TBmBJ.",
+    "output_schema": "JSON object with keys 'alpha', 'beta', 'gamma', 'alpha_prime'. Each maps to an object with 'GGA_PBE' (float, eV) and 'TBmBJ' (float, eV)."
+  },
+  {
+    "id": "s6",
+    "title": "Bader charge analysis",
+    "role": "scored",
+    "action": "Perform Bader charge analysis on the self-consistent electron density from GGA-PBE runs (and optionally TBmBJ) for each polymorph. Report the atomic charges (in e) for Al and H atoms.",
+    "output_file": "bader_charges.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bader charges for Al and H in α-, β-, γ-AlH3 (GGA-PBE and optionally TBmBJ).",
+    "output_schema": "JSON object with keys 'alpha', 'beta', 'gamma'. Each maps to an object with 'Al' (float, e) and 'H' (either a single float or an array of floats per site, e). For γ, list values for each distinct H site as an array."
+  }
+]

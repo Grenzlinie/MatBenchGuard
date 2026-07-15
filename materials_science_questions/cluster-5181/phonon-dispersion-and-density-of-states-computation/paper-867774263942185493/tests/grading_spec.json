@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The normal mode frequencies and critical field are outputs of a complex diagrammatic many-body computation that the verifier sandbox cannot redo; T0 result-level comparison against paper-derived gold with relative tolerances is the appropriate tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_normal_modes.csv": "reference_match",
+    "step_02_critical_field.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold normal mode frequencies (Omega_plus, Omega_minus) at E0=0.05, 0.10, 0.15 V/nm for μ=200meV, ℏω=2μ=400meV, T_e=300K, θ=0°.",
+      "source_provenance": "Paper Fig.4a,b — plotted mode frequencies vs field amplitude. Reference solve.sh produces these values as a correct implementation would.",
+      "generation_method": "Values extracted from the paper's mode-splitting plots at the three specified field amplitudes; consistent with Eq.(47) and the paper's parameter set.",
+      "why_not_fabricated": "These are the actual paper-reported physical quantities for the specified parameter set; the reference oracle represents a correct solution pathway."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold critical field E_crit where lower shear mode vanishes.",
+      "source_provenance": "Paper Fig.4f and associated analysis — critical field at μ=200meV, ℏω=2μ, T_e=300K.",
+      "generation_method": "Value derived from the instability condition Ω−=0; confirmed consistent with the paper's analysis.",
+      "why_not_fabricated": "This is the paper-reported instability threshold; the reference solve.sh confirms a correct implementation yields this value."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_normal_modes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "E0_V_per_nm",
+            "Omega_plus_meV",
+            "Omega_minus_meV"
+          ],
+          "units": {
+            "E0_V_per_nm": "V/nm",
+            "Omega_plus_meV": "meV",
+            "Omega_minus_meV": "meV"
+          }
+        },
+        "description": "Light-induced renormalized shear phonon frequencies at three electric field amplitudes."
+      },
+      {
+        "file": "step_02_critical_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "E_crit_V_per_nm"
+          ],
+          "units": {
+            "E_crit_V_per_nm": "V/nm"
+          }
+        },
+        "description": "Critical electric field amplitude at which the lower shear phonon mode vanishes, signaling a light-induced structural instability."
+      }
+    ],
+    "notes": "The checker compares the agent's reported values against hidden gold values extracted from the paper's figures, using relative tolerances appropriate for the numerical method (10% for frequencies, 20% for critical field). All model parameters and conditions are specified in the workflow steps."
+  },
+  "steps": [
+    {
+      "id": "normal_modes",
+      "step_id": "step_02",
+      "output_file": "step_01_normal_modes.csv",
+      "kind": "numeric_table",
+      "weight": 0.6,
+      "gold": {
+        "rows": [
+          {
+            "E0_V_per_nm": 0.05,
+            "Omega_plus_meV": 4.0,
+            "Omega_minus_meV": 3.8
+          },
+          {
+            "E0_V_per_nm": 0.1,
+            "Omega_plus_meV": 4.3,
+            "Omega_minus_meV": 3.4
+          },
+          {
+            "E0_V_per_nm": 0.15,
+            "Omega_plus_meV": 4.8,
+            "Omega_minus_meV": 2.5
+          }
+        ],
+        "tolerance": 0.1,
+        "tolerance_type": "relative"
+      }
+    },
+    {
+      "id": "critical_field",
+      "step_id": "step_03",
+      "output_file": "step_02_critical_field.csv",
+      "kind": "single_numeric",
+      "weight": 0.4,
+      "gold": {
+        "value": 0.18,
+        "column": "E_crit_V_per_nm",
+        "tolerance": 0.2,
+        "tolerance_type": "relative"
+      }
+    }
+  ]
+}

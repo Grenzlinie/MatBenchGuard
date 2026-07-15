@@ -1,0 +1,240 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Compute-driven workflow; result-level comparison against paper-reported values with tolerances is appropriate. Structural checks (ordering, monotonicity) are added for robustness.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for binding energies, isotherms, and electrostatic contributions taken from the paper (Table 3, Table 6, Fig.10).",
+      "source_provenance": "Paper: Table 3 (binding energies), Fig.10 and text (isotherms), Table 6 (electrostatic decomposition).",
+      "generation_method": "Extracted directly from the paper and encoded inline. Verified against the reference solve.sh, which produces consistent numbers.",
+      "why_not_fabricated": "Values are the actual reported quantities of the paper, not artificially created."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "E_ads_kJmol"
+          ]
+        },
+        "description": "DFT-calculated H2 adsorption energies for the four sites: hollow, ligand, metal side-on, metal end-on. Used to verify site ordering and energy values."
+      },
+      {
+        "file": "isotherms_77K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_bar",
+            "exc_wt",
+            "abs_wt"
+          ]
+        },
+        "description": "GCMC-computed H2 excess and absolute gravimetric loadings at 77 K for pressures up to 100 bar."
+      },
+      {
+        "file": "isotherms_298K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_bar",
+            "exc_wt",
+            "abs_wt"
+          ]
+        },
+        "description": "GCMC-computed H2 excess and absolute gravimetric loadings at 298 K for pressures up to 100 bar."
+      },
+      {
+        "file": "electrostatic_contrib_77K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_bar",
+            "abs_wt_LJplusCoulomb",
+            "abs_wt_LJonly",
+            "coulomb_wt",
+            "electrostatic_pct"
+          ]
+        },
+        "description": "Electrostatic contribution to absolute H2 uptake at 77 K, separated by comparing full-potential and LJ-only GCMC simulations."
+      }
+    ],
+    "notes": "All outputs are tabular CSV files. The checker compares numerical values against reference data with tolerances and validates the ordering of binding energies. Target policy is reference_match for each file."
+  },
+  "steps": [
+    {
+      "id": "check_binding_energies",
+      "output_file": "binding_energies.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "tolerance": 1.5,
+      "reference": {
+        "hollow": -13.72,
+        "ligand": -10.76,
+        "metal_side_on": -10.61,
+        "metal_end_on": -6.5
+      }
+    },
+    {
+      "id": "check_isotherms_77K",
+      "output_file": "isotherms_77K.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "tolerance_exc": 0.5,
+      "tolerance_abs": 0.5,
+      "reference_points": [
+        {
+          "pressure_bar": 1,
+          "exc_wt": 2.55,
+          "abs_wt": 2.56
+        },
+        {
+          "pressure_bar": 5,
+          "exc_wt": 3.76,
+          "abs_wt": 3.81
+        },
+        {
+          "pressure_bar": 10,
+          "exc_wt": 4.05,
+          "abs_wt": 4.13
+        },
+        {
+          "pressure_bar": 20,
+          "exc_wt": 4.0,
+          "abs_wt": 4.32
+        },
+        {
+          "pressure_bar": 50,
+          "exc_wt": 4.0,
+          "abs_wt": 4.5
+        },
+        {
+          "pressure_bar": 100,
+          "exc_wt": 4.0,
+          "abs_wt": 4.62
+        }
+      ]
+    },
+    {
+      "id": "check_isotherms_298K",
+      "output_file": "isotherms_298K.csv",
+      "kind": "rubric",
+      "weight": 0.2,
+      "tolerance_exc": 0.1,
+      "tolerance_abs": 0.1,
+      "reference_points": [
+        {
+          "pressure_bar": 10,
+          "exc_wt": 0.022,
+          "abs_wt": 0.063
+        },
+        {
+          "pressure_bar": 50,
+          "exc_wt": 0.11,
+          "abs_wt": 0.315
+        },
+        {
+          "pressure_bar": 100,
+          "exc_wt": 0.22,
+          "abs_wt": 0.63
+        }
+      ]
+    },
+    {
+      "id": "check_electrostatic_contrib",
+      "output_file": "electrostatic_contrib_77K.csv",
+      "kind": "rubric",
+      "weight": 0.2,
+      "tolerance_val": 0.1,
+      "tolerance_pct": 3.0,
+      "reference_rows": [
+        {
+          "pressure_bar": 1,
+          "abs_wt_LJplusCoulomb": 2.56,
+          "abs_wt_LJonly": 1.9,
+          "coulomb_wt": 0.66,
+          "electrostatic_pct": 25.78
+        },
+        {
+          "pressure_bar": 2,
+          "abs_wt_LJplusCoulomb": 3.21,
+          "abs_wt_LJonly": 2.53,
+          "coulomb_wt": 0.68,
+          "electrostatic_pct": 21.18
+        },
+        {
+          "pressure_bar": 3,
+          "abs_wt_LJplusCoulomb": 3.52,
+          "abs_wt_LJonly": 2.83,
+          "coulomb_wt": 0.69,
+          "electrostatic_pct": 19.6
+        },
+        {
+          "pressure_bar": 4,
+          "abs_wt_LJplusCoulomb": 3.69,
+          "abs_wt_LJonly": 3.01,
+          "coulomb_wt": 0.68,
+          "electrostatic_pct": 18.43
+        },
+        {
+          "pressure_bar": 5,
+          "abs_wt_LJplusCoulomb": 3.81,
+          "abs_wt_LJonly": 3.15,
+          "coulomb_wt": 0.66,
+          "electrostatic_pct": 17.32
+        },
+        {
+          "pressure_bar": 10,
+          "abs_wt_LJplusCoulomb": 4.13,
+          "abs_wt_LJonly": 3.52,
+          "coulomb_wt": 0.61,
+          "electrostatic_pct": 14.77
+        },
+        {
+          "pressure_bar": 20,
+          "abs_wt_LJplusCoulomb": 4.32,
+          "abs_wt_LJonly": 3.81,
+          "coulomb_wt": 0.51,
+          "electrostatic_pct": 11.81
+        },
+        {
+          "pressure_bar": 30,
+          "abs_wt_LJplusCoulomb": 4.4,
+          "abs_wt_LJonly": 3.97,
+          "coulomb_wt": 0.43,
+          "electrostatic_pct": 9.77
+        },
+        {
+          "pressure_bar": 40,
+          "abs_wt_LJplusCoulomb": 4.46,
+          "abs_wt_LJonly": 4.06,
+          "coulomb_wt": 0.4,
+          "electrostatic_pct": 8.97
+        },
+        {
+          "pressure_bar": 50,
+          "abs_wt_LJplusCoulomb": 4.5,
+          "abs_wt_LJonly": 4.14,
+          "coulomb_wt": 0.36,
+          "electrostatic_pct": 8.0
+        }
+      ]
+    }
+  ]
+}

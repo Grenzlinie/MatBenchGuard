@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of atomistic energies from ABOP is infeasible in verifier sandbox; structural audit of energy ordering and threshold for small sizes matches paper's main claim.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energies.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atoms",
+            "morphology",
+            "phase",
+            "energy_per_atom"
+          ],
+          "units": {
+            "energy_per_atom": "eV/atom"
+          }
+        },
+        "description": "Average potential energy per atom for each particle size, morphology, and phase. The checker will verify energetic ordering between morphologies for each size and phase, and a threshold condition for small sizes."
+      }
+    ],
+    "notes": "The scoring is a structural audit (ordering and threshold), not a direct metric comparison. The energy values must be negative, but the checker primarily inspects relative order and size-dependent energy differences."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for structural scoring",
+      "source_provenance": "Paper Fig.4 indicates energy difference >10 meV/atom for smallest sizes; relaxed to 5 meV/atom for reproducibility",
+      "generation_method": "Derived from paper's quantitative claim and adjusted for tolerance",
+      "why_not_fabricated": "Based directly on paper's reported energy difference threshold"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_02_energies",
+      "output_file": "energies.csv",
+      "kind": "structural_audit",
+      "weight": 1.0,
+      "small_size_limit": 1000,
+      "min_diff_threshold": 0.005,
+      "target_policy": "structural_audit",
+      "description": "Verify energy ordering (single < deca < ico) for each size-phase group, and threshold ico-single >= 0.005 eV/atom for sizes <= 1000. Also require all energies negative."
+    }
+  ]
+}

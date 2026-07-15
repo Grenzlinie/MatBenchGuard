@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The final properties are aggregated values from MD simulations; recomputing from raw CSV stress-strain curves would be complex for a lightweight checker, so result-level compare against paper gold with generous tolerances is acceptable and ensures monotonic reward.",
+  "pass_threshold": 0.8,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "kappa_armchair",
+            "kappa_zigzag",
+            "Lambda_armchair",
+            "Lambda_zigzag"
+          ],
+          "properties": {
+            "kappa_armchair": {
+              "type": "number",
+              "unit": "W/m-K"
+            },
+            "kappa_zigzag": {
+              "type": "number",
+              "unit": "W/m-K"
+            },
+            "Lambda_armchair": {
+              "type": "number",
+              "unit": "nm"
+            },
+            "Lambda_zigzag": {
+              "type": "number",
+              "unit": "nm"
+            }
+          }
+        },
+        "description": "Intrinsic thermal conductivity and effective phonon mean free path of phagraphene at 300 K along armchair and zigzag directions."
+      },
+      {
+        "file": "mechanical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "modulus_armchair",
+            "modulus_zigzag",
+            "strength_armchair",
+            "strength_zigzag"
+          ],
+          "properties": {
+            "modulus_armchair": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "modulus_zigzag": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "strength_armchair": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "strength_zigzag": {
+              "type": "number",
+              "unit": "GPa"
+            }
+          }
+        },
+        "description": "Elastic modulus and tensile strength of phagraphene at 300 K along armchair and zigzag directions."
+      }
+    ],
+    "notes": "Thermal conductivity and mechanical properties are extracted from NEMD and tensile MD simulations, respectively. The checker compares the reported values to the paper-reported gold with appropriate tolerances and trend verification (κ_zigzag > κ_armchair, modulus_armchair > modulus_zigzag)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for thermal and mechanical properties",
+      "source_provenance": "Table 1 of the paper (10.1039/C6RA05082D): κ_armchair 218±20 W/m-K, κ_zigzag 285±29 W/m-K, Λ_eff armchair 74.9±5.6 nm, zigzag 94.3±6.1 nm; modulus armchair 870±15 GPa, zigzag 800±14 GPa; tensile strength both 85±2 GPa.",
+      "generation_method": "Extracted directly from the paper's results section and summary table.",
+      "why_not_fabricated": "These are the actual reported values from the original computational study, published in the paper."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_03_fit_thermal",
+      "output_file": "thermal_properties.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "tolerance_strategy": "absolute",
+      "gold": {
+        "kappa_armchair": 218.0,
+        "kappa_zigzag": 285.0,
+        "Lambda_armchair": 74.9,
+        "Lambda_zigzag": 94.3
+      },
+      "tolerances": {
+        "kappa_armchair": 30.0,
+        "kappa_zigzag": 30.0,
+        "Lambda_armchair": 10.0,
+        "Lambda_zigzag": 10.0
+      },
+      "trend_required": "kappa_zigzag > kappa_armchair"
+    },
+    {
+      "id": "step_06_mechanical_properties",
+      "output_file": "mechanical_properties.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "tolerance_strategy": "absolute",
+      "gold": {
+        "modulus_armchair": 870.0,
+        "modulus_zigzag": 800.0,
+        "strength_armchair": 85.0,
+        "strength_zigzag": 85.0
+      },
+      "tolerances": {
+        "modulus_armchair": 50.0,
+        "modulus_zigzag": 50.0,
+        "strength_armchair": 5.0,
+        "strength_zigzag": 5.0
+      },
+      "trends_required": [
+        "modulus_armchair > modulus_zigzag",
+        "abs(strength_armchair - strength_zigzag) <= 5.0"
+      ]
+    }
+  ]
+}

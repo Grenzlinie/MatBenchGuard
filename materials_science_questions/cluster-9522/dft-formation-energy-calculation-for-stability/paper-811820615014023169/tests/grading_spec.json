@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Formation enthalpies depend on the DFT code and settings; without the exact same toolchain, absolute values cannot be directly compared to the paper. Instead we verify internal consistency: the reported formation enthalpy is recomputed from the supplied total and reference energies, and the summary is audited for structural correctness.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "enthalpies.json": "consistency_recompute",
+    "results_summary.txt": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "enthalpies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "reference_energies": {
+              "type": "object",
+              "required": {
+                "Fe_bcc_eV_per_atom": "number",
+                "Cr_bcc_eV_per_atom": "number",
+                "calculator": "string"
+              }
+            },
+            "compounds": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": {
+                  "name": "string",
+                  "composition": "string",
+                  "number_of_atoms": "integer",
+                  "total_energy_eV": "number",
+                  "formation_enthalpy_meV_per_atom": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Formation enthalpies of Fe14Cr and Fe15Cr candidate structures computed from DFT total energies relative to bcc Fe and bcc Cr references. The checker verifies that Fe14Cr has the lowest enthalpy (threshold_or_better)."
+      },
+      {
+        "file": "results_summary.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Plain text file stating which structure is the most stable based on formation enthalpies. The checker performs a structural audit to ensure the correct compound is identified as most stable."
+      }
+    ],
+    "notes": "Only the DFT formation enthalpy validation is scoped; AKMC simulations and SRO analyses are excluded. The agent must reproduce all structures and DFT calculations from scratch using open-source tools."
+  },
+  "steps": [
+    {
+      "id": "step_04_enthalpies",
+      "output_file": "enthalpies.json",
+      "weight": 0.8,
+      "kind": "rubric",
+      "description": "Verify that the reported formation enthalpy per atom matches recomputation from total energy, reference energies, and stoichiometry."
+    },
+    {
+      "id": "step_05_summary",
+      "output_file": "results_summary.txt",
+      "weight": 0.2,
+      "kind": "rubric",
+      "description": "Audit that the summary text contains a compound name from the enthalpy file and states it is the most stable."
+    }
+  ]
+}

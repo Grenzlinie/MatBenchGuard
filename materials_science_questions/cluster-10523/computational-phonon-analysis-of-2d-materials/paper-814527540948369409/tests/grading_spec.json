@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute the metrics from the raw artifact files (CSV, text) and compare to paper-reported values with generous tolerances. Structural trends are also checked.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for thermal conductivity, exponent, and modal contributions",
+      "source_provenance": "paper's Fig. 2b, text, and main results",
+      "generation_method": "extracted from paper text: K_lat 300K=645 W/mK, exponent 0.735, ZA fraction 0.6, etc.",
+      "why_not_fabricated": "values are directly from the accepted manuscript"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "K_lat_iterative_W_mK",
+            "K_lat_RTA_W_mK"
+          ],
+          "units": {
+            "T_K": "Kelvin",
+            "K_lat_iterative_W_mK": "W/(m·K)",
+            "K_lat_RTA_W_mK": "W/(m·K)"
+          }
+        },
+        "description": "Lattice thermal conductivity at three temperatures (300, 500, 700 K) from the exact iterative BTE solution and the relaxation-time approximation."
+      },
+      {
+        "file": "temperature_exponent.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {}
+        },
+        "description": "Fitted exponent α in the temperature dependence K_lat ∝ 1/T^α."
+      },
+      {
+        "file": "modal_contributions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "branch",
+            "contribution_ratio"
+          ],
+          "units": {
+            "contribution_ratio": "dimensionless"
+          }
+        },
+        "description": "Fractional contribution of the ZA, TA, LA, and optical branches to the total iterative lattice thermal conductivity at 300 K."
+      }
+    ],
+    "notes": "All scored outputs are compared against the paper's reported values with generous tolerances to account for the substitution of VASP with Quantum ESPRESSO and differences in computational setup. The thermal conductivity CSV must contain the three required rows; the exponent text file must contain a single floating-point number; the modal contributions CSV must list the four branches with ratios that sum to approximately 1.0."
+  },
+  "steps": [
+    {
+      "id": "step_4",
+      "output_file": "thermal_conductivity.csv",
+      "kind": "composite",
+      "weight": 0.5,
+      "reference": {
+        "k300": 645,
+        "k300_tol_rel": 0.2,
+        "rta_ratio_300": 0.5,
+        "rta_ratio_tol": 0.1,
+        "temperatures": [
+          300,
+          500,
+          700
+        ]
+      }
+    },
+    {
+      "id": "step_5",
+      "output_file": "temperature_exponent.txt",
+      "kind": "composite",
+      "weight": 0.25,
+      "reference": {
+        "exponent": 0.735,
+        "tolerance": 0.1
+      }
+    },
+    {
+      "id": "step_6",
+      "output_file": "modal_contributions.csv",
+      "kind": "composite",
+      "weight": 0.25,
+      "reference": {
+        "ZA_fraction": 0.6,
+        "ZA_tol": 0.15,
+        "sum_tol_range": [
+          0.95,
+          1.05
+        ]
+      }
+    }
+  ]
+}

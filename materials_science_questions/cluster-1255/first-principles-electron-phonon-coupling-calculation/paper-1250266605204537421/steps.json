@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step-geom-relax",
+    "title": "Geometry relaxation",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO pw.x with PBE functional and Grimme D2 dispersion correction, perform a variable-cell geometry relaxation of the provided initial crystal structure. Ensure adequate convergence with respect to kinetic energy cutoff and k-point sampling.",
+    "output_file": "",
+    "evidence": "geometry_relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Fully relax the crystal structure to obtain the equilibrium inter-ring distance.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-dos",
+    "title": "Electronic density of states calculation",
+    "role": "process",
+    "action": "Perform a static self-consistent field (scf) calculation on the relaxed structure, then use dos.x to compute the total electronic density of states. Extract the DOS value at the Fermi level.",
+    "output_file": "",
+    "evidence": "dos_output.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Compute the DOS near EF to confirm metallicity and quantify the Fermi-level DOS.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-phonon",
+    "title": "Phonon dispersion and dynamical stability",
+    "role": "process",
+    "action": "Perform a DFPT phonon calculation with ph.x on a suitable q-grid to obtain the phonon spectrum. Verify that there are no imaginary frequency modes (i.e., the phase is dynamically stable).",
+    "output_file": "",
+    "evidence": "phonon_frequencies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Ensure the predicted phase is dynamically stable (no negative phonon branches).",
+    "output_schema": ""
+  },
+  {
+    "id": "step-epw",
+    "title": "Electron-phonon coupling and superconductivity",
+    "role": "process",
+    "action": "Run a non-self-consistent calculation on a denser k-mesh, construct Wannier functions with Wannier90, and execute EPW to obtain the Eliashberg spectral function, cumulative λ, and the critical temperature Tc (McMillan-Allen-Dynes approximation with μ*=0.1).",
+    "output_file": "",
+    "evidence": "epw_output.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Compute the electron-phonon coupling constant λ and the superconducting critical temperature Tc.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-collect",
+    "title": "Compile final reproduction results",
+    "role": "scored",
+    "action": "Extract from the preceding calculations: the inter-ring distance (shortest distance between stacked molecular planes, Å), the electronic DOS at the Fermi level (states/eV/atom), the electron-phonon coupling constant λ (dimensionless), the superconducting Tc (K), and a boolean dynamic_stable (true if no imaginary phonon modes). Write these five results into a JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This step aggregates the four key verification quantities and the stability flag into a single scored artifact.",
+    "output_schema": "JSON object with keys: inter_ring_distance (float, Å), fermi_level_DOS (float, states/eV/atom), lambda (float), Tc (float, K), dynamic_stable (bool)."
+  }
+]

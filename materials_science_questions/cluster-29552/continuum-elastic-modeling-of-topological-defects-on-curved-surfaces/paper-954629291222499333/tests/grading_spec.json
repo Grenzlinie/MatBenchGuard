@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Pearson correlations, linear regression parameters, and stress‑drop prediction correlations from the raw defect_analysis.csv and stress_drop_predictions.csv; compare against paper‑derived directional thresholds (threshold_or_better). This is T1, the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Directional lower‑bound thresholds for the six summary metrics, used to score the recomputed values.",
+      "source_provenance": "Paper‑reported values: rho_phi 0.26, R² 0.72, rho_stress_global 0.97, rho_stress_local 0.92. Taskability targets: rho_phi ≥0.15, R²≥0.5, rho_stress_global ≥0.85, rho_stress_local ≥0.80. Slope threshold: positive (>0) required.",
+      "generation_method": "Thresholds set from paper’s reported values with a safe margin to allow for implementation / seed variation; slope positivity is a structural check consistent with the paper’s observation that ε* scales linearly with ⟨|u_na|⟩.",
+      "why_not_fabricated": "Every threshold directly corresponds to a reported paper value or an indisputable structural relation (slope > 0); they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "event_id",
+            "sample_id",
+            "defect_x",
+            "defect_y",
+            "phi_esh_loc",
+            "u_na_avg",
+            "epsilon_star_fit",
+            "phi_fit"
+          ]
+        },
+        "description": "Table of all detected -1 defects across plastic events and samples. Structural checks verify expected columns, multiple samples, and a minimum event count."
+      },
+      {
+        "file": "stress_drop_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "event_id",
+            "sample_id",
+            "Delta_sigma_MD",
+            "Delta_sigma_global_fit",
+            "Delta_sigma_local_descriptor"
+          ]
+        },
+        "description": "Table of stress drops per plastic event. Structural checks verify expected columns, multiple samples, and a minimum event count."
+      },
+      {
+        "file": "summary_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "rho_phi": "float",
+            "slope_u_vs_eps": "float",
+            "intercept_u_vs_eps": "float",
+            "R2_u_vs_eps": "float",
+            "rho_stress_global": "float",
+            "rho_stress_local": "float"
+          }
+        },
+        "description": "Headline metrics comparing locally derived vs. fitted quantities: correlation of orientation, linear fit of eigenstrain vs. local displacement, and stress drop prediction correlations. Metrics compared to hidden paper reference with appropriate tolerances (threshold-or-better for correlations and R², relative tolerance for slope)."
+      }
+    ],
+    "notes": "The structural audits on the CSV files have low weight. The main score comes from summary_metrics.json, where most metrics are directional (threshold_or_better) and slope is checked with a relative tolerance."
+  },
+  "steps": [
+    {
+      "id": "defect_analysis_structural",
+      "output_file": "defect_analysis.csv",
+      "weight": 0.05,
+      "kind": "structural_audit",
+      "required_columns": [
+        "event_id",
+        "sample_id",
+        "defect_x",
+        "defect_y",
+        "phi_esh_loc",
+        "u_na_avg",
+        "epsilon_star_fit",
+        "phi_fit"
+      ],
+      "min_rows": 10,
+      "min_distinct_sample_ids": 2
+    },
+    {
+      "id": "stress_drop_structural",
+      "output_file": "stress_drop_predictions.csv",
+      "weight": 0.05,
+      "kind": "structural_audit",
+      "required_columns": [
+        "event_id",
+        "sample_id",
+        "Delta_sigma_MD",
+        "Delta_sigma_global_fit",
+        "Delta_sigma_local_descriptor"
+      ],
+      "min_rows": 10,
+      "min_distinct_sample_ids": 2
+    },
+    {
+      "id": "summary_metrics",
+      "output_file": "summary_metrics.json",
+      "weight": 0.9,
+      "kind": "recompute",
+      "thresholds": {
+        "rho_phi_lower": 0.15,
+        "R2_lower": 0.5,
+        "rho_stress_global_lower": 0.85,
+        "rho_stress_local_lower": 0.8
+      }
+    }
+  ]
+}

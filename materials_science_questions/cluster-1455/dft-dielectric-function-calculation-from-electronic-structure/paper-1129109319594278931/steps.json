@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_0",
+    "title": "DFT electronic density of states calculation",
+    "role": "process",
+    "action": "Compute the spin-polarized electronic density of states g(E) of hcp Co using Quantum ESPRESSO: lattice constants a=4.736 Bohr, c=7.693 Bohr, norm-conserving Troullier-Martins pseudopotential (PBE), plane-wave kinetic energy cutoff 100 Ry, 12×12×6 Monkhorst-Pack k-point grid, Gaussian smearing. Save the DOS data.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the raw electronic density of states needed for the chemical potential determination.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "Temperature-dependent chemical potential",
+    "role": "process",
+    "action": "Using the DOS from step_0, determine the chemical potential μ(Te) at Te=300 K and Te=400 K by requiring that the integral of g(E)·f(E,μ,Te) equals the total number of valence electrons (N=9).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Chemical potential values at 300 K and 400 K are required for the BSE calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "BSE calculation of complex refractive index at Te=300 K",
+    "role": "process",
+    "action": "Run OCEAN (BSE) for hcp Co at Te=300 K using the μ(300 K) from step_1, with parameters: ground-state k-grid 10×10×1, final-state k-grid 16×16×1, screening k-grid 4×4×1, 100 bands, Slater integral scaling 0.8, Lorentzian broadening 0.3 eV. Compute the complex dielectric function ε(ω) and convert to complex refractive index (1−δ+iβ).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Baseline refractive index at the equilibrium electronic temperature.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "BSE calculation of complex refractive index at Te=400 K",
+    "role": "process",
+    "action": "Repeat the OCEAN calculation from step_2 but at Te=400 K, using μ(400 K) from step_1, to obtain the refractive index of the electronically excited state.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Excited-state refractive index after a 100 K electronic temperature rise.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Refractive-index modulation and A(hν) function",
+    "role": "process",
+    "action": "Calculate the differences Δδ = δ(400 K) − δ(300 K) and Δβ = β(400 K) − β(300 K). Form A(hν) = (Δδ)^2 + (Δβ)^2, assuming the modulation amplitude scales linearly with absorbed energy density (the squared amplitude scales with ρ^2). Save A(hν) as a function of photon energy.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Proportionality function A(hν) that enters the SD signal expression.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5",
+    "title": "Normalized self-diffraction signal",
+    "role": "scored",
+    "action": "Using A(hν) from step_4, the EUV absorption length L(hν) from Saadeh et al. (2023) optical constants, sample thickness d=20 nm, detection angle ψ=28.7°, half-crossing angle θ=9.2°, and wave vector k=2π/λ, compute the normalized SD signal according to the thin-film transmission-geometry expression. Compute for photon energies from 54 to 72 eV with a step ≤1 eV. Normalize the resulting signal so that its maximum is 1.",
+    "output_file": "sd_spectrum.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final computed SD spectrum. The agent must produce this file from the upstream DFT+BSE pipeline.",
+    "output_schema": "Two columns: photon_energy (eV), normalized_signal (dimensionless). Values are normalized such that the maximum signal equals 1."
+  }
+]

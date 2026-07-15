@@ -1,0 +1,192 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputation from raw DFT output is infeasible in the verifier sandbox, so extracted results are compared to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "monolayer_results.json": "reference_match",
+    "three_layer_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for bond lengths, angles, displacements, electron densities, and structural trends from Tables 1-3 of the source paper.",
+      "source_provenance": "Paper Tables 1, 2, 3.",
+      "generation_method": "Values extracted directly from the paper.",
+      "why_not_fabricated": "These are the paper-reported numbers; the checker compares the agent's computed results against these hidden reference values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "monolayer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "bond_lengths": {
+              "type": "object",
+              "description": "bond label pairs to lengths in Å, e.g. 'C1-1': 1.9",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "Å"
+              }
+            },
+            "bond_angles": {
+              "type": "object",
+              "description": "triple atom labels to angles in degrees",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "deg"
+              }
+            },
+            "tilt_angles": {
+              "type": "object",
+              "description": "tilt angle labels (e.g. 'HC1H') to degrees",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "deg"
+              }
+            },
+            "displacements": {
+              "type": "array",
+              "description": "displacement vectors for each Si atom in layers 1-4",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "atom": {
+                    "type": "string",
+                    "description": "atom label, e.g. '1', '1''', '2', '2'''"
+                  },
+                  "dx": {
+                    "type": "number",
+                    "unit": "Å"
+                  },
+                  "dz": {
+                    "type": "number",
+                    "unit": "Å"
+                  }
+                },
+                "required": [
+                  "atom",
+                  "dx",
+                  "dz"
+                ]
+              }
+            },
+            "electron_densities": {
+              "type": "object",
+              "description": "average valence electrons per atom for each layer (e.g. 'C1C2C3', '1 1''', '2 2''')",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "e"
+              }
+            }
+          },
+          "required": [
+            "bond_lengths",
+            "bond_angles",
+            "tilt_angles",
+            "displacements",
+            "electron_densities"
+          ]
+        },
+        "description": "Optimized bond lengths, angles, tilt angles, Si atom displacements from bulk positions, and layer-resolved valence electron densities for the carbon monolayer on Si(001)."
+      },
+      {
+        "file": "three_layer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "bond_lengths": {
+              "type": "object",
+              "description": "bond label pairs to lengths in Å (includes Si-C, C-C, C-H, Si-Si)",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "Å"
+              }
+            },
+            "bond_angles": {
+              "type": "object",
+              "description": "triple atom labels to angles in degrees",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "deg"
+              }
+            },
+            "tilt_angles": {
+              "type": "object",
+              "description": "tilt angles for Si-C-Si groups, e.g. 'Si1C1Si1' in degrees",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "deg"
+              }
+            },
+            "displacements": {
+              "type": "array",
+              "description": "displacement vectors for each Si atom in substrate layers 1-4",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "atom": {
+                    "type": "string"
+                  },
+                  "dx": {
+                    "type": "number",
+                    "unit": "Å"
+                  },
+                  "dz": {
+                    "type": "number",
+                    "unit": "Å"
+                  }
+                },
+                "required": [
+                  "atom",
+                  "dx",
+                  "dz"
+                ]
+              }
+            },
+            "electron_densities": {
+              "type": "object",
+              "description": "average valence electrons per atom for deposited layers and Si substrate layers",
+              "additionalProperties": {
+                "type": "number",
+                "unit": "e"
+              }
+            }
+          },
+          "required": [
+            "bond_lengths",
+            "bond_angles",
+            "tilt_angles",
+            "displacements",
+            "electron_densities"
+          ]
+        },
+        "description": "Optimized structural and electronic parameters for the three-layer SiC film on Si(001), analogous to the monolayer output."
+      }
+    ],
+    "notes": "The scoring compares extracted numeric values for stated quantities (bond lengths, angles, displacements, electron densities) with reference values within tolerances, and verifies qualitative structural trends (e.g., displacement ordering, bond length changes, dipole direction)."
+  },
+  "steps": [
+    {
+      "id": "monolayer_analysis",
+      "kind": "reference_match",
+      "output_file": "monolayer_results.json",
+      "weight": 0.5,
+      "description": "Compare monolayer bond lengths, angles, tilt angles, displacements, electron densities and structural trends with paper reference values within tolerances."
+    },
+    {
+      "id": "threelayer_analysis",
+      "kind": "reference_match",
+      "output_file": "three_layer_results.json",
+      "weight": 0.5,
+      "description": "Compare three-layer film bond lengths, angles, tilt angles, displacements, electron densities and structural trends with paper reference values within tolerances."
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "pass_threshold": 0.6,
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputing from raw artifacts is not possible because the output contract requires only the final derived numbers; the verifier sandbox lacks the resources to re-run the full Tersoff potential workflow. We therefore score by comparing the agent‑reported values to the paper‑reported gold with appropriate tolerances.",
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "b1_b2_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "b1": "float (Å)",
+            "b2": "float (Å)",
+            "binding_energy_per_atom": "float (eV/atom)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "b1": "Å",
+            "b2": "Å",
+            "binding_energy_per_atom": "eV/atom"
+          }
+        },
+        "description": "Equilibrium bond lengths and binding energy per atom computed with the modified Tersoff potential."
+      },
+      {
+        "file": "bulk_modulus.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "GPa"
+          }
+        },
+        "description": "Bulk modulus of C60 at zero pressure computed with the original Tersoff potential."
+      },
+      {
+        "file": "force_constant.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "mdyne/Å"
+          }
+        },
+        "description": "Bond-stretching force constant computed with the original Tersoff potential."
+      },
+      {
+        "file": "critical_pressures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "external_critical_pressure_GPa": "float",
+            "internal_critical_pressure_GPa": "float"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "external_critical_pressure_GPa": "GPa",
+            "internal_critical_pressure_GPa": "GPa"
+          }
+        },
+        "description": "Critical external and internal pressures for C60 stability from the original Tersoff potential."
+      }
+    ],
+    "notes": "Only Tersoff-potential results are scored; Brenner potential and phonon analyses are excluded. The C60 initial coordinates are generated from known icosahedral geometry, not fetched as an external dataset."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for bond lengths, binding energy, bulk modulus, force constant, critical pressures",
+      "source_provenance": "Paper Tables 2, 3, 4 and discussion text (e.g., ‘critical pressures … 922GPa and -134GPa’).",
+      "generation_method": "Direct transcription from the paper’s reported numbers.",
+      "why_not_fabricated": "Values are exactly the results the paper claims for the given Tersoff parameter sets."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step02_b1_b2_energy",
+      "output_file": "b1_b2_energy.json",
+      "kind": "exact_match",
+      "weight": 0.5,
+      "targets": {
+        "b1": 1.45,
+        "b2": 1.41,
+        "binding_energy_per_atom": -7.17
+      },
+      "tolerances": {
+        "b1": 0.01,
+        "b2": 0.01,
+        "binding_energy_per_atom": 0.05
+      }
+    },
+    {
+      "id": "step03_bulk_modulus",
+      "output_file": "bulk_modulus.txt",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target": 674,
+      "tolerance": 50
+    },
+    {
+      "id": "step04_force_constant",
+      "output_file": "force_constant.txt",
+      "kind": "exact_match",
+      "weight": 0.15,
+      "target": 5.6,
+      "tolerance": 0.5
+    },
+    {
+      "id": "step05_critical_pressures",
+      "output_file": "critical_pressures.json",
+      "kind": "exact_match",
+      "weight": 0.15,
+      "targets": {
+        "external_critical_pressure_GPa": 922,
+        "internal_critical_pressure_GPa": -134
+      },
+      "tolerances": {
+        "external_critical_pressure_GPa": 50,
+        "internal_critical_pressure_GPa": 10
+      }
+    }
+  ]
+}

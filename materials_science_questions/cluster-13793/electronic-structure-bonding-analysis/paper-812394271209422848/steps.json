@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_optimize_geometry",
+    "title": "Geometry optimization of oxygen position",
+    "role": "process",
+    "action": "Set up the initial BaCoO3 structure with lattice parameters a=5.645 Å, c=4.752 Å, space group P6₃mc. Perform a ferromagnetic fixed-spin-moment calculation (total moment 2 μB/cell) using the GGA-PBE functional, and relax the oxygen position x by minimizing forces and total energy. Record the final x and residual forces.",
+    "output_file": "",
+    "evidence": "optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Relax the oxygen coordinate to find the equilibrium geometry. The optimized x will be used by subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_extract_x",
+    "title": "Extract optimized oxygen position x",
+    "role": "scored",
+    "action": "From the geometry optimization output, extract the converged oxygen x parameter and write it to a plain text file.",
+    "output_file": "optimized_x.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Write the optimized oxygen position parameter x to optimized_x.txt as a single floating-point number.",
+    "output_schema": "single float, e.g., 0.1284"
+  },
+  {
+    "id": "step_03_scf_optimized",
+    "title": "SCF calculation for optimized geometry",
+    "role": "process",
+    "action": "Using the optimized geometry from step_02, perform a self-consistent field calculation with higher numerical precision (converged charge density, wavefunctions, eigenvalues).",
+    "output_file": "",
+    "evidence": "scf_optimized.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the self-consistent electronic structure for the equilibrium geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_scf_x1450",
+    "title": "SCF calculation for x=0.1450 geometry",
+    "role": "process",
+    "action": "Set up the structure with oxygen x=0.1450 (all other parameters identical). Perform the same high-quality SCF calculation and retain the converged charge density and eigenvalues.",
+    "output_file": "",
+    "evidence": "scf_x1450.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the electronic structure for the comparison geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_band_analysis",
+    "title": "Band structure analysis for both geometries",
+    "role": "scored",
+    "action": "Using the eigenvalues from step_03 and step_04, compute the band structure along the high-symmetry path including the chain direction Γ-A. Identify the d_{x²−y²} band and measure its bandwidth (energy spread) along Γ-A for the optimized geometry. Determine whether the optimized geometry is half-metallic (a spin gap at the Fermi level in one channel) and whether the x=0.1450 geometry is metallic (no gap in either spin). Write the results to a JSON file.",
+    "output_file": "band_analysis.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extract key electronic structure metrics: bandwidth of d_{x²−y²} for the optimized geometry, half-metallic status of optimized geometry, metallic status of x=0.1450 geometry.",
+    "output_schema": "object with fields: optimized_bandwidth_dx2y2 (float, eV), optimized_half_metallic (boolean), x1450_metallic (boolean)"
+  },
+  {
+    "id": "step_06_diff_charge",
+    "title": "Differential charge density analysis",
+    "role": "scored",
+    "action": "For both the optimized and x=0.1450 geometries, compute the self-consistent crystal charge density and subtract a superposition of isolated ionic densities (Co⁴⁺, O²⁻, Ba²⁺). From the resulting differential density maps, determine the peak positive density in the lobes between oxygen ligands around a Co ion. Write the peak values (in e/Å³) to a JSON file.",
+    "output_file": "density_peaks.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extract the peak differential electron density in the Co-O interaction region for both geometries.",
+    "output_schema": "object with fields: optimized_peak_density (float, e/Å³), x1450_peak_density (float, e/Å³)"
+  }
+]

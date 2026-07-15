@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step01",
+    "title": "Prepare ordered structural model",
+    "role": "process",
+    "action": "Using the published crystallographic data (space group Im-3m, a = 8.73180 Å, atomic positions Re on 12e (0.3413, 0, 0), As1 on 12d (1/4, 0, 1/2), E2 on 16f (0.1663, 0.1663, 0.1663) with 0.25 Ge / 0.75 As occupancy), construct an ordered structural model for DFT. Reduce symmetry from Im-3m to R-3m to allow full Ge/As ordering: in the primitive rhombohedral cell, assign Ge to the 2-fold site that derives from the 16f position and As to the 6-fold site. Output a structure file (e.g., POSCAR or CIF) describing the ordered R-3m supercell (or primitive cell containing 2 formula units). Ensure the lattice vectors and atomic coordinates are consistent with the reported cubic lattice constant.",
+    "output_file": "",
+    "evidence": "ordered_structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step must be executed before DFT calculations; it is not scored directly but its correctness is forced by the downstream DOS/gap that depend on a proper semiconductor model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "DFT SCF calculation and DOS generation",
+    "role": "scored",
+    "action": "Perform a self-consistent field (SCF) calculation using the LDA functional within a plane-wave code (e.g., Quantum ESPRESSO) on the ordered structural model from step01. After convergence, compute the total density of states (DOS) on a fine k-point grid, aligned with the Fermi level. Write the DOS to /app/outputs/dos.dat as two columns: energy (eV relative to Fermi level) and DOS (states/eV). Ensure the energy range covers at least −5 eV to +5 eV.",
+    "output_file": "dos.dat",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This is the main computational result. The DOS must be physically plausible with a gap around the Fermi level. The checker will structurally audit the DOS and recompute the band gap from it.",
+    "output_schema": "Two-column plain text: energy (eV), DOS (states/eV). Energy range must cover at least −5 eV to +5 eV relative to Fermi level."
+  },
+  {
+    "id": "step03",
+    "title": "Compute band gap from DOS",
+    "role": "scored",
+    "action": "From the computed DOS in dos.dat, determine the band gap by identifying the energy difference between the highest occupied and lowest unoccupied states (the energy window where DOS goes to zero at the Fermi level). Write the band gap value as a single floating-point number (in eV) to /app/outputs/band_gap.txt.",
+    "output_file": "band_gap.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The band gap extracted by the agent. The checker will recompute it from dos.dat and compare to a hidden reference.",
+    "output_schema": "A single line containing a floating-point number (the band gap in eV)."
+  }
+]

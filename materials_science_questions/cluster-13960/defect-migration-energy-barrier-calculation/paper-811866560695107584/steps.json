@@ -1,0 +1,41 @@
+[
+  {
+    "id": "build_gb_supercell",
+    "title": "Build Σ=5 [001] twist grain boundary supercell and identify vacancy sites",
+    "role": "process",
+    "action": "Construct the atomic supercell for a Cu Σ=5 [001] twist grain boundary with two grains of 30 layers each, a free-atom region of approximately 5a x 5a x 10a (a = lattice constant), and a surrounding mantle of fixed atoms. Identify the three inequivalent coincident-site-lattice sites per layer (coincident site '1'/'a', and un-coincident sites '2'/'b' and '3'/'c') in the first four atomic layers adjacent to the boundary and in a bulk reference region. Save the supercell and site labels for later steps.",
+    "output_file": "",
+    "evidence": "gb_supercell.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step creates the initial atomic geometry required for all vacancy calculations. The supercell must exactly follow the construction described in the paper (periodic boundary conditions, two-fold symmetry, site labeling of CSL unit cell).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01",
+    "title": "Vacancy formation energies",
+    "role": "scored",
+    "action": "Implement the MAEAM interatomic potential for Cu using the provided functional forms and parameter values. For each inequivalent site (coincident and un-coincident) in layers 1–4 and a bulk reference, create a single vacancy by removing the corresponding atom and relax the system using molecular dynamics with MAEAM forces. Compute the formation energy Ef = E(N-1,1) – E(N,0) + Ec, where E(N-1,1) is the energy of the cell with a vacancy, E(N,0) is the energy of the perfect cell, and Ec is the cohesion energy. Collect all formation energies (in eV) in a structured JSON file.",
+    "output_file": "step_01_formation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the layer- and site-resolved vacancy formation energies that are the core energetic quantities reported in the paper. These numerical values will be compared to reference data within allowed tolerances.",
+    "output_schema": "A JSON object with key 'bulk_formation_energy' (float) and for each of the first four layers a key 'layer1', 'layer2', 'layer3', 'layer4'. Each layer value is an object with keys 'site1', 'site2', 'site3' mapping to the formation energy in eV (float). Example: {\"bulk_formation_energy\": 1.1838, \"layer1\": {\"site1\": 1.1814, \"site2\": -0.2288, \"site3\": -0.2288}, ...}"
+  },
+  {
+    "id": "step_02",
+    "title": "Vacancy migration activation energies",
+    "role": "scored",
+    "action": "For each defined intra-layer migration path in layers 1L, 2L, 3L, 4L (nearest-neighbor jumps) and each defined inter-layer migration path (1L-1LR, 2L-1L, 3L-2L, 4L-3L, 5L-4L), sample the system energy along the migration path (e.g., by stepwise displacement of the vacancy followed by constrained relaxations) to identify the saddle point energy Esad. Compute the activation energy Qv = Esad – Eeq + Ev, where Eeq is the equilibrium energy of the initial vacancy site and Ev is the vacancy formation energy at that site from step 01. Use the site labels from the paper (1,2,3 for odd layers; a,b,c for even layers; cR, bR for the rotating grain). Collect all activation energies (in eV) in a structured JSON file.",
+    "output_file": "step_02_activation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the vacancy migration activation energies for all intra- and inter-layer paths, which are the second headline quantitative result. These values will be compared to reference data within allowed tolerances and trend checks.",
+    "output_schema": "A JSON object with top-level keys for each migration path: 'intra_1L', 'intra_2L', 'intra_3L', 'intra_4L', 'inter_1L-1LR', 'inter_2L-1L', 'inter_3L-2L', 'inter_4L-3L', 'inter_5L-4L'. Each path's value is an object whose keys are strings of the form '<source_site>_to_<target_site>' (e.g., '1_to_2', 'c_to_a', '2_to_cR') and whose values are the activation energy in eV (float). All site labels must use the exact notation from the paper."
+  }
+]

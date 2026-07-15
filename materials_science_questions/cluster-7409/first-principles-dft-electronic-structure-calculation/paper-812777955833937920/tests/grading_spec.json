@@ -1,0 +1,247 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline results are DFT-computed magnetic moment and coupling energies that cannot be recomputed from lightweight raw artifacts without rerunning the full DFT workflow; result-level comparison against paper-reported values with tolerances is used, supplemented by a structural trend check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for single Ni magnetic moment and Table1/Table2 from the paper",
+      "source_provenance": "paper sections 4.2 and 4.4, Tables 1 and 2, and text (magnetic moment ~2.0 μB)",
+      "generation_method": "extracted from the published paper",
+      "why_not_fabricated": "values are directly quoted from the paper's reported DFT results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "single_ni_magnetic_moment",
+            "table1",
+            "table2"
+          ],
+          "properties": {
+            "single_ni_magnetic_moment": {
+              "type": "number",
+              "description": "Local magnetic moment of a single Ni dopant in μB"
+            },
+            "table1": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "config",
+                  "ni_ni_distance",
+                  "delta_E",
+                  "m_tot",
+                  "coupling"
+                ],
+                "properties": {
+                  "config": {
+                    "type": "string"
+                  },
+                  "ni_ni_distance": {
+                    "type": "number",
+                    "description": "Ni-Ni distance after relaxation in Å"
+                  },
+                  "delta_E": {
+                    "type": "number",
+                    "description": "E_AFM - E_FM in meV"
+                  },
+                  "m_tot": {
+                    "type": "number",
+                    "description": "total magnetic moment in μB"
+                  },
+                  "coupling": {
+                    "type": "string",
+                    "enum": [
+                      "FM",
+                      "AFM"
+                    ]
+                  }
+                }
+              }
+            },
+            "table2": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "case",
+                  "ni_ni_distance",
+                  "delta_E",
+                  "m_tot",
+                  "coupling"
+                ],
+                "properties": {
+                  "case": {
+                    "type": "string"
+                  },
+                  "ni_ni_distance": {
+                    "type": "number",
+                    "description": "Ni-Ni distance after relaxation in Å"
+                  },
+                  "delta_E": {
+                    "type": "number",
+                    "description": "E_AFM - E_FM in meV"
+                  },
+                  "m_tot": {
+                    "type": "number",
+                    "description": "total magnetic moment in μB"
+                  },
+                  "coupling": {
+                    "type": "string",
+                    "enum": [
+                      "FM",
+                      "AFM"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "DFT-computed magnetic moment and coupling data for Ni-doped SnO₂ (110) surface; the checked values are the single-Ni magnetic moment and the ΔE, magnetic moments, and coupling types for the two-Ni configurations without and with oxygen vacancies."
+      }
+    ],
+    "notes": "The hidden gold consists of the paper-reported magnetic moment and coupling energies, compared with tolerances. The checker also evaluates the trend that oxygen vacancies weaken ferromagnetism by comparing the two tables."
+  },
+  "steps": [
+    {
+      "id": "check_single_ni_moment",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 2.0,
+      "tolerance": 0.1,
+      "path": "single_ni_magnetic_moment"
+    },
+    {
+      "id": "check_table1",
+      "output_file": "results.json",
+      "kind": "table_compare",
+      "weight": 0.4,
+      "table_path": "table1",
+      "gold_rows": [
+        {
+          "config": "Ni_{Sn5cI} and Ni_{Sn5cI}",
+          "ni_ni_distance": 3.13,
+          "delta_E": 145,
+          "m_tot": 3.6,
+          "coupling": "FM"
+        },
+        {
+          "config": "Ni_{Sn5cI} and Ni_{Sn5cII}",
+          "ni_ni_distance": 6.78,
+          "delta_E": 32,
+          "m_tot": 3.6,
+          "coupling": "FM"
+        },
+        {
+          "config": "Ni_{Sn5cI} and Ni_{Sn5cIII}",
+          "ni_ni_distance": 7.47,
+          "delta_E": -41,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "config": "Ni_{Sn6cI} and Ni_{Sn6cI}",
+          "ni_ni_distance": 3.13,
+          "delta_E": -64,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "config": "Ni_{Sn6cI} and Ni_{Sn6cII}",
+          "ni_ni_distance": 6.78,
+          "delta_E": 16,
+          "m_tot": 4,
+          "coupling": "FM"
+        },
+        {
+          "config": "Ni_{Sn6cI} and Ni_{Sn6cIII}",
+          "ni_ni_distance": 7.47,
+          "delta_E": 33,
+          "m_tot": 3.6,
+          "coupling": "FM"
+        }
+      ],
+      "tolerances": {
+        "ni_ni_distance": 0.1,
+        "delta_E_abs": 20,
+        "delta_E_rel": 0.5,
+        "m_tot": 0.1
+      }
+    },
+    {
+      "id": "check_table2",
+      "output_file": "results.json",
+      "kind": "table_compare",
+      "weight": 0.4,
+      "table_path": "table2",
+      "gold_rows": [
+        {
+          "case": "Case (1)",
+          "ni_ni_distance": 3.14,
+          "delta_E": 102,
+          "m_tot": 4,
+          "coupling": "FM"
+        },
+        {
+          "case": "Case (2)",
+          "ni_ni_distance": 6.79,
+          "delta_E": -30,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "case": "Case (3)",
+          "ni_ni_distance": 7.49,
+          "delta_E": -33,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "case": "Case (4)",
+          "ni_ni_distance": 3.14,
+          "delta_E": -91,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "case": "Case (5)",
+          "ni_ni_distance": 6.79,
+          "delta_E": -13,
+          "m_tot": 0,
+          "coupling": "AFM"
+        },
+        {
+          "case": "Case (6)",
+          "ni_ni_distance": 7.56,
+          "delta_E": 30,
+          "m_tot": 4,
+          "coupling": "FM"
+        }
+      ],
+      "tolerances": {
+        "ni_ni_distance": 0.1,
+        "delta_E_abs": 20,
+        "delta_E_rel": 0.5,
+        "m_tot": 0.1
+      }
+    },
+    {
+      "id": "check_trend",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.1,
+      "min_satisfied_pairs": 4,
+      "pair_count": 6
+    }
+  ]
+}

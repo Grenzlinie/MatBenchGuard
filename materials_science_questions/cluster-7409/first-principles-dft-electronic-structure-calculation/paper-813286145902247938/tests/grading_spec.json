@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute DFT results from raw artifacts in the verifier; reasonable tolerances account for toolchain differences.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_positions.json": "reference_match",
+    "formation_energy.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for band positions and defect formation energy from the paper.",
+      "source_provenance": "Paper abstract and Fig. 2 (section 3) for band positions; section 3 (formation energy) for 14.54 eV.",
+      "generation_method": "Extracted from the paper's reported values.",
+      "why_not_fabricated": "These are the exact values the paper reports; they are used as reference with tolerance to verify the agent's reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_positions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "U-J_3.2": "float (energy in eV)",
+            "U-J_7.2": "float (energy in eV)"
+          }
+        },
+        "description": "In-gap defect band energies above the valence-band maximum for Bi-doped anatase at U-J=3.2 eV and 7.2 eV."
+      },
+      {
+        "file": "formation_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Bi_plus3_defect_formation_energy_eV": "float (energy in eV)"
+          }
+        },
+        "description": "Neutral Bi³⁺ substitutional defect formation energy in anatase."
+      }
+    ],
+    "notes": "The two scored quantities are the in-gap band positions at two U-J values and the defect formation energy. The hidden checker will compare the reported values to the paper's computed values with appropriate tolerances that account for toolchain differences."
+  },
+  "steps": [
+    {
+      "id": "step_band_positions",
+      "output_file": "band_positions.json",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "scoring": {
+        "fields": [
+          {
+            "key": "U-J_3.2",
+            "gold": 2.9,
+            "tolerance_abs": 0.3
+          },
+          {
+            "key": "U-J_7.2",
+            "gold": 3.3,
+            "tolerance_abs": 0.3
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_formation_energy",
+      "output_file": "formation_energy.json",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "scoring": {
+        "field": "Bi_plus3_defect_formation_energy_eV",
+        "gold": 14.54,
+        "tolerance_abs": 0.5
+      }
+    }
+  ]
+}

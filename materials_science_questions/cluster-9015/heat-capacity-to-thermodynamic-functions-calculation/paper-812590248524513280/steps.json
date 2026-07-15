@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_1_data_prep",
+    "title": "Prepare experimental data for Al-P and Fe-Al-P systems",
+    "role": "process",
+    "action": "Compile the experimental data points required for optimization and validation: heat capacity of AlP, standard enthalpy and entropy of AlP, Al-rich liquidus compositions, melting point of AlP, vapor pressures of Al(g) and P2(g) over AlP, Fe-Al-P isothermal tie-lines, activity coefficients of P in liquid Fe-Al, and the solubility of P in BCC_A2. Digitize the numerical values from the cited publications and produce a structured file.",
+    "output_file": "",
+    "evidence": "experimental_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This step aggregates all necessary experimental inputs from the literature into a format usable by the optimization routine. The evidence file documents the compiled data points.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_fit_cp",
+    "title": "Fit heat capacity function of stoichiometric AlP",
+    "role": "process",
+    "action": "Fit the heat capacity expression C_P(T) = a + b*T + c*T^{-2} to the selected experimental heat capacity data for AlP. Report the fitted coefficients.",
+    "output_file": "",
+    "evidence": "alp_cp_fit.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain the analytic C_P(T) function that enters the Gibbs energy integral and is used in the subsequent optimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_optimization",
+    "title": "Thermodynamic optimization of Al-P and Fe-Al-P parameters",
+    "role": "scored",
+    "action": "Using an open-source CALPHAD framework, perform the thermodynamic optimization. Adopt the published parameters for the Fe-P and Fe-Al binary subsystems. Optimize the Gibbs energy parameters for stoichiometric AlP (ΔH°_298, S°_298, and Cp coefficients) and the liquid Al-P interaction parameters. Extend to the ternary Fe-Al-P system using the Toop interpolation with Al as the asymmetric component and optimize ternary parameters as needed. The optimization must simultaneously reproduce the experimental melting point of AlP, the Al-rich liquidus, vapor pressures, and the ternary phase equilibria. Output the complete set of optimized model parameters.",
+    "output_file": "optimized_parameters.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The optimized thermodynamic database for the Fe-Al-P system.",
+    "output_schema": "JSON object with required top-level keys \"AlP\" and \"liquid\". \"AlP\" contains \"Delta_H_298\" (J/mol), \"S_298\" (J/(mol·K)), \"Cp\" (object with a, b, c for C_P = a + b*T + c*T^{-2}). \"liquid\" contains \"delta_g_AlP\" as array [a, b] (Δg_AlP = a + b*T). Optional ternary liquid parameters in \"ternary_FeP_Al\"."
+  },
+  {
+    "id": "step_4_alp_diagram",
+    "title": "Compute Al-P phase diagram",
+    "role": "scored",
+    "action": "Using the optimized database, compute the Al-P liquidus curve. Determine the melting temperature of stoichiometric AlP and the liquidus composition over the full composition range. Output the phase diagram data.",
+    "output_file": "alp_phase_diagram.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulated Al-P phase boundaries: melting point and liquidus as a function of temperature and composition.",
+    "output_schema": "CSV with columns: T_K (temperature in K), x_P (mole fraction of P in liquid), phase_flag (character indicating the phase boundary type). Additionally, a row with T_melt_K and fixed composition x_P=0.5 for the congruent melting point of AlP."
+  },
+  {
+    "id": "step_5_isotherms",
+    "title": "Compute Fe-Al-P isothermal sections",
+    "role": "scored",
+    "action": "Using the optimized database, compute the isothermal phase diagrams of the Fe-Al-P system at 450, 650, and 800 °C. Identify the phase boundaries and report the equilibrium compositions.",
+    "output_file": "fealp_isothermal_sections.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Phase boundaries of the Fe-Al-P system at three isotherms.",
+    "output_schema": "CSV with columns: T_C (temperature in °C: 450, 650, 800), region_label (phase name, e.g., BCC_A2, AlP, liquid), x_Fe, x_Al, x_P (mole fractions for each phase boundary point or tie-line end-point)."
+  },
+  {
+    "id": "step_6_p_activity",
+    "title": "Compute activity coefficient of P in liquid Fe-Al",
+    "role": "scored",
+    "action": "Using the optimized database, calculate the activity coefficient of phosphorus in liquid Fe-Al-P alloys at 1400 and 1600 °C for Al concentrations up to 5 wt%. Output the results.",
+    "output_file": "p_activity_coefficient.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Calculated activity coefficient of P for varying Al content.",
+    "output_schema": "CSV with columns: T_C (1400, 1600), wt_Al (weight percent Al in the alloy), gamma_P (activity coefficient of P, referenced to the 1 wt% standard state), log10_gamma_P (base-10 logarithm of gamma_P)."
+  }
+]

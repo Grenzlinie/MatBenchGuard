@@ -1,0 +1,316 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts Tc, zero-T magnetizations, and coercive fields from submitted CSVs and compares to paper values; peak effect region is detected from the fine-grid central hysteresis curve.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper reference values (Tc, zero-T magnetizations, coercive fields, remanence ordering, peak effect presence)",
+      "source_provenance": "paper figures and text: Tc=2.12 J/kB, zero-T values, coercive fields at each temperature, remanence comparison, and peak effect region described in the text and figures.",
+      "generation_method": "direct transcription from the paper's reported numbers, verified against the paper.",
+      "why_not_fabricated": "these are the exact values the paper reports; they are the correct target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fm_magnetization_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "mc1",
+            "mc2",
+            "me1",
+            "me2",
+            "MT"
+          ],
+          "units": {
+            "T": "J/k_B",
+            "mc1": "spin (dimensionless)",
+            "mc2": "spin (dimensionless)",
+            "me1": "spin (dimensionless)",
+            "me2": "spin (dimensionless)",
+            "MT": "spin (dimensionless)"
+          }
+        },
+        "description": "Temperature scan of magnetizations for FM case; used to derive Tc and zero-T values."
+      },
+      {
+        "file": "afm_magnetization_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "mc1",
+            "mc2",
+            "me1",
+            "me2",
+            "MT"
+          ],
+          "units": {
+            "T": "J/k_B",
+            "mc1": "spin (dimensionless)",
+            "mc2": "spin (dimensionless)",
+            "me1": "spin (dimensionless)",
+            "me2": "spin (dimensionless)",
+            "MT": "spin (dimensionless)"
+          }
+        },
+        "description": "Temperature scan of magnetizations for AFM case; used to derive Tc and zero-T values."
+      },
+      {
+        "file": "fm_hysteresis_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "H",
+            "mc1",
+            "mc2",
+            "me1",
+            "me2",
+            "MT"
+          ],
+          "units": {
+            "T": "J/k_B",
+            "H": "J",
+            "mc1": "spin (dimensionless)",
+            "mc2": "spin (dimensionless)",
+            "me1": "spin (dimensionless)",
+            "me2": "spin (dimensionless)",
+            "MT": "spin (dimensionless)"
+          }
+        },
+        "description": "Hysteresis loops at T=1,2,3 for FM case; used to extract coercive fields and remanence ordering."
+      },
+      {
+        "file": "afm_hysteresis_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "H",
+            "mc1",
+            "mc2",
+            "me1",
+            "me2",
+            "MT"
+          ],
+          "units": {
+            "T": "J/k_B",
+            "H": "J",
+            "mc1": "spin (dimensionless)",
+            "mc2": "spin (dimensionless)",
+            "me1": "spin (dimensionless)",
+            "me2": "spin (dimensionless)",
+            "MT": "spin (dimensionless)"
+          }
+        },
+        "description": "Hysteresis loops at T=1,2,3 for AFM case (all sublattices); used to extract coercive fields and identify triple hysteresis."
+      },
+      {
+        "file": "afm_hysteresis_central_T1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "H",
+            "mc1",
+            "mc2"
+          ],
+          "units": {
+            "H": "J",
+            "mc1": "spin (dimensionless)",
+            "mc2": "spin (dimensionless)"
+          }
+        },
+        "description": "Fine-grid hysteresis of central sublattice at T=1 for AFM; used to locate coercive fields and check peak effect region."
+      },
+      {
+        "file": "fm_extracted_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Tc": "float",
+            "zeroT_magnetizations": "object with mc1,mc2,me1,me2,MT as floats",
+            "coercive_fields_T1": "float",
+            "coercive_fields_T2": "float",
+            "coercive_fields_T3": "float",
+            "remanence_central_greater_than_edge": "bool"
+          }
+        },
+        "description": "Extracted scalar quantities for FM case; the checker compares these to hidden reference values with tolerance."
+      },
+      {
+        "file": "afm_extracted_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Tc": "float",
+            "zeroT_magnetizations": "object with mc1,mc2,me1,me2,MT as floats",
+            "coercive_fields_total_T1": "object with Hc1,Hc2,Hc3 as floats",
+            "coercive_fields_central_T1": "object with Hc1,Hc2,Hc3 as floats",
+            "peak_effect_present_T1": "bool"
+          }
+        },
+        "description": "Extracted scalar quantities for AFM case; the checker compares these to hidden reference values with tolerance."
+      }
+    ],
+    "notes": "All numerical values are in units where J is the energy unit and kB=1. The checker recomputes the EFT-derived properties from the raw CSV files to validate consistency and then compares extracted JSON values against paper-reported numbers within tolerances. The agent must implement the self-consistent solver; no pre-trained model or external data required."
+  },
+  "steps": [
+    {
+      "id": "fm_mag_vs_t",
+      "output_file": "fm_magnetization_vs_T.csv",
+      "weight": 0.2,
+      "params": {
+        "Tc_ref": 2.12,
+        "Tc_tol": 0.05,
+        "zeroT_ref": {
+          "mc1": 1.0,
+          "mc2": 1.0,
+          "me1": 1.0,
+          "me2": 1.0,
+          "MT": 1.0
+        },
+        "zeroT_tol": 0.01
+      }
+    },
+    {
+      "id": "afm_mag_vs_t",
+      "output_file": "afm_magnetization_vs_T.csv",
+      "weight": 0.2,
+      "params": {
+        "Tc_ref": 2.12,
+        "Tc_tol": 0.05,
+        "zeroT_ref": {
+          "mc1": -1.0,
+          "mc2": -1.0,
+          "me1": 1.0,
+          "me2": 1.0,
+          "MT": 0.384
+        },
+        "zeroT_tol": 0.01
+      }
+    },
+    {
+      "id": "fm_hysteresis",
+      "output_file": "fm_hysteresis_curves.csv",
+      "weight": 0.2,
+      "params": {
+        "coercive_ref_by_T": {
+          "1": 0.44,
+          "2": 0.02,
+          "3": 0.0
+        },
+        "tol": 0.02
+      }
+    },
+    {
+      "id": "afm_hysteresis",
+      "output_file": "afm_hysteresis_curves.csv",
+      "weight": 0.2,
+      "params": {
+        "T": 1,
+        "coercive_ref": {
+          "Hc1": 0.58,
+          "Hc2": 1.18,
+          "Hc3": 1.3
+        },
+        "tol": 0.02
+      }
+    },
+    {
+      "id": "afm_central_t1",
+      "output_file": "afm_hysteresis_central_T1.csv",
+      "weight": 0.1,
+      "params": {
+        "coercive_ref": {
+          "Hc1": 0.58,
+          "Hc2": 1.18,
+          "Hc3": 1.3
+        },
+        "tol": 0.02,
+        "check_peak_effect": true,
+        "peak_effect_H_range": [
+          1.18,
+          1.3
+        ]
+      }
+    },
+    {
+      "id": "fm_extracted",
+      "output_file": "fm_extracted_values.json",
+      "weight": 0.05,
+      "params": {
+        "Tc_ref": 2.12,
+        "Tc_tol": 0.05,
+        "zeroT_ref": {
+          "mc1": 1.0,
+          "mc2": 1.0,
+          "me1": 1.0,
+          "me2": 1.0,
+          "MT": 1.0
+        },
+        "zeroT_tol": 0.01,
+        "coercive_ref": {
+          "T1": 0.44,
+          "T2": 0.02,
+          "T3": 0.0
+        },
+        "coercive_tol": 0.02,
+        "remanence_expected": true
+      }
+    },
+    {
+      "id": "afm_extracted",
+      "output_file": "afm_extracted_values.json",
+      "weight": 0.05,
+      "params": {
+        "Tc_ref": 2.12,
+        "Tc_tol": 0.05,
+        "zeroT_ref": {
+          "mc1": -1.0,
+          "mc2": -1.0,
+          "me1": 1.0,
+          "me2": 1.0,
+          "MT": 0.384
+        },
+        "zeroT_tol": 0.01,
+        "coercive_total_T1_ref": {
+          "Hc1": 0.58,
+          "Hc2": 1.18,
+          "Hc3": 1.3
+        },
+        "coercive_tol": 0.02,
+        "coercive_central_T1_ref": {
+          "Hc1": 0.58,
+          "Hc2": 1.18,
+          "Hc3": 1.3
+        },
+        "peak_effect_expected": true
+      }
+    }
+  ]
+}

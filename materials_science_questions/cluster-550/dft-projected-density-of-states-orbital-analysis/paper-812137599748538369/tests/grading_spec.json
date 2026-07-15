@@ -1,0 +1,145 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Scored artifacts are lattice constants and band gaps compared to paper-reported values with tolerances, plus structural check on PDOS; full recompute not feasible as verifier cannot re-run DFT.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lattice_constants.json": "reference_match",
+    "band_gaps.json": "reference_match",
+    "partial_dos_BST.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported lattice constants and band gaps as hidden gold",
+      "source_provenance": "Paper text: BaTiO3 4.004 Å, SrTiO3 3.903 Å; band gaps: BaTiO3 3.46, SrTiO3 3.56, BST 3.54 eV.",
+      "generation_method": "Extracted directly from the paper's reported optimized values and optical gaps.",
+      "why_not_fabricated": "Values are exactly as stated in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "BaTiO3": "number",
+            "SrTiO3": "number"
+          },
+          "units": {
+            "BaTiO3": "Å",
+            "SrTiO3": "Å"
+          }
+        },
+        "description": "Optimized lattice constants of cubic BaTiO3 and SrTiO3 from DFT geometry optimization."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "BaTiO3": "number",
+            "SrTiO3": "number",
+            "BST": "number"
+          },
+          "units": {
+            "BaTiO3": "eV",
+            "SrTiO3": "eV",
+            "BST": "eV"
+          }
+        },
+        "description": "Optical band gaps (VBM–CBM) for BaTiO3, SrTiO3, and the BST heterostructure."
+      },
+      {
+        "file": "partial_dos_BST.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total",
+            "Ti_d",
+            "O_p",
+            "Ba_p",
+            "Sr_p"
+          ],
+          "units": {
+            "energy": "eV (relative to VBM)",
+            "total": "arbitrary",
+            "Ti_d": "arbitrary",
+            "O_p": "arbitrary",
+            "Ba_p": "arbitrary",
+            "Sr_p": "arbitrary"
+          }
+        },
+        "description": "Projected density of states of the BST supercell. Used to verify orbital character of valence and conduction band edges."
+      }
+    ],
+    "notes": "Electron density difference maps are omitted as qualitative and not numerically checkable. The agent must re‑run the DFT workflow using an open‑source code (CP2K) with the B3PW hybrid functional and Hay-Wadt small‑core ECPs; all inputs are public. Scoring compares computed lattice constants and band gaps to paper‑reported values (hidden gold) with appropriate tolerances, and checks orbital dominance trends in the PDOS."
+  },
+  "steps": [
+    {
+      "id": "lattice_constants_check",
+      "output_file": "lattice_constants.json",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target_values": {
+        "BaTiO3": 4.004,
+        "SrTiO3": 3.903
+      },
+      "tolerance": 0.015
+    },
+    {
+      "id": "band_gaps_check",
+      "output_file": "band_gaps.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_values": {
+        "BaTiO3": 3.46,
+        "SrTiO3": 3.56,
+        "BST": 3.54
+      },
+      "tolerance": 0.2
+    },
+    {
+      "id": "pdos_check",
+      "output_file": "partial_dos_BST.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "dominance_rules": {
+        "valence": {
+          "energy_range": [
+            -1.0,
+            0.0
+          ],
+          "dominant_column": "O_p",
+          "subdominant_columns": [
+            "Ti_d",
+            "Ba_p",
+            "Sr_p"
+          ]
+        },
+        "conduction": {
+          "energy_range": [
+            0.0,
+            1.0
+          ],
+          "dominant_column": "Ti_d",
+          "subdominant_columns": [
+            "O_p",
+            "Ba_p",
+            "Sr_p"
+          ]
+        }
+      }
+    }
+  ]
+}

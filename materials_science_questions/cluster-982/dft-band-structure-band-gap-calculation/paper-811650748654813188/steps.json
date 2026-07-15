@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_supercell",
+    "title": "Build supercell and doping configurations",
+    "role": "process",
+    "action": "Construct an 84-atom supercell of α-Si3N4 (a=7.753 Å, c=5.618 Å, space group P31c) from the experimental crystal structure. Generate input files for Quantum ESPRESSO for the pristine system, elemental references (fcc Al, diamond Si), and all required Al-doped configurations: single substitutional at each inequivalent site (sub-1, sub-2), single interstitial, two substitutional far apart and neighboring, one substitutional plus one interstitial (1+1 complex), two substitutional plus one interstitial (2+1 complex), and three substitutional plus one interstitial (3+1 complex). Identify and label the inequivalent sites.",
+    "output_file": "",
+    "evidence": "supercell_configurations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Data preparation step; no scored artifact produced.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft",
+    "title": "Run DFT total energy and geometry optimization",
+    "role": "process",
+    "action": "Perform GGA-PBE total energy and geometry optimization calculations using Quantum ESPRESSO for the pristine supercell, elemental Al and Si, and every Al-doped configuration listed in step 1. Relax internal coordinates (lattice constants fixed at experimental values) and obtain self-consistent total energies and optimized geometries needed for the formation heat and band gap analysis.",
+    "output_file": "",
+    "evidence": "dft_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Heavy computational step; stores evidence of the run but not scored directly.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_formation_heats",
+    "title": "Calculate formation heats",
+    "role": "scored",
+    "action": "Compute the formation heats of all Al configurations from the DFT total energies (pristine, elemental references, and doped systems) using the definition referenced to pure α-Si3N4, elemental Al and Si. Write the results to /app/outputs/formation_heats.json.",
+    "output_file": "formation_heats.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Formation heat values for each distinct Al configuration.",
+    "output_schema": "JSON object: keys are configuration names (strings \"sub1\", \"sub2\", \"interstitial\", \"two_sub_far\", \"two_sub_near\", \"interaction_energy\", \"complex_1+1_per_Al\", \"complex_2+1_per_Al\", \"complex_3+1_per_Al\"); values are formation heats in eV (float). The interaction_energy is two_sub_far minus two_sub_near. The complex per‑Al values are the total formation heat divided by the number of Al atoms in the complex."
+  },
+  {
+    "id": "step_04_band_gaps",
+    "title": "Extract band gaps",
+    "role": "scored",
+    "action": "Extract the electronic band gap from the DFT calculations for pristine α-Si3N4 and for the most stable (1+1) Al‑doped configuration. For metallic systems report 0. Write the results to /app/outputs/band_gaps.json.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Band gap values for the two representative systems.",
+    "output_schema": "JSON object: keys \"pure\" and \"complex_1+1\"; values are band gaps in eV (float). A metallic system yields 0."
+  }
+]

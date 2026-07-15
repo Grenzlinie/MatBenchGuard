@@ -1,0 +1,156 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes peak positions from raw absorption spectra arrays and cross-checks self-reported summary; no reliance on agent-reported metrics alone.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference peak energies for C60 monomer and dimer absorption spectra, plus shoulder criteria, derived from the paper.",
+      "source_provenance": "Paper's Fig. 6 and surrounding text: PBE monomer ~3.8 eV, B3LYP monomer ~4.2 eV, PBE dimer ~3.6 eV, shoulder near 2.75 eV.",
+      "generation_method": "Manually extracted from the paper; tolerances set to ±0.3 eV to account for different computational implementations.",
+      "why_not_fabricated": "These values directly correspond to the paper’s reported spectral features and are the expected outcome of the workflow."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "monomer_pbe_spectrum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "energy_ev": "float",
+            "epsilon_r": "float",
+            "epsilon_i": "float",
+            "absorption": "float"
+          },
+          "required": [
+            "energy_ev",
+            "epsilon_r",
+            "epsilon_i",
+            "absorption"
+          ]
+        },
+        "description": "Absorption spectrum of C60 monomer computed from PBE polarizability; array of points covering 1–6 eV with ≤0.1 eV spacing."
+      },
+      {
+        "file": "monomer_b3lyp_spectrum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "energy_ev": "float",
+            "epsilon_r": "float",
+            "epsilon_i": "float",
+            "absorption": "float"
+          },
+          "required": [
+            "energy_ev",
+            "epsilon_r",
+            "epsilon_i",
+            "absorption"
+          ]
+        },
+        "description": "Absorption spectrum of C60 monomer computed from B3LYP polarizability; same format as monomer_pbe_spectrum.json."
+      },
+      {
+        "file": "dimer_pbe_spectrum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "energy_ev": "float",
+            "epsilon_r": "float",
+            "epsilon_i": "float",
+            "absorption": "float"
+          },
+          "required": [
+            "energy_ev",
+            "epsilon_r",
+            "epsilon_i",
+            "absorption"
+          ]
+        },
+        "description": "Absorption spectrum of C60 dimer computed from PBE polarizability; used for aggregation effect analysis."
+      },
+      {
+        "file": "results_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "monomer_pbe_peak1_ev",
+            "monomer_b3lyp_peak1_ev",
+            "dimer_pbe_peak1_ev",
+            "shoulder_energy_ev",
+            "functional_sensitivity_percent"
+          ],
+          "properties": {
+            "monomer_pbe_peak1_ev": "float",
+            "monomer_b3lyp_peak1_ev": "float",
+            "dimer_pbe_peak1_ev": "float",
+            "shoulder_energy_ev": "float|null",
+            "functional_sensitivity_percent": "float"
+          }
+        },
+        "description": "Summary of extracted peak energies, shoulder detection, and functional sensitivity; cross-validated against raw spectra by the checker."
+      }
+    ],
+    "notes": "The raw spectra are the primary scored artifacts; the checker will extract peak positions and compute functional sensitivity from them. The summary file is provided for convenience and will be cross-checked against the recomputed values."
+  },
+  "steps": [
+    {
+      "id": "monomer_pbe_peak",
+      "output_file": "monomer_pbe_spectrum.json",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "gold": {
+        "energy_ev": 3.8,
+        "tolerance_ev": 0.3
+      }
+    },
+    {
+      "id": "monomer_b3lyp_peak",
+      "output_file": "monomer_b3lyp_spectrum.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "gold": {
+        "energy_ev": 4.2,
+        "tolerance_ev": 0.3
+      }
+    },
+    {
+      "id": "dimer_pbe_spec",
+      "output_file": "dimer_pbe_spectrum.json",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "gold": {
+        "main_peak_ev": 3.6,
+        "main_peak_tolerance_ev": 0.3,
+        "shoulder_energy_min": 2.55,
+        "shoulder_energy_max": 2.95,
+        "shoulder_intensity_ratio": 0.1
+      }
+    },
+    {
+      "id": "summary",
+      "output_file": "results_summary.json",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "cross_check": {
+        "peak_tolerance_ev": 0.1,
+        "sensitivity_tolerance_percent": 2.0,
+        "expected_sensitivity_min_percent": 5.0,
+        "expected_sensitivity_max_percent": 15.0
+      }
+    }
+  ]
+}

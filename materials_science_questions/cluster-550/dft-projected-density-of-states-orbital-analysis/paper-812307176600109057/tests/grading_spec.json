@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The agent only submits the final computed structure and polarization values; there is no raw DFT output to recompute in the verifier. Verifying against the paper's reported gold with tolerances is the appropriate fallback.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "optimized_structure.csv": "exact_match",
+    "polarization_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice parameter, atomic coordinates, and polarization values inline in grading_spec.json steps",
+      "source_provenance": "Paper text: a=3.9885 Å, Table 1 fractional coordinates, polarization values 18 and 58 μC/cm².",
+      "generation_method": "Extracted directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's actual reported results, used as the reference gold for scoring."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_structure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lattice_parameter_a_angstrom",
+            "element",
+            "x_frac",
+            "y_frac",
+            "z_frac"
+          ],
+          "units": {
+            "lattice_parameter_a_angstrom": "angstrom"
+          }
+        },
+        "description": "Equilibrium pseudocubic lattice parameter and fractional coordinates of the relaxed supercell."
+      },
+      {
+        "file": "polarization_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "subcell",
+            "polarization_muC_per_cm2"
+          ],
+          "units": {
+            "polarization_muC_per_cm2": "microC/cm^2"
+          }
+        },
+        "description": "Spontaneous polarization of PbFeO3 and PbNbO3 subcells."
+      }
+    ],
+    "notes": "The checker compares the lattice parameter and fractional coordinates to the paper's reported values within tolerances. For polarization, it verifies that the polarization of PbNbO3 is larger than that of PbFeO3, and checks absolute values against the paper's reference within a tolerance."
+  },
+  "steps": [
+    {
+      "id": "lattice_parameter_a",
+      "output_file": "optimized_structure.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 3.9885,
+      "tolerance_abs": 0.01,
+      "column": "lattice_parameter_a_angstrom",
+      "row_filter": {
+        "element": "lattice"
+      }
+    },
+    {
+      "id": "atomic_coordinates",
+      "output_file": "optimized_structure.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "tolerance_abs": 0.005,
+      "expected_rows": [
+        {
+          "element": "O",
+          "x": 0.0,
+          "y": 0.5,
+          "z": 0.25
+        },
+        {
+          "element": "O",
+          "x": 0.0,
+          "y": 0.5,
+          "z": 0.752189
+        },
+        {
+          "element": "O",
+          "x": 0.5,
+          "y": 0.0,
+          "z": 0.25
+        },
+        {
+          "element": "O",
+          "x": 0.5,
+          "y": 0.0,
+          "z": 0.748394
+        },
+        {
+          "element": "O",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.0
+        },
+        {
+          "element": "O",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.5
+        },
+        {
+          "element": "Fe",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.745723
+        },
+        {
+          "element": "Nb",
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0.246352
+        },
+        {
+          "element": "Pb",
+          "x": 0.0,
+          "y": 0.0,
+          "z": -0.039843
+        },
+        {
+          "element": "Pb",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.531113
+        }
+      ]
+    },
+    {
+      "id": "subcell_polarization",
+      "output_file": "polarization_values.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "expected_polarizations": {
+        "PbFeO3": 18.0,
+        "PbNbO3": 58.0
+      },
+      "tolerance_relative": 0.3,
+      "require_trend": true
+    }
+  ]
+}

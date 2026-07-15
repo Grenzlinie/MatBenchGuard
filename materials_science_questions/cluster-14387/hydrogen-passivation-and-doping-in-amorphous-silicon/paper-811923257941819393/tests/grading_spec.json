@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "T0_result_compare",
+  "scoring_justification": "The agent's artifact is the computed scalars themselves; a deeper recompute (T1) is infeasible because there is no raw intermediate. T0 comparison against paper‑reported values with tolerances is the appropriate tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide hidden gold values for a_Se_D, a_Si_N_av, and a_Si_D to which the agent's computed numbers are compared.",
+      "source_provenance": "Paper‑reported values: Section 2.1 gives D = 2.3×10¹⁶ cm⁻³ for a‑Se, Section 2.2 states N_av ~ 3.8 and D = 1.2×10¹⁸ cm⁻³ for a‑Si.",
+      "generation_method": "Direct extraction from the paper text.",
+      "why_not_fabricated": "These are the paper's own published numbers (traceable to Sections 2.1 and 2.2)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_densities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a_Se_D": "float (cm^-3)",
+            "a_Si_N_av": "float",
+            "a_Si_D": "float (cm^-3)"
+          },
+          "items": {}
+        },
+        "description": "The agent's computed dangling-bond defect density for a-Se, average coordination for the a-Si divacancy region, and dangling-bond defect density for a-Si. The checker compares these three numbers to the paper's reported values within hidden absolute tolerances."
+      }
+    ],
+    "notes": "The agent must derive the three quantities from the public empirical constants and the divacancy counting procedure described in the step action. No external data files need to be downloaded; the constants (D0, D1, Nav*, Nav_aSe, Si atomic density) are either standard physical values or publicly reported in the literature."
+  },
+  "steps": [
+    {
+      "id": "scored_defect_densities",
+      "output_file": "defect_densities.json",
+      "kind": "numeric_comparison",
+      "weight": 1.0,
+      "tolerance": {
+        "a_Se_D": 5000000000000000.0,
+        "a_Si_N_av": 0.2,
+        "a_Si_D": 2e+17
+      },
+      "target": {
+        "a_Se_D": 2.3e+16,
+        "a_Si_N_av": 3.8,
+        "a_Si_D": 1.2e+18
+      }
+    }
+  ]
+}

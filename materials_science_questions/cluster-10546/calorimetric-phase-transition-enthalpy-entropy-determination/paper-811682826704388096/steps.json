@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Compile experimental α and C_p/T data for BeO",
+    "role": "scored",
+    "action": "From the cited literature (Victor & Douglas 1963, Krzhizhanovskii & Shtern 1973, Sirota et al. 1987), collect paired values of temperature (K), volumetric thermal expansion coefficient α (in units of 10⁻⁶ K⁻¹) and isobaric heat capacity C_p (J mol⁻¹ K⁻¹) for BeO in the range 40–720 K. For each temperature where both α and C_p are available, compute C_p/T and record one row. Output a CSV file with columns temperature_K, alpha_ppm_per_K, Cp_over_T_J_per_mol_K2.",
+    "output_file": "step_01_alpha_cp_data.csv",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Curated table of paired experimental α and C_p/T values for BeO from three literature sources, used as input for the subsequent linear fit.",
+    "output_schema": "Columns: temperature_K (float), alpha_ppm_per_K (float, α×10⁶), Cp_over_T_J_per_mol_K2 (float, C_p/T). Each row is one temperature with both α and C_p/T available."
+  },
+  {
+    "id": "step_02",
+    "title": "Perform linear fit of α vs C_p/T and extract γ⁻",
+    "role": "scored",
+    "action": "From step_01_alpha_cp_data.csv, perform a linear regression of alpha_ppm_per_K vs Cp_over_T_J_per_mol_K2. Extract the raw slope (in units consistent with the input columns). Compute γ⁻ (K/MPa) as γ⁻ = slope × V₀, where V₀ = 8.25×10⁻³ m³/mol. Also compute the coefficient of determination R². Write a JSON file with keys slope, gamma_minus, r_squared.",
+    "output_file": "step_02_fit_results.json",
+    "evidence": "none",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Result of the linear regression: raw slope, derived γ⁻, and R². γ⁻ is the headline quantity used to compute β(T).",
+    "output_schema": "JSON object with keys: slope (float, raw regression coefficient), gamma_minus (float, K/MPa), r_squared (float)."
+  },
+  {
+    "id": "step_03",
+    "title": "Compute temperature-dependent volume compressibility β",
+    "role": "scored",
+    "action": "Using γ⁻ from step_02_fit_results.json and the C_p/T column from step_01_alpha_cp_data.csv, compute β = (γ⁻)² / V₀ × (C_p/T) at each temperature. Output a CSV with columns temperature_K and beta_GPa_minus_one (β in GPa⁻¹, where β = (γ⁻)² / (8.25e-3 m³/mol) × (C_p/T) with γ⁻ in K/MPa and C_p/T in J mol⁻¹ K⁻²).",
+    "output_file": "step_03_beta_vs_t.csv",
+    "evidence": "none",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Derived isothermal volume compressibility β as a function of temperature, computed from the fitted γ⁻ and the experimental heat capacity.",
+    "output_schema": "Columns: temperature_K (float), beta_GPa_minus_one (float, β in GPa⁻¹)."
+  }
+]

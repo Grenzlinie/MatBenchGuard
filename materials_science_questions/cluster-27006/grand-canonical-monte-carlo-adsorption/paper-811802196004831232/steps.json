@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Run GCMC simulations for CO2 adsorption in slit carbon pores",
+    "role": "process",
+    "action": "Simulate CO2 adsorption in slit-shaped carbon pores with Steele 10‑4‑3 solid-fluid potential using the Nguyen force field at 333 K for effective pore widths covering 0.19 to 4.7 nm and pressures from 1e‑6 to 27 MPa. Produce arrays of adsorbed amount N(H,μ) (molecules per unit surface area) for each pore width.",
+    "output_file": "",
+    "evidence": "gcmc_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "GCMC simulations of rigid linear CO2 molecules in slit pores. The solid-fluid interaction is given by Steele's 10‑4‑3 potential with σss=0.34 nm, εss/kb=28 K, ρs=114 nm⁻³, Δ=0.335 nm. The CO2 force field parameters are from Nguyen (2006). Simulation box: 4×4 nm in surface directions, periodic boundary conditions, pore widths H, effective width Heff = H − 0.34 nm. At least 25×10⁶ equilibration steps and 25×10⁶ production steps per condition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute solvation pressure from adsorption isotherms",
+    "role": "scored",
+    "action": "Perform thermodynamic integration of the GCMC isotherms to obtain the grand potential per unit surface area Ωp(H,μ) using an ideal-gas reference state. Compute solvation pressure σs = −∂Ωp/∂H via numerical differentiation. Write a CSV with effective pore width and solvation pressure at a bulk pressure of 27 MPa.",
+    "output_file": "solvation_pressure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Solvation pressure (adsorption stress) for individual slit carbon pores at 333 K and 27 MPa.",
+    "output_schema": "Columns: effective_pore_width_nm (float), solvation_pressure_GPa (float). Pore widths must cover at least 15 points from 0.2 to 2.0 nm, including the key widths 0.23, 0.31, 0.36, 0.54, 1.0, 1.3 nm."
+  },
+  {
+    "id": "step3",
+    "title": "Compute strain isotherm from solvation pressure and pore size distribution",
+    "role": "scored",
+    "action": "Using the provided PSD (psd.csv) and bulk modulus K=12 GPa, compute the average adsorption stress via surface‑area‑weighted averaging over the pore‑size distribution. Then compute the volumetric strain ε(p) = (1/K)[σ̅_s − p]. Write the strain isotherm for pressures from 0.1 to 27 MPa.",
+    "output_file": "strain_isotherm.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Predicted macroscopic volumetric strain of the activated carbon sample during CO2 adsorption at 333 K.",
+    "output_schema": "Columns: pressure_MPa (float), volumetric_strain (float). At least 20 pressure points monotonically increasing from 0.1 to 27 MPa."
+  },
+  {
+    "id": "step4",
+    "title": "Compute total adsorption isotherm from pore-resolved isotherms and PSD",
+    "role": "scored",
+    "action": "Integrate the pore-specific adsorbed amounts N(H,μ) over the PSD (psd.csv) to obtain total adsorbed quantity per unit mass. Convert to cm³(STP)/g. Write the adsorption isotherm for pressures from 0.1 to 27 MPa.",
+    "output_file": "adsorption_isotherm.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total CO2 adsorption isotherm on the activated carbon sample at 333 K, computed from the pore-scale simulations and the PSD.",
+    "output_schema": "Columns: pressure_MPa (float), loading_cm3_g (float). Same pressure range as strain isotherm, at least 20 points."
+  }
+]

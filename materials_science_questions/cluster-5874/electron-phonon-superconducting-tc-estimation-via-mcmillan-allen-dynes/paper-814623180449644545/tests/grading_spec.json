@@ -1,0 +1,142 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 feasible: checker independently solves the FEM Hc2 equation, fits WHHM curves, and compares submitted h(t) and derived ratios within tolerances that absorb reproducible numerical spread.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "target_policies": {
+    "h_vs_t.csv": "reference_match",
+    "ratios.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "h_vs_t.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "t",
+            "epsilonFtau",
+            "h_FEM",
+            "h_WHHM_fit"
+          ]
+        },
+        "description": "FEM computed reduced‑field curves and WHHM fits for a grid of reduced temperatures and disorder parameters."
+      },
+      {
+        "file": "ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "epsilonFtau",
+            "alpha_H_over_alpha_0",
+            "dTc_over_Tc0",
+            "max_rel_diff_h_vs_WHHM_fit"
+          ]
+        },
+        "description": "Derived ratios and Tc suppression verifying indistinguishability of FEM and WHHM curves for ε_Fτ > 1.5."
+      }
+    ],
+    "notes": "The experimental re‑analysis of Zr–Cu Hc2 data (Table I in the paper) is omitted because the raw Hc2(T) data from Ref. 11 are not publicly available in machine‑readable form. The task focuses on the reproducible numerical core: FEM Hc2 curves, WHHM fitting, and the derived parameters."
+  },
+  "steps": [
+    {
+      "id": "score_h_vs_t",
+      "output_file": "h_vs_t.csv",
+      "weight": 0.6,
+      "kind": "recompute_fem_whhm",
+      "parameters": {
+        "lambda": 1.0,
+        "Theta_D": 0.017,
+        "epsilon_F": 5.0,
+        "mu_star": 0.13,
+        "mu": 0.5,
+        "tolerance_h": 0.02,
+        "epsilonFtau_values": [
+          1000000.0,
+          2.0,
+          1.5,
+          1.3,
+          1.0
+        ],
+        "t_grid": [
+          0.1,
+          0.15,
+          0.2,
+          0.25,
+          0.3,
+          0.35,
+          0.4,
+          0.45,
+          0.5,
+          0.55,
+          0.6,
+          0.65,
+          0.7,
+          0.75,
+          0.8,
+          0.85,
+          0.9,
+          0.95,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "score_ratios",
+      "output_file": "ratios.csv",
+      "weight": 0.4,
+      "kind": "recompute_ratios",
+      "parameters": {
+        "tolerance_alpha": 0.05,
+        "tolerance_dTc": 0.05,
+        "tolerance_max_rel_diff": 0.01,
+        "epsilonFtau_check_indistinguishable": [
+          1000000.0,
+          2.0
+        ],
+        "max_rel_diff_threshold": 0.015
+      }
+    }
+  ],
+  "common_parameters": {
+    "lambda": 1.0,
+    "Theta_D": 0.017,
+    "epsilon_F": 5.0,
+    "mu_star": 0.13,
+    "mu": 0.5,
+    "t_grid": [
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.85,
+      0.9,
+      0.95,
+      1.0
+    ],
+    "epsilonFtau_values": [
+      1000000.0,
+      2.0,
+      1.5,
+      1.3,
+      1.0
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The model is an analytical deterministic expression; the checker can recompute the expected output using the same equations and parameters, comparing each row's predicted values to the agent's submitted CSV via mean absolute error (MAE).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "predictions.csv": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "V_CNT",
+            "E_modulus (GPa)",
+            "Tensile_strength (MPa)"
+          ],
+          "units": {
+            "V_CNT": "dimensionless",
+            "E_modulus (GPa)": "GPa",
+            "Tensile_strength (MPa)": "MPa"
+          }
+        },
+        "description": "CSV file with three columns containing the computed elastic modulus and tensile strength for each CNT volume fraction. The checker recomputes the same analytical model and compares row-wise values."
+      }
+    ],
+    "notes": "The model uses deterministic analytical expressions; no randomness. The checker will recompute the expected values using the same formulas and parameters, comparing each cell with an absolute tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_predictions",
+      "output_file": "predictions.csv",
+      "weight": 1.0,
+      "kind": "recompute_predictions",
+      "model_params": {
+        "Em": 3.11,
+        "E_CNT": 800.0,
+        "Sm": 64.51,
+        "S_CNT": 18.0,
+        "L_CNT": 2e-06,
+        "d_CNT": 3e-08,
+        "fR": 0.16666666666666666,
+        "fW": 0.6,
+        "alpha": 10.0,
+        "beta": 0.9
+      },
+      "mae_tolerance_threshold": 0.1,
+      "description": "Recompute expected E_modulus and Tensile_strength from V_CNT using the given model parameters and compare with the agent's submitted values. Score based on mean absolute error (MAE) across all predicted points; full credit when MAE ≈ 0, degrading linearly to zero at MAE >= 0.1."
+    }
+  ]
+}

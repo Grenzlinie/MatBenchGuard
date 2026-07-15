@@ -1,0 +1,142 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute of DFT energies in the verifier sandbox is infeasible; scoring relies on structural checks (required IP trend, bond-length plausibility) and tolerance windows around paper-reported reference ionization potentials.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_fe2_results.json": "threshold_or_better",
+    "step_02_fe3_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference ionization potentials and bond-length plausibility bounds for Fe2 and Fe3",
+      "source_provenance": "paper (SCF‑Xα‑SW results: Fe₂ restricted IP 7.8 eV, unrestricted IP 6.4 eV; Fe₃ unrestricted IP 6.3 eV; bond lengths from paper/exafs references)",
+      "generation_method": "extracted from the paper's Section III and experimental/EXAFS literature; tolerances set to ±1.5 eV to absorb method differences between SCF‑Xα‑SW and open‑source DFT (PBE/def2‑TZVP). The reference solve.sh writes exactly these paper values.",
+      "why_not_fabricated": "these are the paper's own reported quantities, not invented; they represent the target reproduction results for the original method."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_fe2_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Fe2_spin_restricted_bond_length": "float (angstrom)",
+            "Fe2_spin_unrestricted_bond_length": "float (angstrom)",
+            "Fe2_spin_restricted_neutral_total_energy": "float (eV)",
+            "Fe2_spin_restricted_cation_total_energy": "float (eV)",
+            "Fe2_spin_unrestricted_neutral_total_energy": "float (eV)",
+            "Fe2_spin_unrestricted_cation_total_energy": "float (eV)",
+            "Fe2_spin_restricted_IP": "float (eV)",
+            "Fe2_spin_unrestricted_IP": "float (eV)"
+          },
+          "units": {
+            "bond_length": "angstrom",
+            "total_energy": "eV",
+            "IP": "eV"
+          }
+        },
+        "description": "Contains Fe2 optimized bond lengths, total energies, and computed adiabatic ionization potentials for both spin-restricted and spin-unrestricted DFT calculations. The checker verifies that spin-unrestricted IP is lower than restricted IP by a significant margin, that restricted and unrestricted IPs fall within allowed windows, and that bond lengths are physically reasonable."
+      },
+      {
+        "file": "step_02_fe3_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Fe3_spin_unrestricted_bond_length": "float (angstrom)",
+            "Fe3_spin_unrestricted_neutral_total_energy": "float (eV)",
+            "Fe3_spin_unrestricted_cation_total_energy": "float (eV)",
+            "Fe3_spin_unrestricted_IP": "float (eV)"
+          },
+          "units": {
+            "bond_length": "angstrom",
+            "total_energy": "eV",
+            "IP": "eV"
+          }
+        },
+        "description": "Contains Fe3 optimized (average) bond length, total energies, and computed adiabatic ionization potential from spin-unrestricted DFT. The checker verifies that the IP falls within an allowed window and the bond length is physically reasonable."
+      }
+    ],
+    "notes": "The original paper used SCF-Xα-SW; this reproduction uses open-source DFT (e.g., ORCA with PBE/def2-TZVP). Tolerances are set to accommodate expected shifts due to functional and basis set differences."
+  },
+  "steps": [
+    {
+      "id": "fe2_ip_trend",
+      "output_file": "step_01_fe2_results.json",
+      "weight": 0.15,
+      "kind": "inequality",
+      "params": {
+        "field_left": "Fe2_spin_restricted_IP",
+        "field_right": "Fe2_spin_unrestricted_IP",
+        "min_difference": 1.0
+      }
+    },
+    {
+      "id": "fe2_restricted_ip_range",
+      "output_file": "step_01_fe2_results.json",
+      "weight": 0.2,
+      "kind": "range",
+      "params": {
+        "field": "Fe2_spin_restricted_IP",
+        "min": 6.3,
+        "max": 9.3
+      }
+    },
+    {
+      "id": "fe2_unrestricted_ip_range",
+      "output_file": "step_01_fe2_results.json",
+      "weight": 0.25,
+      "kind": "range",
+      "params": {
+        "field": "Fe2_spin_unrestricted_IP",
+        "min": 4.9,
+        "max": 7.9
+      }
+    },
+    {
+      "id": "fe2_bond_lengths_range",
+      "output_file": "step_01_fe2_results.json",
+      "weight": 0.1,
+      "kind": "range",
+      "params": {
+        "fields": [
+          "Fe2_spin_restricted_bond_length",
+          "Fe2_spin_unrestricted_bond_length"
+        ],
+        "min": 1.7,
+        "max": 2.2
+      }
+    },
+    {
+      "id": "fe3_unrestricted_ip_range",
+      "output_file": "step_02_fe3_results.json",
+      "weight": 0.2,
+      "kind": "range",
+      "params": {
+        "field": "Fe3_spin_unrestricted_IP",
+        "min": 4.8,
+        "max": 7.8
+      }
+    },
+    {
+      "id": "fe3_bond_length_range",
+      "output_file": "step_02_fe3_results.json",
+      "weight": 0.1,
+      "kind": "range",
+      "params": {
+        "fields": [
+          "Fe3_spin_unrestricted_bond_length"
+        ],
+        "min": 1.8,
+        "max": 2.3
+      }
+    }
+  ]
+}

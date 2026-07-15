@@ -1,0 +1,127 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Compare agent's reported band gaps, bond angles, and formation energies to paper's hidden reference values with tolerances, and verify monotonic trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_band_gaps.csv": "reference_match",
+    "step_02_bond_angles.csv": "reference_match",
+    "step_03_formation_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported band gaps, bond angles, and formation energies for Sc, Y, La doped PZT.",
+      "source_provenance": "Fig. 6 and Table I of the paper.",
+      "generation_method": "Extracted directly from paper text and figures.",
+      "why_not_fabricated": "Values are taken verbatim from the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "required_columns": [
+            "system",
+            "energy_band_gap_eV",
+            "optical_band_gap_eV"
+          ],
+          "units": {
+            "energy_band_gap_eV": "eV",
+            "optical_band_gap_eV": "eV"
+          }
+        },
+        "description": "Energy band gap (Kohn-Sham gap) and optical band gap (Tauc analysis) for each doped system."
+      },
+      {
+        "file": "step_02_bond_angles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "required_columns": [
+            "system",
+            "Ti_O_Ti_angle_deg"
+          ],
+          "units": {
+            "Ti_O_Ti_angle_deg": "deg"
+          }
+        },
+        "description": "Ti-O-Ti bond angle for each doped system."
+      },
+      {
+        "file": "step_03_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "required_columns": [
+            "system",
+            "O_vacancy_formation_energy_eV"
+          ],
+          "units": {
+            "O_vacancy_formation_energy_eV": "eV"
+          }
+        },
+        "description": "Neutral oxygen vacancy formation energy under oxygen-rich conditions for each doped system."
+      }
+    ],
+    "notes": "Quantities are computed from first-principles DFT using open-source tools. The checker compares the reported values against hidden reference data and verifies the expected monotonic trends (band gaps decreasing with increasing atomic number; bond angles increasing with ionic radius). No gold values or tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "band_gaps_check",
+      "output_file": "step_01_band_gaps.csv",
+      "weight": 0.4,
+      "kind": "band_gap_check",
+      "target_values": {
+        "La": {
+          "energy_band_gap_eV": 1.25,
+          "optical_band_gap_eV": 2.9
+        },
+        "Y": {
+          "energy_band_gap_eV": 1.4,
+          "optical_band_gap_eV": 3.1
+        },
+        "Sc": {
+          "energy_band_gap_eV": 1.55,
+          "optical_band_gap_eV": 3.3
+        }
+      },
+      "energy_tolerance": 0.1,
+      "optical_tolerance": 0.1,
+      "trend": {
+        "energy": "increasing",
+        "optical": "increasing"
+      }
+    },
+    {
+      "id": "bond_angles_check",
+      "output_file": "step_02_bond_angles.csv",
+      "weight": 0.3,
+      "kind": "bond_angle_check",
+      "target_values": {
+        "La": 161.4,
+        "Y": 157.5,
+        "Sc": 156.1
+      },
+      "tolerance": 1.0,
+      "trend": "decreasing"
+    },
+    {
+      "id": "formation_energies_check",
+      "output_file": "step_03_formation_energies.csv",
+      "weight": 0.3,
+      "kind": "formation_energy_check",
+      "target_values": {
+        "La": 0.41,
+        "Y": 0.45,
+        "Sc": 0.39
+      },
+      "tolerance": 0.05
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of the free energy derivative from the agent's evidence files requires implementing the complete pair-potential model, lattice sum, and Hildebrand equation of state, which is impractical for the verifier. Instead, we rely on the paper-reported gold values with tolerances that absorb implementation variation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "solubility_limit.txt": "exact_match",
+    "effective_valence.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "solubility limit gold",
+      "source_provenance": "paper text: experimental solubility limit at T=600 K is x=0.20 (used as calibration input for parameter p).",
+      "generation_method": "read from the paper's description of the phase diagram and the calibration condition.",
+      "why_not_fabricated": "The value is the experimental fact used by the paper itself; a correct reproduction must match it within tolerance."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "effective valence gold",
+      "source_provenance": "Fig. 6 in the paper: effective valence number z at x=0.2 and T=600 K is approximately 0.86.",
+      "generation_method": "read from the figure's data point; the reference solution hardcodes this value.",
+      "why_not_fabricated": "It is the paper's headline result; the verifier compares the agent's computed z to this physically determined reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "solubility_limit.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "a single floating-point number representing the mole fraction of AgBr in α-AgI at which ∂F/∂x=0 at T=600 K"
+        },
+        "description": "Solubility limit composition x (mole fraction) at T=600 K"
+      },
+      {
+        "file": "effective_valence.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "a single floating-point number representing the effective valence (ionicity) of silver ions at x=0.2 AgBr and T=600 K"
+        },
+        "description": "Effective valence number z at x=0.2, T=600 K (dimensionless)"
+      }
+    ],
+    "notes": "Both outputs are single numbers written as plain text. The solubility limit is expected to be very close to the experimental input used for calibration (0.20) as a consistency check; the effective valence is the main reproduced quantity."
+  },
+  "steps": [
+    {
+      "id": "step_solubility",
+      "output_file": "solubility_limit.txt",
+      "kind": "numeric_compare",
+      "weight": 0.4,
+      "target": 0.2,
+      "tolerance_abs": 0.02,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "step_valence",
+      "output_file": "effective_valence.txt",
+      "kind": "numeric_compare",
+      "weight": 0.6,
+      "target": 0.86,
+      "tolerance_abs": 0.02,
+      "target_policy": "exact_match"
+    }
+  ]
+}

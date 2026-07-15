@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes integrated benzene density near the metal wall and electric field at z=0.9 nm from the agent's raw CSV profiles, verifying the published desorption trend (Na/Na vs Cl/Cl) and unscreened field without trusting any self-reported metric.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "benzene_density_profiles.csv": "metric_recompute",
+    "electric_field_profiles.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for benzene density ratio and electric field magnitudes",
+      "source_provenance": "Inferred from paper's Figure 1 (benzene density profiles) and Figure 3 (electric field) and the narrative description of desorption in Na/Na system and unscreened field.",
+      "generation_method": "Thresholds chosen to match the qualitative behavior: integrated density ratio < 0.2 captures the drastic desorption; NaNa field > 3 V/nm reflects the unscreened field of ~7.9 V/nm near the metal, and ClCl field < 1 V/nm reflects the screened/local field near zero.",
+      "why_not_fabricated": "Thresholds are derived from published observable trends, not arbitrary; they are consistent with a correct reproduction as modelled in the reference solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "benzene_density_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "z_nm",
+            "density_nm3"
+          ],
+          "units": {
+            "density_nm3": "nm^{-3}"
+          }
+        },
+        "description": "Number density profiles of benzene center-of-mass along the surface normal for Na/Na and Cl/Cl systems. The checker will recompute integrated densities from this table to verify the desorption trend."
+      },
+      {
+        "file": "electric_field_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "z_nm",
+            "E_V_per_nm"
+          ],
+          "units": {
+            "E_V_per_nm": "V/nm"
+          }
+        },
+        "description": "Average electric field z-component profile for each system. The checker will recompute the field strength at specified positions to verify the unscreened field in the Na/Na system."
+      }
+    ],
+    "notes": "The scored artifacts are the raw profiles; no gold values or tolerances are disclosed. The hidden checker independently recomputes metrics from these profiles."
+  },
+  "steps": [
+    {
+      "id": "step03_benzene_density_profile",
+      "output_file": "benzene_density_profiles.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "target_policy": "metric_recompute",
+      "target": {
+        "description": "Integrated density of benzene near the metal wall (z ∈ [0.7, 0.931] nm) must be drastically lower for NaNa than for ClCl, reflecting desorption."
+      },
+      "thresholds": {
+        "ratio_threshold": 0.2,
+        "decay_span": 0.3,
+        "z_min": 0.7,
+        "z_max": 0.931
+      }
+    },
+    {
+      "id": "step04_electric_field_profile",
+      "output_file": "electric_field_profiles.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "target_policy": "metric_recompute",
+      "target": {
+        "description": "Electric field at z ≈ 0.9 nm must be >3 V/nm for NaNa and <1 V/nm for ClCl, confirming unscreened vs screened field."
+      },
+      "thresholds": {
+        "z_nm_target": 0.9,
+        "NaNa_min": 3.0,
+        "ClCl_max": 1.0
+      }
+    }
+  ]
+}

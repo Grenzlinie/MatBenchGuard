@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_01",
+    "title": "Strain-dependent first-principles lattice dynamics",
+    "role": "scored",
+    "action": "Perform DFT calculations with Quantum ESPRESSO for single-crystal silicon at lattice constants corresponding to isotropic tensile strains s = 0%, 2%, 4%, 6%, 8%, 10% (a = 5.4021, 5.5101, 5.6182, 5.7262, 5.8343, 5.9423 Å). Use Phonopy to obtain harmonic force constants and phonon dispersions, and ShengBTE to compute lattice thermal conductivity at 300 K and the phonon group velocities and relaxation times. Compute the Young’s modulus for each strain from the elastic constants. Write the results to step_01_first_principles_results.csv. Additionally, save the full phonon data (dispersion, group velocities, relaxation times, cumulative thermal conductivity vs. MFP) for the 0% strain case to a file phonon_data_0pct.npz (needed for step 02).",
+    "output_file": "step_01_first_principles_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "First-principles reference data: strain-dependent elastic modulus and lattice thermal conductivity. Values must be monotonic with strain.",
+    "output_schema": "strain_percent (integer), lattice_constant_angstrom (float), elastic_modulus_GPa (float), thermal_conductivity_W_mK (float)"
+  },
+  {
+    "id": "step_02",
+    "title": "MCRT simulation with strain-augmented sound velocity",
+    "role": "scored",
+    "action": "1. Load the PnC geometry from the provided resource (res_pnc_geometry) and the experimental normalized modulus from (res_exp_normalized_modulus). 2. Using the bulk Si phonon properties saved in step_01 (0% strain), implement a 3D Monte Carlo ray-tracing code for phonon thermal conductivity assuming fully diffuse boundary scattering. For each pitch, compute the Casimir-limit thermal conductivity κ_sim. 3. Map each pitch to an effective strain rate s by linearly interpolating between the experimental normalized modulus and the first-principles strain-modulus relationship obtained from step_01. For pitches smaller than the smallest measured modulus, extrapolate linearly. 4. For each pitch, apply the sound-velocity reduction factor (E(s)/E(0))^{1/2} as a scaling factor for the low-frequency group velocities, and also consider the change in phonon scattering rates due to elastic non-uniformity (modelled as a factor on the phonon MFP). Compute the strain-incorporated thermal conductivity κ_strain. 5. Write the final results to step_02_kappa_results.csv.",
+    "output_file": "step_02_kappa_results.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "MCRT simulation outputs: κ_sim and κ_strain for all pitches. The checker will compute the ratio κ_strain/κ_sim and compare its trend against a hidden experimental reference.",
+    "output_schema": "pitch_nm (integer), kappa_sim (float, W/mK), kappa_strain (float, W/mK)"
+  }
+]

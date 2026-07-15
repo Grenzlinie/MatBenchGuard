@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Derived features (peak, effective moment, elastic minima) are recomputed from the agent's raw CSV curves and compared to paper-reported values within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "schottky_tmsb.csv": "metric_recompute",
+    "susceptibility_prsb.csv": "metric_recompute",
+    "elastic_tmsb.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for Schottky peak, susceptibility effective moment, elastic minima",
+      "source_provenance": "Paper figures and text: TmSb Schottky peak at ~11 K magnitude ~1.5 J/mol K, PrSb effective moment free-ion 3.58 μB, elastic minima near 20 K and 15 K from paper's Fig.7 and text.",
+      "generation_method": "Derived from paper's reported quantities and typical curve scales.",
+      "why_not_fabricated": "These values come directly from the published results, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "schottky_tmsb.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "Cm_J_per_mol_K"
+          ],
+          "units": {
+            "T_K": "K",
+            "Cm_J_per_mol_K": "J/(mol K)"
+          }
+        },
+        "description": "Schottky specific heat of TmSb as a function of temperature. The checker will locate the Cₘ peak (temperature and magnitude) and compare to hidden references."
+      },
+      {
+        "file": "susceptibility_prsb.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "chi_inv_per_mol_emu"
+          ],
+          "units": {
+            "T_K": "K",
+            "chi_inv_per_mol_emu": "emu/mol"
+          }
+        },
+        "description": "Inverse magnetic susceptibility of PrSb as a function of temperature. The checker will fit the high-temperature region and extract the effective magnetic moment, comparing to a hidden reference."
+      },
+      {
+        "file": "elastic_tmsb.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "c44_10^11_dyn_per_cm2",
+            "c11_c12_10^11_dyn_per_cm2"
+          ],
+          "units": {
+            "T_K": "K",
+            "c44_10^11_dyn_per_cm2": "10^11 dyn/cm^2",
+            "c11_c12_10^11_dyn_per_cm2": "10^11 dyn/cm^2"
+          }
+        },
+        "description": "Temperature dependence of symmetry elastic constants for TmSb. The checker will locate the minima in c44 and c11−c12, verify their positions and depths against hidden references, and check the shoulder-like shape of c44."
+      }
+    ],
+    "notes": "All temperature values must be strictly ascending. The checker recomputes derived quantities from the raw curves; no self-reported metrics are scored. The elastic constant step is load-bearing: its output depends on the preceding diagonalization and strain-susceptibility steps, which must therefore be genuinely executed."
+  },
+  "steps": [
+    {
+      "id": "schottky",
+      "output_file": "schottky_tmsb.csv",
+      "weight": 0.35,
+      "kind": "recompute_metric",
+      "target_T": 11.0,
+      "tol_T": 1.5,
+      "target_mag": 1.5,
+      "tol_mag": 0.3
+    },
+    {
+      "id": "suscept",
+      "output_file": "susceptibility_prsb.csv",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "target_p_eff": 3.58,
+      "tol_p_eff": 0.18
+    },
+    {
+      "id": "elastic",
+      "output_file": "elastic_tmsb.csv",
+      "weight": 0.35,
+      "kind": "recompute_metric",
+      "c44_T_target": 20.0,
+      "c44_T_tol": 3.0,
+      "c44_delta_target": 0.025,
+      "c44_delta_tol": 0.005,
+      "c12_T_target": 15.0,
+      "c12_T_tol": 3.0,
+      "c12_delta_target": 0.015,
+      "c12_delta_tol": 0.003
+    }
+  ]
+}

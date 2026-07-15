@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT output cannot be recomputed in the verifier sandbox; compare agent-reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_03_N(E_F).txt": "exact_match",
+    "step_04_plasma_frequencies.csv": "exact_match",
+    "step_05_thermopower_300K.csv": "exact_match",
+    "step_06_lambda.txt": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_03_N(E_F).txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single number: total DOS at the Fermi energy in eV⁻¹ per formula unit (both spins)."
+        },
+        "description": "Total electronic density of states at E_F, a key input for λ and a test of the DFT calculation."
+      },
+      {
+        "file": "step_04_plasma_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "hbar_omega_p"
+          ],
+          "units": {
+            "hbar_omega_p": "eV"
+          }
+        },
+        "description": "Diagonal components (xx, yy, zz) of the Drude plasma frequency ℏΩ_p."
+      },
+      {
+        "file": "step_05_thermopower_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "S_300K"
+          ],
+          "units": {
+            "S_300K": "μV/K"
+          }
+        },
+        "description": "Seebeck coefficient components at 300 K."
+      },
+      {
+        "file": "step_06_lambda.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single number: electron‑phonon coupling constant λ."
+        },
+        "description": "Superconducting coupling constant λ derived from N(E_F) and experimental γ."
+      }
+    ],
+    "notes": "All output values must be computed using the specified DFT method (PBE scalar‑relativistic, with the given relaxed coordinates and experimental lattice constants) and the Boltzmann transport code. The experimental γ value used for λ is fixed at 11.64 mJ mol⁻¹ K⁻²."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for scored artifacts",
+      "source_provenance": "Paper text: N(E_F)=3.19 eV⁻¹/f.u., plasma frequencies: 4.40, 2.11, 4.71 eV, Seebeck at 300 K: −8.3, −9.6, −0.3 μV/K, λ=0.55.",
+      "generation_method": "Extracted directly from the paper (results section and text).",
+      "why_not_fabricated": "These are the paper’s own reported numbers; the agent’s honest DFT+BoltzTraP2 reproduction should match them within tolerance."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_02_dos",
+      "output_file": "step_03_N(E_F).txt",
+      "kind": "numeric_compare",
+      "format": "single_line_float",
+      "gold": 3.19,
+      "relative_tolerance": 0.1,
+      "weight": 0.25
+    },
+    {
+      "id": "step_03_plasma",
+      "output_file": "step_04_plasma_frequencies.csv",
+      "kind": "numeric_compare",
+      "format": "csv_direction_to_value",
+      "direction_column": "direction",
+      "value_column": "hbar_omega_p",
+      "gold": {
+        "xx": 4.4,
+        "yy": 2.11,
+        "zz": 4.71
+      },
+      "relative_tolerance": 0.1,
+      "weight": 0.25
+    },
+    {
+      "id": "step_05_seebeck",
+      "output_file": "step_05_thermopower_300K.csv",
+      "kind": "numeric_compare",
+      "format": "csv_direction_to_value",
+      "direction_column": "direction",
+      "value_column": "S_300K",
+      "gold": {
+        "xx": -8.3,
+        "yy": -9.6,
+        "zz": -0.3
+      },
+      "relative_tolerance": 0.2,
+      "weight": 0.25
+    },
+    {
+      "id": "step_06_lambda",
+      "output_file": "step_06_lambda.txt",
+      "kind": "numeric_compare",
+      "format": "single_line_float",
+      "gold": 0.55,
+      "relative_tolerance": 0.15,
+      "weight": 0.25
+    }
+  ]
+}

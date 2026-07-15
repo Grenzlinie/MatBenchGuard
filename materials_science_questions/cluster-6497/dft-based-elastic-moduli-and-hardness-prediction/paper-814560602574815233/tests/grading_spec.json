@@ -1,0 +1,187 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing from raw artefacts is infeasible because the agent only submits fitted K0 and compressibility values; the raw P–V data used for the fits is not submitted. Therefore the checker compares the submitted values to the paper-reported reference with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold bulk moduli, axial/volume compressibilities, and subset classification for each carbonate, taken from Table 2 of the paper and the paper's discussion of cation valence electron subsets.",
+      "source_provenance": "Paper Table 2 (K0, b_a, b_c, b_V) and text describing alkaline earth vs. 3d vs. 4d classification.",
+      "generation_method": "Extracted directly from the paper's published values; classification follows the paper's own grouping (alkaline earth: Mg, Ca; 3d: Ni, Co, Mn, Zn; 4d: Cd).",
+      "why_not_fabricated": "All values are the actual paper-reported numbers for the exact same compounds and units used in the agent's task, ensuring the reproduction target is authentic."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "carbonates": "array of objects, each with keys: carbonate (string), K0_GPa (number, GPa), K0_err (number, GPa)"
+          }
+        },
+        "description": "Room-temperature bulk modulus K0 and fitting uncertainty for each carbonate, obtained from a second-order Birch-Murnaghan EOS fit with K0'=4."
+      },
+      {
+        "file": "axial_compressibilities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "carbonates": "array of objects, each with keys: carbonate (string), ba (number, 1e-3 GPa⁻¹), bc (number, 1e-3 GPa⁻¹), bV (number, 1e-3 GPa⁻¹)"
+          }
+        },
+        "description": "Mean linear compressibilities b_a, b_c, and b_V derived from linear fits of normalized axes and volume versus pressure."
+      },
+      {
+        "file": "subset_classification.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "alkaline_earth": "array of carbonate name strings",
+            "3d_transition_metal": "array of carbonate name strings",
+            "4d_transition_metal": "array of carbonate name strings"
+          }
+        },
+        "description": "Classification of carbonates into three subsets based on the cation's valence electron character (alkaline earth s², 3d transition metal, 4d transition metal)."
+      }
+    ],
+    "notes": "FeCO3 is mentioned in the paper but is not included in the provided P–V data; classification includes only the carbonates for which data is supplied. The classification is based solely on cation type, not on numerical trends."
+  },
+  "steps": [
+    {
+      "id": "fit_bulk_moduli",
+      "output_file": "bulk_moduli.json",
+      "weight": 0.35,
+      "kind": "bulk_moduli_check",
+      "gold": {
+        "carbonates": [
+          {
+            "carbonate": "NiCO3",
+            "K0_GPa": 131,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "MgCO3",
+            "K0_GPa": 107,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "CoCO3",
+            "K0_GPa": 125,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "ZnCO3",
+            "K0_GPa": 124,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "MnCO3",
+            "K0_GPa": 107,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "CdCO3",
+            "K0_GPa": 97,
+            "tol": 2.0
+          },
+          {
+            "carbonate": "CaCO3",
+            "K0_GPa": 67,
+            "tol": 2.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "compute_compressibilities",
+      "output_file": "axial_compressibilities.json",
+      "weight": 0.35,
+      "kind": "compressibility_check",
+      "gold": {
+        "carbonates": [
+          {
+            "carbonate": "NiCO3",
+            "ba": 1.74,
+            "bc": 3.48,
+            "bV": 6.86,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "MgCO3",
+            "ba": 2.13,
+            "bc": 4.03,
+            "bV": 8.15,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "CoCO3",
+            "ba": 1.67,
+            "bc": 3.87,
+            "bV": 7.1,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "ZnCO3",
+            "ba": 1.6,
+            "bc": 4.07,
+            "bV": 7.18,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "MnCO3",
+            "ba": 1.71,
+            "bc": 4.96,
+            "bV": 8.25,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "CdCO3",
+            "ba": 1.28,
+            "bc": 6.51,
+            "bV": 8.95,
+            "tol": 0.2
+          },
+          {
+            "carbonate": "CaCO3",
+            "ba": 2.42,
+            "bc": 9.34,
+            "bV": 14.1,
+            "tol": 0.2
+          }
+        ]
+      }
+    },
+    {
+      "id": "classify_subsets",
+      "output_file": "subset_classification.json",
+      "weight": 0.3,
+      "kind": "exact_match",
+      "gold": {
+        "alkaline_earth": [
+          "MgCO3",
+          "CaCO3"
+        ],
+        "3d_transition_metal": [
+          "NiCO3",
+          "CoCO3",
+          "MnCO3",
+          "ZnCO3"
+        ],
+        "4d_transition_metal": [
+          "CdCO3"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "result-level compare (T0)",
+  "scoring_justification": "The agent's raw DFT output files are not required; only the final CSV is submitted. Recomputing barriers and rate constants from raw outputs is therefore infeasible, so we compare the agent's reported values to the paper's hidden gold with tolerances appropriate for DFT method spread.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "initial_decomposition_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for barriers and rate constants to score against",
+      "source_provenance": "Paper's Table 1 (barriers for P1–P4 at 298.15 K) and Table 2 (rate constants at five temperatures).",
+      "generation_method": "Transcribed directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the exact paper-reported values for the same quantities, used as the reference gold for scoring reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "initial_decomposition_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pathway",
+            "temperature_K",
+            "delta_G_forward_kcalmol",
+            "rate_constant_s-1"
+          ],
+          "units": {
+            "delta_G_forward_kcalmol": "kcal/mol",
+            "rate_constant_s-1": "s^{-1}"
+          }
+        },
+        "description": "Barriers and rate constants for the initial decomposition pathways P1-P4 of HMDSO. Rows: 4 pathways × 5 temperatures. delta_G_forward_kcalmol is provided only for T=298.15 K; other rows leave that column empty."
+      }
+    ],
+    "notes": "The agent may use any open-source quantum chemistry package (Psi4, Orca, NWChem) capable of B3LYP/6-311+G(d,p) DFT. The initial HMDSO geometry should be constructed as described in the method (Si-O 1.43 Å, Si-C 1.51 Å, Si-O-Si angle 150°). The CCSD benchmark step is not required for the scored target."
+  },
+  "steps": [
+    {
+      "id": "barriers_and_rate_constants",
+      "output_file": "initial_decomposition_results.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Compare delta_G barriers at 298.15 K and log10 rate constants to hidden gold tolerances, plus check pathway ordering.",
+      "gold_barriers": {
+        "P1": 84.38,
+        "P2": 37.92,
+        "P3": 100.69,
+        "P4": 45.41
+      },
+      "gold_rate_constants": {
+        "P1": {
+          "298.15": 8.3e-50,
+          "1000": 4.43e-06,
+          "1500": 15.7,
+          "2000": 24900.0,
+          "2500": 2180000.0
+        },
+        "P2": {
+          "298.15": 9.7e-16,
+          "1000": 107000.0,
+          "1500": 92900000.0,
+          "2000": 2980000000.0,
+          "2500": 25200000000.0
+        },
+        "P3": {
+          "298.15": 9.1e-62,
+          "1000": 2.02e-09,
+          "1500": 0.0659,
+          "2000": 410.0,
+          "2500": 81500.0
+        },
+        "P4": {
+          "298.15": 3.12e-21,
+          "1000": 2460.0,
+          "1500": 7520000.0,
+          "2000": 453000000.0,
+          "2500": 5570000000.0
+        }
+      },
+      "barrier_tolerance_kcalmol": 2.0,
+      "log_rate_tolerance": 0.5
+    }
+  ]
+}

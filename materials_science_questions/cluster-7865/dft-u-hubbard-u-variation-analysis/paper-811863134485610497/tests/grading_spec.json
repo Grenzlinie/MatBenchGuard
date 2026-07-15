@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Full recompute of spin exchange parameters from raw DFT energies and of DOS ratio from raw PDOS arrays; no trust in agent‑reported numbers.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "exchange_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "J1",
+            "J2",
+            "J3",
+            "J4"
+          ],
+          "units": {
+            "J1": "K",
+            "J2": "K",
+            "J3": "K",
+            "J4": "K"
+          }
+        },
+        "description": "Spin exchange parameters J₁–J₄ for Cs₂CuCl₄, Rb₂CuCl₄, K₂CuCl₄, and Na₂CuCl₄. The checker compares each value against hidden paper‑reported references with appropriate tolerances and verifies that the exchange parameters across the alkali series follow the expected physical trend."
+      },
+      {
+        "file": "dos_ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating‑point number."
+        },
+        "description": "Ratio of integrated Cs 6p to Cs 6s PDOS in the occupied energy region for Cs₂CuCl₄. The checker compares the value against a hidden paper‑derived gold within a tolerance range."
+      }
+    ],
+    "notes": "The scoring verifies that the computed J values are consistent with the paper‑reported GGA+U (U=6 eV) results and that the alkaline substitution trend matches the expected physical behavior. The DOS ratio validates the dominance of Cs 6p over Cs 6s orbitals."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for spin exchange parameters J₁–J₄ and DOS ratio tolerance window.",
+      "source_provenance": "Paper Table 2 (A=Cs,Rb,K,Na with U=6 eV) for exchange parameters; paper text states Cs 6p DOS is roughly an order of magnitude larger than Cs 6s, giving a target ratio of ~10.",
+      "generation_method": "Direct transcription of published J values; ratio target set to 10, tolerance range 5–15.",
+      "why_not_fabricated": "These are the paper's actual reported figures; not invented by the author."
+    }
+  ],
+  "steps": [
+    {
+      "id": "exchange_parameters",
+      "output_file": "exchange_parameters.csv",
+      "kind": "recompute_and_compare",
+      "weight": 0.85,
+      "description": "Recompute J₁–J₄ from energies.json, compare to paper gold, and verify chemical trend across alkali series.",
+      "gold_values": {
+        "Cs2CuCl4": {
+          "J1": -8.5,
+          "J2": -4.8,
+          "J3": 0.0,
+          "J4": 0.3
+        },
+        "Rb2CuCl4": {
+          "J1": -14.0,
+          "J2": -4.8,
+          "J3": -3.6,
+          "J4": 0.2
+        },
+        "K2CuCl4": {
+          "J1": -16.6,
+          "J2": -4.8,
+          "J3": -6.2,
+          "J4": 0.3
+        },
+        "Na2CuCl4": {
+          "J1": -21.2,
+          "J2": -4.5,
+          "J3": -12.6,
+          "J4": 0.7
+        }
+      },
+      "tolerance_Cs_K": 3.0,
+      "tolerance_others_K": 5.0,
+      "trend_tolerance_J2J4_K": 2.0
+    },
+    {
+      "id": "dos_ratio",
+      "output_file": "dos_ratio.txt",
+      "kind": "recompute_and_compare",
+      "weight": 0.15,
+      "description": "Recompute Cs 6p/6s DOS ratio from pdos_cs.json and check that ratio lies within [5, 15].",
+      "target_ratio_min": 5.0,
+      "target_ratio_max": 15.0
+    }
+  ]
+}

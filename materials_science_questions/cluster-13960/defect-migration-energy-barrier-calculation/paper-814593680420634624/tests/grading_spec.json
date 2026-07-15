@@ -1,0 +1,535 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step_05 dislocation barrier maps are recomputed from hidden spatial samples; step_04 polynomial fits are evaluated at hidden strains; step_06 lambda profiles are sampled at hidden radii; steps_01-03 are compared against paper-reported gold values (T0 fallback for unrecomputable DFT+NEB+kMC intermediates).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_type",
+            "strain_value",
+            "defect_config",
+            "formation_energy_eV"
+          ]
+        },
+        "description": "Formation energies of Fe defects and Si vacancy under various strains."
+      },
+      {
+        "file": "step_02_migration_barriers_uniform.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_type",
+            "strain_value",
+            "migration_direction",
+            "barrier_TET_HEX_eV",
+            "barrier_HEX_TET_eV"
+          ]
+        },
+        "description": "Migration barriers for Fe jumps between interstitial sites under strain."
+      },
+      {
+        "file": "step_03_diffusion_coeffs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_type",
+            "temperature_K",
+            "D_over_Dbulk"
+          ]
+        },
+        "description": "Relative diffusion coefficients from kMC for uniaxially strained states."
+      },
+      {
+        "file": "step_04_barrier_fits.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": "JSON keys representing strain components (e.g., eps_x, tau_xy), each mapping to an array of four coefficient arrays."
+        },
+        "description": "Polynomial coefficients for barrier strain-dependence functions e_s(epsilon)."
+      },
+      {
+        "file": "step_05_dislocation_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "dislocation_type",
+            "x_angstrom",
+            "y_angstrom",
+            "migration_direction",
+            "barrier_eV"
+          ]
+        },
+        "description": "Two-dimensional maps of local migration barriers around dislocations."
+      },
+      {
+        "file": "step_06_lambda_radial.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "dislocation_type",
+            "radius_angstrom",
+            "halfspace",
+            "temperature_K",
+            "lambda"
+          ]
+        },
+        "description": "Angle-averaged migration-rate ratios lambda(r) for each dislocation half-space and temperature."
+      }
+    ],
+    "notes": "Phonon frequency factors for kMC are taken as given constants (30 THz for TET->HEX, 18 THz for HEX->TET) from the paper's analysis; their separate recomputation is not required. All steps rely on publicly available codes and standard pseudopotentials. The agent is expected to use external compute resources for the DFT+NEB simulations."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for formation energies, migration barriers, diffusion coefficients, polynomial evaluation targets, spatial barrier samples, lambda samples",
+      "source_provenance": "paper Figs. 3,6,7,9,10,11 and explicit numeric values in text",
+      "generation_method": "approximate values based on paper's figure curves and textual description; spot-check subset used for scoring",
+      "why_not_fabricated": "Values are extracted from the paper's reported data; they serve as a reference for reproducible computation rather than arbitrary fabrication."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_formation_energies.csv",
+      "weight": 0.1,
+      "kind": "result_compare",
+      "tolerance_abs": 0.1,
+      "gold": [
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "defect_config": "TET",
+          "formation_energy_eV": 0.0
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "defect_config": "HEX",
+          "formation_energy_eV": 0.56
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "defect_config": "SUB",
+          "formation_energy_eV": 0.76
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "defect_config": "TRA",
+          "formation_energy_eV": 0.7
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.05,
+          "defect_config": "TET",
+          "formation_energy_eV": 0.0
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.05,
+          "defect_config": "HEX",
+          "formation_energy_eV": -0.05
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": -0.05,
+          "defect_config": "HEX",
+          "formation_energy_eV": 1.2
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": 0.0,
+          "defect_config": "TET",
+          "formation_energy_eV": 0.0
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": 0.0,
+          "defect_config": "HEX",
+          "formation_energy_eV": 0.56
+        },
+        {
+          "strain_type": "shear_010_001",
+          "strain_value": 0.05,
+          "defect_config": "HEX",
+          "formation_energy_eV": 0.35
+        }
+      ]
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_migration_barriers_uniform.csv",
+      "weight": 0.1,
+      "kind": "result_compare",
+      "tolerance_abs": 0.05,
+      "gold": [
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.74,
+          "barrier_HEX_TET_eV": 0.19
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.0,
+          "migration_direction": 1,
+          "barrier_TET_HEX_eV": 0.74,
+          "barrier_HEX_TET_eV": 0.19
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.05,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.3,
+          "barrier_HEX_TET_eV": 0.25
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": -0.05,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 1.2,
+          "barrier_HEX_TET_eV": 0.02
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": 0.0,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.74,
+          "barrier_HEX_TET_eV": 0.19
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": 0.05,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.62,
+          "barrier_HEX_TET_eV": 0.15
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": -0.05,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.86,
+          "barrier_HEX_TET_eV": 0.1
+        },
+        {
+          "strain_type": "shear_010_001",
+          "strain_value": 0.05,
+          "migration_direction": 0,
+          "barrier_TET_HEX_eV": 0.68,
+          "barrier_HEX_TET_eV": 0.12
+        }
+      ]
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_diffusion_coeffs.csv",
+      "weight": 0.1,
+      "kind": "result_compare",
+      "tolerance_relative": 0.2,
+      "gold": [
+        {
+          "strain_type": "hydrostatic",
+          "temperature_K": 100,
+          "D_over_Dbulk": 1.0
+        },
+        {
+          "strain_type": "hydrostatic",
+          "temperature_K": 300,
+          "D_over_Dbulk": 1.0
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": 0.05,
+          "temperature_K": 300,
+          "D_over_Dbulk": 10000000.0
+        },
+        {
+          "strain_type": "hydrostatic",
+          "strain_value": -0.05,
+          "temperature_K": 300,
+          "D_over_Dbulk": 1e-08
+        },
+        {
+          "strain_type": "uniaxial_100",
+          "strain_value": 0.05,
+          "temperature_K": 300,
+          "D_over_Dbulk": 5.0
+        },
+        {
+          "strain_type": "shear_010_001",
+          "strain_value": 0.05,
+          "temperature_K": 300,
+          "D_over_Dbulk": 2.0
+        }
+      ]
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_barrier_fits.json",
+      "weight": 0.2,
+      "kind": "polynomial_eval",
+      "tolerance_abs": 0.02,
+      "eval_points": [
+        {
+          "strain_component": "eps_x",
+          "epsilon": -0.02,
+          "expected_e_s": [
+            1.12,
+            1.12,
+            1.12,
+            1.12
+          ]
+        },
+        {
+          "strain_component": "eps_x",
+          "epsilon": 0.0,
+          "expected_e_s": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "strain_component": "eps_x",
+          "epsilon": 0.02,
+          "expected_e_s": [
+            0.88,
+            0.88,
+            0.88,
+            0.88
+          ]
+        },
+        {
+          "strain_component": "eps_y",
+          "epsilon": -0.02,
+          "expected_e_s": [
+            1.09,
+            1.09,
+            1.09,
+            1.09
+          ]
+        },
+        {
+          "strain_component": "tau_xy",
+          "epsilon": -0.02,
+          "expected_e_s": [
+            1.04,
+            1.03,
+            1.03,
+            1.03
+          ]
+        },
+        {
+          "strain_component": "tau_xy",
+          "epsilon": 0.02,
+          "expected_e_s": [
+            0.96,
+            0.97,
+            0.97,
+            0.97
+          ]
+        },
+        {
+          "strain_component": "tau_xz",
+          "epsilon": 0.0,
+          "expected_e_s": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_dislocation_barriers.csv",
+      "weight": 0.35,
+      "kind": "spatial_sample",
+      "tolerance_abs": 0.05,
+      "samples": [
+        {
+          "dislocation_type": "screw",
+          "x": 0,
+          "y": 10,
+          "migration_direction": 0,
+          "barrier_eV": 0.72
+        },
+        {
+          "dislocation_type": "screw",
+          "x": 10,
+          "y": 0,
+          "migration_direction": 1,
+          "barrier_eV": 0.73
+        },
+        {
+          "dislocation_type": "screw",
+          "x": 0,
+          "y": 40,
+          "migration_direction": 0,
+          "barrier_eV": 0.74
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "x": 0,
+          "y": -15,
+          "migration_direction": 0,
+          "barrier_eV": 0.6
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "x": 0,
+          "y": 15,
+          "migration_direction": 0,
+          "barrier_eV": 0.88
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "x": 0,
+          "y": -50,
+          "migration_direction": 0,
+          "barrier_eV": 0.68
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "x": 0,
+          "y": 50,
+          "migration_direction": 0,
+          "barrier_eV": 0.79
+        },
+        {
+          "dislocation_type": "90°partial",
+          "x": 0,
+          "y": -10,
+          "migration_direction": 0,
+          "barrier_eV": 0.64
+        },
+        {
+          "dislocation_type": "90°partial",
+          "x": 0,
+          "y": 10,
+          "migration_direction": 0,
+          "barrier_eV": 0.82
+        },
+        {
+          "dislocation_type": "30°partial",
+          "x": 0,
+          "y": -10,
+          "migration_direction": 0,
+          "barrier_eV": 0.67
+        }
+      ]
+    },
+    {
+      "id": "step_06",
+      "output_file": "step_06_lambda_radial.csv",
+      "weight": 0.15,
+      "kind": "lambda_compare",
+      "tolerance_abs": 0.12,
+      "samples": [
+        {
+          "dislocation_type": "screw",
+          "radius_angstrom": 10,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.6
+        },
+        {
+          "dislocation_type": "screw",
+          "radius_angstrom": 10,
+          "halfspace": "b",
+          "temperature_K": 100,
+          "lambda": 1.6
+        },
+        {
+          "dislocation_type": "screw",
+          "radius_angstrom": 20,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.15
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "radius_angstrom": 5,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 2.5
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "radius_angstrom": 5,
+          "halfspace": "b",
+          "temperature_K": 100,
+          "lambda": 3.2
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "radius_angstrom": 15,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.35
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "radius_angstrom": 15,
+          "halfspace": "a",
+          "temperature_K": 300,
+          "lambda": 1.35
+        },
+        {
+          "dislocation_type": "60°mixed",
+          "radius_angstrom": 50,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.05
+        },
+        {
+          "dislocation_type": "90°partial",
+          "radius_angstrom": 5,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.8
+        },
+        {
+          "dislocation_type": "90°partial",
+          "radius_angstrom": 5,
+          "halfspace": "b",
+          "temperature_K": 100,
+          "lambda": 2.2
+        },
+        {
+          "dislocation_type": "30°partial",
+          "radius_angstrom": 5,
+          "halfspace": "a",
+          "temperature_K": 100,
+          "lambda": 1.7
+        }
+      ]
+    }
+  ]
+}

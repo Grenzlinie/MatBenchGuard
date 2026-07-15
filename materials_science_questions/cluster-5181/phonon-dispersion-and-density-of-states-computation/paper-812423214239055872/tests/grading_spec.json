@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Load-bearing RBM step reconstitutes the scaling law coefficient A from submitted data (T1). The other two steps are deterministic fixed frequencies compared to paper-derived references with tolerance (T0).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_hBN_zone_center.json": "exact_match",
+    "RBM_frequencies.csv": "reference_match",
+    "tube_10_10_raman_active.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for bulk h-BN zone-center frequencies and (10,10) tube Raman-active frequencies.",
+      "source_provenance": "Bulk frequencies from paper Table II; tube frequencies from the reference implementation (values consistent with paper’s Raman spectra for the (10,10) tube).",
+      "generation_method": "Manually transcribed from the paper and cross-checked with reference solve.sh output.",
+      "why_not_fabricated": "These are the paper's published and computed results, serving as the authoritative reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_hBN_zone_center.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "E1u_TO",
+            "E1u_LO",
+            "E2g_symmetric_inplane",
+            "A2u_TO",
+            "A2u_LO",
+            "B1g_anti_outplane",
+            "B1g_sym_inphase_outplane",
+            "E2g_sym_inphase_inplane"
+          ],
+          "units": {
+            "E1u_TO": "cm⁻¹",
+            "E1u_LO": "cm⁻¹",
+            "E2g_symmetric_inplane": "cm⁻¹",
+            "A2u_TO": "cm⁻¹",
+            "A2u_LO": "cm⁻¹",
+            "B1g_anti_outplane": "cm⁻¹",
+            "B1g_sym_inphase_outplane": "cm⁻¹",
+            "E2g_sym_inphase_inplane": "cm⁻¹"
+          }
+        },
+        "description": "Computed zone‑centre optical phonon frequencies of bulk h‑BN. Each frequency is compared to a hidden gold value within an absolute tolerance."
+      },
+      {
+        "file": "RBM_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radius_angstrom",
+            "rbm_freq_cm⁻¹"
+          ],
+          "units": {
+            "radius_angstrom": "Å",
+            "rbm_freq_cm⁻¹": "cm⁻¹"
+          }
+        },
+        "description": "RBM frequencies for a range of BNNT radii. The checker fits ω = A/R and compares A to the hidden reference coefficient."
+      },
+      {
+        "file": "tube_10_10_raman_active.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "E2g_high",
+            "E1_high"
+          ],
+          "units": {
+            "E2g_high": "cm⁻¹",
+            "E1_high": "cm⁻¹"
+          }
+        },
+        "description": "Raman‑active zone‑centre frequencies of the (10,10) BNNT. Only the two most prominent G‑band modes are required; each is compared to hidden gold within an absolute tolerance."
+      }
+    ],
+    "notes": "The fitting of VSM parameters to experimental h‑BN data is omitted because the scored targets use the already‑published Table I parameters. The nonresonant Raman intensity calculation is omitted as its bond‑polarizability parameters are not fully specified."
+  },
+  "steps": [
+    {
+      "id": "bulk_freq_check",
+      "output_file": "bulk_hBN_zone_center.json",
+      "kind": "exact_match_set",
+      "weight": 0.3,
+      "tolerance_abs": 5,
+      "gold_values": {
+        "E1u_TO": 1367,
+        "E1u_LO": 1612,
+        "E2g_symmetric_inplane": 1366,
+        "A2u_TO": 758,
+        "A2u_LO": 819,
+        "B1g_anti_outplane": 819,
+        "B1g_sym_inphase_outplane": 100,
+        "E2g_sym_inphase_inplane": 43
+      }
+    },
+    {
+      "id": "rbm_coeff_check",
+      "output_file": "RBM_frequencies.csv",
+      "kind": "fit_slope",
+      "weight": 0.4,
+      "target_A": 851,
+      "tolerance_A": 20,
+      "radius_col": "radius_angstrom",
+      "freq_col": "rbm_freq_cm⁻¹"
+    },
+    {
+      "id": "tube_raman_check",
+      "output_file": "tube_10_10_raman_active.json",
+      "kind": "exact_match_set",
+      "weight": 0.3,
+      "tolerance_abs": 10,
+      "gold_values": {
+        "E2g_high": 1457,
+        "E1_high": 1419
+      }
+    }
+  ]
+}

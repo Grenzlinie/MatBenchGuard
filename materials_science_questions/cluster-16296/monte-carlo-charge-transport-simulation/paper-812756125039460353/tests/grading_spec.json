@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the full Boltzmann solver in the verifier is infeasible; instead we evaluate structural properties of the computed curves (peak existence/magnitude, monotonic trends, asymptotic limits) against tolerances sourced from the paper's reported figures and textual descriptions.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide hidden reference integer sets and tolerances for structural checks; no separate data file is needed because all gold is encoded within the scorer logic.",
+      "source_provenance": "Derived from the paper's Fig. 2, Fig. 3, and the analytic forms used in the reference solution (which themselves approximate the paper's reported curves).",
+      "generation_method": "Analytic functions from the paper's reported parameters (A=0.141 for gamma=5, peak ~1.26; r_H ~2.0 at gamma=0.5; etc.) translated into tolerance bounds.",
+      "why_not_fabricated": "The bounds are drawn directly from the paper's own statements and figure values: the maximum of μ_eff/μ_1 for γ=5 ≈ 1.26, the Hall factor at low temperature ≈ 2.0, and the asymptotic trends as r→∞ and γ→∞. These are the paper's claimed outcomes."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu_eff_mu1_vs_r": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "r": {
+                    "type": "number"
+                  },
+                  "gamma": {
+                    "type": "number"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "mu2_mu1_vs_r": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "r": {
+                    "type": "number"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "rH_vs_gamma": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "gamma": {
+                    "type": "number"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Curves of effective drift mobility ratio, light-to-heavy hole mobility ratio, and Hall factor, computed from the two-band Boltzmann solver."
+      }
+    ],
+    "notes": "The checker audits structural properties of the submitted curves (peak existence, monotonicity, asymptotic limits) against hidden tolerances derived from the paper's reported results; it does not recompute a numeric metric from the artifact."
+  },
+  "steps": [
+    {
+      "id": "mu_eff_mu1_structural",
+      "output_file": "results.json",
+      "weight": 0.5,
+      "target_policy": "structural_audit",
+      "description": "Structural audit of μ_eff/μ_1 vs r for γ=2,3,4,5: check near-1 start, existence of a peak, monotonic peak ordering with γ, and asymptotic return to 1."
+    },
+    {
+      "id": "mu2_mu1_structural",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "description": "Structural audit of μ_2/μ_1 vs r for γ=5: check near-1 start, monotonic decrease, and asymptotic approach to 1."
+    },
+    {
+      "id": "rH_vs_gamma_structural",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "description": "Structural audit of r_H vs γ for r=7.35: check approximate magnitude at low γ, monotonic decrease, and near-1 limit at high γ."
+    }
+  ]
+}

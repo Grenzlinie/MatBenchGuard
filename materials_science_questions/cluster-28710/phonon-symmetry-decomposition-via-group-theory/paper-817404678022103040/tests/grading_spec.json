@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute transmission inhibition ratios from the raw CSV: locate frequency nearest to ω1=0.863 and ω2=0.978 and verify center/side ratios exceed 5.",
+  "pass_threshold": 0.8,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transmission_spectra.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "transmission_center",
+            "transmission_side"
+          ],
+          "units": {
+            "frequency": "omega*a/(2*pi*c)",
+            "transmission_center": "dimensionless",
+            "transmission_side": "dimensionless"
+          }
+        },
+        "description": "Normalized transmission spectra in center and side beam directions as a function of frequency around the Dirac cone."
+      }
+    ],
+    "notes": "The checker will recompute inhibition ratios from this CSV at specific hidden frequencies and check that the center-to-side ratio and side-to-center ratio each exceed an order-of-magnitude threshold."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "row_count_check",
+      "output_file": "transmission_spectra.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify CSV has at least 100 rows covering [0.85,1.0]."
+    },
+    {
+      "id": "transmission_inhibition_ratios",
+      "output_file": "transmission_spectra.csv",
+      "kind": "recompute_metric",
+      "weight": 0.95,
+      "target_frequencies": [
+        0.863,
+        0.978
+      ],
+      "frequency_tolerance": 0.01,
+      "ratio_thresholds": {
+        "center_to_side_at_lower": 5.0,
+        "side_to_center_at_upper": 5.0
+      },
+      "description": "At ω1=0.863 (lower cone) require transmission_center/transmission_side ≥ 5. At ω2=0.978 (upper cone) require transmission_side/transmission_center ≥ 5. Both conditions must hold for full credit; one hold yields 0.5."
+    }
+  ]
+}

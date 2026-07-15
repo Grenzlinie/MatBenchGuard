@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Electronic structure calculation",
+    "role": "process",
+    "action": "Implement a one-dimensional self-consistent Schrödinger-Poisson solver for the vertical design THz QCL (layer sequence: 48/96/20/74/42/161 Å, Al0.15Ga0.85As barriers in bold, GaAs wells; doping 3.0×10¹⁰ cm⁻² in the depopulation well). Apply a bias of 60 mV per module. Compute the lowest four subband energies and wavefunctions.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Solve the coupled Schrödinger and Poisson equations to obtain the quantized subband states of the active region under applied bias. Use standard effective-mass approximation and appropriate Dirichlet/periodic boundary conditions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Scattering rate calculation",
+    "role": "process",
+    "action": "Using the subband wavefunctions and energies, compute the electron-LO-phonon scattering rates (Frohlich interaction) and electron-electron scattering rates for transitions between all subbands. For electron-electron scattering, implement the maximum-scattering-probability approximation where the rate Γ_{im,max}^{ee}(k₁) = (m* N_sub) / (2 ħ³ A) M_{im,max}² Σ_{j,k₂} f_j(k₂). Include screening and temperature-dependent occupation factors. For the electron-LO rates, use the appropriate phonon occupation numbers at the given lattice temperature. Output a data structure with all scattering matrices for subsequent MC simulation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute the scattering rates from Fermi's golden rule, with temperature via phonon occupation, and screened electron-electron interactions using the maximum-scattering-probability approximation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Monte Carlo simulation of carrier dynamics",
+    "role": "process",
+    "action": "Implement an ensemble Monte Carlo simulation for the 4-subband system. Initialize 5000 superparticles in subband 1 according to the doping density. Use the previously computed scattering rates and an applied electric field of 60 mV per module (converted to a force). For electron-electron scattering, use the self-consistent scattering method (maximum scattering probability). Simulate for a sufficient time to reach steady-state, recording subband populations and energy distributions. Use typical MC techniques (free flight, self-scattering).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Run the ensemble MC simulation to obtain the steady-state distribution of carriers among subbands under bias.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Extraction of scattering rates and lifetimes",
+    "role": "scored",
+    "action": "From the steady-state Monte Carlo outputs, calculate (i) the intersubband scattering rate from subband 4 to subband 3, (τ₄₃)⁻¹; (ii) the intersubband scattering rate from subband 4 to subband 2, (τ₄₂)⁻¹; (iii) the upper laser level lifetime τ₄; (iv) the lower laser level lifetime τ₃; and (v) the fraction of the 4→3 transition mediated by electron-LO-phonon scattering. Report the results for lattice temperatures of 25 K, 100 K, and 200 K. Write the data to `/app/outputs/scattering_rates_lifetimes.csv`.",
+    "output_file": "scattering_rates_lifetimes.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Post-process the MC statistics to obtain the key transport quantities that demonstrate the temperature-dependent relaxation channels and the dominance of e-LO phonon scattering.",
+    "output_schema": "CSV with header: T_lattice,tau43_inv,tau42_inv,tau4,tau3,fraction_eLO_43. All columns numeric. Units: T_lattice (K), tau43_inv (ps⁻¹), tau42_inv (ps⁻¹), tau4 (ps), tau3 (ps), fraction_eLO_43 (dimensionless, range 0–1)."
+  }
+]

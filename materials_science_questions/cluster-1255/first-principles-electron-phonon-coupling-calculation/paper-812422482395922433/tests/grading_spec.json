@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1/T2 infeasible because the verifier cannot re‑run DFT/DFPT or the Eliashberg solver; we score structural relations (ordering, μ*‑trend) together with tolerance‑based comparison of the reported λ and Tc to the paper gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lambda_values.json": "reference_match",
+    "tc_values.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper‑reported λ and Tc",
+      "source_provenance": "paper text: λ=0.59 (MgB2), 0.43 (NbB2); Tc at μ*=0.1 ~23K (MgB2), ~4K (NbB2) (abstract + Fig. 3).",
+      "generation_method": "direct extraction from paper results",
+      "why_not_fabricated": "exact published numbers used as hidden references; tolerances absorb implementation spread while preserving the physical trend."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lambda_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "material",
+              "lambda"
+            ],
+            "properties": {
+              "material": {
+                "type": "string",
+                "enum": [
+                  "MgB2",
+                  "NbB2"
+                ]
+              },
+              "lambda": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Average electron-phonon coupling constant λ for MgB2 and NbB2. Each entry must have material and the λ value."
+      },
+      {
+        "file": "tc_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "material",
+              "mu_star",
+              "Tc"
+            ],
+            "properties": {
+              "material": {
+                "type": "string",
+                "enum": [
+                  "MgB2",
+                  "NbB2"
+                ]
+              },
+              "mu_star": {
+                "type": "number"
+              },
+              "Tc": {
+                "type": "number",
+                "units": "K"
+              }
+            }
+          }
+        },
+        "description": "Superconducting transition temperature Tc for MgB2 and NbB2 at one or more μ* values. Each entry must have material, μ*, and Tc in Kelvin."
+      }
+    ],
+    "notes": "The checker compares λ and Tc to paper-reported values with appropriate tolerances and also verifies ordering (MgB2 λ > NbB2 λ, MgB2 Tc > NbB2 Tc)."
+  },
+  "steps": [
+    {
+      "id": "check_lambda",
+      "output_file": "lambda_values.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "description": "Verify λ values for both materials match paper within tolerance and that MgB2 λ > NbB2 λ.",
+      "reference_values": {
+        "MgB2": 0.59,
+        "NbB2": 0.43
+      },
+      "tolerance_abs": 0.05,
+      "ordering": "MgB2 > NbB2"
+    },
+    {
+      "id": "check_tc",
+      "output_file": "tc_values.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "description": "Verify Tc at μ*=0.1 for both materials within tolerance, ordering MgB2 > NbB2, and monotonic decrease of Tc with μ*.",
+      "reference_values": {
+        "MgB2": 23.0,
+        "NbB2": 4.0
+      },
+      "tolerance_abs": 3.0,
+      "ordering": "MgB2 > NbB2",
+      "mu_star_trend": "decreasing"
+    }
+  ]
+}

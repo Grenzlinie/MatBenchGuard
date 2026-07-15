@@ -1,0 +1,47 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The orientation angle cannot be recomputed from raw artifacts because the simulation is the agent's job; compare reported angle to hidden threshold derived from the paper's perpendicular-alignment claim.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "orientation.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden threshold for average_orientation",
+      "source_provenance": "paper: perpendicular orientation conclusion (Fig. 3, conclusion)",
+      "generation_method": "Set threshold 80° based on the paper's observed perpendicular orientation; angles >= 80° indicate perpendicular alignment.",
+      "why_not_fabricated": "This threshold reflects the paper's physical result; the reference solution writes 90°."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "orientation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "average_orientation": "float (degrees)"
+          }
+        },
+        "description": "Average orientation angle of the simulated cylindrical domains relative to the cylinder long axis. The checker compares this to a hidden threshold based on the expected physical behavior."
+      }
+    ],
+    "notes": "The geometry parameters (cylinder dimensions, cross-section shape, mesh resolution) and numerical solver settings are left to the agent's discretion; the result must reflect the physics captured by the given free-energy parameters and periodic boundary conditions."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "orientation.json",
+      "weight": 1.0,
+      "kind": "result_level_compare",
+      "metric_field": "average_orientation",
+      "threshold": 80.0,
+      "comparison": ">= threshold gives full reward, else proportional reward (max(0, value/threshold))",
+      "description": "Score reported average_orientation against hidden threshold"
+    }
+  ]
+}

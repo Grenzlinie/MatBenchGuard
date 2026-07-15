@@ -1,0 +1,181 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the headline quantities (phonon modes, phase energies, polarization) requires re‑running full DFT+Phonopy calculations, which is infeasible inside the verifier sandbox. Therefore structural checks on mode symmetries and energy ordering, plus a result‑level compare with generous tolerance for the polarization, are used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "unstable_modes.json": "structural_audit",
+    "phase_energies.json": "structural_audit",
+    "polarization_results.txt": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "unstable_modes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "point",
+              "symmetry",
+              "frequency"
+            ],
+            "properties": {
+              "point": {
+                "type": "string"
+              },
+              "symmetry": {
+                "type": "string"
+              },
+              "frequency": {
+                "type": "number",
+                "description": "Positive magnitude of imaginary frequency in cm⁻¹"
+              }
+            }
+          }
+        },
+        "description": "List of unstable phonon modes: each entry specifies the high-symmetry Brillouin‑zone point, the irreducible representation (irrep) label, and the imaginary‑frequency magnitude. The checker verifies structural presence of expected irreps at X and M within a plausible frequency range."
+      },
+      {
+        "file": "phase_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "P4/mmm",
+            "P4/mbm",
+            "Pmma",
+            "Pmc2_1"
+          ],
+          "properties": {
+            "P4/mmm": {
+              "type": "number"
+            },
+            "P4/mbm": {
+              "type": "number"
+            },
+            "Pmma": {
+              "type": "number"
+            },
+            "Pmc2_1": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "JSON object with the relative total energies (meV per formula unit) of the condensed phases, referenced to P4/mmm (which must be 0). The checker ensures Pmc2_1 has the lowest energy and that the ordering of energies is physically plausible."
+      },
+      {
+        "file": "polarization_results.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "pattern": "each line must be of the form: strain_<value>: <number> μC/cm²"
+        },
+        "description": "Three-line text file reporting the computed spontaneous polarization at the three required strain levels. The checker compares the reported values to hidden paper‑reference values (with a generous tolerance) and verifies the positive strain‑polarization trend."
+      }
+    ],
+    "notes": "All DFT‑based computational artifacts are expected to be obtained using the PBEsol functional and the SSSP pseudopotential library as listed in the resources. The absolute values may differ slightly from the original VASP results, but qualitative trends (unstable modes, energy ordering, polarization enhancement under tensile strain) must be preserved."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold polarization values for 0% and +3% strain",
+      "source_provenance": "Paper text: 'The computed polarization ... shows a spontaneous value of P = 0.48 μC/cm²' and 'the polarization at +3% of strain increases to 0.57 μC/cm²'.",
+      "generation_method": "Copied directly from the paper.",
+      "why_not_fabricated": "These values are explicitly stated in the paper's results section under the same conditions as the task's scored artifact."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Unstable mode symmetry and frequency ranges",
+      "source_provenance": "Paper text describing the unstable modes and their frequencies in the phonon-dispersion analysis (X5- ~40 cm⁻¹, M2+ ~40 cm⁻¹, M5- ~45 cm⁻¹, M4- ~37 cm⁻¹).",
+      "generation_method": "Extracted from the paper's eigendisplacement description.",
+      "why_not_fabricated": "These are the specific modes and approximate frequencies the paper identifies as the origin of the structural instabilities."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Phase energy ordering and reference values (Table 1)",
+      "source_provenance": "Table 1 of the paper: ΔE values of P4/mbm (−102.3 meV/f.u.), Pmma (−186.3 meV/f.u.), Pmc2_1 (−224.0 meV/f.u.) relative to P4/mmm.",
+      "generation_method": "Copied from Table 1.",
+      "why_not_fabricated": "The table provides the exact total energies the paper computed, allowing a check of energy ordering and approximate magnitude."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_04_unstable_modes",
+      "output_file": "unstable_modes.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "required_symmetries": [
+        {
+          "point": "X",
+          "symmetry": "X5-",
+          "freq_range": [
+            30,
+            50
+          ]
+        },
+        {
+          "point": "M",
+          "symmetry": "M2+",
+          "freq_range": [
+            30,
+            55
+          ]
+        },
+        {
+          "point": "M",
+          "symmetry": "M5-",
+          "freq_range": [
+            30,
+            55
+          ]
+        },
+        {
+          "point": "M",
+          "symmetry": "M4-",
+          "freq_range": [
+            30,
+            55
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step_06_phase_energies",
+      "output_file": "phase_energies.json",
+      "kind": "structural",
+      "weight": 0.3,
+      "required_keys": [
+        "P4/mmm",
+        "P4/mbm",
+        "Pmma",
+        "Pmc2_1"
+      ],
+      "energy_order": [
+        "Pmc2_1",
+        "Pmma",
+        "P4/mbm"
+      ],
+      "max_energy": 0.0
+    },
+    {
+      "id": "step_09_report_polarization",
+      "output_file": "polarization_results.txt",
+      "kind": "result_compare",
+      "weight": 0.5,
+      "targets": {
+        "0": 0.48,
+        "+3": 0.57
+      },
+      "tolerance_rel": 0.5,
+      "require_trend": true
+    }
+  ]
+}

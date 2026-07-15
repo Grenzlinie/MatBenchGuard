@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 is infeasible because the transition moments depend on the external MINDO/3 calculation whose raw output is not available. The checker instead performs an internal self‑consistency recompute and structural trend checks (enhancement / suppression) using only the agent's reported values, adhering to the relations established in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_transition_moments.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "None needed; all checks use internal structure of the agent's artifact. The enhancement/suppression conditions and R‑value selection are derived from the paper's Table 2 and statements, documented here for provenance.",
+      "source_provenance": "Paper Table 2 and descriptive text (model I enhancement at distances R=4.4–3.0 Å relative to binary at R=3.8 Å; model II suppression at corresponding R).",
+      "generation_method": "Direct transcription of the paper's findings; no synthetic data created.",
+      "why_not_fabricated": "The checks verify structural consistency, not absolute values; they are faithful to the paper's qualitative claims."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_transition_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "systems"
+          ],
+          "properties": {
+            "systems": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "R_values"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "O2+H2",
+                      "O2+C2H4",
+                      "O2+C2H4+H2_model_I",
+                      "O2+C2H4+H2_model_II"
+                    ]
+                  },
+                  "R_values": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "R"
+                      ],
+                      "properties": {
+                        "R": {
+                          "type": "number",
+                          "unit": "angstrom"
+                        },
+                        "M_ba": {
+                          "type": "number",
+                          "unit": "10^-4 eÅ"
+                        },
+                        "M_aX": {
+                          "type": "number",
+                          "unit": "10^-4 eÅ"
+                        },
+                        "M_ba_SCF": {
+                          "type": "number",
+                          "unit": "10^-4 eÅ"
+                        },
+                        "M_ba_CI": {
+                          "type": "number",
+                          "unit": "10^-4 eÅ"
+                        },
+                        "M_ba_tot": {
+                          "type": "number",
+                          "unit": "10^-4 eÅ"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "This artifact contains the collision‑induced electric‑dipole transition moments for the b–a and a–X transitions of O₂ in binary (O₂+H₂, O₂+C₂H₄) and ternary (O₂+C₂H₄+H₂ model I and II) complexes. For ternary systems it also provides the SCF and CI components of the b–a moment. The checker recomputes self‑consistency (M_ba_tot vs M_ba_SCF+M_ba_CI) and verifies structural trends (enhancement for model I, suppression for model II) without requiring absolute‑value agreement with the reference literature."
+      }
+    ],
+    "notes": "Only transition moments (Table 2 equivalents) are scored; molecular‑orbital coefficient analysis (Table 1) is not required. The agent must use a MINDO/3 implementation with CI(SD) and spin‑orbit coupling, e.g. MOPAC."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "computed_transition_moments.json",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify JSON structure: all four systems present and each contains R_values entries."
+    },
+    {
+      "id": "self_consistency",
+      "output_file": "computed_transition_moments.json",
+      "kind": "recompute",
+      "weight": 0.15,
+      "description": "For every ternary data point, recompute |M_ba_tot - (M_ba_SCF + M_ba_CI)| / max(|M_ba_tot|, 1e-6) and require ≤ 1% tolerance. Score = fraction of entries that satisfy tolerance."
+    },
+    {
+      "id": "model_I_enhancement",
+      "output_file": "computed_transition_moments.json",
+      "kind": "trend",
+      "weight": 0.4,
+      "description": "At R=3.8, 3.4, 4.0 Å verify ternary M_ba_tot > 1.1 × max(binary M_ba of O₂+H₂ and O₂+C₂H₄ at the same R). Score = fraction of these three points that pass."
+    },
+    {
+      "id": "model_II_suppression",
+      "output_file": "computed_transition_moments.json",
+      "kind": "trend",
+      "weight": 0.4,
+      "description": "At R=3.6, 3.4, 3.0 Å verify ternary M_ba_tot < min(binary M_ba of O₂+H₂ and O₂+C₂H₄ at the same R). Score = fraction of these three points that pass."
+    }
+  ]
+}

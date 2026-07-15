@@ -1,0 +1,177 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Decomposition energy is recomputed from step‑01 formation energies; other quantities are compared to paper gold with appropriate tolerances. This is a hybrid T1/T0 design, lightweight and resistant to trivial fabrication.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_bulk_and_defect_formation.json": "exact_match",
+    "step_02_main_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for all scored fields",
+      "source_provenance": "paper (Table I, Table II, Fig. 5, text) and the reference oracle solve.sh that encodes the correct output of the reproduction workflow.",
+      "generation_method": "direct transcription of paper numbers; formation energies are self‑consistent with the decomposition energy; ZPL values compatible with Fig. 5 extrapolation.",
+      "why_not_fabricated": "All numbers are the actual paper‑stated values for the same quantity, same units, same conditions. No synthetic labels are needed; verification is against the published computational result."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_bulk_and_defect_formation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bulk_lattice_constant_A",
+            "bulk_band_gap_eV",
+            "defect_formation_energies",
+            "charge_transition_levels"
+          ],
+          "properties": {
+            "bulk_lattice_constant_A": {
+              "type": "number"
+            },
+            "bulk_band_gap_eV": {
+              "type": "number"
+            },
+            "defect_formation_energies": {
+              "type": "object",
+              "required": [
+                "(CN)_Si_0",
+                "C_Si_0",
+                "(NSi)_Si_0"
+              ],
+              "properties": {
+                "(CN)_Si_0": {
+                  "type": "number"
+                },
+                "C_Si_0": {
+                  "type": "number"
+                },
+                "(NSi)_Si_0": {
+                  "type": "number"
+                }
+              }
+            },
+            "charge_transition_levels": {
+              "type": "object",
+              "required": [
+                "(CN)_Si_0_to_minus1"
+              ],
+              "properties": {
+                "(CN)_Si_0_to_minus1": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Bulk Si lattice constant and HSE band gap, formation energies of (CN)Si^0, C_Si^0, and (NSi)Si^0, and the 0/-1 charge transition level of (CN)Si."
+      },
+      {
+        "file": "step_02_main_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "decomposition_energy_eV",
+            "migration_barrier_eV",
+            "dW_factor_percent",
+            "zpl_values_meV",
+            "extrapolated_zpl_meV",
+            "radiative_lifetime_us"
+          ],
+          "properties": {
+            "decomposition_energy_eV": {
+              "type": "number"
+            },
+            "migration_barrier_eV": {
+              "type": "number"
+            },
+            "dW_factor_percent": {
+              "type": "number"
+            },
+            "zpl_values_meV": {
+              "type": "object",
+              "required": [
+                "supercell_216",
+                "supercell_512",
+                "supercell_1000"
+              ],
+              "properties": {
+                "supercell_216": {
+                  "type": "number"
+                },
+                "supercell_512": {
+                  "type": "number"
+                },
+                "supercell_1000": {
+                  "type": "number"
+                }
+              }
+            },
+            "extrapolated_zpl_meV": {
+              "type": "number"
+            },
+            "radiative_lifetime_us": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Key reproduced properties: decomposition energy of (CN)Si^0, migration barrier of (NSi)Si^0, Debye-Waller factor, ZPL energies for three supercell sizes, the dilute-limit extrapolated ZPL, and the radiative lifetime."
+      }
+    ],
+    "notes": "All values are compared to paper-reported gold with appropriate tolerances (hidden). The checker reads both JSON files and compares each field; reward is the fraction of comparisons within tolerance. The solving agent must perform the full DFT workflow; guessing the values is possible but the task is designed to encourage honest reproduction."
+  },
+  "steps": [
+    {
+      "id": "step_01_bulk_and_defect_formation",
+      "output_file": "step_01_bulk_and_defect_formation.json",
+      "weight": 0.4,
+      "expected": {
+        "bulk_lattice_constant_A": 5.433,
+        "bulk_lattice_constant_A_tol": 0.02,
+        "bulk_band_gap_eV": 1.15,
+        "bulk_band_gap_eV_tol": 0.1,
+        "defect_formation_energies": {
+          "(CN)_Si_0": 3.0,
+          "C_Si_0": 2.0,
+          "(NSi)_Si_0": 1.61
+        },
+        "formation_energy_tol": 0.2,
+        "charge_transition_level": {
+          "(CN)_Si_0_to_minus1": 0.98
+        },
+        "transition_level_tol": 0.15
+      }
+    },
+    {
+      "id": "step_02_main_results",
+      "output_file": "step_02_main_results.json",
+      "weight": 0.6,
+      "expected": {
+        "decomposition_energy_eV": 0.61,
+        "decomposition_energy_tol": 0.1,
+        "migration_barrier_eV": 0.68,
+        "migration_barrier_tol": 0.1,
+        "dW_factor_percent": 5.0,
+        "dW_factor_tol": 1.0,
+        "zpl_values_meV": {
+          "supercell_216": 809.0,
+          "supercell_512": 820.0,
+          "supercell_1000": 824.0
+        },
+        "zpl_tol": 20.0,
+        "extrapolated_zpl_meV": 828.0,
+        "extrapolated_zpl_tol": 20.0,
+        "radiative_lifetime_us": 4.18,
+        "radiative_lifetime_tol": 0.5
+      }
+    }
+  ]
+}

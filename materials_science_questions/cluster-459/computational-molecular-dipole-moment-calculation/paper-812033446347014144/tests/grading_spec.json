@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes percentage error of agent-reported total and potential energies against paper exact reference values (Table 2 and Table 3).",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Exact total and potential energies from Tables 2 and 3 of the paper (Bates & Carson 1956), used as reference to assess agent's reported energies.",
+      "source_provenance": "Paper Table 2 and Table 3 exact values",
+      "generation_method": "Extracted from the paper's reported exact two-centre values for R=1.0,2.0,3.0 (total) and all R (potential).",
+      "why_not_fabricated": "These are the paper's exact values, not fabricated; the checker compares agent's computed approximate energies to these to verify the claimed accuracy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "total_energy"
+          ],
+          "units": {
+            "R": "a.u.",
+            "total_energy": "Hartree"
+          }
+        },
+        "description": "Total electronic energies (−E) of the 2pσ state for HeH²⁺ at R = 0.5, 1.0, 2.0, 3.0, 4.0, 5.0 a.u. computed with the type (vi) variational wavefunction. Scoring checks that percentage errors relative to exact reference values are ≤1% for R ≤ 2 a.u. and ≤3.5% for R = 3 a.u."
+      },
+      {
+        "file": "potential_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "potential_energy"
+          ],
+          "units": {
+            "R": "a.u.",
+            "potential_energy": "Hartree"
+          }
+        },
+        "description": "Potential energies (V) for the same internuclear distances, computed with the same trial wavefunction. Scoring uses a soft tolerance: percentage error ≤10% for all R."
+      }
+    ],
+    "notes": "Only the variational energies for the combined wavefunction (type vi) are scored. Exact dipole moments are not part of the reproduction target."
+  },
+  "steps": [
+    {
+      "id": "total_energy_check",
+      "output_file": "total_energies.csv",
+      "kind": "error_thresholds",
+      "weight": 0.7,
+      "gold": {
+        "1.0": {
+          "exact": 2.677,
+          "max_error_percent": 1.0
+        },
+        "2.0": {
+          "exact": 2.69,
+          "max_error_percent": 1.0
+        },
+        "3.0": {
+          "exact": 2.358,
+          "max_error_percent": 3.5
+        }
+      }
+    },
+    {
+      "id": "potential_energy_check",
+      "output_file": "potential_energies.csv",
+      "kind": "error_thresholds",
+      "weight": 0.3,
+      "gold": {
+        "0.5": {
+          "exact": 5.063,
+          "max_error_percent": 10.0
+        },
+        "1.0": {
+          "exact": 5.794,
+          "max_error_percent": 10.0
+        },
+        "2.0": {
+          "exact": 4.834,
+          "max_error_percent": 10.0
+        },
+        "3.0": {
+          "exact": 3.716,
+          "max_error_percent": 10.0
+        },
+        "4.0": {
+          "exact": 3.105,
+          "max_error_percent": 10.0
+        },
+        "5.0": {
+          "exact": 2.78,
+          "max_error_percent": 10.0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Agent submits only the final numeric scores; no raw DFT/MC trajectories or per‑atom outputs are provided, so full recompute from raw artifacts is not feasible. We compare the reported values to paper gold with appropriate tolerances (T0 result‑level comparison).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "magnetic_moment_muB": "number",
+            "mae_meV": "number"
+          },
+          "description": "Total magnetic moment per unit cell in μB and magnetocrystalline anisotropy energy in meV/f.u."
+        },
+        "description": "Scored artifact reporting magnetic moment and MAE."
+      },
+      {
+        "file": "exchange_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "J1_meV": "number",
+            "J2_meV": "number",
+            "J3_meV": "number"
+          },
+          "description": "Exchange coupling parameters J1, J2, J3 in meV."
+        },
+        "description": "Scored artifact reporting exchange parameters from Ising model fit."
+      },
+      {
+        "file": "curie_temperature.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating‑point number on the first line, representing the Curie temperature in Kelvin."
+        },
+        "description": "Scored artifact reporting Curie temperature from Monte Carlo simulation."
+      },
+      {
+        "file": "topological_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "soc_band_gap_meV": "number",
+            "chern_number": "integer"
+          },
+          "description": "SOC-induced band gap in meV and Chern number (integer)."
+        },
+        "description": "Scored artifact reporting band gap with SOC+U and Chern number."
+      }
+    ],
+    "notes": "All scored artifacts are compared to paper‑reported values within hidden tolerances (T0 result-level comparison). The exchange_parameters step is load‑bearing to ensure the Monte Carlo process is directly linked to the fitted parameters."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for all scored quantities (magnetic moment 2.0 μB, MAE 5.3 meV, J1=26.86 meV, J2=3.00 meV, J3=0.12 meV, Curie temperature 528 K, SOC band gap 68.6 meV, Chern number -1).",
+      "source_provenance": "Directly transcribed from the source paper (main text, Section III.B, III.C, III.E) and confirmed by the reference solve.sh.",
+      "generation_method": "The gold values are the paper’s own reported numbers; the reference oracle (solve.sh) writes exactly these numbers to verify the full‑reward path.",
+      "why_not_fabricated": "All quantities are taken verbatim from the published paper, with units identical to the output contract; no synthetic or guessed values are used."
+    }
+  ],
+  "steps": [
+    {
+      "id": "magnetic_properties",
+      "output_file": "magnetic_properties.json",
+      "weight": 0.15,
+      "kind": "numeric_compare",
+      "gold": {
+        "magnetic_moment_muB": 2.0,
+        "mae_meV": 5.3
+      },
+      "tolerances": {
+        "magnetic_moment_muB": 0.1,
+        "mae_meV": 5.0
+      },
+      "description": "Compare magnetic moment and MAE to paper gold."
+    },
+    {
+      "id": "exchange_parameters",
+      "output_file": "exchange_parameters.json",
+      "weight": 0.35,
+      "kind": "numeric_compare",
+      "gold": {
+        "J1_meV": 26.86,
+        "J2_meV": 3.0,
+        "J3_meV": 0.12
+      },
+      "tolerances": {
+        "J1_meV": 2.0,
+        "J2_meV": 2.0,
+        "J3_meV": 2.0
+      },
+      "description": "Compare exchange parameters to paper gold (load‑bearing)."
+    },
+    {
+      "id": "curie_temperature",
+      "output_file": "curie_temperature.txt",
+      "weight": 0.3,
+      "kind": "numeric_compare",
+      "gold": 528.0,
+      "tolerance": 15.0,
+      "description": "Compare Curie temperature to 528 K within 15 K."
+    },
+    {
+      "id": "topological_properties",
+      "output_file": "topological_properties.json",
+      "weight": 0.2,
+      "kind": "numeric_compare",
+      "gold": {
+        "soc_band_gap_meV": 68.6,
+        "chern_number": -1
+      },
+      "tolerances": {
+        "soc_band_gap_meV": 15.0,
+        "chern_number": 0
+      },
+      "description": "Compare SOC gap and Chern number to paper gold."
+    }
+  ]
+}

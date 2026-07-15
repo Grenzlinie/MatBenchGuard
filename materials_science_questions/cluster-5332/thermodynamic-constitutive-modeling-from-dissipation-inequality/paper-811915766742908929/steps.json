@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_vcr",
+    "title": "Compute critical dislocation velocity",
+    "role": "scored",
+    "action": "Using the material constants for a copperlike metal, compute the critical dislocation velocity v_cr from the formula v_cr = (sqrt(2) * c_s / N) * sqrt((1-ν)/(1-2ν)), where c_s = sqrt(G/ρ). Use the shear modulus G, Poisson ratio ν, mass density ρ, and N=4 from the constants. Write the result as a single float in m/s to the output file.",
+    "output_file": "critical_velocity.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Critical dislocation velocity for the copperlike metal.",
+    "output_schema": "A plain text file containing a single float value representing the critical dislocation velocity in m/s."
+  },
+  {
+    "id": "step_k_s",
+    "title": "Compute instantaneous storage fraction vs normalized velocity",
+    "role": "scored",
+    "action": "For each normalized dislocation velocity ratio r = v_d/v_cr in {0.0, 0.1, …, 0.9} and each time t ∈ {5×10⁻⁹ s, 10⁻⁸ s, 2×10⁻⁸ s}:\n  1. Compute the characteristic scale ζ_c = l_c − N v_d Δt_c, where v_d = r · v_cr, N=4, l_c=10⁻⁶ m, Δt_c=2×10⁻¹⁰ s.\n  2. Evaluate the path variable s = √24 · (−N v_d t) / ζ_c.\n  3. Compute the incompatibility field at the material point: ψ_inc = ψ_inc^s + ψ₁ sin(s) + ψ₂ cos(s), with ψ_inc^s = 10⁻³, ψ₁ = ψ₂ = 0.033 ψ_inc^s.\n  4. Compute the dynamic hardening:\n     θ_ψ = (G ρ_d^m ζ_c²) / (3 N²) · (c_s/v_cr)² · r² / (1 − r²),\n     where c_s = √(G/ρ), G=51 GPa, ρ=9830 kg/m³, ρ_d^m=10¹⁵ m⁻².\n  5. Compute the far-field plastic dissipation (constant):\n     U_0^f = (l_c² ρ_d^m σ₀ ψ_inc^s) / 12,\n     with σ₀ = 200 MPa.\n  6. Compute the plastic dissipation at the path position:\n     U_ζ^f = U_0^f − (ζ_c² ρ_d^m / 12) · (σ₀ ψ_inc + ½ θ_ψ ψ_inc²).\n  7. Calculate the instantaneous storage fraction: k_s = U_ζ^f / U_0^f.\n  Write one CSV row with columns vd_over_vcr (= r), t_ns (5, 10, or 20), and k_s. For r=0, set θ_ψ=0 and handle division (r²=0 gives denominator 1). Ensure all quantities are in SI units (Pa, m, s, etc.).",
+    "output_file": "k_s_vs_velocity.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Storage fraction k_s vs normalized dislocation velocity v_d/v_cr for three time instances, computed using the thermodynamic model with explicit formulas.",
+    "output_schema": "CSV with columns: vd_over_vcr (float), t_ns (5,10,20), k_s (float). One row per (vd_over_vcr, t)."
+  }
+]

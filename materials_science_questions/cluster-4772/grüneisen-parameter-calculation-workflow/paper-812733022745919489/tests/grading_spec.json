@@ -1,0 +1,162 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute structural and aggregate metrics from the agent's submitted CSV tables (alpha vs T, gamma_C vs freq) to verify the physical behaviour reported in the paper: negativity below 60 K, minimum near 40 K, zero crossing around 60 K, negative integrated gamma_C in the 0–100 cm⁻¹ region, and shape of the frequency dependence. The total gamma_CV is compared to a hidden paper-derived value.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference alpha_vs_T curve, binned gamma_C sign/min characteristics, and total gamma_CV gold value",
+      "source_provenance": "paper Fig.11b (ice Ih, 0.1 MPa, TIP4P/2005, quasiharmonic) and Fig.13a; total integrated gamma_CV inferred from Fig.13a area",
+      "generation_method": "digitised/estimated from the published figures and encoded in the reference solve.sh as the oracle answer",
+      "why_not_fabricated": "The values match the qualitative and quantitative description in the paper: negative alpha below 60 K, minimum ~40 K, negative gamma_C in 0–100 cm⁻¹, and a total around -0.04 J mol⁻¹ K⁻¹."
+    }
+  ],
+  "target_policies": {
+    "alpha_vs_T.csv": "metric_recompute",
+    "gamma_C_vs_freq.csv": "metric_recompute",
+    "total_gamma_CV.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "alpha_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "alpha"
+          ],
+          "units": {
+            "T": "K",
+            "alpha": "K⁻¹"
+          }
+        },
+        "description": "Thermal expansivity α(T) for ice Ih at 0.1 MPa, with T from 0 to 100 K in 5 K steps."
+      },
+      {
+        "file": "gamma_C_vs_freq.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "low_freq",
+            "high_freq",
+            "gamma_C"
+          ],
+          "units": {
+            "low_freq": "cm⁻¹",
+            "high_freq": "cm⁻¹",
+            "gamma_C": "J mol⁻¹ K⁻¹"
+          }
+        },
+        "description": "Frequency‑binned (10 cm⁻¹ bins, 0–200 cm⁻¹) average γ_j C_j at T=30 K for ice Ih."
+      },
+      {
+        "file": "total_gamma_CV.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "gamma_CV"
+          ],
+          "units": {
+            "T": "K",
+            "gamma_CV": "J mol⁻¹ K⁻¹"
+          }
+        },
+        "description": "Total γ C_V at T=30 K for ice Ih (single row)."
+      }
+    ],
+    "notes": "All outputs must be computed using the TIP4P/2005 water model within the quasiharmonic approximation, without fitting to the paper's reported values."
+  },
+  "steps": [
+    {
+      "id": "thermal_expansivity",
+      "output_file": "alpha_vs_T.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "hidden_reference_T": [
+        0,
+        5,
+        10,
+        15,
+        20,
+        25,
+        30,
+        35,
+        40,
+        45,
+        50,
+        55,
+        60,
+        65,
+        70,
+        75,
+        80,
+        85,
+        90,
+        95,
+        100
+      ],
+      "hidden_reference_alpha": [
+        0.0,
+        -5e-07,
+        -1e-06,
+        -1.5e-06,
+        -2e-06,
+        -2.5e-06,
+        -3e-06,
+        -3.5e-06,
+        -4e-06,
+        -3.5e-06,
+        -2.5e-06,
+        -1e-06,
+        5e-07,
+        2e-06,
+        4e-06,
+        6e-06,
+        8e-06,
+        1e-05,
+        1.2e-05,
+        1.35e-05,
+        1.5e-05
+      ],
+      "tolerance_mae": 1.5e-06,
+      "min_T_window": [
+        35,
+        45
+      ],
+      "zero_cross_neg_T": 55,
+      "zero_cross_pos_T": 60
+    },
+    {
+      "id": "gruneisen_freq",
+      "output_file": "gamma_C_vs_freq.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "negative_sum_low_bound": 0.0,
+      "most_negative_bin_window": [
+        40,
+        70
+      ],
+      "pos_high_bound": 100.0
+    },
+    {
+      "id": "total_gamma_cv",
+      "output_file": "total_gamma_CV.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "hidden_gold": -0.04,
+      "tolerance_rel": 0.2,
+      "unit": "J mol⁻¹ K⁻¹"
+    }
+  ]
+}

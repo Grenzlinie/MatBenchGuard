@@ -1,0 +1,209 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Compute-driven DFT workflow; checker cannot recompute DFT from raw inputs, so uses direct comparison against paper's reported values with tolerances, plus structural audits for phonon stability and band metallic character.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for lattice parameters, cohesive energy, elastic constants, Young's modulus, and criteria for spectral peaks, all from the paper.",
+      "source_provenance": "Paper text and tables: a=6.70 Å, b=3.80 Å; E_coh=-7.23 eV/atom; elastic constants C11=235.06, C22=225.76, C12=81.25, C66=55.89 N/m; Ymin=164.46, Ymax=205.83 N/m; phonon no imaginary modes; metallic band structure; optical peak xx ~0.8 eV, yy ~2.3 eV.",
+      "generation_method": "Extracted from paper sections 3 (structural), methodology, and results.",
+      "why_not_fabricated": "These are the actual reported values in the paper; no arbitrary fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_structure.cif",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "other",
+          "description": "CIF file containing lattice parameters a, b, c, alpha, beta, gamma and fractional atomic coordinates."
+        },
+        "description": "Relaxed crystal structure; lattice constants a and b are compared to paper values within tolerance."
+      },
+      {
+        "file": "cohesive_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": "eV/atom"
+        },
+        "description": "Cohesive energy per atom; compared to paper value with tolerance."
+      },
+      {
+        "file": "phonon_frequencies_gamma.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "List of phonon frequencies at Γ point, one per line, in THz."
+        },
+        "description": "Phonon frequencies at Γ; checked for absence of imaginary modes (no frequency below a small negative threshold)."
+      },
+      {
+        "file": "elastic_constants.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Space-separated C11, C22, C12, C66 in N/m."
+        },
+        "description": "Independent elastic constants of the monolayer."
+      },
+      {
+        "file": "young_modulus.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Space-separated Ymin and Ymax in N/m."
+        },
+        "description": "Minimum and maximum directional Young's modulus."
+      },
+      {
+        "file": "band_structure.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_index",
+            "kx",
+            "ky",
+            "kz",
+            "band1"
+          ],
+          "description": "Columns: k_index, kx, ky, kz, then one column per band (eigenvalues in eV). Fermi level at 0 eV."
+        },
+        "description": "Electronic band structure along high-symmetry path; checked for metallic character (bands crossing Fermi level)."
+      },
+      {
+        "file": "optical_absorption_xx.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "photon_energy",
+            "absorption"
+          ],
+          "description": "Two columns: photon energy (eV) and absorption coefficient (arb. units)."
+        },
+        "description": "Optical absorption spectrum for x-polarization; used to verify peak location and relative intensity trends."
+      },
+      {
+        "file": "optical_absorption_yy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "photon_energy",
+            "absorption"
+          ],
+          "description": "Two columns: photon energy (eV) and absorption coefficient (arb. units)."
+        },
+        "description": "Optical absorption spectrum for y-polarization; used to verify peak location and relative intensity trends."
+      }
+    ],
+    "notes": "All quantities are computed from open-source DFT with public pseudopotentials. The checker will compare lattice parameters, cohesive energy, elastic constants, and Young's modulus against hidden reference values with appropriate tolerances. Phonon stability, band metallic nature, and optical peak locations are checked structurally."
+  },
+  "steps": [
+    {
+      "id": "step_01_structure_relaxation",
+      "output_file": "relaxed_structure.cif",
+      "weight": 0.15,
+      "params": {
+        "a_target": 6.7,
+        "b_target": 3.8,
+        "tolerance": 0.05
+      }
+    },
+    {
+      "id": "step_03_cohesive_energy",
+      "output_file": "cohesive_energy.txt",
+      "weight": 0.25,
+      "params": {
+        "target": -7.23,
+        "tolerance": 0.15
+      }
+    },
+    {
+      "id": "step_04_phonon_gamma",
+      "output_file": "phonon_frequencies_gamma.txt",
+      "weight": 0.15,
+      "params": {
+        "imaginary_threshold": -0.5
+      }
+    },
+    {
+      "id": "step_05_elastic_constants",
+      "output_file": "elastic_constants.txt",
+      "weight": 0.1,
+      "params": {
+        "C11_target": 235.06,
+        "C22_target": 225.76,
+        "C12_target": 81.25,
+        "C66_target": 55.89,
+        "C11_tol": 35.26,
+        "C22_tol": 33.86,
+        "C12_tol": 12.19,
+        "C66_tol": 8.38
+      }
+    },
+    {
+      "id": "step_06_young_modulus",
+      "output_file": "young_modulus.txt",
+      "weight": 0.1,
+      "params": {
+        "Ymin_target": 164.46,
+        "Ymax_target": 205.83,
+        "Ymin_tol": 24.67,
+        "Ymax_tol": 30.87
+      }
+    },
+    {
+      "id": "step_07_band_structure",
+      "output_file": "band_structure.txt",
+      "weight": 0.15,
+      "params": {
+        "crossing_eps": 0.001
+      }
+    },
+    {
+      "id": "step_08a_optical_xx",
+      "output_file": "optical_absorption_xx.txt",
+      "weight": 0.05,
+      "params": {
+        "energy_range": [
+          0.6,
+          1.0
+        ],
+        "min_peak_absorption": 0.5
+      }
+    },
+    {
+      "id": "step_08b_optical_yy",
+      "output_file": "optical_absorption_yy.txt",
+      "weight": 0.05,
+      "params": {
+        "energy_range": [
+          2.0,
+          2.6
+        ],
+        "min_peak_absorption": 0.5
+      }
+    }
+  ]
+}

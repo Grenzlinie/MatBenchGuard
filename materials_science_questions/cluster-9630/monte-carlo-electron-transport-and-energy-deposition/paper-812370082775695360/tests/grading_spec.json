@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's main results are structural patterns (isotropization, double-peaked vs single-peaked emission profiles, relative ordering of peak rates) which must be verified with tolerance factors rather than exact numeric gold. No hidden gold values are available for emission rates; thus T1 recompute is infeasible. T3 structural audit is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "distribution_moments.csv": "structural_audit",
+    "emission_rates_realistic.csv": "structural_audit",
+    "emission_rates_cosh.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "distribution_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_us",
+            "f0",
+            "f1",
+            "f2",
+            "f3"
+          ]
+        },
+        "description": "The normalized Legendre moments of electron velocity distribution at 90 km altitude under constant electric field 50 V/m at specified times (0.5, 1.0, 1.5 µs). Verifies isotropization."
+      },
+      {
+        "file": "emission_rates_realistic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_us",
+            "case",
+            "emission_rate"
+          ]
+        },
+        "description": "Altitude-integrated optical emission rate in 1st positive N₂ band for realistic EMP waveforms. Verifies double-peaked temporal profiles and relative ordering of peak emission rates."
+      },
+      {
+        "file": "emission_rates_cosh.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_us",
+            "case",
+            "emission_rate"
+          ]
+        },
+        "description": "Altitude-integrated optical emission rate for cosh EMPs under equal-energy and equal-amplitude normalizations. Verifies monotonic dependence on pulse width and single-peaked profiles for shorter pulses."
+      }
+    ],
+    "notes": "Verification uses structural patterns (isotropization, double-peaked vs single-peaked, relative ordering within factor 2) rather than exact numeric match. No gold values are revealed here; the checker inspects shape and trends."
+  },
+  "steps": [
+    {
+      "id": "dist_moments",
+      "output_file": "distribution_moments.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "description": "Check isotropization: at t=1.5 us, f0/(f0+f1+f2+f3) > 0.8."
+    },
+    {
+      "id": "realistic_emissions",
+      "output_file": "emission_rates_realistic.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "description": "Verify double-peaked profiles for all T2 cases and peak ratio T2_2 vs T2_25 within factor 2."
+    },
+    {
+      "id": "cosh_emissions",
+      "output_file": "emission_rates_cosh.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "description": "For equal-energy: monotonic decrease of peak rate with T2; for equal-amplitude: peaks within factor 2; for T2=5,7,10: single-peaked time profiles."
+    }
+  ]
+}

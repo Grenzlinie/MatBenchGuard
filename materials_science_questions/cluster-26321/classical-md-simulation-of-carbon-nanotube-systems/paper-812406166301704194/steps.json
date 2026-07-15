@@ -1,0 +1,67 @@
+[
+  {
+    "id": "s1",
+    "title": "Prepare molecular structures",
+    "role": "process",
+    "action": "Obtain the three-dimensional structure of the SARS-CoV-2 RNA frameshift stimulation element (FSE) from the public PDB entry 6XRZ (or equivalent). Construct the 17 carbon nanoparticle (CNP) models: fullerenes (C20, C36, C60, C70, C240, C20@C60, C20@C60@C240), carbon nanotubes (SCNT (10,0), SCNT (6,6), SCNT (28,0), DCNT (10,0), DCNT (6,6), TCNT (10,0), NR (6,6), SCNT (16,0)@C60), and graphenes (MG, BG). Use the geometries and formulas described in the method.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate all required input coordinate files for the simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Run simulated annealing simulations",
+    "role": "process",
+    "action": "For each CNP, build the complex with the RNA fragment and run a classical simulated annealing simulation using the Universal Force Field (e.g., with LAMMPS) with the protocol: 200 annealing cycles, initial temperature 200 K, mid‑cycle temperature 300 K, 50 heating ramps per cycle, 100 dynamic steps per ramp, NVT ensemble with Nosé–Hoover thermostat, 1 fs timestep, cutoff 18.5 Å. After each cycle minimize the lowest energy configuration. Save the total potential energy, van der Waals energy, and electrostatic energy for the optimized complex, the isolated CNP, and the isolated RNA.",
+    "output_file": "",
+    "evidence": "simulation_logs.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Core molecular mechanics annealing procedure that produces the component energies needed for interaction energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Compute interaction energies",
+    "role": "scored",
+    "action": "From the simulation output energies, calculate the interaction energy for each CNP–RNA complex as E_int = E_complex – E_CNP – E_RNA, for the total potential, van der Waals, and electrostatic components. Write the results to a CSV file.",
+    "output_file": "interaction_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Interaction energies quantifying the binding strength between each carbon nanoparticle and the RNA fragment.",
+    "output_schema": "CSV with columns: CNP_name (string), E_int_total (float, kcal/mol), E_int_vdw (float, optional), E_int_elec (float, optional). 17 rows, one per CNP."
+  },
+  {
+    "id": "s4",
+    "title": "Compute molecular descriptors",
+    "role": "process",
+    "action": "Compute the five molecular descriptors (molecular weight MW, overall surface area OSA, volume Vol, specific surface area SSA, sum of degrees SDeg) for each CNP using cheminformatics tools (e.g., RDKit, Open Babel) and save the descriptor table as a CSV file.",
+    "output_file": "",
+    "evidence": "descriptors.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Provides the independent variables for the QSAR regression.",
+    "output_schema": ""
+  },
+  {
+    "id": "s5",
+    "title": "Develop nano‑QSAR models",
+    "role": "scored",
+    "action": "Using the total potential interaction energies from interaction_energies.csv and the descriptors from descriptors.csv, perform orthogonal partial least squares (OPLS) regression. Build three models: fullerenes only, CNTs+graphenes, and all CNPs. Output each model's regression equation, coefficients, and statistics R², RMSE, cumulative Q² (Q²_CUM) in a structured JSON file.",
+    "output_file": "qsar_models.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main machine‑learning result linking CNP structural descriptors to binding affinity.",
+    "output_schema": "JSON object with keys 'fullerenes', 'cnt_graphenes', 'all'. Each value is an object containing: 'equation' (string), 'R2' (float), 'RMSE' (float), 'Q2_CUM' (float), 'coefficients' (object with descriptor names as keys and numeric coefficient values)."
+  }
+]

@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ENSP = Se_eVnm / Sn_eVnm from the agent's raw stopping-power columns, then compares the recomputed ENSP to paper-reported gold values (Table 1) with tolerance ±0.02 and verifies monotonic ordering across the four compositions.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported ENSP gold values for four fluorapatite compositions and their expected monotonic ordering",
+      "source_provenance": "Paper Table 1 (DOI: 10.1039/c3ra42246a): ENSP column — Pb4Ca6(VO4)6F2: 0.68, Ca10(VO4)6F2: 0.73, Ca10(P0.5V0.5O4)6F2: 0.76, Ca10(PO4)6F2: 0.79. Ordering from Section 3.1 and Table 1: Ca10PO4 > Ca10P0.5V0.5O4 > Ca10VO4 > Pb4Ca6VO4.",
+      "generation_method": "Extracted verbatim from Table 1 of the paper.",
+      "why_not_fabricated": "These are the paper's own published SRIM-computed ENSP values, directly stated in Table 1 with full precision."
+    }
+  ],
+  "target_policies": {
+    "ensp_computed.csv": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ensp_computed.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "Se_eVnm",
+            "Sn_eVnm",
+            "ENSP"
+          ],
+          "units": {
+            "Se_eVnm": "eV/nm",
+            "Sn_eVnm": "eV/nm",
+            "ENSP": "dimensionless"
+          },
+          "description": "Four rows for Ca10VO4_6F2, Ca10P0.5V0.5O4_6F2, Ca10PO4_6F2, Pb4Ca6VO4_6F2 in that order."
+        },
+        "description": "Computed electronic stopping power (Se), nuclear stopping power (Sn), and their ratio (ENSP) for the four fluorapatite compositions under 1 MeV Kr²⁺ irradiation."
+      }
+    ],
+    "notes": "The checker will verify that ENSP values match the paper's reported gold within a tolerance and that the ordering Ca10PO4_6F2 > Ca10P0.5V0.5O4_6F2 > Ca10VO4_6F2 > Pb4Ca6VO4_6F2 is satisfied. The agent must write exactly four rows in the specified order."
+  },
+  "steps": [
+    {
+      "id": "srim_ensp",
+      "output_file": "ensp_computed.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Recompute ENSP = Se_eVnm / Sn_eVnm from raw columns, compare to paper gold values within tolerance, verify ordering.",
+      "hidden_gold": {
+        "compositions": [
+          "Ca10VO4_6F2",
+          "Ca10P0.5V0.5O4_6F2",
+          "Ca10PO4_6F2",
+          "Pb4Ca6VO4_6F2"
+        ],
+        "ensp_gold": [
+          0.73,
+          0.76,
+          0.79,
+          0.68
+        ],
+        "tolerance": 0.02,
+        "value_weight": 0.6,
+        "order_weight": 0.4,
+        "order_pairs": [
+          [
+            "Ca10PO4_6F2",
+            "Ca10P0.5V0.5O4_6F2"
+          ],
+          [
+            "Ca10P0.5V0.5O4_6F2",
+            "Ca10VO4_6F2"
+          ],
+          [
+            "Ca10VO4_6F2",
+            "Pb4Ca6VO4_6F2"
+          ]
+        ]
+      }
+    }
+  ]
+}

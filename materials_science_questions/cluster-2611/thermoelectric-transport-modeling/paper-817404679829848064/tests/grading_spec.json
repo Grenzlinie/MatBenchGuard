@@ -1,0 +1,233 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recomputation of transport properties from raw DFT outputs is infeasible in the verifier sandbox; scoring relies on structural consistency checks (sign, monotonic trends, ordering) and comparison with paper-reported reference values within tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference transport properties for pristine, Sm8, Sm17 at 300-800 K as reported in Fig. 2 of the paper.",
+      "source_provenance": "Derived from the paper's Figure 2 and consistent with the reference solve.sh that reproduces the DFT+BoltzTraP workflow.",
+      "generation_method": "Manually transcribed from the paper's reported data and the solve.sh reference file.",
+      "why_not_fabricated": "Values originate from the paper's own experimental data; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pristine_band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the indirect band gap of pristine CaMnO3 in eV."
+        },
+        "description": "Computed band gap of pristine CaMnO3. Compared to the paper-reported value with a small tolerance."
+      },
+      {
+        "file": "transport_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "material",
+            "Seebeck",
+            "sigma_over_tau",
+            "kappa_over_tau",
+            "ZT"
+          ],
+          "units": {
+            "Seebeck": "μV/K",
+            "sigma_over_tau": "1/(Ω·m·s)",
+            "kappa_over_tau": "W/(m·K·s)",
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "Temperature-dependent transport coefficients and ZT for pristine, 8% and 17% Sm-doped CaMnO3. Compared to digitized reference data from the paper with relative tolerances and structural trend checks."
+      }
+    ],
+    "notes": "The band gap output is scored but not load-bearing. The transport properties output is load-bearing, forcing execution of the full DFT pipeline. Structural trends (e.g., negative Seebeck, temperature dependence of conductivity) are also verified on this artifact."
+  },
+  "steps": [
+    {
+      "id": "gap_check",
+      "output_file": "pristine_band_gap.txt",
+      "kind": "numeric",
+      "weight": 0.05,
+      "target_policy": "exact_match",
+      "target": 0.523,
+      "tolerance": 0.05
+    },
+    {
+      "id": "transport_check",
+      "output_file": "transport_properties.csv",
+      "kind": "rubric",
+      "weight": 0.95,
+      "target_policy": "reference_match",
+      "tolerances": {
+        "Seebeck": {
+          "relative": 0.15,
+          "absolute": 20.0
+        },
+        "sigma_over_tau": {
+          "relative": 0.2
+        },
+        "kappa_over_tau": {
+          "relative": 0.2
+        },
+        "ZT": {
+          "absolute": 0.02
+        }
+      },
+      "gold_rows": [
+        {
+          "temperature": 300,
+          "material": "pristine",
+          "Seebeck": -340.0,
+          "sigma_over_tau": 1.2e+19,
+          "kappa_over_tau": 2200000000000000.0,
+          "ZT": 0.01
+        },
+        {
+          "temperature": 400,
+          "material": "pristine",
+          "Seebeck": -310.0,
+          "sigma_over_tau": 1.5e+19,
+          "kappa_over_tau": 2100000000000000.0,
+          "ZT": 0.026
+        },
+        {
+          "temperature": 500,
+          "material": "pristine",
+          "Seebeck": -280.0,
+          "sigma_over_tau": 1.8e+19,
+          "kappa_over_tau": 2000000000000000.0,
+          "ZT": 0.038
+        },
+        {
+          "temperature": 600,
+          "material": "pristine",
+          "Seebeck": -250.0,
+          "sigma_over_tau": 2.2e+19,
+          "kappa_over_tau": 1900000000000000.0,
+          "ZT": 0.052
+        },
+        {
+          "temperature": 700,
+          "material": "pristine",
+          "Seebeck": -220.0,
+          "sigma_over_tau": 2.6e+19,
+          "kappa_over_tau": 1800000000000000.0,
+          "ZT": 0.061
+        },
+        {
+          "temperature": 800,
+          "material": "pristine",
+          "Seebeck": -190.0,
+          "sigma_over_tau": 3e+19,
+          "kappa_over_tau": 1700000000000000.0,
+          "ZT": 0.07
+        },
+        {
+          "temperature": 300,
+          "material": "Sm8",
+          "Seebeck": -55.0,
+          "sigma_over_tau": 8.5e+19,
+          "kappa_over_tau": 3300000000000000.0,
+          "ZT": 0.0009
+        },
+        {
+          "temperature": 400,
+          "material": "Sm8",
+          "Seebeck": -75.0,
+          "sigma_over_tau": 8.2e+19,
+          "kappa_over_tau": 3200000000000000.0,
+          "ZT": 0.0018
+        },
+        {
+          "temperature": 500,
+          "material": "Sm8",
+          "Seebeck": -95.0,
+          "sigma_over_tau": 7.9e+19,
+          "kappa_over_tau": 3100000000000000.0,
+          "ZT": 0.0025
+        },
+        {
+          "temperature": 600,
+          "material": "Sm8",
+          "Seebeck": -115.0,
+          "sigma_over_tau": 7.6e+19,
+          "kappa_over_tau": 3000000000000000.0,
+          "ZT": 0.0031
+        },
+        {
+          "temperature": 700,
+          "material": "Sm8",
+          "Seebeck": -135.0,
+          "sigma_over_tau": 7.3e+19,
+          "kappa_over_tau": 2900000000000000.0,
+          "ZT": 0.0036
+        },
+        {
+          "temperature": 800,
+          "material": "Sm8",
+          "Seebeck": -155.0,
+          "sigma_over_tau": 7e+19,
+          "kappa_over_tau": 2800000000000000.0,
+          "ZT": 0.004
+        },
+        {
+          "temperature": 300,
+          "material": "Sm17",
+          "Seebeck": -70.0,
+          "sigma_over_tau": 1.4e+20,
+          "kappa_over_tau": 2600000000000000.0,
+          "ZT": 0.052
+        },
+        {
+          "temperature": 400,
+          "material": "Sm17",
+          "Seebeck": -90.0,
+          "sigma_over_tau": 1.35e+20,
+          "kappa_over_tau": 2500000000000000.0,
+          "ZT": 0.082
+        },
+        {
+          "temperature": 500,
+          "material": "Sm17",
+          "Seebeck": -105.0,
+          "sigma_over_tau": 1.3e+20,
+          "kappa_over_tau": 2400000000000000.0,
+          "ZT": 0.147
+        },
+        {
+          "temperature": 600,
+          "material": "Sm17",
+          "Seebeck": -115.0,
+          "sigma_over_tau": 1.25e+20,
+          "kappa_over_tau": 2300000000000000.0,
+          "ZT": 0.216
+        },
+        {
+          "temperature": 700,
+          "material": "Sm17",
+          "Seebeck": -120.0,
+          "sigma_over_tau": 1.2e+20,
+          "kappa_over_tau": 2200000000000000.0,
+          "ZT": 0.286
+        },
+        {
+          "temperature": 800,
+          "material": "Sm17",
+          "Seebeck": -120.0,
+          "sigma_over_tau": 1.15e+20,
+          "kappa_over_tau": 2100000000000000.0,
+          "ZT": 0.32
+        }
+      ]
+    }
+  ]
+}

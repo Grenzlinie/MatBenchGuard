@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build and relax 2D1L host unit cell",
+    "role": "process",
+    "action": "Obtain the crystal structure of 2D1L perovskite BA2PbI4 (n=1) from the public dataset (Stoumpos et al. 2016), replace organic cations with Cs to create the M2PbI4 model, and perform geometry relaxation using PBE DFT. Save the relaxed host unit cell structure.",
+    "output_file": "",
+    "evidence": "relaxed_host_unit_cell.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the host unit cell with Cs substitution.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Construct 3×3×1 supercell and compute host reference energies",
+    "role": "process",
+    "action": "From the relaxed M2PbI4 unit cell, construct a 3×3×1 supercell. Perform a Gamma-point PBE calculation to obtain the total energy E(host) and the valence-band maximum eigenvalue ε_VBM(host). Save these energies.",
+    "output_file": "",
+    "evidence": "host_supercell_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Host supercell reference for defect formation energy formulas.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute elemental reference energies for Pb, I, Cs",
+    "role": "process",
+    "action": "Calculate the total energy per atom of Pb (fcc), I (I2 molecule), and Cs (bcc) in their standard elemental phases using the same PBE settings.",
+    "output_file": "",
+    "evidence": "elemental_reference_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Elemental reference energies E(Pb), E(I), E(M).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Defect supercell calculations for V_I, I_i, and deep defects",
+    "role": "process",
+    "action": "For each defect type (V_I on outer layer LA and inner layer LB, I_i on LA and LB, Pb_i, Pb_I, I_M, I_Pb) in the 3×3×1 supercell, create the defect by removing/adding atoms as appropriate, relax atomic positions (fixed lattice), and compute total energies in the relevant charge states: V_I in q=0 and +1, I_i in q=0 and -1, and the four deep defects in q=0. Save all defect total energies E(α,q).",
+    "output_file": "",
+    "evidence": "defect_total_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Total energies E(α,q) for all required defects and charge states.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Calculate transition energy levels for V_I and I_i",
+    "role": "scored",
+    "action": "Using the defect total energies from Step 4 and the standard definitions: ΔE(α,q) = E(α,q) − E(host) + n_Pb·E(Pb) + n_I·E(I) + n_M·E(M) + q·ε_VBM(host), and transition level ε_α(q/q′) = [ΔE(α,q) − ΔE(α,q′)]/(q′ − q). Compute the (0/1+) transition level for V_I (referenced to CBM, i.e., CBM energy assumed known from host calculation) and the (0/1−) transition level for I_i (referenced to VBM), for both LA and LB positions. Write results to transition_levels_2D1L.json.",
+    "output_file": "transition_levels_2D1L.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing V_I and I_i transition energy levels referenced to band edges.",
+    "output_schema": "JSON object with keys: V_I_LA, V_I_LB, I_i_LA, I_i_LB; each is an object {\"transition_type\": \"(0/1+)\" or \"(0/1−)\", \"value_eV\": float, \"reference\": \"CBM\" or \"VBM\"}."
+  },
+  {
+    "id": "step_06",
+    "title": "Calculate neutral formation energies for deep defects",
+    "role": "scored",
+    "action": "For defects Pb_i, Pb_I, I_M, I_Pb in charge state q=0, compute the formation energy ΔH(α,0) = ΔE(α,0) + Σ n_i·μ_i, with ΔE(α,0) defined as in step 5 and chemical potentials μ_Pb = μ_I = μ_M = 0. Use the host and elemental reference energies from earlier steps. Output to deep_defect_formation_energies.json.",
+    "output_file": "deep_defect_formation_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact with neutral formation energies for four deep-level defects.",
+    "output_schema": "JSON object with keys: Pb_i_0, Pb_I_0, I_M_0, I_Pb_0; each value is a float (formation energy in eV)."
+  }
+]

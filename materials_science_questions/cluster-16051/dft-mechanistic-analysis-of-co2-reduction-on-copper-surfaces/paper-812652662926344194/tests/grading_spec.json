@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Recompute from raw artifacts is infeasible (no lightweight DFT module). Compare agent's reported values to paper-reported gold within tolerances; also enforce trend that H* on S,Se,Te is endergonic.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for adsorption energies and electronic properties from the paper's supplementary tables.",
+      "source_provenance": "Paper Supporting Information Table S4 (adsorption energies) and Table S3 (electronic properties) for Cu(111)-X systems (X=O,S,Se,Te).",
+      "generation_method": "Direct transcription from the paper's supplementary tables.",
+      "why_not_fabricated": "Values are the paper's actual reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "adsorption_energies"
+          ],
+          "description": "The top-level object must contain a key 'adsorption_energies' whose value is an array. Each array element is an object with fields: system (string), adsorbate (string, 'H*' or 'CO₂*'), site (string, 'Cu' or 'X'), adsorption_free_energy_eV (number), and activation_angle_deg (number, required only for CO₂* entries). The array must also include chalcogen adsorption free energies using adsorbate 'X_adatom'."
+        },
+        "description": "DFT-computed adsorption free energies for H* and CO₂* on clean Cu(111) and atop chalcogen adatoms (O, S, Se, Te), using the computational hydrogen electrode at U=0 V vs RHE and pH 6.7. Provides the activity trend: H* adsorption must be endergonic on S, Se, Te, and CO₂* must show activation with lower free energies relative to clean Cu."
+      },
+      {
+        "file": "electronic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "description": "An array of objects, each containing: system (string), chalcogen (string, one of 'O','S','Se','Te'), Bader_charge_X_e (number), p_band_center_X_eV (number), d_band_shift_Cu_eV (number)."
+        },
+        "description": "Electronic descriptors computed from DFT charge density and density-of-states: Bader charge on each chalcogen, p-band center of the chalcogen relative to the Fermi level, and shift in the Cu d-band center relative to clean Cu(111). Explains basicity and reactivity trends."
+      }
+    ],
+    "notes": "The cation effect stage (experimental partial current density vs solvation free energy) is not included because it requires non-public experimental data. The Pourbaix diagram and XPS shifts are included as process steps for completeness but are not scored; their evidence artifacts are optional. All values compared against paper-reported data from Tables S3–S4 with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_adsorption",
+      "output_file": "adsorption_energies.json",
+      "weight": 0.6,
+      "kind": "json_field_check",
+      "gold": {
+        "CO2*": {
+          "Cu": 0.73,
+          "O": 0.55,
+          "S": 1.47,
+          "Se": 1.57,
+          "Te": 1.59
+        },
+        "CO2*_angle": {
+          "Cu": 119,
+          "O": 117,
+          "S": 119,
+          "Se": 119,
+          "Te": 119
+        },
+        "H*": {
+          "Cu": -0.14,
+          "O": -0.68,
+          "S": 0.57,
+          "Se": 0.93,
+          "Te": 1.15
+        },
+        "X_adatom": {
+          "O": 1.28,
+          "S": -0.92,
+          "Se": -1.22,
+          "Te": -1.71
+        }
+      },
+      "tolerances": {
+        "energy_eV": 0.2,
+        "angle_deg": 3
+      }
+    },
+    {
+      "id": "step_electronic",
+      "output_file": "electronic_properties.json",
+      "weight": 0.4,
+      "kind": "json_field_check",
+      "gold": {
+        "O": {
+          "Bader": -0.93,
+          "p_band": -2.5,
+          "d_band": -0.16
+        },
+        "S": {
+          "Bader": -0.59,
+          "p_band": -1.61,
+          "d_band": -0.07
+        },
+        "Se": {
+          "Bader": -0.43,
+          "p_band": -1.28,
+          "d_band": -0.05
+        },
+        "Te": {
+          "Bader": -0.21,
+          "p_band": -0.88,
+          "d_band": -0.07
+        }
+      },
+      "tolerances": {
+        "Bader_e": 0.1,
+        "p_band_eV": 0.2,
+        "d_band_eV": 0.05
+      }
+    }
+  ]
+}

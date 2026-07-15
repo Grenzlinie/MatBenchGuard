@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Dielectric function checked via peak location (structural audit). Elastic constants compared to paper values with tolerance and cubic stability conditions verified; this constitutes a structural-results combination because raw lower-level data (stress-strain fits) is unavailable.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "elastic_constants.json": "reference_match",
+    "dielectric_function.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference elastic constants and dielectric peak criteria from the paper",
+      "source_provenance": "Paper Table 1 and text (Fig.3 description)",
+      "generation_method": "Directly copied from paper's reported elastic constants (C11, C12, C44, B0, v) and peak location descriptions.",
+      "why_not_fabricated": "These are the paper's own published results, serving as the hidden gold for reproduction check; not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "float (GPa)",
+            "C12": "float (GPa)",
+            "C44": "float (GPa)",
+            "B0": "float (GPa)",
+            "v": "float (dimensionless)"
+          }
+        },
+        "description": "Elastic stiffness constants C11, C12, C44, bulk modulus B0, and Poisson's ratio v of cubic Al3Sc. All C values in GPa, v dimensionless."
+      },
+      {
+        "file": "dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy (eV)",
+            "epsilon1",
+            "epsilon2"
+          ],
+          "units": {
+            "energy (eV)": "eV",
+            "epsilon1": "dimensionless",
+            "epsilon2": "dimensionless"
+          }
+        },
+        "description": "Frequency-dependent dielectric function: real part epsilon1 and imaginary part epsilon2 vs photon energy (eV). Energy range 0–40 eV. Structural check verifies absorption peaks in epsilon2."
+      }
+    ],
+    "notes": "The partial density of states (PDOS) analysis is omitted from the scored pipeline as it is not a headline quantitative result."
+  },
+  "steps": [
+    {
+      "id": "elastic_check",
+      "output_file": "elastic_constants.json",
+      "weight": 0.6,
+      "kind": "scored",
+      "gold": {
+        "C11": 181.00667,
+        "C12": 37.2805,
+        "C44": 38.86243,
+        "B0": 85.18922,
+        "v": 0.1708
+      },
+      "tolerance_rel": 0.1,
+      "tolerance_abs_v": 0.01
+    },
+    {
+      "id": "dielectric_check",
+      "output_file": "dielectric_function.csv",
+      "weight": 0.4,
+      "kind": "scored",
+      "peaks": {
+        "low_energy_range": [
+          0.0,
+          15.0
+        ],
+        "high_energy_range": [
+          25.0,
+          35.0
+        ]
+      }
+    }
+  ]
+}

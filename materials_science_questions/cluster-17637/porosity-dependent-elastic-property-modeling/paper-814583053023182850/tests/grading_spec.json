@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Full recompute from raw artifacts (FEM meso-model results) is not possible in the lightweight verifier environment; a result-level comparison against the paper's reported values with tolerances is the appropriate fallback.",
+  "pass_threshold": 0.85,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold reference values for the six output fields",
+      "source_provenance": "paper reported numbers: E1=91 GPa, E2=76 GPa, εu1=0.13%, εu2=0.15%, damage_bone=0.70, damage_matrix=0.40",
+      "generation_method": "extracted from the paper text (AIP Conference Proceedings 1683, 020150, 2015)",
+      "why_not_fabricated": "these are the exact results of the original computational study, used as the hidden comparison target"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "type1_effective_modulus_GPa": "number (GPa)",
+            "type1_ultimate_strain_percent": "number (%)",
+            "type2_effective_modulus_GPa": "number (GPa)",
+            "type2_ultimate_strain_percent": "number (%)",
+            "type2_damage_bone_fraction": "number (fraction 0-1)",
+            "type2_damage_matrix_fraction": "number (fraction 0-1)"
+          }
+        },
+        "description": "Computed effective elastic properties, ultimate strains, and damage fractions at failure for the two porous structure types. The checker compares each value to the paper's reference with prescribed tolerances and validates the relative ordering of moduli."
+      }
+    ],
+    "notes": "The solving agent must implement the full multiscale FEM pipeline, not merely interpolate reported numbers. The geometric randomness introduces run‑to‑run spread; tolerances accommodate legitimate re‑implementation variation while distinguishing a genuine solution from a guess."
+  },
+  "steps": [
+    {
+      "id": "field_type1_effective_modulus_GPa",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type1_effective_modulus_GPa",
+      "target": 91,
+      "tolerance": 2,
+      "weight": 0.142857
+    },
+    {
+      "id": "field_type1_ultimate_strain_percent",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type1_ultimate_strain_percent",
+      "target": 0.13,
+      "tolerance": 0.01,
+      "weight": 0.142857
+    },
+    {
+      "id": "field_type2_effective_modulus_GPa",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type2_effective_modulus_GPa",
+      "target": 76,
+      "tolerance": 2,
+      "weight": 0.142857
+    },
+    {
+      "id": "field_type2_ultimate_strain_percent",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type2_ultimate_strain_percent",
+      "target": 0.15,
+      "tolerance": 0.01,
+      "weight": 0.142857
+    },
+    {
+      "id": "field_type2_damage_bone_fraction",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type2_damage_bone_fraction",
+      "target": 0.7,
+      "tolerance": 0.05,
+      "weight": 0.142857
+    },
+    {
+      "id": "field_type2_damage_matrix_fraction",
+      "output_file": "results.json",
+      "kind": "check_numeric_field",
+      "field": "type2_damage_matrix_fraction",
+      "target": 0.4,
+      "tolerance": 0.05,
+      "weight": 0.142857
+    },
+    {
+      "id": "trend_type2_modulus_lt_type1",
+      "output_file": "results.json",
+      "kind": "check_trend",
+      "field_a": "type2_effective_modulus_GPa",
+      "field_b": "type1_effective_modulus_GPa",
+      "relation": "less_than",
+      "weight": 0.142857
+    }
+  ]
+}

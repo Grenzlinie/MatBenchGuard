@@ -1,0 +1,54 @@
+[
+  {
+    "id": "compile_params",
+    "title": "Compile empirical parameters",
+    "role": "process",
+    "action": "Collect all required empirical parameters for the calculations: Born-Mayer exchange constants, ionic radii, range parameter ρ, Madelung constant, lattice distances, polarizabilities, ionization energies, cross-section ratios, and room-temperature model parameters. Write them to a structured JSON file for downstream steps.",
+    "output_file": "",
+    "evidence": "prepared_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Assemble the empirical input data from the provided reference tables.",
+    "output_schema": ""
+  },
+  {
+    "id": "solve_equation_3",
+    "title": "Solve energy-balance equation for multiple ionization threshold",
+    "role": "scored",
+    "action": "For each of the seven alkali halides LiF, NaF, KCl, NaCl, KBr, NaBr, KI, numerically solve the energy-balance equation (which balances electrostatic, polarization, and Born-Mayer repulsion terms) to find the non-integral positive charge n on the multiply-ionized anion, then determine the integer threshold p = floor(n)+1. Use the compiled parameters. Save the results to multiple_ionization_threshold.csv.",
+    "output_file": "multiple_ionization_threshold.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Numerical solution of the energy-balance equation that determines the minimum number of electrons (p) that must be removed from a halogen ion to permit its displacement into an interstitial position.",
+    "output_schema": "CSV with columns: alkali_halide (string), n (float), p (integer). One row per halide: LiF, NaF, KCl, NaCl, KBr, NaBr, KI."
+  },
+  {
+    "id": "compute_energy_per_f_centre",
+    "title": "Compute X-ray energy per F-centre",
+    "role": "scored",
+    "action": "Using a multiple-ionisation cross-section model (relating cross-section ratios to ionization energies and atomic numbers) and the compiled parameters, compute the average X-ray energy E_F (in eV) absorbed per F-centre formed for each of the seven alkali halides. Use the appropriate p value from the previous step. Save the results to energy_per_f_centre.csv.",
+    "output_file": "energy_per_f_centre.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Computation of the X-ray energy per F-centre from the multiple-ionisation model; depends on the correct p thresholds.",
+    "output_schema": "CSV with columns: alkali_halide (string), E_F (float, units eV). One row per halide."
+  },
+  {
+    "id": "room_temperature_dilatation",
+    "title": "Compute room-temperature linear dilatation and vacancy concentration",
+    "role": "scored",
+    "action": "For a typical NaCl-like case, compute the linear dilatation Δl/l and the negative-ion vacancy concentration N_v after one hour of X-irradiation using the room-temperature model. Use the following fixed parameters: a0 = 3e-8 cm, N0 = 2e22 cm⁻³, a = 1e-4 cm, c0 = 5e-6, q = 4, β_i = 2e16 cm⁻³ hr⁻¹, and t = 1 hr. Save the results to room_temperature_model.csv.",
+    "output_file": "room_temperature_model.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Room-temperature model for volume dilatation and F-centre production rate after 1 hour of irradiation.",
+    "output_schema": "CSV with columns: delta_l_over_l (float, dimensionless), N_v (float, units cm⁻³). Single row."
+  }
+]

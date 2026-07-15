@@ -1,0 +1,143 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Full recompute infeasible for energetics and MECP because only final reported numbers are available; rate recompute requires seam vibrational frequencies not in the output contract. T0 result-level compare with tolerances therefore applied.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_energetics.json": "exact_match",
+    "step_02_MECP.json": "exact_match",
+    "step_03_rate_coefficient.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for energetics, MECP energy, spin-orbit coupling, and rate coefficient",
+      "source_provenance": "Table 3 and text of Faraday Discuss., 2003, 124, 129–143; CCSD(T)/VQZ‑VDZ with BP86 orbitals, ZPE from B3PW91*; B3PW91*/TZV MECP energy and CASSCF(12,12)/VDZ V₁₂",
+      "generation_method": "extracted from the paper’s reported numbers, confirmed against reference solve.sh",
+      "why_not_fabricated": "all values are the paper’s actual reported best estimates; they are not invented stand‑ins"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energetics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "deltaE13_electronic_kcalmol": "number",
+            "deltaE13_withZPE_kcalmol": "number",
+            "BDE3_electronic_kcalmol": "number",
+            "BDE3_withZPE_kcalmol": "number"
+          },
+          "units": {
+            "deltaE13_electronic_kcalmol": "kcal/mol",
+            "deltaE13_withZPE_kcalmol": "kcal/mol",
+            "BDE3_electronic_kcalmol": "kcal/mol",
+            "BDE3_withZPE_kcalmol": "kcal/mol"
+          }
+        },
+        "description": "Computed singlet–triplet splitting and bond dissociation energy (electronic and with ZPE correction) at the CCSD(T)/VQZ‑VDZ//B3PW91* level, compared to the paper’s best‑estimate values."
+      },
+      {
+        "file": "step_02_MECP.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "geometry": "object (atom labels to Cartesian coordinates)",
+            "relative_energy_kcalmol": "number",
+            "V12_cm1": "number",
+            "deltaF": "number",
+            "F": "number",
+            "mu_H_reduced_mass": "number"
+          },
+          "units": {
+            "relative_energy_kcalmol": "kcal/mol",
+            "V12_cm1": "cm⁻¹",
+            "deltaF": "Hartree/bohr or consistent au",
+            "F": "Hartree/bohr or consistent au",
+            "mu_H_reduced_mass": "atomic mass units (u)"
+          }
+        },
+        "description": "MECP structure, relative energy, spin‑orbit coupling V₁₂, and the dynamical parameters (ΔF, F, μ_H) required to recompute the non‑adiabatic rate. Compared to the paper’s reported B3PW91*/TZV MECP energy and V₁₂ within tolerances."
+      },
+      {
+        "file": "step_03_rate_coefficient.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T": "number (temperature in K)",
+            "k_LZ_cm3_molecule-1_s-1": "number",
+            "k_WKB_cm3_molecule-1_s-1": "number"
+          },
+          "units": {
+            "T": "K",
+            "k_LZ_cm3_molecule-1_s-1": "cm³ molecule⁻¹ s⁻¹",
+            "k_WKB_cm3_molecule-1_s-1": "cm³ molecule⁻¹ s⁻¹"
+          }
+        },
+        "description": "NA‑TST rate coefficient at 300 K computed using Landau–Zener and WKB hopping probabilities. The checker recomputes the rate from the submitted step_02_MECP.json parameters and compares it to the agent’s value, then checks the recomputed rate against the paper’s reported value."
+      }
+    ],
+    "notes": "The checker will recompute the NA‑TST rate from the MECP parameters in step_02_MECP.json to verify consistency, and will also compare the recomputed rate to the paper’s experimental‑level reference value. Energetics and MECP properties are compared directly to the paper’s reported values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "zpe_corrected_energetics",
+      "output_file": "step_01_energetics.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "deltaE13_electronic_kcalmol": 8.1,
+        "deltaE13_withZPE_kcalmol": 8.8,
+        "BDE3_electronic_kcalmol": 39.6,
+        "BDE3_withZPE_kcalmol": 36.0
+      },
+      "tolerances": {
+        "deltaE13_electronic_kcalmol": 1.0,
+        "deltaE13_withZPE_kcalmol": 2.0,
+        "BDE3_electronic_kcalmol": 1.0,
+        "BDE3_withZPE_kcalmol": 2.0
+      },
+      "scoring": "average of per-field exact_match within tolerance"
+    },
+    {
+      "id": "mecp_summary",
+      "output_file": "step_02_MECP.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "relative_energy_kcalmol": 0.49,
+        "V12_cm1": 66.0
+      },
+      "tolerances": {
+        "relative_energy_kcalmol": 0.5,
+        "V12_cm1": 10.0
+      },
+      "geometry_required": true,
+      "scoring": "average of (relative_energy within tolerance, V12 within tolerance); geometry presence checked with near-zero weight"
+    },
+    {
+      "id": "na_tst_rate",
+      "output_file": "step_03_rate_coefficient.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": {
+        "k_LZ_cm3_molecule-1_s-1": 8.8e-15,
+        "k_WKB_cm3_molecule-1_s-1": 8.8e-15
+      },
+      "tolerances": {
+        "k_LZ_cm3_molecule-1_s-1": "factor_10",
+        "k_WKB_cm3_molecule-1_s-1": "factor_10"
+      },
+      "scoring": "average of (k_LZ within factor 10 of 8.8e-15, k_WKB within factor 10 of 8.8e-15)"
+    }
+  ]
+}

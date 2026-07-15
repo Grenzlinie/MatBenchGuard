@@ -1,0 +1,187 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Analytic columns (free-volume and Padé) are recomputed from tau; MD pressures compared to paper gold with tolerances. Structural checks (monotonicity, high-density agreement, std sanity) add further verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "transition_results.json": "exact_match",
+    "md_pressure_table.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported MD pressure values per tau and transition parameters",
+      "source_provenance": "Direct transcription from Table I and Section III of the source paper",
+      "generation_method": "Hardcoded from the paper's reported values, verified against the reference solve.sh output.",
+      "why_not_fabricated": "These are the exact values reported in the paper; used only as reference targets with appropriate tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "transition_pressure",
+            "tau_solid",
+            "tau_fluid"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "transition_pressure": "PV_0/(NkT)",
+            "tau_solid": "reduced volume (unitless)",
+            "tau_fluid": "reduced volume (unitless)"
+          }
+        },
+        "description": "Computed solid-fluid phase transition pressure and coexisting reduced volumes"
+      },
+      {
+        "file": "md_pressure_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required": [
+            "tau",
+            "pv_md",
+            "pv_md_std",
+            "pv_free_volume",
+            "pv_pade"
+          ],
+          "items": {},
+          "required_columns": [
+            "tau",
+            "pv_md",
+            "pv_md_std",
+            "pv_free_volume",
+            "pv_pade"
+          ],
+          "units": {
+            "tau": "reduced volume (unitless)",
+            "pv_md": "PV/(NkT)",
+            "pv_md_std": "PV/(NkT)",
+            "pv_free_volume": "PV/(NkT)",
+            "pv_pade": "PV/(NkT)"
+          }
+        },
+        "description": "Equation of state from MD and analytic theories: reduced volume τ, mean MD pressure, standard deviation, free-volume pressure, and (3,3) Padé approximant pressure"
+      }
+    ],
+    "notes": "The MD simulation output (raw_pressure_blocks.json) is an intermediate evidence file and not directly scored. The analytic columns (pv_free_volume, pv_pade) must be computed from the agent's τ values using the exact formulas. The MD pressures are compared to hidden paper-reported values with tolerances."
+  },
+  "steps": [
+    {
+      "id": "transition_results",
+      "output_file": "transition_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "fields": {
+        "transition_pressure": {
+          "target": 6.936,
+          "tolerance": 0.05
+        },
+        "tau_solid": {
+          "target": 1.272,
+          "tolerance": 0.005
+        },
+        "tau_fluid": {
+          "target": 1.297,
+          "tolerance": 0.005
+        }
+      }
+    },
+    {
+      "id": "md_pressure_table",
+      "output_file": "md_pressure_table.csv",
+      "weight": 0.7,
+      "kind": "custom",
+      "reference_md": [
+        [
+          1.05,
+          41.56,
+          0.05
+        ],
+        [
+          1.1,
+          21.45,
+          0.08
+        ],
+        [
+          1.115,
+          18.81,
+          0.12
+        ],
+        [
+          1.125,
+          17.42,
+          0.05
+        ],
+        [
+          1.15,
+          14.76,
+          0.04
+        ],
+        [
+          1.175,
+          12.93,
+          0.07
+        ],
+        [
+          1.2,
+          11.45,
+          0.03
+        ],
+        [
+          1.285,
+          8.55,
+          0.09
+        ],
+        [
+          1.3,
+          8.18,
+          0.06
+        ],
+        [
+          1.4,
+          6.52,
+          0.1
+        ],
+        [
+          1.5,
+          5.61,
+          0.09
+        ],
+        [
+          1.6,
+          5.13,
+          0.09
+        ],
+        [
+          1.7,
+          4.57,
+          0.11
+        ],
+        [
+          1.8,
+          4.18,
+          0.11
+        ],
+        [
+          1.9,
+          3.83,
+          0.1
+        ],
+        [
+          2.0,
+          3.57,
+          0.05
+        ]
+      ]
+    }
+  ]
+}

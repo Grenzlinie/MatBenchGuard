@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Main quantities (Poisson's ratio values) are reported by the agent; checker validates them against paper-reported values with tolerances and monotonic trend, as full recompute from raw simulation outputs is not available in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ranges for Poisson's ratio at c=0% and c=14% derived from paper's abstract: -0.15(2) and -0.29(3) with ±0.05 tolerance.",
+      "source_provenance": "Paper abstract and figure 5.",
+      "generation_method": "Extracted from paper's reported values and extended with generous tolerance to accommodate run-to-run variation.",
+      "why_not_fabricated": "Based on the paper's own published results with tolerance to accommodate stochastic spread."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "size_effect_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system_size",
+            "angle_alpha",
+            "poisson_ratio"
+          ],
+          "units": {
+            "angle_alpha": "degrees",
+            "poisson_ratio": "dimensionless"
+          }
+        },
+        "description": "Poisson's ratio vs α for two system sizes; the checker computes the max absolute difference between the two curves to confirm overlap."
+      },
+      {
+        "file": "concentration_effect.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "poisson_ratio"
+          ],
+          "units": {
+            "concentration": "percent",
+            "poisson_ratio": "dimensionless"
+          }
+        },
+        "description": "Poisson's ratio at α=0 for concentrations c=0%,5%,14%; values are compared to hidden gold tolerances and checked for monotonic decrease."
+      }
+    ],
+    "notes": "The accuracy of the simulations depends on implementation details and stochastic variation; the checker tolerates reasonable spreads while rejecting obviously wrong results."
+  },
+  "steps": [
+    {
+      "id": "size_effect_overlap",
+      "output_file": "size_effect_curves.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "description": "Maximum absolute difference between the Poisson's ratio curves for N=500 and N=2000 across all angles.",
+      "tolerance": 0.05,
+      "target": 0.0,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "concentration_effect",
+      "output_file": "concentration_effect.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "description": "Checks that Poisson's ratio at c=0% and c=14% are within paper-derived ranges and that the values decrease monotonically with concentration.",
+      "c0_target_range": [
+        -0.2,
+        -0.1
+      ],
+      "c14_target_range": [
+        -0.34,
+        -0.24
+      ],
+      "target_policy": "threshold_or_better"
+    }
+  ]
+}

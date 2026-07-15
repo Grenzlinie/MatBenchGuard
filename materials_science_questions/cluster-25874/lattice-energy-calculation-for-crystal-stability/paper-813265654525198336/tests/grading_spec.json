@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Raw Mulliken charges needed for full recompute are not in the output contract, so consistency against hidden gold and ordering is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "nitro_group_charges.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold -Q_NO2 values for 15 tautomers from the paper's Table 5",
+      "source_provenance": "Paper Table 5 (DFT-B3LYP/aug-cc-pVDZ computed values)",
+      "generation_method": "Directly extracted from the paper's Table 5, matching the tautomer labels.",
+      "why_not_fabricated": "Values are taken verbatim from the published paper; the reference solve.sh writes exactly those values, confirming they are the paper's reported numbers for this chemical system."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "nitro_group_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "tautomer",
+            "q_NO2"
+          ],
+          "units": {
+            "q_NO2": "e (elementary charge)"
+          }
+        },
+        "description": "Nitro group charges (-Q_NO2) for the 15 tautomers, computed from Mulliken charges at B3LYP/aug‑cc‑pVDZ level."
+      }
+    ],
+    "notes": "The hidden verifier will compare the reported q_NO2 values against a set of reference charges (derived from the paper) with an appropriate tolerance, and will also verify the correct ordering of high‑insensitivity tautomers (q_NO2 ≥ 0.5 e) and the least insensitive tautomer (q_NO2 ≤ 0.1 e)."
+  },
+  "steps": [
+    {
+      "id": "nitro_charge_check",
+      "output_file": "nitro_group_charges.csv",
+      "weight": 1.0,
+      "kind": "reference_match",
+      "target_policy": "reference_match",
+      "description": "Compare q_NO2 values to paper gold within tolerance and verify high‑insensitivity ordering.",
+      "params": {
+        "gold_values": {
+          "ANTONO-1": 0.55,
+          "ANTONO-2": 0.537,
+          "ANTONO-3": 0.976,
+          "ANTONO-4": 0.201,
+          "ANTONO-5": 0.112,
+          "ANTONO-6": 0.135,
+          "ANTONO-7": 0.21,
+          "ANTONO-8": 0.536,
+          "ANTONO-9": 0.159,
+          "ANTONO-10": 0.126,
+          "ANTONO-11": 0.511,
+          "ANTONO-12": 0.566,
+          "ANTONO-13": 0.229,
+          "ANTONO-14": 0.176,
+          "ANTONO-15": 0.059
+        },
+        "tolerance_abs": 0.05,
+        "high_insensitivity_tautomers": [
+          "ANTONO-1",
+          "ANTONO-2",
+          "ANTONO-8",
+          "ANTONO-11",
+          "ANTONO-12"
+        ],
+        "high_insensitivity_threshold": 0.5,
+        "least_insensitive_tautomer": "ANTONO-15",
+        "least_insensitive_threshold": 0.1
+      }
+    }
+  ]
+}

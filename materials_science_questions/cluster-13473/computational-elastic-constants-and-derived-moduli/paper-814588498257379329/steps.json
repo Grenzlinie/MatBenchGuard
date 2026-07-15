@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "System preparation and equilibration",
+    "role": "process",
+    "action": "Set up and equilibrate the coarse-grained gel model for both topologies (diamond cubic and simple cubic) with chain length 60 beads, using the model parameters: magnetic node particles (diameter σ_n=10) placed on the respective lattice, polymer chains (60 beads, σ_c=1) attached via virtual sites, harmonic bonds (k=10, r0=2^(1/6)), WCA repulsion (ε=10), and Langevin thermostat (k_B T=1). Randomize dipole moments, apply periodic boundary conditions, reshape from the initially stretched configuration to the desired volume, and relax.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare and equilibrate the initial gel configuration for further steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Equilibrium swelling determination",
+    "role": "scored",
+    "action": "For each topology, determine the equilibrium swelling length l0 in the field-free case. Run multiple NVT simulations at different box volumes around the initially stretched volume, compute the isotropic pressure from the diagonal stress tensor, and interpolate to zero stress to obtain l0. Write the equilibrium values to equilibrium_swelling.csv.",
+    "output_file": "equilibrium_swelling.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium swelling length for each topology (diamond cubic and simple cubic) with chain length 60.",
+    "output_schema": "CSV with columns: topology (string, 'DC' or 'SC'), chain_length (int, 60), l0 (float). One row per topology."
+  },
+  {
+    "id": "step_3",
+    "title": "Anisotropic deformation under magnetic field",
+    "role": "scored",
+    "action": "For each topology and for each Langevin parameter α = 0, 10, 20, 30, 40, 50, 60, perform the iterative stress-matching procedure to find the equilibrium shape l_∥ (parallel) and l_⊥ (perpendicular) under an applied magnetic field. At each iteration, simulate with the current box lengths, average stress components over 24 independent simulations (randomized dipole orientations), and adjust box lengths using linear extrapolation from the two shapes with lowest absolute stress, limiting the change to ~2% per iteration. Terminate when both |σ_∥| and |σ_⊥| < 1e-5. Compute the relative volume shrinkage δV/V0 = 1 - (l_∥ l_⊥^2) / l0^3. Write the final l_∥, l_⊥, and volume shrinkage for each α to deformation_data.csv.",
+    "output_file": "deformation_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium shape lengths and volume shrinkage as functions of magnetic field strength for both topologies.",
+    "output_schema": "CSV with columns: topology (string, 'DC' or 'SC'), alpha (float), l_parallel (float), l_perpendicular (float), volume_shrinkage (float). One row per field strength per topology."
+  },
+  {
+    "id": "step_4",
+    "title": "Elastic constants",
+    "role": "scored",
+    "action": "For each topology and for both field conditions: field-free (α=0) and α=20, compute the elastic constant matrix elements a, b, c, d, e as defined in the paper's linear elasticity model for a tetragonal symmetry (field parallel to x). Apply small strains (Δε ~ 0.01) around the respective equilibrium shapes in each Cartesian direction, simulate, measure the stress tensor, and fit a linear stress-strain model to extract the constants. Write the results to elastic_constants.csv.",
+    "output_file": "elastic_constants.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Elastic constant matrix elements for diamond cubic and simple cubic topologies under field-free and α=20 conditions.",
+    "output_schema": "CSV with columns: topology (string, 'DC' or 'SC'), field_condition (string, 'alpha_0' or 'alpha_20'), a (float), b (float), c (float), d (float), e (float). One row per topology per condition."
+  },
+  {
+    "id": "step_5",
+    "title": "Magnetization curve",
+    "role": "scored",
+    "action": "For each topology, run simulations at the field‑free equilibrium swelling volume (shape from step 2) for each α = 0, 10, 20, 30, 40, 50, 60, keeping the box fixed. For each α, compute the average magnetization parallel to the external field (component of total dipole moment along the field). Write the results to magnetization_curve.csv.",
+    "output_file": "magnetization_curve.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Magnetization parallel to the field as a function of field strength for both topologies.",
+    "output_schema": "CSV with columns: topology (string, 'DC' or 'SC'), alpha (float), M (float). One row per field strength per topology."
+  }
+]

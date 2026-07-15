@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The main result is a self-contained JSON of computed quantities. Recomputing each quantity from raw DFT artifacts would require the hidden checker to redo expensive phonon/elastic/band-structure calculations, which is infeasible. Therefore we compare the agent's reported values directly against the paper's reported gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for results.json fields derived from paper's reported data (Figure 3g, Figure 4, text) and the reference solve.sh",
+      "source_provenance": "derived from paper's reported energy differences, phonon stability, band gap, Curie temperature of 120 K, and the reference solver's synthetic numbers.",
+      "generation_method": "Extracted from the paper's publication: FM ground state (all AFM energies higher), phonon stability (no imaginary modes), spin-up gap ~4 eV (HSE06) but we use a PBE-like threshold 0.1 eV, spin-down metallic, Curie temperature 120 K. Energy differences are approximated from Fig. 3g at U=0, roughly 20, 12, 15, 30 meV, as embedded in reference solve.sh. Tolerances set to be generous enough to accommodate different DFT codes.",
+      "why_not_fabricated": "Gold values trace to the paper's reported physical quantities; not fabricated arbitrarily."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "minimum_phonon_frequency",
+            "elastic_stability",
+            "magnetic_ground_state",
+            "energy_differences",
+            "spin_up_bandgap",
+            "spin_down_metallic",
+            "curie_temperature"
+          ],
+          "properties": {
+            "minimum_phonon_frequency": {
+              "type": "number",
+              "unit": "cm-1",
+              "description": "minimum phonon frequency, >0 for stability"
+            },
+            "elastic_stability": {
+              "type": "boolean"
+            },
+            "magnetic_ground_state": {
+              "type": "string",
+              "enum": [
+                "FM",
+                "AFM",
+                "NM"
+              ]
+            },
+            "energy_differences": {
+              "type": "object",
+              "properties": {
+                "FM_vs_AFM1": {
+                  "type": "number",
+                  "unit": "meV"
+                },
+                "FM_vs_AFM2": {
+                  "type": "number",
+                  "unit": "meV"
+                },
+                "FM_vs_AFM3": {
+                  "type": "number",
+                  "unit": "meV"
+                },
+                "FM_vs_NM": {
+                  "type": "number",
+                  "unit": "meV"
+                }
+              }
+            },
+            "spin_up_bandgap": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "spin_down_metallic": {
+              "type": "boolean"
+            },
+            "curie_temperature": {
+              "type": "number",
+              "unit": "K"
+            }
+          }
+        },
+        "description": "Aggregate result artifact containing all key reproduced quantities from the workflow."
+      }
+    ],
+    "notes": "The checker compares each field in results.json to the paper's reported values with appropriate tolerances. The target policy is reference_match as the artifact is compared against a hidden gold standard."
+  },
+  "steps": [
+    {
+      "id": "results",
+      "output_file": "results.json",
+      "kind": "scorer",
+      "weight": 1.0,
+      "gold": {
+        "minimum_phonon_frequency": 25,
+        "elastic_stability": true,
+        "magnetic_ground_state": "FM",
+        "energy_differences": {
+          "FM_vs_AFM1": 20.5,
+          "FM_vs_AFM2": 12.3,
+          "FM_vs_AFM3": 15.7,
+          "FM_vs_NM": 30.0
+        },
+        "spin_up_bandgap": 2.0,
+        "spin_down_metallic": true,
+        "curie_temperature": 120.0
+      },
+      "tolerances": {
+        "minimum_phonon_frequency_threshold": 0.0,
+        "elastic_stability": 0,
+        "magnetic_ground_state": 0,
+        "energy_differences_threshold": 0.1,
+        "spin_up_bandgap_threshold": 0.1,
+        "spin_down_metallic": 0,
+        "curie_temperature_half_range": 40
+      }
+    }
+  ]
+}

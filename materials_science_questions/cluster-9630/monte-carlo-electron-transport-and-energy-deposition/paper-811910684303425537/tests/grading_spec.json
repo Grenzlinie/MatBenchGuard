@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Core verification is structural: max increases with energy, no-loss >= with-loss, and time-evolution shape, supplemented by a few numeric reference points from the paper with generous absolute tolerance (3). A full recompute from raw traces is not feasible in the lightweight verifier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for the mean number of secondary electrons at 100 fs (250 eV, both limiting cases) and the theoretical maximum number per 17 eV increment, extracted from the paper text.",
+      "source_provenance": "Paper text: 'the number of secondaries for the limiting case with no loss to the lattice is close to the number reported … (14 vs 10)' and 'We observe a larger number of secondaries at 100 fs for the model with loss to the lattice … (10 vs 6)'. Expected Nmax = E'/E_{e-h} with E_{e-h}≈14.66 eV.",
+      "generation_method": "Directly quoted from the paper and the derived theoretical expectation.",
+      "why_not_fabricated": "These are the paper's own approximate reported numbers and the physically motivated expected maximum."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "time_evolution": "array of objects with fields: energy_eV (float), limiting_case (string), time_fs (float), mean_num_secondaries (float)",
+            "max_secondaries": "array of objects with fields: energy_eV (float), limiting_case (string), max_num (float)"
+          },
+          "items": {
+            "time_evolution_entry": {
+              "energy_eV": "float",
+              "limiting_case": "string",
+              "time_fs": "float",
+              "mean_num_secondaries": "float"
+            },
+            "max_secondaries_entry": {
+              "energy_eV": "float",
+              "limiting_case": "string",
+              "max_num": "float"
+            }
+          }
+        },
+        "description": "Contains the time evolution of the average number of secondary electrons and the maximum average number for each primary energy and limiting case, derived from the Monte Carlo simulation."
+      }
+    ],
+    "notes": "The time_evolution array should have entries for every recorded time step (0 to 2000 fs in 10 fs increments) for all 8 conditions. max_secondaries should have one entry per condition."
+  },
+  "steps": [
+    {
+      "id": "step_03_aggregate",
+      "output_file": "simulation_results.json",
+      "kind": "structural",
+      "weight": 1.0,
+      "config": {
+        "time_100fs_ref": {
+          "250": {
+            "no_loss": 14,
+            "with_loss": 10
+          }
+        },
+        "max_tol_abs": 5,
+        "expected_max_per_17eV": [
+          17,
+          34,
+          51,
+          68
+        ],
+        "energies": [
+          250,
+          500,
+          750,
+          1000
+        ],
+        "cases": [
+          "no_loss",
+          "with_loss"
+        ]
+      }
+    }
+  ]
+}

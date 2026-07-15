@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute DFT band gaps are method-dependent; full recompute from raw orbitals is infeasible. Scoring verifiable structural properties: concentration-range adherence, increasing mean, theoretical upper bound, and non-monotonic/anisotropic strain behaviour.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "band_gap_vs_concentration.csv": "structural_audit",
+    "band_gap_vs_strain.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_vs_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "structure_id",
+            "band_gap_eV"
+          ],
+          "units": {
+            "concentration": "",
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Band gaps computed by DFT for gr:BN configurations at various BN concentrations. The checker will verify that gaps for each concentration fall within paper-reported ranges, average gap increases with concentration, and no gap exceeds the theoretical upper bound (4.5 eV * c_BN)."
+      },
+      {
+        "file": "band_gap_vs_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_id",
+            "strain_direction",
+            "strain",
+            "band_gap_eV"
+          ],
+          "units": {
+            "strain": "",
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Band gaps under uniaxial tensile strain for two gr:BN configurations. The checker will verify non-monotonic behavior (existence of at least one local extremum per direction and a sign change of the derivative) and anisotropic, opposite trends between the two configurations."
+      }
+    ],
+    "notes": "All gold values and tolerances are hidden and derived from the paper's reported numbers and trends. The agent must produce the raw CSV files; the checker performs a structural audit without requiring exact numerical match."
+  },
+  "steps": [
+    {
+      "id": "band_gap_vs_concentration",
+      "output_file": "band_gap_vs_concentration.csv",
+      "kind": "structural",
+      "weight": 0.6,
+      "target_policy": "structural_audit",
+      "description": "Verify structural properties of band gap vs BN concentration: gaps within physically plausible range, increasing average with concentration, and adherence to theoretical upper bound 4.5*c_BN."
+    },
+    {
+      "id": "band_gap_vs_strain",
+      "output_file": "band_gap_vs_strain.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "target_policy": "structural_audit",
+      "description": "Verify strain-dependent band gap features: each strain series is non-monotonic and exhibits at least one interior local extremum; the two configurations show opposite anisotropic trends (peak vs valley in each direction)."
+    }
+  ]
+}

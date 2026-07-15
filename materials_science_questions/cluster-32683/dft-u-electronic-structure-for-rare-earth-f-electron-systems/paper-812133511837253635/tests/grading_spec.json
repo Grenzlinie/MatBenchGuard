@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 (recompute) is infeasible because the full LDA+DMFT workflow is computationally heavy and cannot be re-executed in the lightweight verifier sandbox. The strongest feasible tier is result-level comparison (T0) of reported quantities against paper gold with domain-appropriate tolerances and a structural trend check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for SrVO3 and CaVO3 LDA+DMFT results, derived from the paper's reported numbers",
+      "source_provenance": "Paper (Physical Review B 72, 155106 (2005)): Fig. 5 (LDA bandwidths 2.6 eV SrVO3, 2.5 eV CaVO3), Sect. III B (Hubbard band peaks at -1.5 eV and 2.5 eV), Sect. III B last paragraph (effective masses 2.1 and 2.4)",
+      "generation_method": "Extracted directly from paper text and figures; quasiparticle peak weight computed as 1/effective_mass_ratio",
+      "why_not_fabricated": "Numbers come from the cited paper; they are the ground truth the reproduction must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "srvo3_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lda_bandwidth": "float (eV)",
+            "lower_hubbard_band_peak": "float (eV)",
+            "upper_hubbard_band_peak": "float (eV)",
+            "quasiparticle_peak_weight": "float",
+            "effective_mass_ratio": "float"
+          }
+        },
+        "description": "SrVO3 LDA+DMFT results: t2g bandwidth, Hubbard band positions, quasiparticle weight, effective mass ratio."
+      },
+      {
+        "file": "cavo3_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lda_bandwidth": "float (eV)",
+            "lower_hubbard_band_peak": "float (eV)",
+            "upper_hubbard_band_peak": "float (eV)",
+            "quasiparticle_peak_weight": "float",
+            "effective_mass_ratio": "float"
+          }
+        },
+        "description": "CaVO3 LDA+DMFT results: t2g bandwidth, Hubbard band positions, quasiparticle weight, effective mass ratio."
+      }
+    ],
+    "notes": "Interaction parameters U=5.55 eV, U′=3.55 eV, J=1.0 eV are fixed input for the LDA+DMFT steps. The Hubbard band peaks are the local maxima of the lower and upper Hubbard bands in the spectral function. Quasiparticle peak weight quantifies the coherent spectral weight at the Fermi level; effective mass ratio is derived from the quasiparticle weight as m*/m0 = 1/Z."
+  },
+  "steps": [
+    {
+      "id": "srvo3_results_check",
+      "output_file": "srvo3_results.json",
+      "kind": "rubric",
+      "weight": 0.4,
+      "gold": {
+        "lda_bandwidth": 2.6,
+        "lower_hubbard_band_peak": -1.5,
+        "upper_hubbard_band_peak": 2.5,
+        "quasiparticle_peak_weight": 0.476190476,
+        "effective_mass_ratio": 2.1
+      },
+      "tolerances": {
+        "lda_bandwidth": 0.1,
+        "lower_hubbard_band_peak": 0.2,
+        "upper_hubbard_band_peak": 0.2,
+        "quasiparticle_peak_weight": 0.05,
+        "effective_mass_ratio": 0.2
+      },
+      "description": "Check SrVO3 results against paper gold"
+    },
+    {
+      "id": "cavo3_results_check",
+      "output_file": "cavo3_results.json",
+      "kind": "rubric",
+      "weight": 0.4,
+      "gold": {
+        "lda_bandwidth": 2.5,
+        "lower_hubbard_band_peak": -1.5,
+        "upper_hubbard_band_peak": 2.5,
+        "quasiparticle_peak_weight": 0.416666667,
+        "effective_mass_ratio": 2.4
+      },
+      "tolerances": {
+        "lda_bandwidth": 0.1,
+        "lower_hubbard_band_peak": 0.2,
+        "upper_hubbard_band_peak": 0.2,
+        "quasiparticle_peak_weight": 0.05,
+        "effective_mass_ratio": 0.2
+      },
+      "description": "Check CaVO3 results against paper gold"
+    },
+    {
+      "id": "trend_check",
+      "output_file": null,
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Verify structural trend: CaVO3 effective mass ratio > SrVO3 effective mass ratio"
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Crossover temperature can be recomputed directly from the submitted peak heights/positions, so the strongest tier applies.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Frenkel line temperatures for each pressure as used in the paper (from Ref. [10])",
+      "source_provenance": "Paper text: FL temperatures 515 K (0.5 kbar), 525 K (1 kbar), 550 K (2.5 kbar), 580 K (5 kbar), 680 K (10 kbar)",
+      "generation_method": "hardcoded from paper",
+      "why_not_fabricated": "These are the exact published FL temperatures that the paper compares against; they define the expected structural crossover."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "crossover_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "state_points",
+            "crossover_summary"
+          ],
+          "state_points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pressure_kbar",
+                "temperature_K",
+                "peaks"
+              ],
+              "properties": {
+                "pressure_kbar": {
+                  "type": "number"
+                },
+                "temperature_K": {
+                  "type": "number"
+                },
+                "peaks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "peak_id",
+                      "position_A",
+                      "height"
+                    ],
+                    "properties": {
+                      "peak_id": {
+                        "type": "string",
+                        "enum": [
+                          "first",
+                          "second",
+                          "third",
+                          "new_second"
+                        ]
+                      },
+                      "position_A": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "crossover_summary": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "pressure_kbar",
+                "crossover_temperature_K",
+                "crossover_method"
+              ],
+              "properties": {
+                "pressure_kbar": {
+                  "type": "number"
+                },
+                "crossover_temperature_K": {
+                  "type": "number"
+                },
+                "crossover_method": {
+                  "type": "string",
+                  "enum": [
+                    "new_peak_prominent",
+                    "third_peak_minimum"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "All per-state-point PDF peak positions/heights and per-pressure crossover temperature and method."
+      }
+    ],
+    "notes": "The agent must run the full MD simulation pipeline; no pre-computed data is provided. The checker will compare the reported crossover temperatures to the expected Frenkel line values (hidden) and verify self-consistency with the peak data, scoring on a threshold-or-better basis."
+  },
+  "steps": [
+    {
+      "id": "crossover_0.5kbar",
+      "output_file": "crossover_results.json",
+      "weight": 0.2,
+      "pressure_kbar": 0.5,
+      "fl_temp": 515,
+      "method": "new_peak_prominent"
+    },
+    {
+      "id": "crossover_1.0kbar",
+      "output_file": "crossover_results.json",
+      "weight": 0.2,
+      "pressure_kbar": 1.0,
+      "fl_temp": 525,
+      "method": "new_peak_prominent"
+    },
+    {
+      "id": "crossover_2.5kbar",
+      "output_file": "crossover_results.json",
+      "weight": 0.2,
+      "pressure_kbar": 2.5,
+      "fl_temp": 550,
+      "method": "new_peak_prominent"
+    },
+    {
+      "id": "crossover_5.0kbar",
+      "output_file": "crossover_results.json",
+      "weight": 0.2,
+      "pressure_kbar": 5.0,
+      "fl_temp": 580,
+      "method": "third_peak_minimum"
+    },
+    {
+      "id": "crossover_10.0kbar",
+      "output_file": "crossover_results.json",
+      "weight": 0.2,
+      "pressure_kbar": 10.0,
+      "fl_temp": 680,
+      "method": "third_peak_minimum"
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Full MD trajectory recompute is infeasible in lightweight verifier; compare reported D and vdW energies to paper values within tolerance.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "diffusion_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "D"
+          ],
+          "units": {
+            "D": "10⁻⁵ cm² s⁻¹"
+          },
+          "description": "Each row corresponds to one system (WAT_BNNT, WAT_FBNNT, Drug_BNNT, Drug_FBNNT) with its diffusion coefficient."
+        },
+        "description": "Self‑diffusion coefficients of water and carboplatin inside pristine and functionalized BNNT. The values will be compared to hidden paper‑reported references within tolerance."
+      },
+      {
+        "file": "vdw_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "vdw_per_drug",
+            "ele_per_drug"
+          ],
+          "units": {
+            "vdw_per_drug": "kcal mol⁻¹",
+            "ele_per_drug": "kcal mol⁻¹"
+          },
+          "description": "Five rows (1‑Drug_FBNNT … 5‑Drug_FBNNT) with van der Waals and electrostatic energies per drug molecule. The system column contains the system name."
+        },
+        "description": "Per‑drug non‑bonded interaction energies between carboplatin and the functionalized BNNT inner surface at different drug loadings. Values will be compared to hidden paper‑reported references within tolerance."
+      }
+    ],
+    "notes": "Only the reported diffusion coefficients and energies are scored; raw MD trajectories are not required as scored artifacts. The checker compares the agent's reported values to hidden paper‑reported target values with appropriate tolerances and also verifies the trend (higher diffusion in FBNNT)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold diffusion coefficients and vdW energies extracted from the paper's Table 2 and Table 3.",
+      "source_provenance": "Paper Table 2 (diffusion coefficients) and Table 3 (vdW energies per drug)",
+      "generation_method": "Direct transcription from the published paper.",
+      "why_not_fabricated": "They are the paper's reported results."
+    }
+  ],
+  "steps": [
+    {
+      "id": "diffusion",
+      "output_file": "diffusion_coefficients.csv",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "gold": {
+        "WAT_BNNT": 0.44,
+        "WAT_FBNNT": 0.6,
+        "Drug_BNNT": 0.56,
+        "Drug_FBNNT": 1.89
+      },
+      "tolerance_rel": 0.2,
+      "trend_checks": [
+        {
+          "condition_a": "WAT_FBNNT",
+          "condition_b": "WAT_BNNT",
+          "expected": "greater"
+        },
+        {
+          "condition_a": "Drug_FBNNT",
+          "condition_b": "Drug_BNNT",
+          "expected": "greater"
+        }
+      ]
+    },
+    {
+      "id": "vdw_energy",
+      "output_file": "vdw_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "gold": {
+        "1-Drug_FBNNT": {
+          "vdw": -43.0,
+          "ele": 0.018
+        },
+        "2-Drug_FBNNT": {
+          "vdw": -45.2,
+          "ele": 0.032
+        },
+        "3-Drug_FBNNT": {
+          "vdw": -46.3,
+          "ele": 0.207
+        },
+        "4-Drug_FBNNT": {
+          "vdw": -46.8,
+          "ele": -0.139
+        },
+        "5-Drug_FBNNT": {
+          "vdw": -45.4,
+          "ele": -0.897
+        }
+      },
+      "tolerance_rel": 0.1
+    }
+  ]
+}

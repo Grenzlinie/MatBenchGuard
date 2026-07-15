@@ -1,0 +1,41 @@
+[
+  {
+    "id": "01_build_models",
+    "title": "Build initial molecular models of the metalloclusters",
+    "role": "process",
+    "action": "Construct initial Cartesian coordinate files for all eight cluster/redox systems (oxidized and reduced [2Fe]H, [4Fe4S]Cys4, [4Fe4S]Cys3His, [2Fe2S]Cys4) with methylthiolate capping groups replacing cysteinate, using the atom types, residue names, and connectivity from the original work.",
+    "output_file": "",
+    "evidence": "models_summary.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the 3D structures that will serve as input for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "02_dft_calculations",
+    "title": "Run DFT geometry optimization, frequency, and charge calculations",
+    "role": "process",
+    "action": "For each cluster model, perform a gas-phase geometry optimization followed by an analytical frequency calculation using the BLYP functional and 6-31+G* basis set in ORCA. Use settings that output the Hessian in internal coordinates. Compute Natural Population Analysis (NPA) charges from the converged wavefunction using Multiwfn. Store the DFT output and wavefunction files.",
+    "output_file": "",
+    "evidence": "dft_calculations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate raw quantum-mechanical data (Hessian diagonal elements, NPA charges) that are the sole input to the parameter derivation step.",
+    "output_schema": ""
+  },
+  {
+    "id": "03_derive_parameters",
+    "title": "Derive force-field parameters and compile CSV table",
+    "role": "scored",
+    "action": "Extract the diagonal Hessian elements corresponding to the manually defined internal coordinates (bonds, angles, dihedrals, impropers). Apply the scaling factor (0.9945)^2 and convert to CHARMM units (multiply bond constants by 2242.3, angle/torsion constants by 627.49). Map harmonic torsional constants to CHARMM dihedral amplitudes. Redistribute methylthiolate hydrogen charges to cysteinate methylene hydrogens while preserving integer cluster charge. Compile all bond force constants, angle force constants, dihedral amplitudes, improper torsion constants, and NPA partial charges into a single CSV file with the prescribed schema for the eight cluster/redox systems.",
+    "output_file": "ff_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The final derived parameter set, containing all reported force constants and atomic charges.",
+    "output_schema": "CSV with columns: cluster (string), coordinate_type (string), atom1 (string), atom2 (string), atom3 (string), atom4 (string), parameter_type (string), value (float), units (string). One row per parameter. The value column holds the numeric parameter as computed by the agent."
+  }
+]

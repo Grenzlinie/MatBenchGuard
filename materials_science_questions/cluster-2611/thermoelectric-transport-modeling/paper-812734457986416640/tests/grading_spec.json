@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes max ZT and its Fermi energy from the submitted ZT_vs_Ef.csv, compares ZT to a hidden threshold (threshold_or_better) and Ef location to a hidden window derived from the paper's inner band edges, and verifies self-consistency with summary.json.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ZT_vs_Ef.csv": "threshold_or_better",
+    "summary.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference threshold for max ZT and Ef window",
+      "source_provenance": "Paper Fig. 5 shows ZT > 20 at T=400 K near inner band edges (around -0.6 and 0.6 eV). Threshold set to 15.0 to be robust yet require correct physics; Ef window centers at -0.6 and 0.6 eV with tolerance 0.2 eV.",
+      "generation_method": "Derived from paper's main claim and figure analysis.",
+      "why_not_fabricated": "The threshold directly reflects the paper's quantitative claim; the window captures the band-edge location that any correct tight-binding calculation will produce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ZT_vs_Ef.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Ef",
+            "ZT"
+          ],
+          "units": {
+            "Ef": "eV",
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "CSV table of Fermi energy vs. figure of merit ZT for the ordered DNA ladder at T=400 K. The checker recomputes the maximum ZT from this table and scores it against a hidden threshold."
+      },
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "max_ZT": "float",
+            "Ef_at_max_ZT": "float"
+          },
+          "units": {
+            "max_ZT": "dimensionless",
+            "Ef_at_max_ZT": "eV"
+          }
+        },
+        "description": "Extracted maximum ZT and the Fermi energy where it occurs. The checker will verify that these values are consistent with the ZT_vs_Ef.csv table."
+      }
+    ],
+    "notes": "The hidden checker recomputes the maximum ZT and its associated Ef directly from ZT_vs_Ef.csv and compares them against a paper-derived gold threshold and energy window. The summary.json is additionally verified for self-consistency. The reward is determined solely by the checker's recomputation."
+  },
+  "steps": [
+    {
+      "id": "zt_max_threshold",
+      "output_file": "ZT_vs_Ef.csv",
+      "weight": 0.6,
+      "kind": "numeric",
+      "target": 15.0,
+      "tolerance": 0.0,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "ef_at_max_location",
+      "output_file": "ZT_vs_Ef.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "params": {
+        "centers": [
+          -0.6,
+          0.6
+        ],
+        "tolerance": 0.2
+      }
+    },
+    {
+      "id": "summary_consistency",
+      "output_file": "summary.json",
+      "weight": 0.1,
+      "kind": "custom",
+      "params": {
+        "field_tolerance": 1e-05
+      }
+    }
+  ]
+}

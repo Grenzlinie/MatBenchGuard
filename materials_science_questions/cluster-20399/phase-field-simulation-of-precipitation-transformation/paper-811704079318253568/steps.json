@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_model_setup",
+    "title": "Model Setup",
+    "role": "process",
+    "action": "Implement the Landau free-energy functional incorporating global transition-temperature effect (GTTE) via concentration-dependent leading coefficient and local-field effect (LFE) via static defect fields. Implement the stochastic time-dependent Ginzburg-Landau equation solver on a 2D grid (256×256 units, periodic boundary conditions) using the specified elastic constants, gradient energy coefficient, and Landau coefficients. Set all physical and numerical parameters as defined in the model description.",
+    "output_file": "",
+    "evidence": "parameters_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Defines and implements the phase-field model, including all physical parameters and solver configuration. This step must be executed before any simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_cooling_sim",
+    "title": "Cooling Simulations",
+    "role": "process",
+    "action": "For each defect concentration c in {0, 0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.2}, run cooling-driven phase-field simulations from a high temperature (in the austenite phase) down to a temperature where the system is fully transformed or frozen. Store the order-parameter fields η₁(r), η₂(r) at a sufficient number of temperature steps for later post-processing.",
+    "output_file": "",
+    "evidence": "cooling_complete.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates microstructural evolution data (order-parameter fields) for all defect concentrations. These fields are mandatory inputs for the subsequent transition-temperature determination.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_transition_temps",
+    "title": "Determine Transition Temperatures",
+    "role": "scored",
+    "action": "From the saved cooling-simulation fields for each c, compute the volume fraction of martensitic domains and the heat capacity as functions of temperature. Identify Ms (for c<0.05) or Tg (for c≥0.075) as the peak in heat capacity, and Tnd as the temperature where the volume fraction of martensite (including nanosized domains) reaches approximately 3%. Write transition_temperatures.csv with columns c, Ms, Tg, Tnd. For c where Ms is determined, Tg must be NaN; for c where Tg is determined, Ms must be NaN.",
+    "output_file": "transition_temperatures.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Post-processes the cooling simulation outputs to extract the phase-diagram transition temperatures. The CSV contains one row per c value with the corresponding Ms, Tg, and Tnd.",
+    "output_schema": "columns: c (float, dimensionless defect concentration), Ms (float, normalized temperature or NaN), Tg (float, normalized temperature or NaN), Tnd (float, normalized temperature)."
+  },
+  {
+    "id": "step_zfc_fc",
+    "title": "ZFC/FC Simulation and Curve for c=0.125",
+    "role": "scored",
+    "action": "For c=0.125, run zero-field cooling (ZFC) and field cooling (FC) protocols using the same phase-field model. In ZFC, cool in zero applied field and record the volume fraction of one variant as a function of temperature. In FC, apply a small symmetry-breaking field during cooling, then measure the volume fraction on heating. Write zfc_fc_curve.csv with columns T, strain_ZFC, strain_FC. The temperature range must cover from above Tnd to below Tg for this composition.",
+    "output_file": "zfc_fc_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Runs the ZFC/FC protocol to probe ergodicity breaking and strain-glass freezing. The resulting CSV provides the volume-fraction curves, which must show separation and FC strain lying above ZFC at low temperatures.",
+    "output_schema": "columns: T (float, normalized temperature), strain_ZFC (float, volume fraction), strain_FC (float, volume fraction)."
+  }
+]

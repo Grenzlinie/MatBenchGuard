@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T1 recompute infeasible – the verifier sandbox cannot re-run DFT+phonon calculations; a result-level comparison against paper-reported hidden gold with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "raman_active_frequencies.json": "exact_match",
+    "thermal_conductivity_300K.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Raman-active mode frequencies (T2g, A1g, Eg) from cubic graphene paper.",
+      "source_provenance": "Paper Figure 3(a) and Section 3 text: frequencies 417.63, 1394.02, 1504.15 cm⁻¹.",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "These are the actual published experimental/computational results of the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Lattice thermal conductivity at 300 K for cubic graphene.",
+      "source_provenance": "Paper Section 3: 'at room temperature, the calculated lattice thermal conductivity of cubic graphene is about 266.17 W/mK'.",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "This is the actual published value from the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "raman_active_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "T2g_frequency",
+            "A1g_frequency",
+            "Eg_frequency",
+            "unit"
+          ],
+          "properties": {
+            "T2g_frequency": "float",
+            "A1g_frequency": "float",
+            "Eg_frequency": "float",
+            "unit": "string (cm^-1)"
+          }
+        },
+        "description": "Frequencies of the three Raman-active phonon modes of cubic graphene: T2g, A1g, Eg. Each in cm^-1."
+      },
+      {
+        "file": "thermal_conductivity_300K.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "thermal_conductivity_300K"
+          ],
+          "properties": {
+            "thermal_conductivity_300K": {
+              "type": "object",
+              "required": [
+                "value",
+                "unit"
+              ],
+              "properties": {
+                "value": "float",
+                "unit": "string (W/mK)"
+              }
+            }
+          }
+        },
+        "description": "Lattice thermal conductivity of cubic graphene at 300 K, given as a value in W/mK."
+      }
+    ],
+    "notes": "Scored via result-level comparison against hidden paper values with tolerances (exact_match policy). Only the two specified artifacts are scored."
+  },
+  "steps": [
+    {
+      "id": "raman",
+      "output_file": "raman_active_frequencies.json",
+      "kind": "compare_numeric",
+      "weight": 0.5,
+      "target_frequencies": {
+        "T2g": 417.63,
+        "A1g": 1394.02,
+        "Eg": 1504.15
+      },
+      "tolerance_abs": 10.0
+    },
+    {
+      "id": "thermal",
+      "output_file": "thermal_conductivity_300K.json",
+      "kind": "compare_numeric",
+      "weight": 0.5,
+      "target_value": 266.17,
+      "tolerance_relative": 0.15
+    }
+  ]
+}

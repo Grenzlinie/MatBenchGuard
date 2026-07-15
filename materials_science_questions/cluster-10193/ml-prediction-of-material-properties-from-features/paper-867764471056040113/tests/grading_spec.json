@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute the full MeltNet training pipeline in the verifier; we compare the agent's reported per-fold and overall MAE values against the paper's reference values with a monotonic threshold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "meltnet_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported MAE values for single and ensemble MeltNet across 5-fold CV, plus baseline (Vegard's law) MAE per fold and overall. Used as reference for comparing agent's MAE.",
+      "source_provenance": "Paper Table I 'Comparison between different methods in predicting melting temperatures ...'",
+      "generation_method": "Direct extraction from Table I numbers.",
+      "why_not_fabricated": "These are the paper's own reported values; using them as gold is faithful to the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "meltnet_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "single_fold_mae": "array of 5 floats (Kelvin)",
+            "ensemble_fold_mae": "array of 5 floats (Kelvin)",
+            "overall_single_mae": "float (Kelvin)",
+            "overall_ensemble_mae": "float (Kelvin)"
+          }
+        },
+        "description": "MAE values of single and ensemble MeltNet predictions across 5-fold cross-validation, compared to hidden reference values from the paper."
+      }
+    ],
+    "notes": "The agent must execute the full pipeline (data generation, descriptor computation, single-model cross-validation, ensemble training) and compute the MAE values. The checker will compare each reported MAE to hidden gold values with tolerances."
+  },
+  "steps": [
+    {
+      "id": "mae_metrics",
+      "output_file": "meltnet_results.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Evaluate the meltnet_results.json against paper-reported MAE values with monotonic scoring."
+    }
+  ],
+  "gold": {
+    "single_fold_paper": [
+      130.8,
+      143.3,
+      125.8,
+      116.6,
+      148.9
+    ],
+    "single_fold_baseline": [
+      225.2,
+      254.5,
+      195.5,
+      179.5,
+      235.0
+    ],
+    "ensemble_fold_paper": [
+      123.8,
+      133.3,
+      109.6,
+      104.2,
+      141.7
+    ],
+    "ensemble_fold_baseline": [
+      225.2,
+      254.5,
+      195.5,
+      179.5,
+      235.0
+    ],
+    "overall_single_paper": 133.1,
+    "overall_ensemble_paper": 122.5,
+    "overall_baseline": 218.0
+  }
+}

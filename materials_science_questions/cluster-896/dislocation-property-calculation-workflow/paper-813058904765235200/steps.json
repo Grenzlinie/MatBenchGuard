@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Bulk reference DFT calculations",
+    "role": "process",
+    "action": "Perform spin-polarised DFT (PAW, PBE GGA) for a perfect bcc Fe supercell (250-atom or similar) to obtain E_bulk. For each solute X = B, C, N, O, place a single solute in an octahedral interstitial site and relax the supercell to obtain E_X. Record the total energies in a temporary file for later use.",
+    "output_file": "",
+    "evidence": "bulk_ref_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Pure dislocation reference DFT calculations",
+    "role": "process",
+    "action": "Construct a quadrupolar array of 1/2⟨111⟩ screw dislocation dipoles in bcc Fe using cells containing 135 Fe atoms (1b length) and 270 Fe atoms (2b length). Relax the easy-core dipole in both cells to obtain E_easy_1b and E_easy_2b. Constrain the three central ⟨111⟩ Fe columns to the same altitude to relax the hard-core dipole (1b cell) and obtain E_hard_1b. Store the energies in a temporary file.",
+    "output_file": "",
+    "evidence": "dislocation_ref_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Dislocation–solute relaxation simulations",
+    "role": "process",
+    "action": "For each solute X ∈ {B, C, N, O} and each solute separation distance d ∈ {1b, 2b} along ⟨111⟩, prepare a dislocation dipole cell with two solute atoms placed in the E₁ octahedral-like first-neighbour positions near each core. Relax atomic positions until forces fall below 10⁻² eV/Å. Additionally, for Fe(N) with d = 1b, perform a separate relaxation starting with the N atom at the centre of the hard-core prismatic site. For every case, record the final total energy E_disloc_X_d and note the final core configuration (easy or hard). Save all raw results in a temporary file.",
+    "output_file": "",
+    "evidence": "relaxation_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compile total energy table",
+    "role": "scored",
+    "action": "From the data collected in the previous steps, produce a scored file total_energies.json containing all raw total energies: E_bulk (float), E_X_B, E_X_C, E_X_N, E_X_O (floats), E_easy_1b, E_easy_2b, E_hard_1b (floats), and for each solute and distance (1b, 2b) the final energy E_disloc_X_1b, E_disloc_X_2b (floats). For Fe(N) 1b use the lower energy from the hard-core relaxation.",
+    "output_file": "total_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing all raw DFT total energies needed to recompute interaction energies.",
+    "output_schema": "Keys: E_bulk (float), E_X_B (float), E_X_C (float), E_X_N (float), E_X_O (float), E_easy_1b (float), E_easy_2b (float), E_hard_1b (float), E_disloc_B_1b (float), E_disloc_B_2b (float), E_disloc_C_1b (float), E_disloc_C_2b (float), E_disloc_N_1b (float), E_disloc_N_2b (float), E_disloc_O_1b (float), E_disloc_O_2b (float). All energies in eV."
+  },
+  {
+    "id": "step_05",
+    "title": "Reconstruction outcomes",
+    "role": "scored",
+    "action": "Produce a second scored file summarizing whether each relaxation from the E₁ configuration led to the hard core.",
+    "output_file": "reconstruction_outcomes.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Boolean flags indicating hard-core reconstruction from spontaneous relaxation.",
+    "output_schema": "Keys: B_1b, B_2b, C_1b, C_2b, N_1b, N_2b, O_1b, O_2b (each boolean)."
+  }
+]

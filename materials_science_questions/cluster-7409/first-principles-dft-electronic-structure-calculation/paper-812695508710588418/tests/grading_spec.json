@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The bandgap is recomputed from the raw PDOS data; this is the core of the paper's claim and is fully derivative from the agent’s DFT calculation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pdos_TiO2_101.dat": "structural_audit",
+    "bandgap_TiO2_101.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference bandgap value for comparison",
+      "source_provenance": "Paper conclusion text and Fig 3: bandgap ~1.0 eV for TiO2-(101) sheet (PBE).",
+      "generation_method": "Value extracted from paper; tolerance set to ±0.2 eV based on typical DFT spread.",
+      "why_not_fabricated": "It is the actual paper-reported number, so scoring is faithful to the replication target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pdos_TiO2_101.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy[eV]",
+            "total_DOS[states/eV]",
+            "Ti_3d_PDOS[states/eV]",
+            "O_2p_PDOS[states/eV]"
+          ]
+        },
+        "description": "Projected density of states data for Ti-3d and O-2p orbitals. The file enables verification that a clear energy gap exists in the DOS around the Fermi level."
+      },
+      {
+        "file": "bandgap_TiO2_101.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "The PBE single-particle bandgap in eV, computed as the energy separation between the valence-band maximum and conduction-band minimum in the PDOS."
+      }
+    ],
+    "notes": "Only the (101) electronic structure is scored. Optical properties, bulk bandgap, and (001) sheet are excluded per scope."
+  },
+  "steps": [
+    {
+      "id": "step_03_pdos",
+      "output_file": "pdos_TiO2_101.dat",
+      "kind": "custom",
+      "weight": 0.8,
+      "config": {
+        "target_bandgap": 1.0,
+        "tolerance": 0.2,
+        "dos_threshold_factor": 0.01,
+        "min_points": 500
+      }
+    },
+    {
+      "id": "step_04_bandgap",
+      "output_file": "bandgap_TiO2_101.txt",
+      "kind": "custom",
+      "weight": 0.2,
+      "config": {
+        "consistency_tolerance": 0.05
+      }
+    }
+  ]
+}

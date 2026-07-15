@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw artifacts is infeasible as it requires rerunning ab initio calculations; compare reported values to paper gold with tolerances and structural ordering checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_enthalpies.csv": "reference_match",
+    "dhb_isomer_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold binding enthalpies and free energies for six molecules, and relative energies for DHB-Na+ isomers",
+      "source_provenance": "Paper Table 4 (binding enthalpies/free energies) and Table 2 (MP2/b2//HF/b1 relative energies)",
+      "generation_method": "Direct transcription from the published article",
+      "why_not_fabricated": "Values are the exact paper-reported numbers; they are not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_enthalpies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "delta_H298_kcalmol",
+            "delta_G298_kcalmol"
+          ],
+          "units": {
+            "delta_H298_kcalmol": "kcal/mol",
+            "delta_G298_kcalmol": "kcal/mol"
+          }
+        },
+        "description": "Sodium binding enthalpies and free energies at 298 K for the six MALDI matrix molecules DHB, SA, 4-HCCA, PA, NA, AA, computed at the MP2/6-311+G(2d,2p)//HF/6-31G* level including ZPVE and thermal corrections."
+      },
+      {
+        "file": "dhb_isomer_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "isomer_label",
+            "relative_delta_H_kcalmol"
+          ],
+          "units": {
+            "relative_delta_H_kcalmol": "kcal/mol"
+          }
+        },
+        "description": "Relative enthalpies (ΔH298) of DHB-Na+ isomers 1-8 at the MP2/6-311+G(2d,2p)//HF/6-31G* level, with isomer 1 as reference (0.0 kcal/mol)."
+      }
+    ],
+    "notes": "The hidden checker compares the reported binding enthalpies and free energies to paper-reported values with appropriate tolerances, and verifies relative ordering and key energy differences for DHB isomers."
+  },
+  "steps": [
+    {
+      "id": "binding_enthalpies",
+      "output_file": "binding_enthalpies.csv",
+      "weight": 0.5,
+      "kind": "binding_enthalpies_check",
+      "gold": {
+        "DHB": {
+          "delta_H298_kcalmol": 34.5,
+          "delta_G298_kcalmol": 27.8
+        },
+        "SA": {
+          "delta_H298_kcalmol": 39.0,
+          "delta_G298_kcalmol": 30.7
+        },
+        "4-HCCA": {
+          "delta_H298_kcalmol": 44.3,
+          "delta_G298_kcalmol": 36.1
+        },
+        "PA": {
+          "delta_H298_kcalmol": 42.9,
+          "delta_G298_kcalmol": 35.2
+        },
+        "NA": {
+          "delta_H298_kcalmol": 37.5,
+          "delta_G298_kcalmol": 29.6
+        },
+        "AA": {
+          "delta_H298_kcalmol": 37.0,
+          "delta_G298_kcalmol": 29.0
+        }
+      },
+      "expected_order": [
+        "DHB",
+        "AA",
+        "NA",
+        "SA",
+        "PA",
+        "4-HCCA"
+      ],
+      "tolerance_H": 1.5,
+      "tolerance_G": 1.5
+    },
+    {
+      "id": "dhb_isomer_energies",
+      "output_file": "dhb_isomer_energies.csv",
+      "weight": 0.5,
+      "kind": "isomer_energies_check",
+      "gold": {
+        "1": 0.0,
+        "2": 0.0,
+        "3": 8.6,
+        "4": 10.4,
+        "5": 10.2,
+        "6": 0.7,
+        "7": 13.9,
+        "8": "not found"
+      },
+      "tolerances": {
+        "1": 0.0,
+        "2": 0.5,
+        "3": 1.5,
+        "4": 1.5,
+        "5": 1.5,
+        "6": 0.5,
+        "7": 1.5,
+        "8": null
+      }
+    }
+  ]
+}

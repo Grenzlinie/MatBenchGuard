@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01",
+    "title": "Extract pair potential coefficients and compute equilibrium properties",
+    "role": "process",
+    "action": "Obtain the polynomial pair potential coefficients C_{j,i} for Cu, Ag, Au from the Esterling and Swaroop papers. For each metal, determine the equilibrium distance r_e by minimizing the total free energy, and evaluate the second, third, and fourth spatial derivatives of the potential at r_e. Also determine the first-minimum distance bar_r_e of the potential energy.",
+    "output_file": "",
+    "evidence": "potential_derivatives.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate calculation of the potential derivatives and equilibrium distances needed for subsequent thermodynamic properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Compute Debye temperature and Grüneisen parameter",
+    "role": "process",
+    "action": "For each metal, retrieve the experimental isothermal bulk modulus K_T from the cited ultrasonic measurement papers (Overton & Gaffney 1955 for Cu; Neighbours & Alers 1958 for Ag and Au). Using K_T, the equilibrium distance r_e, and the potential derivatives, compute the Debye temperature Θ_D via the relation Θ_D = n (5 K_T r_e)^(1/2) / k_B. Compute the Grüneisen parameter γ from r_e and the potential derivatives.",
+    "output_file": "",
+    "evidence": "debye_gamma.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the Θ_D and γ values needed for later auxiliary quantities and as output quantities in the final CSV.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Compute auxiliary quantities for anharmonic heat capacity",
+    "role": "process",
+    "action": "Using the potential derivatives, atomic mass, the Debye temperature from step 2, compute the characteristic lattice frequency ω_L = ħ sqrt(8 Φ''(bar_r_e)/m). Then compute the dimensionless parameters G = [Φ'''(r_e)]^2/[Φ''(r_e)]^3, K = Φ''''(r_e)/[Φ''(r_e)]^2, C_x = 0.125 (K - B G), α = 1 - A ω_L G, and the temperature scale T_A = Θ_D α (1 + 8 A ω_L C_x). Use A=0.04257 and B=0.2992.",
+    "output_file": "",
+    "evidence": "auxiliary_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Prepares the parameters required to evaluate C_v via the low- and high-temperature limiting forms.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "Compute molar heat C_v and volume thermal expansion β and assemble output CSV",
+    "role": "scored",
+    "action": "For each metal (Cu, Ag, Au) and each temperature T in {20, 50, 100, 150, 200, 300} K, compute the molar heat at constant volume C_v using the low-temperature limit (C_v = (12/5) π^4 R (T/T_A)^3) when Θ ≪ ω_L and the high-temperature limit (C_v = 3R [1 - Θ C_x - 0.04166 (ω_L/Θ)^2]) when Θ ≫ ω_L, where Θ = k_B T. Then compute the volume thermal expansion coefficient β via β = - (C_v / (2 r_e N_A)) * [Φ'''(r_e) / (Φ''(r_e))^2]. Collect all computed results: Θ_D and γ from previous steps (with T_K=0.0) and the β and C_v values for each temperature. Write a CSV file 'computed_properties.csv' with columns: metal (Cu/Ag/Au), property (Theta_D, gamma, beta, C_v), T_K (numeric, use 0.0 for Θ_D and γ), value (numeric), unit (K for Theta_D, dimensionless for gamma, 1e-6/K for beta, J/(mol·K) for C_v). Include one row per metal per property per temperature.",
+    "output_file": "computed_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing all computed thermodynamic properties for Cu, Ag, and Au as reported in the paper’s Tables I and II (present calculations).",
+    "output_schema": "Columns: metal (string, one of Cu, Ag, Au), property (string, one of Theta_D, gamma, beta, C_v), T_K (float, temperature in K; 0.0 for Theta_D and gamma), value (float, numeric value), unit (string, e.g., K, dimensionless, 1e-6/K, J/(mol·K)). One row per metal-property-temperature combination."
+  }
+]

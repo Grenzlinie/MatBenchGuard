@@ -1,0 +1,144 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Dynamics metrics recomputed from raw time series; classification matched against hidden gold from Table 1.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "symmetry_classification.json": "reference_match",
+    "photomagnetism_dynamics.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold entries for symmetry classification (irreducible representation, axial isotropy subgroup, abbreviation)",
+      "source_provenance": "Table 1 of the paper 'Phase competition and photomagnetism in supramolecular assemblies based on octacyanomolybdates of square antiprism configuration'",
+      "generation_method": "verbatim copy from the published table",
+      "why_not_fabricated": "Exact strings from the paper's classification table"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "symmetry_classification.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "irreducible_representation": "string",
+              "axial_isotropy_subgroup": "string",
+              "abbreviation": "string"
+            },
+            "required": [
+              "irreducible_representation",
+              "axial_isotropy_subgroup",
+              "abbreviation"
+            ]
+          },
+          "required": [
+            "irreducible_representation",
+            "axial_isotropy_subgroup",
+            "abbreviation"
+          ]
+        },
+        "description": "JSON array of the eight static density-wave states, each with irreducible representation, axial isotropy subgroup, and descriptive abbreviation as in Table 1 of the source."
+      },
+      {
+        "file": "photomagnetism_dynamics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "t",
+            "M_ab",
+            "M_c",
+            "E_ab",
+            "E_c"
+          ],
+          "units": {
+            "t": "ħ/t_CuMo",
+            "M_ab": "normalized magnetization",
+            "M_c": "normalized magnetization",
+            "E_ab": "t_CuMo",
+            "E_c": "t_CuMo"
+          }
+        },
+        "description": "Time series of magnetization (normalized by saturated magnetization) and absorbed photon energy for a-axis and c-axis laser polarizations, demonstrating polarization-dependent photomagnetism and double-stepped absorption."
+      }
+    ],
+    "notes": "The PM ground-state evidence and spectral function file are not scored; only the classification list and the magnetization/absorption dynamics carry reward. Tolerances accommodate legitimate toolchain spread."
+  },
+  "steps": [
+    {
+      "id": "symmetry_classification",
+      "output_file": "symmetry_classification.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "gold_entries": [
+        {
+          "irreducible_representation": "ΓA_g⊗S⁰⊗T⁰",
+          "axial_isotropy_subgroup": "C_4h LST",
+          "abbreviation": "PM"
+        },
+        {
+          "irreducible_representation": "ΓB_g⊗S⁰⊗T⁰",
+          "axial_isotropy_subgroup": "C_2h LST",
+          "abbreviation": "Cu-CDW"
+        },
+        {
+          "irreducible_representation": "ΓA_u⊗S⁰⊗T⁰",
+          "axial_isotropy_subgroup": "C_4 LST",
+          "abbreviation": "Mo-CDW"
+        },
+        {
+          "irreducible_representation": "ΓB_u⊗S⁰⊗T⁰",
+          "axial_isotropy_subgroup": "S_4 LST",
+          "abbreviation": "BOW"
+        },
+        {
+          "irreducible_representation": "ΓA_g⊗S¹⊗T¹",
+          "axial_isotropy_subgroup": "C_4h L A(e_z) M(e_y)",
+          "abbreviation": "CuMo-(A)FM"
+        },
+        {
+          "irreducible_representation": "ΓB_g⊗S¹⊗T¹",
+          "axial_isotropy_subgroup": "(E+C_4z u_{2x}) C_2h L A(e_z) M(e_y)",
+          "abbreviation": "Cu-AFM"
+        },
+        {
+          "irreducible_representation": "ΓA_u⊗S¹⊗T¹",
+          "axial_isotropy_subgroup": "(E+I u_{2x}) C_4 L A(e_z) M(e_y)",
+          "abbreviation": "Mo-AFM"
+        },
+        {
+          "irreducible_representation": "ΓB_u⊗S¹⊗T¹",
+          "axial_isotropy_subgroup": "(E+C_4z u_{2x}) S_4 L A(e_z) M(e_y)",
+          "abbreviation": "SBOW"
+        }
+      ],
+      "match_fields": [
+        "irreducible_representation",
+        "axial_isotropy_subgroup",
+        "abbreviation"
+      ]
+    },
+    {
+      "id": "photomagnetism_dynamics",
+      "output_file": "photomagnetism_dynamics.csv",
+      "weight": 0.6,
+      "kind": "metric_recompute",
+      "thresholds": {
+        "M_ab_threshold": 0.1,
+        "M_c_threshold": 0.05,
+        "double_step_ratio": 1.5,
+        "dt_default": 1.0,
+        "smoothing_window": 3
+      },
+      "description": "Recompute max magnetization and detect double-step absorption from the time series."
+    }
+  ]
+}

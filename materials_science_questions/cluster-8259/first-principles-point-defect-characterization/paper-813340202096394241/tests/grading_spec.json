@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute formation energies are DFT-implementation-dependent; only relative stability trends (interfacial vs interior preference, substitution vs vacancy preference) are robust and can be scored.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "defect",
+            "location",
+            "mu_N",
+            "E_f"
+          ],
+          "units": {
+            "mu_N": "eV",
+            "E_f": "eV"
+          }
+        },
+        "description": "CSV file containing computed neutral defect formation energies for all defect types, locations, and nitrogen chemical potential values. Used to verify the relative stability trends (interfacial vs interior preference, substitutional vs vacancy) via structural checks."
+      }
+    ],
+    "notes": "Charged defect calculations and electronic structure analysis (DOS, half-metallicity) are excluded per the reproduction scope. The scored target is limited to neutral defect formation energies and relative trends."
+  },
+  "steps": [
+    {
+      "id": "trends",
+      "output_file": "formation_energies.csv",
+      "weight": 1.0,
+      "kind": "structural_audit",
+      "description": "Verify interfacial vs interior stability and substitutional vs vacancy stability.",
+      "target_policy": "structural_audit",
+      "config": {
+        "mu_N_values": [
+          -4.0,
+          -2.0,
+          0.0
+        ],
+        "mu_N_tolerance": 0.01,
+        "defect_interior_mapping": {
+          "C_B": {
+            "system": "pure_BNNT",
+            "location": "interior_BN"
+          },
+          "C_N": {
+            "system": "pure_BNNT",
+            "location": "interior_BN"
+          },
+          "B_C": {
+            "system": "pure_CNT",
+            "location": "interior_C"
+          },
+          "N_C": {
+            "system": "pure_CNT",
+            "location": "interior_C"
+          },
+          "V_C": {
+            "system": "pure_CNT",
+            "location": "interior_C"
+          },
+          "V_B": {
+            "system": "pure_BNNT",
+            "location": "interior_BN"
+          },
+          "V_N": {
+            "system": "pure_BNNT",
+            "location": "interior_BN"
+          }
+        },
+        "substitutional_pairs": [
+          {
+            "sub": "C_B",
+            "vac": "V_C"
+          },
+          {
+            "sub": "C_N",
+            "vac": "V_C"
+          },
+          {
+            "sub": "B_C",
+            "vac": "V_B"
+          },
+          {
+            "sub": "N_C",
+            "vac": "V_N"
+          }
+        ]
+      }
+    }
+  ]
+}

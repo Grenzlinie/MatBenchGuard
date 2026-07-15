@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute normalized RMSD between effective and SP density profiles from agent's CSV; structural checks for classical profile deviation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_density_profiles.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_density_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "position_nm",
+            "classical_density",
+            "effective_density",
+            "schrodinger_poisson_density"
+          ],
+          "units": {
+            "position_nm": "nm",
+            "classical_density": "cm^{-3}",
+            "effective_density": "cm^{-3}",
+            "schrodinger_poisson_density": "cm^{-3}"
+          }
+        },
+        "description": "CSV file containing electron density profiles for the classical, effective potential (a0=3 Å), and Schrödinger-Poisson solutions."
+      }
+    ],
+    "notes": "The checker will recompute normalized error metrics (e.g., normalised root-mean-square deviation) between the effective potential density profile and the Schrödinger-Poisson profile, and verify that the classical density profile substantially deviates from the quantum ones."
+  },
+  "steps": [
+    {
+      "id": "effective_sp_closeness",
+      "output_file": "step_01_density_profiles.csv",
+      "kind": "metric_recompute",
+      "weight": 0.5,
+      "params": {
+        "metric": "nrmsd",
+        "column_a": "effective_density",
+        "column_b": "schrodinger_poisson_density",
+        "threshold_better": 0.05,
+        "threshold_worse": 0.2,
+        "scoring": "linear_below"
+      }
+    },
+    {
+      "id": "classical_sp_difference",
+      "output_file": "step_01_density_profiles.csv",
+      "kind": "metric_recompute",
+      "weight": 0.3,
+      "params": {
+        "metric": "nrmsd",
+        "column_a": "classical_density",
+        "column_b": "schrodinger_poisson_density",
+        "threshold_better": 0.15,
+        "threshold_worse": 0.0,
+        "scoring": "linear_above"
+      }
+    },
+    {
+      "id": "peak_structure",
+      "output_file": "step_01_density_profiles.csv",
+      "kind": "rubric",
+      "weight": 0.2,
+      "params": {
+        "checks": [
+          {
+            "description": "SP peak position > 21 nm",
+            "func": "sp_peak_x_gt_21",
+            "weight": 0.5
+          },
+          {
+            "description": "Classical peak position <= 20.5 nm",
+            "func": "cl_peak_x_le_20_5",
+            "weight": 0.3
+          },
+          {
+            "description": "Classical peak density > 1.5 * SP peak density",
+            "func": "cl_max_gt_1_5_sp_max",
+            "weight": 0.2
+          }
+        ]
+      }
+    }
+  ],
+  "notes": "Tolerances are chosen so that the oracle's synthetic CSV (effective ≈ SP with 0.5% noise, classical very different) achieves full reward. The thresholds accommodate potential implementation spread while ensuring a genuinely mismatched classical profile fails."
+}

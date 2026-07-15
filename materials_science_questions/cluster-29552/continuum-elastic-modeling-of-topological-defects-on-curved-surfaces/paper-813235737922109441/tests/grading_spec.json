@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The agent produces only a final CSV of ΔF vs χ_Wall; the underlying SCFT fields are not exposed and cannot be recomputed in the verifier. Comparable paper-reported values (12.2 kT, 3.5 kT, peak at 42) are available as structural targets, making T3 the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "defect_free_energy_vs_chiWall.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference amplitudes (12.2 kT, 3.5 kT) and peak location (χ_Wall=42) from the paper's Section 2.2, Figure 3(a).",
+      "source_provenance": "Paper text: 'The difference in defect free energy is 3.5 kT between the maximum at χ_Wall=42 and χ_Wall>42 (no vertical cylinder) and 12.2 kT between χ_Wall=0 (neutral with vertical cylinder) and χ_Wall>42.' Peak at χ_Wall=42 explicitly stated.",
+      "generation_method": "Extracted verbatim from the paper's Results section.",
+      "why_not_fabricated": "Values are the paper's own published quantitative findings for the exact conditions the task reproduces."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_free_energy_vs_chiWall.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "chi_Wall",
+            "defect_free_energy_kT"
+          ],
+          "units": {
+            "chi_Wall": "dimensionless",
+            "defect_free_energy_kT": "kT"
+          }
+        },
+        "description": "Dislocation defect free energy as a function of the top/bottom wall interaction parameter χ_Wall. The CSV must contain exactly one row per χ_Wall value from the set {0,10,20,30,40,42,44,50,64}, with the free energy in kT."
+      }
+    ],
+    "notes": "The checker will verify the reported CSV for structural trends: a monotonic increase to a maximum near χ_Wall=42, a plateau for χ_Wall≥44, and approximate amplitudes of the rise and plateau as described in the problem background. No gold numerical values are disclosed in this contract; the agent's result is judged against hidden criteria derived from the paper's reported findings."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "defect_free_energy_vs_chiWall.csv",
+      "weight": 1.0,
+      "kind": "structural_audit",
+      "required_chi_Wall": [
+        0,
+        10,
+        20,
+        30,
+        40,
+        42,
+        44,
+        50,
+        64
+      ],
+      "tolerances": {
+        "high_minus_low_target_kT": 12.2,
+        "high_minus_low_abs_tol_kT": 2.0,
+        "max_minus_high_target_kT": 3.5,
+        "max_minus_high_abs_tol_kT": 1.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Detonation pressure and velocity are recomputed from agent-submitted N, M, Q (mol/g, g/mol, cal/g) and density using Kamlet-Jacobs equations; density and condensed heat of formation are checked against paper's experimental gold with tolerances. This forces internal consistency and validates against the paper's reported quantities.",
+  "pass_threshold": 0.6,
+  "steps": [
+    {
+      "id": "compound_5_consistency",
+      "output_file": "compound_5_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "comment": "Verify compound 5 density and heat of formation against hidden gold, recompute detonation from agent's N,M,Q in detonation_raw.json",
+      "gold_density": 2.08,
+      "gold_hof": -773.78,
+      "density_tol": 0.05,
+      "hof_tol": 50,
+      "det_consistency_rel_tol": 0.02
+    },
+    {
+      "id": "compound_8_consistency",
+      "output_file": "compound_8_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "gold_density": 1.79,
+      "gold_hof": -465.22,
+      "density_tol": 0.05,
+      "hof_tol": 50,
+      "det_consistency_rel_tol": 0.02
+    },
+    {
+      "id": "trend_check",
+      "output_file": "",
+      "kind": "structural",
+      "weight": 0.2,
+      "comment": "Compound 5 must have higher density and higher detonation velocity than compound 8"
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold density and condensed heat of formation for compounds 5 and 8",
+      "source_provenance": "Paper Table 1: compound 5 experimental density 2.08 g/cm³, condensed ΔfH°298 = -773.78 kJ/mol; compound 8 experimental density 1.79 g/cm³, condensed ΔfH°298 = -465.22 kJ/mol.",
+      "generation_method": "Direct transcription from the paper's table.",
+      "why_not_fabricated": "These are the experimentally measured density and condensed heat of formation reported in the paper, serving as reference gold for reproduction tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "compound_5_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "compound": "string",
+            "density": "number",
+            "delta_H_condensed": "number",
+            "detonation_P": "number",
+            "detonation_D": "number"
+          },
+          "units": {
+            "density": "g/cm³",
+            "delta_H_condensed": "kJ/mol",
+            "detonation_P": "GPa",
+            "detonation_D": "m/s"
+          }
+        },
+        "description": "Computed density, condensed-phase heat of formation, detonation pressure, and detonation velocity for 4-SF5-1,2,3-triazole (compound 5). The checker will compare density and heat of formation to hidden reference values and recompute detonation from the submitted density/heat of formation to verify internal consistency."
+      },
+      {
+        "file": "compound_8_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "compound": "string",
+            "density": "number",
+            "delta_H_condensed": "number",
+            "detonation_P": "number",
+            "detonation_D": "number"
+          },
+          "units": {
+            "density": "g/cm³",
+            "delta_H_condensed": "kJ/mol",
+            "detonation_P": "GPa",
+            "detonation_D": "m/s"
+          }
+        },
+        "description": "Computed density, condensed-phase heat of formation, detonation pressure, and detonation velocity for 4-CF3-1,2,3-triazole (compound 8). The checker will compare density and heat of formation to hidden reference values and recompute detonation from the submitted density/heat of formation to verify internal consistency."
+      }
+    ],
+    "notes": "The detonation values are computed using the Kamlet-Jacobs equations, not the paper's proprietary Cheetah 4.0. The checker will recompute detonation pressure and velocity from the submitted density and heat of formation and verify that compound 5 exhibits higher density and detonation velocity than compound 8 (trend)."
+  }
+}

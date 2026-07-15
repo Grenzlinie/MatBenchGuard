@@ -1,0 +1,54 @@
+[
+  {
+    "id": "compute_polarizability",
+    "title": "Compute Cs dynamic polarizability and static decomposition",
+    "role": "scored",
+    "action": "Compute the dynamic electric-dipole polarizability α(iω) of the ground-state Cs atom at imaginary frequencies using a relativistic coupled-cluster approach (CCSD(T) within Fock-space RCC). Employ a sum-over-states expression for the valence contribution, with experimental E1 amplitudes and energies for the 6s–6p transitions replacing calculated values. Compute core contribution via relativistic random-phase approximation (RRPA), estimate core-valence, and estimate tail contributions from Dirac-Fock orbitals. Decompose the static limit α(0) into core, valence, core-valence, and tail components. Report the total static polarizability and its decomposition in atomic units.",
+    "output_file": "step_01_static_polarizability.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Static scalar polarizability and component breakdown of ground-state Cs.",
+    "output_schema": "Keys: alpha_total (float), alpha_valence (float), alpha_core (float), alpha_core_valence (float), alpha_tail (float), uncertainty_total (float). All values in atomic units."
+  },
+  {
+    "id": "prepare_dielectric",
+    "title": "Prepare material dielectric functions ε(iω)",
+    "role": "process",
+    "action": "For each surface material (Au, Si, SiO₂, SiNₓ, ordinary sapphire, extraordinary sapphire, birefringent sapphire, YAG), obtain the frequency-dependent dielectric constant ε(iω) along the imaginary axis. Use optical data from the Palik handbook: for Au, compute Im[ε(ω)] = 2nκ, apply Kramers-Kronig to obtain ε(iω), and extrapolate below 0.1 eV with the Drude model (ωp = 9.0 eV, γ = 0.035 eV). For Si, SiO₂, sapphire, YAG, use Palik n,κ data over the available energy range and derive ε(iω) via Kramers-Kronig. For SiNₓ, employ the Tauc-Lorentz model. Save the dielectric functions for all materials for subsequent integration steps.",
+    "output_file": "",
+    "evidence": "dielectric_functions.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_c3",
+    "title": "Compute C3 dispersion coefficients",
+    "role": "scored",
+    "action": "Using the dynamic polarizability α(iω) from step 'compute_polarizability' and the material dielectric functions ε(iω) from step 'prepare_dielectric', numerically integrate the Lifshitz expression to obtain the C3 coefficient for each medium. For the perfect conductor, set S = 1. Decompose each integral into core, valence, core-valence, and tail contributions. Output a CSV table with one row per material (perfect_conductor, Au, Si, SiO2, SiNx, ordinary_sapphire, extraordinary_sapphire, birefringent_sapphire, YAG) and columns for each component and total, all in atomic units.",
+    "output_file": "step_02_C3_coefficients.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "C3 dispersion coefficients for Cs interacting with eight surfaces, with contribution breakdown.",
+    "output_schema": "Columns: material (string, one of: perfect_conductor, Au, Si, SiO2, SiNx, ordinary_sapphire, extraordinary_sapphire, birefringent_sapphire, YAG), C3_core (float), C3_valence (float), C3_core_valence (float), C3_tail (float), C3_total (float). All C3 values in atomic units."
+  },
+  {
+    "id": "compute_f3_fit",
+    "title": "Compute retardation functions and obtain fitting parameters",
+    "role": "scored",
+    "action": "For each surface (Au, Si, SiO₂, SiNₓ, ordinary_sapphire, extraordinary_sapphire, birefringent_sapphire, YAG), evaluate the full interaction potential V(z) from the atom-surface formula using the dynamic polarizability and dielectric functions. Derive the retardation function f₃(z) = -V(z) z³ / C₃ over a dense grid of separation distances z. Fit the computed f₃(z) to the rational functional form f₃(z) = (1 + A₁ α_fs z + A₂ (α_fs z)²) / (1 + A₁ α_fs z + B₂ (α_fs z)² + B₃ (α_fs z)³). Output a CSV with the best-fit parameters A₁, A₂, B₂, B₃ for each surface.",
+    "output_file": "step_03_f3_fitting_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Fitting parameters for the analytical retardation function f3(z) of Cs interacting with each surface.",
+    "output_schema": "Columns: surface (string), A1 (float), A2 (float), B2 (float), B3 (float). Parameters are dimensionless."
+  }
+]

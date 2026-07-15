@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "MD simulation and g(r) calculation",
+    "role": "process",
+    "action": "Run MD simulations of SPC/E water at 300 K and at least the pressures: 1 bar, 1 kbar, 2 kbar, 3 kbar, 5 kbar, 10 kbar. For each pressure, equilibrate and collect a production run of at least 1 ns. Compute the oxygen-oxygen radial distribution function g(r) from the production trajectory.",
+    "output_file": "",
+    "evidence": "g_r_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required process that produces g(r) curves for subsequent fitting. Evidence log summarizes simulation settings and g(r) extent.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Fit G function to g(r) data",
+    "role": "scored",
+    "action": "For each simulated pressure, fit the G function (a two-state decomposition with tetrahedral and hexagonal contributions, explicitly treating the first three coordination spheres via asymmetric Freundlich distributions for the first sphere and symmetric Gaussians for the second and third spheres, plus an implicit sigmoidal tail) to the computed g(r). Save all fitted parameters to fitted_parameters.csv.",
+    "output_file": "fitted_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Fitted G-function parameters for each pressure. The checker will recompute the order parameter P_r from these parameters and compare to paper gold.",
+    "output_schema": "CSV with header: pressure,parameter_name,value. pressure is in bar (float), parameter_name is string identifying the parameter (e.g., A2_t, omega2_t, ...), value is float. One row per parameter per pressure."
+  },
+  {
+    "id": "step3",
+    "title": "Compute order parameter P_r",
+    "role": "scored",
+    "action": "From the fitted parameters, compute the dimensionless order parameter P_r = (C^t - C^h)/(C^t + C^h) where C^t and C^h are sums of A_i^j / omega_i^j for tetrahedral and hexagonal second- and third-sphere Gaussians. Save pressure (bar) and P_r to pr_vs_pressure.csv.",
+    "output_file": "pr_vs_pressure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Order parameter P_r vs. pressure at 300 K. Positive values indicate tetrahedral dominance, negative values hexagonal dominance. Monotonically decreasing trend expected. Checker compares to hidden paper gold values (from Fig. 3) within tolerance.",
+    "output_schema": "CSV with header: pressure,Pr. pressure in bar (float), Pr dimensionless (float). One row per simulated pressure."
+  },
+  {
+    "id": "step4",
+    "title": "Determine crossover pressure",
+    "role": "scored",
+    "action": "From the pr_vs_pressure data, interpolate to find the pressure at which P_r = 0 (crossover from tetrahedral to hexagonal dominance). Write the crossover pressure in kbar to crossover_pressure.txt.",
+    "output_file": "crossover_pressure.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Single numeric value: pressure in kbar at which the order parameter crosses zero at 300 K. Checker compares to paper-reported value (~2.3 kbar) within tolerance.",
+    "output_schema": "A single line containing the crossover pressure as a floating-point number (kbar)."
+  }
+]

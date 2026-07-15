@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_01",
+    "title": "Compute TEC device parameters R, S, θ_TEC",
+    "role": "scored",
+    "action": "For each of the ten TEC models, use the provided maximum ratings to calculate the electrical resistance R, Seebeck coefficient S, and thermal resistance θ_TEC using the standard estimation formulas: R = (Vmax/Imax)*(Thot − ΔTmax)/Thot, S = Vmax/Thot, θ_TEC = (ΔTmax/(Imax*Vmax)) * (2*Thot)/(Thot − ΔTmax). Write the results to step_01_tec_parameters.csv.",
+    "output_file": "step_01_tec_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Estimated electrical resistance, Seebeck coefficient, and thermal resistance for each TEC model.",
+    "output_schema": "columns: Model (string), R (float, Ω), S (float, V/K), theta_TEC (float, K/W). One row per model."
+  },
+  {
+    "id": "step_02",
+    "title": "Predict operating conditions by iterative solution",
+    "role": "scored",
+    "action": "Using the computed R, S, θ_TEC from step_01 and the design parameters (cooling load Qc=22 W, cold‑side temperature Tcold=5 °C, ambient temperature Tamb=25 °C, heat sink thermal resistance θ_HS=0.15 °C/W), solve the coupled system iteratively for each model: (a) choose an initial guess for Thot; (b) compute ΔT = Thot − Tcold; (c) solve the quadratic equation Qc = S·Tcold·I − 0.5·I²·R − ΔT/θ_TEC for the appropriate root of current I; (d) compute voltage V = S·ΔT + I·R; (e) compute power P = I·V; (f) compute heat to hot side Qh = Qc + P; (g) update Thot = Tamb + Qh·θ_HS; (h) repeat until Thot converges. Calculate COP = Qc/P. Output the final converged I, V, Thot, and COP for each model to step_02_predictions.csv.",
+    "output_file": "step_02_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Predicted operating current, voltage, hot‑side temperature, and coefficient of performance for each TEC model.",
+    "output_schema": "columns: Model (string), I (float, A), V (float, V), T_hot (float, °C), COP (float). One row per model."
+  }
+]

@@ -1,0 +1,147 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The scored artifacts contain only final computed numeric values (friction stresses, beta, tau_c, k). No intermediate raw artifacts are scored, so a full recompute from raw artifacts is infeasible; instead the reported numbers are compared to the paper's reported values with linear tolerance decay, per the approved plan.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for friction shear stresses, Labusch parameter, critical unpinning stress, and Hall-Petch slope",
+      "source_provenance": "Paper sections 4.2–4.4 (tau0_edge=5.4 MN/m², tau0_screw=3.1 MN/m², beta≈7, tau0_screw_low=9.5 MN/m², τc≈0.03G, k=0.33 MN/m^{3/2}). τc was recomputed as 1449 MN/m² from G=48.3 GPa, b=0.256 nm, h=√6 b/2, b_e=√3 b/6, λ=b. These are the paper's actual reported numbers, consistent with the reference solver.",
+      "generation_method": "Taken verbatim from paper text and verified by recalculating the expressions with stated parameters. The solver's hardcoded values match these numbers exactly.",
+      "why_not_fabricated": "These are the exact values from the paper's theoretical discussion, traceable to the formulas and constants. The task's gold is the paper's own result, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_moderate_temp_tau0.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "tau0_edge",
+            "tau0_screw"
+          ],
+          "properties": {
+            "tau0_edge": {
+              "type": "number",
+              "units": "MN/m²"
+            },
+            "tau0_screw": {
+              "type": "number",
+              "units": "MN/m²"
+            }
+          }
+        },
+        "description": "Friction shear stresses from the Nabarro model for dissociated edge and screw partials at moderate temperature."
+      },
+      {
+        "file": "step_02_low_temp_tau0.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "beta",
+            "tau0_screw_low"
+          ],
+          "properties": {
+            "beta": {
+              "type": "number",
+              "units": "dimensionless"
+            },
+            "tau0_screw_low": {
+              "type": "number",
+              "units": "MN/m²"
+            }
+          }
+        },
+        "description": "Labusch parameter and Fridel-model friction stress for a dissociated screw dislocation at low temperature."
+      },
+      {
+        "file": "step_03_hall_petch_k.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "tau_c",
+            "k"
+          ],
+          "properties": {
+            "tau_c": {
+              "type": "number",
+              "units": "MN/m²"
+            },
+            "k": {
+              "type": "number",
+              "units": "MN/m^{3/2}"
+            }
+          }
+        },
+        "description": "Critical unpinning shear stress and predicted Hall-Petch slope k for the Cu-Cd alloy."
+      }
+    ],
+    "notes": "All outputs are to be placed in /app/outputs. The hidden checker compares the reported numeric values to paper-derived reference values using absolute tolerances. The load-bearing step (step_03) ensures that the intermediate process step (step_00) has been executed."
+  },
+  "steps": [
+    {
+      "id": "step_01_moderate_temp_tau0",
+      "output_file": "step_01_moderate_temp_tau0.json",
+      "weight": 0.3,
+      "kind": "value_compare",
+      "fields": {
+        "tau0_edge": {
+          "gold": 5.4,
+          "tolerance": 0.5,
+          "units": "MN/m²"
+        },
+        "tau0_screw": {
+          "gold": 3.1,
+          "tolerance": 0.5,
+          "units": "MN/m²"
+        }
+      }
+    },
+    {
+      "id": "step_02_low_temp_tau0",
+      "output_file": "step_02_low_temp_tau0.json",
+      "weight": 0.3,
+      "kind": "value_compare",
+      "fields": {
+        "beta": {
+          "gold": 7.0,
+          "tolerance": 0.5,
+          "units": "dimensionless"
+        },
+        "tau0_screw_low": {
+          "gold": 9.5,
+          "tolerance": 0.5,
+          "units": "MN/m²"
+        }
+      }
+    },
+    {
+      "id": "step_03_hall_petch_k",
+      "output_file": "step_03_hall_petch_k.json",
+      "weight": 0.4,
+      "kind": "value_compare",
+      "fields": {
+        "tau_c": {
+          "gold": 1449.0,
+          "tolerance": 1.0,
+          "units": "MN/m²"
+        },
+        "k": {
+          "gold": 0.33,
+          "tolerance": 0.05,
+          "units": "MN/m^{3/2}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,338 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent computes final numerical values (volume derivatives, Grüneisen parameters, pressure derivatives) from public inputs and formulas. No independent lower-level artifact is available for recompute; the verifier compares the submitted CSV values to the paper's reported calculated results (hidden gold) with absolute tolerances.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "volume_derivatives.csv": "exact_match",
+    "gruneisen_parameters.csv": "exact_match",
+    "pressure_derivatives.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for volume derivatives, Grüneisen parameters, and pressure derivatives from paper Tables 2-4 (calculated columns).",
+      "source_provenance": "Paper 'Interrelationship between Higher-Order Elastic Constants and Pressure Derivatives of Dielectric Constants for Ionic Crystals', phys. stat. sol. (b) 140, 89 (1987). Tables 2, 3, and 4 – calculated columns.",
+      "generation_method": "Extracted directly from the paper's tables; numbers match those written by the reference solve.sh.",
+      "why_not_fabricated": "These are the exact published numerical results the agent is expected to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "volume_derivatives.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "crystal",
+            "V_d_eps0_dV",
+            "V2_d2_eps0_dV2"
+          ],
+          "units": {}
+        },
+        "description": "First and second volume derivatives of the static dielectric constant for each crystal. The hidden checker compares these values to the paper's reported calculated values with appropriate tolerances."
+      },
+      {
+        "file": "gruneisen_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "crystal",
+            "gamma_TO",
+            "gamma_LO"
+          ],
+          "units": {}
+        },
+        "description": "Transverse and longitudinal optical mode Grüneisen parameters for each crystal, compared to paper's Table 3."
+      },
+      {
+        "file": "pressure_derivatives.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "crystal",
+            "d_eps0_dP_normalized",
+            "d2_eps0_dP2_normalized"
+          ],
+          "units": {
+            "d_eps0_dP_normalized": "10^{-11} Pa^{-1}",
+            "d2_eps0_dP2_normalized": "10^{-22} Pa^{-2}"
+          }
+        },
+        "description": "Normalized first and second pressure derivatives of the static dielectric constant, corresponding to Table 4. These are the main headline quantities."
+      }
+    ],
+    "notes": "All three outputs are CSV files with one row per crystal. The checker compares each numeric value to the paper's reported calculated results using absolute tolerances appropriate for the precision of the method."
+  },
+  "steps": [
+    {
+      "id": "step_04_volume_derivatives",
+      "output_file": "volume_derivatives.csv",
+      "weight": 0.33,
+      "kind": "csv_compare",
+      "tolerances": {
+        "V_d_eps0_dV": 0.5,
+        "V2_d2_eps0_dV2": 0.5
+      },
+      "gold_rows": [
+        {
+          "crystal": "LiF",
+          "V_d_eps0_dV": 29.2,
+          "V2_d2_eps0_dV2": 153
+        },
+        {
+          "crystal": "LiCl",
+          "V_d_eps0_dV": 41.9,
+          "V2_d2_eps0_dV2": 281
+        },
+        {
+          "crystal": "LiBr",
+          "V_d_eps0_dV": 44.1,
+          "V2_d2_eps0_dV2": 303
+        },
+        {
+          "crystal": "NaF",
+          "V_d_eps0_dV": 11.7,
+          "V2_d2_eps0_dV2": 47
+        },
+        {
+          "crystal": "NaCl",
+          "V_d_eps0_dV": 15.0,
+          "V2_d2_eps0_dV2": 84
+        },
+        {
+          "crystal": "NaBr",
+          "V_d_eps0_dV": 14.9,
+          "V2_d2_eps0_dV2": 85
+        },
+        {
+          "crystal": "NaI",
+          "V_d_eps0_dV": 18.0,
+          "V2_d2_eps0_dV2": 112
+        },
+        {
+          "crystal": "KF",
+          "V_d_eps0_dV": 12.1,
+          "V2_d2_eps0_dV2": 57
+        },
+        {
+          "crystal": "KCl",
+          "V_d_eps0_dV": 8.52,
+          "V2_d2_eps0_dV2": 41
+        },
+        {
+          "crystal": "KBr",
+          "V_d_eps0_dV": 7.72,
+          "V2_d2_eps0_dV2": 35
+        },
+        {
+          "crystal": "KI",
+          "V_d_eps0_dV": 6.69,
+          "V2_d2_eps0_dV2": 33
+        },
+        {
+          "crystal": "RbF",
+          "V_d_eps0_dV": 16.7,
+          "V2_d2_eps0_dV2": 95
+        },
+        {
+          "crystal": "RbCl",
+          "V_d_eps0_dV": 8.37,
+          "V2_d2_eps0_dV2": 48
+        },
+        {
+          "crystal": "RbBr",
+          "V_d_eps0_dV": 7.24,
+          "V2_d2_eps0_dV2": 42
+        },
+        {
+          "crystal": "RbI",
+          "V_d_eps0_dV": 6.54,
+          "V2_d2_eps0_dV2": 38
+        }
+      ]
+    },
+    {
+      "id": "step_05_gruneisen_parameters",
+      "output_file": "gruneisen_parameters.csv",
+      "weight": 0.33,
+      "kind": "csv_compare",
+      "tolerances": {
+        "gamma_TO": 0.1,
+        "gamma_LO": 0.1
+      },
+      "gold_rows": [
+        {
+          "crystal": "LiF",
+          "gamma_TO": 2.63,
+          "gamma_LO": 0.96
+        },
+        {
+          "crystal": "LiCl",
+          "gamma_TO": 3.04,
+          "gamma_LO": 1.11
+        },
+        {
+          "crystal": "LiBr",
+          "gamma_TO": 3.08,
+          "gamma_LO": 1.16
+        },
+        {
+          "crystal": "NaF",
+          "gamma_TO": 2.41,
+          "gamma_LO": 1.15
+        },
+        {
+          "crystal": "NaCl",
+          "gamma_TO": 2.84,
+          "gamma_LO": 1.43
+        },
+        {
+          "crystal": "NaBr",
+          "gamma_TO": 2.91,
+          "gamma_LO": 1.51
+        },
+        {
+          "crystal": "NaI",
+          "gamma_TO": 3.17,
+          "gamma_LO": 1.64
+        },
+        {
+          "crystal": "KF",
+          "gamma_TO": 2.43,
+          "gamma_LO": 1.14
+        },
+        {
+          "crystal": "KCl",
+          "gamma_TO": 2.39,
+          "gamma_LO": 1.35
+        },
+        {
+          "crystal": "KBr",
+          "gamma_TO": 2.42,
+          "gamma_LO": 1.43
+        },
+        {
+          "crystal": "KI",
+          "gamma_TO": 2.5,
+          "gamma_LO": 1.56
+        },
+        {
+          "crystal": "RbF",
+          "gamma_TO": 2.66,
+          "gamma_LO": 1.14
+        },
+        {
+          "crystal": "RbCl",
+          "gamma_TO": 2.37,
+          "gamma_LO": 1.33
+        },
+        {
+          "crystal": "RbBr",
+          "gamma_TO": 2.37,
+          "gamma_LO": 1.4
+        },
+        {
+          "crystal": "RbI",
+          "gamma_TO": 2.43,
+          "gamma_LO": 1.51
+        }
+      ]
+    },
+    {
+      "id": "step_06_pressure_derivatives",
+      "output_file": "pressure_derivatives.csv",
+      "weight": 0.34,
+      "kind": "csv_compare",
+      "tolerances": {
+        "d_eps0_dP_normalized": 0.5,
+        "d2_eps0_dP2_normalized": 50
+      },
+      "gold_rows": [
+        {
+          "crystal": "LiF",
+          "d_eps0_dP_normalized": -4.89,
+          "d2_eps0_dP2_normalized": 84.9
+        },
+        {
+          "crystal": "LiCl",
+          "d_eps0_dP_normalized": -11.94,
+          "d2_eps0_dP2_normalized": 538
+        },
+        {
+          "crystal": "LiBr",
+          "d_eps0_dP_normalized": -14.12,
+          "d2_eps0_dP2_normalized": 813
+        },
+        {
+          "crystal": "NaF",
+          "d_eps0_dP_normalized": -4.95,
+          "d2_eps0_dP2_normalized": 110
+        },
+        {
+          "crystal": "NaCl",
+          "d_eps0_dP_normalized": -10.71,
+          "d2_eps0_dP2_normalized": 541
+        },
+        {
+          "crystal": "NaBr",
+          "d_eps0_dP_normalized": -12.21,
+          "d2_eps0_dP2_normalized": 763
+        },
+        {
+          "crystal": "NaI",
+          "d_eps0_dP_normalized": -16.63,
+          "d2_eps0_dP2_normalized": 1426
+        },
+        {
+          "crystal": "KF",
+          "d_eps0_dP_normalized": -7.27,
+          "d2_eps0_dP2_normalized": 249
+        },
+        {
+          "crystal": "KCl",
+          "d_eps0_dP_normalized": -10.18,
+          "d2_eps0_dP2_normalized": 658
+        },
+        {
+          "crystal": "KBr",
+          "d_eps0_dP_normalized": -10.79,
+          "d2_eps0_dP2_normalized": 814
+        },
+        {
+          "crystal": "KI",
+          "d_eps0_dP_normalized": -11.33,
+          "d2_eps0_dP2_normalized": 1115
+        },
+        {
+          "crystal": "RbF",
+          "d_eps0_dP_normalized": -9.65,
+          "d2_eps0_dP2_normalized": 448
+        },
+        {
+          "crystal": "RbCl",
+          "d_eps0_dP_normalized": -10.97,
+          "d2_eps0_dP2_normalized": 876
+        },
+        {
+          "crystal": "RbBr",
+          "d_eps0_dP_normalized": -11.28,
+          "d2_eps0_dP2_normalized": 1058
+        },
+        {
+          "crystal": "RbI",
+          "d_eps0_dP_normalized": -12.48,
+          "d2_eps0_dP2_normalized": 1488
+        }
+      ]
+    }
+  ]
+}

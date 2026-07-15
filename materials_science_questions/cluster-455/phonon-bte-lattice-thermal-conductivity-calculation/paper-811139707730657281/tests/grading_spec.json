@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute agreement metrics from the agent's CSV against paper-reported reference values; trend checks recompute monotonicity and flatness from submitted temperature series.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for 300K thermal conductivity of GeH: pristine bulk, nanocrystalline lb16, nanocrystalline lb34, amorphous limit.",
+      "source_provenance": "Paper: Appl. Phys. Lett. 109, 131907 (2016), text and Fig. 3. Pristine bulk: 8.8 W/mK at 300K; nanocrystalline lb16: 0.53 W/mK; nanocrystalline lb34: 0.74 W/mK; amorphous limit: 0.29 W/mK.",
+      "generation_method": "Directly extracted from the paper's reported calculated values.",
+      "why_not_fabricated": "These are the paper's own computational results that the reproduction aims to match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "pristine_bulk",
+            "nanocrystalline_lb16",
+            "nanocrystalline_lb34",
+            "amorphous_limit"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "pristine_bulk": "W/mK",
+            "nanocrystalline_lb16": "W/mK",
+            "nanocrystalline_lb34": "W/mK",
+            "amorphous_limit": "W/mK"
+          }
+        },
+        "description": "Lattice thermal conductivity of GeH computed via phonon BTE for different scattering scenarios. The hidden checker compares the values at 300 K to paper reference values with tolerance, and also verifies temperature trends (pristine decreasing, nanocrystalline increasing, amorphous flat)."
+      }
+    ],
+    "notes": "Units are W/mK. The agent must compute the results from first principles; the hidden checker checks consistency with known reference values within physically reasonable tolerances. Temperature trends are also evaluated."
+  },
+  "steps": [
+    {
+      "id": "pristine_300K_match",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 8.8,
+      "tolerance": 2.0,
+      "column": "pristine_bulk"
+    },
+    {
+      "id": "nanocrystalline_lb16_300K_match",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 0.53,
+      "tolerance": 0.1,
+      "column": "nanocrystalline_lb16"
+    },
+    {
+      "id": "nanocrystalline_lb34_300K_match",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 0.74,
+      "tolerance": 0.15,
+      "column": "nanocrystalline_lb34"
+    },
+    {
+      "id": "amorphous_300K_match",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 0.29,
+      "tolerance": 0.06,
+      "column": "amorphous_limit"
+    },
+    {
+      "id": "pristine_trend",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "trend",
+      "weight": 0.1,
+      "column": "pristine_bulk",
+      "trend_type": "decreasing"
+    },
+    {
+      "id": "nanocrystalline_lb16_trend",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "trend",
+      "weight": 0.1,
+      "column": "nanocrystalline_lb16",
+      "trend_type": "increasing"
+    },
+    {
+      "id": "nanocrystalline_lb34_trend",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "trend",
+      "weight": 0.1,
+      "column": "nanocrystalline_lb34",
+      "trend_type": "increasing"
+    },
+    {
+      "id": "amorphous_trend",
+      "output_file": "thermal_conductivity_results.csv",
+      "kind": "trend",
+      "weight": 0.1,
+      "column": "amorphous_limit",
+      "trend_type": "flat",
+      "max_min_ratio": 0.2
+    }
+  ]
+}

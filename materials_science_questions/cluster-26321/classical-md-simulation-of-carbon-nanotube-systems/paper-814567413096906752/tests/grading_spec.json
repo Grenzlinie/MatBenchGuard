@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the MD trajectories is infeasible for the lightweight checker. Structural trend checks on the agent's own output files verify the claimed physical relationships.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_water_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z",
+            "water_energy_per_molecule"
+          ],
+          "units": {
+            "z": "nm",
+            "water_energy_per_molecule": "kJ/mol"
+          }
+        },
+        "description": "Water energy per molecule averaged in 0.1 nm z-bins. Scored by checking monotonic decrease with electric field intensity."
+      },
+      {
+        "file": "step_03_U_NP_volume.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z",
+            "U_NP_volume"
+          ],
+          "units": {
+            "z": "nm",
+            "U_NP_volume": "kJ/mol"
+          }
+        },
+        "description": "Volume-integrated water energy U_NP-volume as a function of z. Scored by verifying that its magnitude is larger at a high-field (z≈3 nm) than at a low-field (z≈21 nm) position."
+      },
+      {
+        "file": "step_01_zcoord.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Two column whitespace-separated values: time (ps) and z_coordinate (nm). No header."
+        },
+        "description": "Nanoparticle centre‑of‑mass z‑coordinate vs time. Scored by verifying net displacement: final average z > 6 nm (crossed first field transition)."
+      }
+    ],
+    "notes": "All three artifacts are required. The checker performs structural trend checks (monotonicity, threshold crossing, relative magnitude) with tolerances to absorb run-to-run noise. No absolute matching against paper-reported numeric values is required."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "check_zcoord",
+      "output_file": "step_01_zcoord.dat",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "description": "Nanoparticle final average z > 6 nm."
+    },
+    {
+      "id": "check_water_energy",
+      "output_file": "step_02_water_energy.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "description": "Water energy per molecule strict monotonic decrease with field intensity (lower energy at higher field)."
+    },
+    {
+      "id": "check_U_NP_volume",
+      "output_file": "step_03_U_NP_volume.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "U_NP-volume magnitude larger at z=3 nm than at z=21 nm by at least 5 kJ/mol."
+    }
+  ]
+}

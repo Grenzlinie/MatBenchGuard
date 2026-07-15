@@ -1,0 +1,217 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Headline quantities are aggregate properties from MD simulations; checker cannot rerun full pipeline, so uses result-level comparison with hidden gold from paper plus trend checks.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "physical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "extent",
+            "density_g_per_cc",
+            "density_std",
+            "volumetric_shrinkage_pct",
+            "shrinkage_std"
+          ],
+          "units": {
+            "density_g_per_cc": "g/cm³",
+            "volumetric_shrinkage_pct": "%"
+          }
+        },
+        "description": "Mean and standard error of mass density and volumetric shrinkage across replicates, as a function of extent of reaction."
+      },
+      {
+        "file": "mechanical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "extent",
+            "bulk_modulus_GPa",
+            "bulk_std",
+            "shear_modulus_GPa",
+            "shear_std",
+            "Youngs_modulus_GPa",
+            "Youngs_std",
+            "Poisson_ratio",
+            "Poisson_std",
+            "yield_strength_MPa",
+            "yield_std"
+          ],
+          "units": {
+            "bulk_modulus_GPa": "GPa",
+            "shear_modulus_GPa": "GPa",
+            "Youngs_modulus_GPa": "GPa",
+            "yield_strength_MPa": "MPa"
+          }
+        },
+        "description": "Mean and standard error of bulk modulus, shear modulus, Young's modulus, Poisson's ratio, and yield strength across replicates, as a function of extent of reaction. For extents <0.4 (liquid state) shear modulus and yield strength are negligible; Poisson's ratio ~0.5."
+      },
+      {
+        "file": "thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "extent",
+            "Tg_C",
+            "Tg_std",
+            "CTE_below_Tg_per_C",
+            "CTE_below_std",
+            "CTE_above_Tg_per_C",
+            "CTE_above_std"
+          ],
+          "units": {
+            "Tg_C": "°C",
+            "CTE_below_Tg_per_C": "10⁻⁵/°C",
+            "CTE_above_Tg_per_C": "10⁻⁵/°C"
+          }
+        },
+        "description": "Mean and standard error of glass transition temperature and coefficient of thermal expansion (below and above Tg) across replicates, for extents ≥0.4."
+      }
+    ],
+    "notes": "The scored artifacts are compared to hidden reference values extracted from the paper's reported curves. Tolerances account for force‑field, implementation, and sampling differences. The checker expects monotonic trends: density, moduli, yield strength, and Tg increase with extent; CTE decreases; Poisson's ratio decreases from ~0.5. Liquid‑state behavior (shear modulus/yield strength ~0 for extents ≤0.3) is required."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for fully polymerized state from paper",
+      "source_provenance": "Paper text: density=1.172 g/cc, shrinkage=13.09%, bulk modulus=6.67 GPa, shear=1.18, Young=3.34, Poisson=0.42, yield=245.6 MPa, Tg=116.7 C, CTE_below=6.8e-5/C.",
+      "generation_method": "Copied from paper's reported values.",
+      "why_not_fabricated": "Values are directly from the paper's results section."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_physical",
+      "output_file": "physical_properties.csv",
+      "weight": 0.3,
+      "kind": "result_compare",
+      "params": {
+        "checks": [
+          {
+            "name": "final_density",
+            "weight": 0.6,
+            "gold": 1.172,
+            "tolerance_rel": 0.05
+          },
+          {
+            "name": "final_shrinkage",
+            "weight": 0.3,
+            "gold": 13.09,
+            "tolerance_rel": 0.05
+          },
+          {
+            "name": "monotonic_density",
+            "weight": 0.05,
+            "type": "monotonic_increasing",
+            "column": "density_g_per_cc"
+          },
+          {
+            "name": "monotonic_shrinkage",
+            "weight": 0.05,
+            "type": "monotonic_increasing",
+            "column": "volumetric_shrinkage_pct"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_mechanical",
+      "output_file": "mechanical_properties.csv",
+      "weight": 0.4,
+      "kind": "result_compare",
+      "params": {
+        "checks": [
+          {
+            "name": "final_bulk",
+            "weight": 0.2,
+            "gold": 6.67,
+            "tolerance_rel": 0.15
+          },
+          {
+            "name": "final_shear",
+            "weight": 0.2,
+            "gold": 1.18,
+            "tolerance_rel": 0.15
+          },
+          {
+            "name": "final_young",
+            "weight": 0.2,
+            "gold": 3.34,
+            "tolerance_rel": 0.15
+          },
+          {
+            "name": "final_poisson",
+            "weight": 0.1,
+            "gold": 0.42,
+            "tolerance_abs": 0.05
+          },
+          {
+            "name": "final_yield",
+            "weight": 0.1,
+            "gold": 245.6,
+            "tolerance_rel": 0.15
+          },
+          {
+            "name": "monotonic_moduli",
+            "weight": 0.1,
+            "type": "monotonic_increasing_multi",
+            "columns": [
+              "bulk_modulus_GPa",
+              "shear_modulus_GPa",
+              "Youngs_modulus_GPa"
+            ]
+          },
+          {
+            "name": "liquid_low_extent",
+            "weight": 0.1,
+            "type": "liquid_check"
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_thermal",
+      "output_file": "thermal_properties.csv",
+      "weight": 0.3,
+      "kind": "result_compare",
+      "params": {
+        "checks": [
+          {
+            "name": "final_tg",
+            "weight": 0.5,
+            "gold": 116.7,
+            "tolerance_rel": 0.1
+          },
+          {
+            "name": "final_cte_below",
+            "weight": 0.3,
+            "gold": 6.8,
+            "tolerance_rel": 0.1
+          },
+          {
+            "name": "monotonic_tg",
+            "weight": 0.1,
+            "type": "monotonic_increasing",
+            "column": "Tg_C"
+          },
+          {
+            "name": "cte_above_gt_below",
+            "weight": 0.1,
+            "type": "cte_trend"
+          }
+        ]
+      }
+    }
+  ]
+}

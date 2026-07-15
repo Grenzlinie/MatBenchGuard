@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ν_min, the product ν_min·τ_c, and the ratios τ_c⁰/τ_c and n_d/n_d⁰ from the agent's raw CSV rows, then compares to the paper's empirical formulas (9),(12),(13) and the product condition using multiplicative tolerances (factor 4 for product, factor 2 for ratios). No hidden labels or external fetch are needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-derived formulas for scaling laws and product bounds",
+      "source_provenance": "Paper equations (9), (12), (13) and associated tolerance (factor of 4 for product, factor of 2 for ratios)",
+      "generation_method": "Extracted from the paper and encoded as params within grading_spec steps",
+      "why_not_fabricated": "These are the paper's own reported empirical relations; they are used to verify the agent's simulated data, not as random labels."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "s0",
+            "theta0",
+            "nu",
+            "tau_c",
+            "n_d"
+          ],
+          "units": {
+            "nu": "Hz",
+            "tau_c": "s",
+            "n_d": "m^-3"
+          }
+        },
+        "description": "Simulation results containing τ_c and n_d for baseline (theta0=0, nu=0) and for pulsation cases across the required grid of saturation, amplitude, and frequency. The checker will extract plateau and baseline values to verify the existence of a minimum frequency plateau and the paper's scaling laws."
+      }
+    ],
+    "notes": "The CSV must include all required (s0, theta0, nu) combinations as described in the step action. The frequency-sweep rows for s0=6 serve to identify ν_min and show the plateau; the plateau-regime rows provide the data for the scaling law verification."
+  },
+  "steps": [
+    {
+      "id": "check_plateau_product",
+      "output_file": "simulation_results.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "params": {
+        "s0_sweep": 6,
+        "theta0_values": [
+          0.0005,
+          0.01,
+          0.05
+        ],
+        "product_lower_bound": 1,
+        "product_upper_bound": 16,
+        "product_nominal": 4,
+        "rel_change_threshold": 0.1
+      },
+      "description": "Verify that for s0=6 and each θ0>0 a minimum frequency plateau exists and the product ν_min·τ_c falls within a factor of 4 of 4 (i.e., 1 ≤ ν_min·τ_c ≤ 16)."
+    },
+    {
+      "id": "check_scaling_laws",
+      "output_file": "simulation_results.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "params": {
+        "s0_values": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "theta0_values": [
+          0.0005,
+          0.01,
+          0.05
+        ],
+        "formula_tau_prefactor": 1.06,
+        "formula_tau_exponent_coeff": 2.15,
+        "formula_n_prefactor": 0.88,
+        "formula_n_exponent_coeff": 6.5,
+        "ratio_tolerance_factor": 2.0
+      },
+      "description": "For every (s0,θ0>0) combination, compute R_τ = τ_c⁰/τ_c and R_n = n_d/n_d⁰ from the baseline and plateau rows, then compare to the paper’s formulas (12)–(13). Accept if both R/R_ref are within a factor of 2."
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute the fraction of total DOS at Fermi level from agent's raw DOS and PDOS data; compare to paper-reported 70% ±10% tolerance. Fermi surface sheet count matched exactly. structural_audit on band_structure and total_dos for validity.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_dos.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "Two-column space-separated file: Energy (eV) and Total DOS (states/eV/unit cell)."
+        },
+        "description": "Total density of states. Checked for valid format and reasonable values; used as a consistency check for the PDOS analysis."
+      },
+      {
+        "file": "projected_dos.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "other",
+          "description": "Three-column space-separated file: Energy (eV), Atom index (integer), PDOS (states/eV/atom)."
+        },
+        "description": "Projected density of states onto tungsten 5d orbitals. The checker will recompute the fraction of total DOS at the Fermi level contributed by atoms W1, W12, and W14–W19 and compare it to the paper-reported value with tolerance."
+      },
+      {
+        "file": "band_structure.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "Three-column space-separated file: k-distance (Å⁻¹), Band index (integer), Energy (eV)."
+        },
+        "description": "Band structure along the high-symmetry k-path. The checker will verify the presence of flat bands crossing the Fermi level, consistent with the atoms identified in the PDOS."
+      },
+      {
+        "file": "fermi_surface_sheets.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line 'Number of Fermi surface sheets: N' where N is an integer."
+        },
+        "description": "Count of Fermi surface sheets. The checker compares the integer to the paper-reported value."
+      }
+    ],
+    "notes": "The main result is the orbital contribution of the specified tungsten atoms to the Fermi-level DOS, verified by recomputing the fraction from projected_dos.dat and total_dos.dat. The band structure and Fermi surface sheets provide supporting verification."
+  },
+  "steps": [
+    {
+      "id": "step_03_total_dos",
+      "output_file": "total_dos.dat",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Check that total_dos.dat is a valid two-column numeric file with sufficient data points."
+    },
+    {
+      "id": "step_04_projected_dos",
+      "output_file": "projected_dos.dat",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "description": "Recompute the fraction of total DOS at Fermi level from atoms W1,W12,W14-19 and compare to paper-reported 70% ±10%.",
+      "target_fraction": 0.7,
+      "tolerance": 0.1,
+      "energy_window": [
+        -0.05,
+        0.05
+      ]
+    },
+    {
+      "id": "step_05_band_structure",
+      "output_file": "band_structure.dat",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify band_structure.dat has correct format and bands crossing the Fermi level indicating metallic character."
+    },
+    {
+      "id": "step_06_fermi_surface_sheets",
+      "output_file": "fermi_surface_sheets.txt",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target": 6,
+      "description": "Check the Fermi surface sheet count equals 6 exactly."
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "target fraction for orbital contribution at Fermi level",
+      "source_provenance": "paper text: '5d-состояния вольфрама W1, 12, 14-19 дают вклад порядка 70% в величину полной плотности состояния на уровне Ферми'",
+      "generation_method": "directly from paper conclusion",
+      "why_not_fabricated": "the paper explicitly states 70% contribution"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "target number of Fermi surface sheets",
+      "source_provenance": "paper Fig.4 caption/description: 'соответствующая поверхность Ферми содержит 6 листов'",
+      "generation_method": "directly from paper",
+      "why_not_fabricated": "the paper explicitly reports 6 sheets"
+    }
+  ]
+}

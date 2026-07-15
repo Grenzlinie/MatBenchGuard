@@ -1,0 +1,183 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Use T0 result-level compare against paper Table I for dft_results, and T3 structural audit for strain_results because strain curve numeric values are not tabulated.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_results.json": "reference_match",
+    "strain_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference values for magnetic moment, epsilon, binding energy from Table I of Xiao et al., Physica E 2018",
+      "source_provenance": "Paper Table I and text (e.g., V_Sn M=4.00, epsilon=433; Li M=3.00, epsilon=83; etc.)",
+      "generation_method": "exact transcription from published Table I",
+      "why_not_fabricated": "These are the paper's own reported numbers; they are the only ground truth for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system",
+              "magnetic_moment",
+              "epsilon",
+              "binding_energy"
+            ],
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "magnetic_moment": {
+                "type": "number",
+                "units": "μ_B"
+              },
+              "epsilon": {
+                "type": "number",
+                "units": "meV"
+              },
+              "binding_energy": {
+                "type": "number",
+                "units": "eV"
+              }
+            }
+          }
+        },
+        "description": "Total magnetic moment, spin‑polarization energy, and binding energy for each vacancy/dopant system. Compared against paper‑reported Table I values with hidden tolerances."
+      },
+      {
+        "file": "strain_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system",
+              "strain",
+              "epsilon"
+            ],
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "strain": {
+                "type": "number",
+                "units": "percent"
+              },
+              "epsilon": {
+                "type": "number",
+                "units": "meV"
+              }
+            }
+          }
+        },
+        "description": "Spin‑polarization energy ε as a function of biaxial tensile strain for Mg‑ and Al‑doped SnS2. The checker verifies that ε is positive and increases monotonically with strain, consistent with Figure 2 of the paper."
+      }
+    ],
+    "notes": "The dft_results.json output is verified by comparing the agent‑reported magnetic moments and epsilon against the paper’s published values (Table I) with appropriate tolerances. The strain_results.json output is verified by structural consistency (monotonic increase of epsilon with strain). Binding energy is present but may be scored at lower weight."
+  },
+  "steps": [
+    {
+      "id": "step05_dft_results",
+      "output_file": "dft_results.json",
+      "weight": 0.8,
+      "gold": {
+        "systems": {
+          "V_Sn": {
+            "magnetic_moment": 4.0,
+            "epsilon": 433,
+            "binding_energy": 5.91
+          },
+          "V_S": {
+            "magnetic_moment": 0.0,
+            "epsilon": 0.0,
+            "binding_energy": null
+          },
+          "Li": {
+            "magnetic_moment": 3.0,
+            "epsilon": 83,
+            "binding_energy": 3.19
+          },
+          "Na": {
+            "magnetic_moment": 3.0,
+            "epsilon": 75,
+            "binding_energy": 2.85
+          },
+          "K": {
+            "magnetic_moment": 3.0,
+            "epsilon": 153,
+            "binding_energy": 2.39
+          },
+          "Mg": {
+            "magnetic_moment": 1.71,
+            "epsilon": 10,
+            "binding_energy": 5.3
+          },
+          "Ca": {
+            "magnetic_moment": 2.0,
+            "epsilon": 31,
+            "binding_energy": 6.1
+          },
+          "Sr": {
+            "magnetic_moment": 2.0,
+            "epsilon": 36,
+            "binding_energy": 5.77
+          },
+          "Al": {
+            "magnetic_moment": 0.0,
+            "epsilon": 0,
+            "binding_energy": 6.37
+          },
+          "Ga": {
+            "magnetic_moment": 1.0,
+            "epsilon": 2,
+            "binding_energy": 4.96
+          },
+          "In": {
+            "magnetic_moment": 1.0,
+            "epsilon": 3,
+            "binding_energy": 5.07
+          }
+        },
+        "tolerances": {
+          "magnetic_moment": 0.1,
+          "epsilon": 20.0,
+          "binding_energy": 0.5,
+          "epsilon_zero_tol": 5.0
+        },
+        "weights": {
+          "magnetic_moment": 0.5,
+          "epsilon": 0.4,
+          "binding_energy": 0.1
+        }
+      }
+    },
+    {
+      "id": "step07_strain_results",
+      "output_file": "strain_results.json",
+      "weight": 0.2,
+      "gold": {
+        "systems": {
+          "Mg": {
+            "epsilon_0": 10.0
+          },
+          "Al": {
+            "epsilon_0": 0.0
+          }
+        },
+        "strain_tolerance": 20.0
+      }
+    }
+  ]
+}

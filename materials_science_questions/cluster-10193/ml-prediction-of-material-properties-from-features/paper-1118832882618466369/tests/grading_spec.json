@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute T1 not feasible because verifier cannot re-run full training and cross-validation to recompute R² from raw predictions; it would need the original dataset and trained model, making T0 the appropriate tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for R² scores derived from paper Table II values minus tolerance.",
+      "source_provenance": "Paper Table II: WaveTENet 10-fold CV R² values: S=0.977, σ=0.984, PF=0.981, κ=0.972, zT=0.963.",
+      "generation_method": "Full credit threshold = paper R² - 0.015; partial threshold = paper R² - 0.035. Values embedded in grading_spec steps.",
+      "why_not_fabricated": "Thresholds are directly derived from the paper's reported main experimental results, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "r2_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "S",
+            "sigma",
+            "PF",
+            "kappa",
+            "zT"
+          ],
+          "properties": {
+            "S": {
+              "type": "number"
+            },
+            "sigma": {
+              "type": "number"
+            },
+            "PF": {
+              "type": "number"
+            },
+            "kappa": {
+              "type": "number"
+            },
+            "zT": {
+              "type": "number"
+            }
+          },
+          "description": "Five keys, each mapping to a floating-point R² value computed over the 10-fold cross-validation."
+        },
+        "description": "The coefficient of determination (R²) for each of the five thermoelectric properties evaluated via 10-fold cross-validation on the doped ESTM dataset."
+      }
+    ],
+    "notes": "The agent must report R² values for all five properties. The model training step must reproduce WaveTENet as described; the process evidence files (features_and_targets.npy, cv_predictions.npz) are required to ensure the pipeline was executed even though only the final JSON is scored."
+  },
+  "steps": [
+    {
+      "id": "r2_S",
+      "output_file": "r2_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "property": "S",
+      "target": 0.962,
+      "partial_target": 0.942,
+      "description": "R² for Seebeck coefficient S. Paper reported 0.977; full credit if >=0.962, partial if >=0.942."
+    },
+    {
+      "id": "r2_sigma",
+      "output_file": "r2_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "property": "sigma",
+      "target": 0.969,
+      "partial_target": 0.949,
+      "description": "R² for electrical conductivity σ. Paper reported 0.984; full credit if >=0.969, partial if >=0.949."
+    },
+    {
+      "id": "r2_PF",
+      "output_file": "r2_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "property": "PF",
+      "target": 0.966,
+      "partial_target": 0.946,
+      "description": "R² for power factor PF. Paper reported 0.981; full credit if >=0.966, partial if >=0.946."
+    },
+    {
+      "id": "r2_kappa",
+      "output_file": "r2_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "property": "kappa",
+      "target": 0.957,
+      "partial_target": 0.937,
+      "description": "R² for thermal conductivity κ. Paper reported 0.972; full credit if >=0.957, partial if >=0.937."
+    },
+    {
+      "id": "r2_zT",
+      "output_file": "r2_results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "property": "zT",
+      "target": 0.948,
+      "partial_target": 0.928,
+      "description": "R² for figure of merit zT. Paper reported 0.963; full credit if >=0.948, partial if >=0.928."
+    }
+  ]
+}

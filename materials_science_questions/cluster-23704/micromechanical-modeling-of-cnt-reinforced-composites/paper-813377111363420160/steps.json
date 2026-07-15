@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_config_gen",
+    "title": "Generate random CNT aggregate configurations",
+    "role": "process",
+    "action": "Generate random initial atomic configurations for (5,5) armchair SWCNTs (length 2 nm, 160 atoms each) randomly dispersed in a cubic cell using the spherical uniform orientation method (trig method) and uniform spatial placement, avoiding covalent overlaps. Generate configurations for CNT counts N = 25, 50, 200, 800, 1000 at a constant density of 0.08 g/cm³, and for N = 800 at densities 0.10, 0.12, 0.14, 0.16 g/cm³.",
+    "output_file": "",
+    "evidence": "configurations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Creates the initial atomic configurations needed for all subsequent loading simulations. The algorithm must use the trig method for orientation distribution and enforce minimum inter-tube distance.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_simulation",
+    "title": "Run incremental constrained minimization simulations",
+    "role": "process",
+    "action": "For each configuration from step_config_gen, perform the incremental constrained minimization loading procedure using LAMMPS with the AIREBO potential. For each direction (x, y, z), repeatedly expand the cell incrementally (up to 5% total strain), conformally rescale atom coordinates, fix the positions of CNT end atoms, minimize the energy, and record the virial stress after each increment. Obtain stress-strain data for every configuration and also save the final relaxed configurations for order parameter calculation.",
+    "output_file": "",
+    "evidence": "simulation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Executes the core molecular mechanics loading procedure on all configurations. Generates raw stress-strain data and relaxed structures needed by all downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_stress_strain",
+    "title": "Extract stress-strain curve for 25 CNTs",
+    "role": "scored",
+    "action": "From the simulation data for the 25-CNT configuration, compute the averaged stress-strain curve (average of the three loading directions) and write it to step_01_stress_strain_25_CNTs.csv containing at least 500 points spanning 0 to 5% strain.",
+    "output_file": "step_01_stress_strain_25_CNTs.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The stress-strain response of a 25-CNT aggregate; the verifier will compare this curve to the expected reference and score it using root-mean-square deviation.",
+    "output_schema": "Comma-separated values with columns: strain (dimensionless), stress (GPa). At least 500 rows covering strain from 0 to 0.05."
+  },
+  {
+    "id": "step_young_modulus",
+    "title": "Compute Young's moduli for increasing CNT counts",
+    "role": "scored",
+    "action": "For each CNT count (50, 200, 800, 1000) at constant density 0.08 g/cm³, compute the Young's modulus from the stress-strain slope in each direction, then calculate the mean Young's modulus (GPa) and the coefficient of variance across directions. Write the results to step_02_young_modulus_aggregates.csv.",
+    "output_file": "step_02_young_modulus_aggregates.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Young's modulus and its directional spread for aggregates with different numbers of CNTs, showing convergence towards isotropic behavior. The verifier will compare these values to reference targets within tolerance.",
+    "output_schema": "Comma-separated values with columns: num_cnts (integer), young_modulus_gpa (float), coefficient_of_variance (float, fraction). One row per CNT count."
+  },
+  {
+    "id": "step_order_param",
+    "title": "Compute order parameters",
+    "role": "scored",
+    "action": "For each CNT count (50, 200, 800, 1000), calculate the orientational order parameter S = ⟨(3 cos²θ − 1)/2⟩ using the CNT axis directions from the initial configurations (or after relaxation). Write the results to step_03_order_parameter.csv.",
+    "output_file": "step_03_order_parameter.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Quantifies the randomness of the CNT orientation distribution; values near zero indicate isotropy. The verifier will compare these to reference values within an absolute tolerance.",
+    "output_schema": "Comma-separated values with columns: num_cnts (integer), order_parameter (float between -0.5 and 1). One row per CNT count."
+  },
+  {
+    "id": "step_density_study",
+    "title": "Perform density study with 800 CNTs",
+    "role": "scored",
+    "action": "For the 800-CNT configurations at densities 0.10, 0.12, 0.14, 0.16 g/cm³, compute the Young's modulus (average over the three loading directions). Write the density–modulus pairs to step_04_density_study.csv.",
+    "output_file": "step_04_density_study.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Demonstrates the linear relationship between aggregate density and Young's modulus. The verifier will compare these values to reference targets within a relative tolerance.",
+    "output_schema": "Comma-separated values with columns: density_g_cm3 (float), young_modulus_gpa (float). One row per density tested."
+  }
+]

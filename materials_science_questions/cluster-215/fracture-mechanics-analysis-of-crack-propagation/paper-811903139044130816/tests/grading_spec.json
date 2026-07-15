@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Fracture stress values are directly recomputable from the agent's reported n and dimensionless parameter using the analytical/implicit equations with no hidden labels required.",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "mode_II_fracture_stress.csv": "metric_recompute",
+    "tension_fracture_stress.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mode_II_fracture_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "sigma_Pa",
+            "parameter_R_over_epsilon_d"
+          ],
+          "units": {
+            "n": "dimensionless",
+            "sigma_Pa": "Pa",
+            "parameter_R_over_epsilon_d": "dimensionless"
+          }
+        },
+        "description": "Fracture stress as a function of exponent n for the mode II geometry, for several values of the dimensionless parameter R/(εd). The checker will recompute sigma from the reported n and parameter using the energy-balance formula and compare within relative tolerance."
+      },
+      {
+        "file": "tension_fracture_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "sigma_Pa",
+            "parameter_R_over_2kc_epsilon"
+          ],
+          "units": {
+            "n": "dimensionless",
+            "sigma_Pa": "Pa",
+            "parameter_R_over_2kc_epsilon": "dimensionless"
+          }
+        },
+        "description": "Fracture stress as a function of exponent n for the tension test, for two values of the dimensionless parameter R/(2kcε). The checker will solve the implicit equation from the reported n and parameter using the same Rivlin-Thomas approximation, then recompute sigma and compare within relative tolerance."
+      }
+    ],
+    "notes": "The trouser tear and lubricated cutting analyses are trivial force-balance equalities and are intentionally omitted from the computational reproduction. The two scored CSV files capture the complete computed headline results."
+  },
+  "steps": [
+    {
+      "id": "step_mode2",
+      "output_file": "mode_II_fracture_stress.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Recompute mode II fracture stress from n and parameter_R_over_epsilon_d using Equation (2d). Score fraction of rows whose reported sigma_Pa matches the recomputed value within tolerance."
+    },
+    {
+      "id": "step_tension",
+      "output_file": "tension_fracture_stress.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Recompute tension fracture stress from n and parameter_R_over_2kc_epsilon by solving the implicit Rivlin-Thomas equation and comparing reported sigma_Pa."
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes mean absolute error between submitted Ufg curves and embedded reference curves, plus a structural slope trend check; no need to trust agent-reported metrics.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_ufg_vs_E.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference Ufg values for no-ni and with-ni curves, used for MAE comparison.",
+      "source_provenance": "Derived from approximate reproduction of Fig. 3 in the paper (n-Ge photogradient e.m.f.).",
+      "generation_method": "Values taken from the reference solve.sh, which reflects the expected correct output of solving the energy balance equation with given parameters.",
+      "why_not_fabricated": "These values are directly based on the paper's published quantitative results and the standard solving procedure; they represent the intended answer for this task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_ufg_vs_E.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "E",
+            "Ufg_no_ni",
+            "Ufg_with_ni"
+          ],
+          "units": {
+            "E": "kV/cm",
+            "Ufg_no_ni": "mV",
+            "Ufg_with_ni": "mV"
+          }
+        },
+        "description": "Computed microwave‑averaged photogradient e.m.f. as a function of electric field for n‑Ge without and with non‑equivalent intervalley scattering."
+      }
+    ],
+    "notes": "The CSV provides the full computed ⟨U_fg⟩_T curve. The checker will compare these values to digitised gold curves, recompute the mean absolute error, and verify the slope reduction for E > 5 kV/cm in the with‑ni case."
+  },
+  "steps": [
+    {
+      "id": "ufg_curves",
+      "output_file": "step_01_ufg_vs_E.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "params": {
+        "ref_E": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "ref_no_ni": [
+          0.0,
+          0.7,
+          1.4,
+          2.1,
+          2.8,
+          3.5,
+          4.5,
+          5.5,
+          6.5,
+          7.5,
+          8.5,
+          9.5,
+          10.5,
+          11.5,
+          12.5,
+          13.5,
+          14.5
+        ],
+        "ref_with_ni": [
+          0.0,
+          0.7,
+          1.4,
+          2.1,
+          2.8,
+          3.5,
+          4.0,
+          4.5,
+          5.0,
+          5.5,
+          5.9,
+          6.3,
+          6.7,
+          7.1,
+          7.5,
+          7.9,
+          8.3
+        ],
+        "mae_threshold_no": 2.0,
+        "mae_threshold_wi": 1.5,
+        "mae_max_loss_no": 4.0,
+        "mae_max_loss_wi": 3.0,
+        "slope_trend_bonus": 0.05
+      }
+    }
+  ]
+}

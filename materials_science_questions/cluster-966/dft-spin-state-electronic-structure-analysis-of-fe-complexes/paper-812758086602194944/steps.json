@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_build_models",
+    "title": "Build molecular models and input files",
+    "role": "process",
+    "action": "Construct the six oligomer models: deprotonated ([Fe2(Htrz)4(trz)2]2+, [Fe4(Htrz)8(trz)4]4+, [Fe6(Htrz)12(trz)6]6+) and undeprotonated ([Fe2(Htrz)6]4+, [Fe4(Htrz)12]8+, [Fe6(Htrz)18]12+) linear chains with triazole bridges. Prepare input files for geometry optimization using B3LYP/6-31G(d) with an open-source DFT code.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_opt",
+    "title": "Run geometry optimizations",
+    "role": "process",
+    "action": "Execute geometry optimizations for all six complexes at the B3LYP/6-31G(d) level using the chosen DFT code. Retain the final optimized coordinates and total electronic energies for each complex.",
+    "output_file": "",
+    "evidence": "optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_extract_xyz",
+    "title": "Collect optimized structures into a single XYZ file",
+    "role": "scored",
+    "action": "Concatenate the final optimized coordinates of all six complexes into one XYZ file, with a comment line naming each complex (e.g., 'deprotonated A1').",
+    "output_file": "step_01_optimized_structures.xyz",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimized geometries in XYZ format for structural verification.",
+    "output_schema": "Concatenated XYZ text file containing coordinates for all six complexes. Each structure begins with the number of atoms on one line, a comment line identifying the complex, and then atom lines (element symbol and xyz coordinates)."
+  },
+  {
+    "id": "step_fe_fe_dist",
+    "title": "Compute Fe-Fe distances",
+    "role": "scored",
+    "action": "From the optimized structures, calculate center-to-center Fe-Fe distances for all adjacent Fe pairs in each complex. Output the distances in angstroms as a JSON file.",
+    "output_file": "step_02_Fe_Fe_distances.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fe-Fe nearest-neighbor distances per model and ligand type.",
+    "output_schema": "{\"method\": \"B3LYP/6-31G(d)\", \"deprotonated\": {\"A1\": [dist], \"A2\": [dist,dist,...], \"A3\": [dist,...]}, \"undeprotonated\": {\"A1\": [dist], \"A2\": [...], \"A3\": [...]}}"
+  },
+  {
+    "id": "step_fe_n_bond",
+    "title": "Compute Fe-N bond lengths",
+    "role": "scored",
+    "action": "Extract all Fe-N bond lengths from the optimized structures, separating deprotonated and undeprotonated triazole rings where applicable. Output as JSON.",
+    "output_file": "step_03_Fe_N_bond_lengths.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fe-N bond lengths organized by complex and ring type.",
+    "output_schema": "{\"method\": \"B3LYP/6-31G(d)\", \"deprotonated\": {\"A2\": {\"deprot_ring\": [l1,...], \"undeprot_ring\": [l1,...]}, \"A3\": {...}}, \"undeprotonated\": {\"A2\": [l1,...], \"A3\": [l1,...]}}"
+  },
+  {
+    "id": "step_iso_frags",
+    "title": "Calculate isolated fragment energies",
+    "role": "process",
+    "action": "Perform energy calculations for an isolated Fe(II) ion and an isolated 1,2,4-H-triazole molecule at the same B3LYP/6-31G(d) level to serve as reference energies for formation energy analysis.",
+    "output_file": "",
+    "evidence": "isolated_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_form_energy",
+    "title": "Compute formation energies",
+    "role": "scored",
+    "action": "Using the total energies of the optimized oligomers and the isolated fragments, compute the formation energy for each complex: E_stability = E_oligomer - (n*E_Fe + m*E_Htrz). Report values in kJ/mol in a JSON file.",
+    "output_file": "step_04_formation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Formation energies for each complex, used to compare stability.",
+    "output_schema": "{\"method\": \"B3LYP/6-31G(d)\", \"deprotonated\": {\"A1\": E, \"A2\": E, \"A3\": E}, \"undeprotonated\": {\"A1\": E, \"A2\": E, \"A3\": E}, \"units\": \"kJ/mol\"}"
+  }
+]

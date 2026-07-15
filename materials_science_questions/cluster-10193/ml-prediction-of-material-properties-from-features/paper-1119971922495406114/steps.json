@@ -1,0 +1,54 @@
+[
+  {
+    "id": "train_qm9_se",
+    "title": "Train QM9-SchNet Ensemble (QM9-SE) from scratch",
+    "role": "process",
+    "action": "Train a SchNet model with DPOSE (64 independent output heads, Negative Log-Likelihood loss) from scratch on the full QM9 dataset (130,831 molecules) using an 80/20 train‑test split. Obtain a trained QM9‑SE model.",
+    "output_file": "",
+    "evidence": "training_log_qm9.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prerequisite for QM9 evaluation; the trained model is needed to compute predictive variances and R².",
+    "output_schema": ""
+  },
+  {
+    "id": "fine_tune_oc20_se",
+    "title": "Fine-tune OC20-SchNet Ensemble (OC20-SE) on intermetallic slabs",
+    "role": "process",
+    "action": "Load the pretrained SchNet checkpoint, add DPOSE heads (64 output heads), and fine‑tune on the intermetallic slab subset of the OC20 dataset, freezing all upstream weights. Obtain the OC20‑SE model.",
+    "output_file": "",
+    "evidence": "training_log_oc20.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prerequisite for OC20 evaluation; the fine‑tuned model specializes in intermetallic slabs.",
+    "output_schema": ""
+  },
+  {
+    "id": "fine_tune_aumd_se",
+    "title": "Fine-tune AuMD-SE model on bulk gold systems",
+    "role": "process",
+    "action": "Using the same pretrained SchNet checkpoint, add DPOSE heads and fine‑tune on the bulk gold configurations from the Gold dataset, freezing upstream weights. Obtain the AuMD‑SE model.",
+    "output_file": "",
+    "evidence": "training_log_gold.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prerequisite for gold vs silver evaluation; the model specializes on gold bulk structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "evaluate_all",
+    "title": "Evaluate all models and produce summary",
+    "role": "scored",
+    "action": "Use the trained QM9‑SE model to compute predictive variance for the specified in‑domain (CF₄, CH₄, HF) and out‑of‑domain (CCl₄, SiH₄, HCl, SiF₄, SiCl₄) molecules, and compute R² on the QM9 test split. Use the fine‑tuned OC20‑SE model to compute median predictive variance over intermetallic and non‑metal slab subsets and R² on the intermetallic test set. Use the fine‑tuned AuMD‑SE model to compute mean predictive variance for gold structures and for analogous silver structures. Aggregate all results into a single JSON file.",
+    "output_file": "evaluation_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final artifact that captures all mandatory quantitative comparisons: variance differences between in‑domain and out‑of‑domain data, and regression quality on in‑domain test splits.",
+    "output_schema": "{\n  \"qm9_in_domain_variance\": [float] (variance for CF₄, CH₄, HF),\n  \"qm9_out_of_domain_variance\": [float] (variance for CCl₄, SiH₄, HCl, SiF₄, SiCl₄),\n  \"oc20_intermetallic_variance_median\": float,\n  \"oc20_nonmetal_variance_median\": float,\n  \"gold_variance_au_mean\": float,\n  \"gold_variance_ag_mean\": float,\n  \"qm9_test_R2\": float,\n  \"oc20_intermetallic_test_R2\": float\n}"
+  }
+]

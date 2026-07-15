@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute peak parameters from raw FDTD spectra (coupling_spectrum_TE.csv and coupling_spectrum_TM.csv) and compare to paper's reported values with tolerant thresholds; verify TE0 highest ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "coupling_spectrum_TE.csv": "structural_audit",
+    "coupling_spectrum_TM.csv": "structural_audit",
+    "extracted_peaks.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold peak parameters for TE0 and two TM0 peaks",
+      "source_provenance": "Paper text and Fig. 5: TE0 at 1.5625 um, efficiency 0.41, bandwidth 49 nm; TM0 at 1.3223 um, efficiency 0.2706, bandwidth 34 nm; TM0 at 1.5826 um, efficiency 0.3288, bandwidth 47 nm.",
+      "generation_method": "extracted directly from the paper's reported values",
+      "why_not_fabricated": "These are the exact values the paper reports; we use them as reference targets for reproduction verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "coupling_spectrum_TE.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_um",
+            "efficiency"
+          ],
+          "units": {
+            "wavelength_um": "micrometer",
+            "efficiency": "fraction (0 to 1)"
+          }
+        },
+        "description": "CSV file with two numeric columns: wavelength (um) and coupling efficiency (fraction) for TE polarization."
+      },
+      {
+        "file": "coupling_spectrum_TM.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_um",
+            "efficiency"
+          ],
+          "units": {
+            "wavelength_um": "micrometer",
+            "efficiency": "fraction (0 to 1)"
+          }
+        },
+        "description": "CSV file with two numeric columns: wavelength (um) and coupling efficiency (fraction) for TM polarization."
+      },
+      {
+        "file": "extracted_peaks.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "mode": "string (one of 'TE0', 'TM0')",
+            "wavelength_um": "number (float)",
+            "efficiency": "number (float, fraction)",
+            "bandwidth_3dB_nm": "number (float, nm)"
+          }
+        },
+        "description": "Array of peak objects containing mode identifier, peak wavelength, efficiency, and 3-dB bandwidth."
+      }
+    ],
+    "notes": "The top-grating efficiency study and the Fabry-Perot thickness optimization are omitted from this reproduction; the optimized geometric and material parameters are provided directly. The simulation uses Meep, an open-source FDTD solver."
+  },
+  "steps": [
+    {
+      "id": "spectrum_TE",
+      "output_file": "coupling_spectrum_TE.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "spectrum_TM",
+      "output_file": "coupling_spectrum_TM.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "peaks_extracted",
+      "output_file": "extracted_peaks.json",
+      "kind": "recompute_metric",
+      "weight": 0.9,
+      "target_policy": "reference_match",
+      "target_peaks": [
+        {
+          "mode": "TM0",
+          "wavelength_um": 1.3223,
+          "efficiency": 0.2706,
+          "bandwidth_3dB_nm": 34,
+          "wavelength_tol": 0.015,
+          "efficiency_tol": 0.03,
+          "bandwidth_tol": 8
+        },
+        {
+          "mode": "TE0",
+          "wavelength_um": 1.5625,
+          "efficiency": 0.41,
+          "bandwidth_3dB_nm": 49,
+          "wavelength_tol": 0.015,
+          "efficiency_tol": 0.03,
+          "bandwidth_tol": 8
+        },
+        {
+          "mode": "TM0",
+          "wavelength_um": 1.5826,
+          "efficiency": 0.3288,
+          "bandwidth_3dB_nm": 47,
+          "wavelength_tol": 0.015,
+          "efficiency_tol": 0.03,
+          "bandwidth_tol": 8
+        }
+      ],
+      "te0_highest_check": true
+    }
+  ]
+}

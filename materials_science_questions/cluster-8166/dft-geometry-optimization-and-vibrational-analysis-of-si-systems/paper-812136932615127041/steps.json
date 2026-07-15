@@ -1,0 +1,54 @@
+[
+  {
+    "id": "build_models",
+    "title": "Build initial CNT models and bulk Si cell",
+    "role": "process",
+    "action": "Construct atomic coordinates for (5,5) and (9,0) CNTs with hydrogen termination at the bottom, then create Si-doping models: model I (single Si at topmost pentagon), model II (Si at second layer), model III (Si at third layer), model IV (two Si at para-sites of hexagon at second layer), model V (single Si at topmost hexagon), model VI (two Si at para-sites of hexagon). Also generate a bulk Si unit cell.",
+    "output_file": "",
+    "evidence": "initial_structures.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the initial geometries needed for DFT optimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "geometry_optimization",
+    "title": "DFT geometry optimization of all CNT models",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for all CNT models (pure and doped) using SIESTA with GGA (BLYP) and DZP basis set. Fix bottom hydrogen atoms during relaxation. Converge forces to reasonable tolerance. Save optimized geometries and total energies.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxes atomic positions to obtain ground-state geometries and total energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_reference_energies",
+    "title": "Compute chemical potentials",
+    "role": "process",
+    "action": "Compute the total energy per atom of bulk Si, E_Si, from the optimized bulk Si cell. Determine the carbon chemical potential E_C as the total energy per carbon atom of the optimized pure CNT (total energy divided by number of C atoms). Output both values.",
+    "output_file": "",
+    "evidence": "chemical_potentials.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtains the chemical potentials required for the formation energy formula.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_results",
+    "title": "Calculate formation energies, HOMO/LUMO, and effective work function",
+    "role": "scored",
+    "action": "From the optimized total energies of all models and the chemical potentials, compute formation energies for each doped model using the formula: formation energy = (total energy of doped system - total energy of pure system) - (E_Si - E_C). Extract HOMO and LUMO energies from the DFT electronic structure output. Compute effective work function as (LUMO - HOMO)/2. Write a CSV file with columns: system, formation_energy_eV, homo_eV, lumo_eV, effective_work_function_eV.",
+    "output_file": "results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing formation energies and effective work functions for all pure and doped CNT models.",
+    "output_schema": "CSV with columns: system (string, values 'pure_5_5','model_I','model_II','model_III','model_IV','pure_9_0','model_V','model_VI'), formation_energy_eV (float), homo_eV (float), lumo_eV (float), effective_work_function_eV (float)."
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_ref_phases",
+    "title": "Reference‑phase total energies",
+    "role": "process",
+    "action": "Perform DFT relaxations of bcc W, the Se₆ molecular crystal, and bulk WSe₂ (primitive cell) to obtain the total energy per atom or per formula unit.",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "These energies serve as chemical‑potential references for formation‑energy evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_pristine_supercells",
+    "title": "Relax pristine WSe₂ monolayer and WSe₂/graphite supercells",
+    "role": "process",
+    "action": "Build a 5×5 supercell of monolayer WSe₂ with >20 Å vacuum (isolated) and a 3×3 WSe₂ on 4×4 graphite supercell (3 graphite layers, 13 Å vacuum, <1% tensile strain on WSe₂) using relaxed lattice constants. Relax atomic positions and record total energies of the pristine cells.",
+    "output_file": "",
+    "evidence": "pristine_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "These total energies are the pristine reference E_pristine for formation energy formula.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_defects_relax",
+    "title": "Relax intrinsic defect supercells",
+    "role": "process",
+    "action": "Using the relaxed pristine supercells, create supercells containing a single intrinsic defect (Seᵥₐc, Wᵥₐc, Sew, 2Seᵥₐc) in both isolated monolayer and supported WSe₂/graphite. Relax each defect geometry and record its total energy.",
+    "output_file": "",
+    "evidence": "defect_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "These total energies enter the formation‑energy expressions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_o_passivation",
+    "title": "Relax Seᵥₐc passivated by O atom",
+    "role": "process",
+    "action": "Create a supercell of isolated monolayer WSe₂ with a Se vacancy and substitute an O atom at that site (OSe). Relax the geometry and record its total energy.",
+    "output_file": "",
+    "evidence": "opassivation_energy.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Needed for the subsequent gap‑state passivation check.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_formation_energies",
+    "title": "Compute formation energies of intrinsic defects",
+    "role": "scored",
+    "action": "Using total energies from reference phases, pristine and defect supercells, calculate the chemical potentials μW and μSe for both W‑rich (μSe = μSe_min) and Se‑rich (μSe = μSe_max) limits. Compute the formation energy for each defect under each condition and substrate. Write the per‑row results to formation_energies.csv.",
+    "output_file": "formation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation energies (eV) of Seᵥₐc, Wᵥₐc, Sew, 2Seᵥₐc on isolated and supported monolayer WSe₂ under W‑rich and Se‑rich conditions.",
+    "output_schema": "defect (str), condition (str: 'W-rich' or 'Se-rich'), substrate (str: 'isolated' or 'supported'), formation_energy_eV (float)"
+  },
+  {
+    "id": "step_dos",
+    "title": "Compute density of states (DOS) for pristine, Seᵥₐc, and OSe",
+    "role": "process",
+    "action": "For the isolated monolayer, perform non‑self‑consistent PBE‑D2 calculations with dense k‑mesh to obtain the density of states for (i) pristine supercell, (ii) Seᵥₐc defect supercell, (iii) OSe supercell. Align the energy scales using a common core‑level reference (e.g., deepest W 1s core level far from the defect).",
+    "output_file": "",
+    "evidence": "dos_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The DOS is needed to determine whether defects introduce states inside the pristine band gap.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_gap_states",
+    "title": "Identify presence of gap states",
+    "role": "scored",
+    "action": "From the computed DOS, determine the energy range of the pristine band gap. For each system (pristine, Seᵥₐc, OSe), check whether any electronic states appear inside that gap. Write the result to gap_state_passivation.csv.",
+    "output_file": "gap_state_passivation.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Binary indicator of gap states for pristine, Seᵥₐc, and oxygen‑passivated Seᵥₐc.",
+    "output_schema": "system (str: 'pristine', 'Sevac', 'Sevac+O'), has_gap_states (bool: True if defect states within pristine band gap)"
+  }
+]

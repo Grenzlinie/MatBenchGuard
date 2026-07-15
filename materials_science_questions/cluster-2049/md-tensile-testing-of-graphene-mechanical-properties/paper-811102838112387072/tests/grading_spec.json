@@ -1,0 +1,58 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes transverse modulus and ultimate tensile strength from raw stress-strain data and compares to paper-reported values plus structural ordering, fulfilling T1 recompute.",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "config",
+            "strain",
+            "stress"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress": "GPa"
+          }
+        },
+        "description": "Stress-strain curves for three interphase configurations (PG, GV_all, GV_half). The checker recomputes transverse modulus and ultimate tensile strength from these data."
+      }
+    ],
+    "notes": "The agent must carry out all process steps to generate the provided stress-strain data. The checker extracts properties and compares them to hidden reference values."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold moduli and strengths for PG, GV_all, GV_half interphase configurations",
+      "source_provenance": "Paper Table 2: 'Current Model – GV Displacing All the Polymer', 'Current Model – GV Displacing Half the Polymer', 'Current Model – PG' rows.",
+      "generation_method": "Values converted to GPa (strength from MPa) as specified in the output contract; taken directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the exact reference results the agent must reproduce within tolerance; they are the paper's own headline interphase mechanical properties."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_mechanical_properties",
+      "output_file": "stress_strain_data.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold_moduli": {
+        "PG": 4.9,
+        "GV_all": 19.53,
+        "GV_half": 8.28
+      },
+      "gold_strengths": {
+        "PG": 0.3775,
+        "GV_all": 0.7835,
+        "GV_half": 1.024
+      },
+      "tol_modulus": 0.3,
+      "tol_strength": 0.2
+    }
+  ]
+}

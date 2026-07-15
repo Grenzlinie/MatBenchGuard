@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_geom_opt",
+    "title": "Geometry optimization of FNH3PbI3 polymorphs",
+    "role": "process",
+    "action": "Construct initial structures for the three polymorphs (pseudocubic with FNH3+ oriented along [110] and [111], and orthorhombic Pnma) from standard perovskite templates and the lattice constants described in the method. Perform full periodic DFT geometry optimization using the PBE functional and PAW pseudopotentials. Use a plane-wave cutoff of approximately 520 eV, force convergence threshold of 0.0002 eV/Å, and appropriate k-point meshes (e.g., 12×12×12 for pseudocubic, 10×8×10 for orthorhombic). Relax the ion positions and cell shape/volume until forces are below the threshold.",
+    "output_file": "",
+    "evidence": "geometry_optimization_completed.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate step: the relaxed unit-cell geometries are required for all downstream analyses. The evidence file should contain metadata (converged forces, total energies) confirming completion.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_bandstructure",
+    "title": "Electronic band structure calculations",
+    "role": "process",
+    "action": "Using the relaxed geometries from step_geom_opt, compute electronic band structures along high-symmetry k-point paths for all three polymorphs. Perform two calculations per polymorph: one without spin-orbit coupling (non-SOC) and one with spin-orbit coupling (SOC). Use the same functional and pseudopotentials as in the geometry optimization. Save the energy eigenvalues along the k-point paths for later extraction of properties.",
+    "output_file": "",
+    "evidence": "bandstructure_status.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate step: the band structure data (energy vs. k) is needed to obtain bandgaps, Rashba parameters, and effective masses.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_lattice",
+    "title": "Extract lattice parameters",
+    "role": "scored",
+    "action": "From the relaxed geometries of step_geom_opt, extract the optimized lattice constants (a, b, c) and angles (α, β, γ) for each polymorph, as well as the cell volume. Write the values to optimized_lattice.json.",
+    "output_file": "optimized_lattice.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Relaxed lattice parameters for the three FNH3PbI3 polymorphs.",
+    "output_schema": "JSON object with keys \"pseudocubic_110\", \"pseudocubic_111\", \"orthorhombic\". Each value is an object with fields \"a\", \"b\", \"c\" (float, Å), \"alpha\", \"beta\", \"gamma\" (float, degrees), \"volume\" (float, Å^3)."
+  },
+  {
+    "id": "step_bandgaps",
+    "title": "Bandgap and Rashba parameter extraction",
+    "role": "scored",
+    "action": "From the band structure results of step_bandstructure, determine the bandgap energies and nature (direct/indirect) for non-SOC and SOC cases for each polymorph. For the pseudocubic polymorphs, also extract the Rashba splitting energies for the conduction and valence bands and the k-point shifts (k0) where applicable. Write all values to bandgaps_and_rashba.json.",
+    "output_file": "bandgaps_and_rashba.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bandgap energies, nature, and Rashba splitting parameters. This quantity can only be obtained correctly after genuinely executing the preceding geometry optimization and band structure steps.",
+    "output_schema": "JSON object with keys \"pseudocubic_110\", \"pseudocubic_111\", \"orthorhombic\". Each value is an object with: \"Eg_nonSOC\" (eV), \"nature_nonSOC\" (string \"direct\" or \"indirect\"), \"Eg_SOC\" (eV), \"nature_SOC\" (string). Additionally, for pseudocubic polymorphs include \"Rashba_CB_splitting\" (eV), \"Rashba_VB_splitting\" (eV), \"k0_CB\" (Å^-1), \"k0_VB\" (Å^-1). Use null for missing values (e.g., orthorhombic Rashba parameters)."
+  },
+  {
+    "id": "step_masses",
+    "title": "Effective mass extraction",
+    "role": "scored",
+    "action": "For each polymorph, from the band curvatures near the conduction band minimum and valence band maximum in the non-SOC and SOC band structures, compute the electron and hole effective masses using m* = ħ² (∂²ε/∂k²)⁻¹. Write the results to effective_masses.json.",
+    "output_file": "effective_masses.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Effective masses of electrons and holes in units of the free electron mass m_e.",
+    "output_schema": "JSON object with keys \"pseudocubic_110\", \"pseudocubic_111\", \"orthorhombic\". Each value is an object with: \"mh_star_nonSOC\", \"me_star_nonSOC\", \"mh_star_SOC\", \"me_star_SOC\" (all floats, in units of m_e)."
+  },
+  {
+    "id": "step_binding",
+    "title": "Binding energy calculations for molecular fragments",
+    "role": "scored",
+    "action": "From the relaxed periodic structures of step_geom_opt, extract the molecular fragments corresponding to the blocks C–G in the pseudocubic phase (Figure 2) and the three blocks A–C in the orthorhombic phase (Figure 3) as described in the method. Perform single-point PBE calculations with an all-electron basis set (e.g., Def2-TZVPPD) to obtain the basis-set superposition error corrected binding energies ΔE(BSSE) in kcal/mol and eV. Write the results to binding_energies.json.",
+    "output_file": "binding_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Binding energies of selected noncovalent interaction motifs.",
+    "output_schema": "JSON array of objects. Each object has: \"system\" (string, either \"pseudocubic\" or \"orthorhombic\"), \"block_label\" (string, e.g., \"Fig2C\", \"Fig2D\", ..., \"Fig3A\", \"Fig3B\", \"Fig3C\"), \"ΔE_BSSE_kcal_per_mol\" (float), \"ΔE_BSSE_eV\" (float). The list must contain exactly the eight blocks: five from the pseudocubic phase (C-G) and three from the orthorhombic phase (A-C)."
+  }
+]

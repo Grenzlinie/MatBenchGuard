@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "HWHM and ratio are recomputed from the raw angle‑transmission CSV data, directly verifying the claimed angular tolerance enhancement without trusting agent‑reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "angular_transmission_SPG.csv": "metric_recompute",
+    "angular_transmission_bi-atomic.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference HWHM values and ratio threshold",
+      "source_provenance": "Paper Fig. 4: SPG HWHM = 9.5 deg, bi‑atomic HWHM = 17 deg, two‑fold enhancement claim",
+      "generation_method": "Directly extracted from paper's reported numbers",
+      "why_not_fabricated": "These are the paper's own reported results, used to verify that the re‑simulated curves reproduce the angular tolerance enhancement within tolerance, and ratio > 1.5 confirms the claimed improvement."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "angular_transmission_SPG.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "angle_deg",
+            "transmission"
+          ],
+          "units": {
+            "angle_deg": "degree",
+            "transmission": "fraction (0-1)"
+          }
+        },
+        "description": "Angle-resolved transmission curve for the SPG structure. The checker will recompute the half-width at half-maximum (HWHM) of the transmission peak from this data and compare it to the hidden reference."
+      },
+      {
+        "file": "angular_transmission_bi-atomic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "angle_deg",
+            "transmission"
+          ],
+          "units": {
+            "angle_deg": "degree",
+            "transmission": "fraction (0-1)"
+          }
+        },
+        "description": "Angle-resolved transmission curve for the bi-atomic structure. The checker will recompute its HWHM and compute the ratio to the SPG HWHM, verifying the claimed angular tolerance enhancement."
+      }
+    ],
+    "notes": "The checker will recompute the half-width at half-maximum (HWHM) from the submitted data and assess whether the bi-atomic HWHM is at least 1.5 times the SPG HWHM. Both CSVs must contain at least 15 rows covering 0–30°. The resonance wavelength λ_R is determined by the agent as part of the simulation; the exact value is not prescribed."
+  },
+  "steps": [
+    {
+      "id": "spg_hwhm_check",
+      "output_file": "angular_transmission_SPG.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "reference_hwhm_deg": 9.5,
+      "tolerance_abs_deg": 2.0,
+      "note": "Half-width at half-maximum computed from SPG angular transmission data; score degrades with absolute deviation."
+    },
+    {
+      "id": "bi_hwhm_check",
+      "output_file": "angular_transmission_bi-atomic.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "reference_hwhm_deg": 17.0,
+      "tolerance_abs_deg": 2.0,
+      "note": "Half-width at half-maximum for bi-atomic grating, similar scoring."
+    },
+    {
+      "id": "ratio_check",
+      "output_file": "angular_transmission_bi-atomic.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "threshold_ratio": 1.5,
+      "note": "Ratio of bi-atomic HWHM to SPG HWHM must be at least 1.5 to get full credit; linear ramp from 1.0 to 1.5."
+    }
+  ]
+}

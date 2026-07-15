@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of DFT elastic constants and band gap from raw electronic-structure data is infeasible in the verifier sandbox; scoring relies on value tolerance against paper-reported reference plus mechanical stability conditions and string match for transition type.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported elastic constants C11, C12, C44 for GGA(PBE96) and band gap for EV-GGA",
+      "source_provenance": "Paper Table 1: GGA(PBE96) row gives C11=422.113, C12=64.209, C44=169.27; Table 2: GGA-EV row gives band gap 2.6164 eV.",
+      "generation_method": "Values copied directly from the paper’s tables.",
+      "why_not_fabricated": "Values are exactly those reported in the paper for the specified functionals."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_A": "number",
+            "bulk_modulus_GPa": "number",
+            "C11_GPa": "number",
+            "C12_GPa": "number",
+            "C44_GPa": "number"
+          }
+        },
+        "description": "Equilibrium lattice constant, bulk modulus, and the three independent cubic elastic constants computed by the volume-conserving strain method."
+      },
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "number",
+            "transition": "string"
+          }
+        },
+        "description": "Electronic band gap of cubic KTaO3 and the type of indirect transition (R→Γ)."
+      }
+    ],
+    "notes": "The checker compares the reported quantities to the paper's computed results and verifies the cubic mechanical stability conditions (C11−C12>0, C11+2C12>0, C44>0)."
+  },
+  "steps": [
+    {
+      "id": "elastic_constants",
+      "output_file": "elastic_constants.json",
+      "weight": 0.7,
+      "kind": "rubric",
+      "targets": {
+        "C11_GPa": {
+          "value": 422.113,
+          "tolerance": 0.05
+        },
+        "C12_GPa": {
+          "value": 64.209,
+          "tolerance": 0.05
+        },
+        "C44_GPa": {
+          "value": 169.27,
+          "tolerance": 0.05
+        }
+      },
+      "partial_tolerance": 0.1
+    },
+    {
+      "id": "band_gap",
+      "output_file": "band_gap.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "band_gap_target_eV": 2.6164,
+      "band_gap_tolerance": 0.1,
+      "expected_transition": "R→Γ",
+      "partial_tolerance": 0.2
+    }
+  ]
+}

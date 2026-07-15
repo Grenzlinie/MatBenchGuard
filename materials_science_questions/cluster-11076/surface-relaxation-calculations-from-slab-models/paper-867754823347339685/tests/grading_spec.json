@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes solution/segregation energies from raw total energies, then verifies qualitative signs and quantitative reference match within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "raw_total_energies.csv": "metric_recompute",
+    "solution_energies.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "raw_total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system_name",
+            "total_energy_eV"
+          ],
+          "units": {
+            "total_energy_eV": "eV"
+          }
+        },
+        "description": "Raw DFT total energies for all slab and bulk configurations. The checker uses this file to recompute solution and segregation energies."
+      },
+      {
+        "file": "solution_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "layer",
+            "e_sol_eV",
+            "e_seg_eV",
+            "m_cr_muB"
+          ],
+          "units": {
+            "e_sol_eV": "eV",
+            "e_seg_eV": "eV",
+            "m_cr_muB": "μ_B"
+          }
+        },
+        "description": "Derived solution energies, segregation energies, and Cr magnetic moments for the S, S-1, S-2, and central layers. The checker verifies the segregation energies against reference values and checks sign conditions."
+      }
+    ],
+    "notes": "Both CSV files must be comma-separated with a header row. The raw_total_energies.csv must contain exactly seven rows: Fe_slab, Fe_slab_Cr_S, Fe_slab_Cr_Sm1, Fe_slab_Cr_Sm2, Fe_slab_Cr_central, Fe_bulk, Cr_bulk. solution_energies.csv must contain four rows for layers S, S-1, S-2, and central."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported segregation energies and Cr magnetic moments from Table I.",
+      "source_provenance": "Paper Table I",
+      "generation_method": "Extracted from paper",
+      "why_not_fabricated": "These are the paper's reported values used for reference comparison; no fabrication is needed."
+    }
+  ],
+  "steps": [
+    {
+      "id": "raw_csv_valid",
+      "output_file": "raw_total_energies.csv",
+      "kind": "file_structure",
+      "weight": 0.02,
+      "expected_columns": [
+        "system_name",
+        "total_energy_eV"
+      ],
+      "expected_rows": 7,
+      "required_systems": [
+        "Fe_slab",
+        "Fe_slab_Cr_S",
+        "Fe_slab_Cr_Sm1",
+        "Fe_slab_Cr_Sm2",
+        "Fe_slab_Cr_central",
+        "Fe_bulk",
+        "Cr_bulk"
+      ]
+    },
+    {
+      "id": "recomp_signs",
+      "output_file": "raw_total_energies.csv",
+      "kind": "structural",
+      "weight": 0.25
+    },
+    {
+      "id": "recomp_Eseg_ref",
+      "output_file": "raw_total_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.38,
+      "reference": {
+        "E_seg_S": 0.078,
+        "E_seg_Sm1": 0.355
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "sol_energy_ref",
+      "output_file": "solution_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "reference": {
+        "S": {
+          "e_seg_eV": 0.078,
+          "m_cr_muB": -3.1
+        },
+        "S-1": {
+          "e_seg_eV": 0.355,
+          "m_cr_muB": -1.8
+        },
+        "S-2": {
+          "e_seg_eV": 0.007,
+          "m_cr_muB": -1.6
+        },
+        "central": {
+          "e_seg_eV": 0.0,
+          "m_cr_muB": -1.6
+        }
+      },
+      "tolerance": {
+        "e_seg_eV": 0.05,
+        "m_cr_muB": 0.3
+      }
+    }
+  ]
+}

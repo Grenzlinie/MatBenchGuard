@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Only fitted parameter values are submitted; recomputing them requires the raw pressure-volume data which is not an agent artifact. Comparing to paper gold with tolerance is the appropriate T0 fallback.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eos_fit_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold parameter values and tolerances",
+      "source_provenance": "paper DOI 10.1080/08957959.2012.750653, abstract / text",
+      "generation_method": "Manually extracted from paper: V0 = 802.8 Å³, KT = 249 GPa, KT' = 3.2, KT_fixed4 = 241.8 GPa, ka = 1.24e-3 GPa⁻¹, ka' = 4.41e-6 GPa⁻², k_V = 3.72e-3 GPa⁻¹",
+      "why_not_fabricated": "These are the paper's own reported values for the same measurable quantities, verified against the source."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eos_fit_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V0": "float (Å^3)",
+            "V0_error": "float (Å^3)",
+            "KT": "float (GPa)",
+            "KT_error": "float (GPa)",
+            "KT_prime": "float",
+            "KT_prime_error": "float",
+            "KT_fixed4": "float (GPa)",
+            "KT_fixed4_error": "float (GPa)",
+            "ka": "float (GPa^-1)",
+            "ka_error": "float (GPa^-1)",
+            "ka_prime": "float (GPa^-2)",
+            "ka_prime_error": "float (GPa^-2)",
+            "k_V": "float (GPa^-1)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Contains the fitted zero-pressure volume, isothermal bulk modulus, its first pressure derivative, the bulk modulus with fixed K_T'=4, the linear compressibility coefficients from the quadratic fit of lattice parameter, and all associated standard errors."
+      }
+    ],
+    "notes": "The bundled data file provides pressure (GPa), lattice parameter a (Å), and volume V (Å³) from Table 2 of the paper. The agent must perform both regression tasks and output a single JSON with all parameters and their uncertainties. The exact fitting library (e.g., SciPy) is not mandated; any equivalent nonlinear least-squares implementation is acceptable. The output is compared to the paper-reported numbers within hidden tolerances that accommodate numerical and implementation differences."
+  },
+  "steps": [
+    {
+      "id": "eos_params_accuracy",
+      "output_file": "eos_fit_results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold": {
+        "V0": {
+          "target": 802.8,
+          "tolerance_abs": 1.0
+        },
+        "KT": {
+          "target": 249.0,
+          "tolerance_abs": 15.0
+        },
+        "KT_prime": {
+          "target": 3.2,
+          "tolerance_abs": 1.5
+        },
+        "KT_fixed4": {
+          "target": 241.8,
+          "tolerance_abs": 15.0
+        },
+        "ka": {
+          "target": 0.00124,
+          "tolerance_abs": 0.0002
+        },
+        "ka_prime": {
+          "target": 4.41e-06,
+          "tolerance_abs": 1e-06
+        },
+        "k_V": {
+          "target": 0.00372,
+          "tolerance_abs": 0.0005
+        }
+      }
+    }
+  ]
+}

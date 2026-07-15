@@ -1,0 +1,138 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Raw DFT band structure/DOS/linewidth files are not required; scoring uses monotonic trends for N(0) and λ, plus tolerance comparisons on reported final values. Full recompute from raw data is infeasible without the intermediate DFT outputs.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap, N(0), λ, and Tc values extracted from the paper.",
+      "source_provenance": "Paper text and figures: Eg=2.62 eV (Fig.3), N(0) values inferred from Fig.6, λ values from Fig.6 and text (λ=1.92 at x=0.45), Tc values from abstract/conclusion (51.3 K for μ*=0.1, 66.1 K for μ*=0).",
+      "generation_method": "Digitized/extracted from paper's reported data; values are those the paper describes as its computed results.",
+      "why_not_fabricated": "All values are the paper's own reported quantities, used here as the hidden gold for result-level validation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_pristine_RbH.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "items": {
+            "value": "float (eV)"
+          }
+        },
+        "description": "Direct band gap of pristine RbH at L-point."
+      },
+      {
+        "file": "N0_vs_x.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "N0"
+          ],
+          "items": {
+            "x": "float",
+            "N0": "float (states/eV/atom/spin)"
+          }
+        },
+        "description": "N(0) values for three Sr contents; threshold_or_better checks monotonic increase and per-point tolerances."
+      },
+      {
+        "file": "lambda_vs_x.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "lambda"
+          ],
+          "items": {
+            "x": "float",
+            "lambda": "float"
+          }
+        },
+        "description": "Electron-phonon coupling λ for three Sr contents; threshold_or_better checks monotonic increase and per-point tolerances."
+      },
+      {
+        "file": "Tc_at_x045.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "items": {
+            "value1": "float (K, μ*=0.1)",
+            "value2": "float (K, μ*=0)"
+          }
+        },
+        "description": "Superconducting critical temperature at x=0.45 for two Coulomb pseudopotentials."
+      }
+    ],
+    "notes": "All artifacts are compared to hidden paper gold values within appropriate tolerances: band gap and Tc against fixed reference numbers; N(0) and λ using threshold_or_better that enforces monotonic increase across x and per-point tolerances. The process steps (structural optimization, phonon/linewidth calculation) are required because the load-bearing scored steps (λ and Tc) depend on them."
+  },
+  "steps": [
+    {
+      "id": "check_bandgap",
+      "output_file": "band_gap_pristine_RbH.txt",
+      "description": "Direct band gap of pristine RbH at L-point",
+      "weight": 0.1,
+      "kind": "numeric_tolerance",
+      "reference": 2.62,
+      "tolerance_abs": 0.2,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_N0",
+      "output_file": "N0_vs_x.csv",
+      "description": "N(0) values and monotonic increase with x",
+      "weight": 0.25,
+      "kind": "monotonic_numeric",
+      "reference": {
+        "0.05": 0.06,
+        "0.20": 0.1,
+        "0.45": 0.18
+      },
+      "tolerance_rel": 0.2,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "check_lambda",
+      "output_file": "lambda_vs_x.csv",
+      "description": "Electron-phonon coupling λ values and monotonic increase with x",
+      "weight": 0.3,
+      "kind": "monotonic_numeric",
+      "reference": {
+        "0.05": 0.3,
+        "0.20": 0.8,
+        "0.45": 1.92
+      },
+      "tolerance_rel": 0.2,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "check_Tc",
+      "output_file": "Tc_at_x045.txt",
+      "description": "Superconducting Tc at x=0.45 for μ*=0.1 and μ*=0",
+      "weight": 0.35,
+      "kind": "numeric_tolerance",
+      "reference": [
+        51.3,
+        66.1
+      ],
+      "tolerance_abs": [
+        5.0,
+        5.0
+      ],
+      "target_policy": "exact_match"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute final quantities from raw simulator output; we compare against paper-reported reference values with tolerances and verify the expected monotonic energy trend.",
+  "pass_threshold": 0.4,
+  "target_policies": {
+    "step_01_metrics.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference storage time and secondary count for 10 keV primary electron",
+      "source_provenance": "Paper: 'A 10 keV primary electron will be stored for 3 h. In this timespan it produces ~300 secondaries.'",
+      "generation_method": "Extracted directly from paper text; tolerances set wide (factor ~3.3x) to accommodate independent simulation variations.",
+      "why_not_fabricated": "These are the paper's own reported values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Monotonic non-decreasing trend between 5, 10, 20 keV",
+      "source_provenance": "Paper states storage time and secondary count increase with primary energy; we enforce monotonic ordering.",
+      "generation_method": "Derived from paper's qualitative description, implemented as structural check.",
+      "why_not_fabricated": "Reflects the paper's conclusion about energy dependence."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_metrics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_keV",
+            "storage_time_hours",
+            "secondary_count"
+          ]
+        },
+        "description": "Quantitative results of the Monte Carlo electron transport simulation: storage time and secondary electron count for each simulated primary electron energy. The values must be non-decreasing with increasing primary energy."
+      }
+    ],
+    "notes": "The storage_time_hours and secondary_count are expected to be monotonic non-decreasing when energy_keV increases (5 < 10 < 20). The absolute values are compared to a hidden reference derived from the original paper."
+  },
+  "steps": [
+    {
+      "id": "results_check",
+      "output_file": "step_01_metrics.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "config": {
+        "target_energy_keV": 10.0,
+        "ts_ref_hours": 3.0,
+        "ts_lo": 0.5,
+        "ts_hi": 10.0,
+        "nsec_ref": 300,
+        "nsec_lo": 50,
+        "nsec_hi": 800,
+        "monotonic_energies": [
+          5.0,
+          10.0,
+          20.0
+        ],
+        "sub_weights": {
+          "ts_10keV": 0.4,
+          "nsec_10keV": 0.4,
+          "monotonic": 0.2
+        }
+      }
+    }
+  ]
+}

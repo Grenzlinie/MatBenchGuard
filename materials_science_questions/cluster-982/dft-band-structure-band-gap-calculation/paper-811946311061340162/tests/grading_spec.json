@@ -1,0 +1,334 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Verifier cannot recompute DFT/DFPT; compare agent's computed values to paper's reported gold with realistic tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap.json": "exact_match",
+    "phonon_frequencies.csv": "reference_match",
+    "dielectric_tensor.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for band gaps, phonon frequencies (TO, LO), Z_star, epsilon, and dielectric tensor components.",
+      "source_provenance": "Paper Table 3 (phonon), Table 4 (dielectric), and textual description of band gaps (indirect 3.764 eV, direct 3.799 eV).",
+      "generation_method": "Direct extraction from the paper.",
+      "why_not_fabricated": "These are the paper's own reported results for identical computational setup."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "indirect_gap_eV": "number",
+            "direct_gap_Gamma_eV": "number",
+            "band_gap_type": "string"
+          }
+        },
+        "description": "The indirect band gap (eV), direct band gap at Γ (eV), and a string confirming the indirect nature of the gap."
+      },
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "TO_cm1",
+            "LO_cm1",
+            "symmetry",
+            "Z_star",
+            "epsilon"
+          ],
+          "units": {
+            "TO_cm1": "cm^{-1}",
+            "LO_cm1": "cm^{-1}",
+            "Z_star": "dimensionless",
+            "epsilon": "dimensionless"
+          }
+        },
+        "description": "Phonon frequencies (TO and LO in cm⁻¹), symmetry label (B1u, B2u, or B3u), scalar mode effective charge, and dielectric intensity for each of the 25 IR-active modes."
+      },
+      {
+        "file": "dielectric_tensor.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "electronic": {
+              "xx": "number",
+              "yy": "number",
+              "zz": "number",
+              "average": "number"
+            },
+            "ionic": {
+              "xx": "number",
+              "yy": "number",
+              "zz": "number",
+              "average": "number"
+            },
+            "static": {
+              "xx": "number",
+              "yy": "number",
+              "zz": "number",
+              "average": "number"
+            }
+          }
+        },
+        "description": "Electronic, ionic, and static dielectric tensor diagonal components (xx, yy, zz) and their orientationally averaged values."
+      }
+    ],
+    "notes": "The agent must perform the full DFT/DFPT workflow and produce the three scored artifacts that correspond to the main headline quantities of the paper: band gap, phonon spectrum, and dielectric tensor. Tolerances and reference values are kept hidden for grading."
+  },
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "band_gap.json",
+      "weight": 0.2,
+      "kind": "numeric_comparison",
+      "target_values": {
+        "indirect_gap_eV": 3.764,
+        "direct_gap_Gamma_eV": 3.799,
+        "band_gap_type": "indirect"
+      },
+      "tolerance_bandgap_abs": 0.2,
+      "description": "Indirect and direct band gaps"
+    },
+    {
+      "id": "step_phonon",
+      "output_file": "phonon_frequencies.csv",
+      "weight": 0.4,
+      "kind": "table_comparison",
+      "expected_rows": 25,
+      "valid_symmetries": [
+        "B1u",
+        "B2u",
+        "B3u"
+      ],
+      "gold_table": [
+        {
+          "TO_cm1": 54.2,
+          "LO_cm1": 54.6,
+          "symmetry": "B1u",
+          "Z_star": 0.11,
+          "epsilon": 0.02
+        },
+        {
+          "TO_cm1": 108.4,
+          "LO_cm1": 112.3,
+          "symmetry": "B3u",
+          "Z_star": 2.35,
+          "epsilon": 1.69
+        },
+        {
+          "TO_cm1": 140.5,
+          "LO_cm1": 145.0,
+          "symmetry": "B2u",
+          "Z_star": 3.19,
+          "epsilon": 1.86
+        },
+        {
+          "TO_cm1": 185.7,
+          "LO_cm1": 190.0,
+          "symmetry": "B2u",
+          "Z_star": 0.87,
+          "epsilon": 0.08
+        },
+        {
+          "TO_cm1": 203.6,
+          "LO_cm1": 204.7,
+          "symmetry": "B1u",
+          "Z_star": 6.21,
+          "epsilon": 2.51
+        },
+        {
+          "TO_cm1": 204.7,
+          "LO_cm1": 208.5,
+          "symmetry": "B3u",
+          "Z_star": 4.88,
+          "epsilon": 1.54
+        },
+        {
+          "TO_cm1": 229.8,
+          "LO_cm1": 236.2,
+          "symmetry": "B3u",
+          "Z_star": 5.58,
+          "epsilon": 4.08
+        },
+        {
+          "TO_cm1": 236.3,
+          "LO_cm1": 259.3,
+          "symmetry": "B2u",
+          "Z_star": 8.43,
+          "epsilon": 11.27
+        },
+        {
+          "TO_cm1": 269.7,
+          "LO_cm1": 286.6,
+          "symmetry": "B1u",
+          "Z_star": 6.52,
+          "epsilon": 5.56
+        },
+        {
+          "TO_cm1": 297.8,
+          "LO_cm1": 307.1,
+          "symmetry": "B1u",
+          "Z_star": 2.97,
+          "epsilon": 0.41
+        },
+        {
+          "TO_cm1": 311.2,
+          "LO_cm1": 313.5,
+          "symmetry": "B2u",
+          "Z_star": 1.32,
+          "epsilon": 0.05
+        },
+        {
+          "TO_cm1": 314.8,
+          "LO_cm1": 316.9,
+          "symmetry": "B3u",
+          "Z_star": 3.53,
+          "epsilon": 1.4
+        },
+        {
+          "TO_cm1": 338.6,
+          "LO_cm1": 342.8,
+          "symmetry": "B1u",
+          "Z_star": 3.34,
+          "epsilon": 0.3
+        },
+        {
+          "TO_cm1": 352.2,
+          "LO_cm1": 356.4,
+          "symmetry": "B3u",
+          "Z_star": 9.53,
+          "epsilon": 3.17
+        },
+        {
+          "TO_cm1": 371.6,
+          "LO_cm1": 373.2,
+          "symmetry": "B1u",
+          "Z_star": 4.03,
+          "epsilon": 1.15
+        },
+        {
+          "TO_cm1": 373.3,
+          "LO_cm1": 385.9,
+          "symmetry": "B3u",
+          "Z_star": 8.65,
+          "epsilon": 2.61
+        },
+        {
+          "TO_cm1": 416.3,
+          "LO_cm1": 420.1,
+          "symmetry": "B2u",
+          "Z_star": 7.49,
+          "epsilon": 3.64
+        },
+        {
+          "TO_cm1": 449.8,
+          "LO_cm1": 455.5,
+          "symmetry": "B1u",
+          "Z_star": 9.03,
+          "epsilon": 4.44
+        },
+        {
+          "TO_cm1": 455.6,
+          "LO_cm1": 457.3,
+          "symmetry": "B2u",
+          "Z_star": 4.25,
+          "epsilon": 1.02
+        },
+        {
+          "TO_cm1": 457.4,
+          "LO_cm1": 521.6,
+          "symmetry": "B3u",
+          "Z_star": 5.77,
+          "epsilon": 1.81
+        },
+        {
+          "TO_cm1": 620.9,
+          "LO_cm1": 631.5,
+          "symmetry": "B2u",
+          "Z_star": 3.16,
+          "epsilon": 0.29
+        },
+        {
+          "TO_cm1": 636.7,
+          "LO_cm1": 648.8,
+          "symmetry": "B1u",
+          "Z_star": 2.18,
+          "epsilon": 0.14
+        },
+        {
+          "TO_cm1": 648.9,
+          "LO_cm1": 649.2,
+          "symmetry": "B3u",
+          "Z_star": 0.37,
+          "epsilon": 0.004
+        },
+        {
+          "TO_cm1": 666.4,
+          "LO_cm1": 667.4,
+          "symmetry": "B3u",
+          "Z_star": 3.52,
+          "epsilon": 0.3
+        },
+        {
+          "TO_cm1": 667.5,
+          "LO_cm1": 671.4,
+          "symmetry": "B1u",
+          "Z_star": 3.17,
+          "epsilon": 0.24
+        }
+      ],
+      "tolerances": {
+        "TO_cm1": 8.0,
+        "LO_cm1": 12.0,
+        "Z_star": 0.5,
+        "epsilon_relative": 0.15
+      },
+      "description": "All IR-active modes with frequencies, Z*, epsilon"
+    },
+    {
+      "id": "step_dielectric",
+      "output_file": "dielectric_tensor.json",
+      "weight": 0.4,
+      "kind": "numeric_comparison",
+      "gold_dielectric": {
+        "electronic": {
+          "xx": 5.12,
+          "yy": 4.93,
+          "zz": 4.83,
+          "average": 4.96
+        },
+        "ionic": {
+          "xx": 14.77,
+          "yy": 16.6,
+          "zz": 18.21,
+          "average": 16.53
+        },
+        "static": {
+          "xx": 19.89,
+          "yy": 21.53,
+          "zz": 23.04,
+          "average": 21.49
+        }
+      },
+      "tolerances_dielectric": {
+        "relative": 0.1,
+        "absolute": 1.0
+      },
+      "description": "Electronic, ionic, and static dielectric tensor components"
+    }
+  ]
+}

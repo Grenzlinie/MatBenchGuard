@@ -1,0 +1,136 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Task requires DFT computations which the verifier cannot rerun; therefore result-level comparison against paper-derived gold with tolerances is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cI24_lattice_parameter.txt": "reference_match",
+    "enthalpy_difference.txt": "threshold_or_better",
+    "cI24_phonon_min_freq.txt": "threshold_or_better",
+    "cI24_band_gap.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice parameter a for cI24 at 16 TPa",
+      "source_provenance": "Paper Fig.1 and text: a=3.12 Å",
+      "generation_method": "Value from paper",
+      "why_not_fabricated": "Directly from the paper's reported optimized lattice parameter"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold enthalpy difference per atom ΔH = H(cI24) - H(oP8)",
+      "source_provenance": "Paper Fig.2(b) and enthalpy discussion; plan example uses -0.012 eV/atom representing cI24 stability",
+      "generation_method": "Estimated from paper's enthalpy curve crossing at 15.5 TPa; plan adopted -0.012 as reference threshold",
+      "why_not_fabricated": "Based on the paper's central conclusion that cI24 is more stable than oP8 above 15.5 TPa"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Minimum phonon frequency of cI24 at 16 TPa (dynamical stability)",
+      "source_provenance": "Paper Fig.2(c) shows no imaginary modes; phonon frequencies >0 THz",
+      "generation_method": "Visual inspection of published phonon dispersion",
+      "why_not_fabricated": "Paper explicitly states no imaginary frequencies for cI24"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold electronic band gap of cI24 at 16 TPa",
+      "source_provenance": "Paper Fig.4(b) and text: cI24 is metallic, band gap zero",
+      "generation_method": "Paper reports metallic behaviour; HSE06 bands cross Fermi level",
+      "why_not_fabricated": "Paper's reported electronic structure"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cI24_lattice_parameter.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "content": "single floating-point number",
+          "units": "angstrom"
+        },
+        "description": "Optimized lattice parameter a of the cI24 sodium phase at 16 TPa."
+      },
+      {
+        "file": "enthalpy_difference.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "content": "single floating-point number",
+          "units": "eV/atom",
+          "threshold_condition": "must be negative (cI24 more stable)"
+        },
+        "description": "Enthalpy difference per atom between cI24 and oP8 at 16 TPa."
+      },
+      {
+        "file": "cI24_phonon_min_freq.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "content": "single floating-point number",
+          "units": "THz",
+          "threshold_condition": "must be positive (no imaginary modes)"
+        },
+        "description": "Minimum phonon frequency of cI24 at 16 TPa, indicating dynamical stability."
+      },
+      {
+        "file": "cI24_band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "content": "single floating-point number",
+          "units": "eV"
+        },
+        "description": "Electronic band gap of cI24 at 16 TPa."
+      }
+    ],
+    "notes": "All values must be obtained from the same consistent DFT setup and temperature=0 K. The checker compares the reported numbers to the paper's reference results with tolerances that absorb legitimate methodological spread. No further intermediate artifacts are scored."
+  },
+  "steps": [
+    {
+      "id": "ci24_lattice",
+      "output_file": "cI24_lattice_parameter.txt",
+      "kind": "float_compare",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "gold": 3.12,
+      "tolerance": 0.01
+    },
+    {
+      "id": "enthalpy_diff",
+      "output_file": "enthalpy_difference.txt",
+      "kind": "float_compare",
+      "weight": 0.3,
+      "target_policy": "threshold_or_better",
+      "gold": -0.012,
+      "tolerance": 0.0,
+      "direction": "lower"
+    },
+    {
+      "id": "phonon_min",
+      "output_file": "cI24_phonon_min_freq.txt",
+      "kind": "float_compare",
+      "weight": 0.2,
+      "target_policy": "threshold_or_better",
+      "gold": 0.0,
+      "tolerance": 0.5,
+      "direction": "greater"
+    },
+    {
+      "id": "band_gap",
+      "output_file": "cI24_band_gap.txt",
+      "kind": "float_compare",
+      "weight": 0.2,
+      "target_policy": "exact_match",
+      "gold": 0.0,
+      "tolerance": 0.1
+    }
+  ]
+}

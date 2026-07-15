@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_setup",
+    "title": "Build oriented MAPbI3 structural models",
+    "role": "process",
+    "action": "Construct the unit cell and a 3×3×3 supercell of tetragonal MAPbI3 (a=8.8310 Å, c=12.6855 Å). For each crystallographic orientation [100], [110], [111], orient the C-N axis of the MA+ cation accordingly while keeping the inorganic PbI3− framework fixed. Generate three unit cells and three supercells, one per orientation.",
+    "output_file": "",
+    "evidence": "orientations_setup.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the input geometries for subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dielectric",
+    "title": "Compute dielectric constant tensors",
+    "role": "scored",
+    "action": "For each orientation ([100], [110], [111]), perform a DFT calculation on the unit cell using density functional perturbation theory (linear response) to obtain the full dielectric constant tensor (3×3 matrix in row-major order). Compute the averaged diagonal value as (ε_xx+ε_yy+ε_zz)/3. Use a GGA functional with van der Waals correction. Write a JSON file with the tensor and averaged diagonal for each orientation.",
+    "output_file": "dielectric_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Dielectric constant tensors and averaged diagonals for the three MA+ orientations.",
+    "output_schema": "Top-level object with keys \"100\", \"110\", \"111\". Each value is an object with \"tensor\" (list of 9 floats) and \"avg_diagonal\" (float)."
+  },
+  {
+    "id": "step_03_polaron",
+    "title": "Compute polaron trapping energies",
+    "role": "scored",
+    "action": "For each orientation, use the 3×3×3 supercell. Compute the energy of the delocalized (bulk-like) state via a standard SCF calculation. Then introduce a localized electron (or hole) by adding/removing one electron and fully relax the structure to obtain the trapped polaron state. The polaron trapping energy is the difference between the two energies. Sample the Brillouin zone at the gamma point. Report electron and hole trapping energies in meV.",
+    "output_file": "polaron_trapping_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Polaron trapping energies (meV) for electrons and holes for each MA+ orientation.",
+    "output_schema": "Top-level object with keys \"100\", \"110\", \"111\". Each value is an object with \"electron\" (float) and \"hole\" (float) in meV."
+  },
+  {
+    "id": "step_04_rotor",
+    "title": "Compute rotational frequency ratios",
+    "role": "scored",
+    "action": "Using the rigid free-rotor model, compute the rotational frequency of each MA+ isotopologue (CH3NH3+, CH3ND3+, CD3NH3+, CD3ND3+) about the C-N axis. Frequency is inversely proportional to the square root of the moment of inertia. Calculate the ratio relative to CH3NH3+. Input atomic masses from standard sources; assume identical molecular geometry.",
+    "output_file": "rotational_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Ratios of rotational frequencies of the four MA+ isotopologues.",
+    "output_schema": "Object with keys \"CH3NH3\", \"CH3ND3\", \"CD3NH3\", \"CD3ND3\", each a float ratio (CH3NH3 = 1.0)."
+  }
+]

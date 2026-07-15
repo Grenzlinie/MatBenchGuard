@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected time series from analytic formulas (continued fraction, orthogonal polynomial zeros, cosine sums for finite N; Gaussian for λ=0) and compares pointwise to agent's submitted time series.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "finite_N_timeseries.csv": "metric_recompute",
+    "thermodynamic_limit_timeseries.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "finite_N_timeseries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "tau",
+            "u1_real",
+            "u1_imag",
+            "closure_order",
+            "N"
+          ],
+          "units": {
+            "tau": "dimensionless rescaled time",
+            "u1_real": "dimensionless",
+            "u1_imag": "dimensionless"
+          }
+        },
+        "description": "Time-series of the one-spin coefficient u₁(τ) = f₁ˣ + i f₁ʸ for N=10 and closure orders ℓ=2,4. The checker recomputes pointwise absolute error against reference time series generated from the same analytic formulas, and verifies that the solution does not decay (envelope stays above a threshold)."
+      },
+      {
+        "file": "thermodynamic_limit_timeseries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "tau",
+            "u1_real",
+            "u1_imag"
+          ],
+          "units": {
+            "tau": "dimensionless rescaled time",
+            "u1_real": "dimensionless",
+            "u1_imag": "dimensionless"
+          }
+        },
+        "description": "Time-series of u₁(τ) in the thermodynamic limit λ=0, exhibiting Gaussian decay. The checker recomputes pointwise absolute error against the reference Gaussian solution."
+      }
+    ],
+    "notes": "The checker performs T1 recompute: it generates reference time series from the same analytic solution (for finite N/ℓ via continued fraction, orthogonal polynomial zeros, and cosine sums; for λ=0 via the Gaussian expression), then computes the maximum absolute difference between the agent's series and the reference at common τ points, using a tolerance appropriate for numerical root-finding and floating-point evaluation."
+  },
+  "steps": [
+    {
+      "id": "finite_N_accuracy",
+      "output_file": "finite_N_timeseries.csv",
+      "kind": "recompute",
+      "weight": 0.6,
+      "tolerance_abs": 1e-05
+    },
+    {
+      "id": "finite_N_quasiperiodic",
+      "output_file": "finite_N_timeseries.csv",
+      "kind": "structural",
+      "weight": 0.1
+    },
+    {
+      "id": "thermo_limit_accuracy",
+      "output_file": "thermodynamic_limit_timeseries.csv",
+      "kind": "recompute",
+      "weight": 0.3,
+      "tolerance_abs": 1e-05
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "T0_result_level_compare",
+  "scoring_justification": "The checker compares the agent's SHG efficiency spectrum to a hidden reference spectrum (Gaussian fit to the paper's nominal geometry simulation). A direct re‑run of the RCWA computation from the raw artifact is infeasible without the solver, but the reference is a trustworthy gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "shg_efficiency_spectrum.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference parameters for the nominal MIM geometry's SHG efficiency spectrum (peak wavelength, peak value, Gaussian sigma).",
+      "source_provenance": "Paper Fig. 1(c) (computed efficiency), with peak efficiency 8×10⁻9 W⁻¹ at 3.17 µm; the Gaussian fits the shape of the simulated spectrum shown in the paper.",
+      "generation_method": "Gaussian curve matching the paper's reported peak and approximate width from Fig. 1(c); the reference is a smooth fit to the expected spectrum, not a pixel‑level extraction.",
+      "why_not_fabricated": "The parameters reproduce the paper's key computational result within accepted tolerance; an agent's correct RCWA‑generated spectrum will have the same peak and high correlation with this reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "shg_efficiency_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_um",
+            "efficiency_W-1"
+          ],
+          "units": {
+            "wavelength_um": "µm",
+            "efficiency_W-1": "W⁻¹"
+          }
+        },
+        "description": "SHG efficiency spectrum computed for the nominal MIM grating over pump wavelengths 2.9–3.3 µm."
+      }
+    ],
+    "notes": "Spectrum must cover pump wavelengths from 2.9 µm to 3.3 µm in steps ≤0.01 µm. The structure and material parameters are fixed: d=544 nm, w=235 nm, t=40 nm, h=152 nm, Au Drude (λp=159 nm, γ=0.0075), GaAs n=3.3, χ^(2)_xyz=150 pm/V. Pump TM-polarized normal incidence; signal TE-polarized at λ/2."
+  },
+  "gold": {
+    "peak_wavelength_um": 3.17,
+    "peak_efficiency_W-1": 8e-09,
+    "gaussian_sigma_um": 0.15
+  },
+  "steps": [
+    {
+      "id": "check_peak_wavelength",
+      "output_file": "shg_efficiency_spectrum.csv",
+      "weight": 0.3333,
+      "kind": "custom",
+      "description": "Agent's peak pump wavelength is within ±0.02 µm of the reference peak (3.17 µm)."
+    },
+    {
+      "id": "check_peak_efficiency",
+      "output_file": "shg_efficiency_spectrum.csv",
+      "weight": 0.3333,
+      "kind": "custom",
+      "description": "Agent's peak SHG efficiency is within ±10% of the reference peak (8.0×10⁻⁹ W⁻¹)."
+    },
+    {
+      "id": "check_correlation",
+      "output_file": "shg_efficiency_spectrum.csv",
+      "weight": 0.3334,
+      "kind": "custom",
+      "description": "Pearson correlation between the agent's spectrum and the reference Gaussian spectrum exceeds 0.98."
+    }
+  ]
+}

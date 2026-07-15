@@ -1,0 +1,157 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "All artifacts are final computed quantities from DFT/DFPT; recomputing them from raw ABINIT outputs is infeasible without re-running the full calculation, so the checker compares reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single float on the first line representing the indirect band gap in eV."
+        },
+        "description": "Indirect band gap of undoped BaHfN2."
+      },
+      {
+        "file": "cbm_character.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single string on the first line representing the dominant orbital character at the conduction band minimum (e.g., 'Hf 5d_xy')."
+        },
+        "description": "Orbital character of the conduction band minimum."
+      },
+      {
+        "file": "bec.txt",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom",
+            "Zxx",
+            "Zyy",
+            "Zzz"
+          ],
+          "description": "Atom symbol (string), Zxx (float), Zyy (float), Zzz (float). In tetragonal symmetry Zxx equals Zyy.",
+          "units": {
+            "Zxx": "e",
+            "Zyy": "e",
+            "Zzz": "e"
+          }
+        },
+        "description": "Born effective charge tensors for Ba, Hf, N1, N2."
+      },
+      {
+        "file": "dielectric.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Four floats on separate lines in order: epsilon_inf_xx, epsilon_inf_zz, epsilon_0_xx, epsilon_0_zz. Each is dimensionless."
+        },
+        "description": "High-frequency and static dielectric tensor components."
+      },
+      {
+        "file": "phonon_undoped.txt",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode_label",
+            "symmetry",
+            "frequency_TO",
+            "frequency_LO"
+          ],
+          "description": "Zone-center phonon frequencies for undoped BaHfN2. Columns: mode_label (string, e.g., '1-2'), symmetry (string), frequency_TO (float, cm⁻¹), frequency_LO (float, cm⁻¹; empty for Raman modes).",
+          "units": {
+            "frequency_TO": "cm⁻¹",
+            "frequency_LO": "cm⁻¹"
+          }
+        },
+        "description": "Zone-center optical phonon frequencies and LO-TO splittings for undoped BaHfN2."
+      },
+      {
+        "file": "phonon_doped.txt",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode_label",
+            "frequency"
+          ],
+          "description": "Zone-center phonon frequencies for doped Ba0.5La0.5HfN2. Columns: mode_label (string), frequency (float, cm⁻¹).",
+          "units": {
+            "frequency": "cm⁻¹"
+          }
+        },
+        "description": "Zone-center phonon frequencies for the metallic La-doped system."
+      }
+    ],
+    "notes": "All scored artifacts are recomputed quantities from DFT/DFPT. The checker will compare them against paper-reported reference values with appropriate tolerances (not provided here). The structural relaxation steps are required prerequisites but are not directly scored; their execution is enforced by the load-bearing phonon steps."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for band gap, CBM character, Born effective charges, dielectric constants, undoped and doped phonon frequencies.",
+      "source_provenance": "Paper Tables I (E_g^exp LDA HGH semcore), II (BEC), IV (dielectric constants fully relaxed), III (phonon frequencies for undoped and doped).",
+      "generation_method": "All gold numbers are copied from the paper's tables. No fabrication.",
+      "why_not_fabricated": "Values are the paper's reported quantities and provide the hidden reference for result compare."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "band_gap.txt",
+      "weight": 0.05,
+      "kind": "reference_match",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_cbm_character",
+      "output_file": "cbm_character.txt",
+      "weight": 0.05,
+      "kind": "exact_match",
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "step_bec",
+      "output_file": "bec.txt",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_dielectric",
+      "output_file": "dielectric.txt",
+      "weight": 0.1,
+      "kind": "reference_match",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_phonon_undoped",
+      "output_file": "phonon_undoped.txt",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "target_policy": "reference_match"
+    },
+    {
+      "id": "step_doped_phonons",
+      "output_file": "phonon_doped.txt",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "target_policy": "reference_match"
+    }
+  ]
+}

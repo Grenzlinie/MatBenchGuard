@@ -1,0 +1,93 @@
+[
+  {
+    "id": "s00_jellium_func",
+    "title": "Parametrization of jellium LR-RPA correlation energy functional",
+    "role": "process",
+    "action": "Numerically integrate the RPA correlation energy for the homogeneous electron gas (jellium) with the long-range Coulomb interaction (erfc split) for a dense grid of densities and cutoff radii r_c. Fit a Padé approximant to obtain ε_c^{LR-RPA,jellium}(n, r_c).",
+    "output_file": "",
+    "evidence": "s00_jellium_fit.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "s01_dft_crystals",
+    "title": "DFT calculations for bulk crystals and isolated atoms",
+    "role": "process",
+    "action": "Perform DFT (LDA or PBE) self-consistent calculations for the bulk crystals Al, Si, β-SiC, diamond, w-AlN, c-BN and for the corresponding isolated atoms (Al, Si, C, N, B) using converged plane-wave cutoffs and k-point grids. Save Kohn-Sham wavefunctions, eigenvalues, and densities.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "s02_atomization",
+    "title": "Atomization energies via range-separated RPA",
+    "role": "scored",
+    "action": "For each crystal and atom, compute the total range-separated RPA correlation energy using the fitted jellium functional and the explicit LR-RPA correlation energy evaluated from the DFT wavefunctions. Obtain total atomization energy as E_bulk - E_atom (including kinetic and exchange contributions). Evaluate for cutoff radii r_c = 0.5, 1.0, 2.0 bohr and for the full RPA limit.",
+    "output_file": "step_01_atomization_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Atomization energies of bulk crystals for different range-separation cutoff radii.",
+    "output_schema": "{ \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"crystal\": {\"type\": \"string\"}, \"rc\": {\"type\": \"number\"}, \"E_atomization_RPA\": {\"type\": \"number\", \"unit\": \"eV/atom\"} }, \"required\": [\"crystal\", \"rc\", \"E_atomization_RPA\"] } }"
+  },
+  {
+    "id": "s03_dft_hbn",
+    "title": "DFT calculations for h-BN interlayer configurations",
+    "role": "process",
+    "action": "Perform DFT (LDA/PBE) total energy calculations for hexagonal BN with a series of interlayer spacings (c/2 from ~3.0 to ~5.5 bohr) to map the energy vs spacing curve. Save wavefunctions and densities.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "s04_hbn_interlayer",
+    "title": "h-BN interlayer spacing and elastic constant from range-separated RPA",
+    "role": "scored",
+    "action": "Compute the total range-separated RPA energy for each spacing using the same method and functional. Fit the total energy vs spacing to extract the equilibrium interlayer spacing d_0 and the elastic constant C_33. Use cutoff radii r_c = 1.0, 2.0, 4.0 bohr and the full-RPA limit.",
+    "output_file": "step_02_hBN_interlayer.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium interlayer spacing and elastic constant C_33 of hexagonal BN for various cutoff radii.",
+    "output_schema": "CSV with columns: r_c (bohr), d_0 (bohr), C_33 (GPa). One row per r_c value tested."
+  },
+  {
+    "id": "s05_dft_defects",
+    "title": "DFT calculations for silicon defect supercells",
+    "role": "process",
+    "action": "Perform DFT (LDA) calculations for the perfect silicon supercell (16, 64, 216 atoms) and for defect supercells containing a silicon self-interstitial in split<110> and hexagonal configurations, and a vacancy. For the 64-atom supercell, compute minimum-energy paths using climbing-image nudged elastic band method (or equivalent) for the migration paths split<110> → hex and hex → hex with LDA forces. Relax atomic positions using LDA; for the vacancy, apply a manual Jahn-Teller distortion relaxation as described in the paper.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "s06_defect_energies",
+    "title": "Defect formation and migration energies",
+    "role": "scored",
+    "action": "Compute the range-separated RPA correlation energies for perfect and defect supercells. Calculate formation energies as E^f = E(defect) - E(bulk) + Σ ν_i μ_i, using μ_Si from bulk silicon. For migration, extract the barrier as the energy difference along the path. Report formation energies for Si_split<110>, Si_hex, and V_Si in each supercell size, and migration barriers for the split→hex and hex→hex paths in the 64-atom cell.",
+    "output_file": "step_03_defect_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Formation energies and migration barriers of silicon self-interstitials and vacancy.",
+    "output_schema": "{ \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": { \"supercell_size\": {\"type\": \"integer\"}, \"defect\": {\"type\": \"string\", \"enum\": [\"Si_split⟨110⟩\", \"Si_hex\", \"V_Si\"]}, \"formation_energy\": {\"type\": \"number\", \"unit\": \"eV\"}, \"migration_barrier\": {\"type\": \"number\", \"unit\": \"eV\", \"optional\": true} }, \"required\": [\"supercell_size\", \"defect\", \"formation_energy\"] } }"
+  }
+]

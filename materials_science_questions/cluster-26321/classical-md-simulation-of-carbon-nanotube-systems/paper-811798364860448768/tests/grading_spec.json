@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: τ and η̃ are recomputed from raw velocity CSVs and metadata; radial density peak is structurally audited.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "deceleration_phase.csv": "metric_recompute",
+    "radial_density.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "deceleration_phase.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "mean_axial_velocity"
+          ],
+          "units": {
+            "time": "ps",
+            "mean_axial_velocity": "m/s"
+          }
+        },
+        "description": "Time series of the mean axial velocity during the free deceleration period. The initial slope provides the deceleration used to compute interfacial shear stress."
+      },
+      {
+        "file": "radial_density.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_angstrom",
+            "density_kg_per_m3"
+          ],
+          "units": {
+            "r_angstrom": "Angstrom",
+            "density_kg_per_m3": "kg/m^3"
+          }
+        },
+        "description": "Radial oxygen density profile. The checker verifies the existence and position of the first solvation shell peak near the expected wall distance."
+      }
+    ],
+    "notes": "The primary scoring uses the raw velocity file and metadata (which are intermediate artefacts not listed here) to recompute interfacial shear stress and nominal viscosity, comparing them against the paper's reported values with tolerances consistent with re-run spread. The radial density profile is audited structurally to confirm the first solvation shell location."
+  },
+  "steps": [
+    {
+      "id": "step_tau_eta",
+      "output_file": "deceleration_phase.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target": 1.8,
+      "tolerance_relative": 0.2,
+      "description": "Recomputed interfacial shear stress τ (MPa) and nominal viscosity η̃ (cp) from raw velocity data, compared to paper-reported values."
+    },
+    {
+      "id": "step_radial",
+      "output_file": "radial_density.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify first solvation shell peak location (r ≈ 8.4 Å) and density (>1500 kg/m³)."
+    }
+  ]
+}

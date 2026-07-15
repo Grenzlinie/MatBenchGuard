@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step1",
+    "title": "DFT structural relaxations",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO pw.x with PBE ultrasoft pseudopotential for Ta, relax the atomic positions of bcc-Ta and Pnma-Ta at a target pressure of 100 GPa, and relax ω-Ta at several pressures (e.g., 80, 100, 120 GPa). Save the optimized coordinates and total energies for each calculation.",
+    "output_file": "",
+    "evidence": "relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepares relaxed structures and reference energies needed for all downstream artifact calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Enthalpy difference Pnma vs bcc",
+    "role": "scored",
+    "action": "From the relaxed total energies of Pnma and bcc at 100 GPa, compute the enthalpy difference H_rel_bcc = H(Pnma) - H(bcc) in eV/atom. Write the result to rel_enthalpy.json.",
+    "output_file": "rel_enthalpy.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Enthalpy difference of Pnma relative to bcc at 100 GPa.",
+    "output_schema": "{\"P\": 100, \"H_rel_bcc\": <float> in eV/atom}"
+  },
+  {
+    "id": "step3",
+    "title": "Phonon dispersion of Pnma",
+    "role": "scored",
+    "action": "Perform a density functional perturbation theory (DFPT) phonon calculation for Pnma-Ta at 96 GPa (or 100 GPa) using Quantum ESPRESSO ph.x. Compute the phonon frequencies along a high-symmetry q‑path in the first Brillouin zone. Write the q‑point labels and frequencies to phonon_dispersion.json.",
+    "output_file": "phonon_dispersion.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Phonon dispersion data to verify dynamical stability (absence of imaginary modes).",
+    "output_schema": "{\"qpoints\": [\"<string>\", ...], \"frequencies\": [[<float>, ...], ...], \"unit\": \"cm^{-1}\"}"
+  },
+  {
+    "id": "step4",
+    "title": "Elastic constants of Pnma",
+    "role": "scored",
+    "action": "Compute the full set of nine orthorhombic elastic constants Cij for Pnma-Ta at 100 GPa using a stress‑strain method (e.g., extracting from QE calculations). Write the constants to pnma_elastic_constants.json.",
+    "output_file": "pnma_elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Elastic constants of Pnma-Ta to confirm mechanical stability.",
+    "output_schema": "{\"pressure\": 100, \"C11\": <float>, \"C22\": <float>, \"C33\": <float>, \"C44\": <float>, \"C55\": <float>, \"C66\": <float>, \"C12\": <float>, \"C13\": <float>, \"C23\": <float>, \"unit\": \"GPa\"}"
+  },
+  {
+    "id": "step5",
+    "title": "Sound velocities of Pnma",
+    "role": "scored",
+    "action": "From the Pnma elastic constants and the density (from the relaxed volume), compute the shear sound velocity C_l and bulk sound velocity C_b at 100 GPa. Output the results in pnma_sound_velocity.json.",
+    "output_file": "pnma_sound_velocity.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derived sound velocities to compare with experimental shock data.",
+    "output_schema": "{\"pressure\": 100, \"C_l\": <float>, \"C_b\": <float>, \"unit\": \"km/s\"}"
+  },
+  {
+    "id": "step6",
+    "title": "Elastic constants of omega-Ta",
+    "role": "scored",
+    "action": "For each relaxed ω‑Ta structure at the candidate pressures, compute the elastic constants (including C44) using a stress‑strain method. Write the results as a list of pressure–constant pairs to omega_elastic_constants.json. The C44 values must clearly indicate mechanical instability (negative).",
+    "output_file": "omega_elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Elastic constants of ω‑Ta showing mechanical instability via negative C44.",
+    "output_schema": "[{\"pressure\": <float>, \"C11\": <float>, \"C12\": <float>, \"C13\": <float>, \"C33\": <float>, \"C44\": <float>, ...}]"
+  }
+]

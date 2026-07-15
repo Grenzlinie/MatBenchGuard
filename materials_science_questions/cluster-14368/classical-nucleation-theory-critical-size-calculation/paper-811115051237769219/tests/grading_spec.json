@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Recomputing growth rates from raw KMC data is infeasible in the verifier (simulation is too costly and trajectories are not submitted); using paper-reported reference values for comparison with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "growth_rates.csv": "reference_match",
+    "critical_supersaturation.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold growth rates and critical supersaturations",
+      "source_provenance": "Extracted from Figs. 2 and 5 of the paper 'Growth of elongated nanostructures' (Vlachos, 1995). The reference solve.sh writes identical values.",
+      "generation_method": "Read from the paper's plots (digitized or paper-stated). For w/a0=6,8,10,15,20,40,160 at sigma=0.6; critical supersaturation for w=8,15.",
+      "why_not_fabricated": "These are the paper's reported headline numbers; they are the only authoritative reference. The values are consistent with the qualitative claims and the oracle solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "growth_rates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "width",
+            "growth_rate"
+          ],
+          "units": {
+            "width": "a0",
+            "growth_rate": "dimensionless"
+          }
+        },
+        "description": "Time-average growth rate of the elongated nanostructure as a function of stripe width at a fixed relative supersaturation of 0.6. The checker compares the submitted values to the paper's reported values within a tolerance and verifies that the growth rate increases with width."
+      },
+      {
+        "file": "critical_supersaturation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "width",
+            "critical_supersaturation"
+          ],
+          "units": {
+            "width": "a0",
+            "critical_supersaturation": "dimensionless"
+          }
+        },
+        "description": "Critical relative supersaturation as a function of stripe width. The checker compares the submitted values to the paper's reported values within a tolerance and verifies that the critical supersaturation decreases with increasing width."
+      }
+    ],
+    "notes": "No hidden gold or tolerances revealed; all scoring is based on comparison to paper-reported values via hidden tests."
+  },
+  "steps": [
+    {
+      "id": "growth_rate_values",
+      "output_file": "growth_rates.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "params": {
+        "rel_tol": 0.2
+      }
+    },
+    {
+      "id": "growth_rate_trend",
+      "output_file": "growth_rates.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "crit_sup_values",
+      "output_file": "critical_supersaturation.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "params": {
+        "abs_tol": 0.1
+      }
+    },
+    {
+      "id": "crit_sup_trend",
+      "output_file": "critical_supersaturation.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "target_policy": "structural_audit"
+    }
+  ],
+  "hidden_growth_gold": {
+    "6": 1e-07,
+    "8": 3e-07,
+    "10": 1e-06,
+    "15": 8e-06,
+    "20": 1.5e-05,
+    "40": 2.8e-05,
+    "160": 4e-05
+  },
+  "hidden_crit_gold": {
+    "8": 0.45,
+    "15": 0.24
+  }
+}

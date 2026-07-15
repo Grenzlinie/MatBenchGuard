@@ -1,0 +1,248 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute bulk modulus from reported elastic constants; compare dielectric constants and linear fit coefficients to paper values; check structural plausibility of elastic constants and phase assignments.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold for dielectric constants, tolerance factors, phase map, expected linear fit coefficients, and elastic constant range bounds.",
+      "source_provenance": "Paper Table 4 (dielectric constants), Table 2 (tolerance factors), Eqs. (5)-(6) (linear fits), and text describing phase assignments.",
+      "generation_method": "Transcribed directly from the paper's stated numerical values and descriptions.",
+      "why_not_fabricated": "All values are direct quantitative results reported in the source paper; no random or made-up numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "/app/outputs/computed_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            "RE",
+            "t",
+            "space_group",
+            "a",
+            "b",
+            "c",
+            "beta",
+            "dielectric_constant",
+            "C11",
+            "C12",
+            "C44",
+            "C13",
+            "C33",
+            "C66",
+            "C15",
+            "C25",
+            "C35",
+            "C46",
+            "bulk_modulus",
+            "lattice_energy",
+            "S_wave_velocity",
+            "P_wave_velocity"
+          ],
+          "notes": "b, c, beta are NaN for cubic phases; missing elastic constants (due to symmetry) are set to 0.0."
+        },
+        "description": "Equilibrium properties for the 16 Ba2RE3+NbO6 compounds computed from GULP minimisations with derived RE–O potentials."
+      },
+      {
+        "file": "/app/outputs/linear_fits.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "lines": [
+            "B = <float> + <float> * t",
+            "E_L = <float> + <float> * t"
+          ]
+        },
+        "description": "Least-squares linear regression equations linking bulk modulus and lattice energy to the tolerance factor."
+      }
+    ],
+    "notes": "Only scored outputs are listed; the intermediate derived_potentials.csv is a required process artifact but not evaluated by the hidden verifier."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "computed_properties.csv",
+      "kind": "rubric",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "config": {
+        "dielectric_gold": {
+          "La": 45.0,
+          "Ce": 48.77,
+          "Pr": 44.5,
+          "Nd": 44.0,
+          "Pm": 49.28,
+          "Sm": 43.01,
+          "Eu": 40.0,
+          "Gd": 40.0,
+          "Tb": 39.0,
+          "Dy": 38.9,
+          "Ho": 38.0,
+          "Y": 36.99,
+          "Er": 35.36,
+          "Tm": 35.85,
+          "Yb": 36.0,
+          "Lu": 39.27
+        },
+        "tolerance_factor_map": {
+          "La": 0.952,
+          "Ce": 0.957,
+          "Pr": 0.961,
+          "Nd": 0.9,
+          "Pm": 0.965,
+          "Sm": 0.968,
+          "Eu": 0.97,
+          "Gd": 0.972,
+          "Tb": 0.976,
+          "Dy": 0.978,
+          "Ho": 0.981,
+          "Y": 0.981,
+          "Er": 0.983,
+          "Tm": 0.985,
+          "Yb": 0.988,
+          "Lu": 0.99
+        },
+        "phase_map": {
+          "La": "I2/m",
+          "Ce": "I2/m",
+          "Pr": "I2/m",
+          "Nd": "I2/m",
+          "Pm": "I2/m",
+          "Sm": "I2/m",
+          "Eu": "I4/m",
+          "Gd": "I4/m",
+          "Tb": "I4/m",
+          "Dy": "I4/m",
+          "Ho": "Fm-3m",
+          "Y": "Fm-3m",
+          "Er": "Fm-3m",
+          "Tm": "Fm-3m",
+          "Yb": "Fm-3m",
+          "Lu": "Fm-3m"
+        },
+        "elastic_ranges": {
+          "Fm-3m": {
+            "nonzero": {
+              "C11": [
+                250,
+                500
+              ],
+              "C12": [
+                80,
+                250
+              ],
+              "C44": [
+                40,
+                150
+              ]
+            },
+            "zero": [
+              "C13",
+              "C33",
+              "C66",
+              "C15",
+              "C25",
+              "C35",
+              "C46"
+            ]
+          },
+          "I4/m": {
+            "nonzero": {
+              "C11": [
+                250,
+                500
+              ],
+              "C12": [
+                80,
+                250
+              ],
+              "C13": [
+                80,
+                250
+              ],
+              "C33": [
+                250,
+                500
+              ],
+              "C44": [
+                40,
+                150
+              ],
+              "C66": [
+                60,
+                200
+              ]
+            },
+            "zero": [
+              "C15",
+              "C25",
+              "C35",
+              "C46"
+            ]
+          },
+          "I2/m": {
+            "nonzero": {
+              "C11": [
+                250,
+                500
+              ],
+              "C12": [
+                80,
+                250
+              ],
+              "C13": [
+                80,
+                250
+              ],
+              "C33": [
+                250,
+                500
+              ],
+              "C44": [
+                40,
+                150
+              ],
+              "C66": [
+                60,
+                200
+              ]
+            },
+            "zero": []
+          }
+        },
+        "bulk_modulus_fit": {
+          "a": -525.89,
+          "b": 711.91
+        },
+        "lattice_energy_fit": {
+          "a": -165.25,
+          "b": -131.41
+        },
+        "dielectric_tol": 2.0,
+        "bulk_tol_rel": 0.05,
+        "energy_tol_rel": 0.05,
+        "bulk_consistency_tol": 0.02,
+        "t_tol": 0.001
+      }
+    },
+    {
+      "id": "step2",
+      "output_file": "linear_fits.txt",
+      "kind": "rubric",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "config": {
+        "expected_lines": [
+          "B = -525.89 + 711.91 * t",
+          "E_L = -165.25 + -131.41 * t"
+        ],
+        "coeff_tol_rel": 0.01
+      }
+    }
+  ]
+}

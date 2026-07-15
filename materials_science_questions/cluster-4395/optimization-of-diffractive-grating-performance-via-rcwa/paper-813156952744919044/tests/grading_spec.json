@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Improvement recomputed from double and pyramid loss files; compared to paper-reported threshold 0.7 via monotonic scaling (threshold_or_better).",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "double_layer_current_loss.txt": "structural_audit",
+    "pyramid_current_loss.txt": "structural_audit",
+    "improvement.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden improvement threshold (0.7 mA/cm² per concentration) for monotonic scoring",
+      "source_provenance": "Paper abstract and conclusion: 'lead to a current improvement of 0.7 mA/cm² per concentration for a 60 degree aperture angles'",
+      "generation_method": "extracted from paper text",
+      "why_not_fabricated": "directly from paper's main reported result"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "double_layer_current_loss.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "shape": "scalar",
+          "unit": "mA/cm² per concentration"
+        },
+        "description": "Total current loss for the optimized double-layer MgF₂/ZnS ARC (124nm/70nm) on an air-matched 3J device at 60° aperture half-angle."
+      },
+      {
+        "file": "pyramid_current_loss.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "shape": "scalar",
+          "unit": "mA/cm² per concentration"
+        },
+        "description": "Total current loss for the 2D pyramidal TiO₂ grating (h=260nm, t=50nm, f=0.7) on an air-matched 3J device at 60° aperture half-angle."
+      },
+      {
+        "file": "improvement.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "shape": "scalar",
+          "unit": "mA/cm² per concentration"
+        },
+        "description": "Improvement in total current loss (double-layer loss minus pyramid loss) at 60° aperture. Higher is better."
+      }
+    ],
+    "notes": "The primary scored artifact is the improvement; the two individual loss files serve as consistency checks. The checker will verify that the improvement is positive, that the loss values are within plausible bounds, and that improvement = double_loss - pyramid_loss."
+  },
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "double_layer_current_loss.txt",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify double-layer current loss is a plausible positive number."
+    },
+    {
+      "id": "step_04",
+      "output_file": "pyramid_current_loss.txt",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify pyramid current loss is a plausible positive number."
+    },
+    {
+      "id": "step_05",
+      "output_file": "improvement.txt",
+      "kind": "threshold_or_better",
+      "weight": 0.9,
+      "description": "Recompute improvement from the two loss files, then compare to paper threshold (0.7 mA/cm²) using monotonic scaling; also check self-consistency."
+    }
+  ]
+}

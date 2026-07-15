@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker independently recomputes the thermodynamic quantities using the Miedema-Bakker model and compares the agent's computed values against these recomputed references.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference recomputed values for all target thermodynamic quantities.",
+      "source_provenance": "Computed by the checker using the Miedema-Bakker model with elemental parameters from Miedema's work (as per paper).",
+      "generation_method": "Inline Python recomputation using formulas in instruction.md and reference solve.sh.",
+      "why_not_fabricated": "Values are determined by the publicly available model and parameters, not arbitrary. The checker recomputes them on the fly, so no hidden static gold file is needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_thermodynamic_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Cu_7Cr_7Mo",
+            "Ti_13Ta_12Sn",
+            "Cu_7Nb_7Co",
+            "Cu_50Cr"
+          ],
+          "properties": {
+            "Cu_7Cr_7Mo": {
+              "type": "object",
+              "required": [
+                "dGm"
+              ],
+              "properties": {
+                "dGm": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                }
+              }
+            },
+            "Ti_13Ta_12Sn": {
+              "type": "object",
+              "required": [
+                "dGm",
+                "dGam"
+              ],
+              "properties": {
+                "dGm": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                },
+                "dGam": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                }
+              }
+            },
+            "Cu_7Nb_7Co": {
+              "type": "object",
+              "required": [
+                "dGm",
+                "dHf"
+              ],
+              "properties": {
+                "dGm": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                },
+                "dHf": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                }
+              }
+            },
+            "Cu_50Cr": {
+              "type": "object",
+              "required": [
+                "dGm_298K",
+                "dGm_503K",
+                "dGm_cf_453K",
+                "dGm_cf_503K"
+              ],
+              "properties": {
+                "dGm_298K": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                },
+                "dGm_503K": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                },
+                "dGm_cf_453K": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                },
+                "dGm_cf_503K": {
+                  "type": "number",
+                  "unit": "kJ/mol"
+                }
+              }
+            }
+          }
+        },
+        "description": "Computed thermodynamic values (Gibbs free energy, amorphous formation energy, intermetallic formation enthalpy, centrifugal-field modified free energy) for the four validation alloy systems, all in kJ/mol."
+      }
+    ],
+    "notes": "All values are in kJ/mol. Ternary systems use Hillert extrapolation. Centrifugal field parameters: radius=150 mm, angular velocity=6000 rpm (~628 rad/s), duration 4 h."
+  },
+  "steps": [
+    {
+      "id": "compute_target_properties",
+      "output_file": "computed_thermodynamic_values.json",
+      "kind": "recompute_values",
+      "weight": 1.0,
+      "tolerance_abs": 0.0001,
+      "note": "All values are compared against recomputed references. The checker's recompute uses identical formulas as the reference solve.sh."
+    }
+  ]
+}

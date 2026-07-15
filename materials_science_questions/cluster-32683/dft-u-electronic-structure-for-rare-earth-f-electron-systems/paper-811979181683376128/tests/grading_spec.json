@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Effective electron numbers are computed by the agent from DFT runs; the checker compares them to the paper-reported values with tolerances. No deeper recomputation is feasible.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "table1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "calculation",
+            "n_s",
+            "n_p",
+            "n_d",
+            "n_f",
+            "n_g",
+            "n_out"
+          ],
+          "units": {
+            "n_s": "electrons/atom",
+            "n_p": "electrons/atom",
+            "n_d": "electrons/atom",
+            "n_f": "electrons/atom",
+            "n_g": "electrons/atom",
+            "n_out": "electrons/atom"
+          },
+          "description": "Effective valence electron numbers per atom for the two relativistic approximations (without spin-orbit). Two rows: APW (non-relativistic) and RAPW (scalar-relativistic)."
+        },
+        "description": "Scored Table 1 reproduction: effective electron numbers from non-relativistic and scalar-relativistic DFT calculations, compared against the paper's reported values with tolerances and verified trends."
+      },
+      {
+        "file": "table2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "state",
+            "n_state"
+          ],
+          "units": {
+            "n_state": "electrons/atom"
+          },
+          "description": "Spin-orbit-resolved effective valence electron numbers from the fully relativistic calculation. Rows: s1/2, p3/2, p1/2, d5/2, d3/2, f7/2, f5/2, g9/2, g7/2, n_out."
+        },
+        "description": "Scored Table 2 reproduction: spin-orbit-resolved electron numbers from the full relativistic DFT calculation, compared against the paper's reported values with tolerances."
+      }
+    ],
+    "notes": "The agent must use an all-electron DFT code (e.g., Elk, FLEUR) to perform three separate calculations. The exact method (APW, LAPW, FLAPW) can differ, but the resulting electron numbers should be within the stated tolerances. The checker will verify numerical agreement against the paper’s reported values and will perform internal consistency and trend checks (e.g., verifying that spin-orbit resolved components sum to the corresponding scalar-relativistic totals) without revealing which physical quantities are expected to increase or decrease."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for Table 1 and Table 2 from the paper",
+      "source_provenance": "Paper Tables 1 and 2",
+      "generation_method": "Copied from paper text",
+      "why_not_fabricated": "Values are the paper's reported numbers; they are the expected output of a correct reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "table1_values",
+      "output_file": "table1.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance_partial": 0.03,
+      "tolerance_n_out": 0.05,
+      "gold": [
+        {
+          "calculation": "APW",
+          "n_s": 0.476,
+          "n_p": 0.327,
+          "n_d": 1.112,
+          "n_f": 0.022,
+          "n_g": 0.001,
+          "n_out": 1.062
+        },
+        {
+          "calculation": "RAPW",
+          "n_s": 0.594,
+          "n_p": 0.369,
+          "n_d": 0.958,
+          "n_f": 0.018,
+          "n_g": 0.002,
+          "n_out": 1.059
+        }
+      ]
+    },
+    {
+      "id": "table1_trends",
+      "output_file": "table1.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "description": "Verify relativistic trends: n_s(RAPW) > n_s(APW), n_p(RAPW) > n_p(APW), n_d(RAPW) < n_d(APW)"
+    },
+    {
+      "id": "table2_values",
+      "output_file": "table2.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance_partial": 0.03,
+      "tolerance_n_out": 0.05,
+      "gold": [
+        {
+          "state": "s1/2",
+          "n_state": 0.594
+        },
+        {
+          "state": "p3/2",
+          "n_state": 0.259
+        },
+        {
+          "state": "p1/2",
+          "n_state": 0.11
+        },
+        {
+          "state": "d5/2",
+          "n_state": 0.545
+        },
+        {
+          "state": "d3/2",
+          "n_state": 0.413
+        },
+        {
+          "state": "f7/2",
+          "n_state": 0.01
+        },
+        {
+          "state": "f5/2",
+          "n_state": 0.008
+        },
+        {
+          "state": "g9/2",
+          "n_state": 0.001
+        },
+        {
+          "state": "g7/2",
+          "n_state": 0.001
+        },
+        {
+          "state": "n_out",
+          "n_state": 1.059
+        }
+      ]
+    },
+    {
+      "id": "table2_consistency",
+      "output_file": "table2.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "description": "Check that sums of spin-orbit-resolved channels match RAPW totals: p3/2+p1/2 ≈ n_p(RAPW), d5/2+d3/2 ≈ n_d(RAPW), f7/2+f5/2 ≈ n_f(RAPW), g9/2+g7/2 ≈ n_g(RAPW), n_s ≈ n_s(RAPW), n_out matches; tolerance 0.02 each"
+    }
+  ]
+}

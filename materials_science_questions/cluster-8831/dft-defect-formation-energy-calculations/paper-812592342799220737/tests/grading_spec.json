@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Formation energies are compared to paper-reported values (2.21 eV, 0.72 eV) with tolerance 0.3 eV; band gaps are checked by threshold conditions, consistent with the paper's conclusion on band inversion reversal. No external labels or holdouts are required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.json": "exact_match",
+    "band_gaps.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference formation energies and band gap thresholds for scoring",
+      "source_provenance": "Paper main text (vacancy formation energy 2.21 eV, adatom 0.72 eV; band gap thresholds from expected Dirac crossing behaviour)",
+      "generation_method": "Extracted from published paper values; thresholds based on physical expectation of gap opening for vacancy and near-zero gap for pristine/adatom",
+      "why_not_fabricated": "Values are direct from the paper; thresholds are the standard qualitative prediction from the paper's conclusion (gap opening indicates band inversion reversal)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "vacancy_formation_energy_eV": "number",
+            "adatom_formation_energy_eV": "number"
+          }
+        },
+        "description": "Defect formation energies (in eV) for a Te vacancy and a Te adatom in monolayer WTe2 under Te-rich conditions, derived from DFT total energies."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pristine_gap_eV": "number",
+            "vacancy_gap_eV": "number",
+            "adatom_gap_eV": "number"
+          }
+        },
+        "description": "Band gaps (in eV) along Γ‑X for pristine, Te‑vacancy, and Te‑adatom supercells. The verifier will evaluate these against reference thresholds to assess the paper's topological claims."
+      }
+    ],
+    "notes": "Formation energies compared to paper values with tolerance 0.3 eV. Band gaps audited by threshold; the exact thresholds are not disclosed to the agent."
+  },
+  "steps": [
+    {
+      "id": "step_05",
+      "output_file": "formation_energies.json",
+      "weight": 0.6,
+      "kind": "formation_energies",
+      "tolerance_eV": 0.3,
+      "gold_vacancy_eV": 2.21,
+      "gold_adatom_eV": 0.72
+    },
+    {
+      "id": "step_06",
+      "output_file": "band_gaps.json",
+      "weight": 0.4,
+      "kind": "band_gaps",
+      "gap_threshold_eV": 0.3
+    }
+  ]
+}

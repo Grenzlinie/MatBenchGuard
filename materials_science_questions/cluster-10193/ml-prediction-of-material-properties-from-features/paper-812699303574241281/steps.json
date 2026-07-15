@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_data_prep",
+    "title": "Extract and curate training data",
+    "role": "process",
+    "action": "Obtain the Supporting Information PDF from the ACS publication (Table S2). Extract the 134 phosphor compositions and their experimental T50 values. Apply the sanitization criteria: only retain T50 values reached within the measurement window (no extrapolation) and measurements starting at room temperature (~300 K). Ensure the final curated dataset contains 134 compounds.",
+    "output_file": "",
+    "evidence": "curated_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_feature_eng",
+    "title": "Construct initial 178 features and standardize",
+    "role": "process",
+    "action": "For each composition, compute 35 elemental properties for each constituent element (atomic number, atomic weight, Mendeleev number, covalent radius, etc.) using public periodic table data. Aggregate each property via weighted average, difference, maximum, minimum, and standard deviation using stoichiometric weights. Add the three non-compositional features (host crystal system, host space group, Eu³⁺ substitution concentration) if available from Table S2. Standardize all features to zero mean and unit variance.",
+    "output_file": "",
+    "evidence": "features_standardized.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_rfe",
+    "title": "Recursive feature elimination to select 51 features",
+    "role": "process",
+    "action": "Use a linear SVR estimator and leave-one-out cross-validation to recursively eliminate the five least important features per iteration. Monitor the cross-validated coefficient of determination (r²) as a function of feature count and select the subset of 51 features that yields the best performance. Record the indices of the selected features.",
+    "output_file": "",
+    "evidence": "selected_features.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_grid_search",
+    "title": "Hyperparameter tuning via grid search",
+    "role": "process",
+    "action": "Using the selected 51 features, perform an exhaustive grid search over cost C in {0.3, 1, 3, 10, 30, 100} and epsilon ε in {0.001, 0.01, 0.1, 1} with leave-one-out cross-validation. Identify the combination with the highest average r² and save the optimal hyperparameters.",
+    "output_file": "",
+    "evidence": "grid_search_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_predictions",
+    "title": "Leave-one-out cross-validated predictions",
+    "role": "scored",
+    "action": "Train a support vector regression model with linear kernel, using the optimal hyperparameters (C=30, epsilon=0.01) on the 51 selected features. Perform leave-one-out cross-validation on the entire 134-sample curated dataset to obtain predicted T50 for every compound. Write a CSV file with columns: composition, experimental_t50 (K), predicted_t50 (K).",
+    "output_file": "step_01_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "LOO cross-validated predicted T50 values.",
+    "output_schema": "composition (string), experimental_t50 (float, K), predicted_t50 (float, K); header row, comma-separated."
+  },
+  {
+    "id": "step_06_metrics",
+    "title": "Compute and report performance metrics",
+    "role": "scored",
+    "action": "From the leave-one-out predictions, compute the coefficient of determination (r²) and mean absolute error (MAE) between experimental and predicted T50. Write these two metrics to a JSON file.",
+    "output_file": "step_02_metrics.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Performance metrics from LOO predictions.",
+    "output_schema": "{\"r2\": float, \"mae\": float, \"mae_unit\": \"K\"}"
+  }
+]

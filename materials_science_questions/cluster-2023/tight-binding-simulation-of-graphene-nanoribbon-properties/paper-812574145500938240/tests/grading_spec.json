@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Conduction channel count is recomputed from transmission CSV (T1); bandgap and metallicity are compared to paper-reported values with tolerance (T0).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "transmission_both_edge_Os.csv": "metric_recompute",
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported bandgap for H-passivated AGNR (1.52 eV) from Table I; tolerance ±0.08 eV.",
+      "source_provenance": "Table I of the paper: Bandgap (eV) for H-passivated AGNRs = 1.52 (direct).",
+      "generation_method": "Direct extraction from paper Table I.",
+      "why_not_fabricated": "The paper provides this exact value; the tolerance absorbs differences due to code/functional (SIESTA vs ATK)."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Metallicity flags for Os-passivated configurations from Table I: both 'Metallic'.",
+      "source_provenance": "Table I of the paper: Bandgap column for One-edge Os-passivated and Both-edge Os-passivated listed as 'Metallic'.",
+      "generation_method": "Direct extraction from paper Table I.",
+      "why_not_fabricated": "Paper explicitly reports metallic behaviour; boolean checks are unambiguous."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected conduction channel count range [7,9] at Fermi level for both-edge Os-passivated AGNR.",
+      "source_provenance": "Paper states 'up to eight conduction channels' (Results and Discussion, and abstract). The transmission at E=0 should be approximately 8.",
+      "generation_method": "Derived from paper's reported channel count and typical NEGF transmission value. Range [7,9] accommodates small numerical differences.",
+      "why_not_fabricated": "The paper gives the explicit maximum channel count of 8; the range is a reasonable tolerance for recomputation from a smooth transmission curve."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transmission_both_edge_Os.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "transmission"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "transmission": "dimensionless"
+          }
+        },
+        "description": "Energy-resolved transmission for both-edge Os-passivated AGNR over [-1,1] eV. The checker recomputes the conduction channel count from the transmission at E=0 eV."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "H_passivated_bandgap_eV": "float",
+            "one_edge_Os_metallic": "boolean",
+            "both_edge_Os_metallic": "boolean",
+            "both_edge_Os_conduction_channels": "int"
+          },
+          "units": {
+            "H_passivated_bandgap_eV": "eV"
+          }
+        },
+        "description": "Bandgap and metallicity for H-passivated and Os-passivated AGNRs, and conduction channel count for both-edge Os-passivated AGNR. Compared to hidden reference values."
+      }
+    ],
+    "notes": "The transmission CSV and results.json must be produced in order. Bandgap and conduction channel values are verified against paper-reported results with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_03_negf_transmission",
+      "output_file": "transmission_both_edge_Os.csv",
+      "kind": "recompute_transmission",
+      "weight": 0.4,
+      "target_range": [
+        7,
+        9
+      ],
+      "energy_column": "energy_eV",
+      "transmission_column": "transmission",
+      "description": "Recompute conduction channel count from transmission spectrum at E=0 eV; expected between 7 and 9."
+    },
+    {
+      "id": "step_04_results_json",
+      "output_file": "results.json",
+      "kind": "reference_match_results",
+      "weight": 0.6,
+      "bandgap_target": 1.52,
+      "bandgap_tolerance": 0.08,
+      "metallic_flags": {
+        "one_edge": true,
+        "both_edge": true
+      },
+      "description": "Compare reported bandgap and metallicity to paper values with tolerance; check both-edge Os conduction channel consistency is ensured by transmission step."
+    }
+  ]
+}

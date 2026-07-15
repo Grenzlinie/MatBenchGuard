@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Bulk ZnO primitive cell optimization",
+    "role": "process",
+    "action": "Perform DFT geometry optimization of the wurtzite ZnO primitive cell using Quantum ESPRESSO with GGA-PBE functional and SSSP pseudopotentials. Relax both atomic positions and cell parameters to obtain optimized lattice constants. Record the optimization log.",
+    "output_file": "",
+    "evidence": "bulk_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "DFT log providing evidence of bulk optimization; serves as the basis for supercell construction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Defect supercell construction",
+    "role": "process",
+    "action": "From the optimized ZnO primitive cell, build a 2×2×2 supercell. Substitute two Zn atoms with Cr to create near-configuration (Cr atoms separated by one O) and far-configuration (Cr atoms separated by -O-Zn-O-) models for monodoped case. For the codoped far configuration, additionally replace one Zn with Al. Produce a CIF or equivalent structure file for each configuration.",
+    "output_file": "",
+    "evidence": "defect_supercells.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Input geometries for the three defect supercell configurations (near monodoped, far monodoped, far codoped).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Relaxation of defect supercells",
+    "role": "process",
+    "action": "Perform full geometry relaxation (atomic positions and cell parameters) for each of the three defect supercells using spin-polarized DFT. Use the same exchange-correlation functional, cutoff energy, and k-point grid as in the bulk optimization. Save the relaxation logs.",
+    "output_file": "",
+    "evidence": "relax_defects.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimized geometries for the near monodoped, far monodoped, and far codoped supercells, obtained via spin-polarized relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute monodoped energies and magnetic moments",
+    "role": "scored",
+    "action": "For the near and far monodoped relaxed supercells, perform spin-polarized self-consistent field (SCF) calculations for both ferromagnetic (FM) and antiferromagnetic (AFM) spin orderings. Extract the total energies and compute the FM-AFM energy difference per configuration. From the FM SCF run, extract the total magnetic moment per supercell and the local magnetic moments on each Cr and on the bridging O atom. Write the results to a JSON file.",
+    "output_file": "monodoped_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file reporting total magnetic moment, local Cr moment, local bridging O moment (in μB), and energy differences (in meV) for near and far monodoped configurations.",
+    "output_schema": "{\"total_moment_muB\": \"float\", \"local_moment_Cr_muB\": \"float\", \"local_moment_bridging_O_muB\": \"float\", \"energy_difference_near_meV\": \"float\", \"energy_difference_far_meV\": \"float\"}"
+  },
+  {
+    "id": "step_05",
+    "title": "Compute codoped energy difference",
+    "role": "scored",
+    "action": "For the relaxed codoped far supercell, perform spin-polarized SCF calculations for FM and AFM orderings, then compute the FM-AFM energy difference. Write the result to a JSON file.",
+    "output_file": "codoped_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file reporting the FM-AFM energy difference (in meV) for the (Cr,Al)-codoped far configuration.",
+    "output_schema": "{\"energy_difference_codoped_far_meV\": \"float\"}"
+  }
+]

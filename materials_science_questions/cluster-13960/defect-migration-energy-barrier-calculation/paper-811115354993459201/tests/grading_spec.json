@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute delta_E from E_2O and E_3O (self-consistency), then compare to paper gold with threshold_or_better tolerance and check structural trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_differences.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold delta_E values for each oxyanion model",
+      "source_provenance": "Paper Section 'Results and discussion', paragraph 2: I 1.44 eV, II 1.94 eV, III 0.50 eV, IV 0.73 eV",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "numbers are the paper's own reported energy differences"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "model": "string",
+            "delta_E": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_2O": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_3O": {
+              "type": "number",
+              "unit": "eV"
+            }
+          },
+          "required_fields": [
+            "model",
+            "delta_E",
+            "E_2O",
+            "E_3O"
+          ]
+        },
+        "description": "Energy differences between 3-O and 2-O coordinations for the four oxyanion models (I, II, III, IV). The checker verifies that delta_E > 0 for every model and that the values are consistent with the paper within tolerance (threshold_or_better). Also checks structural trend: tetrahedral models (I,II) have larger delta_E than octahedral models (III,IV)."
+      }
+    ],
+    "notes": "The intermediate pathway geometries (Walsh diagrams) and rotational barrier calculations are not required for scoring. Only the endpoint energy differences for the four models are scored. The agent must re-run the extended Hückel calculations; no pre-made output files are provided."
+  },
+  "steps": [
+    {
+      "id": "energy_differences",
+      "output_file": "energy_differences.json",
+      "weight": 1.0,
+      "kind": "numeric",
+      "description": "Validate energy_differences.json and score delta_E against paper gold with structural trend check",
+      "params": {
+        "gold_values": {
+          "I": 1.44,
+          "II": 1.94,
+          "III": 0.5,
+          "IV": 0.73
+        },
+        "tolerance": 0.3
+      }
+    }
+  ]
+}

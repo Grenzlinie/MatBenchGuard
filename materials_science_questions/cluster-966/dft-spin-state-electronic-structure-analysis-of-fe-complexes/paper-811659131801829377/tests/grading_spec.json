@@ -1,0 +1,124 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Agent reports final numeric results; checker compares to paper gold with tolerances. Recomputing from raw electronic structure files is not required as the scored artifacts are the final spin densities and CASSCF mixing values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "free_ligand_spin_densities.csv": "exact_match",
+    "casdtma_mixing.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold spin density values from paper Table 1 and CASSCF mixing from paper Figure 3.",
+      "source_provenance": "Paper reported AIM spin densities (Table 1) and CASSCF mixing (Figure 3).",
+      "generation_method": "Extracted from the paper text and solve.sh hardcoded accordingly.",
+      "why_not_fabricated": "Values are the paper's actual published numbers for the same quantities, verified against the reference solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_ligand_spin_densities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ligand",
+            "geometry",
+            "bridgehead_spin_density_e",
+            "sulfur_spin_density_e"
+          ],
+          "units": {
+            "bridgehead_spin_density_e": "e",
+            "sulfur_spin_density_e": "e"
+          }
+        },
+        "description": "AIM-integrated atomic spin densities on the bridgehead and sulfur atoms for the three free ligands in relaxed and chelation-constrained geometries."
+      },
+      {
+        "file": "casdtma_mixing.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "relaxed_max_mixing": "number",
+            "fixed_max_mixing": "number"
+          },
+          "units": {
+            "relaxed_max_mixing": "e",
+            "fixed_max_mixing": "e"
+          }
+        },
+        "description": "Maximum deviation from integer occupation (occupied–virtual mixing) from CASSCF(13,17) for the dtma radical in relaxed and fixed geometries."
+      }
+    ],
+    "notes": "The hidden checker will compare the reported spin densities and CASSCF mixing values to paper gold values with suitable tolerances (±0.02 e for bridgehead, ±0.05 e for S, ±0.01 e for CASSCF mixing). The agent must execute the full DFT+QTAIM+CASSCF pipeline; the scored outputs cannot be obtained by guesswork alone."
+  },
+  "steps": [
+    {
+      "id": "step_spin_csv",
+      "output_file": "free_ligand_spin_densities.csv",
+      "kind": "reference_match",
+      "weight": 0.8,
+      "tolerances": {
+        "bridgehead": 0.02,
+        "sulfur": 0.05
+      },
+      "gold_rows": [
+        {
+          "ligand": "pdt",
+          "geometry": "relaxed",
+          "bridgehead": 0.03,
+          "sulfur": 0.92
+        },
+        {
+          "ligand": "pdt",
+          "geometry": "fixed",
+          "bridgehead": 0.02,
+          "sulfur": 0.96
+        },
+        {
+          "ligand": "dtma",
+          "geometry": "relaxed",
+          "bridgehead": 0.0,
+          "sulfur": 0.93
+        },
+        {
+          "ligand": "dtma",
+          "geometry": "fixed",
+          "bridgehead": 0.02,
+          "sulfur": 0.97
+        },
+        {
+          "ligand": "dtme",
+          "geometry": "relaxed",
+          "bridgehead": 0.0,
+          "sulfur": 0.93
+        },
+        {
+          "ligand": "dtme",
+          "geometry": "fixed",
+          "bridgehead": 0.01,
+          "sulfur": 0.97
+        }
+      ]
+    },
+    {
+      "id": "step_casscf_json",
+      "output_file": "casdtma_mixing.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "tolerances": {
+        "mixing": 0.01
+      },
+      "gold": {
+        "relaxed_max_mixing": 0.07,
+        "fixed_max_mixing": 0.08
+      }
+    }
+  ]
+}

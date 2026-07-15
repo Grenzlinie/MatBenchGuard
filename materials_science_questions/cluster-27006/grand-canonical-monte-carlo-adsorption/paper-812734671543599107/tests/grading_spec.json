@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline gravimetric uptakes are obtained from GCMC simulations; the checker cannot re-run those simulations, so it compares the agent's reported values to the paper's reported values with generous tolerances that accommodate code-to-code variability.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulated_uptakes.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulated_uptakes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "dispersion_swnt_wt%",
+            "dispersion_slit_wt%",
+            "chemisorption_swnt_wt%",
+            "chemisorption_slit_wt%"
+          ],
+          "properties": {
+            "dispersion_swnt_wt%": {
+              "type": "number",
+              "description": "Gravimetric uptake (wt%) inside SWNT using dispersion-only forces at 100 bar, 298 K"
+            },
+            "dispersion_slit_wt%": {
+              "type": "number",
+              "description": "Gravimetric uptake (wt%) in a 1.2 nm slit pore using dispersion-only forces at 100 bar, 298 K"
+            },
+            "chemisorption_swnt_wt%": {
+              "type": "number",
+              "description": "Gravimetric uptake (wt%) inside SWNT using chemisorption-2 potential at 100 bar, 298 K"
+            },
+            "chemisorption_slit_wt%": {
+              "type": "number",
+              "description": "Gravimetric uptake (wt%) in a 1.2 nm slit pore using chemisorption-2 potential at 100 bar, 298 K"
+            }
+          }
+        },
+        "description": "JSON file containing the four simulated total gravimetric hydrogen uptake values at 100 bar and 298 K, for the four condition combinations. The checker will compare each reported value to the paper-hidden reference with appropriate tolerances and also evaluate structural relationships among the values."
+      }
+    ],
+    "notes": "The verifier checks the reported uptakes against reference values and enforces certain ordering constraints among the values."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported gravimetric uptakes (gold values) and ordering constraints",
+      "source_provenance": "Paper Fig. 3 and Fig. 4; dispersion SWNT ~0.4 wt%, dispersion slit ~1.5 wt%, chemisorption SWNT 3.2 wt%, chemisorption slit 9–10 wt% (approximate 9.5 wt%).",
+      "generation_method": "Extracted from the paper's described figures and text; the exact values 0.40, 1.50, 3.20, 9.50 are used as the hidden gold because they represent the paper's reported approximate values at the relevant axis. The reference solve.sh writes these numbers directly.",
+      "why_not_fabricated": "These numbers are directly stated or readable from the paper's own results; they are the target of the reproduction task. The task asks the agent to reproduce these same quantities, so the gold is the paper's own result."
+    }
+  ],
+  "steps": [
+    {
+      "id": "dispersion_swnt_value",
+      "output_file": "simulated_uptakes.json",
+      "kind": "reference_match",
+      "field": "dispersion_swnt_wt%",
+      "gold": 0.4,
+      "tolerance_abs": 0.3,
+      "weight": 0.2
+    },
+    {
+      "id": "dispersion_slit_value",
+      "output_file": "simulated_uptakes.json",
+      "kind": "reference_match",
+      "field": "dispersion_slit_wt%",
+      "gold": 1.5,
+      "tolerance_abs": 0.3,
+      "weight": 0.2
+    },
+    {
+      "id": "chemisorption_swnt_value",
+      "output_file": "simulated_uptakes.json",
+      "kind": "reference_match",
+      "field": "chemisorption_swnt_wt%",
+      "gold": 3.2,
+      "tolerance_abs": 1.0,
+      "weight": 0.2
+    },
+    {
+      "id": "chemisorption_slit_value",
+      "output_file": "simulated_uptakes.json",
+      "kind": "reference_match",
+      "field": "chemisorption_slit_wt%",
+      "gold": 9.5,
+      "tolerance_abs": 1.0,
+      "weight": 0.2
+    },
+    {
+      "id": "dispersion_ordering",
+      "output_file": "simulated_uptakes.json",
+      "kind": "structural",
+      "field1": "dispersion_swnt_wt%",
+      "field2": "dispersion_slit_wt%",
+      "operator": "lt",
+      "weight": 0.1
+    },
+    {
+      "id": "chemisorption_ordering",
+      "output_file": "simulated_uptakes.json",
+      "kind": "structural",
+      "field1": "chemisorption_swnt_wt%",
+      "field2": "chemisorption_slit_wt%",
+      "operator": "lt",
+      "weight": 0.1
+    }
+  ]
+}

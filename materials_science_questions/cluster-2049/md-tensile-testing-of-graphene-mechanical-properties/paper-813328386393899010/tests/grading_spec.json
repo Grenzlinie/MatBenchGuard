@@ -1,0 +1,191 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Shape profiles are recomputed via sine fit R²/residual (T1); buckling strains and free energy minima are compared to paper gold with tolerance (T0) because the agent only submits summary CSVs, not raw traces.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported buckling strains, free energy minima, and shape criteria",
+      "source_provenance": "Paper Table I and text for free energy and shape",
+      "generation_method": "Extracted from paper; for shape, sine fit quality metrics derived.",
+      "why_not_fabricated": "Values are the paper's own results, confirmed against text and table."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "buckling_strains.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "boundary_condition",
+            "compression_direction",
+            "buckling_strain_percent"
+          ],
+          "units": {
+            "buckling_strain_percent": "percent"
+          }
+        },
+        "description": "Buckling strains for perfect graphene, LAGBI, and LAGBII under free and supported lateral boundary conditions for compression along x and y. The checker recomputes strain values from the paper’s Table I within tolerance."
+      },
+      {
+        "file": "free_energy_minima.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "boundary_condition",
+            "compression_direction",
+            "free_energy_min_eV",
+            "equilibrium_strain_percent"
+          ],
+          "units": {
+            "free_energy_min_eV": "electron volt",
+            "equilibrium_strain_percent": "percent"
+          }
+        },
+        "description": "Free energy minima ΔF and equilibrium strains ε_m for PG and LAGBI under SBC α=0. Checker compares ΔF to the paper‑reported values with tolerance ±0.5 eV."
+      },
+      {
+        "file": "shape_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "x_position_nm",
+            "average_z_deviation_nm"
+          ],
+          "units": {
+            "x_position_nm": "nm",
+            "average_z_deviation_nm": "nm"
+          }
+        },
+        "description": "y‑averaged out‑of‑plane deflection for PG, LAGBI, LAGBII under SBC α=0 at ε=2.45 %. The checker fits a sine function A·sin(πx/a) and evaluates R² for each system; PG must exhibit a good fit (R²>0.9) while grain‑boundary systems must deviate (R²<0.7) and show a significant residual near the centre."
+      }
+    ],
+    "notes": "Scored artifacts cover buckling strains, free‑energy minima, and deformation shape profiles. All gold values and tolerances are hidden. The load‑bearing steps (free energy minima and shape profiles) ensure the MD simulation stages cannot be bypassed."
+  },
+  "steps": [
+    {
+      "id": "step_04_buckling",
+      "output_file": "buckling_strains.csv",
+      "kind": "value_compare",
+      "weight": 0.3,
+      "target_policy": "threshold_or_better",
+      "expected_rows": [
+        {
+          "system": "PG",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 0.6,
+          "tolerance": 0.1
+        },
+        {
+          "system": "LAGBI",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 0.34,
+          "tolerance": 0.1
+        },
+        {
+          "system": "LAGBII",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 0.01,
+          "tolerance": 0.05
+        },
+        {
+          "system": "PG",
+          "boundary_condition": "SBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 0.7,
+          "tolerance": 0.1
+        },
+        {
+          "system": "LAGBI",
+          "boundary_condition": "SBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 1.45,
+          "tolerance": 0.1
+        },
+        {
+          "system": "LAGBII",
+          "boundary_condition": "SBC",
+          "compression_direction": "alpha0",
+          "buckling_strain_percent": 0.4,
+          "tolerance": 0.1
+        },
+        {
+          "system": "PG",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha_pi_2",
+          "buckling_strain_percent": 1.07,
+          "tolerance": 0.1
+        },
+        {
+          "system": "LAGBI",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha_pi_2",
+          "buckling_strain_percent": 3.0,
+          "tolerance": 0.2
+        },
+        {
+          "system": "LAGBII",
+          "boundary_condition": "FBC",
+          "compression_direction": "alpha_pi_2",
+          "buckling_strain_percent": 0.2,
+          "tolerance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "step_05_free_energy",
+      "output_file": "free_energy_minima.csv",
+      "kind": "value_compare",
+      "weight": 0.35,
+      "target_policy": "exact_match",
+      "expected_rows": [
+        {
+          "system": "PG",
+          "boundary_condition": "SBC",
+          "compression_direction": "alpha0",
+          "free_energy_min_eV": -1.5,
+          "tolerance": 0.5,
+          "equilibrium_strain_percent": 0.47,
+          "strain_tolerance": 0.1
+        },
+        {
+          "system": "LAGBI",
+          "boundary_condition": "SBC",
+          "compression_direction": "alpha0",
+          "free_energy_min_eV": -10.5,
+          "tolerance": 0.5,
+          "equilibrium_strain_percent": 1.07,
+          "strain_tolerance": 0.1
+        }
+      ]
+    },
+    {
+      "id": "step_06_shape",
+      "output_file": "shape_profiles.csv",
+      "kind": "structural_audit",
+      "weight": 0.35,
+      "target_policy": "structural_audit",
+      "ribbon_length_nm": 20.0,
+      "pg_r2_threshold": 0.9,
+      "gb_r2_max": 0.7,
+      "residual_threshold_nm": 0.05,
+      "center_x_nm": 10.0
+    }
+  ]
+}

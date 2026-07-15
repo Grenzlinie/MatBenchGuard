@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute reaction barriers and sign of free-energy changes from the agent's raw Gibbs free energy profiles; adsorption energy/Bader charge ordering and tolerance checks against paper-reported values.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_adsorption_energies_and_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "E_ads",
+            "Bader_charge_on_CO2"
+          ],
+          "units": {
+            "E_ads": "eV",
+            "Bader_charge_on_CO2": "e"
+          }
+        },
+        "description": "Computed CO₂ adsorption energies and Bader charges on pristine, V_BrS, and V surfaces. Checked for correct relative ordering (more negative E_ads, larger charge on V) and values within tolerance using reference match."
+      },
+      {
+        "file": "step_03_gibbs_free_energy_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "reaction_step",
+            "free_energy"
+          ],
+          "units": {
+            "free_energy": "eV"
+          }
+        },
+        "description": "Gibbs free energy of each elementary step for CO₂ reduction to CH₃OH on the three surfaces. Checked for correct barrier orderings and exothermic *CO→*CHO step on V surface, using recomputed metric scoring."
+      }
+    ],
+    "notes": "All values are computed by periodic DFT with an open-source planewave/pseudopotential code. The checker compares against hidden reference values using reference_match for step_02 and metric_recompute for step_03."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference adsorption energies, Bader charges, barrier targets, and reaction step names for DFT surface calculations",
+      "source_provenance": "Paper JACS 2021, 143, 6551-6559: E_ads values reported on page 6556 (pristine -2.63 eV, V -2.73 eV); Bader charges from Bader analysis (0.46 e pristine, 1.22 e V); free-energy barrier for *COOH->*CO on V (0.82 eV) and pristine (1.80 eV) from Figs. 4c,e; *CO->*CHO exothermic on V and endothermic on pristine as stated in text and Fig. 4e.",
+      "generation_method": "Extracted from paper text and figures; inline in grading_spec.",
+      "why_not_fabricated": "Values directly from the published paper; serve as authoritative gold for DFT reproduction."
+    }
+  ],
+  "target_policies": {
+    "step_02_adsorption_energies_and_charges.csv": "reference_match",
+    "step_03_gibbs_free_energy_profiles.csv": "metric_recompute"
+  },
+  "steps": [
+    {
+      "id": "s02",
+      "output_file": "step_02_adsorption_energies_and_charges.csv",
+      "weight": 0.35,
+      "kind": "numeric",
+      "targets": {
+        "E_ads": {
+          "pristine": -2.63,
+          "V": -2.73,
+          "tolerance": 0.15
+        },
+        "Bader_charge_on_CO2": {
+          "pristine": 0.46,
+          "V": 1.22,
+          "tolerance": 0.1
+        }
+      }
+    },
+    {
+      "id": "s03",
+      "output_file": "step_03_gibbs_free_energy_profiles.csv",
+      "weight": 0.65,
+      "kind": "numeric",
+      "barrier_checks": [
+        {
+          "from": "*COOH",
+          "to": "*CO",
+          "system": "V",
+          "target": 0.82,
+          "tolerance": 0.2
+        },
+        {
+          "from": "*COOH",
+          "to": "*CO",
+          "system": "pristine",
+          "target": 1.8,
+          "tolerance": 0.5
+        }
+      ],
+      "exothermic_checks": [
+        {
+          "from": "*CO",
+          "to": "*CHO",
+          "system": "V",
+          "expected_sign": "negative"
+        },
+        {
+          "from": "*CO",
+          "to": "*CHO",
+          "system": "pristine",
+          "expected_sign": "positive"
+        }
+      ]
+    }
+  ]
+}

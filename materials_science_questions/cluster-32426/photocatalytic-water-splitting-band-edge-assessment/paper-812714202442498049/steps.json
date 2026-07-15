@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare training data from C2DB",
+    "role": "process",
+    "action": "Download the C2DB v2018-12 database, filter to non-magnetic materials. Compute stability labels (low if formation energy > 0, high if formation energy < 0 and energy above convex hull < 0.2 eV/atom, medium otherwise). Compute statistical functions (average, weighted average, max, min, standard deviation) of the atomic properties listed in Table 1 and include prototype label encoding as features.",
+    "output_file": "",
+    "evidence": "c2db_features_labels.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the labelled feature vectors required for training.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Discover SISSO composite features",
+    "role": "process",
+    "action": "Using the SISSO method in a multi-task approach, generate and select six combined nonlinear features (S1–S6) that best separate stability classes across prototypes. The explicit forms are those reported in the paper (Table 3). Append these to the feature set.",
+    "output_file": "",
+    "evidence": "sisso_features.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Identifies six composite features that capture nonlinear relationships in the data.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Train XGBoost stability classifier",
+    "role": "process",
+    "action": "Train a gradient-boosted decision tree classifier (XGBoost) on the full feature set (atomic stats + SISSO features + prototype). Perform stratified 5-fold cross-validation to obtain ROC-AUC for each class and record feature importances. Save the trained model.",
+    "output_file": "",
+    "evidence": "classifier_model.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the trained stability classifier and its CV AUC scores.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Train SISSO regression model for formation energy (high-stability class)",
+    "role": "process",
+    "action": "Train a 3D SISSO regression model on the high‑stability class materials to predict formation energy. Perform 5‑fold cross‑validation to compute the RMSE. Save the model coefficients.",
+    "output_file": "",
+    "evidence": "regression_model_params.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the formation energy regression model and its cross‑validated RMSE.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute ML predictions for validation compounds",
+    "role": "process",
+    "action": "For GaAsSe4 and AlAsTe4 in both MoS2 and CdI2 prototypes, compute the feature vectors (including SISSO features) and apply the trained XGBoost classifier to obtain the predicted stability class, and the SISSO regression model to obtain the predicted formation energy. Save these intermediate predictions.",
+    "output_file": "",
+    "evidence": "ml_predictions.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generates ML predictions for the four validation systems.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Perform DFT formation energy calculations",
+    "role": "process",
+    "action": "For GaAsSe4 and AlAsTe4 in MoS2 and CdI2 structures, as well as for the constituent elements in their reference states, perform DFT total‑energy calculations using the PBE functional and PAW pseudopotentials with an open‑source plane‑wave code. Compute formation energies per atom as ΔH_f = (E_total − sum of elemental reference energies) / N_atoms.",
+    "output_file": "",
+    "evidence": "dft_total_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtains DFT formation energies for the four validation compounds.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Compile validation results",
+    "role": "scored",
+    "action": "Combine the ML predicted classes and formation energies from step 05 with the DFT formation energies from step 06, the regression model’s cross‑validated RMSE from step 04, and the classifier’s AUC scores from step 03 into a single JSON file according to the output schema.",
+    "output_file": "validation_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The main scored artifact containing all reproducible quantities: stability predictions, formation energies, RMSE, and AUC scores.",
+    "output_schema": "{\"compounds\":[{\"name\":\"GaAsSe4\",\"prototype\":\"MoS2\",\"predicted_class\":\"low\",\"predicted_formation_energy\":0.12,\"dft_formation_energy\":0.12,\"dft_code\":\"Quantum ESPRESSO\",\"notes\":\"\"},{\"name\":\"GaAsSe4\",\"prototype\":\"CdI2\",\"predicted_class\":\"high\",\"predicted_formation_energy\":-0.06,\"dft_formation_energy\":-0.06,\"dft_code\":\"...\",\"notes\":\"\"},{\"name\":\"AlAsTe4\",\"prototype\":\"MoS2\",\"predicted_class\":\"low\",\"predicted_formation_energy\":0.13,\"dft_formation_energy\":0.13,\"dft_code\":\"...\",\"notes\":\"\"},{\"name\":\"AlAsTe4\",\"prototype\":\"CdI2\",\"predicted_class\":\"high\",\"predicted_formation_energy\":-0.03,\"dft_formation_energy\":-0.03,\"dft_code\":\"...\",\"notes\":\"\"}],\"regression_model_rmse\":0.205,\"classification_performance\":{\"method\":\"SISSO+XGBoost\",\"test_auc\":{\"low\":0.93,\"medium\":0.89,\"high\":0.94},\"notes\":\"AUC from stratified 5-fold CV\"}}"
+  }
+]

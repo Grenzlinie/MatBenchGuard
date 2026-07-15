@@ -1,0 +1,198 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The targeted quantities are directly reported energies; recomputing them from the raw GULP outputs would require re-running the full simulation which is infeasible for the verifier. Therefore we compare the agent's CSV entries to the paper's gold values with tolerances, using a threshold-or-better policy.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold energies for intrinsic defect, migration, and doping",
+      "source_provenance": "Paper Tables 3, 4, and 7",
+      "generation_method": "Extracted directly from the paper's reported numerical values",
+      "why_not_fabricated": "These are the exact energy values reported in the publication; they are the ground truth for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "intrinsic_defect_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polymorph",
+            "defect_type",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Intrinsic defect formation energies for both polymorphs. Lower (more negative) values indicate more favorable defects. The checker compares each reported energy to a hidden paper-derived threshold with tolerance; values at or below the threshold pass."
+      },
+      {
+        "file": "li_migration_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polymorph",
+            "path_label",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "jump_distance_A": "Å"
+          }
+        },
+        "description": "Li-ion migration activation energies. Lower barriers indicate higher mobility. The checker scores paths A and B for monoclinic and path X for orthorhombic against hidden thresholds (with tolerance) in a threshold-or-better manner."
+      },
+      {
+        "file": "dopant_incorporation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polymorph",
+            "dopant",
+            "site",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Trivalent dopant incorporation energies. Lower energies indicate more favorable substitution. Only Al³⁺ on the Si site entries for both polymorphs are scored; the checker uses hidden thresholds with tolerance, accepting values at or below the threshold as correct."
+      }
+    ],
+    "notes": "The structural optimization (step_01) is a required process step but not directly scored. Only specific entries in each CSV are scored as described; the agent should still report all computed values for completeness. The hidden checker applies absolute tolerances when comparing to paper-reported energies."
+  },
+  "steps": [
+    {
+      "id": "intrinsic_defect_energies",
+      "output_file": "intrinsic_defect_energies.csv",
+      "weight": 0.45,
+      "tolerance_ev": 0.1,
+      "scored_entries": [
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "Li_Frenkel",
+          "gold_ev": 2.55
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "Mn_Frenkel",
+          "gold_ev": 6.41
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "O_Frenkel",
+          "gold_ev": 8.11
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "Schottky",
+          "gold_ev": 34.84
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "Li_Mn_antisite",
+          "gold_ev": 1.38
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "Li_deficiency_oxidation",
+          "gold_ev": 14.36
+        },
+        {
+          "polymorph": "monoclinic",
+          "defect_type": "O_excess_oxidation",
+          "gold_ev": 12.43
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "Li_Frenkel",
+          "gold_ev": 3.9
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "Mn_Frenkel",
+          "gold_ev": 7.79
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "O_Frenkel",
+          "gold_ev": 11.78
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "Schottky",
+          "gold_ev": 43.73
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "Li_Mn_antisite",
+          "gold_ev": 1.65
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "Li_deficiency_oxidation",
+          "gold_ev": 16.12
+        },
+        {
+          "polymorph": "orthorhombic",
+          "defect_type": "O_excess_oxidation",
+          "gold_ev": 14.75
+        }
+      ]
+    },
+    {
+      "id": "li_migration_energies",
+      "output_file": "li_migration_energies.csv",
+      "weight": 0.25,
+      "tolerance_ev": 0.1,
+      "scored_entries": [
+        {
+          "polymorph": "monoclinic",
+          "path_label": "A",
+          "gold_ev": 0.6
+        },
+        {
+          "polymorph": "monoclinic",
+          "path_label": "B",
+          "gold_ev": 0.54
+        },
+        {
+          "polymorph": "orthorhombic",
+          "path_label": "X",
+          "gold_ev": 0.95
+        }
+      ]
+    },
+    {
+      "id": "dopant_incorporation_energies",
+      "output_file": "dopant_incorporation_energies.csv",
+      "weight": 0.3,
+      "tolerance_ev": 0.2,
+      "scored_entries": [
+        {
+          "polymorph": "monoclinic",
+          "dopant": "Al",
+          "site": "Si",
+          "gold_ev": 2.7
+        },
+        {
+          "polymorph": "orthorhombic",
+          "dopant": "Al",
+          "site": "Si",
+          "gold_ev": 3.51
+        }
+      ]
+    }
+  ]
+}

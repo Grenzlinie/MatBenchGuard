@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Checker compares reported numeric values to paper gold within tolerances and enforces a relative trend; recomputation from raw DFT artifacts is not feasible in the verifier sandbox.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "computed_properties.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold lattice constants and band gaps for BaTiO3, SrTiO3, and the BST supercell",
+      "source_provenance": "Paper abstract and sections 2 (Computational details and results) and abstract. Lattice constants: '3.903 (3.905) for SrTiO3 and 4.004(3.996) for BaTiO3', 'The lattice parameter calculated for our heterostructure is 3.963 Å'. Band gaps: 'optical band gap for pure SrTiO3 ... is 3.56 eV', 'BaTiO3 ... is 3.46 eV', 'band gap calculated for the heterostructure ... is 3.54 eV'.",
+      "generation_method": "Extracted verbatim from the published paper (Physica Scripta T118, 276).",
+      "why_not_fabricated": "Values are the paper's own reported results, the target of the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "BaTiO3_lattice_constant_A": "float",
+            "SrTiO3_lattice_constant_A": "float",
+            "BST_supercell_lattice_constant_A": "float",
+            "BaTiO3_band_gap_eV": "float",
+            "SrTiO3_band_gap_eV": "float",
+            "BST_band_gap_eV": "float"
+          }
+        },
+        "description": "JSON file containing the lattice constants (Å) and optical band gaps (eV) for BaTiO3, SrTiO3, and the layered Ba0.5Sr0.5TiO3 supercell, as produced by the hybrid DFT workflow."
+      }
+    ],
+    "notes": "The qualitative DOS and electron density difference maps are produced as process evidence but are not scored."
+  },
+  "steps": [
+    {
+      "id": "lat_BT",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "BaTiO3_lattice_constant_A",
+      "weight": 0.15,
+      "gold": 4.004,
+      "tolerance": 0.005
+    },
+    {
+      "id": "lat_ST",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "SrTiO3_lattice_constant_A",
+      "weight": 0.15,
+      "gold": 3.903,
+      "tolerance": 0.005
+    },
+    {
+      "id": "lat_BST",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "BST_supercell_lattice_constant_A",
+      "weight": 0.15,
+      "gold": 3.963,
+      "tolerance": 0.005
+    },
+    {
+      "id": "gap_BT",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "BaTiO3_band_gap_eV",
+      "weight": 0.15,
+      "gold": 3.46,
+      "tolerance": 0.05
+    },
+    {
+      "id": "gap_ST",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "SrTiO3_band_gap_eV",
+      "weight": 0.15,
+      "gold": 3.56,
+      "tolerance": 0.05
+    },
+    {
+      "id": "gap_BST",
+      "output_file": "computed_properties.json",
+      "kind": "numeric_match",
+      "field": "BST_band_gap_eV",
+      "weight": 0.15,
+      "gold": 3.54,
+      "tolerance": 0.05
+    },
+    {
+      "id": "gap_trend",
+      "output_file": "computed_properties.json",
+      "kind": "structural_trend",
+      "fields": [
+        "SrTiO3_band_gap_eV",
+        "BST_band_gap_eV"
+      ],
+      "relation": "less_than",
+      "weight": 0.1
+    }
+  ]
+}

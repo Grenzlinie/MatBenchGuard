@@ -1,0 +1,320 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "No raw DFT outputs are declared; recomputation from raw total energies or potential profiles is infeasible without those artifacts. We compare the agent's summary values to the paper's reported numbers with tolerances, and also verify structural properties (ordering, classification, contact types).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies_distances.json": "exact_match",
+    "adsorption_classification.json": "exact_match",
+    "schottky_barriers.json": "exact_match",
+    "tunneling_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for binding energies, distances, SBH, contact types, tunneling parameters, and adsorption classification",
+      "source_provenance": "paper Table 1 and classification text",
+      "generation_method": "extracted directly from the published manuscript",
+      "why_not_fabricated": "values are the exact reported numbers from the paper we are reproducing"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies_distances.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "metal",
+              "E_b",
+              "d_CdTe_M"
+            ],
+            "properties": {
+              "metal": {
+                "type": "string"
+              },
+              "E_b": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "d_CdTe_M": {
+                "type": "number",
+                "unit": "Å"
+              }
+            }
+          }
+        },
+        "description": "Interfacial binding energies per Cd atom and equilibrium vertical distances for Al, Ag, Au, Cu, Ni."
+      },
+      {
+        "file": "adsorption_classification.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "metal",
+              "category"
+            ],
+            "properties": {
+              "metal": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "weak chemisorption",
+                  "medium chemisorption",
+                  "strong chemisorption"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Adsorption strength classification for each metal interface."
+      },
+      {
+        "file": "schottky_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "metal",
+              "SBH",
+              "contact_type"
+            ],
+            "properties": {
+              "metal": {
+                "type": "string"
+              },
+              "SBH": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "contact_type": {
+                "type": "string",
+                "enum": [
+                  "n-type",
+                  "p-type"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Schottky barrier heights (with GW correction) and contact types for each metal."
+      },
+      {
+        "file": "tunneling_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "metal",
+              "Delta_V",
+              "w_B",
+              "T_B"
+            ],
+            "properties": {
+              "metal": {
+                "type": "string"
+              },
+              "Delta_V": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "w_B": {
+                "type": "number",
+                "unit": "Å"
+              },
+              "T_B": {
+                "type": "number",
+                "unit": "%"
+              }
+            }
+          }
+        },
+        "description": "Tunneling barrier height, width, and probability for each metal interface."
+      }
+    ],
+    "notes": "All values should be reported for the five metals: Al, Ag, Au, Cu, Ni. GW correction uses a scaling factor applied to DFT band edges; the exact GW gap is not required to be computed from scratch. The check can compare values with appropriate tolerances accounting for DFT code differences."
+  },
+  "steps": [
+    {
+      "id": "binding_energies_distances",
+      "output_file": "binding_energies_distances.json",
+      "kind": "numeric_compare",
+      "weight": 0.35,
+      "tolerances": {
+        "E_b": 0.3,
+        "d_CdTe_M": 0.2
+      },
+      "gold": [
+        {
+          "metal": "Al",
+          "E_b": 1.35,
+          "d_CdTe_M": 2.3
+        },
+        {
+          "metal": "Ag",
+          "E_b": 1.25,
+          "d_CdTe_M": 2.27
+        },
+        {
+          "metal": "Au",
+          "E_b": 1.58,
+          "d_CdTe_M": 1.96
+        },
+        {
+          "metal": "Cu",
+          "E_b": 1.26,
+          "d_CdTe_M": 2.29
+        },
+        {
+          "metal": "Ni",
+          "E_b": 2.8,
+          "d_CdTe_M": 1.14
+        }
+      ],
+      "expected_order_E_b": [
+        "Ag",
+        "Cu",
+        "Al",
+        "Au",
+        "Ni"
+      ],
+      "expected_order_d": [
+        "Al",
+        "Cu",
+        "Ag",
+        "Au",
+        "Ni"
+      ]
+    },
+    {
+      "id": "adsorption_classification",
+      "output_file": "adsorption_classification.json",
+      "kind": "exact_match",
+      "weight": 0.15,
+      "gold": [
+        {
+          "metal": "Al",
+          "category": "weak chemisorption"
+        },
+        {
+          "metal": "Ag",
+          "category": "weak chemisorption"
+        },
+        {
+          "metal": "Au",
+          "category": "medium chemisorption"
+        },
+        {
+          "metal": "Cu",
+          "category": "weak chemisorption"
+        },
+        {
+          "metal": "Ni",
+          "category": "strong chemisorption"
+        }
+      ]
+    },
+    {
+      "id": "schottky_barriers",
+      "output_file": "schottky_barriers.json",
+      "kind": "numeric_compare",
+      "weight": 0.25,
+      "tolerances": {
+        "SBH": 0.15
+      },
+      "gold": [
+        {
+          "metal": "Al",
+          "SBH": 0.12,
+          "contact_type": "n-type"
+        },
+        {
+          "metal": "Ag",
+          "SBH": 0.26,
+          "contact_type": "n-type"
+        },
+        {
+          "metal": "Au",
+          "SBH": 0.44,
+          "contact_type": "p-type"
+        },
+        {
+          "metal": "Cu",
+          "SBH": 0.63,
+          "contact_type": "n-type"
+        },
+        {
+          "metal": "Ni",
+          "SBH": 0.66,
+          "contact_type": "p-type"
+        }
+      ]
+    },
+    {
+      "id": "tunneling_barriers",
+      "output_file": "tunneling_barriers.json",
+      "kind": "numeric_compare",
+      "weight": 0.25,
+      "tolerances": {
+        "Delta_V": 0.3,
+        "w_B": 0.1,
+        "T_B": 5.0
+      },
+      "gold": [
+        {
+          "metal": "Al",
+          "Delta_V": 1.41,
+          "w_B": 0.49,
+          "T_B": 56.7
+        },
+        {
+          "metal": "Ag",
+          "Delta_V": 1.87,
+          "w_B": 0.51,
+          "T_B": 49.0
+        },
+        {
+          "metal": "Au",
+          "Delta_V": 0.0,
+          "w_B": 0.0,
+          "T_B": 100.0
+        },
+        {
+          "metal": "Cu",
+          "Delta_V": 1.68,
+          "w_B": 0.44,
+          "T_B": 55.8
+        },
+        {
+          "metal": "Ni",
+          "Delta_V": 0.0,
+          "w_B": 0.0,
+          "T_B": 100.0
+        }
+      ],
+      "no_barrier_metals": [
+        "Au",
+        "Ni"
+      ]
+    }
+  ]
+}

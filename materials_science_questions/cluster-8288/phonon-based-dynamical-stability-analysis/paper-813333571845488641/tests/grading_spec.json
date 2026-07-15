@@ -1,0 +1,239 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All quantities are recomputed from the agent's raw artifacts: lattice parameters from CIF, enthalpy ordering from CSV, max imaginary frequency from YAML, numeric values from txt, XRD and Raman peak positions from CSV. Tolerances absorb toolchain spread while excluding trivial guesses.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relaxed_structure.cif": "reference_match",
+    "enthalpy_vs_pressure.csv": "threshold_or_better",
+    "phonon_dispersion.yaml": "threshold_or_better",
+    "band_gap.txt": "reference_match",
+    "bulk_modulus.txt": "reference_match",
+    "hardness.txt": "reference_match",
+    "xrd_pattern.csv": "reference_match",
+    "raman_spectrum.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported reference values for C carbon properties",
+      "source_provenance": "Paper text: abstract 'lowest enthalpy ... direct band gap around 4.38 eV ... bulk modulus (427.8 GPa) ... Vickers hardness (56 GPa)'; Fig.1(b) enthalpy ranking; Fig.3 XRD peaks ~8.5°,~16°,~17°; Fig.4 Raman peaks at 950,1200,1300 cm⁻¹.",
+      "generation_method": "Extracted directly from the paper's text and figure descriptions.",
+      "why_not_fabricated": "These are the paper's own reported numbers, which define the reproduction target. They are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_structure.cif",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "other",
+          "description": "CIF file containing lattice parameters a, b, c (Å) and atomic fractional coordinates; compared to paper's reference values within tolerances."
+        },
+        "description": "Optimized C carbon unit cell at 15 GPa; lattice parameters and atomic positions are checked against paper's reported values."
+      },
+      {
+        "file": "enthalpy_vs_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "H_graphite",
+            "H_diamond",
+            "H_M_carbon",
+            "H_W_carbon",
+            "H_bctC4",
+            "H_oC16II",
+            "H_CcoC8",
+            "H_C_carbon"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "H_graphite": "eV/atom",
+            "H_diamond": "eV/atom",
+            "H_M_carbon": "eV/atom",
+            "H_W_carbon": "eV/atom",
+            "H_bctC4": "eV/atom",
+            "H_oC16II": "eV/atom",
+            "H_CcoC8": "eV/atom",
+            "H_C_carbon": "eV/atom"
+          }
+        },
+        "description": "Enthalpy per atom for all carbon phases at multiple pressures; the checker verifies that C carbon is the most stable phase at pressures above a threshold consistent with the paper's claim."
+      },
+      {
+        "file": "phonon_dispersion.yaml",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "q_path",
+            "frequencies",
+            "max_imaginary_frequency"
+          ],
+          "items": {
+            "q_path": "list of string labels",
+            "frequencies": "list of lists of floats (cm⁻¹)",
+            "max_imaginary_frequency": "float (cm⁻¹)"
+          }
+        },
+        "description": "Phonon dispersion data and max_imaginary_frequency; stability is validated if the maximum imaginary frequency is within a small tolerance."
+      },
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number giving the direct band gap at Γ point in eV."
+        },
+        "description": "Direct band gap; compared to paper's reference value within tolerance."
+      },
+      {
+        "file": "bulk_modulus.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number giving the bulk modulus in GPa."
+        },
+        "description": "Bulk modulus B0 from EOS fit; compared to paper's reference value within tolerance."
+      },
+      {
+        "file": "hardness.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number giving the Vickers hardness in GPa."
+        },
+        "description": "Vickers hardness; compared to paper's reference value within tolerance."
+      },
+      {
+        "file": "xrd_pattern.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "two_theta_deg",
+            "intensity_arb"
+          ],
+          "units": {
+            "two_theta_deg": "degrees",
+            "intensity_arb": "arbitrary units"
+          }
+        },
+        "description": "Simulated XRD pattern; peak positions are compared to reference values within tolerance."
+      },
+      {
+        "file": "raman_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "raman_shift_cm^{-1}",
+            "intensity_arb"
+          ],
+          "units": {
+            "raman_shift_cm^{-1}": "cm⁻¹",
+            "intensity_arb": "arbitrary units"
+          }
+        },
+        "description": "Raman spectrum; peak positions are compared to reference values within tolerance."
+      }
+    ],
+    "notes": "All scored quantities are compared to paper-reported values with appropriate tolerances. The enthalpy check uses a threshold_or_better policy to ensure C carbon is the lowest-enthalpy phase. The phonon stability check is based on max_imaginary_frequency. The remaining quantities are checked via reference_match with tolerances derived from expected DFT spread."
+  },
+  "steps": [
+    {
+      "id": "s2",
+      "output_file": "relaxed_structure.cif",
+      "kind": "structure_relaxed_match",
+      "weight": 0.05,
+      "target_lattice_a": 2.469,
+      "target_lattice_b": 11.17,
+      "target_lattice_c": 4.802,
+      "tolerance_a": 0.05,
+      "tolerance_b": 0.1,
+      "tolerance_c": 0.05,
+      "require_n_atoms": 24
+    },
+    {
+      "id": "s4",
+      "output_file": "enthalpy_vs_pressure.csv",
+      "kind": "enthalpy_ordering",
+      "weight": 0.4,
+      "pressure_threshold": 6.5,
+      "epsilon": 1e-06
+    },
+    {
+      "id": "s5",
+      "output_file": "phonon_dispersion.yaml",
+      "kind": "phonon_stability",
+      "weight": 0.1,
+      "max_imaginary_threshold": -1.0
+    },
+    {
+      "id": "s6",
+      "output_file": "band_gap.txt",
+      "kind": "numeric_reference_match",
+      "weight": 0.1,
+      "target": 4.38,
+      "tolerance": 0.2
+    },
+    {
+      "id": "s7",
+      "output_file": "bulk_modulus.txt",
+      "kind": "numeric_reference_match",
+      "weight": 0.1,
+      "target": 427.8,
+      "tolerance": 10.0
+    },
+    {
+      "id": "s8",
+      "output_file": "hardness.txt",
+      "kind": "numeric_reference_match",
+      "weight": 0.1,
+      "target": 56.0,
+      "tolerance": 5.0
+    },
+    {
+      "id": "s9",
+      "output_file": "xrd_pattern.csv",
+      "kind": "xrd_peak_match",
+      "weight": 0.1,
+      "target_peaks": [
+        8.5,
+        16.0,
+        17.0
+      ],
+      "tolerance": 0.5
+    },
+    {
+      "id": "s10",
+      "output_file": "raman_spectrum.csv",
+      "kind": "raman_peak_match",
+      "weight": 0.05,
+      "target_peaks": [
+        950,
+        1200,
+        1300
+      ],
+      "tolerance": 30
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1: checker recomputes peak coverage and domain density from the agent’s process artifact domain_data.csv, then compares to paper gold from Table 1.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold peak coverage and domain density for Bi, As, Hg from the paper’s Table 1 (reactive domain counts model).",
+      "source_provenance": "Table 1 in the paper; columns: θ and number of reactive domains per unit cm².",
+      "generation_method": "Extracted directly from the published table: Bi (θ=0.65, domains=1.52×10¹⁴ cm⁻²), As (θ=0.70, domains=1.57×10¹⁴ cm⁻²), Hg (θ=0.70, domains=1.97×10¹⁴ cm⁻²).",
+      "why_not_fabricated": "These are the exact values the paper reports for the geometric model prediction; they serve as the hidden reference against which the agent’s simulation output is verified."
+    }
+  ],
+  "target_policies": {
+    "peak_data.csv": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "peak_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "S_M",
+            "coverage_peak",
+            "domain_density"
+          ],
+          "units": {
+            "coverage_peak": "dimensionless",
+            "domain_density": "10^14 cm^-2"
+          }
+        },
+        "description": "For each ad-atom species (Bi, As, Hg), the coverage at which the arithmetic mean of reactive domain counts over fcc(100),(111),(110) is maximal, and the corresponding domain density."
+      }
+    ],
+    "notes": "The solver must compute the geometric model; experimental current measurements are not part of this task. The hidden checker compares the reported values against gold values from the paper with tolerances (coverage_peak ±0.05, domain_density ±20% relative)."
+  },
+  "steps": [
+    {
+      "id": "step_02_peak",
+      "output_file": "peak_data.csv",
+      "kind": "recompute_peak",
+      "weight": 1.0,
+      "gold_species": {
+        "Bi": {
+          "coverage_peak": 0.65,
+          "domain_density": 1.52
+        },
+        "As": {
+          "coverage_peak": 0.7,
+          "domain_density": 1.57
+        },
+        "Hg": {
+          "coverage_peak": 0.7,
+          "domain_density": 1.97
+        }
+      },
+      "tolerances": {
+        "coverage_peak": 0.05,
+        "domain_density_rel": 0.2
+      }
+    }
+  ]
+}

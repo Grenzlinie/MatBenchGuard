@@ -1,0 +1,152 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline CCE carbon concentrations are computed from a full CCE solver; the verifier cannot re‑run that solver, so it compares the agent’s reported values to the paper‑reported gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold carbon concentrations for ternary alloys and TRIP steels, plus V_gamma gold values.",
+      "source_provenance": "Extracted from paper Table 1 and Figures 3/4; values encoded in reference solve.sh and consistent with the paper.",
+      "generation_method": "Direct transcription from solve.sh, which itself reproduces the paper’s reported numbers.",
+      "why_not_fabricated": "These are the paper’s actual reported quantities; the reference oracle writes them, confirming they correspond to the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cce_alloying_elements.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Alloy_element",
+            "Temperature_C",
+            "Austenite_vol_fraction",
+            "C_austenite_wt"
+          ],
+          "units": {
+            "Temperature_C": "°C",
+            "Austenite_vol_fraction": "dimensionless",
+            "C_austenite_wt": "wt%"
+          }
+        },
+        "description": "CCE carbon concentration in austenite for eight ternary Fe‑1%X‑0.5%C alloys, used to verify the solver and reproduce the alloying effect trends."
+      },
+      {
+        "file": "cce_trip_steels.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Steel_label",
+            "Composition",
+            "Intercritical_T_C",
+            "Austempering_T_C",
+            "V_gamma_calc",
+            "C_austenite_CCE_wt"
+          ],
+          "units": {
+            "Intercritical_T_C": "°C",
+            "Austempering_T_C": "°C",
+            "V_gamma_calc": "dimensionless",
+            "C_austenite_CCE_wt": "wt%"
+          }
+        },
+        "description": "CCE carbon concentration in retained austenite for eight TRIP steels, compared against paper‑reported values and trend checks (T0 and paraequilibrium)."
+      }
+    ],
+    "notes": "The checker compares the submitted carbon concentrations to the expected thermodynamic values and evaluates required relative trends among alloying elements. Scoring tolerates legitimate differences arising from the choice of thermodynamic database, while still enforcing the reported qualitative orderings and approximate magnitudes."
+  },
+  "steps": [
+    {
+      "id": "check_alloy",
+      "output_file": "cce_alloying_elements.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "schema_validation": {
+        "required_columns": [
+          "Alloy_element",
+          "Temperature_C",
+          "Austenite_vol_fraction",
+          "C_austenite_wt"
+        ],
+        "expected_rows": 8
+      },
+      "scoring": {
+        "identifier_column": "Alloy_element",
+        "value_column": "C_austenite_wt",
+        "gold": {
+          "Al": 1.45,
+          "Cr": 1.3,
+          "Cu": 1.56,
+          "Mn": 1.57,
+          "Mo": 1.3,
+          "Ni": 1.56,
+          "Si": 1.57,
+          "P": 1.75
+        },
+        "tolerance_abs": 0.2,
+        "decay": "linear"
+      }
+    },
+    {
+      "id": "check_trip",
+      "output_file": "cce_trip_steels.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "schema_validation": {
+        "required_columns": [
+          "Steel_label",
+          "Composition",
+          "Intercritical_T_C",
+          "Austempering_T_C",
+          "V_gamma_calc",
+          "C_austenite_CCE_wt"
+        ],
+        "expected_rows": 8
+      },
+      "scoring": {
+        "cc_e": {
+          "identifier_column": "Steel_label",
+          "value_column": "C_austenite_CCE_wt",
+          "gold": {
+            "TRIP1": 1.88,
+            "TRIP2": 1.85,
+            "TRIP3": 1.79,
+            "TRIP4": 2.16,
+            "TRIP5": 2.4,
+            "TRIP6": 2.19,
+            "TRIP7": 1.5,
+            "TRIP8": 2.12
+          },
+          "tolerance_abs": 0.25,
+          "decay": "linear",
+          "weight": 0.8
+        },
+        "v_gamma": {
+          "identifier_column": "Steel_label",
+          "value_column": "V_gamma_calc",
+          "gold": {
+            "TRIP1": 0.097,
+            "TRIP2": 0.099,
+            "TRIP3": 0.102,
+            "TRIP4": 0.133,
+            "TRIP5": 0.121,
+            "TRIP6": 0.133,
+            "TRIP7": 0.108,
+            "TRIP8": 0.088
+          },
+          "tolerance_abs": 0.02,
+          "decay": "linear",
+          "weight": 0.2
+        }
+      }
+    }
+  ]
+}

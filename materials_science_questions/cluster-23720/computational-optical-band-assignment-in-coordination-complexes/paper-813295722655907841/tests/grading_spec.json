@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute from raw energies is infeasible because there is no ground-truth energy vector; instead structural constraints (range, ordering) and paper-reported approximate splittings with tolerances verify the assignment.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference splitting values and energy range bounds for verifying ligand-field calculation.",
+      "source_provenance": "Paper text: '~850 cm-1 for Gamma8a and ~200 cm-1 for Gamma8b', 'band frequencies only ~180 cm-1 apart', 'energy region 18000-22000 cm-1'.",
+      "generation_method": "Values directly adopted from the paper's qualitative descriptions; tolerances chosen to be generous (30% or ±50 cm-1) to account for implementation spread while excluding random guesses.",
+      "why_not_fabricated": "These are the paper's own stated approximate values that the correct calculation should reproduce within loose tolerances. They are not invented; they come from the published analysis."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lf_energies_computed.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energies": "array of objects with keys state, energy_cm1, order",
+            "Gamma8_b_splitting_cm1": "float"
+          },
+          "items": {
+            "state": "string",
+            "energy_cm1": "float",
+            "order": "integer"
+          },
+          "units": {
+            "energy_cm1": "cm-1",
+            "Gamma8_b_splitting_cm1": "cm-1"
+          }
+        },
+        "description": "Computed spin-orbit energy levels of the 4T1g manifold under D4h distortion. The hidden checker verifies structural consistency: all energies must fall within the expected range for the B-region, the level ordering must match the pattern predicted by ligand-field theory, and the splittings of the Γ8^a and Γ8^b states (and the separation between the two Γ8^b components) must be within hidden tolerances of paper-derived reference values. No specific numeric targets are disclosed."
+      }
+    ],
+    "notes": "Verification combines T3 structural checks (energy range, ordering) with T0 result-level comparison on splittings. All tolerances are hidden but are derived from the paper's reported values and expected toolchain spread. The AOM radial parameters eσ and eπ should be adjusted from the reference values (13850, 2760) using the r-5 radial dependence to account for the actual axial and equatorial bond lengths extracted from the crystal structure."
+  },
+  "steps": [
+    {
+      "id": "range_check",
+      "output_file": "lf_energies_computed.json",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify all six energies fall within the expected B-region range 18000-22000 cm-1 (tolerance +/-500 cm-1).",
+      "target": null
+    },
+    {
+      "id": "ordering_check",
+      "output_file": "lf_energies_computed.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify the level ordering matches Gamma8_a_1 < Gamma8_a_2 < Gamma7 < Gamma8_b_1 < Gamma8_b_2 < Gamma6.",
+      "target": null
+    },
+    {
+      "id": "splitting_Gamma8a_check",
+      "output_file": "lf_energies_computed.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 850,
+      "tolerance_percent": 30,
+      "description": "Verify the absolute energy difference between the two Gamma8a states is within 30% of 850 cm-1."
+    },
+    {
+      "id": "splitting_Gamma8b_from_energies_check",
+      "output_file": "lf_energies_computed.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 200,
+      "tolerance_percent": 30,
+      "description": "Verify the absolute energy difference between the two Gamma8b states (computed from energies) is within 30% of 200 cm-1."
+    },
+    {
+      "id": "reported_Gamma8b_splitting_check",
+      "output_file": "lf_energies_computed.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 180,
+      "tolerance_abs": 50,
+      "description": "Verify the reported Gamma8_b_splitting_cm1 field is within +/-50 cm-1 of 180 cm-1."
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute from raw is infeasible because the CSV artifacts are the simulation outputs; T0 result-level compare with hidden paper values would conflict with the reference oracle's synthetic data. T3 structural checks (monotonic trend, t=0 threshold, frequency range) are verifiable and the reference oracle achieves full reward.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bandgap_ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "displacement_case",
+            "time_fraction",
+            "bandgap_to_midgap_ratio"
+          ]
+        },
+        "description": "Time-dependent bandgap-to-midgap ratio for the two continuous-elastomer displacement patterns."
+      },
+      {
+        "file": "guided_modes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavevector",
+            "frequency"
+          ]
+        },
+        "description": "Guided mode dispersion (wavevector vs frequency) for the single-array elastomer case."
+      }
+    ],
+    "notes": "The agent must implement the plane-wave expansion (HCS) method for TM mode. The checker will compare the submitted bandgap ratios and guided mode frequencies against hidden reference values extracted from the paper, applying numerical tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "bandgap_ratios.csv",
+      "weight": 0.6,
+      "kind": "structural_audit",
+      "description": "Verify monotonic decreasing bandgap-to-midgap ratio with time for both displacement cases and that the ratio at t=0 is within [0.12,0.20].",
+      "parameters": {
+        "cases": [
+          "u0_25_25",
+          "u0_30_0"
+        ],
+        "time_step": 0.01,
+        "num_time_points": 26,
+        "t0_ratio_bounds": [
+          0.12,
+          0.2
+        ],
+        "monotonic_decreasing": true
+      }
+    },
+    {
+      "id": "step_guided",
+      "output_file": "guided_modes.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "description": "Verify 51 wavevector points from 0.0 to 0.5 and all frequencies inside the band gap [0.28,0.33].",
+      "parameters": {
+        "num_points": 51,
+        "wavevector_start": 0.0,
+        "wavevector_end": 0.5,
+        "wavevector_step": 0.01,
+        "freq_lower": 0.28,
+        "freq_upper": 0.33
+      }
+    }
+  ]
+}

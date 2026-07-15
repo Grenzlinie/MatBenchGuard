@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Comparison of computed compressibility values to paper-reported approximate values along the isochore, with tolerance absorbing numerical discretization differences, and structural trend bonus.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "chi0_over_chi_vs_Gamma.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Golden reference table of (Gamma, chi0_over_chi) along the isochore extracted from the paper.",
+      "source_provenance": "Figure 6 and associated text in the paper 'Further investigations into the low-density behaviour of the hypernetted chain equation for ionic fluids' (Molecular Physics, 1992).",
+      "generation_method": "Approximate values read from the isochore curves in Figure 6 at ρσ³=0.05, with minor rounding.",
+      "why_not_fabricated": "These are the paper's own reported results for this isochore, providing a concrete verification target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "chi0_over_chi_vs_Gamma.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Gamma",
+            "chi0_over_chi"
+          ],
+          "columns_schema": {
+            "Gamma": "float",
+            "chi0_over_chi": "float"
+          }
+        },
+        "description": "Computed inverse isothermal compressibility χ0/χ for the RPM at ρσ³=0.05 as a function of Γ. Used for comparison to hidden reference values and structural trend checks."
+      }
+    ],
+    "notes": "The solving agent must reimplement the HNC solver and produce this CSV. The hidden checker compares each chi0_over_chi against reference values with a tolerance and verifies monotonic decrease. Only converged state points are required."
+  },
+  "steps": [
+    {
+      "id": "chi0_pointwise",
+      "output_file": "chi0_over_chi_vs_Gamma.csv",
+      "kind": "numeric",
+      "weight": 0.9,
+      "description": "Per-point comparison of chi0_over_chi to paper's approximate values within 15% relative tolerance.",
+      "gold_table": [
+        {
+          "Gamma": 2.0,
+          "chi0": 0.92
+        },
+        {
+          "Gamma": 5.0,
+          "chi0": 0.82
+        },
+        {
+          "Gamma": 7.0,
+          "chi0": 0.72
+        },
+        {
+          "Gamma": 8.0,
+          "chi0": 0.62
+        },
+        {
+          "Gamma": 10.0,
+          "chi0": 0.35
+        },
+        {
+          "Gamma": 12.0,
+          "chi0": 0.1
+        },
+        {
+          "Gamma": 14.0,
+          "chi0": 0.02
+        }
+      ],
+      "tolerance_relative": 0.15
+    },
+    {
+      "id": "chi0_structural",
+      "output_file": "chi0_over_chi_vs_Gamma.csv",
+      "kind": "structural",
+      "weight": 0.1,
+      "description": "Verify monotonic decrease in chi0_over_chi with Gamma, and that the ratio of mean of first two to mean of last two points is >= 5.",
+      "monotonic_direction": "decreasing",
+      "ratio_threshold": 5.0
+    }
+  ]
+}

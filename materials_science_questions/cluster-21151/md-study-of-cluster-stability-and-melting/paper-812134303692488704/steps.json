@@ -1,0 +1,80 @@
+[
+  {
+    "id": "generate_initial_config",
+    "title": "Generate initial liquid iron configuration",
+    "role": "process",
+    "action": "Create a random close-packed configuration of 100000 iron atoms in a cubic box with periodic boundaries at density 7800 kg/m³. Assign Maxwell-distributed velocities at 2300 K.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the starting atomic coordinates and velocities for the MD simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "equilibrate_2300k",
+    "title": "Equilibrate the liquid at 2300 K",
+    "role": "process",
+    "action": "Run MD with the Pak-Doyama potential at fixed volume and T=2300 K: 3000 isothermal steps followed by 3000 adiabatic steps (Δ t = 1.523×10⁻¹⁵ s, Verlet integration).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Equilibrates the initial configuration to a well-defined liquid state at 2300 K.",
+    "output_schema": ""
+  },
+  {
+    "id": "isothermal_annealing",
+    "title": "Instantaneous quench and isothermal annealing",
+    "role": "process",
+    "action": "Instantaneously change temperature to each target (1240 K down to 900 K in 20 K steps). Run cyclic annealing (1000Δ t isothermal + 4000Δ t adiabatic per cycle) until rapid crystallization. Record atom trajectories and system energies.",
+    "output_file": "",
+    "evidence": "trajectories.lammpstrj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces raw MD trajectories for all supercooled temperatures that are needed for diffusion analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_msd",
+    "title": "Compute mean-square displacement",
+    "role": "process",
+    "action": "After each annealing cycle, quench to 0 K to establish reference positions; compute mean-square atomic displacement ⟨Δ r²(t)⟩ as a function of time t from the start of the current cycle (preannealing time τ=0.7615×10⁻¹¹ s). Output MSD(t) curves for every temperature.",
+    "output_file": "",
+    "evidence": "msd_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Extracts the MSD kinetics from the trajectories, serving as the input for fitting the diffusion model.",
+    "output_schema": ""
+  },
+  {
+    "id": "fit_msd_model",
+    "title": "Fit two-component model to MSD data",
+    "role": "process",
+    "action": "For each temperature, fit the equation ⟨Δ r²(t)⟩ = a k_B T ln(t/τ+1) + 6 D t to the MSD data using non-linear least squares, extracting the product a = δr² n₀ Ω and the self-diffusion coefficient D.",
+    "output_file": "",
+    "evidence": "DT_values.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Deconvolves the logarithmic relaxation and linear diffusion contributions to obtain D(T) for all temperatures.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_activation_params",
+    "title": "Arrhenius analysis of self-diffusion",
+    "role": "scored",
+    "action": "Separate the D(T) data into supercooled melt and metallic glass regimes; perform separate linear fits of ln D = ln D₀ − Eₐ/(k_B T) to obtain activation energies and pre-exponential factors. Write the results to /app/outputs/diffusion_activation_parameters.json.",
+    "output_file": "diffusion_activation_parameters.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final scored artifact – self-diffusion activation parameters for the melt and glass states, derived from the complete MD workflow.",
+    "output_schema": "{\"Ea_melt_eV\": \"number\", \"D0_melt_m2_per_s\": \"number\", \"Ea_glass_eV\": \"number\", \"D0_glass_m2_per_s\": \"number\"}"
+  }
+]

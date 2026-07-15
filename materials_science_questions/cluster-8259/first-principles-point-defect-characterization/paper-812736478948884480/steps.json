@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_build_supercells",
+    "title": "Build supercell models",
+    "role": "process",
+    "action": "Construct the 2×2×1 tetragonal supercell of MAPbI3, then create defective structures I_i, I_i⁻¹, I_i⁺¹, and IO₃⁻¹ by adding interstitial iodine (and adjusting charge) and oxygen atoms as needed.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare initial atomic configurations for all five systems.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_geometry_optimization",
+    "title": "DFT geometry optimization at 0 K",
+    "role": "process",
+    "action": "Perform full DFT geometry optimization at 0 K for each of the five systems (pristine, I_i, I_i⁻¹, I_i⁺¹, IO₃⁻¹) using PBE functional, PAW pseudopotentials, DFT-D3 van der Waals correction, and a plane-wave cutoff of 400 eV. Converge forces tightly.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain optimized 0 K structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_molecular_dynamics",
+    "title": "Ab initio molecular dynamics at 300 K",
+    "role": "process",
+    "action": "For each optimized system, heat from 0 K to 300 K over 2 ps using velocity rescaling, then continue a 6 ps microcanonical (NVE) MD trajectory with a 1 fs time step. Save at least 4000 snapshots (coordinates, velocities, total energies).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate thermally equilibrated trajectories.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_structural_distances",
+    "title": "Compute I–I and I–Pb distances",
+    "role": "scored",
+    "action": "From the 0 K optimized geometries and the 300 K MD trajectories, extract the interstitial–lattice I–I distances and the I–Pb distances for I_i, I_i⁻¹, I_i⁺¹. Compute canonical averages over the MD trajectory for 300 K. Report the data in JSON.",
+    "output_file": "structural_distances.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Equilibrium and thermally averaged bond lengths for interstitial iodine defect systems.",
+    "output_schema": "A JSON object with top-level keys 'I_i', 'I_i_minus1', 'I_i_plus1'. Each key's value is an object with two sub-objects: '0K' and '300K'. Each of these contains 'I_I_distance' (float, Å) and 'I_Pb_distance' (float, Å)."
+  },
+  {
+    "id": "step_05_rms_velocities",
+    "title": "Compute root-mean-square velocities",
+    "role": "scored",
+    "action": "Using the 6 ps MD trajectories, compute the root-mean-square (RMS) velocity of atomic positions (Å/fs) for each system, partitioned into groups: total, MA cations, Pb–I lattice atoms, Pb–I including interstitial iodine, interstitial iodine itself, and oxygen (where present). Report as CSV.",
+    "output_file": "rms_velocities.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Atomic fluctuation amplitudes for each system, as in Table 1 of the paper.",
+    "output_schema": "CSV with columns: System (string, one of 'MAPbI3', 'I_i', 'I_i_minus1', 'I_i_plus1', 'IO3_minus1'), total (float, Å/fs), MA (float, Å/fs), Pb_I_lattice (float, Å/fs), Pb_I_including_interstitial (float, Å/fs), interstitial_I (float, Å/fs), O (float, Å/fs, 0.0 when absent)."
+  },
+  {
+    "id": "step_06_nonadiabatic_molecular_dynamics",
+    "title": "Run NAMD simulations",
+    "role": "process",
+    "action": "For each system, take the first 4000 MD snapshots, compute Kohn–Sham orbitals and nonadiabatic couplings. Perform decoherence-induced surface hopping (DISH) NAMD simulations to obtain state-to-state transition rate constants for all relevant processes (CBM→VBM, VBM→trap, CBM→trap, etc.). Save the raw rate constants.",
+    "output_file": "",
+    "evidence": "na_rate_constants.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute rate constants for charge trapping and recombination channels.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_recombination_times",
+    "title": "Kinetic analysis and recombination times",
+    "role": "scored",
+    "action": "Using the rate constants obtained in step_06, solve the coupled kinetic equations for each system to obtain the macroscopic electron–hole recombination times (in ns). Report the times and the relative ordering of recombination times across systems in JSON.",
+    "output_file": "recombination_times.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derive overall electron–hole recombination time constants from NAMD rate constants. The output must include recombination times (in ns) for pristine, I_i, I_i⁻¹, I_i⁺¹, and IO₃⁻¹, and must satisfy the trend IO₃⁻¹ > I_i⁺¹ > I_i⁻¹ > pristine > I_i (longer time = slower recombination).",
+    "output_schema": "A JSON object with top-level keys 'pristine', 'I_i', 'I_i_minus1', 'I_i_plus1', 'IO3_minus1'. Each key's value is an object containing 'recombination_time_ns' (float) and optionally 'rate_constant_per_ps' (float). Also include an array 'recombination_ordering' listing the system identifiers in increasing order of recombination time (e.g., ['I_i','pristine','I_i_minus1','I_i_plus1','IO3_minus1'])."
+  }
+]

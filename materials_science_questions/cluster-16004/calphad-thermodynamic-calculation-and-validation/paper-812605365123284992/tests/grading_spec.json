@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact phase fractions depend on the chosen public thermodynamic database, preventing a robust absolute‑value comparison. Structural checks of phase coexistence at the oxidation temperature and monotonic trends capture the physical claim without requiring a fixed gold number.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phase_fractions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature",
+            "Phase",
+            "MoleFraction"
+          ],
+          "units": {
+            "Temperature": "°C"
+          }
+        },
+        "description": "Equilibrium phase fractions at each temperature from 900 to 1200 °C. Each row lists a phase with mole fraction > 0.0001 at a given temperature."
+      }
+    ],
+    "notes": "Scoring is structural: the checker will verify that certain phase labels exist at 1100 °C with mole fraction > 0.001 (e.g., a B2 phase, an L1₂ phase, a sigma/Mo(Re) phase) and that a Re(Cr) or HCP phase label, if present, has mole fraction < 0.01. Exact fractions are not compared."
+  },
+  "steps": [
+    {
+      "id": "structural_at_1100C",
+      "output_file": "step_01_phase_fractions.csv",
+      "kind": "structural",
+      "weight": 0.6,
+      "config": {
+        "temperature": 1100,
+        "required_categories": [
+          {
+            "label": "beta",
+            "aliases": [
+              "B2_BETA",
+              "B2",
+              "BCC_B2"
+            ]
+          },
+          {
+            "label": "gamma_prime",
+            "aliases": [
+              "L12_FCC",
+              "FCC_L12",
+              "L12"
+            ]
+          },
+          {
+            "label": "sigma",
+            "aliases": [
+              "SIGMA",
+              "MoRe",
+              "SIGMA_PHASE"
+            ]
+          }
+        ],
+        "min_mole_fraction": 0.001,
+        "forbidden_categories": [
+          {
+            "label": "hcp_or_re_cr",
+            "aliases": [
+              "HCP_A3",
+              "HCP",
+              "ReCr",
+              "RE_CR"
+            ]
+          }
+        ],
+        "max_mole_fraction": 0.01
+      }
+    },
+    {
+      "id": "monotonic_trend",
+      "output_file": "step_01_phase_fractions.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "config": {
+        "temperatures": [
+          900,
+          950,
+          1000,
+          1050,
+          1100,
+          1150,
+          1200
+        ],
+        "beta_aliases": [
+          "B2_BETA",
+          "B2",
+          "BCC_B2"
+        ],
+        "gamma_prime_aliases": [
+          "L12_FCC",
+          "FCC_L12",
+          "L12"
+        ],
+        "epsilon": 0.0001
+      }
+    }
+  ]
+}

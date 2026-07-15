@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_run_simulation",
+    "title": "Run MPCD simulation",
+    "role": "process",
+    "action": "Implement the multi-particle collision (MPC) algorithm with free streaming and random rotations of velocities in cells. Initialize N particles in a periodic 3D box partitioned into 32×32×32 cells, with average density ρ=10.0 particles per cell and temperature kB T=1/3. Use rotation angle ±π/2 about random axes. Equilibrate the system and then run a production phase long enough for the stress autocorrelation to decay to near zero (e.g., at least 10000 time steps). Record the off-diagonal stress component σ_xy at every step and save the trajectory as a NumPy array.",
+    "output_file": "",
+    "evidence": "stress_trajectory.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core MPC simulation that generates the raw stress trajectory needed to compute the scored autocorrelation and viscosity. Without this step the downstream scored artifacts cannot be honestly produced.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_compute_autocorrelation",
+    "title": "Compute stress autocorrelation function",
+    "role": "scored",
+    "action": "From the saved off-diagonal stress trajectory, compute the stress–stress autocorrelation function C(t) = ⟨σ_xy(0) σ_xy(t)⟩ averaged over time origins. Write the result as a CSV file with columns 'time' and 'autocorrelation'.",
+    "output_file": "stress_autocorrelation.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Stress autocorrelation function for the 3D MPC system. The curve should decay to near zero within a few reduced time units.",
+    "output_schema": "Two columns: time (float, lag time in units of τ) and autocorrelation (float, dimensionless C(t)/C(0)). Header row required."
+  },
+  {
+    "id": "step_03_compute_viscosity",
+    "title": "Compute shear viscosity",
+    "role": "scored",
+    "action": "Using the autocorrelation function from the previous step, compute the shear viscosity η according to the discrete Green–Kubo formula described in the method: η = (m²ρ / (2 kB T N)) * Σ_{ℓ} C(ℓτ) * τ, with appropriate units. Write the result as a JSON object with key 'shear_viscosity'.",
+    "output_file": "shear_viscosity.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Shear viscosity obtained by integrating the stress autocorrelation. Computed in simulation units (m=1, τ=1, cell length=1).",
+    "output_schema": "A JSON object containing a single key 'shear_viscosity' with a numeric value (float)."
+  }
+]

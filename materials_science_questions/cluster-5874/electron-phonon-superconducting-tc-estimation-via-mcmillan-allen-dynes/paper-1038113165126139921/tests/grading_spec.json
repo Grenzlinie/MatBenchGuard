@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Tc is recomputed from λ and ω_log using the McMillan-Allen-Dynes formula (μ*=0.1); λ, ω_log, N(E_F) are compared to paper Table III; Spearman correlation and pressure/doping ordering are structural but derived from the agent's reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "superconducting_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference λ, ω_log, N(E_F) for RS-LuH and Lu4NH3 at 0,1,10 GPa",
+      "source_provenance": "Table III of J. Appl. Phys. 136, 023903 (2024)",
+      "generation_method": "Copied verbatim from the published table",
+      "why_not_fabricated": "These are the exact reported numbers in the paper; they constitute the hidden gold for direct comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "superconducting_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "pressure_GPa",
+            "Tc_K",
+            "lambda",
+            "omega_log_K",
+            "N_EF_states_per_spin_Ry_unitcell"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "Tc_K": "K",
+            "omega_log_K": "K",
+            "N_EF_states_per_spin_Ry_unitcell": "states/(spin*Ry*unitcell)"
+          }
+        },
+        "description": "Table of computed superconducting parameters for all studied compounds and pressures. The hidden checker compares the Tc, λ, ω_log, and N(E_F) values to paper-reported reference numbers and validates the monotonic increase of Tc with lanthanide atomic number (excluding Yb and La anomalies), the decrease of Tc with increasing pressure for RS-LuH and Lu4NH3, and the lower Tc of the N-doped compound compared to pristine RS-LuH at each pressure."
+      }
+    ],
+    "notes": "All required compounds and pressures are listed in the step action. For YbH at 0 GPa (dynamically unstable) the Tc field may be left blank or omitted; the checker handles this when evaluating trends."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "superconducting_properties.csv",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "description": "Verify CSV exists, has required columns, and contains at least 21 rows."
+    },
+    {
+      "id": "tc_recompute",
+      "output_file": "superconducting_properties.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "Recompute Tc from λ and ω_log using McMillan-Allen-Dynes (μ*=0.1) and compare with reported Tc; score average agreement."
+    },
+    {
+      "id": "param_value_match",
+      "output_file": "superconducting_properties.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": [
+        {
+          "compound": "RS-LuH",
+          "pressure_GPa": 0.0,
+          "lambda": 1.02,
+          "omega_log_K": 275.1,
+          "N_EF_states_per_spin_Ry_unitcell": 8.07
+        },
+        {
+          "compound": "RS-LuH",
+          "pressure_GPa": 1.0,
+          "lambda": 0.86,
+          "omega_log_K": 294.0,
+          "N_EF_states_per_spin_Ry_unitcell": 7.96
+        },
+        {
+          "compound": "RS-LuH",
+          "pressure_GPa": 10.0,
+          "lambda": 0.55,
+          "omega_log_K": 294.6,
+          "N_EF_states_per_spin_Ry_unitcell": 6.96
+        },
+        {
+          "compound": "Lu4NH3",
+          "pressure_GPa": 0.0,
+          "lambda": 0.66,
+          "omega_log_K": 277.5,
+          "N_EF_states_per_spin_Ry_unitcell": 30.98
+        },
+        {
+          "compound": "Lu4NH3",
+          "pressure_GPa": 1.0,
+          "lambda": 0.64,
+          "omega_log_K": 278.0,
+          "N_EF_states_per_spin_Ry_unitcell": 30.73
+        },
+        {
+          "compound": "Lu4NH3",
+          "pressure_GPa": 10.0,
+          "lambda": 0.56,
+          "omega_log_K": 276.0,
+          "N_EF_states_per_spin_Ry_unitcell": 28.8
+        }
+      ],
+      "tolerance": {
+        "lambda": 0.1,
+        "omega_log_K": 0.1,
+        "N_EF_states_per_spin_Ry_unitcell": 0.1
+      },
+      "description": "Compare λ, ω_log, N(E_F) for the six known rows to Table III gold with ±10% relative tolerance."
+    },
+    {
+      "id": "monotonic_trend",
+      "output_file": "superconducting_properties.csv",
+      "kind": "structural",
+      "weight": 0.25,
+      "description": "Spearman rank correlation of Tc vs atomic number for lanthanide series at 0 GPa (excluding La and Yb) must be ≥ 0.8."
+    },
+    {
+      "id": "pressure_doping_trends",
+      "output_file": "superconducting_properties.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Tc(RS-LuH) and Tc(Lu4NH3) must decrease with pressure; Tc(Lu4NH3) < Tc(RS-LuH) at each pressure."
+    }
+  ]
+}

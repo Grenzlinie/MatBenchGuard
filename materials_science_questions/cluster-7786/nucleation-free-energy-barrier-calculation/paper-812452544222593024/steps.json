@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_setup",
+    "title": "Model parameter and initial distribution setup",
+    "role": "process",
+    "action": "Define all parameters for the zero barrier case: lattice sizes L=100 (1D) and L=32 (2D), diffusion constants D and D', flux F (not needed for dimensionless rates), Ehrlich-Schwoebel length ℓ_ES=0 → boundary parameter a=0. Construct the uniform initial distribution p^U(n)=1/L^d and the stationary distribution p^S(n): in 1D, p^S(n)=6 n(L+1-n)/(L(L+1)(L+2)); in 2D, the normalized discrete solution of the stationary diffusion equation with absorbing boundaries (parabolic shape).",
+    "output_file": "",
+    "evidence": "params.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_mf_reference",
+    "title": "Compute mean-field (noninteracting) reference results",
+    "role": "process",
+    "action": "For zero barriers, compute the reference nucleation statistics for noninteracting adatoms in 1D (L=100) and 2D (L=32) using the analytical formulas (e.g., eigenmode sums from the paper). Obtain the total meeting number W_NI and, optionally, the spatial distribution P_NI(n). This step provides a baseline check but is not required for the scored artifacts.",
+    "output_file": "",
+    "evidence": "mf_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_d1_analytic",
+    "title": "Exact analytical solution for interacting adatoms in 1D",
+    "role": "process",
+    "action": "Implement the mapping of two adatoms on a 1D terrace to a 2D random walker with an absorbing diagonal. Use separation of variables in a sine basis and the antisymmetric initial condition trick. Compute the eigenmode coefficients and the cumulative first-meeting probability P(n) for n=1..L. Summation over eigenmodes must be carried to convergence (all k,j from 1 to L or until contributions are negligible). Record the total meeting probability W from this solution.",
+    "output_file": "",
+    "evidence": "d1_analysis.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_d1_spatial",
+    "title": "Output 1D spatial distribution of first nucleation events",
+    "role": "scored",
+    "action": "Write the unnormalized probabilities P(n) computed from the interacting adatom exact solution for L=100 into a CSV file with columns n (1..100) and P_n.",
+    "output_file": "spatial_distribution_d1.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Spatial distribution of first nucleation events on a 1D terrace of size L=100 with zero step-edge barrier, computed analytically.",
+    "output_schema": "Two columns: n (integer, 1 ≤ n ≤ 100), P_n (non‑negative float)"
+  },
+  {
+    "id": "step_d2_numerical",
+    "title": "Numerical integration of 4D master equation for 2D",
+    "role": "process",
+    "action": "Discretize the 4D probability p_{m1,n1,m2,n2}(t) for L=32 with zero barrier (a=0) and the initial symmetrized distribution. Iterate the discrete evolution equation forward in time, recording at each step the probability current onto the absorbing hyperplane (m1=m2, n1=n2) to accumulate the temporal distribution. Terminate when the temporal distribution has decayed to a negligible level. From the accumulated nucleations, compute the total meeting probability W and the dimensionless nucleation rate ω D/(F² L⁶) for the 2D case.",
+    "output_file": "",
+    "evidence": "d2_simulation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_nucleation_rates",
+    "title": "Compile nucleation rates JSON",
+    "role": "scored",
+    "action": "Collect the 1D results (W from the analytical solution, compute d1_omega_dimless = W / 12) and the 2D results (numerically determined W and d2_omega_dimless). Write a JSON file with keys 'd1_W', 'd1_omega_dimless', and 'd2_omega_dimless'. The dimensionless rates are defined as: d1_omega_dimless = ω D / (F² L⁴) for L=100; d2_omega_dimless = ω D / (F² L⁶) for L=32.",
+    "output_file": "nucleation_rates.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON containing the total meeting probability W for 1D zero-barrier and the dimensionless nucleation rates for 1D (L=100) and 2D (L=32) zero-barrier interacting adatoms.",
+    "output_schema": "{'d1_W': float, 'd1_omega_dimless': float, 'd2_omega_dimless': float}"
+  }
+]

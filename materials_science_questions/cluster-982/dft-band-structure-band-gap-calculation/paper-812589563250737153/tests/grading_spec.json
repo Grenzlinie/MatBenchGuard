@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Band gap compared to paper value with tolerance; band structure validated structurally.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "First line: two integers (number of k‑points, number of bands). Each subsequent line: kpoint_index band_index energy_eV (indices starting from 1)."
+        },
+        "description": "Raw electronic band structure along the high‑symmetry path. Verified for structural consistency (non‑empty, correct line count, plausible energy range)."
+      },
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap": "float (eV)"
+          }
+        },
+        "description": "Computed direct band gap at the Γ point. The value is compared to the paper‑reported DFT band gap with an allowed tolerance that accounts for differences in DFT code and pseudopotentials."
+      }
+    ],
+    "notes": "The band gap is extracted from the computed band structure and must be consistent with it. Tolerance for the band gap is not disclosed to the solver."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap value for exact-match comparison with tolerance.",
+      "source_provenance": "Paper abstract and Band Structure section: \"calculated energy gap of the crystal is about 4.18 eV\".",
+      "generation_method": "Copied directly from the published paper.",
+      "why_not_fabricated": "The value is the paper's reported DFT band gap for the same compound, same model."
+    }
+  ],
+  "steps": [
+    {
+      "id": "band_structure_check",
+      "output_file": "band_structure.dat",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "check": {
+        "non_empty": true,
+        "header_two_ints": true,
+        "valid_line_count": true,
+        "energy_range": [
+          -50.0,
+          50.0
+        ],
+        "finite_energies": true
+      }
+    },
+    {
+      "id": "band_gap_check",
+      "output_file": "band_gap.json",
+      "kind": "numeric",
+      "weight": 0.8,
+      "target_policy": "exact_match",
+      "target": 4.18,
+      "tolerance_abs": 0.5
+    }
+  ]
+}

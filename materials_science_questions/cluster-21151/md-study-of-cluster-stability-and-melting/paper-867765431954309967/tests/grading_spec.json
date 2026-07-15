@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute pairwise correlations from ic_traces; structural trend for coherence because exact paper gold values are not available.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ic_traces.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "target_IC",
+            "neighbor_1_IC",
+            "neighbor_2_IC",
+            "neighbor_3_IC",
+            "neighbor_4_IC",
+            "neighbor_5_IC"
+          ],
+          "units": {
+            "time": "ps",
+            "target_IC": "dimensionless",
+            "neighbor_1_IC": "dimensionless",
+            "neighbor_2_IC": "dimensionless",
+            "neighbor_3_IC": "dimensionless",
+            "neighbor_4_IC": "dimensionless",
+            "neighbor_5_IC": "dimensionless"
+          }
+        },
+        "description": "IC time series of a target atom and its persistent nearest neighbours during a cooperative attachment event. The checker will recompute pairwise Pearson correlations between target_IC and each neighbour_IC over the rise window and verify the average correlation exceeds a hidden threshold."
+      },
+      {
+        "file": "coherence_lengths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "coherence_length"
+          ],
+          "units": {
+            "temperature": "K",
+            "coherence_length": "number of atoms"
+          }
+        },
+        "description": "Average number of cooperatively attaching atoms at each temperature. The checker verifies that coherence_length strictly increases with decreasing temperature and compares the values to a hidden reference (within tolerance)."
+      }
+    ],
+    "notes": "The ic_traces.csv is the primary load-bearing artifact that forces the full MD–IC pipeline to be executed. The coherence_lengths.csv corroborates the temperature trend. No gold values are disclosed here."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "ic_traces_check",
+      "output_file": "ic_traces.csv",
+      "kind": "recompute_metric",
+      "metric": "pairwise_avg_correlation",
+      "target_policy": "threshold_or_better",
+      "threshold": 0.8,
+      "weight": 0.7
+    },
+    {
+      "id": "coherence_lengths_check",
+      "output_file": "coherence_lengths.csv",
+      "kind": "structural_audit",
+      "weight": 0.3
+    }
+  ]
+}

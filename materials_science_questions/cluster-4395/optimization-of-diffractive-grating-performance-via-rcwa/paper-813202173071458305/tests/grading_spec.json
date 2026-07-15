@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The agent reports final optimized parameters and performance metrics after running eigenmode sweeps; no raw simulation outputs (field distributions, effective indices) are available for the verifier to recompute the gain from first principles, so we compare the reported values to the paper’s gold values with tolerances.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "optimal_parameters.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold design parameters and performance metrics",
+      "source_provenance": "Paper Table 2 and conclusion text ('600 nm ridge height', '730 nm period', '0.616 μm⁻¹ threshold gain', '16.3% QW confinement factor')",
+      "generation_method": "extracted directly from the paper's reported final results",
+      "why_not_fabricated": "the gold values are the paper's own published numbers, exactly as quoted in the manuscript"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimal_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "ridge_height_um",
+            "grating_depth_um",
+            "grating_width_um",
+            "period_um",
+            "threshold_gain_per_um",
+            "Qw_confinement_factor"
+          ],
+          "properties": {
+            "ridge_height_um": {
+              "description": "Optimized ridge height in micrometers."
+            },
+            "grating_depth_um": {
+              "description": "Optimized grating depth in micrometers."
+            },
+            "grating_width_um": {
+              "description": "Optimized grating width in micrometers."
+            },
+            "period_um": {
+              "description": "Optimized grating period in micrometers."
+            },
+            "threshold_gain_per_um": {
+              "description": "Final threshold gain in per micrometer (lower is better)."
+            },
+            "Qw_confinement_factor": {
+              "description": "Quantum‑well power confinement factor expressed as a percentage (e.g., 16.3 means 16.3%)."
+            }
+          }
+        },
+        "description": "The fully optimized design parameters and the corresponding threshold gain and QW confinement factor, obtained after running the complete eigenmode sweep pipeline and selecting the best configuration based on physical considerations."
+      }
+    ],
+    "notes": "The checker will verify each structural parameter against the paper’s hidden gold with an absolute tolerance, and evaluate threshold gain with a threshold‑or‑better policy (lower gain is better; meeting or beating the reference earns full credit). The confinement factor is compared with an absolute tolerance. The agent must have genuinely performed the sweeps; the final result cannot be guessed without running the simulations."
+  },
+  "steps": [
+    {
+      "id": "check_final",
+      "output_file": "optimal_parameters.json",
+      "weight": 1.0,
+      "kind": "custom",
+      "tolerances": {
+        "structural_abs_um": 0.05,
+        "gain_abs_per_um": 0.15,
+        "conf_abs_percent": 5.0
+      },
+      "gold": {
+        "ridge_height_um": 0.6,
+        "grating_depth_um": 0.1,
+        "grating_width_um": 0.3,
+        "period_um": 0.73,
+        "threshold_gain_per_um": 0.616,
+        "Qw_confinement_factor": 16.3
+      }
+    }
+  ]
+}

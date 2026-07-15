@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "T0: result-level compare; re-running MD is infeasible in verifier sandbox, so checker reads agent-reported CSV files and compares to paper-reported asymptotic values and structural trends (monotonicity, sign of stress).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "target asymptotic elastic modulus and Poisson's ratio from the paper",
+      "source_provenance": "Paper text and Fig.6: E→208.0 GPa for d≳6 nm, ν→0.355 by d≈5 nm.",
+      "generation_method": "Extracted directly from the paper's reported convergent limits.",
+      "why_not_fabricated": "These are the paper's own numbers; they are necessary as a reference to score the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "d_nm",
+            "E_GPa",
+            "nu"
+          ],
+          "units": {
+            "d_nm": "nm",
+            "E_GPa": "GPa",
+            "nu": "dimensionless"
+          }
+        },
+        "description": "Size-dependent axial elastic modulus and Poisson's ratio. The checker will compare to the paper's reported asymptotes and monotonic trends."
+      },
+      {
+        "file": "stress_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "position_nm",
+            "sigma_zz_GPa"
+          ],
+          "units": {
+            "position_nm": "nm",
+            "sigma_zz_GPa": "GPa"
+          }
+        },
+        "description": "Cross-sectional normal stress profile at free relaxation. The checker will verify tensile near surface and compressive near centre."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "elastic_moduli_trends",
+      "output_file": "elastic_moduli.csv",
+      "kind": "rubric",
+      "weight": 0.45,
+      "target_E": 208.0,
+      "tol_E": 20.8,
+      "target_nu": 0.355,
+      "tol_nu": 0.02,
+      "description": "Check monotonic trends (E decreasing, nu increasing) and asymptotic convergence to paper values."
+    },
+    {
+      "id": "stress_profile_qualitative",
+      "output_file": "stress_profile.csv",
+      "kind": "structural_audit",
+      "weight": 0.55,
+      "description": "Verify tensile near surface, compressive (or zero) near centre, and physically reasonable magnitude."
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The main load-bearing step recomputes the activation boundary and power-law fit from the raw CSV, and the regimes are checked structurally. The companion JSON step uses reference_match for the agent‑reported fit parameters. The recomputed quantities are compared to the paper’s reported exponent -2 and prefactor 35.93 with appropriate tolerances.",
+  "pass_threshold": 0.0,
+  "target_policies": {
+    "activation_diagram.csv": "metric_recompute",
+    "power_law_fit.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for power-law scaling (exponent -2, prefactor 35.93) and regime verification",
+      "source_provenance": "paper Fig.7 and text: a0,min/lG = 35.93 (β Cr)^(-2) for R/l_G=4.2×10^4, regime I and III thresholds",
+      "generation_method": "extracted from paper text and consistent with reference solve.sh synthetic data",
+      "why_not_fabricated": "values directly reported in the paper (prefactor A=35.93, exponent -2) and the regime boundaries (a0/lG > 10^4 and < 500) are described in the text; no invention needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "activation_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "a0_over_lG",
+            "Cr",
+            "activated"
+          ],
+          "units": {
+            "a0_over_lG": "dimensionless",
+            "Cr": "dimensionless",
+            "activated": "0 or 1"
+          }
+        },
+        "description": "Raw activation map for a 2D circular particle with R/l_G=4.2e4. The checker recomputes the activation threshold boundary, fits the power-law, and verifies the three fracture regimes from this CSV."
+      },
+      {
+        "file": "power_law_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "A",
+            "exponent",
+            "R_squared",
+            "fitting_range_min_a0_over_lG",
+            "fitting_range_max_a0_over_lG",
+            "observed_R3_constant_a0min"
+          ],
+          "properties": {
+            "A": {
+              "type": "number",
+              "description": "Prefactor in power-law a0_min/lG = A (β Cr)^p",
+              "unit": "dimensionless"
+            },
+            "exponent": {
+              "type": "number",
+              "description": "Fitted exponent p",
+              "unit": "dimensionless"
+            },
+            "R_squared": {
+              "type": "number",
+              "description": "R-squared of the fit",
+              "unit": "dimensionless"
+            },
+            "fitting_range_min_a0_over_lG": {
+              "type": "number",
+              "description": "Minimum a0/lG used in the fit",
+              "unit": "dimensionless"
+            },
+            "fitting_range_max_a0_over_lG": {
+              "type": "number",
+              "description": "Maximum a0/lG used in the fit",
+              "unit": "dimensionless"
+            },
+            "observed_R3_constant_a0min": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "If regime III observed, the constant minimum flaw size a0_min/lG; otherwise null.",
+              "unit": "dimensionless"
+            }
+          }
+        },
+        "description": "Agent-reported power-law fit parameters. The checker compares A and exponent to paper-reported gold values within defined tolerances."
+      }
+    ],
+    "notes": "The checker recomputes the activation boundary from the raw CSV, fits the power-law, and verifies that for a0/lG > 10^4 no activation occurs for Cr < 10 (Regime I) and for a0/lG < 500 no activation occurs for any simulated Cr (Regime III). The power_law_fit.json is cross-checked for consistency with the CSV-derived fit."
+  },
+  "steps": [
+    {
+      "id": "sim_2d",
+      "output_file": "activation_diagram.csv",
+      "kind": "custom",
+      "weight": 0.7,
+      "config": {
+        "description": "Recompute activation boundary, fit power-law, verify regimes I and III",
+        "gold_exponent": -2.0,
+        "gold_A": 35.93,
+        "beta": 0.025,
+        "exponent_range": [
+          -2.5,
+          -1.5
+        ],
+        "A_tolerance_relative": 0.25,
+        "regime_I_a0_min": 10000.0,
+        "regime_I_Cr_max": 9.0,
+        "regime_III_a0_max": 500.0
+      }
+    },
+    {
+      "id": "fit_powerlaw",
+      "output_file": "power_law_fit.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "config": {
+        "description": "Validate self-reported fit parameters against gold and CSV consistency",
+        "gold_exponent": -2.0,
+        "gold_A": 35.93,
+        "exponent_tolerance": 0.5,
+        "A_tolerance_relative": 0.25,
+        "R_squared_min": 0.95
+      }
+    }
+  ]
+}

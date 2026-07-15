@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "DFT calculations of monomer properties",
+    "role": "process",
+    "action": "Using a DFT code (e.g., ORCA or an open-source equivalent), optimize the geometries of the three zwitterionic monomers — DMAPS, MPC, CBMA — starting from the provided SMILES strings. Compute the binding energies of each monomer with (i) SO₄²⁻ near the quaternary ammonium group, (ii) H₂O near the quaternary ammonium group, (iii) Zn²⁺ near the negatively charged group (sulfonate/phosphoryl/carboxylate), and (iv) H₂O near the negatively charged group. Also compute the molecular dipole moment of each optimized monomer from the electrostatic potential.",
+    "output_file": "",
+    "evidence": "dft_runtimes.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the raw energetic and electronic data needed for the scored binding-energy and dipole-moment artifact. Execution of this step is mandatory before step 2.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Write binding energies and dipole moments",
+    "role": "scored",
+    "action": "Write a JSON file containing the computed binding energies (in eV) and molecular dipole moments (in Debye) for DMAPS, MPC, CBMA. The binding energies are for four specific interactions: SO₄²⁻ near quaternary ammonium, H₂O near quaternary ammonium, Zn²⁺ near negatively charged group, and H₂O near negatively charged group.",
+    "output_file": "binding_and_dipole.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Collects the computed binding energies and dipole moments into a structured JSON artifact. The checker verifies that binding-energy orderings and dipole-moment trends match the paper's reported relationships.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"binding_energies\",\"dipole_moments\"],\"properties\":{\"binding_energies\":{\"type\":\"object\",\"required\":[\"SO4_near_N\",\"H2O_near_N\",\"Zn_near_neg\",\"H2O_near_neg\"],\"properties\":{\"SO4_near_N\":{\"type\":\"object\",\"required\":[\"DMAPS\",\"MPC\",\"CBMA\"],\"additionalProperties\":false},\"H2O_near_N\":{\"type\":\"object\",\"required\":[\"DMAPS\",\"MPC\",\"CBMA\"],\"additionalProperties\":false},\"Zn_near_neg\":{\"type\":\"object\",\"required\":[\"DMAPS\",\"MPC\",\"CBMA\"],\"additionalProperties\":false},\"H2O_near_neg\":{\"type\":\"object\",\"required\":[\"DMAPS\",\"MPC\",\"CBMA\"],\"additionalProperties\":false}},\"additionalProperties\":false},\"dipole_moments\":{\"type\":\"object\",\"required\":[\"DMAPS\",\"MPC\",\"CBMA\"],\"additionalProperties\":false}},\"units\":{\"binding_energies\":\"eV\",\"dipole_moments\":\"Debye\"}}"
+  },
+  {
+    "id": "step_3",
+    "title": "MD simulations of water states in gel electrolytes",
+    "role": "process",
+    "action": "Run classical molecular dynamics simulations of 2 M ZnSO₄ aqueous electrolyte containing each zwitterionic polymer (PDMAPS, PMPC, PCBMA) using an explicit atomistic model and standard force fields. For each system, analyze the simulation trajectories to determine the percentages of water molecules that are in free, Zn²⁺-coordinated, and polymer-fixed states.",
+    "output_file": "",
+    "evidence": "md_water_runtimes.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the water-state data required for the scored water-states artifact. Execution of this step is mandatory before step 4.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Write water state percentages",
+    "role": "scored",
+    "action": "Write a JSON file containing the computed percentages of free, Zn²⁺-coordinated, and polymer-fixed H₂O for PDMAPS, PMPC, and PCBMA gel electrolytes.",
+    "output_file": "water_states.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reports the water state distributions for scoring. The checker verifies that free H₂O is lowest for PDMAPS and polymer-fixed H₂O is highest for PDMAPS, as per the paper's trend.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"free_H2O\",\"Zn_coordinated_H2O\",\"polymer_fixed_H2O\"],\"properties\":{\"free_H2O\":{\"type\":\"object\",\"required\":[\"PDMAPS\",\"PMPC\",\"PCBMA\"],\"additionalProperties\":false},\"Zn_coordinated_H2O\":{\"type\":\"object\",\"required\":[\"PDMAPS\",\"PMPC\",\"PCBMA\"],\"additionalProperties\":false},\"polymer_fixed_H2O\":{\"type\":\"object\",\"required\":[\"PDMAPS\",\"PMPC\",\"PCBMA\"],\"additionalProperties\":false}},\"units\":{\"free_H2O\":\"percent\",\"Zn_coordinated_H2O\":\"percent\",\"polymer_fixed_H2O\":\"percent\"}}"
+  }
+]

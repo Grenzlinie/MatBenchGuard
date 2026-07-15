@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build zeolite models and pre‑computed electrostatic potential grids",
+    "role": "process",
+    "action": "Construct atomistic models of Na‑ZSM‑5 for Si/Al ratios ∞, 95, 47, 31, 23, 13 using the MFI framework coordinates. Place Al substitutions and Na⁺ cations at intersection sites. Assign Lennard‑Jones parameters and partial charges from the force field table. Pre‑tabulate the electrostatic potential from the rigid framework (including cations) on a fine grid (0.2 Å spacing) for use in GCMC.",
+    "output_file": "",
+    "evidence": "models_and_grids.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the input structures and potential grids needed by the GCMC simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Molecular dynamics validation of frozen Na⁺ cation assumption",
+    "role": "process",
+    "action": "Perform short molecular dynamics simulations on the Na‑ZSM‑5 models to verify that Na⁺ cations remain near their initial Al‑adjacent sites and do not diffuse, justifying the frozen‑cation approximation used in GCMC.",
+    "output_file": "",
+    "evidence": "md_validation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Validates that the frozen‑cation approximation is reasonable; output is not scored but provides evidence.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "GCMC simulations of CO₂ and N₂ adsorption at T=308 K (all Si/Al)",
+    "role": "scored",
+    "action": "Run Grand Canonical Monte Carlo simulations in the μVT ensemble for pure CO₂ and pure N₂ using the models and potential grids from Step 01. Temperature = 308 K. Pressure ranges: CO₂ from 10⁻⁹ to 20 bar (extended to 300 bar for N₂). For each Si/Al ratio (∞, 95, 47, 31, 23, 13) with Na⁺ charge = 1e, collect equilibrium loadings (molecules/unit cell) at each simulated pressure. Output a CSV containing the adsorption isotherm data.",
+    "output_file": "step_04_isotherms.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Adsorption isotherms (loading vs pressure) for CO₂ and N₂ at six Si/Al ratios.",
+    "output_schema": "columns: gas (string: 'CO2' or 'N2'), SiAl (string: 'inf', '95', '47', '31', '23', '13'), pressure_bar (float), loading_molecules_per_uc (float)"
+  },
+  {
+    "id": "step_04",
+    "title": "Isosteric heats of adsorption for CO₂ and N₂ (all Si/Al)",
+    "role": "scored",
+    "action": "From the same GCMC trajectories used in Step 03, compute the isosteric heat of adsorption as a function of loading using the fluctuation theorem. Output a CSV containing the isosteric heat values.",
+    "output_file": "step_05_isosteric_heats.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Isosteric heats (kJ/mol) vs loading for CO₂ and N₂ at six Si/Al ratios.",
+    "output_schema": "columns: gas (string: 'CO2' or 'N2'), SiAl (string), loading_molecules_per_uc (float), Qst_kJ_per_mol (float)"
+  },
+  {
+    "id": "step_05",
+    "title": "GCMC simulations with varied Na⁺ partial charges at Si/Al=13",
+    "role": "scored",
+    "action": "For Si/Al=13, repeat the GCMC simulations of Step 03 for CO₂ and N₂ with Na⁺ partial charges set to 0.7e and 0.4e (the 1e case is already in Step 03). Compute the corresponding adsorption isotherms and isosteric heats. Output a CSV containing the combined results for all three charges.",
+    "output_file": "step_07_charge_comparison.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Isotherms and isosteric heats for Si/Al=13 at three cation charges.",
+    "output_schema": "columns: gas (string: 'CO2' or 'N2'), Na_charge_e (float: 1.0, 0.7, 0.4), pressure_bar (float), loading_molecules_per_uc (float), Qst_kJ_per_mol (float)"
+  }
+]

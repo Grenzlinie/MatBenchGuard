@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step01",
+    "title": "Build and relax defect supercells",
+    "role": "process",
+    "action": "Construct a wurtzite ZnO supercell (18 formula units, with the paper-reported lattice constants a=3.184 Å, c=5.111 Å). Create initial configurations for carbon substitution at the oxygen site (C_O), carbon substitution at the zinc site (C_Zn), and interstitial carbon (C_I). Relax atomic positions of each defect structure using spin-polarized DFT (LSDA, plane-wave cutoff appropriate for the chosen pseudopotentials, and a Monkhorst-Pack k-point grid sufficient for the supercell) until Hellman-Feynman forces are converged.",
+    "output_file": "",
+    "evidence": "relaxed_coordinates.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "DFT total energy and charge density calculations",
+    "role": "process",
+    "action": "For the relaxed C_O, C_Zn, C_I supercells, as well as a pristine ZnO 18-f.u. supercell and an isolated carbon atom in a large simulation cell, perform spin-polarized self-consistent field (SCF) calculations using the same DFT settings. Save total energies, spin densities, and wavefunctions for subsequent analysis.",
+    "output_file": "",
+    "evidence": "scf_outputs.zip",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Magnetic moments for C_Zn and C_I defects",
+    "role": "scored",
+    "action": "From the SCF outputs for the C_Zn and C_I supercells, extract the integrated absolute magnetic moment per supercell. Write the results to other_defects_magnetism.json.",
+    "output_file": "other_defects_magnetism.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Magnetic moments of the C_Zn and C_I defect supercells. Non-magnetic defects should yield a moment near zero.",
+    "output_schema": "{\"C_Zn_moment\": float (μ_B), \"C_I_moment\": float (μ_B)}"
+  },
+  {
+    "id": "step04",
+    "title": "Local density of states peak positions for C_O",
+    "role": "scored",
+    "action": "Using the wavefunction/charge density from step02 for the C_O defect, compute the projected local density of states (LDOS) on carbon and neighboring Zn atoms. Identify the energy positions (in eV, relative to the Fermi level) of the carbon 2s and carbon 2p peaks. Write to ldos_peaks.json.",
+    "output_file": "ldos_peaks.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "LDOS peak positions for the C_O defect.",
+    "output_schema": "{\"C_2s_peak\": float (eV), \"C_2p_peak\": float (eV)}"
+  },
+  {
+    "id": "step05",
+    "title": "Magnetic moments, orbital contributions, and formation energy for C_O",
+    "role": "scored",
+    "action": "From the step02 data for C_O, pristine ZnO, and isolated carbon: (1) compute the total magnetic moment per substituted carbon for the C_O defect; (2) decompose the moment into contributions from the carbon 2p orbitals, each nearest-neighbor Zn atom, and each second-nearest-neighbor O atom; (3) compute the formation energy of C_O as E(C_O) – E(pristine) – E(isolated C). Write all results to properties_c_o.json.",
+    "output_file": "properties_c_o.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Magnetic and energetic properties of carbon substitution at the oxygen site.",
+    "output_schema": "{\"total_moment_per_C\": float (μ_B), \"C_2p_contribution\": float (μ_B), \"Zn_contribution\": float (μ_B), \"O_contribution\": float (μ_B), \"formation_energy\": float (eV)}"
+  },
+  {
+    "id": "step06",
+    "title": "Two-C defect supercell and ferromagnetic/antiferromagnetic total energies",
+    "role": "process",
+    "action": "Build a supercell with two oxygen atoms substituted by carbon atoms at the largest possible separation (~7.76 Å). Relax atomic positions and perform spin-polarized DFT calculations for both ferromagnetic (FM) and antiferromagnetic (AFM) spin alignments. Save the total energy of each configuration to two_C_energies.json.",
+    "output_file": "",
+    "evidence": "two_C_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step07",
+    "title": "Ferromagnetic coupling energy",
+    "role": "scored",
+    "action": "Compute the energy difference ΔE = E(AFM) – E(FM) using the two-C total energies from step06. Write the result (a positive difference means the FM state is lower in energy) to coupling_energy.json.",
+    "output_file": "coupling_energy.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Ferromagnetic coupling energy for two C_O defects.",
+    "output_schema": "{\"fm_afm_energy_difference\": float (eV), positive means FM lower}"
+  }
+]

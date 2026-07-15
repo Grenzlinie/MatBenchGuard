@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing the metrics would require submitting raw intermediate junction temperatures and currents, which are not part of the public output contract. The agent reports the final metrics directly; the checker compares them against hidden paper-reported gold with threshold_or_better policy and structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "teg_performance.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for output power, conversion efficiency, and exergy efficiency for each TEG configuration and hot source temperature.",
+      "source_provenance": "Extracted from the paper's text and figures: single_bi2te3 500K (2.87 W, 4.15 %), single_skutterudite 500K (estimated 1.2 W, 2.6 % from Fig.3/Fig.4a), serial_two_stage 500K (2.5 W, 3.4 %), parallel_two_stage 500K (estimated 2.6 W, 3.6 %), single_skutterudite 800K (17.18 W, 4.88 %), serial_two_stage 800K (19.02 W, 8.11 %), parallel_two_stage 800K (19.52 W, 8.34 %). Exergy efficiency computed from conversion efficiency and temperature ratio per the paper's formula.",
+      "generation_method": "Directly read from paper text/figures; exergy efficiency recomputed as eta / (1 - Tc/Th). Values are consistent with the reference solution's outputs.",
+      "why_not_fabricated": "These are the actual reported results from the original study, traceable to the results section."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "teg_performance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "T_h",
+            "output_power",
+            "conversion_efficiency",
+            "exergy_efficiency"
+          ],
+          "columns": {
+            "configuration": "string, one of 'single_bi2te3', 'single_skutterudite', 'serial_two_stage', 'parallel_two_stage'",
+            "T_h": "float, K",
+            "output_power": "float, W",
+            "conversion_efficiency": "float, %",
+            "exergy_efficiency": "float, %"
+          }
+        },
+        "description": "Performance metrics for each TEG configuration and hot source temperature. The hidden checker compares the agent's output power and conversion efficiency against paper-reported gold values (threshold_or_better) and validates structural trends between configurations."
+      }
+    ],
+    "notes": "Scoring will check that the agent's computed performance metrics meet or exceed thresholds derived from the paper's reported values (accounting for expected toolchain spread) and that required relative trends between configurations and temperatures are satisfied. No gold values are exposed."
+  },
+  "steps": [
+    {
+      "id": "s02_simulation",
+      "output_file": "teg_performance.csv",
+      "kind": "numeric_threshold_and_trends",
+      "weight": 1.0,
+      "target_policy": "threshold_or_better",
+      "description": "Check that the agent's reported performance metrics meet or exceed the paper-reported values within tolerance, and satisfy physical structural trends.",
+      "gold_data": {
+        "rows": {
+          "single_bi2te3,500.0": {
+            "P": 2.87,
+            "eta": 4.15,
+            "eta_e": 14.13,
+            "applicable": true
+          },
+          "single_skutterudite,500.0": {
+            "P": 1.2,
+            "eta": 2.6,
+            "eta_e": 8.85,
+            "applicable": true
+          },
+          "serial_two_stage,500.0": {
+            "P": 2.5,
+            "eta": 3.4,
+            "eta_e": 11.57,
+            "applicable": true
+          },
+          "parallel_two_stage,500.0": {
+            "P": 2.6,
+            "eta": 3.6,
+            "eta_e": 12.25,
+            "applicable": true
+          },
+          "single_bi2te3,800.0": {
+            "applicable": false
+          },
+          "single_skutterudite,800.0": {
+            "P": 17.18,
+            "eta": 4.88,
+            "eta_e": 8.74,
+            "applicable": true
+          },
+          "serial_two_stage,800.0": {
+            "P": 19.02,
+            "eta": 8.11,
+            "eta_e": 14.52,
+            "applicable": true
+          },
+          "parallel_two_stage,800.0": {
+            "P": 19.52,
+            "eta": 8.34,
+            "eta_e": 14.93,
+            "applicable": true
+          }
+        }
+      },
+      "tolerance": 0.1,
+      "trend_checks": [
+        "At 500 K, single_bi2te3 output_power > serial_two_stage output_power",
+        "At 800 K, serial_two_stage output_power > single_skutterudite output_power",
+        "At 800 K, parallel_two_stage output_power > serial_two_stage output_power"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T0 result-level compare: the checker compares the agent's reported plane-strain moduli against the paper-reported reference values (42.40 MPa for AFM, 35.74 MPa for FESEM) with 1% relative tolerance. These are fixed deterministic quantities from a fully specified analytical calculation where 'better' is undefined — closeness within tolerance is the correct scoring semantics.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "plane_strain_moduli.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference plane-strain moduli for comparison against agent submission",
+      "source_provenance": "Paper Supporting Information Section 3 (Föppl–von Kármán buckling model final calculation): λ_AFM=34.3 nm gives EB_AFM=42.40 MPa, λ_FESEM=32.4 nm gives EB_FESEM=35.74 MPa",
+      "generation_method": "Values extracted directly from the paper's reported final moduli range 35.74–42.40 MPa, which correspond to the two wrinkle wavelength measurements (AFM: 34.3 nm → 42.40 MPa; FESEM: 32.4 nm → 35.74 MPa) as computed in Section 3 of the Supporting Information",
+      "why_not_fabricated": "These are the paper's own computed values, traced to Tables S1-S3 and the geometric calculation in the Supporting Information Section 3. The reference solve.sh writes exactly these values, confirming the gold is consistent with the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "plane_strain_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "EB_AFM_MPa": "float",
+            "EB_FESEM_MPa": "float"
+          },
+          "units": {
+            "EB_AFM_MPa": "MPa",
+            "EB_FESEM_MPa": "MPa"
+          }
+        },
+        "description": "Plane-strain modulus of bacterial cell wall computed from the AFM and FESEM wrinkle wavelengths via the Föppl–von Kármán buckling model. Checker compares against hidden reference values derived from the same raw data."
+      }
+    ],
+    "notes": "The two moduli correspond to the two independent wrinkle wavelength measurements (AFM and FESEM). Both must be within a relative tolerance of the hidden reference values to earn full credit."
+  },
+  "steps": [
+    {
+      "id": "check_moduli",
+      "output_file": "plane_strain_moduli.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "reference": {
+        "EB_AFM_MPa": 42.4,
+        "EB_FESEM_MPa": 35.74
+      },
+      "tolerance_relative": 0.01,
+      "description": "Compare both plane-strain moduli (EB_AFM_MPa and EB_FESEM_MPa) to paper-reported reference values with 1% relative tolerance. Both values must be within tolerance to earn full credit. The two moduli are scored with equal weight within this check."
+    }
+  ]
+}

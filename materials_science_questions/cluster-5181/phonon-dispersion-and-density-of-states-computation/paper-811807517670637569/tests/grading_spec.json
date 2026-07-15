@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Anomaly coincidence is recomputed from raw CSV (T1); phonon properties are compared against paper experimental reference values with tolerances (T0).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values (elastic constants and X‑point phonon frequencies) for phonon_properties.json.",
+      "source_provenance": "Paper Table II (X‑point frequencies) and Table III (experimental elastic constants from Ref. 49).",
+      "generation_method": "Transcribed directly from the paper's listed experimental values.",
+      "why_not_fabricated": "These are the paper's own reported experimental reference values, the same numbers the reference oracle writes and the agent's computed results are meant to match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "C11_GPa",
+            "C12_GPa",
+            "C44_GPa",
+            "Bulk_modulus_GPa",
+            "X_longitudinal_THz",
+            "X_transverse_THz"
+          ],
+          "properties": {
+            "C11_GPa": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "C12_GPa": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "C44_GPa": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "Bulk_modulus_GPa": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "X_longitudinal_THz": {
+              "type": "number",
+              "unit": "THz"
+            },
+            "X_transverse_THz": {
+              "type": "number",
+              "unit": "THz"
+            }
+          }
+        },
+        "description": "Elastic constants and X-point phonon frequencies; checker compares against hidden paper reference values with tolerances."
+      },
+      {
+        "file": "anomaly_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q",
+            "momega2",
+            "D2approx"
+          ],
+          "columns": {
+            "q": {
+              "type": "number",
+              "description": "fractional coordinate along (110) from 0 to 0.5"
+            },
+            "momega2": {
+              "type": "number",
+              "unit": "N/m^2",
+              "description": "phonon eigenvalue mω²"
+            },
+            "D2approx": {
+              "type": "number",
+              "unit": "arbitrary",
+              "description": "approximate -D₂^approx value"
+            }
+          }
+        },
+        "description": "Raw data for the transverse (110) branch; checker recomputes the wavevector of the minimum in momeg2 and the maximum in D2approx and verifies their coincidence within a tolerance."
+      }
+    ],
+    "notes": "The task uses a single LDA pseudopotential; the full dispersion curves and empirical force-constant fitting are omitted as per taskability scope. The anomaly verification relies on recomputing the peak/dip coincidence from the raw CSV data."
+  },
+  "steps": [
+    {
+      "id": "step_phonon_properties",
+      "output_file": "phonon_properties.json",
+      "weight": 0.4,
+      "kind": "scalar_compare",
+      "fields": {
+        "C11_GPa": {
+          "gold": 422.1,
+          "tol_relative": 0.1
+        },
+        "C12_GPa": {
+          "gold": 191.9,
+          "tol_relative": 0.1
+        },
+        "C44_GPa": {
+          "gold": 194.0,
+          "tol_relative": 0.1
+        },
+        "Bulk_modulus_GPa": {
+          "gold": 268.6,
+          "tol_relative": 0.1
+        },
+        "X_longitudinal_THz": {
+          "gold": 7.04,
+          "tol_relative": 0.05
+        },
+        "X_transverse_THz": {
+          "gold": 5.56,
+          "tol_relative": 0.05
+        }
+      }
+    },
+    {
+      "id": "step_anomaly_data",
+      "output_file": "anomaly_data.csv",
+      "weight": 0.6,
+      "kind": "anomaly_coincidence",
+      "params": {
+        "q_min_range": 0.1,
+        "q_max_range": 0.5,
+        "coincidence_tolerance_q": 0.02,
+        "depth_threshold": 0.1
+      }
+    }
+  ]
+}

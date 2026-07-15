@@ -1,0 +1,206 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Per-temperature enthalpy arrays allow recomputation of averages, standard deviations, and derived formation/atomization energies; hidden reference constants from JANAF are provided inline, making full T1 recompute feasible without live network access.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden_constants",
+      "source_provenance": "paper: δHf0(Li2O,s)=-141.6 kcal/mol (text), δHf0(Li,g)=38.5±0.1 kcal/mol (ref 10), δHf0(O,g)=58.989 kcal/mol (JANAF), sublimation enthalpy ΔH0=99.3 kcal/mol (Table 2). Gold reaction enthalpies and final values from Tables 3 and 5.",
+      "generation_method": "Extracted directly from the published paper tables and text; no synthetic fabrication.",
+      "why_not_fabricated": "All numbers are the paper's own reported values used in its derivation; they serve as reference for a reproduced computation."
+    }
+  ],
+  "target_policies": {
+    "thermochemistry_results.json": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermochemistry_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "reaction_enthalpies": {
+              "type": "object",
+              "required_keys": [
+                "Li2O(s)->Li+LiO",
+                "Li2O(g)->Li+LiO"
+              ],
+              "value_schema": {
+                "average_DeltaH0": "float (kcal/mol)",
+                "standard_deviation": "float",
+                "values": "array of floats (kcal/mol)"
+              }
+            },
+            "heat_of_formation": {
+              "type": "object",
+              "required_keys": [
+                "LiO_g",
+                "Li2O_g"
+              ],
+              "value_schema": {
+                "DeltaH0_0": "float (kcal/mol)",
+                "uncertainty": "float"
+              }
+            },
+            "atomization_energy": {
+              "type": "object",
+              "required_keys": [
+                "LiO",
+                "Li2O"
+              ],
+              "value_schema": {
+                "D0_0": "float (kcal/mol)",
+                "uncertainty": "float"
+              }
+            }
+          }
+        },
+        "description": "Structured thermochemistry results: third‑law reaction enthalpies, heats of formation, and atomization energies for LiO(g) and Li₂O(g)."
+      }
+    ],
+    "notes": "The agent must retrieve free‑energy functions from the publicly available JANAF tables. The number of temperature points in the 'values' arrays should match the provided vapor pressures (16 entries). All energies are in kcal/mol."
+  },
+  "steps": [
+    {
+      "id": "structural_check",
+      "output_file": "thermochemistry_results.json",
+      "kind": "rubric",
+      "weight": 0.02,
+      "gold": {},
+      "rubric": "required keys exist and per-temperature arrays have 16 entries"
+    },
+    {
+      "id": "reaction_enthalpy_solid",
+      "output_file": "thermochemistry_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "recompute_config": {
+        "reaction_key": "Li2O(s)->Li+LiO",
+        "gold_average": 188.4,
+        "gold_std": 1.5,
+        "gold_values": [
+          183.9,
+          187.0,
+          188.9,
+          191.3,
+          188.5,
+          188.2,
+          188.8,
+          189.4,
+          189.4,
+          188.5,
+          188.5,
+          188.1,
+          189.0,
+          187.7,
+          189.1,
+          187.8
+        ],
+        "per_value_tolerance": 5.0,
+        "average_tolerance": 2.0,
+        "std_tolerance": 1.0
+      }
+    },
+    {
+      "id": "reaction_enthalpy_gas",
+      "output_file": "thermochemistry_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "recompute_config": {
+        "reaction_key": "Li2O(g)->Li+LiO",
+        "gold_average": 89.1,
+        "gold_std": 1.4,
+        "gold_values": [
+          84.64,
+          87.78,
+          89.56,
+          92.01,
+          89.17,
+          88.55,
+          89.51,
+          89.94,
+          89.96,
+          89.13,
+          89.15,
+          89.04,
+          89.72,
+          88.86,
+          89.32,
+          88.76
+        ],
+        "per_value_tolerance": 5.0,
+        "average_tolerance": 2.0,
+        "std_tolerance": 1.0
+      }
+    },
+    {
+      "id": "heat_of_formation_LiO",
+      "output_file": "thermochemistry_results.json",
+      "kind": "numeric",
+      "weight": 0.18,
+      "field_path": "heat_of_formation.LiO_g.DeltaH0_0",
+      "gold": 8.3,
+      "tolerance": 2.0,
+      "derivation": "avg_ΔH0_solid - ΔHf(Li2O,s) - ΔHf(Li,g)",
+      "hidden_constants_used": [
+        "ΔHf(Li2O,s)",
+        "ΔHf(Li,g)"
+      ]
+    },
+    {
+      "id": "heat_of_formation_Li2O",
+      "output_file": "thermochemistry_results.json",
+      "kind": "numeric",
+      "weight": 0.18,
+      "field_path": "heat_of_formation.Li2O_g.DeltaH0_0",
+      "gold": -42.3,
+      "tolerance": 2.0,
+      "derivation": "ΔHf(Li2O,s) + ΔH_sublim(Li2O)",
+      "hidden_constants_used": [
+        "ΔHf(Li2O,s)",
+        "ΔH_sublim(Li2O)"
+      ]
+    },
+    {
+      "id": "atomization_LiO",
+      "output_file": "thermochemistry_results.json",
+      "kind": "numeric",
+      "weight": 0.06,
+      "field_path": "atomization_energy.LiO.D0_0",
+      "gold": 89.2,
+      "tolerance": 2.0,
+      "derivation": "ΔHf(Li,g) + ΔHf(O,g) - ΔHf(LiO,g)",
+      "hidden_constants_used": [
+        "ΔHf(Li,g)",
+        "ΔHf(O,g)",
+        "agent's ΔHf(LiO)"
+      ]
+    },
+    {
+      "id": "atomization_Li2O",
+      "output_file": "thermochemistry_results.json",
+      "kind": "numeric",
+      "weight": 0.06,
+      "field_path": "atomization_energy.Li2O.D0_0",
+      "gold": 178.3,
+      "tolerance": 2.0,
+      "derivation": "2*ΔHf(Li,g) + ΔHf(O,g) - ΔHf(Li2O,g)",
+      "hidden_constants_used": [
+        "ΔHf(Li,g)",
+        "ΔHf(O,g)",
+        "agent's ΔHf(Li2O,g)"
+      ]
+    }
+  ],
+  "hidden_constants": {
+    "ΔHf(Li2O,s)": -141.6,
+    "ΔHf(Li,g)": 38.5,
+    "ΔHf(O,g)": 58.989,
+    "ΔH_sublim(Li2O)": 99.3
+  }
+}

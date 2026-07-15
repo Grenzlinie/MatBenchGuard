@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT/phonon calculations cannot be re-run in the lightweight verifier; we compare agent-reported results to the paper's published values (Tables 1, 2, and ZPE text) with generous tolerances, plus verify physical trends (Dulong-Petit limit, monotonic entropy, linear internal energy).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "structural_data.csv": "reference_match",
+    "gamma_frequencies.csv": "reference_match",
+    "thermodynamic_data.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for structural parameters, gamma-point frequencies, and zero-point energies",
+      "source_provenance": "Tables 1 and 2 of the paper, plus text: 'The calculated values of free and internal energy at zero pressure and temperature are 285.60, 276.63, and 248.29 meV/unitcell for ZrB2, NbB2, and MoB2, respectively.'",
+      "generation_method": "Direct transcription of the paper's numeric results for the same three compounds.",
+      "why_not_fabricated": "These are the exact values the paper claims to have computed; they are the authoritative targets for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "a",
+            "c",
+            "X_B_distance",
+            "B_B_distance"
+          ],
+          "units": {
+            "a": "Å",
+            "c": "Å",
+            "X_B_distance": "Å",
+            "B_B_distance": "Å"
+          }
+        },
+        "description": "Optimized lattice constants and bond lengths for ZrB2, NbB2, and MoB2."
+      },
+      {
+        "file": "gamma_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "E1u",
+            "A2u",
+            "B1g",
+            "E2g"
+          ],
+          "units": {
+            "E1u": "meV",
+            "A2u": "meV",
+            "B1g": "meV",
+            "E2g": "meV"
+          }
+        },
+        "description": "Gamma-point optical phonon frequencies for the three compounds."
+      },
+      {
+        "file": "thermodynamic_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "T_K",
+            "internal_energy_meV_per_cell",
+            "free_energy_meV_per_cell",
+            "entropy_meV_per_K",
+            "heat_capacity_meV_per_K"
+          ],
+          "units": {
+            "T_K": "K",
+            "internal_energy_meV_per_cell": "meV",
+            "free_energy_meV_per_cell": "meV",
+            "entropy_meV_per_K": "meV/K",
+            "heat_capacity_meV_per_K": "meV/K"
+          }
+        },
+        "description": "Temperature-dependent harmonic thermodynamic properties (internal energy, free energy, entropy, heat capacity) for ZrB2, NbB2, and MoB2 from 0 to 2000 K."
+      }
+    ],
+    "notes": "The phonon_dos.csv file produced as evidence during the phonon calculation step is an intermediate artefact and is not part of the scored output contract. The thermodynamic step depends on it."
+  },
+  "steps": [
+    {
+      "id": "step_geom_opt",
+      "output_file": "structural_data.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "targets": {
+        "ZrB2": {
+          "a": 3.151,
+          "c": 3.42,
+          "X_B_distance": 2.497,
+          "B_B_distance": 1.819
+        },
+        "NbB2": {
+          "a": 3.113,
+          "c": 3.237,
+          "X_B_distance": 2.418,
+          "B_B_distance": 1.797
+        },
+        "MoB2": {
+          "a": 3.034,
+          "c": 3.245,
+          "X_B_distance": 2.387,
+          "B_B_distance": 1.751
+        }
+      },
+      "tolerance": {
+        "a": 0.01,
+        "c": 0.01,
+        "X_B_distance": 0.01,
+        "B_B_distance": 0.01
+      }
+    },
+    {
+      "id": "step_gamma_freq",
+      "output_file": "gamma_frequencies.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "targets": {
+        "ZrB2": {
+          "E1u": 60.61,
+          "A2u": 63.49,
+          "B1g": 67.76,
+          "E2g": 98.45
+        },
+        "NbB2": {
+          "E1u": 57.16,
+          "A2u": 62.88,
+          "B1g": 64.84,
+          "E2g": 105.01
+        },
+        "MoB2": {
+          "E1u": 40.6,
+          "A2u": 57.28,
+          "B1g": 61.91,
+          "E2g": 105.54
+        }
+      },
+      "tolerance": 3.0
+    },
+    {
+      "id": "step_thermo",
+      "output_file": "thermodynamic_data.csv",
+      "weight": 0.6,
+      "kind": "thermo_checks",
+      "zero_point_energy": {
+        "ZrB2": 285.6,
+        "NbB2": 276.63,
+        "MoB2": 248.29
+      },
+      "energy_tolerance": 20.0,
+      "dulong_petit_limit": 0.77556,
+      "dulong_tolerance_frac": 0.05,
+      "eval_temp_k": 2000.0
+    }
+  ]
+}

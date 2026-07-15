@@ -1,0 +1,54 @@
+[
+  {
+    "id": "supercell_gen",
+    "title": "Generate B2 supercell structures",
+    "role": "process",
+    "action": "Construct a 2×2×2 B2 supercell of CuPd to obtain Cu8Pd8. For each alloying element M in [Sc, Ti, Zn, Y, Zr, Hf, La, Al, Mg], substitute one Pd atom with M to create Cu8Pd7M1 structures. Save structure files for subsequent DFT calculations.",
+    "output_file": "",
+    "evidence": "structures/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate all initial candidate structures required for DFT energy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "elemental_ref",
+    "title": "Compute elemental reference cohesive energies",
+    "role": "process",
+    "action": "For pure Cu, Pd, and each M (Sc, Ti, Zn, Y, Zr, Hf, La, Al, Mg), set up the ground-state bulk crystal structure and perform a DFT total-energy calculation using a plane-wave pseudopotential code (Quantum ESPRESSO with SSSP PBE pseudopotentials). Converge with respect to plane-wave cutoff and k-point mesh to ~1 meV/atom, fully relax atomic positions and cell volume at zero pressure. Extract the cohesive energy per atom for each element.",
+    "output_file": "",
+    "evidence": "elemental_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute cohesive energies of pure elements to serve as references for formation enthalpy.",
+    "output_schema": ""
+  },
+  {
+    "id": "alloy_dft",
+    "title": "Compute alloy supercell total energies",
+    "role": "process",
+    "action": "For each supercell (Cu8Pd8 and the nine Cu8Pd7M1 structures), perform full relaxation (atomic positions, cell parameters, volume) using the same DFT settings as the elemental calculations. Extract the total energy per atom after relaxation.",
+    "output_file": "",
+    "evidence": "alloy_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total energies per atom of all compound compositions.",
+    "output_schema": ""
+  },
+  {
+    "id": "formation_enthalpy",
+    "title": "Calculate formation enthalpies",
+    "role": "scored",
+    "action": "Calculate the formation enthalpy per atom ΔHf = E_coh(compound) − Σc_i·E_coh(element_i) using the computed cohesive energies of the pure elements and the total energies per atom of the alloy supercells. For Cu8Pd8, c_Cu=0.5, c_Pd=0.5; for Cu8Pd7M1, c_Cu=0.5, c_Pd=7/16, c_M=1/16. Write a CSV file with columns M_element, x, Delta_Hf. Include a row for the binary (M='None', x=0) and one row per M at x=1.",
+    "output_file": "formation_enthalpies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation enthalpy per atom for each composition — the primary quantitative result of the DFT screening.",
+    "output_schema": "columns: M_element (string), x (integer, 0 or 1), Delta_Hf (float, eV/atom)"
+  }
+]

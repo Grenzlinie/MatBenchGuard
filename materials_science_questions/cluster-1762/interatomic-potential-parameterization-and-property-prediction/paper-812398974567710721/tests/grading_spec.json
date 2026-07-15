@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "Relative energies from BFS calculations are compared to paper‑reported values with tolerances; structural ordering checks augment scoring; recompute from raw atomic positions not feasible in verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "fig4_relative_energies.csv": "reference_match",
+    "fig5_relative_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_barrier_energy_fig4",
+      "source_provenance": "Paper Fig. 4 text: 'small energy barrier (0.0571 eV per atom) that would slow, but not completely inhibit, interdiffusion' for U(100) Mo(1b) close configuration.",
+      "generation_method": "Used directly from the paper sentence.",
+      "why_not_fabricated": "Number appears explicitly in the peer‑reviewed paper; it is the core quantitative result of the single‑Mo analysis."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected_ordering_trend_fig5",
+      "source_provenance": "Paper Fig. 5 and surrounding text: increasing Al–Mo coordination raises subsurface incorporation energy; overlayer far‑from‑patch is the reference (0 eV).",
+      "generation_method": "Extracted from the paper's description of the trend.",
+      "why_not_fabricated": "The ordering trend is a direct claim of the paper and does not depend on exact numeric values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fig4_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "face",
+            "mo_location",
+            "al_proximity",
+            "configuration",
+            "relative_energy_eV"
+          ],
+          "units": {
+            "relative_energy_eV": "eV"
+          }
+        },
+        "description": "Relative energies (in eV) for single-Mo ternary configurations (Fig. 4). Each row is one configuration; the lowest-energy configuration per face and mo_location must be exactly 0.0 eV."
+      },
+      {
+        "file": "fig5_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "row_number",
+            "column_label",
+            "coordination",
+            "configuration_label",
+            "relative_energy_eV"
+          ],
+          "units": {
+            "relative_energy_eV": "eV"
+          }
+        },
+        "description": "Relative energies (in eV) for the 15 Mo‑patch configurations (Fig. 5). The reference configuration (row 1, column O) must be exactly 0.0 eV."
+      }
+    ],
+    "notes": "The checker compares relative energies to published reference values and verifies ordering within each sub-case (e.g., energy barrier of ~0.0571 eV for the specific U(100) Mo(1b) close configuration, and the trend that higher Al-Mo coordination increases subsurface incorporation energy). No absolute tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "step_fig4",
+      "output_file": "fig4_relative_energies.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "target_policy": "reference_match",
+      "description": "Check zero‑reference per group, non‑negative energies, and barrier energy for the U(100) Mo(1b) close configuration.",
+      "hidden_gold": {
+        "barrier_condition": {
+          "face": "U100",
+          "mo_location": "1b",
+          "al_proximity": "close"
+        },
+        "barrier_expected_ev": 0.0571,
+        "barrier_tolerance_ev": 0.01
+      }
+    },
+    {
+      "id": "step_fig5",
+      "output_file": "fig5_relative_energies.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "target_policy": "reference_match",
+      "description": "Check zero reference for row 1 column O, trend that subsurface (1b) energy rises with increasing Al–Mo coordination, and non‑negative energies.",
+      "hidden_gold": {}
+    }
+  ]
+}

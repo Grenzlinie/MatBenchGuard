@@ -1,0 +1,184 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of DFT results is infeasible in the verifier sandbox; compare submitted values to paper-reported gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for lattice constants, band gaps, refractive indices, and Sellmeier equation parameters for the four compounds.",
+      "source_provenance": "Paper Table 1 and text sections 4.1–4.4.",
+      "generation_method": "Extracted directly from the paper's own calculated results.",
+      "why_not_fabricated": "Values are the paper's actual reported DFT results, traceable to the published table and text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CuAlS2": "object with a, c, V",
+            "CuGaS2": "object with a, c, V",
+            "CuInS2": "object with a, c, V",
+            "AgGaS2": "object with a, c, V"
+          },
+          "units": {
+            "a": "Å",
+            "c": "Å",
+            "V": "Å^3"
+          }
+        },
+        "description": "Optimized lattice constants from DFT geometry optimization for all four compounds."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CuAlS2": "object with uncorrected_band_gap",
+            "CuGaS2": "object with uncorrected_band_gap",
+            "CuInS2": "object with uncorrected_band_gap",
+            "AgGaS2": "object with uncorrected_band_gap"
+          },
+          "units": {
+            "uncorrected_band_gap": "eV"
+          }
+        },
+        "description": "Uncorrected (raw GGA) band gaps for all four compounds."
+      },
+      {
+        "file": "optical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CuAlS2": "object with refractive_index_n0 and sellmeier_params",
+            "CuGaS2": "object with refractive_index_n0 and sellmeier_params",
+            "CuInS2": "object with refractive_index_n0 and sellmeier_params",
+            "AgGaS2": "object with refractive_index_n0 and sellmeier_params"
+          },
+          "units": {
+            "refractive_index_n0": "dimensionless",
+            "sellmeier_params.A": "dimensionless",
+            "sellmeier_params.B": "dimensionless",
+            "sellmeier_params.C": "nm",
+            "sellmeier_params.D": "nm^-2"
+          }
+        },
+        "description": "Refractive index at zero energy and Sellmeier equation parameters from scissor-corrected dielectric function."
+      }
+    ],
+    "notes": "The scissor shift uses the provided experimental band gap values; the agent must compute it from the uncorrected gap of step2 and apply it to the dielectric function. All scored quantities are compared to the paper's own calculated values with per-quantity tolerances."
+  },
+  "steps": [
+    {
+      "id": "step1_lattice",
+      "output_file": "optimized_lattice_constants.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "gold": {
+        "CuAlS2": {
+          "a": 5.2816,
+          "c": 10.4429,
+          "V": 291.308
+        },
+        "CuGaS2": {
+          "a": 5.356,
+          "c": 10.629,
+          "V": 304.911
+        },
+        "CuInS2": {
+          "a": 5.5775,
+          "c": 11.2379,
+          "V": 349.594
+        },
+        "AgGaS2": {
+          "a": 5.7219,
+          "c": 10.6275,
+          "V": 347.946
+        }
+      },
+      "tolerances": {
+        "a": 0.05,
+        "c": 0.05,
+        "V": 0.1
+      }
+    },
+    {
+      "id": "step2_gaps",
+      "output_file": "band_gaps.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "gold": {
+        "CuAlS2": {
+          "uncorrected_band_gap": 1.94
+        },
+        "CuGaS2": {
+          "uncorrected_band_gap": 0.9
+        },
+        "CuInS2": {
+          "uncorrected_band_gap": 0.0
+        },
+        "AgGaS2": {
+          "uncorrected_band_gap": 1.0
+        }
+      },
+      "tolerance": 0.2
+    },
+    {
+      "id": "step3_optical",
+      "output_file": "optical_properties.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "gold": {
+        "CuAlS2": {
+          "n0": 2.26,
+          "sellmeier": {
+            "A": 1.47925,
+            "B": 0.77143,
+            "C": 202.83614,
+            "D": -4.0606e-10
+          }
+        },
+        "CuGaS2": {
+          "n0": 2.46,
+          "sellmeier": {
+            "A": 1.53956,
+            "B": 0.8999,
+            "C": 265.00937,
+            "D": -1.308e-08
+          }
+        },
+        "CuInS2": {
+          "n0": 2.57,
+          "sellmeier": {
+            "A": -0.391,
+            "B": 2.861,
+            "C": 228.877,
+            "D": -2.867e-08
+          }
+        },
+        "AgGaS2": {
+          "n0": 2.3,
+          "sellmeier": {
+            "A": -1.26,
+            "B": 3.49,
+            "C": 132.62,
+            "D": -6.49e-09
+          }
+        }
+      },
+      "tol_n0": 0.1,
+      "tol_sellmeier": 0.1
+    }
+  ]
+}

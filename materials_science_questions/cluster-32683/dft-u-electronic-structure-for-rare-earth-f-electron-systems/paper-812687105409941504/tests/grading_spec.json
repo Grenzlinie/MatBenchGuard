@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute N(EF) and structural metrics from dos_curve.csv; compare n_ef.txt to paper-reported reference value.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference N(E_F) value from paper",
+      "source_provenance": "LaPt2B2C LDA calculation reported in paper: N(E_F)=33.9 (Ry formula unit)^{-1}",
+      "generation_method": "Extracted from paper text: 'N(E_F) is reduced to 33.9 (Ry formula unit)^{-1}'",
+      "why_not_fabricated": "Value is explicitly stated in the paper; used as hidden gold for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_relative",
+            "dos_total"
+          ],
+          "units": {
+            "energy_relative": "Ry (relative to EF)",
+            "dos_total": "states/(Ry per formula unit)"
+          }
+        },
+        "description": "Total density of states curve. The checker will verify that the Fermi energy lies on the low-energy side of a DOS peak and that N(EF) is lower than the peak maximum within 0.1 Ry above EF."
+      },
+      {
+        "file": "n_ef.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": null
+        },
+        "description": "Density of states at the Fermi level. The value will be compared to the paper's reported gold and must be consistent with the DOS curve (self-consistency check)."
+      }
+    ],
+    "notes": "The dos_curve.csv must have sufficient resolution (step ≤ 0.001 Ry) to reliably locate the DOS peak. The n_ef.txt value must match the DOS value at energy_relative=0 within numerical precision."
+  },
+  "steps": [
+    {
+      "id": "check_n_ef_value",
+      "output_file": "n_ef.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 33.9,
+      "tolerance_abs": 5.0,
+      "tolerance_rel": 0.15,
+      "description": "Compare extracted N(EF) to paper gold within tolerance"
+    },
+    {
+      "id": "check_dos_curve_sanity",
+      "output_file": "dos_curve.csv",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "required_columns": [
+        "energy_relative",
+        "dos_total"
+      ],
+      "description": "Validate existence and shape of dos_curve.csv"
+    },
+    {
+      "id": "check_n_ef_consistency",
+      "output_file": "n_ef.txt",
+      "kind": "numeric",
+      "weight": 0.15,
+      "reference_artifact": "dos_curve.csv",
+      "consistency_tolerance": 0.001,
+      "description": "Check that n_ef.txt value matches DOS at E=0 within numerical precision"
+    },
+    {
+      "id": "check_fermi_peak_structure",
+      "output_file": "dos_curve.csv",
+      "kind": "structural",
+      "weight": 0.25,
+      "max_energy_window_ry": 0.1,
+      "rising_window_ry": 0.003,
+      "description": "Verify that E_F is on the low-energy side of a peak: N(E_F) < max DOS in (0, +0.1 Ry] and DOS increases immediately above E_F"
+    },
+    {
+      "id": "check_vs_LuNi2B2C",
+      "output_file": "n_ef.txt",
+      "kind": "numeric",
+      "weight": 0.15,
+      "compare_threshold": 45.71,
+      "description": "Verify that N(E_F) is substantially smaller than LuNi2B2C value (65.3) by at least 30%"
+    }
+  ]
+}

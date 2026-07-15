@@ -1,0 +1,152 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full digitized experimental intensity curves unavailable to embed; instead verify acoustic peak position, optical-mode broadness (standard deviation, FWHM) and force constant ratio, which capture the paper's claim of broad optical linewidths and a sharp acoustic feature.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "force_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "parameter_name",
+            "fitted_value",
+            "stoichiometric_value",
+            "ratio"
+          ],
+          "units": {
+            "fitted_value": "force constant (arbitrary units)",
+            "stoichiometric_value": "force constant (arbitrary units)",
+            "ratio": "dimensionless"
+          }
+        },
+        "description": "Fitted Born-von Kármán force constants from the Pd4D3 nonstoichiometric model, including the D-D first-neighbor ratio. The hidden checker compares the D-D first-neighbor ratio to the paper's reported value (~1.5) within a tolerance; structural check (one exact-match ratio)."
+      },
+      {
+        "file": "zone_boundary_100.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_meV",
+            "intensity"
+          ],
+          "units": {
+            "energy_meV": "meV",
+            "intensity": "arbitrary normalised unit"
+          }
+        },
+        "description": "Computed neutron scattering intensity profile for the [100] zone boundary (κ=(3,0,0)) at T=80 K. The hidden checker audits structural features: acoustic-mode peak position and optical-mode energy spread (weighted standard deviation), not a recomputed MAE."
+      },
+      {
+        "file": "zone_center_400.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_meV",
+            "intensity"
+          ],
+          "units": {
+            "energy_meV": "meV",
+            "intensity": "arbitrary normalised unit"
+          }
+        },
+        "description": "Computed neutron scattering intensity profile for the zone center (κ=(4,0,0)) at T=80 K. The hidden checker audits the full width at half maximum (FWHM) of the optical peak in a specified energy window."
+      },
+      {
+        "file": "longitudinal_313_0.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_meV",
+            "intensity"
+          ],
+          "units": {
+            "energy_meV": "meV",
+            "intensity": "arbitrary normalised unit"
+          }
+        },
+        "description": "Computed neutron scattering intensity profile for the longitudinal point (κ≈(3.333,0,0)) at T=80 K. The hidden checker audits structural broadness (energy-weighted standard deviation) over the optical-mode region."
+      }
+    ],
+    "notes": "The force_constants.csv row for the D-D first-neighbor is scored against the paper's increased ratio (~1.5). The three intensity CSV files are checked for structural properties (peak position, broadness, FWHM) consistent with the paper's claims of sharp acoustic feature and broad optical linewidths; no MAE recompute against digitized experimental data is performed. The agent must average over at least 25 random configurations, use the fitted force constants, and convolve with a Gaussian of FWHM ~3 meV."
+  },
+  "steps": [
+    {
+      "id": "force_constants_check",
+      "output_file": "force_constants.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "params": {
+        "target_ratio": 1.5,
+        "tolerance": 0.15
+      }
+    },
+    {
+      "id": "zone_boundary_acoustic",
+      "output_file": "zone_boundary_100.csv",
+      "weight": 0.15,
+      "kind": "custom",
+      "params": {
+        "peak_energy_target": 23.0,
+        "delta": 1.0,
+        "energy_range": [
+          20,
+          26
+        ]
+      }
+    },
+    {
+      "id": "zone_boundary_optical_broad",
+      "output_file": "zone_boundary_100.csv",
+      "weight": 0.15,
+      "kind": "custom",
+      "params": {
+        "min_std": 8.0,
+        "energy_range": [
+          25,
+          50
+        ]
+      }
+    },
+    {
+      "id": "zone_center_peak",
+      "output_file": "zone_center_400.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "params": {
+        "peak_range": [
+          35,
+          50
+        ],
+        "fwhm_min": 3.0,
+        "fwhm_max": 10.0
+      }
+    },
+    {
+      "id": "longitudinal_broad",
+      "output_file": "longitudinal_313_0.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "params": {
+        "min_std": 10.0,
+        "energy_range": [
+          10,
+          50
+        ]
+      }
+    }
+  ]
+}

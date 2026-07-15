@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_dft_and_energies",
+    "title": "DFT calculations and adsorption energy computation",
+    "role": "process",
+    "action": "Construct 2×3×4-layer slabs of Ag(111), Au(111), and Pb(111). For each metal, run DFT total energy calculations for clean slabs, gas-phase CO₂ and H₂ references, and slabs with 1,2,3,4 identical adsorbates of HCOO, COOH, and H. Use minima hopping (or equivalent global optimizer) to find low-energy adsorbate configurations. Compute total adsorption energies including zero-point energy corrections and the standard +0.09 eV (H₂) and +0.25 eV (COOHₐₔₛ) corrections. Save all results to coverage_energies.json.",
+    "output_file": "",
+    "evidence": "coverage_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Heavy computational stage that produces the raw adsorption energies needed for all subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_regression",
+    "title": "Linear regression of adsorption energies",
+    "role": "scored",
+    "action": "From coverage_energies.json, for each metal perform a linear regression of total E_ads(Y) vs total E_ads(X) for the pairs (HCOO vs COOH) and (COOH vs H) using the data points for n = 1–4 (or fewer if some coverages are too packed). Extract the slope and intercept. Save the results to regression_fits.json.",
+    "output_file": "regression_fits.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Slopes and intercepts from coverage‑dependent linear fits. These are the key quantitative descriptors and evidence of systematic bias.",
+    "output_schema": "list of objects, each with: metal (string), pair (string, e.g. 'HCOO_vs_COOH', 'COOH_vs_H'), slope (float, eV/eV), intercept (float, eV)"
+  },
+  {
+    "id": "step_03_classification",
+    "title": "Selectivity classification",
+    "role": "scored",
+    "action": "Using the slopes from regression_fits.json, classify each metal: if HCOO:COOH slope > 1.65 → 'HCOOH'; if < 1.65 → 'CO_single' if H:COOH slope < 0 else 'CO_multi'. Output the classification to classification_summary.json.",
+    "output_file": "classification_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final selectivity categories for the studied metals, derived from the regression slopes according to the paper's scheme.",
+    "output_schema": "list of objects, each with: metal (string), predicted_category (string, one of 'HCOOH', 'CO_single', 'CO_multi'), evidence (string describing the slope values used)"
+  }
+]

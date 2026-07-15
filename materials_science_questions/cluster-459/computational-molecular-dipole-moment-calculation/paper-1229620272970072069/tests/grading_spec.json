@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent submits only a final CSV of computed values; recomputing from raw DFT output is infeasible without requiring large output files that are not part of the minimal reproduction contract.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "dft_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold dipole components, total dipole, length, width, and L/D for 3F and 4F from paper Table 2",
+      "source_provenance": "Paper Table 2",
+      "generation_method": "Directly from the paper's published Table 2 numbers",
+      "why_not_fabricated": "Values are directly from the paper's published Table 2; they are the ground truth the reproduction must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "mu_x",
+            "mu_y",
+            "mu_z",
+            "mu_total",
+            "L",
+            "D",
+            "L_D"
+          ],
+          "units": {
+            "mu_x": "Debye",
+            "mu_y": "Debye",
+            "mu_z": "Debye",
+            "mu_total": "Debye",
+            "L": "Angstrom",
+            "D": "Angstrom",
+            "L_D": "dimensionless"
+          },
+          "row_count": 2
+        },
+        "description": "DFT-computed dipole moments and molecular geometry parameters for the two homologs 3F and 4F."
+      }
+    ],
+    "notes": "Only the numerical values from Table 2 of the source paper are scored. ESP maps, charge density analysis, and experimental characterization are out of scope. The agent must use an open-source DFT code (ORCA or equivalent)."
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "output_file": "dft_values.csv",
+      "weight": 1.0,
+      "kind": "comparison",
+      "description": "Compare agent's computed dipole moments and geometry parameters to paper's reported values from Table 2 with defined tolerances, and verify trends",
+      "gold": {
+        "3F": {
+          "mu_x": 5.52,
+          "mu_y": -0.29,
+          "mu_z": 9.91,
+          "mu_total": 11.35,
+          "L": 19.69,
+          "D": 5.95,
+          "L_D": 3.31
+        },
+        "4F": {
+          "mu_x": 5.53,
+          "mu_y": -0.29,
+          "mu_z": 9.99,
+          "mu_total": 11.43,
+          "L": 20.95,
+          "D": 5.97,
+          "L_D": 3.51
+        }
+      },
+      "tolerances": {
+        "mu_x": 0.05,
+        "mu_y": 0.05,
+        "mu_z": 0.05,
+        "mu_total": 0.1,
+        "L": 0.1,
+        "D": 0.1,
+        "L_D": 0.02
+      },
+      "trends": [
+        "mu_total_4F > mu_total_3F and mu_total_4F - mu_total_3F <= 0.2",
+        "L_D_4F > L_D_3F"
+      ]
+    }
+  ]
+}

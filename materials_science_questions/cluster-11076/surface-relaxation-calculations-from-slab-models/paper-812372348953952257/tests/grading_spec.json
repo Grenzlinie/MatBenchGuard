@@ -1,0 +1,127 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute the classical atomistic surface simulations in the verifier; instead compare reported surface and attachment energies to paper gold values (Table 5 and Table 6) with monotonic tolerance, and verify structural ordering (lowest surface energy, smallest attachment energies).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold surface energies and attachment energies from the paper",
+      "source_provenance": "Paper Tables 5 and 6 (doi:10.1021/jp035785k)",
+      "generation_method": "Direct extraction from the published paper's numerical tables",
+      "why_not_fabricated": "The values are the actual reported numbers in the paper; they are the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "surface_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "termination",
+            "relaxed_surface_energy_J_m2"
+          ],
+          "units": {
+            "relaxed_surface_energy_J_m2": "J/m²"
+          }
+        },
+        "description": "Relaxed surface energies of γ-Fe₂O₃ low-index surfaces. Each row gives the Miller index, the most stable reconstructed termination composition, and the minimum relaxed surface energy in J/m²."
+      },
+      {
+        "file": "attachment_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "termination",
+            "relaxed_attachment_energy_eV"
+          ],
+          "units": {
+            "relaxed_attachment_energy_eV": "eV"
+          }
+        },
+        "description": "Relaxed attachment energies of γ-Fe₂O₃ low-index surfaces. Each row gives the Miller index, the reconstructed termination, and the minimum relaxed attachment energy in eV per molecule."
+      }
+    ],
+    "notes": "The surface energy and attachment energy outputs must be obtained by re-running the simulation workflow. Implementation can use any classical code that supports Buckingham potentials and a shell model. The main surfaces to include are (001), (011), (111), (012), (112), (122)."
+  },
+  "steps": [
+    {
+      "id": "step_surface_energies",
+      "output_file": "surface_energies.csv",
+      "kind": "compare_to_gold_with_ordering",
+      "weight": 0.6,
+      "gold_data": {
+        "001": {
+          "energy": 1.97,
+          "tolerance": 0.1
+        },
+        "011": {
+          "energy": 1.97,
+          "tolerance": 0.1
+        },
+        "111": {
+          "energy": 2.01,
+          "tolerance": 0.1
+        },
+        "012": {
+          "energy": 1.89,
+          "tolerance": 0.1
+        },
+        "112": {
+          "energy": 1.86,
+          "tolerance": 0.05
+        },
+        "122": {
+          "energy": 2.23,
+          "tolerance": 0.1
+        }
+      },
+      "ordering_rule": {
+        "lowest_surface": "112"
+      }
+    },
+    {
+      "id": "step_attachment_energies",
+      "output_file": "attachment_energies.csv",
+      "kind": "compare_to_gold_with_ordering",
+      "weight": 0.4,
+      "gold_data": {
+        "001": {
+          "energy": 12.6,
+          "tolerance": 2.0
+        },
+        "011": {
+          "energy": 12.5,
+          "tolerance": 2.0
+        },
+        "111": {
+          "energy": 8.4,
+          "tolerance": 2.0
+        },
+        "012": {
+          "energy": 42.4,
+          "tolerance": 2.0
+        },
+        "112": {
+          "energy": 38.6,
+          "tolerance": 2.0
+        },
+        "122": {
+          "energy": 35.0,
+          "tolerance": 2.0
+        }
+      },
+      "ordering_rule": {
+        "lowest_surface": "111"
+      }
+    }
+  ]
+}

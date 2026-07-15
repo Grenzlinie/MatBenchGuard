@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing DFTB energies/lattice parameters in checker is infeasible; comparing agent-reported values against paper gold with tolerances and structural trends.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "properties.json": "reference_match",
+    "dos_character.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for properties.json (lattice parameters, volume, relative energy, density, bulk modulus, band gap) and orbital character for dos_character.json",
+      "source_provenance": "Paper Tables 1 and 2, and Figure 2 description",
+      "generation_method": "Extracted directly from the paper's reported values in Table 1 and Table 2, and the statement that VBM is N2p and CBM is B2p.",
+      "why_not_fabricated": "Values are the paper's published quantities; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "polymorphs": "array of objects"
+          },
+          "items": {
+            "polymorph_id": "int",
+            "polymorph_name": "string",
+            "Z": "int",
+            "a": "float (Å)",
+            "c": "float or null",
+            "V_uc": "float (Å³/atom)",
+            "ΔE_tot": "float (eV/atom)",
+            "ρ": "float (g/cm³)",
+            "B": "float (GPa)",
+            "ΔE_g": "float (eV)"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Computed structural and electronic properties of six BN polymorphs."
+      },
+      {
+        "file": "dos_character.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "polymorphs": "array of objects",
+            "orbital_character_matches_paper": "boolean"
+          },
+          "items": {
+            "polymorph_id": "int",
+            "polymorph_name": "string",
+            "VBM_orbital": "string",
+            "CBM_orbital": "string"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Dominant orbital character of valence and conduction band edges and whether it matches the expected N2p/B2p pattern."
+      }
+    ],
+    "notes": "All values are compared to the paper's reported numbers within hidden tolerances that account for method/implementation differences. Structural trends (e.g., V_uc ordering) are also checked implicitly."
+  },
+  "gold": {
+    "properties": [
+      {
+        "polymorph_id": 1,
+        "polymorph_name": "c-BN",
+        "Z": 2,
+        "a": 3.734,
+        "c": null,
+        "V_uc": 6.507,
+        "ΔE_tot": 0.0,
+        "ρ": 3.167,
+        "B": 271,
+        "ΔE_g": 0.0
+      },
+      {
+        "polymorph_id": 2,
+        "polymorph_name": "bct-B2N2",
+        "Z": 8,
+        "a": 4.623,
+        "c": 2.589,
+        "V_uc": 6.917,
+        "ΔE_tot": 0.187,
+        "ρ": 2.979,
+        "B": 275,
+        "ΔE_g": -1.82
+      },
+      {
+        "polymorph_id": 3,
+        "polymorph_name": "bcc-B4N4",
+        "Z": 8,
+        "a": 4.938,
+        "c": null,
+        "V_uc": 7.526,
+        "ΔE_tot": 0.717,
+        "ρ": 2.738,
+        "B": 264,
+        "ΔE_g": -0.1
+      },
+      {
+        "polymorph_id": 4,
+        "polymorph_name": "fcc-B5N5",
+        "Z": 10,
+        "a": 6.77,
+        "c": null,
+        "V_uc": 7.757,
+        "ΔE_tot": 0.651,
+        "ρ": 2.656,
+        "B": 288,
+        "ΔE_g": 1.42
+      },
+      {
+        "polymorph_id": 5,
+        "polymorph_name": "sc-B6N6",
+        "Z": 12,
+        "a": 4.598,
+        "c": null,
+        "V_uc": 8.099,
+        "ΔE_tot": 0.444,
+        "ρ": 2.544,
+        "B": 190,
+        "ΔE_g": 0.85
+      },
+      {
+        "polymorph_id": 6,
+        "polymorph_name": "t-B8N8",
+        "Z": 32,
+        "a": 4.924,
+        "c": 11.32,
+        "V_uc": 8.576,
+        "ΔE_tot": 0.548,
+        "ρ": 2.403,
+        "B": 179,
+        "ΔE_g": -2.29
+      }
+    ],
+    "dos": {
+      "expected_character": {
+        "VBM": "N2p",
+        "CBM": "B2p"
+      },
+      "match_paper": true
+    }
+  },
+  "steps": [
+    {
+      "id": "check_properties",
+      "output_file": "properties.json",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "description": "Check structural and electronic properties against paper gold with tolerances and trend consistency."
+    },
+    {
+      "id": "check_dos",
+      "output_file": "dos_character.json",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "description": "Check orbital character assignments and overall match boolean."
+    }
+  ]
+}

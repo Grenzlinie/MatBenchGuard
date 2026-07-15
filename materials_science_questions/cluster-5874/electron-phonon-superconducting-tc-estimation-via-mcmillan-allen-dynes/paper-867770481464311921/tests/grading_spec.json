@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "exact_match",
+  "scoring_justification": "Compute-driven work; quantities are fixed derived results from the paper's DFT pipeline. Scoring each reported value against the paper's gold with appropriate tolerances is adequate because the production of the intermediate EPC quantities (λ, ω_log) is enforced by the tight Tc tolerance. No stronger recompute tier is feasible without hidden labels or rerunning the expensive DFT.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for formation energies, lattice constants, volume expansion, Tc, and benzene lattice constants for self-consistency.",
+      "source_provenance": "Paper text (formation energies, lattice constants, volume expansion, Tc) and paper Figure 1(a) for benzene lattice constants.",
+      "generation_method": "Extracted directly from the paper: 'We obtained the results of formation energy as 0.35, -2.99, and 1.52 eV ...'; 'lattice constants being a = 8.605 Å, b = 10.705 Å, and c = 6.415 Å'; 'volume increased by 26.9%'; 'Tc=6.2 K'; undoped benzene constants a=7.041 Å, b=8.903 Å, c=6.357 Å.",
+      "why_not_fabricated": "These are the actual reported numbers from the source paper for the exact quantities the agent is asked to reproduce. The reference solve.sh writes exactly these values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energies.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "units": {
+            "values": "eV"
+          }
+        },
+        "description": "Space-separated formation energies (x=1, x=2, x=3) in eV. The checker verifies that the most stable composition has the lowest formation energy and that the differences among compositions are consistent with phase stability."
+      },
+      {
+        "file": "step_02_lattice_constants.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "values": "Å"
+          }
+        },
+        "description": "Three space-separated orthorhombic lattice constants a, b, c of the most stable K-doped phase in Å."
+      },
+      {
+        "file": "step_03_volume_expansion.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "percent"
+          }
+        },
+        "description": "Single float: volume expansion of the most stable K-doped phase relative to undoped solid benzene in percent."
+      },
+      {
+        "file": "step_04_tc.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "K"
+          }
+        },
+        "description": "Superconducting critical temperature Tc of the most stable K-doped phase in Kelvin."
+      }
+    ],
+    "notes": "All scored artifacts are compared to hidden gold values/tolerances derived from the source paper. Volume expansion is cross-checked for self-consistency against submitted lattice constants where feasible."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "step_01_formation_energies.txt",
+      "weight": 0.2,
+      "gold_formation_energies": [
+        0.35,
+        -2.99,
+        1.52
+      ],
+      "stability_threshold": 0.5,
+      "kind": "numeric"
+    },
+    {
+      "id": "lattice_constants",
+      "output_file": "step_02_lattice_constants.txt",
+      "weight": 0.3,
+      "gold_lattice_constants": [
+        8.605,
+        10.705,
+        6.415
+      ],
+      "tolerance_abs": 0.1,
+      "kind": "numeric"
+    },
+    {
+      "id": "volume_expansion",
+      "output_file": "step_03_volume_expansion.txt",
+      "weight": 0.2,
+      "gold_volume_expansion": 26.9,
+      "tolerance_abs": 2.0,
+      "benzene_lattice": [
+        7.041,
+        8.903,
+        6.357
+      ],
+      "consistency_tol": 0.5,
+      "kind": "numeric"
+    },
+    {
+      "id": "tc",
+      "output_file": "step_04_tc.txt",
+      "weight": 0.3,
+      "gold_tc": 6.2,
+      "tolerance_abs": 1.0,
+      "kind": "numeric"
+    }
+  ]
+}

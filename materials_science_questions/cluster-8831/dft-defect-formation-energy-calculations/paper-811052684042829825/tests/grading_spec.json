@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Agent's final scalar results are compared against paper-reported gold numbers with tolerances; raw DFT outputs not submitted for recompute.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_bandgap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Line 1: PBE bandgap (eV); Line 2: HSE06 bandgap (eV)."
+        },
+        "description": "Bandgaps of pristine p1 Li₂S₂ computed with PBE and HSE06 functionals."
+      },
+      {
+        "file": "step_02_defect_formation_energies.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Line 1: formation energy of V_Li⁻ (eV); Line 2: formation energy of p⁺ (eV)."
+        },
+        "description": "Formation energies of the dominant charged defects in p1 Li₂S₂."
+      },
+      {
+        "file": "step_03_p_diffusion_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single value: diffusion barrier of p⁺ along [001] in eV."
+        },
+        "description": "CI-NEB energy barrier for hole polaron migration along the [001] direction."
+      },
+      {
+        "file": "step_04_conductivity_ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single dimensionless number: ratio of electronic conductivity (p⁺) to ionic conductivity (V_Li⁻) at 300 K."
+        },
+        "description": "Estimated conductivity ratio at room temperature, quantifying the dominance of hole polaron transport."
+      }
+    ],
+    "notes": "All values correspond to the p1 Li₂S₂ structure. Chemical potentials follow standard phase‑equilibrium references. Conductivity ratio uses the harmonic mean of diffusion barriers along the studied directions."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all four scored artifacts",
+      "source_provenance": "Paper manuscript: bandgaps from Figure 1 and text (1.7 eV PBE, 2.8 eV HSE06); defect formation energies stated as 0.77 eV for V_Li⁻ and p⁺; diffusion barrier stated as ~13 meV (0.013 eV); conductivity ratio described as ~15 orders of magnitude (1e15).",
+      "generation_method": "Transcribed from the paper's reported quantitative results.",
+      "why_not_fabricated": "These values are the actual paper-reported results; the reference solve.sh reproduces them exactly."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_04",
+      "output_file": "step_01_bandgap.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": [
+        1.7,
+        2.8
+      ],
+      "tolerance_abs": 0.2,
+      "description": "Compare PBE and HSE06 bandgaps against paper gold"
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_02_defect_formation_energies.txt",
+      "kind": "numeric",
+      "weight": 0.25,
+      "gold": [
+        0.77,
+        0.77
+      ],
+      "tolerance_abs": 0.1,
+      "description": "Compare V_Li⁻ and p⁺ formation energies against paper gold"
+    },
+    {
+      "id": "step_06",
+      "output_file": "step_03_p_diffusion_barrier.txt",
+      "kind": "numeric",
+      "weight": 0.25,
+      "gold": 0.013,
+      "tolerance_abs": 0.02,
+      "description": "Compare p⁺ diffusion barrier along [001] against paper gold"
+    },
+    {
+      "id": "step_07",
+      "output_file": "step_04_conductivity_ratio.txt",
+      "kind": "numeric",
+      "weight": 0.3,
+      "gold": 1000000000000000.0,
+      "tolerance_log10": 1.0,
+      "description": "Compare conductivity ratio (electronic/ionic) within one order of magnitude"
+    }
+  ]
+}

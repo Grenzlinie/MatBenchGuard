@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute transport values depend on DFT functional and band structure details; structural relations (monotonicity, phase ordering, ratio crossovers) are the strongest reliably verifiable signature.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "target_policies": {
+    "thermoelectric_properties_wireD_300K.csv": "structural_audit",
+    "ZT_ratio_temperature.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermoelectric_properties_wireD_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "carrier_concentration",
+            "phase",
+            "electrical_conductivity",
+            "seebeck_coefficient",
+            "power_factor",
+            "ZT"
+          ],
+          "units": {
+            "carrier_concentration": "cm^-3",
+            "electrical_conductivity": "S/m",
+            "seebeck_coefficient": "uV/K",
+            "power_factor": "uW/mK^2",
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "Thermoelectric transport properties of ZnO nanowire D at 300 K for a sweep of carrier concentrations, covering both W and H phases."
+      },
+      {
+        "file": "ZT_ratio_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "ZT_H",
+            "ZT_W",
+            "ratio"
+          ],
+          "units": {
+            "temperature": "K",
+            "ZT_H": "dimensionless",
+            "ZT_W": "dimensionless",
+            "ratio": "dimensionless"
+          }
+        },
+        "description": "ZT values for H and W phases and their ratio as a function of temperature, at the doping levels that give maximum ZT at room temperature."
+      }
+    ],
+    "notes": "All scored outputs are evaluated by structural audit (T3): the verifier checks that the output data are physically consistent and obey the expected qualitative behavior for the thermoelectric model. Process steps produce evidence artifacts that must be present but are not directly scored."
+  },
+  "steps": [
+    {
+      "id": "sigma_monotonic",
+      "output_file": "thermoelectric_properties_wireD_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Verify electrical conductivity increases monotonically with carrier concentration for both W and H phases."
+    },
+    {
+      "id": "sigma_ordering",
+      "output_file": "thermoelectric_properties_wireD_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Verify at each common carrier concentration, the conductivity of H phase is greater than that of W phase."
+    },
+    {
+      "id": "pf_ordering",
+      "output_file": "thermoelectric_properties_wireD_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Verify power factor of H phase is greater than that of W phase for at least 80% of carrier concentrations."
+    },
+    {
+      "id": "zt_ordering",
+      "output_file": "thermoelectric_properties_wireD_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Verify ZT of H phase is greater than ZT of W phase for all carrier concentrations <= 1.5e19 cm^-3."
+    },
+    {
+      "id": "zt_temp_ordering",
+      "output_file": "ZT_ratio_temperature.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Verify ZT_H > ZT_W at all temperatures (200-1000 K)."
+    },
+    {
+      "id": "ratio_temp_gt1",
+      "output_file": "ZT_ratio_temperature.csv",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify the ratio ZT_H/ZT_W is greater than 1 at all temperatures."
+    },
+    {
+      "id": "ratio_inc",
+      "output_file": "ZT_ratio_temperature.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Verify the ratio at 1000 K is larger than the ratio at 300 K."
+    }
+  ]
+}

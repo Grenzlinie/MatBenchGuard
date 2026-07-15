@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing DFT band gap and NEB barrier from raw QE output is infeasible in checker sandbox; comparing reported values to paper gold and trends is the appropriate tier.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "band_gap_eV"
+          ],
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "DFT band gap for LTO, LMTZO, and LMTZO‑Ov. Scored by comparing the reported values to hidden gold and verifying the narrowing trend (LMTZO‑Ov gap < LTO gap)."
+      },
+      {
+        "file": "migration_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "barrier_eV"
+          ],
+          "units": {
+            "barrier_eV": "eV"
+          }
+        },
+        "description": "Li⁺ migration barrier for LMTZO and LMTZO‑Ov from NEB. Scored by comparing the reported barriers to hidden gold values and verifying the reduction trend (LMTZO‑Ov barrier < LMTZO barrier)."
+      }
+    ],
+    "notes": "The agent must write both CSV files under /app/outputs. The checker reads these files and compares the reported values and relative trends to the paper’s reported results (hidden). No gold values or tolerances are disclosed publicly."
+  },
+  "steps": [
+    {
+      "id": "check_band_gap",
+      "output_file": "band_gap_results.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "description": "Check LTO band gap within 0.5 eV of 2.0 eV and LMTZO-Ov gap at least 0.2 eV narrower than LTO gap.",
+      "conditions": {
+        "lto_target": 2.0,
+        "lto_tol_abs": 0.5,
+        "gap_narrow_min": 0.2
+      }
+    },
+    {
+      "id": "check_migration_barrier",
+      "output_file": "migration_barriers.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "description": "Check migration barriers match paper values within 0.1 eV, and LMTZO-Ov barrier is lower than LMTZO barrier by at least 0.02 eV.",
+      "conditions": {
+        "lmtzo_barrier_ref": 0.415,
+        "lmtzo_ov_barrier_ref": 0.345,
+        "tol": 0.1,
+        "trend_margin": 0.02
+      }
+    }
+  ],
+  "hidden_assets": []
+}

@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Direct recompute of exact defect positions requires rerunning the full shape‑nematic minimization, which is infeasible in the verifier sandbox; we verify the key structural properties (shape classification against paper phase diagram and defect alignment with w_t maxima) that constitute the main experimental claims.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected shape types (stomatocyte, oblate, prolate) for the required (v, μ) grid derived from Figure 6.",
+      "source_provenance": "Paper Figure 6 stability diagram and associated text.",
+      "generation_method": "Extracted directly from the published stability boundaries: for μ=0 stomatocyte v≤0.55, oblate 0.60–0.75, prolate v=0.80; for μ=1 stomatocyte v≤0.50, oblate 0.55–0.75, prolate v=0.80.",
+      "why_not_fabricated": "These are the exact phase boundaries reported in the paper; they constitute the ground truth for shape classification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "simulations": "array of simulation objects"
+          },
+          "items": {
+            "simulations": {
+              "v": "float",
+              "mu": "float",
+              "shape_type": "string",
+              "defects": "array of {s: float, topological_charge: float}",
+              "w_t_profile": "array of {s: float, w_t: float}",
+              "L_s": "float"
+            }
+          }
+        },
+        "description": "Complete simulation results for all (v, mu) conditions. Must contain at least the 8 basic volumes (0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80) for both mu=0 and mu=1. The checker validates shape classification consistency with the paper's phase diagram and verifies that each reported defect position lies near a local maximum of w_t_profile."
+      }
+    ],
+    "notes": "No external inputs beyond the model and numerical tools are needed. The agent must implement the full minimization algorithm; a pre-computed or loaded result file would be rejected. The checker uses structural rules derived from the paper (phase boundaries, defect-w_t alignment, total charge 2, individual charges ±0.5)."
+  },
+  "steps": [
+    {
+      "id": "check_shape_type",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.6,
+      "parameters": {
+        "required_combos": [
+          {
+            "v": 0.45,
+            "mu": 0,
+            "expected_shape": "stomatocyte"
+          },
+          {
+            "v": 0.5,
+            "mu": 0,
+            "expected_shape": "stomatocyte"
+          },
+          {
+            "v": 0.55,
+            "mu": 0,
+            "expected_shape": "stomatocyte"
+          },
+          {
+            "v": 0.6,
+            "mu": 0,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.65,
+            "mu": 0,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.7,
+            "mu": 0,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.75,
+            "mu": 0,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.8,
+            "mu": 0,
+            "expected_shape": "prolate"
+          },
+          {
+            "v": 0.45,
+            "mu": 1,
+            "expected_shape": "stomatocyte"
+          },
+          {
+            "v": 0.5,
+            "mu": 1,
+            "expected_shape": "stomatocyte"
+          },
+          {
+            "v": 0.55,
+            "mu": 1,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.6,
+            "mu": 1,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.65,
+            "mu": 1,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.7,
+            "mu": 1,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.75,
+            "mu": 1,
+            "expected_shape": "oblate"
+          },
+          {
+            "v": 0.8,
+            "mu": 1,
+            "expected_shape": "prolate"
+          }
+        ]
+      }
+    },
+    {
+      "id": "check_defect_wt_alignment",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.4,
+      "parameters": {
+        "tolerance_fraction": 0.01
+      }
+    }
+  ]
+}

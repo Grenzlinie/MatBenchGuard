@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step1",
+    "title": "Supercell construction",
+    "role": "process",
+    "action": "Construct 16-atom supercells from the B2 RuAl conventional cell: Ru₈Al₈, Ru₉Al₇, and for TM = Ti, Ni, W the substitutional alloys Ru₈Al₇TM (TM on Al site) and Ru₇Al₈TM (TM on Ru site). Use lattice parameter ~3.005 Å as starting point.",
+    "output_file": "",
+    "evidence": "supercells.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates input structures for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT total energy calculations",
+    "role": "process",
+    "action": "Perform DFT geometry optimization and total energy calculation for all supercells of step1 using GGA-PBE, with plane-wave cutoff >= 450 eV, a Monkhorst–Pack k-point mesh appropriate for 16-atom supercells, and self-consistency convergence 10⁻⁶ eV/atom. Use Quantum ESPRESSO (or another open-source DFT code). Save the final total energies.",
+    "output_file": "",
+    "evidence": "total_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Runs DFT to obtain total energies needed for transfer energies and elastic constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Transfer energy and site preference",
+    "role": "scored",
+    "action": "From the total energies, compute E(Ru_Al) = E(Ru₉Al₇) - E(Ru₈Al₈) and then for each TM the transfer energy E_TM(Al→Ru) = E(Ru₇Al₈TM) - E(Ru₈Al₇TM) + E(Ru_Al). Determine E_Antisite from the formation energy of the exchange antisite. Assign site preference using the Ruban–Skriver rule: negative transfer energy ⇒ strong Ru-site preference; transfer energy > E_Antisite ⇒ strong Al-site preference; otherwise random. Output the results for Ti, Ni, and W as a JSON file.",
+    "output_file": "site_preference.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file with transfer energies, site preferences, and E_Antisite for the representative solutes.",
+    "output_schema": "object with keys 'Ti','Ni','W', each containing 'transfer_energy_eV' (float) and 'site_preference' (string: 'Al','Ru','random'), plus top-level key 'E_Antisite_eV' (float)."
+  },
+  {
+    "id": "step4",
+    "title": "DFT elastic constants calculation",
+    "role": "process",
+    "action": "For pure RuAl and for each TM at its preferred site (Ru₈Al₇Ti, Ru₇Al₈Ni, Ru₈Al₇W), apply small strains to the optimized supercells and compute the resulting stress tensors via DFT to obtain single-crystal elastic constants C₁₁, C₁₂, C₄₄. Use the same DFT parameters as in step2.",
+    "output_file": "",
+    "evidence": "elastic_raw.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computes the three independent elastic constants for the cubic systems.",
+    "output_schema": ""
+  },
+  {
+    "id": "step5",
+    "title": "Elastic constants and polycrystalline moduli",
+    "role": "scored",
+    "action": "From C₁₁, C₁₂, C₄₄ obtained in step4, compute bulk modulus B = (C₁₁+2C₁₂)/3, Voigt–Reuss–Hill shear modulus G, Young's modulus E, Poisson's ratio ν, and Zener anisotropy A_Z. Output the results as a JSON file.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file with elastic constants and derived moduli for pure RuAl, Ru₈Al₇Ti, Ru₇Al₈Ni, and Ru₈Al₇W.",
+    "output_schema": "object with keys 'pure_RuAl', 'Ru8Al7Ti', 'Ru7Al8Ni', 'Ru8Al7W'. Each value is an object with numeric fields: 'C11_GPa', 'C12_GPa', 'C44_GPa', 'B_GPa', 'G_GPa', 'E_GPa', 'nu' (float), 'A_Z' (float)."
+  },
+  {
+    "id": "step6",
+    "title": "Electron density and bulk modulus correlation",
+    "role": "scored",
+    "action": "For each composition (pure RuAl, Ru₈Al₇Ti, Ru₇Al₈Ni, Ru₈Al₇W), compute the atomic volume V_M from the optimized lattice parameter, obtain bonding valence Z_B using the Rose–Shore model (literature values), and calculate electron density n = Z_B / V_M. Pair each n with the corresponding bulk modulus B from step5. Output the results as a JSON file.",
+    "output_file": "electron_density_bulk_modulus.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file with electron densities and bulk moduli, enabling verification of the linear trend between B and n.",
+    "output_schema": "object with keys 'pure_RuAl', 'Ru8Al7Ti', 'Ru7Al8Ni', 'Ru8Al7W'. Each value is an object with fields: 'electron_density_el_per_atom' (float) and 'bulk_modulus_GPa' (float)."
+  }
+]

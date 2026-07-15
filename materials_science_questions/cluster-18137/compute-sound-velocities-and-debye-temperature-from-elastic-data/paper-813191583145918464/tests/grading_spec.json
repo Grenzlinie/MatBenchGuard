@@ -1,0 +1,189 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Cannot recompute velocities or coefficients from raw artifacts without implementing the full wave‑equation solver and DOVS computation; compare agent‑reported values against paper's corrected Tables I and II with tolerances (T0).",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "table_i_velocities.csv": "exact_match",
+    "table_ii_coefficients.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold velocities and coefficients from the paper's corrected tables",
+      "source_provenance": "Paper: 'Comment on Low‑temperature lattice excitation of icosahedral Al‑Mn‑Pd quasicrystals' (Phys. Rev. B 65, 026201), Table I and Table II.",
+      "generation_method": "Extracted directly from the paper's published tables; confirmed by the reference oracle.",
+      "why_not_fabricated": "Values are the paper's own reported numbers, not invented. The reference solve.sh writes exactly these values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "table_i_velocities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "axis",
+            "direction_6d",
+            "v1",
+            "v2",
+            "v3",
+            "v4",
+            "v5",
+            "v6"
+          ],
+          "units": {
+            "v1": "m/s",
+            "v2": "m/s",
+            "v3": "m/s",
+            "v4": "m/s",
+            "v5": "m/s",
+            "v6": "m/s"
+          }
+        },
+        "description": "Mode velocities along fivefold, twofold, and threefold axes."
+      },
+      {
+        "file": "table_ii_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "source",
+            "a",
+            "b",
+            "beta",
+            "delta",
+            "omega0",
+            "Theta_D"
+          ],
+          "units": {
+            "a": "s^3/rad^3 mol",
+            "b": "s^5/rad^5 mol",
+            "beta": "J/mol K^4",
+            "delta": "J/mol K^6",
+            "omega0": "rad/s",
+            "Theta_D": "K"
+          }
+        },
+        "description": "DOVS and specific heat coefficients from experiment and three calculated directions."
+      }
+    ],
+    "notes": "The mass density ρ must be obtained from public literature; it is not provided here. The wave equations are from Li and Liu (Phys. Rev. B 63, 064203); the agent must implement the dynamical matrix."
+  },
+  "steps": [
+    {
+      "id": "step_velocities",
+      "output_file": "table_i_velocities.csv",
+      "kind": "numeric_table",
+      "weight": 0.5,
+      "columns": [
+        "v1",
+        "v2",
+        "v3",
+        "v4",
+        "v5",
+        "v6"
+      ],
+      "row_identifier": [
+        "axis"
+      ],
+      "tolerance": {
+        "type": "relative_percent",
+        "value": 1.0
+      },
+      "gold": [
+        {
+          "axis": "A5",
+          "v1": 6340.5,
+          "v2": 3570.0,
+          "v3": 3570.0,
+          "v4": 3067.8,
+          "v5": 3067.8,
+          "v6": 5386.4
+        },
+        {
+          "axis": "A2",
+          "v1": 6340.1,
+          "v2": 3570.0,
+          "v3": 3570.0,
+          "v4": 1830.8,
+          "v5": 4383.6,
+          "v6": 5027.5
+        },
+        {
+          "axis": "A3",
+          "v1": 6340.0,
+          "v2": 3564.1,
+          "v3": 3575.3,
+          "v4": 1695.8,
+          "v5": 4733.3,
+          "v6": 4750.6
+        }
+      ]
+    },
+    {
+      "id": "step_coefficients",
+      "output_file": "table_ii_coefficients.csv",
+      "kind": "numeric_table",
+      "weight": 0.5,
+      "columns": [
+        "a",
+        "b",
+        "beta",
+        "delta",
+        "omega0",
+        "Theta_D"
+      ],
+      "row_identifier": [
+        "source"
+      ],
+      "tolerance": {
+        "type": "relative_percent",
+        "value": 5.0
+      },
+      "gold": [
+        {
+          "source": "Expt",
+          "a": 2.37e-17,
+          "b": 2.37e-43,
+          "beta": 2.63e-05,
+          "delta": 9.21e-08,
+          "omega0": 31480000000000.0,
+          "Theta_D": 420
+        },
+        {
+          "source": "Calc_A5",
+          "a": 2.92e-17,
+          "b": 1.58e-43,
+          "beta": 2.35e-05,
+          "delta": 6.15e-08,
+          "omega0": 33960000000000.0,
+          "Theta_D": 436
+        },
+        {
+          "source": "Calc_A2",
+          "a": 5.45e-17,
+          "b": 1.279e-42,
+          "beta": 4.39e-05,
+          "delta": 4.975e-07,
+          "omega0": 22840000000000.0,
+          "Theta_D": 354
+        },
+        {
+          "source": "Calc_A3",
+          "a": 6.42e-17,
+          "b": 1.992e-42,
+          "beta": 5.17e-05,
+          "delta": 7.748e-07,
+          "omega0": 20950000000000.0,
+          "Theta_D": 335
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's central computational claim is the adsorption site change (hollow→top) and the blueshift trend, not an absolute frequency that depends on DFT implementation choices. A full recompute (T1) is infeasible because there is no single hidden ground-truth frequency set; the paper only reports the qualitative trends. Scoring by structural audit of the site assignment and monotonic frequency increase with Cu content is the strongest feasible tier and directly verifies the claimed physical behavior.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "co_frequencies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide expected CO adsorption site labels (hollow/top) for each alloy composition and the ordered composition list required for the blueshift trend check.",
+      "source_provenance": "Extracted from the paper's textual description of the DFT result and Figure 4c/Figure 5, which state that on pure Ru the adsorption site is hollow, on Cu-substituted surfaces the site changes to top, and the C-O stretching frequency blueshifts with increasing Cu.",
+      "generation_method": "Manually transcribed from the paper's reported behavior; the expected site mapping exactly follows the paper's statement, and the composition order follows the Cu content from 0 (Ru) to 1 (Cu). No synthetic fabrication.",
+      "why_not_fabricated": "These are not fabricated numbers; they are the qualitative conclusions the paper itself draws from its DFT calculations. The checker merely verifies that the agent's submitted artifact reproduces the same qualitative trend."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "co_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "adsorption_site",
+            "frequency_cm1"
+          ],
+          "items": {},
+          "units": {
+            "frequency_cm1": "cm^{-1}"
+          }
+        },
+        "description": "The table contains the predicted CO adsorption site on Ru atoms (hollow or top) and the harmonic C-O stretching frequency for each alloy composition. The checker will verify the structural trend: for pure Ru the site is hollow, for all Cu-substituted compositions the site is top, and the frequency increases monotonically with Cu content."
+      }
+    ],
+    "notes": "No absolute tolerance is applied to frequencies; scoring relies on the site assignment and the monotonic trend (blueshift) matching the paper's claim. The process steps produce intermediate evidence (slab_structures.zip, optimized_geometries.zip) that is not scored but is required for a correct final artifact."
+  },
+  "steps": [
+    {
+      "id": "frequency_check",
+      "output_file": "co_frequencies.csv",
+      "kind": "structural_audit",
+      "weight": 1.0,
+      "target": null,
+      "tolerance": null,
+      "expected_sites": {
+        "Ru": "hollow",
+        "Cu0.2Ru0.8": "top",
+        "Cu0.5Ru0.5": "top",
+        "Cu0.7Ru0.3": "top",
+        "Cu": "top"
+      },
+      "composition_order": [
+        "Ru",
+        "Cu0.2Ru0.8",
+        "Cu0.5Ru0.5",
+        "Cu0.7Ru0.3",
+        "Cu"
+      ],
+      "description": "Verify that adsorption_site is 'hollow' for composition 'Ru' and 'top' for all other listed compositions, and that frequency_cm1 is monotonically non-decreasing with an overall increase from Ru to Cu."
+    }
+  ]
+}

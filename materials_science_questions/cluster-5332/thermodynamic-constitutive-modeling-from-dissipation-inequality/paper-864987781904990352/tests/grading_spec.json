@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level compare: the agent's reported scalar quantities are compared to the paper-derived analytical solutions with absolute tolerances. Recomputing from raw simulation output is infeasible because the task does not require the agent to submit intermediate simulation data.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Provide target values for the four scalar fields (contact velocity, contact traction, left release velocity, right release velocity).",
+      "source_provenance": "Derived from the paper's closed-form equations (20), (22), (24) using the specified input parameters: E=100 N/m², ρ_R=0.01 kg/m³, ν=0.0, L=20 m, δ=0.01 m, v0=0.1 m/s. The paper explicitly gives v_x^C = v0/2, t_x^C = -c_p ρ_R v0/2, left release = 0, right release = v0.",
+      "generation_method": "Direct substitution of the given numerical values into the analytical formulas.",
+      "why_not_fabricated": "These are the exact results of the paper's analytical model for the prescribed parameters; they match the paper's own reported values for this test case."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "contact_analytical_check.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "contact_velocity": "float (m/s)",
+            "contact_traction": "float (N/m^2)",
+            "left_release_velocity": "float (m/s)",
+            "right_release_velocity": "float (m/s)"
+          }
+        },
+        "description": "JSON file with four floating-point fields: contact velocity and traction at impact, and post-separation velocities of left and right bars. The checker compares each value to the paper's analytical solutions with predefined tolerances."
+      }
+    ],
+    "notes": "The quantities are deterministic for the given inputs. Tolerances account for numerical discretization errors."
+  },
+  "steps": [
+    {
+      "id": "contact_velocity",
+      "output_file": "contact_analytical_check.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "field": "contact_velocity",
+      "target": 0.05,
+      "tolerance_abs": 0.0001
+    },
+    {
+      "id": "contact_traction",
+      "output_file": "contact_analytical_check.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "field": "contact_traction",
+      "target": -0.05,
+      "tolerance_abs": 0.001
+    },
+    {
+      "id": "left_release_velocity",
+      "output_file": "contact_analytical_check.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "field": "left_release_velocity",
+      "target": 0.0,
+      "tolerance_abs": 0.0001
+    },
+    {
+      "id": "right_release_velocity",
+      "output_file": "contact_analytical_check.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "field": "right_release_velocity",
+      "target": 0.1,
+      "tolerance_abs": 0.0001
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw DFT artifacts is infeasible in the test sandbox; the checker compares agent-reported values against paper-reported gold with tolerances.",
+  "pass_threshold": 0.0,
+  "target_policies": {
+    "thermal_conductivity_300K.txt": "exact_match",
+    "elastic_constants.txt": "exact_match",
+    "elastic_moduli.txt": "exact_match",
+    "raman_frequencies.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for scored artifacts",
+      "source_provenance": "Paper Table 1 and Section 3: thermal conductivity 266.17 W/mK, elastic constants 328,189,160 GPa, moduli 235,124,190,0.37, Raman frequencies 417.63,1394.02,1504.15 cm⁻¹",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These are the paper's own reported values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity_300K.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number in W/mK."
+        },
+        "description": "Lattice thermal conductivity of cubic graphene at 300 K."
+      },
+      {
+        "file": "elastic_constants.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Three space-separated floats: C11 C12 C44 (GPa)."
+        },
+        "description": "Single-crystal elastic stiffness constants."
+      },
+      {
+        "file": "elastic_moduli.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Four space-separated floats: B(GPa) G(GPa) E(GPa) ν(dimensionless)."
+        },
+        "description": "Polycrystalline elastic moduli from Voigt–Reuss–Hill averaging."
+      },
+      {
+        "file": "raman_frequencies.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Three space-separated floats: T2g A1g Eg frequencies (cm⁻¹)."
+        },
+        "description": "Raman-active phonon mode frequencies at the Γ point."
+      }
+    ],
+    "notes": "All scoring uses result-level comparison against paper reference values with appropriate tolerances for a DFT re-run."
+  },
+  "steps": [
+    {
+      "id": "tc",
+      "output_file": "thermal_conductivity_300K.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "gold": 266.17,
+      "tolerance_type": "ratio_window",
+      "tolerance_low": 0.5,
+      "tolerance_high": 2.0
+    },
+    {
+      "id": "tc_trend",
+      "output_file": "thermal_conductivity_300K.txt",
+      "kind": "trend_check",
+      "weight": 0.0,
+      "target_policy": "trend",
+      "check_type": "less_than",
+      "threshold": 2033.0
+    },
+    {
+      "id": "elast",
+      "output_file": "elastic_constants.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "gold": [
+        328.0,
+        189.0,
+        160.0
+      ],
+      "tolerance_type": "relative",
+      "tolerance": 0.3,
+      "decay_span": 0.7
+    },
+    {
+      "id": "moduli",
+      "output_file": "elastic_moduli.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "gold": [
+        235.0,
+        124.0,
+        190.0,
+        0.37
+      ],
+      "tolerance_type": "relative",
+      "tolerance": 0.3,
+      "decay_span": 0.7
+    },
+    {
+      "id": "raman",
+      "output_file": "raman_frequencies.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "gold": [
+        417.63,
+        1394.02,
+        1504.15
+      ],
+      "tolerance_type": "relative",
+      "tolerance": 0.1,
+      "decay_span": 0.9
+    }
+  ]
+}

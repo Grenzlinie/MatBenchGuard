@@ -1,0 +1,67 @@
+[
+  {
+    "id": "collect_data",
+    "title": "Collect experimental input data",
+    "role": "process",
+    "action": "Extract from the provided instruction the experimental lattice constants (δ), compressibilities (2C), interionic repulsive potential parameters (b, ρ, ionic radii), van der Waals coefficients (c), and repulsive-force derivatives for Cu. Tabulate them for use by subsequent steps. This step is documentation and preparation; no scored output.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Agent must read the instruction to obtain all required numerical inputs for the calculations. These values are provided in the task text; no external download needed.",
+    "output_schema": ""
+  },
+  {
+    "id": "electrostatic",
+    "title": "Compute Electrostatic Lattice Contributions",
+    "role": "scored",
+    "action": "Using the Ewald‑summation second‑derivative formulas for volume‑preserving distortions (type A and B), compute the dimensionless electrostatic coefficients A^(l) and 2B^(l) for the face‑centred cubic (fcc) and body‑centred cubic (bcc) crystal structures. These values are independent of the specific metal and represent the total electrostatic contribution per atom in units of e²/(2δ). The result must match the known values for these structures within numerical precision.",
+    "output_file": "electrostatic_contributions.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Dimensionless electrostatic coefficients A^(l) and 2B^(l) for FCC and BCC crystals.",
+    "output_schema": "{ \"fcc\": {\"A_l\": float, \"2B_l\": float}, \"bcc\": {\"A_l\": float, \"2B_l\": float} }"
+  },
+  {
+    "id": "exchange",
+    "title": "Compute Exchange Interaction Contributions",
+    "role": "scored",
+    "action": "For each metal (Li, Na, K, Cu), compute the exchange contributions A^(I) and 2B^(I) arising from closed‑shell interionic potentials (repulsive Born‑Mayer and attractive van der Waals forces). Use the central‑force formulas, the nearest‑neighbour distances derived from the experimental lattice constants, and the potential parameters (for alkalis: Born‑Mayer and London values; for copper: the repulsive force derivatives). Combine repulsive and van der Waals parts into total A^(I) and 2B^(I) for each metal, expressed in cgs units (×10^11).",
+    "output_file": "exchange_contributions.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Exchange interaction contributions A^(I) and 2B^(I) for Li, Na, K, Cu, in cgs × 10^11.",
+    "output_schema": "[{\"metal\": \"Li\", \"A_I\": float, \"2B_I\": float}, {\"metal\": \"Na\", \"A_I\": float, \"2B_I\": float}, {\"metal\": \"K\", \"A_I\": float, \"2B_I\": float}, {\"metal\": \"Cu\", \"A_I\": float, \"2B_I\": float}]"
+  },
+  {
+    "id": "total_elastic",
+    "title": "Assemble Total Elastic Constants",
+    "role": "scored",
+    "action": "For each metal, combine the electrostatic contributions (scaled to cgs units using the experimental lattice constant δ) with the exchange contributions to obtain the total A = c11 − c12 and 2B = c44. Then, using the experimental compressibility 2C (provided in the instruction), solve for c11 and c12 via the cubic‑symmetry relations. Report all values in cgs units × 10^11.",
+    "output_file": "total_elastic_constants.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Total elastic constants A, 2B, c11, c12 for Li, Na, K, Cu in cgs × 10^11.",
+    "output_schema": "[{\"metal\": \"Li\", \"A\": float, \"2B\": float, \"c11\": float, \"c12\": float}, {\"metal\": \"Na\", \"A\": float, \"2B\": float, \"c11\": float, \"c12\": float}, {\"metal\": \"K\", \"A\": float, \"2B\": float, \"c11\": float, \"c12\": float}, {\"metal\": \"Cu\", \"A\": float, \"2B\": float, \"c11\": float, \"c12\": float}]"
+  },
+  {
+    "id": "debye",
+    "title": "Compute Debye Characteristic Temperatures",
+    "role": "scored",
+    "action": "For the alkali metals (Li, Na, K), use the full set of elastic constants from the previous step and the atomic density (derived from atomic weight and lattice constant) to compute the low‑temperature Debye temperature Θ via the Born‑Karman theory. Evaluate the harmonic mean sound velocity using the direction‑resolved elastic wave equations and the provided power‑series expansion for the angular integral, then apply the standard formula for Θ. Report Θ in Kelvin.",
+    "output_file": "debye_temperatures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Debye characteristic temperatures for Li, Na, K in Kelvin.",
+    "output_schema": "[{\"metal\": \"Li\", \"Theta\": float}, {\"metal\": \"Na\", \"Theta\": float}, {\"metal\": \"K\", \"Theta\": float}]"
+  }
+]

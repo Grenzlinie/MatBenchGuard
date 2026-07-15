@@ -1,0 +1,170 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level compare with ordering: recomputing adsorption energies from raw geometries/infinite summations is infeasible in a lightweight checker; we compare agent-reported values to the paper's gold values with tolerance and enforce relative ordering trends.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "terrace_M",
+            "terrace_Dr",
+            "terrace_Dl",
+            "step_M",
+            "step_Dr",
+            "step_Dl"
+          ],
+          "properties": {
+            "terrace_M": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ],
+              "properties": {
+                "E_ad": {
+                  "type": "number"
+                },
+                "E_reg_rel": {
+                  "type": "number"
+                },
+                "E_mol_rel": {
+                  "type": "number"
+                },
+                "E_int": {
+                  "type": "number"
+                }
+              }
+            },
+            "terrace_Dr": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ]
+            },
+            "terrace_Dl": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ]
+            },
+            "step_M": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ]
+            },
+            "step_Dr": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ]
+            },
+            "step_Dl": {
+              "type": "object",
+              "required": [
+                "E_ad",
+                "E_reg_rel",
+                "E_mol_rel",
+                "E_int"
+              ]
+            }
+          }
+        },
+        "description": "Total adsorption energies and components (in eV) for LiF monomer, rhombic dimer, and linear dimer on the relaxed CaF₂(111) terrace and at the relaxed [10-1] type I step."
+      }
+    ],
+    "notes": "All energies must be in electronvolts (eV). The free-molecule reference energies are required to compute E_mol_rel; the relaxation of the pure surface and step provides the starting configurations. The check compares each E_ad to a reference value with tolerance and verifies relative ordering and consistency with an experimental monomer step value."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold adsorption energies and experimental monomer reference",
+      "source_provenance": "Paper Tables 3 and 5, and experimental value stated as -2.70 ± 0.17 eV",
+      "generation_method": "extracted directly from the published paper",
+      "why_not_fabricated": "These are the exact values reported in the paper; they are the reproduction target"
+    }
+  ],
+  "target_policies": {
+    "adsorption_energies.json": "reference_match"
+  },
+  "steps": [
+    {
+      "id": "file_valid",
+      "output_file": "adsorption_energies.json",
+      "kind": "file_shape",
+      "weight": 0.01,
+      "description": "Validate output JSON structure and required fields"
+    },
+    {
+      "id": "adsorption_values",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare each reported E_ad to paper gold values with tolerance 0.15 eV",
+      "params_gold": {
+        "terrace_M": -1.72,
+        "terrace_Dr": -1.96,
+        "terrace_Dl": -1.11,
+        "step_M": -2.68,
+        "step_Dr": -3.06,
+        "step_Dl": -2.86
+      },
+      "tolerance": 0.15
+    },
+    {
+      "id": "ordering_terrace",
+      "output_file": "adsorption_energies.json",
+      "kind": "ordering",
+      "weight": 0.08,
+      "description": "Terrace |E_ad| ordering: Dl < M < Dr",
+      "condition": "abs(E_ad_Dl) < abs(E_ad_M) < abs(E_ad_Dr)"
+    },
+    {
+      "id": "ordering_step",
+      "output_file": "adsorption_energies.json",
+      "kind": "ordering",
+      "weight": 0.08,
+      "description": "Step |E_ad| ordering: M < Dl < Dr",
+      "condition": "abs(E_ad_step_M) < abs(E_ad_step_Dl) < abs(E_ad_step_Dr)"
+    },
+    {
+      "id": "step_vs_terrace",
+      "output_file": "adsorption_energies.json",
+      "kind": "ordering",
+      "weight": 0.08,
+      "description": "Every step E_ad must be more negative than corresponding terrace E_ad",
+      "condition": "step < terrace for all three molecules"
+    },
+    {
+      "id": "monomer_experimental",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 0.05,
+      "description": "Monomer step E_ad must be within 0.2 eV of experimental -2.70 eV",
+      "params_gold": {
+        "step_M": -2.7
+      },
+      "tolerance": 0.2
+    }
+  ]
+}

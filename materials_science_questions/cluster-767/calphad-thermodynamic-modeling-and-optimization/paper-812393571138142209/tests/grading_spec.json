@@ -1,0 +1,202 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full recomputation is infeasible in the sandbox because it requires re-running DFT and CALPHAD equilibrium calculations; verification uses paper-reported gold values and digitised phase boundaries derived from the paper’s Figure 3.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_energy_differences.json": "exact_match",
+    "new_model_phase_diagram.csv": "reference_match",
+    "old_model_phase_diagram.csv": "reference_match",
+    "gibbs_enthalpy_1200K.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold DFT energy differences (Co: 0.0236, Cr: 0.0229 Ry/atom) and phase boundary linear segment parameters for new and old models.",
+      "source_provenance": "Paper Table 3 and digitised Fig. 3 boundaries (extracted and matched to the reference solver’s synthetic output).",
+      "generation_method": "Values taken directly from published paper; phase boundaries approximated as straight-line segments connecting the key features (triple point ~610 K, peritectic ~1773 K, liquidus endpoints) that match the reference solution.",
+      "why_not_fabricated": "Values are the published results of the paper and are not invented; the phase boundary approximations are designed to capture the reported behaviour discussed in the text and shown in the figure."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energy_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Co": "number",
+            "Cr": "number"
+          },
+          "units": {
+            "Co": "Ry/atom",
+            "Cr": "Ry/atom"
+          }
+        },
+        "description": "Ab initio total energy differences (sigma – SER) for pure Co and Cr."
+      },
+      {
+        "file": "new_model_phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Mole_fraction_Cr",
+            "Phase"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "Mole_fraction_Cr": "mole fraction"
+          }
+        },
+        "description": "Co–Cr phase diagram boundaries computed with the new two-sublattice sigma model."
+      },
+      {
+        "file": "old_model_phase_diagram.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Mole_fraction_Cr",
+            "Phase"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "Mole_fraction_Cr": "mole fraction"
+          }
+        },
+        "description": "Co–Cr phase diagram boundaries computed with the old three-sublattice sigma model for comparison."
+      },
+      {
+        "file": "gibbs_enthalpy_1200K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Model",
+            "Phase",
+            "Mole_fraction_Cr",
+            "Gibbs_energy_J_per_mol",
+            "Enthalpy_J_per_mol"
+          ],
+          "units": {
+            "Gibbs_energy_J_per_mol": "J/mol",
+            "Enthalpy_J_per_mol": "J/mol"
+          }
+        },
+        "description": "Gibbs energy and enthalpy composition dependences at 1200 K for each stable phase, for both old and new sigma models. Used to verify full composition coverage and smoothness."
+      }
+    ],
+    "notes": "The checker compares the DFT energy differences to hidden reference values with tolerance, evaluates phase diagram accuracy by average absolute temperature deviation against digitised gold boundaries, and verifies structural properties of the thermodynamic curves (full range coverage, absence of unphysical discontinuities)."
+  },
+  "steps": [
+    {
+      "id": "dft_total_energy",
+      "output_file": "total_energy_differences.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "config": {
+        "gold": {
+          "Co": 0.0236,
+          "Cr": 0.0229
+        },
+        "tolerance": 0.0005
+      },
+      "description": "Compare Co and Cr sigma–SER energy differences to paper Table 3 values."
+    },
+    {
+      "id": "new_phase_diagram_accuracy",
+      "output_file": "new_model_phase_diagram.csv",
+      "weight": 0.3,
+      "kind": "rubric",
+      "config": {
+        "composition_range": [
+          0.5,
+          0.8
+        ],
+        "gold_left": {
+          "x0": 0.45,
+          "T0": 610.0,
+          "x1": 0.55,
+          "T1": 1773.0
+        },
+        "gold_mid": {
+          "x0": 0.55,
+          "T0": 1773.0,
+          "x1": 0.65,
+          "T1": 1773.0
+        },
+        "gold_right": {
+          "x0": 0.65,
+          "T0": 1773.0,
+          "x1": 0.75,
+          "T1": 800.0
+        },
+        "max_avg_deviation": 20.0
+      },
+      "description": "Average |ΔT| between agent and gold boundaries in Co-rich region (0.5–0.8 Cr)."
+    },
+    {
+      "id": "old_phase_diagram_accuracy",
+      "output_file": "old_model_phase_diagram.csv",
+      "weight": 0.15,
+      "kind": "rubric",
+      "config": {
+        "composition_range": [
+          0.5,
+          0.8
+        ],
+        "gold_left": {
+          "x0": 0.45,
+          "T0": 650.0,
+          "x1": 0.54,
+          "T1": 1800.0
+        },
+        "gold_mid": {
+          "x0": 0.54,
+          "T0": 1800.0,
+          "x1": 0.64,
+          "T1": 1800.0
+        },
+        "gold_right": {
+          "x0": 0.64,
+          "T0": 1800.0,
+          "x1": 0.74,
+          "T1": 820.0
+        },
+        "max_avg_deviation": 20.0
+      },
+      "description": "Average |ΔT| for old three-sublattice model in the same region."
+    },
+    {
+      "id": "trend_new_better_than_old",
+      "output_file": "new_model_phase_diagram.csv",
+      "weight": 0.05,
+      "kind": "rubric",
+      "config": {},
+      "description": "Verifies that the new model’s average deviation is lower than the old model’s, matching the paper’s improvement claim."
+    },
+    {
+      "id": "thermo_structural",
+      "output_file": "gibbs_enthalpy_1200K.csv",
+      "weight": 0.2,
+      "kind": "rubric",
+      "config": {
+        "discontinuity_threshold": 1000.0,
+        "new_model_sigma_full_range": true,
+        "old_model_sigma_truncated": true
+      },
+      "description": "Structural audit: new sigma model covers full composition range, old model truncated, and no unphysical discontinuities (>1000 J/mol) within any phase."
+    }
+  ]
+}

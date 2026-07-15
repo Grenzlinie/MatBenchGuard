@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Static energies and MD event percentages cannot be recomputed without re-running full LAMMPS molecular statics and dynamics simulations in the checker. Compare reported values to paper gold with absolute tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "static_energies.json": "exact_match",
+    "md_statistics.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for static activation energies and MD event percentages from paper Table 2 and text.",
+      "source_provenance": "Paper: static energies from text (Section 3): Ni vacancy formation energy 0.68 eV, NNN migration energy 2.07 eV, six-jump peak barrier 1.34 eV; MD percentages from Table 2 for Ni vacancy at 1200 K.",
+      "generation_method": "Directly taken from paper text and table.",
+      "why_not_fabricated": "Values are the paper's reported results; they match the reference solution solve.sh exactly."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "static_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ni_vacancy_formation_energy_eV": "float",
+            "ni_vacancy_nnn_migration_energy_eV": "float",
+            "six_jump_cycle_peak_barrier_eV": "float"
+          }
+        },
+        "description": "Computed Ni vacancy formation energy, NNN migration energy, and peak barrier of the {110} six-jump cycle, all in eV."
+      },
+      {
+        "file": "md_statistics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "six_jump_cycles_total_percent": "float",
+            "six_jump_cycles_uninterrupted_percent": "float",
+            "six_jump_cycles_interrupted_percent": "float",
+            "six_jump_110_of_six_jump_percent": "float",
+            "ten_jump_cycles_percent": "float",
+            "ten_jump_cycles_uninterrupted_percent": "float",
+            "fourteen_jump_cycles_percent": "float",
+            "failed_attempts_1atom_percent": "float",
+            "failed_attempts_2atom_percent": "float",
+            "failed_attempts_more2_percent": "float",
+            "other_percent": "float"
+          }
+        },
+        "description": "Percentage breakdown of diffusion event types for a Ni vacancy at 1200 K; percentages must sum to 100."
+      }
+    ],
+    "notes": "All static energies must be computed using the provided EAM potential and molecular statics. MD percentages must be computed from a trajectory of at least 1.5 ns at 1200 K. The breakdown categories follow the paper's classification (Table 2)."
+  },
+  "steps": [
+    {
+      "id": "static_energies",
+      "output_file": "static_energies.json",
+      "weight": 0.3,
+      "kind": "numeric_fields",
+      "fields": [
+        {
+          "key": "ni_vacancy_formation_energy_eV",
+          "target": 0.68,
+          "tolerance": 0.05
+        },
+        {
+          "key": "ni_vacancy_nnn_migration_energy_eV",
+          "target": 2.07,
+          "tolerance": 0.05
+        },
+        {
+          "key": "six_jump_cycle_peak_barrier_eV",
+          "target": 1.34,
+          "tolerance": 0.05
+        }
+      ]
+    },
+    {
+      "id": "md_statistics",
+      "output_file": "md_statistics.json",
+      "weight": 0.7,
+      "kind": "percentages_with_consistency",
+      "fields": [
+        {
+          "key": "six_jump_cycles_total_percent",
+          "target": 40.2,
+          "tolerance": 10.0
+        },
+        {
+          "key": "six_jump_cycles_uninterrupted_percent",
+          "target": 32.8,
+          "tolerance": 10.0
+        },
+        {
+          "key": "six_jump_cycles_interrupted_percent",
+          "target": 7.4,
+          "tolerance": 5.0
+        },
+        {
+          "key": "six_jump_110_of_six_jump_percent",
+          "target": 100.0,
+          "tolerance": 5.0
+        },
+        {
+          "key": "ten_jump_cycles_percent",
+          "target": 5.9,
+          "tolerance": 5.0
+        },
+        {
+          "key": "ten_jump_cycles_uninterrupted_percent",
+          "target": 4.4,
+          "tolerance": 5.0
+        },
+        {
+          "key": "fourteen_jump_cycles_percent",
+          "target": 1.5,
+          "tolerance": 3.0
+        },
+        {
+          "key": "failed_attempts_1atom_percent",
+          "target": 6.0,
+          "tolerance": 5.0
+        },
+        {
+          "key": "failed_attempts_2atom_percent",
+          "target": 26.9,
+          "tolerance": 10.0
+        },
+        {
+          "key": "failed_attempts_more2_percent",
+          "target": 6.0,
+          "tolerance": 5.0
+        },
+        {
+          "key": "other_percent",
+          "target": 13.5,
+          "tolerance": 10.0
+        }
+      ],
+      "sum_tolerance": 1.0,
+      "main_categories_sum": [
+        "six_jump_cycles_total_percent",
+        "ten_jump_cycles_percent",
+        "fourteen_jump_cycles_percent",
+        "failed_attempts_1atom_percent",
+        "failed_attempts_2atom_percent",
+        "failed_attempts_more2_percent",
+        "other_percent"
+      ]
+    }
+  ]
+}

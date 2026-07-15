@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_relax_perfect",
+    "title": "Relax pristine Si supercell",
+    "role": "process",
+    "action": "Build a 216‑atom diamond‑cubic Si supercell using the LDA lattice constant (5.39 Å) and relax atomic positions with SIESTA (LDA functional, Troullier‑Martins pseudopotentials, SZ‑optimized PAO basis, real‑space mesh cutoff 50 Ry, Γ‑point sampling) until forces fall below 0.002 eV/Å via conjugate‑gradient minimization.",
+    "output_file": "",
+    "evidence": "perfect_relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Intermediate step: relax the perfect supercell to obtain the reference total energy E_N.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relax_vacancy",
+    "title": "Relax vacancy supercell",
+    "role": "process",
+    "action": "Remove one atom to create a neutral monovacancy in a 215‑atom cell and relax using the same SIESTA settings as the perfect supercell, until forces < 0.002 eV/Å, to obtain the Jahn–Teller D₂d minimum.",
+    "output_file": "",
+    "evidence": "vacancy_relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Intermediate step: relax the defective supercell to obtain total energy E_{N-1} and the starting configuration for ART searches.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_formation_energy",
+    "title": "Compute vacancy formation energy",
+    "role": "scored",
+    "action": "Using the total energies from the relaxed pristine and defective supercells (N=216), compute the formation energy E_form = E_{N-1} - (N-1)/N * E_N and output the result as a single line: E_form = <value> eV.",
+    "output_file": "step_01_formation_energy.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: vacancy formation energy. Value must stem from the DFT relaxations.",
+    "output_schema": "Single line: E_form = <value> eV"
+  },
+  {
+    "id": "step_04_art_sampling",
+    "title": "ART nouveau saddle‑point sampling",
+    "role": "process",
+    "action": "Starting from the relaxed vacancy D₂d minimum, perform ART nouveau saddle‑point searches. For each event: apply random initial displacements restricted to atoms surrounding the vacancy; use the Lanczos algorithm to follow the lowest negative curvature eigendirection while minimizing perpendicular directions until total force < 0.1 eV/Å. After reaching the saddle, relax to the new minimum. Use SIESTA with the same DFT parameters. Generate enough events to reliably identify the lowest‑energy nearest‑neighbour vacancy hop and a reorientation event.",
+    "output_file": "",
+    "evidence": "art_events.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Intermediate simulation: run ART nouveau coupled with SIESTA to obtain saddle points and final minima around the vacancy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_migration_barrier",
+    "title": "Extract migration barrier",
+    "role": "scored",
+    "action": "From the ART‑generated events, identify the transition state corresponding to a nearest‑neighbour vacancy hop (simple diffusion) and compute the barrier as E_saddle − E_minimum. Output the lowest such barrier as a single line: E_barrier_hop = <value> eV.",
+    "output_file": "step_02_migration_barrier.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: migration energy barrier for the neutral vacancy. This barrier depends on the DFT saddle‑point search and cannot be obtained without running the ART steps.",
+    "output_schema": "Single line: E_barrier_hop = <value> eV"
+  },
+  {
+    "id": "step_06_reorientation_barrier",
+    "title": "Extract reorientation barrier",
+    "role": "scored",
+    "action": "From the ART events, identify the transition state for reorientation between equivalent D₂d orientations (change of pairing) and compute its barrier. Output the barrier as a single line: E_barrier_reorient = <value> eV.",
+    "output_file": "step_03_reorientation_barrier.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: reorientation barrier. Must be obtained from the ART sampling results.",
+    "output_schema": "Single line: E_barrier_reorient = <value> eV"
+  }
+]

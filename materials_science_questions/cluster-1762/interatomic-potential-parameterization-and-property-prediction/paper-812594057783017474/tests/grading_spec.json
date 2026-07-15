@@ -1,0 +1,204 @@
+{
+  "scoring_tier": "exact_match",
+  "scoring_justification": "Cohesive energy values compared against paper Table 1 with tolerant exact_match; melting point scored via structural audit because exact gold values are not available as a table in the paper, only as figures.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relative_cohesive_energies.csv": "exact_match",
+    "melting_point_ratios.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for relative cohesive energy Ea/E0 from Table 1",
+      "source_provenance": "Paper Table 1",
+      "generation_method": "Extracted directly from the published table in the paper.",
+      "why_not_fabricated": "These are the exact numbers reported in the paper for the same parameters (n, m, α) the agent must compute."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relative_cohesive_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "m",
+            "alpha",
+            "Ea_E0"
+          ],
+          "units": {
+            "Ea_E0": "dimensionless"
+          }
+        },
+        "description": "Computed relative cohesive energies for FCC nanoparticles at n=2000 and 7000, for m=2,3,4,5 and α=2.0,2.4."
+      },
+      {
+        "file": "melting_point_ratios.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "alpha",
+            "n",
+            "Tm_Tmbulk"
+          ],
+          "units": {
+            "Tm_Tmbulk": "dimensionless"
+          }
+        },
+        "description": "Computed melting point ratios T_m/T_mbulk for Au nanoparticles. Checked for monotonicity, ordering, and range (structural audit)."
+      }
+    ],
+    "notes": "The checker will compare the agent's computed values to paper-reported gold values within a tolerance for relative_cohesive_energies.csv (exact_match policy). For melting_point_ratios.csv, the checker performs a structural audit (monotonicity, ordering, range) without requiring exact numeric matching."
+  },
+  "steps": [
+    {
+      "id": "cohesive_scoring",
+      "output_file": "relative_cohesive_energies.csv",
+      "weight": 0.6,
+      "kind": "numeric",
+      "target_policy": "exact_match",
+      "gold_rows": [
+        {
+          "n": 2000,
+          "m": 2,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.427
+        },
+        {
+          "n": 2000,
+          "m": 3,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.648
+        },
+        {
+          "n": 2000,
+          "m": 4,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.691
+        },
+        {
+          "n": 2000,
+          "m": 5,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.711
+        },
+        {
+          "n": 2000,
+          "m": 2,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.679
+        },
+        {
+          "n": 2000,
+          "m": 3,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.738
+        },
+        {
+          "n": 2000,
+          "m": 4,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.755
+        },
+        {
+          "n": 2000,
+          "m": 5,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.764
+        },
+        {
+          "n": 7000,
+          "m": 2,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.542
+        },
+        {
+          "n": 7000,
+          "m": 3,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.75
+        },
+        {
+          "n": 7000,
+          "m": 4,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.784
+        },
+        {
+          "n": 7000,
+          "m": 5,
+          "alpha": 2.4,
+          "gold_Ea_E0": 0.801
+        },
+        {
+          "n": 7000,
+          "m": 2,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.774
+        },
+        {
+          "n": 7000,
+          "m": 3,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.818
+        },
+        {
+          "n": 7000,
+          "m": 4,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.832
+        },
+        {
+          "n": 7000,
+          "m": 5,
+          "alpha": 2.0,
+          "gold_Ea_E0": 0.839
+        }
+      ],
+      "tolerance_abs": 0.02,
+      "tolerance_rel": 0.05
+    },
+    {
+      "id": "melting_scoring",
+      "output_file": "melting_point_ratios.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "params": {
+        "monotonicity_weight": 0.4,
+        "ordering_weight": 0.4,
+        "range_weight": 0.2,
+        "monotonicity_tolerance": 0.01,
+        "ordering_tolerance": 0.01,
+        "ordering_sets": [
+          {
+            "m": 2,
+            "alphas": [
+              2.6,
+              2.8,
+              3.0
+            ],
+            "direction": "increasing"
+          },
+          {
+            "m": 3,
+            "alphas": [
+              2.3,
+              2.5,
+              2.8
+            ],
+            "direction": "increasing"
+          }
+        ]
+      }
+    }
+  ]
+}

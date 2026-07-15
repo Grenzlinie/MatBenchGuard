@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute spin densities and excitation energies from raw artifacts without running the full DFT pipeline; compare reported values against hidden paper gold with tolerances and trend checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_results.json": "reference_match",
+    "optimized_geometries.tar.gz": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported spin densities and excitation energies as gold references for computed_results.json",
+      "source_provenance": "Paper Table 5 (spin densities) and Table 6 (excitation energies)",
+      "generation_method": "Directly transcribed from the paper",
+      "why_not_fabricated": "Values are the exact numbers reported in the paper for the three complexes, ensuring that a correct reproduction matches them within tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "PH3-7d+": {
+              "spin_density_Fe1": "float",
+              "spin_density_Fe2": "float",
+              "excitation_energy_cm-1": "float",
+              "oscillator_strength": "float"
+            },
+            "6d+": {
+              "spin_density_Fe1": "float",
+              "spin_density_Fe2": "float",
+              "excitation_energy_cm-1": "float",
+              "oscillator_strength": "float"
+            },
+            "CH3O-6e+": {
+              "spin_density_Fe1": "float",
+              "spin_density_Fe2": "float",
+              "excitation_energy_cm-1": "float",
+              "oscillator_strength": "float"
+            },
+            "metadata": {
+              "code": "string",
+              "functional": "string",
+              "basis_set": "string",
+              "remarks": "string"
+            }
+          }
+        },
+        "description": "Computed Mulliken spin densities on the two iron atoms and the lowest TDDFT vertical excitation energy (cm⁻¹) with oscillator strength for the three model radical cations PH3-7d+, 6d+, and CH3O-6e+."
+      },
+      {
+        "file": "optimized_geometries.tar.gz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "other",
+          "description": "tar.gz archive containing expected XYZ files for all neutral and cation complexes."
+        },
+        "description": "Archive of DFT-optimized geometries (XYZ format) for the neutral and radical cation states of PH3-7d, 6d, and CH3O-6e. The archive must contain the expected set of files with proper naming."
+      }
+    ],
+    "notes": "The main scored target is computed_results.json; the geometry archive provides supporting structural evidence. All calculations must use B3LYP functional with LANL2DZ effective core potential on Fe and 6-31G** (geometry) / 6-31+G* (TDDFT) basis sets for other atoms. Spin densities are obtained from Mulliken population analysis."
+  },
+  "steps": [
+    {
+      "id": "step_computed_results",
+      "output_file": "computed_results.json",
+      "weight": 0.9,
+      "gold": {
+        "PH3-7d+": {
+          "spin_density_Fe1": 0.244,
+          "spin_density_Fe2": 0.244,
+          "excitation_energy_cm-1": 6859,
+          "oscillator_strength": 0.62
+        },
+        "6d+": {
+          "spin_density_Fe1": 0.102,
+          "spin_density_Fe2": 0.102,
+          "excitation_energy_cm-1": 11481,
+          "oscillator_strength": 0.52
+        },
+        "CH3O-6e+": {
+          "spin_density_Fe1": 0.065,
+          "spin_density_Fe2": 0.065,
+          "excitation_energy_cm-1": 12361,
+          "oscillator_strength": 0.39
+        }
+      },
+      "tolerances": {
+        "spin_density": 0.02,
+        "excitation_energy": 500,
+        "oscillator_strength": 0.15
+      }
+    },
+    {
+      "id": "step_geometry_archive",
+      "output_file": "optimized_geometries.tar.gz",
+      "weight": 0.1,
+      "expected_files": [
+        "neutral/PH3-7d_neutral.xyz",
+        "neutral/6d_neutral.xyz",
+        "neutral/CH3O-6e_neutral.xyz",
+        "cation/PH3-7d_cation.xyz",
+        "cation/6d_cation.xyz",
+        "cation/CH3O-6e_cation.xyz"
+      ]
+    }
+  ]
+}

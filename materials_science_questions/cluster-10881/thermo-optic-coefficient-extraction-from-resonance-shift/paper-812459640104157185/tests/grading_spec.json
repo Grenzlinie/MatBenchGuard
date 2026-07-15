@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The threshold current densities and mode spacing are deterministic model outputs derived from explicitly given formulas and parameters. The checker can recompute the expected values independently and compare them to the agent's submitted artifacts, which is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "threshold_current_densities.csv": "threshold_or_better",
+    "mode_spacing.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden expected values for threshold current densities and mode spacing, derived from the paper's formulas and parameters.",
+      "source_provenance": "Paper equations (2) and (4) with reported fitting parameters (P1=0.92, P2=0.0014 for circular; P1=0.85, P2=0.2 for ε=0.10) and material constants (α_W=19 cm⁻¹, Γ=0.27, g=10 cm⁻¹/(kA/cm²)) for J_th; ray-tracing path-length formula with n_eff=3.15, Φ=50°, R=70 µm, ε=0.16 for mode spacing.",
+      "generation_method": "Recomputed analytically from the same formulas the agent must implement; no external dataset required.",
+      "why_not_fabricated": "These are the paper's own model predictions, not fabricated labels; they serve as the reference correct output of the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "threshold_current_densities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R",
+            "epsilon",
+            "computed_Jth"
+          ],
+          "units": {
+            "R": "µm",
+            "epsilon": "dimensionless",
+            "computed_Jth": "kA/cm²"
+          }
+        },
+        "description": "Computed threshold current densities for various resonator geometries."
+      },
+      {
+        "file": "mode_spacing.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single numeric value representing the mode spacing in cm⁻¹."
+        },
+        "description": "Computed mode spacing for the bow-tie mode in the specified resonator."
+      }
+    ],
+    "notes": "The checker will recompute the MAE between the submitted threshold densities and hidden experimental data (using a tolerance-based threshold policy), and compare the submitted mode spacing to a hidden reference value with an absolute tolerance."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "threshold_current_densities.csv",
+      "weight": 0.8,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "config": {
+        "alpha_W": 19.0,
+        "Gamma": 0.27,
+        "g": 10.0,
+        "P1_0": 0.92,
+        "P2_0": 0.0014,
+        "P1_10": 0.85,
+        "P2_10": 0.2,
+        "tolerance": 0.01,
+        "expected_pairs": [
+          [
+            22,
+            0.0
+          ],
+          [
+            22,
+            0.1
+          ],
+          [
+            50,
+            0.0
+          ],
+          [
+            50,
+            0.1
+          ],
+          [
+            60,
+            0.0
+          ],
+          [
+            60,
+            0.1
+          ],
+          [
+            70,
+            0.0
+          ],
+          [
+            70,
+            0.1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "step2",
+      "output_file": "mode_spacing.txt",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "exact_match",
+      "config": {
+        "target": 8.163,
+        "tolerance": 0.2
+      }
+    }
+  ]
+}

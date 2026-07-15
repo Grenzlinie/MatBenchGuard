@@ -1,0 +1,184 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes quadratic response surface model from hidden design matrix and finds optimal FSP parameters and predicted tensile strength, then compares agent's results.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Box-Behnken design matrix with 17 runs (A: tool passes, B: rotational speed, C: transverse speed) and measured tensile strengths.",
+      "source_provenance": "Paper Table 2, columns: A (number of tool pass), B (rotational speed rpm), C (transverse speed mm/min), tensile strength (MPa).",
+      "generation_method": "Extracted from published Table 2 of the paper.",
+      "why_not_fabricated": "The data is the actual experimental design matrix used in the paper's response surface analysis; it is the ground truth for model fitting."
+    }
+  ],
+  "design_matrix": [
+    {
+      "A": 1,
+      "B": 800,
+      "C": 20,
+      "TS": 161.36
+    },
+    {
+      "A": 3,
+      "B": 900,
+      "C": 25,
+      "TS": 155.3
+    },
+    {
+      "A": 2,
+      "B": 900,
+      "C": 20,
+      "TS": 158.96
+    },
+    {
+      "A": 1,
+      "B": 1000,
+      "C": 20,
+      "TS": 165.8
+    },
+    {
+      "A": 3,
+      "B": 1000,
+      "C": 20,
+      "TS": 141.84
+    },
+    {
+      "A": 2,
+      "B": 800,
+      "C": 15,
+      "TS": 140.1
+    },
+    {
+      "A": 2,
+      "B": 900,
+      "C": 20,
+      "TS": 158.88
+    },
+    {
+      "A": 3,
+      "B": 800,
+      "C": 20,
+      "TS": 147.33
+    },
+    {
+      "A": 1,
+      "B": 900,
+      "C": 25,
+      "TS": 170.4
+    },
+    {
+      "A": 2,
+      "B": 1000,
+      "C": 15,
+      "TS": 135.56
+    },
+    {
+      "A": 2,
+      "B": 800,
+      "C": 25,
+      "TS": 154.64
+    },
+    {
+      "A": 2,
+      "B": 900,
+      "C": 20,
+      "TS": 158.8
+    },
+    {
+      "A": 2,
+      "B": 900,
+      "C": 20,
+      "TS": 159.04
+    },
+    {
+      "A": 1,
+      "B": 900,
+      "C": 15,
+      "TS": 155
+    },
+    {
+      "A": 2,
+      "B": 1000,
+      "C": 25,
+      "TS": 158.1
+    },
+    {
+      "A": 2,
+      "B": 900,
+      "C": 20,
+      "TS": 159.04
+    },
+    {
+      "A": 3,
+      "B": 900,
+      "C": 15,
+      "TS": 132.8
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_optimum",
+      "output_file": "optimum_parameters.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "description": "Check optimal parameters and predicted tensile strength against recomputed optimum from design matrix."
+    },
+    {
+      "id": "check_comparison",
+      "output_file": "model_comparison.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "description": "Check model comparison metrics (deviation, improvement) and consistency with optimum file."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimum_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "optimum_parameters": {
+              "tool_passes": "integer",
+              "rotational_speed": "float",
+              "transverse_speed": "float"
+            },
+            "predicted_tensile_strength": "float"
+          },
+          "units": {
+            "rotational_speed": "rpm",
+            "transverse_speed": "mm/min",
+            "predicted_tensile_strength": "MPa"
+          }
+        },
+        "description": "Optimal friction stir process parameters and the predicted tensile strength at those settings, to be compared against the paper's reported optimum."
+      },
+      {
+        "file": "model_comparison.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "experimental_tensile_strength": "float",
+            "predicted_tensile_strength": "float",
+            "deviation_percentage": "float",
+            "improvement_percentage": "float"
+          },
+          "units": {
+            "experimental_tensile_strength": "MPa",
+            "predicted_tensile_strength": "MPa",
+            "deviation_percentage": "%",
+            "improvement_percentage": "%"
+          }
+        },
+        "description": "Comparison metrics: model deviation from experimental confirmation and composite improvement over base material."
+      }
+    ],
+    "notes": "Hardness improvement is not included because there is no accompanying regression model for hardness. The task focuses solely on the tensile strength modeling and optimization."
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The verifier sandbox cannot redo the heavy DFT and transport calculations; comparing the agent's reported values to the paper's gold with tolerances is acceptable.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for band gap, dielectric constant, refractive index, Seebeck coefficient, ZT, and monotonic decrease rule",
+      "source_provenance": "Paper text and figures (sections 3.1, 3.2, 3.3)",
+      "generation_method": "Extracted verbatim from the paper's reported quantities.",
+      "why_not_fabricated": "These are the actual paper-reported numbers, traceable to the paper's results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "band_gap_eV",
+            "static_dielectric_constant",
+            "n0_static",
+            "Seebeck_100K_uV_K",
+            "ZT_300K"
+          ],
+          "units": {
+            "band_gap_eV": "eV",
+            "static_dielectric_constant": "dimensionless",
+            "n0_static": "dimensionless",
+            "Seebeck_100K_uV_K": "uV/K",
+            "ZT_300K": "dimensionless"
+          }
+        },
+        "description": "CSV file containing computed electronic, optical, and thermoelectric properties for each Ga1-xInxN composition (x = 0, 0.25, 0.50, 0.75). The checker will compare these values to hidden paper‑reported reference values with tolerances and verify the monotonic decrease of band gap with increasing In content."
+      }
+    ],
+    "notes": "Computed properties must be derived from the preceding DFT, optical, and Boltzmann transport steps. The checker uses the paper‑reported values as a hidden reference; tolerances are not disclosed. Invalid or missing values for mandatory entries (all except n0_static and ZT_300K when not applicable) result in a zero score for that property."
+  },
+  "steps": [
+    {
+      "id": "band_gap_check",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "column": "band_gap_eV",
+      "compositions": [
+        "GaN",
+        "Ga0.75In0.25N",
+        "Ga0.5In0.5N",
+        "Ga0.25In0.75N"
+      ],
+      "gold": {
+        "GaN": 2.99,
+        "Ga0.75In0.25N": 2.67,
+        "Ga0.5In0.5N": 2.31,
+        "Ga0.25In0.75N": 1.95
+      },
+      "tolerance_full": 0.05,
+      "tolerance_zero": 0.2,
+      "monotonic_decreasing": true,
+      "penalty_factor_non_monotonic": 0.9
+    },
+    {
+      "id": "dielectric_check",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "column": "static_dielectric_constant",
+      "compositions": [
+        "GaN",
+        "Ga0.75In0.25N",
+        "Ga0.5In0.5N",
+        "Ga0.25In0.75N"
+      ],
+      "gold": {
+        "GaN": 3.959,
+        "Ga0.75In0.25N": 3.99,
+        "Ga0.5In0.5N": 3.993,
+        "Ga0.25In0.75N": 4.037
+      },
+      "tolerance_full": 0.05,
+      "tolerance_zero": 0.2
+    },
+    {
+      "id": "n0_check",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.05,
+      "column": "n0_static",
+      "compositions": [
+        "GaN"
+      ],
+      "gold": {
+        "GaN": 2.0
+      },
+      "tolerance_full": 0.05,
+      "tolerance_zero": 0.2,
+      "nan_allowed_for_other": true
+    },
+    {
+      "id": "Seebeck_check",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "column": "Seebeck_100K_uV_K",
+      "compositions": [
+        "GaN",
+        "Ga0.75In0.25N",
+        "Ga0.5In0.5N",
+        "Ga0.25In0.75N"
+      ],
+      "gold": {
+        "GaN": 269,
+        "Ga0.75In0.25N": 218,
+        "Ga0.5In0.5N": 120,
+        "Ga0.25In0.75N": 154
+      },
+      "tolerance_full": 5,
+      "tolerance_zero": 20
+    },
+    {
+      "id": "ZT_check",
+      "output_file": "computed_properties.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "column": "ZT_300K",
+      "compositions": [
+        "GaN"
+      ],
+      "gold": {
+        "GaN": 0.8
+      },
+      "tolerance_full": 0.05,
+      "tolerance_zero": 0.15,
+      "nan_allowed_for_other": true
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "A full recompute of the electrostatic model from the CSV alone is not possible without the input parameters. The checker instead validates that the reported energy components sum to the total (internal consistency) and compares the reported values to hidden gold values from the paper's Table III with tolerances that account for numerical differences due to minimization and rounding.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_electrostatic_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for electrostatic calculation (R, E_dip, E_ind, E_dis, E_rep, E_t) for the five K+ complexes. These match the reference solve.sh output.",
+      "source_provenance": "Paper Table III, with minor rounding adjustments to align with the reference solve.sh. The solve.sh values are used as the authoritative gold.",
+      "generation_method": "Extracted from solve.sh and embedded inline.",
+      "why_not_fabricated": "These are the actual computed values from the paper's classical electrostatic model, which a correct implementation reproduces. The slight differences from the published table (e.g., E_rep for NH3 8.97 vs 8.98) reflect the solve.sh rounding; the oracle writes these exact numbers, so the gold must match them to allow full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_electrostatic_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "R_ion_N",
+            "E_dip",
+            "E_ind",
+            "E_dis",
+            "E_rep",
+            "E_t"
+          ],
+          "units": {
+            "R_ion_N": "angstrom",
+            "E_dip": "kcal/mol",
+            "E_ind": "kcal/mol",
+            "E_dis": "kcal/mol",
+            "E_rep": "kcal/mol",
+            "E_t": "kcal/mol"
+          }
+        },
+        "description": "Computed equilibrium ion–molecule distances and energy components (permanent dipole, induced dipole, London dispersion, repulsion) and total stabilization energy for the five K+·M complexes (M = H2O, NH3, CH3NH2, (CH3)2NH, (CH3)3N)."
+      }
+    ],
+    "notes": "The checker will verify that the reported E_t values match the hidden gold values within the required tolerance and that E_dip+E_ind+E_dis+E_rep equals E_t for each row (internal consistency)."
+  },
+  "steps": [
+    {
+      "id": "electrostatic_results",
+      "output_file": "step_01_electrostatic_results.csv",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "gold": {
+        "molecules": [
+          "H2O",
+          "NH3",
+          "CH3NH2",
+          "(CH3)2NH",
+          "(CH3)3N"
+        ],
+        "R_ion_N": [
+          2.59,
+          2.58,
+          2.52,
+          2.46,
+          2.43
+        ],
+        "E_dip": [
+          -17.79,
+          -17.48,
+          -16.06,
+          -15.96,
+          -16.08
+        ],
+        "E_ind": [
+          -3.36,
+          -6.05,
+          -8.16,
+          -10.51,
+          -12.62
+        ],
+        "E_dis": [
+          -1.72,
+          -2.97,
+          -5.23,
+          -7.56,
+          -8.9
+        ],
+        "E_rep": [
+          5.95,
+          8.97,
+          11.19,
+          13.91,
+          15.71
+        ],
+        "E_t": [
+          -16.92,
+          -17.53,
+          -18.26,
+          -20.12,
+          -21.89
+        ]
+      },
+      "tolerances": {
+        "sum_tol": 0.01,
+        "R_tol": 0.05,
+        "energy_tol": 0.1,
+        "component_tol": 0.1
+      }
+    }
+  ]
+}

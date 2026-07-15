@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Relative errors are recomputed from agent's predictions and hidden measured strengths; compared to paper reported errors; threshold_or_better with tolerance.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Measured tensile strengths (MPa) and paper-reported relative errors (%) for each hole diameter and model, used to evaluate agent predictions.",
+      "source_provenance": "Paper Table 1 (experimental data and relative errors)",
+      "generation_method": "Extracted directly from the paper's Table 1 (same publication).",
+      "why_not_fabricated": "These values are the paper's own reported experimental results and evaluation; they are the authoritative reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predicted_strengths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "hole_diameter",
+            "PSC_predicted",
+            "AVC_predicted",
+            "DZC_predicted",
+            "ECGM_predicted"
+          ],
+          "units": {
+            "hole_diameter": "mm",
+            "PSC_predicted": "MPa",
+            "AVC_predicted": "MPa",
+            "DZC_predicted": "MPa",
+            "ECGM_predicted": "MPa"
+          }
+        },
+        "description": "Predicted residual tensile strengths for five hole diameters and four analytical models. The checker compares these to the paper’s measured values and computes relative errors, scoring based on the mean absolute deviation of those errors."
+      }
+    ],
+    "notes": "All necessary material constants and model parameters are provided in the instruction; no external dataset download is required. The iterative ECGM simulation should use Δc=0.001 to match the paper’s reported predictions."
+  },
+  "steps": [
+    {
+      "id": "step_04_write_predictions",
+      "output_file": "predicted_strengths.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "description": "Compute relative errors from predictions and compare to paper's reported errors.",
+      "config": {
+        "diameters": [
+          0.6,
+          1.1,
+          1.5,
+          2.2,
+          5.1
+        ],
+        "measured_strengths": [
+          398.0,
+          327.4,
+          293.6,
+          264.5,
+          149.8
+        ],
+        "paper_errors": {
+          "PSC": [
+            0.91,
+            -2.17,
+            -1.85,
+            -3.54,
+            41.3
+          ],
+          "AVC": [
+            -4.54,
+            -2.17,
+            0.1,
+            0.57,
+            48.55
+          ],
+          "DZC": [
+            4.67,
+            2.7,
+            -0.65,
+            -9.69,
+            3.54
+          ],
+          "ECGM": [
+            -3.05,
+            -1.44,
+            -0.5,
+            -4.36,
+            4.49
+          ]
+        },
+        "tolerance": 1.0,
+        "max_penalty": 5.0
+      }
+    }
+  ]
+}

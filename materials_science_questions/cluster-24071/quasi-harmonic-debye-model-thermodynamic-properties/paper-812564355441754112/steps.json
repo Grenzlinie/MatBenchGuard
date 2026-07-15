@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_relax_perfect",
+    "title": "Relax perfect Al supercell",
+    "role": "process",
+    "action": "Construct a 3×3×3 fcc Al supercell (108 atoms) and relax the cell shape and atomic positions using DFT (Quantum ESPRESSO, PBE functional) to obtain the equilibrium lattice parameter and ground-state reference energy. This relaxed perfect cell is the baseline for defect calculations.",
+    "output_file": "",
+    "evidence": "perfect_relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_vacancy_dipole",
+    "title": "Compute vacancy elastic dipole tensor",
+    "role": "process",
+    "action": "Remove one Al atom from the relaxed supercell to introduce a single vacancy. Keep the supercell shape and volume fixed at the relaxed perfect-cell values, relax all atomic positions, and compute the residual stress tensor σ^res. Convert σ^res to the elastic dipole tensor P_vac via the Varvenne–Clouet mapping (P_ij = -V * σ^res_ij, corrected for periodic image contributions).",
+    "output_file": "",
+    "evidence": "vacancy_dipole_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_transition_dipole",
+    "title": "Compute transition-state elastic dipole tensor",
+    "role": "process",
+    "action": "Build a supercell with an Al atom at the midpoint of a [110] jump between two vacant sites (i.e., two vacancies and one atom placed halfway between them). Fix the supercell shape and volume. Relax all atomic positions, compute the residual stress tensor, and obtain the transition-state elastic dipole P_ts via the same Varvenne–Clouet conversion.",
+    "output_file": "",
+    "evidence": "ts_dipole_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_migration_tensor",
+    "title": "Compute migration dipole and migration-volume tensor",
+    "role": "process",
+    "action": "Calculate the migration dipole ΔP = P_ts - P_vac. Use the paper's elastic constants for Al (C11=105 GPa, C12=65 GPa, C44=33 GPa) to construct the stiffness tensor C and its inverse, the compliance tensor S. Compute the migration-volume tensor component-wise: ΔV_kl = Σ_{ij} ΔP_ij * S_ijkl. All operations are elementary linear algebra; no additional simulation is needed.",
+    "output_file": "",
+    "evidence": "migration_computation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_output_tensors",
+    "title": "Write final computed tensors to JSON",
+    "role": "scored",
+    "action": "Collect the computed vacancy dipole, transition dipole, and migration-volume tensor (all as 3×3 matrices). Write them to computed_tensors.json in the specified format.",
+    "output_file": "computed_tensors.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the three tensors computed from the DFT+elasticity pipeline. Units: dipole tensors in eV, migration-volume tensor in Å³.",
+    "output_schema": "A JSON object with keys 'vacancy_dipole', 'transition_dipole', 'migration_volume_tensor'; each value is a 3×3 array of floats."
+  }
+]

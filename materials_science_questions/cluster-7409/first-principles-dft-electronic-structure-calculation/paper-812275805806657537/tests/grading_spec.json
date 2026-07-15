@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1/T2 infeasible because the headline values are final scalar outputs from a full DFT pipeline; no richer raw artifact available for recompute within the verifier. Scoring compares reported values to paper gold with tolerances and verifies structural properties (list length, ordering).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for band gaps, in-gap state energy, and absorption peak energies from the target paper.",
+      "source_provenance": "Paper abstract and results: perfect gap 3.3 eV, defect gap 2.8 eV, in-gap state 1.7 eV, absorption peaks [1.72, 2.16, 2.81, 3.01, 3.36, 3.70, 4.00] eV.",
+      "generation_method": "Extracted directly from paper text and figures; consistent with the reference solve.sh output.",
+      "why_not_fabricated": "Values are the paper's own reported computed results, serving as the hidden reference against which the agent's reproductions are compared."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "perfect_gap_ev": "float",
+            "defect_gap_ev": "float"
+          }
+        },
+        "description": "Computed band gaps in eV for the perfect PbWO4 supercell and the defect supercell containing V_Pb^2-."
+      },
+      {
+        "file": "in_gap_state.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "in_gap_state_energy_ev": "float"
+          }
+        },
+        "description": "Computed energy in eV of the O 2p-derived in-gap state relative to the valence band maximum."
+      },
+      {
+        "file": "absorption_peaks.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "peaks": "list of 7 floats, sorted ascending"
+          }
+        },
+        "description": "List of seven computed absorption peak photon energies in eV, extracted from the 1–4.5 eV spectral range."
+      }
+    ],
+    "notes": "All files must be placed in /app/outputs. The hidden verifier will check file existence, JSON validity, data types, array length, and compare reported values against a hidden reference."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gap.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target_perfect_gap_ev": 3.3,
+      "tolerance_perfect_gap_ev": 0.15,
+      "target_defect_gap_ev": 2.8,
+      "tolerance_defect_gap_ev": 0.15,
+      "description": "Verify band gap values are within tolerance of paper reference."
+    },
+    {
+      "id": "in_gap_state",
+      "output_file": "in_gap_state.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_in_gap_state_energy_ev": 1.7,
+      "tolerance_in_gap_state_ev": 0.15,
+      "description": "Verify in-gap state energy within tolerance."
+    },
+    {
+      "id": "absorption_peaks",
+      "output_file": "absorption_peaks.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_peaks": [
+        1.72,
+        2.16,
+        2.81,
+        3.01,
+        3.36,
+        3.7,
+        4.0
+      ],
+      "tolerance_peak_ev": 0.2,
+      "description": "Verify absorption peak energies; must be 7 sorted floats, within 0.2 eV of reference peaks. Full credit if max deviation <=0.1 eV, linear decay to 0 at 0.3 eV."
+    }
+  ]
+}

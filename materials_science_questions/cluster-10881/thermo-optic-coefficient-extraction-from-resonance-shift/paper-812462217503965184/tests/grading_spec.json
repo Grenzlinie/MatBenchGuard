@@ -1,0 +1,62 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute |S_T^B| and |S_T^τ| from agent's temperature_scan_results.csv by linear regression of ln(B/B0) and ln(τ/τ0) against T and compare absolute slopes to paper-reported theoretical values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "temperature_scan_results.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference slopes for temperature sensitivity of modal birefringence and PMD",
+      "source_provenance": "Paper reported theoretical values: |S_T^B| = 3 × 10⁻⁴ °C⁻¹, |S_T^τ| = 7 × 10⁻⁴ °C⁻¹ (Section IV-A, Fig. 3); extracted from paper md.",
+      "generation_method": "Extracted directly from paper text.",
+      "why_not_fabricated": "Values are the paper's own published theoretical predictions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "temperature_scan_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "B",
+            "tau"
+          ],
+          "units": {
+            "T": "°C",
+            "B": "dimensionless",
+            "tau": "ps/m"
+          }
+        },
+        "description": "Modal birefringence B and polarization mode dispersion τ as functions of ambient temperature (10, 20, 30, 40, 50 °C). The checker recomputes the relative temperature sensitivities |S_T^B| and |S_T^τ| from this file."
+      }
+    ],
+    "notes": "The agent must write exactly 5 rows (T = 10, 20, 30, 40, 50). The checker reads this CSV, computes ln(B/B₀) and ln(τ/τ₀) with T₀ = 10 °C, performs linear regression against T, takes absolute values of the slopes, and compares them to the paper’s published theoretical sensitivities with absolute tolerances."
+  },
+  "steps": [
+    {
+      "id": "s_b",
+      "output_file": "temperature_scan_results.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "description": "Recompute |S_T^B| and compare to paper reference 3e-4",
+      "reference": 0.0003,
+      "tolerance": 5e-05
+    },
+    {
+      "id": "s_tau",
+      "output_file": "temperature_scan_results.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "description": "Recompute |S_T^τ| and compare to paper reference 7e-4",
+      "reference": 0.0007,
+      "tolerance": 0.0001
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Epsilon coefficients are recomputed from agent's k coefficients (T1); k coefficients compared to paper gold (T0 reference_match); deviation compared to threshold (T0 threshold_or_better).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fitted_k_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "k0": "float (erg/cm²)",
+            "k1": "float (erg/cm²)",
+            "k2": "float (erg/cm²)",
+            "k3": "float (erg/cm²)"
+          }
+        },
+        "description": "Fitted interfacial energy expansion coefficients k0..k3 for Cu, to be verified by recomputing from the agent's surface_energies.json (internal consistency check)."
+      },
+      {
+        "file": "computed_epsilon_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "epsilon0": "float (J^{1/2} m^{-1/2})",
+            "epsilon1": "float (J^{1/2} m^{-1/2})",
+            "epsilon2": "float (J^{1/2} m^{-1/2})",
+            "epsilon3": "float (J^{1/2} m^{-1/2})"
+          }
+        },
+        "description": "Gradient‑energy coefficients ε0..ε3 derived from the k‑coefficients via the closed‑form mapping, recomputed by the verifier from the submitted k‑coefficients."
+      },
+      {
+        "file": "phasefield_vs_wulff_deviation.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "content": "single float"
+        },
+        "description": "Mean absolute angular deviation (degrees) between the phase‑field simulated interface and the Wulff equilibrium shape; lower is better."
+      }
+    ],
+    "notes": "The k‑coefficients are recomputed from surface_energies.json and checked for internal consistency. The ε‑coefficients are recomputed from the submitted k‑coefficients. The angular deviation is scored by threshold: ≤ some hidden value earns full credit."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for k-coefficients and epsilon-coefficient ratios, and deviation threshold",
+      "source_provenance": "Paper Table 1 (Cu row) and Table 3 (Cu row); deviation threshold from approved plan",
+      "generation_method": "Extracted directly from the paper's published tables; deviation threshold set at 5 degrees based on expected simulation accuracy.",
+      "why_not_fabricated": "Values are the paper's own reported results, confirmed against the paper's tables."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_fit_k",
+      "output_file": "fitted_k_coefficients.json",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "reference": {
+        "k0": 1666.87,
+        "k1": 733.621,
+        "k2": -1873.19,
+        "k3": -3260.43
+      },
+      "tolerance_relative": 0.1,
+      "description": "Compare fitted k-coefficients to paper's Cu values within 10% relative tolerance."
+    },
+    {
+      "id": "step_epsilon",
+      "output_file": "computed_epsilon_coefficients.json",
+      "weight": 0.3,
+      "kind": "recompute",
+      "tolerance_eps0_relative": 0.05,
+      "tolerance_ratio_absolute": 0.05,
+      "lambda_nm": 14.3,
+      "description": "Recompute epsilon0 from k0 with λ=14.3 nm, and epsilon ratios from k, compare to agent values."
+    },
+    {
+      "id": "step_deviation",
+      "output_file": "phasefield_vs_wulff_deviation.txt",
+      "weight": 0.4,
+      "kind": "threshold_or_better",
+      "threshold": 5.0,
+      "decay_max": 10.0,
+      "description": "Mean angular deviation must be ≤ 5° for full credit; linear decay to 0 at 15°."
+    }
+  ]
+}

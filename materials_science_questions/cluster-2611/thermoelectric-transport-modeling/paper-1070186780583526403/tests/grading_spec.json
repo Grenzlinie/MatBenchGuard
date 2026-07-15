@@ -1,0 +1,139 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact numeric gold values unavailable; scoring based on physical structural features: peak ordering, sign reversal, monotonicity, as claimed in the paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_mu_T.csv": "structural_audit",
+    "step_02_resistivity_zero_field.csv": "structural_audit",
+    "step_03_hall_resistivity.csv": "structural_audit",
+    "step_04_magnetoresistance.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_mu_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature (K)",
+            "mu_n0=-3e18 (eV)",
+            "mu_n0=1e18 (eV)",
+            "mu_n0=3e18 (eV)"
+          ],
+          "units": {
+            "temperature (K)": "K",
+            "mu_n0=-3e18 (eV)": "eV",
+            "mu_n0=1e18 (eV)": "eV",
+            "mu_n0=3e18 (eV)": "eV"
+          }
+        },
+        "description": "Temperature-dependent chemical potential for three fixed doping levels. The structural auditor verifies the trend (decrease toward mid‑gap) and that the curves for different doping levels are ordered correctly with respect to peak shifts."
+      },
+      {
+        "file": "step_02_resistivity_zero_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature (K)",
+            "rho_n0=-3e18 (μΩ·cm)",
+            "rho_n0=1e18 (μΩ·cm)",
+            "rho_n0=3e18 (μΩ·cm)"
+          ],
+          "units": {
+            "temperature (K)": "K",
+            "rho_n0=-3e18 (μΩ·cm)": "μΩ·cm",
+            "rho_n0=1e18 (μΩ·cm)": "μΩ·cm",
+            "rho_n0=3e18 (μΩ·cm)": "μΩ·cm"
+          }
+        },
+        "description": "Zero‑field resistivity curves showing the characteristic anomaly. Scoring checks that a peak exists for each doping level and that the peak temperature T_P matches the hidden reference (within ±10 K after spline interpolation)."
+      },
+      {
+        "file": "step_03_hall_resistivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B (T)",
+            "temperature (K)",
+            "rho_yx_n0=-3e18 (μΩ·cm)",
+            "rho_yx_n0=1e18 (μΩ·cm)",
+            "rho_yx_n0=3e18 (μΩ·cm)"
+          ],
+          "units": {
+            "B (T)": "T",
+            "temperature (K)": "K",
+            "rho_yx_n0=-3e18 (μΩ·cm)": "μΩ·cm",
+            "rho_yx_n0=1e18 (μΩ·cm)": "μΩ·cm",
+            "rho_yx_n0=3e18 (μΩ·cm)": "μΩ·cm"
+          }
+        },
+        "description": "Field‑dependent Hall resistivity at multiple temperatures and doping levels. Scoring verifies that the electron‑doped curves (n0 = 1e18, 3e18) exhibit a sign reversal (zero crossing in ρ_yx) at intermediate temperatures (50–200 K), as demanded by the structural checker."
+      },
+      {
+        "file": "step_04_magnetoresistance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B (T)",
+            "temperature (K)",
+            "MR_n0=-3e18 (dimensionless)",
+            "MR_n0=1e18 (dimensionless)",
+            "MR_n0=3e18 (dimensionless)"
+          ],
+          "units": {
+            "B (T)": "T",
+            "temperature (K)": "K",
+            "MR_n0=-3e18 (dimensionless)": "dimensionless",
+            "MR_n0=1e18 (dimensionless)": "dimensionless",
+            "MR_n0=3e18 (dimensionless)": "dimensionless"
+          }
+        },
+        "description": "Magnetoresistance MR(B,T) = (ρ_xx(B) – ρ_xx(0))/ρ_xx(0). Scoring checks that at 275 K the MR is monotonically increasing with B and does not saturate (slope at 9 T exceeds a hidden threshold scaled by zero‑field resistivity)."
+      }
+    ],
+    "notes": "All scored artifacts undergo structural verification (T3) against hidden reference curves digitized from the paper’s figures. The checkers extract peak positions, zero crossings, and monotonicity trends rather than exact pointwise equality."
+  },
+  "steps": [
+    {
+      "id": "step_01_mu_T",
+      "output_file": "step_01_mu_T.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "description": "Chemical potential structural trend: electron-doped decreases, hole-doped increases, convergence and ordering at low/high T."
+    },
+    {
+      "id": "step_02_zero_field",
+      "output_file": "step_02_resistivity_zero_field.csv",
+      "weight": 0.5,
+      "kind": "structural",
+      "description": "Resistivity peak existence and temperature ordering T_P(e1) < T_P(e3) < T_P(hole)."
+    },
+    {
+      "id": "step_03_hall",
+      "output_file": "step_03_hall_resistivity.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "description": "Hall sign reversal in electron-doped cases and no reversal in hole-doped case."
+    },
+    {
+      "id": "step_04_mr",
+      "output_file": "step_04_magnetoresistance.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "description": "Non-saturating, monotonically increasing magnetoresistance at T=275 K."
+    }
+  ]
+}

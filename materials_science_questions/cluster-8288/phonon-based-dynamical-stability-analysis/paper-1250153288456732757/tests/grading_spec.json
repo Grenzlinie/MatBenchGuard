@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full recompute from raw DFT logs is infeasible in the verifier container; legitimate fallback to comparing agent-reported numbers against paper reference with toolchain tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_elastic_properties.json": "reference_match",
+    "step_02_phonon.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported elastic constants, moduli, hardness for C6 from Table 2, and max optical phonon frequency from the abstract/text.",
+      "source_provenance": "Paper Table 2: C11=728, C12=20, C13=85, C33=1161, C44=160, C66=70, B_V=333, G_V=320, H_V=58 GPa; text/abstract: max_frequency_THz=60 THz.",
+      "generation_method": "Direct extraction of the paper's explicitly reported numeric values for the C6 allotrope.",
+      "why_not_fabricated": "These are the exact values the paper reports for C6; the task asks to reproduce them for the same material and protocol, making them the correct reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_elastic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "number (GPa)",
+            "C12": "number (GPa)",
+            "C13": "number (GPa)",
+            "C33": "number (GPa)",
+            "C44": "number (GPa)",
+            "C66": "number (GPa)",
+            "B_V": "number (GPa)",
+            "G_V": "number (GPa)",
+            "H_V": "number (GPa)"
+          }
+        },
+        "description": "Reproduced single-crystal elastic constants and derived polycrystalline elastic moduli and Vickers hardness for C6."
+      },
+      {
+        "file": "step_02_phonon.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "max_frequency_THz": "number (THz)"
+          }
+        },
+        "description": "Maximum optical phonon frequency of the C6 allotrope."
+      }
+    ],
+    "notes": "The acceptable tolerance for each quantity accounts for the natural spread between different DFT implementations and settings."
+  },
+  "steps": [
+    {
+      "id": "elastic_properties",
+      "output_file": "step_01_elastic_properties.json",
+      "kind": "custom",
+      "weight": 0.7,
+      "reference_fields": {
+        "C11": 728,
+        "C12": 20,
+        "C13": 85,
+        "C33": 1161,
+        "C44": 160,
+        "C66": 70,
+        "B_V": 333,
+        "G_V": 320,
+        "H_V": 58
+      },
+      "tolerances_relative_percent": {
+        "C11": 10,
+        "C12": 10,
+        "C13": 10,
+        "C33": 10,
+        "C44": 10,
+        "C66": 10,
+        "B_V": 10,
+        "G_V": 10,
+        "H_V": 15
+      }
+    },
+    {
+      "id": "phonon_frequency",
+      "output_file": "step_02_phonon.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "reference_field": "max_frequency_THz",
+      "target": 60,
+      "tolerance_abs": 5
+    }
+  ]
+}

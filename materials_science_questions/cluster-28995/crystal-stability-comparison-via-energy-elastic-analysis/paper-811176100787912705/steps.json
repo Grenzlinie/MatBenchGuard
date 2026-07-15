@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_system_setup",
+    "title": "System construction and force field parameterization",
+    "role": "process",
+    "action": "Construct initial simulation cell with two parallel graphene sheets separated by h=9.0 Å, channel dimensions 42.60 Å x 36.89 Å. Add two water reservoirs (1000 molecules each) connected to the channel. Set up periodic boundary conditions. Define interatomic potentials: TIP4P/2005 for water, Lennard-Jones parameters for carbon-oxygen/hydrogen interactions as specified in the simulation methodology. Prepare the system for LAMMPS MD runs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Create the initial atomic configuration and force field files required by the following simulation steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_compression_limits",
+    "title": "Compression simulations and transition identification",
+    "role": "scored",
+    "action": "For each temperature T in {240, 260, 280, 300} K, run MD simulations in the isothermal-isobaric (NPzzT) ensemble. Increase lateral pressure P_zz gradually from 0.1 to 5.0 GPa stepwise. Monitor potential energy per molecule, mean-squared displacement (MSD), number of water molecules in the channel, and oxygen-oxygen radial distribution function g_O-O(r) to identify phase transitions. Determine the lateral pressures at which the system transforms: BL-A to BL-VHDI, and BL-VHDI to BL-AAI. Where a transition does not occur at a given T, mark as NaN. Output the identified transition pressures.",
+    "output_file": "compression_limit_transitions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: temperature (K), P_BL_A_to_BL_VHDI (GPa), P_BL_VHDI_to_BL_AAI (GPa). Each row corresponds to a simulated temperature.",
+    "output_schema": "Columns: temperature (float, K), P_BL_A_to_BL_VHDI (float, GPa, NaN if not observed), P_BL_VHDI_to_BL_AAI (float, GPa, NaN if not observed). Example row: 240, 1.2, 4.1"
+  },
+  {
+    "id": "step_03_superheating_config",
+    "title": "Prepare superheating initial configurations",
+    "role": "process",
+    "action": "From the compression simulation trajectories, extract snapshots of stable BL-VHDI (e.g., at P_zz=2.0 GPa) and BL-AAI (e.g., at P_zz=4.0 GPa) to serve as starting structures for the superheating runs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate initial configurations for the subsequent heating simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_superheating_limits",
+    "title": "Superheating simulations and melting identification",
+    "role": "scored",
+    "action": "For selected lateral pressures P_zz = 1.0, 2.0, 3.0, 4.0 GPa, run heating MD simulations (temperature ramp) starting from BL-VHDI and BL-AAI configurations. Identify the melting temperature of each phase from abrupt changes in potential energy per molecule or MSD. Where a phase is not stable or melting not observed, mark as NaN. Output the melting points.",
+    "output_file": "superheating_limit_melting.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: lateral_pressure (GPa), T_melt_BL_VHDI (K), T_melt_BL_AAI (K). Each row corresponds to a simulated pressure.",
+    "output_schema": "Columns: lateral_pressure (float, GPa), T_melt_BL_VHDI (float, K, NaN if not observed), T_melt_BL_AAI (float, K, NaN if not observed)."
+  }
+]

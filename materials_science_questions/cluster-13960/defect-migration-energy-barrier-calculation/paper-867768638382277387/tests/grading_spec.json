@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts numeric values from text files and compares to paper-reported reference within tolerance; the values are deterministic outputs of the computational protocol.",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "step_01_formation_energy.txt": "exact_match",
+    "step_02_migration_barrier.txt": "exact_match",
+    "step_03_reorientation_barrier.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for formation energy and barriers",
+      "source_provenance": "Paper Table I and text: formation energy 3.36 eV (LDA, 215-atom, 2³ k-points), migration barrier 0.40 eV, reorientation barrier 0.20 eV",
+      "generation_method": "Extracted from paper's reported values (section III, IV).",
+      "why_not_fabricated": "Values are directly from the paper's reported results for the same computational conditions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_formation_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "description": "Single line: E_form = <value> eV. The value is a real number (eV units)."
+        },
+        "description": "Vacancy formation energy computed from DFT total energies."
+      },
+      {
+        "file": "step_02_migration_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "description": "Single line: E_barrier_hop = <value> eV. The value is a real number (eV units)."
+        },
+        "description": "Lowest migration energy barrier for nearest‑neighbour vacancy hopping."
+      },
+      {
+        "file": "step_03_reorientation_barrier.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "description": "Single line: E_barrier_reorient = <value> eV. The value is a real number (eV units)."
+        },
+        "description": "Energy barrier for reorientation between equivalent D₂d states."
+      }
+    ],
+    "notes": "These three numbers are the main reproducible quantities of the study. The hidden checker compares each to the paper‑reported value within a tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_formation_energy.txt",
+      "kind": "value_compare",
+      "weight": 0.4,
+      "target_value": 3.36,
+      "tolerance_abs": 0.1,
+      "extract_regex": "E_form\\s*=\\s*([0-9.]+)\\s*eV"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_migration_barrier.txt",
+      "kind": "value_compare",
+      "weight": 0.4,
+      "target_value": 0.4,
+      "tolerance_abs": 0.05,
+      "extract_regex": "E_barrier_hop\\s*=\\s*([0-9.]+)\\s*eV"
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_reorientation_barrier.txt",
+      "kind": "value_compare",
+      "weight": 0.2,
+      "target_value": 0.2,
+      "tolerance_abs": 0.05,
+      "extract_regex": "E_barrier_reorient\\s*=\\s*([0-9.]+)\\s*eV"
+    }
+  ]
+}

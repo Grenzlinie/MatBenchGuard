@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "A full recompute (T1) is infeasible because the convex hull construction involves retrieval from the AFLOW.org repository, data validation, and a complex iterative algorithm that cannot be recalculated within the checker environment. A T0 compare against the paper's reported values for the specific compound (formation enthalpy, stability criterion, ground state) with appropriate tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "aflow_AgAuCd_hull.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Ag₂AuCd: formation_enthalpy_atom = -112 meV/atom, stability_criterion = 1 meV/atom, ground_state = true.",
+      "source_provenance": "Paper Figure 5 excerpt explicitly reports δsc = 1 meV/atom and Hf = -112 meV/atom for the ground state Ag₂AuCd (auid aflow:b306fb2e8866a640).",
+      "generation_method": "Transcribed directly from the published paper's report.",
+      "why_not_fabricated": "Values are directly from the paper's own results, no arbitrary fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "aflow_AgAuCd_hull.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_top_level_keys": [
+            "points_data",
+            "facets_data"
+          ],
+          "points_data": {
+            "type": "array",
+            "items": {
+              "required_fields": [
+                "compound",
+                "auid",
+                "formation_enthalpy_atom",
+                "stability_criterion",
+                "ground_state"
+              ],
+              "field_types": {
+                "compound": "string",
+                "auid": "string",
+                "formation_enthalpy_atom": "float (meV/atom)",
+                "stability_criterion": "float (meV/atom)",
+                "ground_state": "boolean"
+              }
+            }
+          },
+          "facets_data": {
+            "type": "array",
+            "description": "list of facet objects with vertices positions and identifiers"
+          }
+        },
+        "description": "Convex hull results for Ag-Au-Cd; the checker will verify specific entries for formation enthalpy, stability criterion, and ground-state flag against hidden reference values."
+      }
+    ],
+    "notes": "The output contract covers the single scored artifact. The checker will locate the entry with compound='Ag2AuCd' and auid='aflow:b306fb2e8866a640' within points_data and compare its formation_enthalpy_atom, stability_criterion, and ground_state to hidden paper-reported values with appropriate tolerances (exact for boolean, tolerance windows for numerics)."
+  },
+  "steps": [
+    {
+      "id": "check_aflow_json",
+      "output_file": "aflow_AgAuCd_hull.json",
+      "kind": "numeric",
+      "description": "Locate Ag₂AuCd entry and check formation_enthalpy_atom, stability_criterion within tolerances, and ground_state true.",
+      "weight": 1.0,
+      "fields": {
+        "compound": "Ag2AuCd",
+        "auid": "aflow:b306fb2e8866a640",
+        "formation_enthalpy_atom_target": -112.0,
+        "formation_enthalpy_atom_tolerance_abs": 2.0,
+        "stability_criterion_target": 1.0,
+        "stability_criterion_tolerance_abs": 1.0,
+        "ground_state_expected": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes each row's mass flux from the agent's stated T and P using the same formula and constants; self‑consistency check catches implementation errors without external gold.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reaction_controlled_rate.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "oxygen_pressure_atm",
+            "mass_flux_Cr_g_cm2_s"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "oxygen_pressure_atm": "atm",
+            "mass_flux_Cr_g_cm2_s": "g cm^-2 s^-1"
+          }
+        },
+        "description": "Reaction-controlled chromium mass flux computed from the equilibrium vapor pressure of CrO₃(g) over Cr₂O₃(s) and the Hertz–Langmuir equation."
+      }
+    ],
+    "notes": "The checker will read the CSV, recompute the expected mass flux from the given temperature and oxygen pressure using the same thermodynamic formula and constants, and verify that the agent's reported mass_flux is within a relative tolerance for each row."
+  },
+  "steps": [
+    {
+      "id": "reaction_rate_check",
+      "output_file": "reaction_controlled_rate.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "required_temperatures": [
+        1273,
+        1373,
+        1473,
+        1573
+      ],
+      "tolerance_relative": 0.0001,
+      "tolerance_absolute": 1e-12,
+      "constants": {
+        "M_Cr": 52.0,
+        "M_CrO3": 99.99,
+        "formula_factor": 44.35
+      }
+    }
+  ]
+}

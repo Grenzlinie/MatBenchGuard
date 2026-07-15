@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All target quantities are deterministic functions of given public physical constants and formulas; the checker recomputes them exactly from the agent's raw artifacts, achieving T1 recompute.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "characteristic_params.json": "exact_match",
+    "psychrometric_temperature.csv": "exact_match",
+    "droplet_lifetime.csv": "exact_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "characteristic_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a": "number",
+            "b": "number",
+            "tau": "number",
+            "beta": "number"
+          },
+          "units": {
+            "a": "dimensionless",
+            "b": "nm",
+            "tau": "microseconds",
+            "beta": "dimensionless"
+          },
+          "description": "Characteristic dimensionless parameters a and beta, length scale b in nm, time scale tau in microseconds."
+        },
+        "description": "Characteristic model parameters for water computed from analytical definitions using given physical properties."
+      },
+      {
+        "file": "psychrometric_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f0",
+            "z_inf"
+          ],
+          "units": {
+            "f0": "dimensionless",
+            "z_inf": "dimensionless"
+          },
+          "description": "Relative humidity f0 and corresponding psychrometric relative temperature difference z_inf."
+        },
+        "description": "Psychrometric temperature difference for two near-saturation ambient humidity values."
+      },
+      {
+        "file": "droplet_lifetime.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R_initial_um",
+            "lifetime_s"
+          ],
+          "units": {
+            "R_initial_um": "micrometers",
+            "lifetime_s": "seconds"
+          },
+          "description": "Initial droplet radius in micrometers and complete evaporation lifetime in seconds."
+        },
+        "description": "Droplet lifetime as a function of initial radius computed from the analytical model."
+      }
+    ],
+    "notes": "All outputs are deterministic functions of the given physical constants and input conditions; they are scored by exact_match against the paper's reported values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "characteristic_params.json",
+      "weight": 0.2,
+      "kind": "numeric_fields",
+      "fields": [
+        "a",
+        "b",
+        "tau",
+        "beta"
+      ],
+      "tolerance_relative": 0.02
+    },
+    {
+      "id": "step2",
+      "output_file": "psychrometric_temperature.csv",
+      "weight": 0.2,
+      "kind": "csv_rows",
+      "key_column": "f0",
+      "value_column": "z_inf",
+      "tolerance_relative": 0.02
+    },
+    {
+      "id": "step3",
+      "output_file": "droplet_lifetime.csv",
+      "weight": 0.6,
+      "kind": "recompute_lifetimes",
+      "tolerance_relative": 0.05
+    }
+  ]
+}

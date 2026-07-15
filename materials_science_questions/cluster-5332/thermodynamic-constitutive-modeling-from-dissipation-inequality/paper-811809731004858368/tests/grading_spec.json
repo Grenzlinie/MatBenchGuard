@@ -1,0 +1,124 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the maximum stress, the stress at which split length first reaches 3.0 mm, and the peak stress ratio from the agent's raw CSV artifacts, comparing each to a hidden paper gold value with a tolerance. These are derived quantities, not directly submitted by the agent.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "load_displacement.csv": "reference_match",
+    "split_length.csv": "reference_match",
+    "ablation_peak_loads.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for peak stress, split threshold stress, and ablation peak ratio",
+      "source_provenance": "Paper text: Section 6.2 reports baseline peak 433 MPa, Section 6.3 reports no-delamination peak 281 MPa and ratio ~1.54. Fig. 6 shows split length vs stress; at split length 3 mm the stress is approximately 330 MPa.",
+      "generation_method": "Extracted from the paper's reported numbers and direct reading from the described figure.",
+      "why_not_fabricated": "These are the actual paper-reported quantities. The checker verifies that the agent's reproduced simulation reproduces these numbers to within reasonable tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "load_displacement.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            {
+              "name": "displacement_mm",
+              "type": "float",
+              "unit": "mm"
+            },
+            {
+              "name": "stress_MPa",
+              "type": "float",
+              "unit": "MPa"
+            }
+          ],
+          "description": "Rows in order of increasing displacement."
+        },
+        "description": "Far‑field stress vs. displacement from the full simulation; checker recomputes the maximum stress and compares it to the paper‑reported value within a tolerance."
+      },
+      {
+        "file": "split_length.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            {
+              "name": "stress_MPa",
+              "type": "float",
+              "unit": "MPa"
+            },
+            {
+              "name": "split_length_mm",
+              "type": "float",
+              "unit": "mm"
+            }
+          ],
+          "description": "Rows ordered by increasing stress."
+        },
+        "description": "Split length vs. applied stress; checker finds the stress at which split length first reaches a threshold and compares to the paper‑reported value within a tolerance."
+      },
+      {
+        "file": "ablation_peak_loads.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            {
+              "name": "case",
+              "type": "string",
+              "enum": [
+                "baseline",
+                "no_delamination"
+              ]
+            },
+            {
+              "name": "peak_stress_MPa",
+              "type": "float",
+              "unit": "MPa"
+            }
+          ]
+        },
+        "description": "Peak stresses from the two simulations; checker computes the ratio baseline_peak / no_delamination_peak and checks it lies within the paper‑reported range."
+      }
+    ],
+    "notes": "All scored CSVs contain raw simulation data that the checker recomputes to extract the relevant quantities (max stress, split-length threshold stress, peak ratio). The agent must implement the constitutive models and run the FE simulations; no pre‑computed artifacts are provided."
+  },
+  "steps": [
+    {
+      "id": "load_displacement_peak",
+      "output_file": "load_displacement.csv",
+      "kind": "numeric_derived",
+      "weight": 0.3,
+      "description": "Maximum stress from the load-displacement curve",
+      "gold_value": 433,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "split_length_threshold",
+      "output_file": "split_length.csv",
+      "kind": "numeric_derived",
+      "weight": 0.4,
+      "description": "Applied stress when split length first reaches 3.0 mm",
+      "gold_value": 330,
+      "tolerance_abs": 20.0
+    },
+    {
+      "id": "ablation_peak_ratio",
+      "output_file": "ablation_peak_loads.csv",
+      "kind": "numeric_derived",
+      "weight": 0.3,
+      "description": "Ratio of baseline peak stress to no-delamination peak stress",
+      "gold_min": 1.4,
+      "gold_max": 1.7
+    }
+  ]
+}

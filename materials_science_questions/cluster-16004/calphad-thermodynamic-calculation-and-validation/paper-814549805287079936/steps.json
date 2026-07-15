@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_structure_generation",
+    "title": "Generate oriented supercell",
+    "role": "process",
+    "action": "Using ATAT tools (cellcvrt), generate a supercell of L12 Ni3Al with at least 1000 atoms, oriented such that the (111) plane is defined by the first two translation vectors and the slip vector is [0 0.5 0.5]. Write the lattice and structure files.",
+    "output_file": "",
+    "evidence": "lat.in, str.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Crystal structure files for subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft_training_set",
+    "title": "DFT total-energy calculations for cluster expansion training",
+    "role": "process",
+    "action": "Enumerate Ni-Al binary and Ni-Al-Ti ternary structures using ATAT's mmaps. Perform DFT calculations with Quantum ESPRESSO (PBE functional) to obtain total energies for each structure. Save the energies in a format readable by ATAT's fit.",
+    "output_file": "",
+    "evidence": "energies.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Reference energies for cluster expansion fitting.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_cluster_expansion",
+    "title": "Cluster expansion fitting",
+    "role": "process",
+    "action": "Fit a cluster expansion using ATAT's mmaps (or corrdump and fit) to obtain effective cluster interactions (eci.out). Report the cross-validation score.",
+    "output_file": "",
+    "evidence": "eci.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Cluster expansion parameters for fast energy evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_compute_pure_apb",
+    "title": "Compute pure Ni3Al APB energy from cluster expansion",
+    "role": "scored",
+    "action": "Using the cluster expansion from step 03, create a defect-free and a defective APB structure with the (111)[0 0.5 0.5] slip. Compute the APB energy via evaluating the energy difference. Write the pure APB energy in mJ/m² to pure_apb_energy.txt.",
+    "output_file": "pure_apb_energy.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "APB energy of pure Ni3Al from cluster expansion (no Monte Carlo).",
+    "output_schema": "A single floating-point number in mJ/m²."
+  },
+  {
+    "id": "step_05_run_mc_simulations",
+    "title": "Monte Carlo simulations for pure and doped systems",
+    "role": "process",
+    "action": "For pure Ni3Al and for Ni3Al with 1% Ti substitution, run canonical Monte Carlo (memc2) at 400 K and 1600 K using the ECIs from step 03, with sufficient equilibration and averaging passes. Use the apb code to compute APB energy for each snapshot, recording per-snapshot energies for later averaging.",
+    "output_file": "",
+    "evidence": "gamma_apb_pure_400.out, gamma_apb_ti_400.out, gamma_apb_pure_1600.out, gamma_apb_ti_1600.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Raw APB energy snapshots for statistical analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_extract_dopant_apb",
+    "title": "Extract mean APB energy and enhancement for doped case",
+    "role": "scored",
+    "action": "From the MC outputs, compute the mean APB energy for the 1% Ti case at each temperature and the corresponding pure Ni3Al mean APB energy (using pure MC results at the same temperature). Calculate the change Δ = γ(Ti) - γ(pure). Write a CSV with columns: concentration (at%), temperature (K), APB_energy (mJ/m²), delta_APB_energy (mJ/m²). Include rows for 1% Ti at 400 K and 1600 K.",
+    "output_file": "dopant_apb_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Mean APB energy and impurity-induced enhancement for 1% Ti at selected temperatures.",
+    "output_schema": "CSV with columns: concentration, temperature, APB_energy, delta_APB_energy. At least two data rows."
+  }
+]

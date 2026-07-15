@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Bulk LaFeO3 relaxation",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO (PBE functional, spin-polarized, G-type AFM order), relax the orthorhombic LaFeO3 unit cell (Pbnm, GdFeO3-type) to obtain optimized lattice constants.",
+    "output_file": "",
+    "evidence": "step_01_bulk_relax.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Optimized lattice constants serve as the basis for surface slab models.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Reference total energies (Fe, Pd, O2)",
+    "role": "process",
+    "action": "Compute total energies of bulk bcc Fe, bulk fcc Pd, and an isolated O2 molecule using the same DFT settings (PBE, spin-polarized). These energies are required for the solution and vacancy formation energy formulas.",
+    "output_file": "",
+    "evidence": "step_02_reference_energies.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference energies E_Fe_bulk, E_Pd_bulk, E_O2_gas.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Slab model construction",
+    "role": "process",
+    "action": "Build atomistic slab models for LaO- and FeO2-terminated LaFeO3(001) surfaces using the relaxed bulk lattice constants. Each slab contains 5 FeO2 layers, ~11 Å vacuum, and the bottom two layers fixed. Set up initial coordinates for subsequent relaxations.",
+    "output_file": "",
+    "evidence": "step_03_slab_models.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Input geometries for DFT relaxations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Relaxation of Pd-substituted slabs (no vacancy)",
+    "role": "process",
+    "action": "For each of the two terminations (LaO, FeO2), substitute one Fe atom with Pd at the 1st and 3rd FeO2 layers (counting from the surface). Perform geometry relaxation of these slabs, keeping the bottom two layers fixed. Store total energies.",
+    "output_file": "",
+    "evidence": "step_04_no_vo_relax_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Total energies for solution energy formula without oxygen vacancies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Relaxation with oxygen vacancy and identification of most stable site",
+    "role": "process",
+    "action": "For each Pd configuration (termination/layer), test all nonequivalent oxygen sites for the oxygen vacancy. For each candidate, relax the slab and compute the formation energy (reference: half O2). Identify the most stable (lowest formation energy) vacancy site for each configuration. Store the total energies and formation energies of the most stable configurations.",
+    "output_file": "",
+    "evidence": "step_05_vo_relax_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Total energies and identified most stable Vo positions for all relevant configurations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Compute segregation energies",
+    "role": "scored",
+    "action": "Using the total energies from the relaxations and the reference energies, calculate the solution energy of Pd via the standard substitution-solution formula and the segregation energy as the difference between solution energies at the 1st and 3rd FeO2 layers. Compute the relative segregation energy (E_sol(1st) - E_sol(3rd)) for each of the four configurations: LaO without Vo, LaO with Vo, FeO2 without Vo, FeO2 with Vo. Write the results to step_03_segregation_energies.csv.",
+    "output_file": "step_03_segregation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Relative segregation energies (eV) for the four Pd/surface configurations.",
+    "output_schema": "columns: termination (string, 'LaO' or 'FeO2'), vo_present (string, 'true'/'false'), relative_energy (float, eV). Four rows."
+  },
+  {
+    "id": "step_07",
+    "title": "Compute oxygen vacancy formation energies",
+    "role": "scored",
+    "action": "Using the most stable configuration energies from the vacancy relaxations and the O2 reference energy, calculate the formation energy of the oxygen vacancy for each termination when Pd is at the surface (the most stable Vo site for the Pd-surface case). Write the formation energies to step_04_vo_formation_energies.csv.",
+    "output_file": "step_04_vo_formation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Oxygen vacancy formation energies (eV) for the most stable Vo site near the Pd-substituted surface.",
+    "output_schema": "columns: termination (string, 'LaO' or 'FeO2'), formation_energy (float, eV), notes (string, optional description). Two rows."
+  }
+]

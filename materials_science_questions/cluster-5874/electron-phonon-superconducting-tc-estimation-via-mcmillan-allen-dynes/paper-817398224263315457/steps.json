@@ -1,0 +1,80 @@
+[
+  {
+    "id": "proc_01",
+    "title": "DFT structural relaxation",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO with full-relativistic pseudopotentials and spin-orbit coupling, perform a variable-cell relaxation of monolayer W2N3 (space group P-6m2, a=2.864 Å) until forces < st convergence criterion. Save the relaxed structure for subsequent calculations.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain equilibrium geometry needed for phonon and EPC calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "proc_02",
+    "title": "Phonon calculation using DFPT",
+    "role": "process",
+    "action": "Compute phonon dispersion and density of states on a sufficiently dense q-mesh using density-functional perturbation theory (Quantum ESPRESSO ph.x). Save the phonon frequencies at all q-points to a file (e.g., 'phonon_frequencies.dat').",
+    "output_file": "",
+    "evidence": "phonon_frequencies.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes phonon modes required to assess dynamical stability and as input for EPC.",
+    "output_schema": ""
+  },
+  {
+    "id": "proc_03",
+    "title": "EPC calculation with EPW",
+    "role": "process",
+    "action": "Using EPW, interpolate electron and phonon quantities onto fine k and q meshes. Compute the Eliashberg spectral function α²F(ω), cumulative EPC λ(ω), total λ, logarithmic average phonon frequency ω_log, and solve the anisotropic Migdal-Eliashberg equations to obtain momentum-resolved superconducting gap at low temperature (e.g., 6 K) and Tc from Eliashberg theory. Output the raw α²F(ω) and λ(ω) data, and the computed λ, ω_log, Tc, and gap.",
+    "output_file": "",
+    "evidence": "epw_output.h5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core EPC calculation; produces data needed for final scored artifacts.",
+    "output_schema": ""
+  },
+  {
+    "id": "scored_01",
+    "title": "Dynamical stability check",
+    "role": "scored",
+    "action": "From the computed phonon frequencies, verify that no imaginary (negative) frequencies exist. Write the statement 'No imaginary frequencies found.' to step_01_phonon_stability.txt.",
+    "output_file": "step_01_phonon_stability.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Confirms dynamical stability of the monolayer.",
+    "output_schema": "A plain-text file containing exactly the phrase 'No imaginary frequencies found.' (optionally followed by a newline)."
+  },
+  {
+    "id": "scored_02",
+    "title": "Final EPC and superconducting properties",
+    "role": "scored",
+    "action": "From the EPW results, extract or compute: total electron-phonon coupling constant λ, logarithmically averaged phonon frequency ω_log (meV), superconducting Tc from McMillan-Allen-Dynes formula (using λ, ω_log, and μ*=0.1), Tc from anisotropic Migdal-Eliashberg theory, and superconducting gap at 6 K. Save these in step_02_epc_properties.json.",
+    "output_file": "step_02_epc_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregates the key superconducting properties: λ, ω_log, Tc (McMillan-Allen-Dynes), Tc (Eliashberg), and the superconducting gap at 6 K.",
+    "output_schema": "A JSON object with keys: 'total_EPC_lambda' (float), 'logavg_phonon_freq_omega_log' (float, meV), 'Tc_McMillan' (float, K), 'Tc_Eliashberg' (float, K), 'gap_6K' (float, meV)."
+  },
+  {
+    "id": "scored_03",
+    "title": "Eliashberg spectral function data",
+    "role": "scored",
+    "action": "From the raw EPW output, extract or format the Eliashberg spectral function α²F(ω) and the cumulative EPC λ(ω) as a function of frequency. Write a JSON array of objects, each with 'frequency' (meV), 'a2F' (arbitrary units), and 'cumulative_lambda' (dimensionless), covering the full frequency range. Save to step_03_eliasberg_spectral_function.json.",
+    "output_file": "step_03_eliasberg_spectral_function.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides the raw spectral function and cumulative λ needed for independent recomputation of total λ and ω_log.",
+    "output_schema": "A JSON array of objects, each with numeric keys 'frequency' (meV), 'a2F' (arbitrary units), and 'cumulative_lambda' (dimensionless). The array must cover frequencies from 0 up to at least the highest phonon energy."
+  }
+]

@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes comparison score from agent's reported values; full DFT recompute is infeasible, but this is the strongest feasible tier for this task.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for LSDA and LSDA+U band gap and Cu magnetic moment from the paper",
+      "source_provenance": "Table II of the paper, as stated in the conclusion text",
+      "generation_method": "Directly transcribed from the paper",
+      "why_not_fabricated": "These are the paper's own reported values; they are the exact reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "LSDA",
+            "LSDA_plus_U"
+          ],
+          "properties": {
+            "LSDA": {
+              "band_gap_eV": "number (eV)",
+              "Cu_moment_muB": "number (μB)"
+            },
+            "LSDA_plus_U": {
+              "band_gap_eV": "number (eV)",
+              "Cu_moment_muB": "number (μB)"
+            }
+          }
+        },
+        "description": "Computed charge-transfer gap (eV) and local Cu magnetic moment (μB) for La2CuO4 from both LSDA (reference) and LSDA+U calculations. The checker compares against hidden paper reference values."
+      }
+    ],
+    "notes": "Only the main La2CuO4 result (gap and moment for LSDA and LSDA+U) is covered; AMF, LaCuO3, and spectral simulations are out of scope per taskability. The LSDA+U scored step is load-bearing: it requires the preceding process calculations to have been run."
+  },
+  "steps": [
+    {
+      "id": "step_scored",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold": {
+        "lsda": {
+          "band_gap_eV": 0.0,
+          "Cu_moment_muB": 0.0
+        },
+        "lsda_plus_u": {
+          "band_gap_eV": 1.65,
+          "Cu_moment_muB": 0.62
+        }
+      },
+      "tolerances": {
+        "lsda_metallic": {
+          "gap_abs_max": 0.1,
+          "moment_abs_max": 0.05
+        },
+        "lsdau_insulating_threshold": {
+          "gap_min": 0.5,
+          "moment_min": 0.3
+        },
+        "lsdau_closeness": {
+          "gap_target": 1.65,
+          "gap_tolerance": 0.3,
+          "gap_decay_range": 0.7,
+          "moment_target": 0.62,
+          "moment_tolerance": 0.1,
+          "moment_decay_range": 0.4
+        }
+      },
+      "description": "Score the LSDA (metallic nonmagnetic) and LSDA+U (insulating antiferromagnetic) results, with quantitative closeness bonus for LSDA+U."
+    }
+  ]
+}

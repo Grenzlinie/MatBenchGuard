@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap is recomputed from the raw dos.dat; structural audit verifies DOS file format and gap existence.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap of Re3GeAs6 from the paper's LMTO-LDA calculation.",
+      "source_provenance": "Paper reports computed band gap of 0.9 eV for Re3GeAs6 (Chem. Mater. 2007, 19, 4065).",
+      "generation_method": "Extracted directly from the paper text.",
+      "why_not_fabricated": "The value is the paper's reported result; it is the target for reproduction and is needed for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos": "states/eV"
+          }
+        },
+        "description": "Total density of states as a function of energy, relative to the Fermi level. Used to verify the existence of a band gap and to recompute the band gap for scoring."
+      },
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "units": "eV"
+        },
+        "description": "The band gap value in eV, as extracted by the agent from the DOS. The checker recomputes the gap from dos.dat and compares it to the hidden reference; meeting or exceeding the reference earns full credit."
+      }
+    ],
+    "notes": "The hidden checker recomputes the band gap from dos.dat and scores it against a paper‑derived reference with a tolerance that absorbs legitimate code/functional spread. The structural audit confirms a gap region exists around the Fermi level. No wett‑lab data or proprietary software is required."
+  },
+  "steps": [
+    {
+      "id": "dos_structure",
+      "output_file": "dos.dat",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "config": {
+        "energy_range": [
+          -5.0,
+          5.0
+        ],
+        "gap_region_threshold_factor": 0.01
+      }
+    },
+    {
+      "id": "bandgap_recompute",
+      "output_file": "dos.dat",
+      "weight": 0.5,
+      "kind": "recompute_bandgap",
+      "config": {
+        "reference_gap": 0.9,
+        "tolerance": 0.15,
+        "dos_threshold_factor": 0.01
+      }
+    },
+    {
+      "id": "bandgap_file",
+      "output_file": "band_gap.txt",
+      "weight": 0.4,
+      "kind": "numeric_threshold",
+      "config": {
+        "reference": 0.9,
+        "delta": 0.15
+      }
+    }
+  ]
+}

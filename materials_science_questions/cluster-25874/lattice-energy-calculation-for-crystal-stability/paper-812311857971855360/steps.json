@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Prepare observed crystal structure",
+    "role": "process",
+    "action": "Obtain the atomic coordinates of maleic hydrazide from the Cradwick (1976) crystal structure via the provided DOI. Construct the rigid planar molecule using the non‑hydrogen bond lengths and angles from that structure, and place hydrogen atoms at the bond lengths recommended by Momany et al. (1965). Build a triclinic unit cell with space group P‑1, Z=2, cell dimensions a=5.83, b=5.78, c=7.31 Å, α=79.0°, β=99.5°, γ=107.2°, placing the molecule in the asymmetric unit according to the published fractional coordinates.",
+    "output_file": "",
+    "evidence": "observed_initial.pdb",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial PDB file for the observed structure before energy minimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute lattice energy of observed structure",
+    "role": "scored",
+    "action": "Implement the lattice energy function U = Σ[-A r^{-6} + B r^{-12} + (q_i q_j / D) r^{-1} - G r^{-10}] with D=2.0, using the Lennard‑Jones and hydrogen‑bond parameters from Momany et al. (1965). Apply the partial atomic charges given in Figure 3 of the analyzed paper. Sum over all atom pairs within 6 Å. Minimize the energy with respect to the six triclinic cell parameters and the six rigid‑body molecular parameters. Record the total lattice energy and its decomposition into van der Waals, Coulombic, and hydrogen‑bond contributions at the minimized geometry.",
+    "output_file": "observed_lattice_energy.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with total, van_der_Waals, Coulombic, hydrogen_bond energies in kJ/mol.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"total\",\"van_der_Waals\",\"Coulombic\",\"hydrogen_bond\"],\"properties\":{\"total\":{\"type\":\"number\",\"description\":\"total lattice energy in kJ/mol\"},\"van_der_Waals\":{\"type\":\"number\",\"description\":\"van der Waals component in kJ/mol\"},\"Coulombic\":{\"type\":\"number\",\"description\":\"Coulombic component in kJ/mol\"},\"hydrogen_bond\":{\"type\":\"number\",\"description\":\"hydrogen bond component in kJ/mol\"}}}"
+  },
+  {
+    "id": "step3",
+    "title": "Construct alternative triclinic structure based on chain motif II",
+    "role": "process",
+    "action": "From the observed layer arrangement, derive the 2D hydrogen‑bond layer corresponding to chain motif II by graphically translating alternate rows of molecules. The resulting planar layer has cell parameters a=9.415, b=7.935 Å, γ=86.3°. Construct a triclinic stacking by setting α=90°, β=90°, and choose the c‑axis length so that the volume per molecule equals that of the observed structure (≈114.5 Å³/molecule). Build the initial triclinic unit cell with these parameters.",
+    "output_file": "",
+    "evidence": "alternative_initial.pdb",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial PDB file for the alternative structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Compute lattice energy of alternative triclinic structure",
+    "role": "scored",
+    "action": "Using the same energy function and parameters as in Step 2, but substituting the N—H...O hydrogen‑bond parameters for the O—H...N interactions, minimize the energy of the alternative triclinic structure with respect to all twelve lattice and molecular parameters. Record the total lattice energy and the three component energies at the minimum.",
+    "output_file": "alternative_lattice_energy.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Same schema as observed_lattice_energy.json.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"total\",\"van_der_Waals\",\"Coulombic\",\"hydrogen_bond\"],\"properties\":{\"total\":{\"type\":\"number\"},\"van_der_Waals\":{\"type\":\"number\"},\"Coulombic\":{\"type\":\"number\"},\"hydrogen_bond\":{\"type\":\"number\"}}}"
+  },
+  {
+    "id": "step5",
+    "title": "Report minimized cell parameters",
+    "role": "scored",
+    "action": "After completing the minimizations in Steps 2 and 4, collect the final cell parameters (a,b,c in Å, α,β,γ in degrees) for both the observed and the alternative structures. Write them to a single JSON file.",
+    "output_file": "minimized_cell_parameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'observed' and 'alternative', each an object with a, b, c, alpha, beta, gamma.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"observed\",\"alternative\"],\"properties\":{\"observed\":{\"type\":\"object\",\"required\":[\"a\",\"b\",\"c\",\"alpha\",\"beta\",\"gamma\"],\"properties\":{\"a\":{\"type\":\"number\",\"description\":\"a in Angstrom\"},\"b\":{\"type\":\"number\"},\"c\":{\"type\":\"number\"},\"alpha\":{\"type\":\"number\",\"description\":\"alpha in degrees\"},\"beta\":{\"type\":\"number\"},\"gamma\":{\"type\":\"number\"}}},\"alternative\":{\"type\":\"object\",\"required\":[\"a\",\"b\",\"c\",\"alpha\",\"beta\",\"gamma\"],\"properties\":{\"a\":{\"type\":\"number\"},\"b\":{\"type\":\"number\"},\"c\":{\"type\":\"number\"},\"alpha\":{\"type\":\"number\"},\"beta\":{\"type\":\"number\"},\"gamma\":{\"type\":\"number\"}}}}}"
+  }
+]

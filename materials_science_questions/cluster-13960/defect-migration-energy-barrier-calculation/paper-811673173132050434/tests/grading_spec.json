@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Barrier values cannot be recomputed from the XYZ path files (no energies); scoring relies on reported barriers compared to paper gold with tolerance and ordering check, plus structural audit of XYZ trajectories.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "barriers.json": "reference_match",
+    "neb_gamma_alumina.xyz": "structural_audit",
+    "neb_eta_alumina.xyz": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported barrier values for Cr ingress on γ- and η-alumina",
+      "source_provenance": "Paper text: activation barrier for Cr ingress into subsurface on γ-alumina ≈2.2 eV, on η-alumina ≈5 eV. 'The activation barrier to get into this position (2.2 eV)...' and 'about 5 eV'.",
+      "generation_method": "Extracted directly from the paper's Discussion section.",
+      "why_not_fabricated": "Values are the paper's own published quantitative results; they are the target to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gamma_alumina_barrier": "number (eV)",
+            "eta_alumina_barrier": "number (eV)"
+          }
+        },
+        "description": "Activation barrier energies for Cr migration from surface to subsurface interstitial on γ‑ and η‑alumina."
+      },
+      {
+        "file": "neb_gamma_alumina.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "standard XYZ format with all NEB images"
+        },
+        "description": "Minimum-energy path atomic coordinates for γ-alumina."
+      },
+      {
+        "file": "neb_eta_alumina.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "standard XYZ format with all NEB images"
+        },
+        "description": "Minimum-energy path atomic coordinates for η-alumina."
+      }
+    ],
+    "notes": "The NEB path XYZ files are required as process evidence of a complete calculation and are audited structurally; the main scored quantity is the barrier values in barriers.json."
+  },
+  "checks": [
+    {
+      "id": "barrier_gamma",
+      "output_file": "barriers.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 2.2,
+      "tolerance_abs": 0.5,
+      "field": "gamma_alumina_barrier"
+    },
+    {
+      "id": "barrier_eta",
+      "output_file": "barriers.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 5.0,
+      "tolerance_abs": 0.5,
+      "field": "eta_alumina_barrier"
+    },
+    {
+      "id": "barrier_ordering",
+      "output_file": "barriers.json",
+      "kind": "ordering",
+      "weight": 0.1
+    },
+    {
+      "id": "xyz_gamma",
+      "output_file": "neb_gamma_alumina.xyz",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "expected_atoms": 71
+    },
+    {
+      "id": "xyz_eta",
+      "output_file": "neb_eta_alumina.xyz",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "expected_atoms": 73
+    }
+  ]
+}

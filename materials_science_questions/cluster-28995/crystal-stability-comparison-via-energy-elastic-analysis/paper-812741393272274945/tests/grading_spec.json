@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper reports only qualitative trends (sign, monotonicity, three-ion dominance) without tabulated absolute γ values; T1/T2 infeasible. Structural checks on the computed CSV are the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stacking_fault_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected sign pattern of gamma_total used in step_sign_pattern",
+      "source_provenance": "Derived from the paper's description of structural stability trends (positive for Z>9, negative for 6<Z<9 for both Z_s; at Z=4 Z_s=1 negative, Z_s=2 positive) and confirmed by the reference solution.",
+      "generation_method": "Extracted from the paper's qualitative claims and the reference solution's correct CSV.",
+      "why_not_fabricated": "The pattern matches the paper's reported physical behaviour and passes the reference oracle."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stacking_fault_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Z",
+            "Z_s",
+            "gamma_total",
+            "gamma_2",
+            "gamma_3"
+          ],
+          "units": {
+            "gamma_total": "Ry",
+            "gamma_2": "Ry",
+            "gamma_3": "Ry"
+          }
+        },
+        "description": "CSV file containing computed intrinsic stacking fault energies for fcc crystals over Z=4..11 for Z_s=1 and Z_s=2."
+      }
+    ],
+    "notes": "The hidden checker will read this file and verify (i) sign pattern at key Z values (positive for Z>9, negative for 6<Z<9, negative near Z=4 for Z_s=1 and positive near Z=4 for Z_s=2), (ii) overall monotonic increase of gamma_total with Z, and (iii) dominance of three-ion term |gamma_3| >> |gamma_2| for most Z, as described in the paper."
+  },
+  "steps": [
+    {
+      "id": "step_sign_pattern",
+      "output_file": "stacking_fault_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "params": {
+        "expected_signs": [
+          {
+            "Z": 4,
+            "Z_s": 1,
+            "sign": -1
+          },
+          {
+            "Z": 5,
+            "Z_s": 1,
+            "sign": -1
+          },
+          {
+            "Z": 6,
+            "Z_s": 1,
+            "sign": -1
+          },
+          {
+            "Z": 7,
+            "Z_s": 1,
+            "sign": -1
+          },
+          {
+            "Z": 8,
+            "Z_s": 1,
+            "sign": -1
+          },
+          {
+            "Z": 9,
+            "Z_s": 1,
+            "sign": 1
+          },
+          {
+            "Z": 10,
+            "Z_s": 1,
+            "sign": 1
+          },
+          {
+            "Z": 11,
+            "Z_s": 1,
+            "sign": 1
+          },
+          {
+            "Z": 4,
+            "Z_s": 2,
+            "sign": 1
+          },
+          {
+            "Z": 5,
+            "Z_s": 2,
+            "sign": 1
+          },
+          {
+            "Z": 6,
+            "Z_s": 2,
+            "sign": -1
+          },
+          {
+            "Z": 7,
+            "Z_s": 2,
+            "sign": -1
+          },
+          {
+            "Z": 8,
+            "Z_s": 2,
+            "sign": -1
+          },
+          {
+            "Z": 9,
+            "Z_s": 2,
+            "sign": -1
+          },
+          {
+            "Z": 10,
+            "Z_s": 2,
+            "sign": 1
+          },
+          {
+            "Z": 11,
+            "Z_s": 2,
+            "sign": 1
+          }
+        ],
+        "epsilon": 0.0001
+      },
+      "description": "Verify sign of gamma_total against expected structural pattern."
+    },
+    {
+      "id": "step_monotonicity",
+      "output_file": "stacking_fault_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "params": {},
+      "description": "Check overall increasing trend of gamma_total with Z (final > initial for each Z_s)."
+    },
+    {
+      "id": "step_dominance",
+      "output_file": "stacking_fault_energies.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "params": {},
+      "description": "Check that |gamma_3| dominates over |gamma_2| (|gamma_3| >= 2*|gamma_2| for all rows)."
+    }
+  ]
+}

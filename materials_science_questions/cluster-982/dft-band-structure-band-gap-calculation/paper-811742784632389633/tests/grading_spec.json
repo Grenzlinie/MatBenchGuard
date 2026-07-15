@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing eigenvalues and elastic constants from raw DFT band structure files without running DFT post-processing is infeasible; result-level comparison against paper-reported BLYP values with realistic tolerances is appropriate.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold BLYP eigenvalues for bulk TiN (step_03)",
+      "source_provenance": "Table 2 of the paper, BLYP row (energies in eV relative to E_F).",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These are the paper's own computed BLYP results; no augmentation needed."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold BLYP elastic constants (step_04)",
+      "source_provenance": "Table 3 of the paper, BLYP row (Mbar).",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These are the paper's own computed BLYP results; no augmentation needed."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold surface state energy at Gamma (step_06)",
+      "source_provenance": "Paper text: 'The state located at 2.9 eV below E_F in ARPES is well reproduced' and our calculated value -2.9 eV.",
+      "generation_method": "Extracted from paper text (value -2.9 eV relative to E_F).",
+      "why_not_fabricated": "This is the paper's reported surface state energy for band A."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_eigenvalues.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Gamma15": "float (eV)",
+            "X3": "float (eV)",
+            "X5_prime": "float (eV)",
+            "X4_prime": "float (eV)"
+          }
+        },
+        "description": "Bulk TiN BLYP eigenvalues at Gamma15, X3, X5', and X4' relative to the Fermi energy."
+      },
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "float (Mbar)",
+            "C12": "float (Mbar)",
+            "C44": "float (Mbar)"
+          }
+        },
+        "description": "Cubic elastic constants of TiN computed via BLYP energy-strain fits."
+      },
+      {
+        "file": "surface_state_gamma_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "eV"
+          }
+        },
+        "description": "Energy of the sigma-type surface state (band A) at the Gamma point of a 4-layer TiN(001) slab, relative to EF."
+      }
+    ],
+    "notes": "The solving agent must use an open-source plane-wave DFT code (Quantum ESPRESSO) and appropriate pseudopotentials. The BLYP functional should be approximated (e.g., using PBE with selected parameters) as exact BLYP may not be directly available. All energies are relative to the Fermi level."
+  },
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "bulk_eigenvalues.json",
+      "kind": "json_field",
+      "weight": 0.5,
+      "fields": [
+        "Gamma15",
+        "X3",
+        "X5_prime",
+        "X4_prime"
+      ],
+      "expected": {
+        "Gamma15": -2.6,
+        "X3": -2.6,
+        "X5_prime": -3.7,
+        "X4_prime": -6.2
+      },
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "step_04",
+      "output_file": "elastic_constants.json",
+      "kind": "json_field",
+      "weight": 0.3,
+      "fields": [
+        "C11",
+        "C12",
+        "C44"
+      ],
+      "expected": {
+        "C11": 6.42,
+        "C12": 1.48,
+        "C44": 1.59
+      },
+      "tolerance_relative": 0.1
+    },
+    {
+      "id": "step_06",
+      "output_file": "surface_state_gamma_energy.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "expected_value": -2.9,
+      "tolerance_abs": 0.3
+    }
+  ]
+}

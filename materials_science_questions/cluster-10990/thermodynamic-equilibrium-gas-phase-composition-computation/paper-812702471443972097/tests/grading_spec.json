@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Transition pressures are final numeric arrays from numerical solvers; recomputation in the verifier is not feasible. Comparison against paper-reported values with generous tolerance and enforcement of the expected monotonic trend provides a faithful and robust verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Solgasmix and dynamic model transition pressures",
+      "source_provenance": "Tables 1 and 2 of the paper (Balat et al., Appl. Surf. Sci. 133 (1998) 115‑123, doi:10.1016/S0169-4332(98)00193‑7)",
+      "generation_method": "Manual transcription from the paper tables; identical to the values written by the reference solve.sh.",
+      "why_not_fabricated": "These are the exact published reference values; the checker compares the agent's computed pressures against them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "solgasmix_transition_pressures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Ordered list of CO2 total transition pressure (Pa) for temperatures 1600, 1700, 1800, 1900, 2000, 2100 K."
+        },
+        "description": "Closed-system equilibrium transition pressures computed by free-energy minimization."
+      },
+      {
+        "file": "dynamic_transition_pressures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Ordered list of CO2 total transition pressure (Pa) for temperatures 1600, 1700, 1800, 1900, 2000, 2100 K from the open-system dynamic model."
+        },
+        "description": "Open-system dynamic model transition pressures with mass transfer coupling."
+      }
+    ],
+    "notes": "Verification compares submitted arrays to paper-reported values (Table 1 and Table 2) with a generous tolerance to allow for differences in thermochemical databases and transport estimates. Both arrays must be strictly increasing with temperature."
+  },
+  "steps": [
+    {
+      "id": "solgasmix",
+      "output_file": "solgasmix_transition_pressures.json",
+      "kind": "numeric_array_match",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "tolerance": 0.25,
+      "reference": [
+        292,
+        1428,
+        5754,
+        20007,
+        61124,
+        165119
+      ],
+      "description": "Compare agent's Solgasmix transition pressures against reference within 25% relative error. Also check array is strictly increasing."
+    },
+    {
+      "id": "dynamic",
+      "output_file": "dynamic_transition_pressures.json",
+      "kind": "numeric_array_match",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "tolerance": 0.25,
+      "reference": [
+        236,
+        1145,
+        4629,
+        16107,
+        49029,
+        131690
+      ],
+      "description": "Compare agent's dynamic model transition pressures against reference within 25% relative error. Also check array is strictly increasing."
+    }
+  ]
+}

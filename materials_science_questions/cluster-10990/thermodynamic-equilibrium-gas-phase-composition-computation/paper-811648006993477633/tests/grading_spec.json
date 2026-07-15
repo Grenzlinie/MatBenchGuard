@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Si(l) temperature range directly recomputed from CSV Si_l_mol column (T1). Supersaturation checked via structural peak conditions because Si saturated vapor pressure data is not available in the verifier sandbox (T3). Trend of Si(l) width with NH3 flow is a structural ordering check (T2).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "equilibrium_compositions.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equilibrium_compositions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Q_NH3",
+            "case",
+            "T_K",
+            "Ar_mol",
+            "H2_mol",
+            "H_mol",
+            "N2_mol",
+            "N_mol",
+            "NH3_mol",
+            "NH4Cl_mol",
+            "HCl_mol",
+            "Cl2_mol",
+            "SiCl4_mol",
+            "SiCl2_mol",
+            "SiCl_mol",
+            "Si_g_mol",
+            "Si3N4_s_mol"
+          ],
+          "units": {
+            "Q_NH3": "L/min",
+            "T_K": "K",
+            "all mole columns": "absolute moles"
+          }
+        },
+        "description": "Equilibrium mole numbers for the Ar-H-N-Si-Cl system at 1 atm, covering five NH3 injection rates, two condensed-phase cases, and a temperature grid from 300 K to 3500 K. The checker recomputes the Si(l) existence temperature window and the maximum Si(g) supersaturation ratio from this table, scoring against the paper's reported values."
+      }
+    ],
+    "notes": "The checker recomputes derived quantities from the raw mole numbers; the agent does not need to supply the final metrics. Only the CSV is scored."
+  },
+  "checks": [
+    {
+      "id": "check_si_l_range",
+      "output_file": "equilibrium_compositions.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "params": {
+        "Q_NH3": 15.0,
+        "case": "with_Si_liquid",
+        "gold_low_K": 1974,
+        "gold_high_K": 2325,
+        "tolerance_K": 50
+      }
+    },
+    {
+      "id": "check_supersat_structural",
+      "output_file": "equilibrium_compositions.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "params": {
+        "Q_NH3": 15.0,
+        "case": "without_Si_liquid",
+        "T_min_peak": 2000,
+        "T_max_peak": 2400,
+        "min_ratio": 0.01
+      }
+    },
+    {
+      "id": "check_width_trend",
+      "output_file": "equilibrium_compositions.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "params": {
+        "Q_values": [
+          2.5,
+          5.0,
+          10.0,
+          15.0
+        ],
+        "expected_trend": "width(10) > width(15) and width(5) < width(10) and width(2.5) < width(5)"
+      }
+    }
+  ]
+}

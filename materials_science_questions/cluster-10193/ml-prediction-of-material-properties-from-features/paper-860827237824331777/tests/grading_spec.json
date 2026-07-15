@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute RMSE, precision, recall from agent's raw predictions and true labels; the paper's reported values serve as hidden thresholds with monotonic scoring so better-than-paper earns full credit.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "regression_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material_name",
+            "measured_Tc",
+            "predicted_Tc_mean",
+            "predicted_Tc_std"
+          ],
+          "units": {
+            "measured_Tc": "K",
+            "predicted_Tc_mean": "K",
+            "predicted_Tc_std": "K"
+          }
+        },
+        "description": "Raw predictions for the Hosono database. The checker will recompute RMSE between measured_Tc and predicted_Tc_mean and compare to a hidden gold tolerance."
+      },
+      {
+        "file": "classification_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material_name",
+            "true_label",
+            "predicted_score",
+            "predicted_class"
+          ]
+        },
+        "description": "Classification output for the Hosono database. The checker will recompute precision and recall from true_label vs predicted_class and compare to hidden gold values."
+      },
+      {
+        "file": "ima_classified_candidates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mineral_name",
+            "formula",
+            "predicted_score",
+            "classification"
+          ]
+        },
+        "description": "List of IMA minerals predicted to be superconductors. The checker verifies that key candidates (e.g., Pd3HgTe3, PdBiTe, Pd2NiTe2) appear among the entries."
+      }
+    ],
+    "notes": "All metrics are recomputed from the raw predictions; no self-reported summary is scored. The IMA list step is load-bearing because it requires genuine training of classification models."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "threshold values for RMSE (7.0 K), precision (0.60), recall (0.74)",
+      "source_provenance": "Paper Fig.1 reports RMSE=7 K for Hosono; Fig.2b reports 29 true positives, 19 false positives, 39 positive items → precision≈0.604, recall≈0.744",
+      "generation_method": "Derived from explicit numbers in the paper's text and figures",
+      "why_not_fabricated": "These are the paper's actual reported results, used as reference thresholds with monotonic scoring to reward faithful reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "regression_rmse",
+      "output_file": "regression_predictions.csv",
+      "kind": "recompute_metric",
+      "metric": "rmse",
+      "pred_column": "predicted_Tc_mean",
+      "true_column": "measured_Tc",
+      "target": 7.0,
+      "higher_better": false,
+      "weight": 0.4
+    },
+    {
+      "id": "classification_precision",
+      "output_file": "classification_results.csv",
+      "kind": "recompute_metric",
+      "metric": "precision",
+      "pred_column": "predicted_class",
+      "true_column": "true_label",
+      "target": 0.6,
+      "higher_better": true,
+      "weight": 0.2
+    },
+    {
+      "id": "classification_recall",
+      "output_file": "classification_results.csv",
+      "kind": "recompute_metric",
+      "metric": "recall",
+      "pred_column": "predicted_class",
+      "true_column": "true_label",
+      "target": 0.74,
+      "higher_better": true,
+      "weight": 0.2
+    },
+    {
+      "id": "ima_candidates",
+      "output_file": "ima_classified_candidates.csv",
+      "kind": "set_check",
+      "required_members": [
+        "Pd3HgTe3",
+        "PdBiTe",
+        "Pd2NiTe2"
+      ],
+      "name_column": "mineral_name",
+      "class_column": "classification",
+      "class_value": "SC",
+      "weight": 0.2
+    }
+  ]
+}

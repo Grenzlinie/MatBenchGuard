@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_data_retrieval",
+    "title": "Data retrieval and preparation",
+    "role": "process",
+    "action": "Fetch the curated cloud point dataset from the 3PDb website. Load the data and verify it contains the required fields: polymer repeat unit SMILES, solvent SMILES, Mw, PDI, volume fraction, pressure, one-phase direction, and observed cloud point temperature. Apply any filtering described in the paper (e.g., PDI < 6, minimum two points per polymer–solvent pair) to obtain exactly 6524 points.",
+    "output_file": "",
+    "evidence": "data_loading.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Download the dataset and log the number of loaded points.",
+    "output_schema": "A plain text log reporting the final number of data points after filtering."
+  },
+  {
+    "id": "step_02_feature_engineering",
+    "title": "Feature engineering and data splitting",
+    "role": "process",
+    "action": "Using RDKit, compute the full set of molecular descriptors for each polymer repeat unit SMILES and each solvent SMILES. Reduce to the non‑constant, finite descriptors (96 polymer descriptors and 120 solvent descriptors as described in the paper). Concatenate with state variables (log Mw, PDI, sqrt(volume fraction), log(pressure), one‑phase direction). Standardize all continuous features to zero mean and unit variance. Split the data stratified by polymer–solvent pair into 80% train, 10% validation, 10% test.",
+    "output_file": "",
+    "evidence": "feature_processing.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate normalized feature matrices and save train/val/test split indices.",
+    "output_schema": "A plain text log recording the final feature dimensions and split sizes."
+  },
+  {
+    "id": "step_03_model_training",
+    "title": "Model training",
+    "role": "process",
+    "action": "Train an XGBoost regressor and a feed‑forward neural network (TensorFlow/Keras) on the training set. Use early stopping based on validation RMSE. Optionally tune hyperparameters (e.g., with Hyperopt) to minimize validation RMSE. Save the trained models.",
+    "output_file": "",
+    "evidence": "model_training.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log training hyperparameters, training/validation loss curves, and the early‑stopping epoch.",
+    "output_schema": "A plain text log containing training hyperparameters and final validation RMSE per model."
+  },
+  {
+    "id": "step_04_test_evaluation",
+    "title": "Test set evaluation",
+    "role": "scored",
+    "action": "For both trained models (XGBoost and ANN), predict cloud point temperatures on the held-out test set. Write a CSV with each test sample's polymer SMILES, solvent SMILES, Mw, PDI, volume fraction, pressure, one‑phase direction, observed temperature, and the predicted temperatures from both models.",
+    "output_file": "step_01_test_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Test-set predictions for both ML models. The verifier will compute RMSE from the observed and predicted columns.",
+    "output_schema": "Columns: polymer_SMILES (string), solvent_SMILES (string), Mw (float), PDI (float), volume_fraction (float), pressure (float), one_phase_direction (string, 'positive' or 'negative'), observed_temperature (float), predicted_temperature_XGBoost (float), predicted_temperature_ANN (float). One row per test sample."
+  },
+  {
+    "id": "step_05_extrapolation_analysis",
+    "title": "Extrapolation analysis",
+    "role": "scored",
+    "action": "Select a polymer with limited data (e.g., poly(vinyl alcohol) or polyisobutylene). Perform a leave‑one‑polymer‑out experiment using XGBoost: (a) train on all data except that polymer, evaluate RMSE on its held‑out test set; (b) incrementally add 5, 10, 20, 50 randomly chosen cloud points from that polymer to the training set, retrain, and record RMSE on the remaining test data for that polymer. Repeat each addition 10 times with different random seeds and average the RMSE. Write a CSV summarizing the results.",
+    "output_file": "step_02_extrapolation_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Extrapolation performance as a function of added training data. The verifier will read the RMSE value at num_added_cloud_points=20.",
+    "output_schema": "Columns: polymer (string), num_added_cloud_points (int), RMSE (float). Rows for the levels 0, 5, 10, 20, 50, with the averaged RMSE across repeats."
+  }
+]

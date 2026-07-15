@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper reports qualitative trends (LO-phonon peak ordering, X7 negligible, hot-phonon effect on X6 decay) without a single numeric metric. Recomputing from raw artifacts would require a full EMC simulation (hours of compute) in the verifier sandbox, which is infeasible. Structural checks on the output CSVs are appropriate and faithful to the paper's claims.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "valley_populations.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "N_Gamma",
+            "N_L",
+            "N_X6",
+            "N_X7",
+            "hot_phonons"
+          ],
+          "units": {}
+        },
+        "description": "Time‑dependent electron population fractions in the four valleys for both hot‑phonon conditions."
+      },
+      {
+        "file": "lo_phonon_spectrum_2ps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q_inv_nm",
+            "N_Gamma",
+            "N_L",
+            "N_X6",
+            "N_X7"
+          ],
+          "units": {
+            "q_inv_nm": "1/nm"
+          }
+        },
+        "description": "Valley‑resolved LO phonon occupation numbers vs. phonon wavevector q at t=2.0 ps."
+      },
+      {
+        "file": "lo_phonon_spectrum_2_5ps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q_inv_nm",
+            "N_Gamma",
+            "N_L",
+            "N_X6",
+            "N_X7"
+          ],
+          "units": {
+            "q_inv_nm": "1/nm"
+          }
+        },
+        "description": "Valley‑resolved LO phonon occupation numbers vs. phonon wavevector q at t=2.5 ps."
+      }
+    ],
+    "notes": "Structural audit checks ordering of peak q-vectors (q_Γ < q_L < q_X7 < q_X6), minimal X7 contribution, and slower X6 decay with hot phonons. Exact numerical values are not required."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_ordering_and_trends",
+      "source_provenance": "Paper equations (2)-(3), Fig.5 description, and the statement about X7 contribution being negligible; hot-phonon effect slowing X6 decay from paper discussion.",
+      "generation_method": "Extracted the qualitative claims (peak q ordering, X7 weakest, hot phonons cause slower X6 decay) directly from the paper's text and figures. No fabricated numbers.",
+      "why_not_fabricated": "These conditions reproduce the paper's own reported physical behavior; failing them means the reproduction did not capture the key results."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_03_valley_populations",
+      "output_file": "valley_populations.csv",
+      "kind": "rubric",
+      "weight": 0.4,
+      "description": "Check that X6 valley population decays more slowly when hot_phonons=true than when false.",
+      "target": {
+        "condition": "mean_X6_hot >= mean_X6_nohot - 1e-4",
+        "time_window": [
+          4.0,
+          5.0
+        ]
+      }
+    },
+    {
+      "id": "step_04_lo_phonon_2ps",
+      "output_file": "lo_phonon_spectrum_2ps.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Verify peak q ordering (q_Gamma < q_L < q_X7 < q_X6) and X7 contribution is smallest.",
+      "target": {
+        "valleys_order": [
+          "N_Gamma",
+          "N_L",
+          "N_X7",
+          "N_X6"
+        ],
+        "x7_fraction_max_ratio": 0.5
+      }
+    },
+    {
+      "id": "step_05_lo_phonon_2_5ps",
+      "output_file": "lo_phonon_spectrum_2_5ps.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Verify that distributions broaden and overlap more compared to 2ps: peak q range shrinks and peak-to-valley ratio decreases.",
+      "target": {
+        "q_range_shrinks": true,
+        "peak_to_valley_ratio_decreases": true,
+        "tolerance": 1e-06
+      }
+    }
+  ]
+}

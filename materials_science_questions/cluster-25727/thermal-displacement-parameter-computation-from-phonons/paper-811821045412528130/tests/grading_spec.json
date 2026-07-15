@@ -1,0 +1,127 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Headline barrier heights and Curie temperatures are compared to paper gold; internal consistency between barrier heights and quartic coefficients is also verified to discourage trivial fabrication.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold barrier heights and Curie temperatures from paper Tables 1 and 2",
+      "source_provenance": "Paper Tables 1 and 2 (Audzijonis et al., Ferroelectrics 392, 45-54, 2009)",
+      "generation_method": "Values transcribed directly from the published tables.",
+      "why_not_fabricated": "These are the paper's reported data, used as a reference for comparison; they are the authoritative values for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_barrier_heights.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "pressure_arb",
+            "composition_x",
+            "barrier_V"
+          ],
+          "units": {
+            "barrier_V": "atomic units (a.u.)"
+          }
+        },
+        "description": "Barrier heights ΔV of the B1u soft mode double-well potential for varying temperature, pressure, and Bi composition. The checker compares these to the paper's reported values with a tolerance."
+      },
+      {
+        "file": "step_03_quartic_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "temperature_K",
+              "pressure_arb",
+              "composition_x",
+              "a",
+              "b",
+              "c",
+              "d"
+            ],
+            "properties": {
+              "temperature_K": {
+                "type": "number"
+              },
+              "pressure_arb": {
+                "type": "number"
+              },
+              "composition_x": {
+                "type": "number"
+              },
+              "a": {
+                "type": "number"
+              },
+              "b": {
+                "type": "number"
+              },
+              "c": {
+                "type": "number"
+              },
+              "d": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Fitted quartic coefficients for each condition. Checked for consistency (e.g., a≈0, d≈0 in symmetric regimes) with low weight."
+      },
+      {
+        "file": "step_04_Tc_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_x",
+            "pressure_arb",
+            "Tc_K"
+          ],
+          "units": {
+            "Tc_K": "Kelvin"
+          }
+        },
+        "description": "Curie temperatures T_C (in K) for each composition and pressure; -1 indicates no transition. The checker compares to paper values within ±10 K."
+      }
+    ],
+    "notes": "All scored quantities are compared to the paper's hidden gold values with appropriate tolerances (barrier heights ±0.001 a.u., Tc ±10 K)."
+  },
+  "steps": [
+    {
+      "id": "barrier_accuracy",
+      "output_file": "step_02_barrier_heights.csv",
+      "weight": 0.6,
+      "kind": "result_level_compare",
+      "tolerance_abs": 0.001,
+      "description": "Compare agent barrier heights to paper gold values with absolute tolerance 0.001 a.u."
+    },
+    {
+      "id": "quartic_consistency",
+      "output_file": "step_03_quartic_coefficients.json",
+      "weight": 0.2,
+      "kind": "consistency",
+      "tolerance_rel": 0.01,
+      "description": "Check internal consistency: for gold conditions (symmetric double-well) the barrier from coefficients matches the reported barrier height, and a, d are near zero."
+    },
+    {
+      "id": "tc_accuracy",
+      "output_file": "step_04_Tc_values.csv",
+      "weight": 0.2,
+      "kind": "result_level_compare",
+      "tolerance_abs": 10.0,
+      "description": "Compare agent Curie temperatures to paper gold (±10 K) and check no-transition sentinel for x>0.7."
+    }
+  ]
+}

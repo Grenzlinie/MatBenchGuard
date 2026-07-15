@@ -1,0 +1,164 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Quantum capacitance summary metrics are recomputed from the raw CSV; electronic properties are result-level compared to paper gold with generous tolerances to account for toolchain spread.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for electronic properties and quantum capacitance summary metrics from the paper",
+      "source_provenance": "Paper (DOI 10.1002/qua.26666) reported numerical values for band gap, magnetic moment, formation energies, binding energies, optical peak positions, and quantum capacitance metrics.",
+      "generation_method": "Extracted directly from the paper's text and figures; cross-verified with the reference solve.sh output.",
+      "why_not_fabricated": "These are the exact paper-reported quantities, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_pristine": "number (eV)",
+            "magnetic_moment_VSc": "number (μB)",
+            "E_form_Vc": "number (eV)",
+            "E_form_Vf": "number (eV)",
+            "E_form_VSc": "number (eV)",
+            "E_binding_all": "array of 4 numbers (eV/atom)",
+            "absorption_peak_positions": "array of 4 numbers (eV)",
+            "reflectivity_max_positions": "array of 4 numbers (eV)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Extracted electronic and stability properties, serving as the basis for verification of band gap, magnetism, formation energies, binding energies, and optical peak positions."
+      },
+      {
+        "file": "quantum_capacitance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "system",
+            "V",
+            "C_diff",
+            "Q",
+            "C_int"
+          ],
+          "units": {
+            "V": "V",
+            "C_diff": "μF/cm²",
+            "Q": "μC/cm²",
+            "C_int": "μF/cm²"
+          }
+        },
+        "description": "Quantum capacitance curves for pristine and vacancy-defect systems, enabling verification of the enhanced capacitance and the identification of V_F as the best anode candidate."
+      }
+    ],
+    "notes": "The checker compares the submitted values and curves against the paper's reported numbers using preset tolerances. The agent must reproduce all listed properties with an open-source DFT code (e.g., Quantum ESPRESSO) and PBE functional; small systematic differences are expected and accounted for by the tolerances."
+  },
+  "steps": [
+    {
+      "id": "check_electronic_properties",
+      "output_file": "electronic_properties.json",
+      "weight": 0.3,
+      "fields": {
+        "band_gap_pristine": {
+          "target": 1.0016,
+          "abs_tol": 0.1
+        },
+        "magnetic_moment_VSc": {
+          "target": 1.0,
+          "abs_tol": 0.2
+        },
+        "E_form_Vc": {
+          "target": 9.97,
+          "abs_tol": 1.0
+        },
+        "E_form_Vf": {
+          "target": 7.52,
+          "abs_tol": 1.0
+        },
+        "E_form_VSc": {
+          "target": 11.64,
+          "abs_tol": 1.0
+        },
+        "E_binding_all": {
+          "targets": [
+            -6.39,
+            -6.31,
+            -6.36,
+            -6.28
+          ],
+          "abs_tol": 0.3
+        },
+        "absorption_peak_positions": {
+          "targets": [
+            9.356,
+            0.131,
+            0.192,
+            0.199
+          ],
+          "abs_tol": [
+            2.0,
+            0.2,
+            0.2,
+            0.2
+          ]
+        },
+        "reflectivity_max_positions": {
+          "targets": [
+            9.356,
+            0.131,
+            0.192,
+            0.199
+          ],
+          "abs_tol": [
+            2.0,
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      }
+    },
+    {
+      "id": "check_quantum_capacitance",
+      "output_file": "quantum_capacitance.csv",
+      "weight": 0.7,
+      "targets": {
+        "Cint0": {
+          "pristine": 0.13,
+          "V_Sc": 139.47,
+          "V_F": 338.85,
+          "V_C": 290.85,
+          "rel_tol": 0.3
+        },
+        "Q06": {
+          "V_Sc": 44.29,
+          "V_F": 128.53,
+          "V_C": 82.21,
+          "rel_tol": 0.25
+        },
+        "Cdiff_max_neg": {
+          "pristine": 655,
+          "V_Sc": 731,
+          "abs_tol_frac": 0.3
+        },
+        "Cdiff_max_pos": {
+          "V_Sc": 192,
+          "V_F": 493,
+          "V_C": 313,
+          "abs_tol_frac": 0.3
+        }
+      }
+    }
+  ]
+}

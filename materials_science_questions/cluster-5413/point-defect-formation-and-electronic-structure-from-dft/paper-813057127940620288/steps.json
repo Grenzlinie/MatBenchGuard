@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_validate_dft",
+    "title": "Validate DFT setup",
+    "role": "process",
+    "action": "Perform a DFT calculation on the primitive CeO2 cell using the chosen functional (e.g., HSE or PBE+U). Compute lattice constant, O2p-Ce4f and O2p-Ce5d band gaps, and formation energy of CeO2. Confirm reasonable agreement with experimental values to ensure the settings are appropriate.",
+    "output_file": "",
+    "evidence": "validation_output.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Validation run to confirm the DFT setup reproduces basic CeO2 properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_prepare_structures",
+    "title": "Prepare supercells and vacancy configurations",
+    "role": "process",
+    "action": "Build 2×2×2 and 3×3×3 CeO2 supercells from the primitive cell. Create the five short-range vacancy pair configurations (<100>, <110>, <111>, <100>_e, <111>_e) in the 2×2×2 supercell, and single-vacancy and <111> cluster structures in the 3×3×3 supercell.",
+    "output_file": "",
+    "evidence": "supercell_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generation of all supercells with the required defect arrangements.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_formation_energies",
+    "title": "Compute formation energies and relative stability",
+    "role": "scored",
+    "action": "Optimise the geometry of each vacancy-pair configuration and calculate total energies. Evaluate formation energies using the standard defect formation energy formula for O-rich and O-poor limits. Determine charge-state transition levels for single vacancy and <111> cluster. Record relative total energies of the five configurations to identify the most stable one.",
+    "output_file": "formation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Re-derivable formation energies and relative stability ranking.",
+    "output_schema": "JSON object with keys 'single_vacancy' (dict of charge states to formation energies in eV), 'cluster_vacancy' (similar), 'relative_stability' (dict mapping configuration name to relative total energy in eV)."
+  },
+  {
+    "id": "step_04_migration_barriers",
+    "title": "Compute migration barriers for single and clustered vacancies",
+    "role": "scored",
+    "action": "Using the climbing-image nudged elastic band (cNEB) method, compute migration barriers for a single oxygen vacancy along <100>, <110>, <111> directions and for the <111> vacancy cluster along <100> (paths A–D), <110> and <111> directions. Record barrier values for every examined path.",
+    "output_file": "migration_barriers.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "NEB results comparing mobility of single vacancy and cluster.",
+    "output_schema": "JSON object with keys 'single_vacancy' and 'cluster_vacancy', each being an object mapping a direction string (e.g., '<100>') to an array of barrier values in eV (one per path)."
+  },
+  {
+    "id": "step_05_aimd",
+    "title": "Run AIMD simulations of vacancy diffusion",
+    "role": "scored",
+    "action": "Perform ab initio molecular dynamics on 3×3×3 supercells with a single vacancy and with the <111> cluster. Use the PBE functional, NVT ensemble at 1000 K, 1 fs time step, Γ‑point sampling. Run a 2 ps equilibration followed by a 4 ps production run. Analyse oxygen trajectories to count vacancy jumps and characterise diffusion behaviour.",
+    "output_file": "aimd_analysis.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "AIMD analysis quantifying diffusion differences.",
+    "output_schema": "JSON object with keys 'single_vacancy_system' and 'cluster_system', each an object with 'total_time_ps' (float), 'num_jumps' (integer), 'jump_pattern' (string)."
+  },
+  {
+    "id": "step_06_ce3_effect",
+    "title": "Investigate Ce³⁺ influence on migration barriers",
+    "role": "scored",
+    "action": "For a single oxygen vacancy, create models with 0, 1 and 2 Ce³⁺ ions near the migration path. Calculate the migration barrier for each configuration using NEB.",
+    "output_file": "ce3_migration_barriers.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Effect of polarons on vacancy migration barriers.",
+    "output_schema": "JSON array of objects, each with 'model' (string), 'num_Ce3' (integer), 'barrier_eV' (float)."
+  }
+]

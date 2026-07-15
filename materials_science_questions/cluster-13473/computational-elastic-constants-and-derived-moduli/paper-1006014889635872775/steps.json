@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_1_generate",
+    "title": "Generate polycrystalline initial configurations",
+    "role": "process",
+    "action": "Create initial atomic configurations of nanocrystalline Cu (fcc, a=3.615 Å) and Ta (bcc, a=3.304 Å) with grain sizes d = 5, 8, 10, 12, 15, 18, 20 nm using Voronoi tessellation. Keep the number of grains constant across sizes.",
+    "output_file": "",
+    "evidence": "generation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log documenting creation parameters and any warnings.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_relax",
+    "title": "Equilibrate via NPT relaxation",
+    "role": "process",
+    "action": "For each initial configuration, run an NPT molecular dynamics simulation in LAMMPS using the corresponding EAM potential. Relax the box size until the total pressure averages to zero (target pressure zero, 200 ps with 2 fs timestep). Monitor instantaneous and cumulative average pressure.",
+    "output_file": "",
+    "evidence": "relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log containing pressure evolution and final zero‑pressure configuration details.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_md",
+    "title": "NVT MD with on‑the‑fly local elasticity calculation",
+    "role": "process",
+    "action": "Run an NVT molecular dynamics simulation on each relaxed configuration using a custom LAMMPS compute that implements the per‑atom Born elasticity tensor for EAM potentials. The per‑atom tensor is computed using the EAM‑specific formula:\n\nV_i C_{i,αβγδ}^B = 1/2 ∑_{j≠i} X_{ij} (r_{ij,α} r_{ij,β} r_{ij,γ} r_{ij,δ}) / r_{ij}^2 + F''(ρ_i) g_{i,αβ} g_{i,γδ}\n\nwith\n\nX_{ij} = v''(r_{ij}) - (1/r_{ij}) v'(r_{ij}) + (F'(ρ_i) + F'(ρ_j)) (ρ''(r_{ij}) - (1/r_{ij}) ρ'(r_{ij})),\n\ng_{i,αβ} = ∑_{j≠i} ρ'(r_{ij}) (r_{ij,α} r_{ij,β} / r_{ij}),\n\nwhere v, F, ρ are the EAM potential functions (pair potential, embedding function, density). Then derive local moduli using Voigt averages:\n\n9 B = C_{11}+C_{22}+C_{33}+2(C_{12}+C_{23}+C_{31}),\n\n15 G = C_{11}+C_{22}+C_{33}−(C_{12}+C_{23}+C_{31})+3(C_{44}+C_{55}+C_{66}),\n\n1/E = 1/(3G) + 1/(9B),\n\nν = 1/2 (1 − 3G/(3B+G)).\n\nOutput per‑atom elastic tensor components and the derived local moduli (bulk B, shear G, Young’s E, Poisson’s ratio ν). Also calculate the per‑atom centrosymmetry parameter.",
+    "output_file": "",
+    "evidence": "per_atom_elasticity.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Archive containing per‑atom data (positions, elastic moduli, centrosymmetry) in a format the analysis scripts can read.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_shear_dist",
+    "title": "Compute shear‑modulus probability density histograms",
+    "role": "scored",
+    "action": "Read the per‑atom data, classify each atom as grain or grain‑boundary using the centrosymmetry parameter, and for each metal and grain size build normalized probability density histograms of the per‑atom shear modulus for grain and grain‑boundary populations. Write the results.",
+    "output_file": "shear_modulus_distributions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with probability density histograms of per‑atom shear modulus for grain and grain‑boundary atoms, for each metal and grain size.",
+    "output_schema": "metal, grain_size_nm, atom_type, bin_center_GPa, density"
+  },
+  {
+    "id": "step_5_avg_moduli",
+    "title": "Compute average elastic moduli per population",
+    "role": "scored",
+    "action": "Using the same per‑atom data and classification, compute the arithmetic average of shear modulus G, Young’s modulus E, bulk modulus B, and Poisson’s ratio ν for the total system, grain atoms, and grain‑boundary atoms at each grain size. Write the results.",
+    "output_file": "average_moduli.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with average elastic moduli for total, grain, and grain‑boundary populations per grain size.",
+    "output_schema": "metal, grain_size_nm, population, G_GPa, E_GPa, B_GPa, Poisson_ratio"
+  },
+  {
+    "id": "step_6_gb_fraction",
+    "title": "Compute grain‑boundary atomic fraction",
+    "role": "scored",
+    "action": "From the per‑atom classification, calculate the grain‑boundary atomic fraction x_gb as a function of grain size. Write the fractions.",
+    "output_file": "gb_fraction.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with grain‑boundary atomic fraction per grain size for each metal.",
+    "output_schema": "metal, grain_size_nm, gb_fraction"
+  },
+  {
+    "id": "step_7_mean_field",
+    "title": "Derive mean‑field model parameters",
+    "role": "scored",
+    "action": "Using the average moduli and the grain‑boundary fraction, fit the scaling relation x_gb = d0 / d to obtain d0. Compute the grain‑size‑averaged moduli of grain and grain‑boundary atoms. Write the mean‑field model parameters.",
+    "output_file": "mean_field_params.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with d0 and the six grain‑size‑averaged moduli for grain and grain‑boundary atoms per metal.",
+    "output_schema": "metal, d0_nm, avg_G_grain_GPa, avg_G_gb_GPa, avg_E_grain_GPa, avg_E_gb_GPa, avg_B_grain_GPa, avg_B_gb_GPa, avg_poisson_grain, avg_poisson_gb"
+  }
+]

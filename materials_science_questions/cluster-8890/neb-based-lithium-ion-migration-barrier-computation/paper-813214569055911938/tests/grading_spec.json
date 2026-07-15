@@ -1,0 +1,178 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT-NEB energies are too expensive to recompute in the verifier sandbox; compare agent-reported energies against paper gold with tolerances. Migration barriers use threshold_or_better (lower is better).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference values for compound 1 DFT-computed energies",
+      "source_provenance": "paper text and Fig.4",
+      "generation_method": "extracted from paper: Frenkel formation energies 0.53,1.07,1.29,0.60 eV; interstitial barriers 0.75,0.89 eV; vacancy barriers 0.58,1.01,0.17,0.21,0.30,0.33 eV; activation energies 0.60,1.02 eV",
+      "why_not_fabricated": "these are the actual DFT-computed values reported in the paper for compound 1; matching them indicates a successful reproduction of the same computational setup."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "frenkel_formation_energies",
+            "interstitial_migration_barriers",
+            "vacancy_migration_barriers",
+            "activation_energies",
+            "dominant_mechanism"
+          ],
+          "properties": {
+            "frenkel_formation_energies": {
+              "type": "object",
+              "required": [
+                "type1_to_type2",
+                "type1_to_type3",
+                "type1_to_type4",
+                "tetrahedral_minimum"
+              ],
+              "properties": {
+                "type1_to_type2": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "type1_to_type3": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "type1_to_type4": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "tetrahedral_minimum": {
+                  "type": "number",
+                  "unit": "eV"
+                }
+              }
+            },
+            "interstitial_migration_barriers": {
+              "type": "object",
+              "required": [
+                "minimum_path_type3_intermediate",
+                "direct_type2_to_type2"
+              ],
+              "properties": {
+                "minimum_path_type3_intermediate": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "direct_type2_to_type2": {
+                  "type": "number",
+                  "unit": "eV"
+                }
+              }
+            },
+            "vacancy_migration_barriers": {
+              "type": "object",
+              "required": [
+                "octahedral_type1_along_a",
+                "octahedral_type1_along_c",
+                "tetrahedral_minimum",
+                "octahedral_to_tetrahedral_minimum",
+                "continuous_1d_barrier",
+                "inter_channel_barrier"
+              ],
+              "properties": {
+                "octahedral_type1_along_a": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "octahedral_type1_along_c": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "tetrahedral_minimum": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "octahedral_to_tetrahedral_minimum": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "continuous_1d_barrier": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "inter_channel_barrier": {
+                  "type": "number",
+                  "unit": "eV"
+                }
+              }
+            },
+            "activation_energies": {
+              "type": "object",
+              "required": [
+                "vacancy_EA",
+                "interstitial_EA"
+              ],
+              "properties": {
+                "vacancy_EA": {
+                  "type": "number",
+                  "unit": "eV"
+                },
+                "interstitial_EA": {
+                  "type": "number",
+                  "unit": "eV"
+                }
+              }
+            },
+            "dominant_mechanism": {
+              "type": "string",
+              "enum": [
+                "vacancy",
+                "interstitial"
+              ]
+            }
+          }
+        },
+        "description": "Computed DFT-derived energies and the dominant Li+ transport mechanism for Li4[SnSe4]."
+      }
+    ],
+    "notes": "The primary scored output is results.json. The dominant_mechanism must be determined from the computed activation energies (vacancy diffusion expected to have lower activation energy). All energies in eV."
+  },
+  "steps": [
+    {
+      "id": "frenkel_energies",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "json_field"
+    },
+    {
+      "id": "interstitial_barriers",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "json_field"
+    },
+    {
+      "id": "vacancy_barriers",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "json_field"
+    },
+    {
+      "id": "activation_energies",
+      "output_file": "results.json",
+      "weight": 0.25,
+      "kind": "json_field"
+    },
+    {
+      "id": "dominant_mechanism",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "json_field"
+    }
+  ]
+}

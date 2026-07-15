@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute d_m without the original zeolite dataset and re-running the full GRNN/RBF training pipeline; comparing agent's reported d_m to paper's reported values with threshold_or_better tolerance is the feasible fallback.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results/performance.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference d_m values for GRNN and RBF from Table 1 of the paper",
+      "source_provenance": "Paper Table 1: Average relative errors d_m (%) for GRNN and RBF methods",
+      "generation_method": "Extracted from the paper's reported values.",
+      "why_not_fabricated": "These are the paper's actual published results, used to verify that the agent's reproduced model achieves comparable or better performance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results/performance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "method",
+            "target",
+            "d_m"
+          ],
+          "units": {
+            "d_m": "percent"
+          }
+        },
+        "description": "Table of average relative errors (d_m in %) for GRNN and RBF predictions of six zeolite structural parameters from XRD peak angles."
+      }
+    ],
+    "notes": "Only the d_m values for GRNN and RBF are scored. Multilinear regression baseline and halved-training-data analysis are excluded per scope."
+  },
+  "steps": [
+    {
+      "id": "check_performance",
+      "output_file": "results/performance.csv",
+      "kind": "threshold_or_better_comparison",
+      "weight": 1.0,
+      "tolerance_abs": 2.0,
+      "reference_dm": {
+        "GRNN": {
+          "r1": 16.3,
+          "r2": 11.8,
+          "fd": 8.2,
+          "a": 20.8,
+          "b": 22.8,
+          "c": 23.7
+        },
+        "RBF": {
+          "r1": 18.6,
+          "r2": 14.4,
+          "fd": 7.6,
+          "a": 19.6,
+          "b": 22.1,
+          "c": 25.8
+        }
+      },
+      "description": "Compare agent's reported d_m values to paper's gold: full credit for each entry if agent d_m ≤ reference + 2.0 else 0; final score = fraction of 12 entries passing."
+    }
+  ]
+}

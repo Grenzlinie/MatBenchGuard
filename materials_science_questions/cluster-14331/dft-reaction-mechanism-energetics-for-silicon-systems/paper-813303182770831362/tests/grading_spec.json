@@ -1,0 +1,179 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Relative energies can be recomputed from total energies; agreement with paper's Table 1 CCSD(T)//MP2/6-31G** values is scored with tolerance. Barrier/exothermicity values are also recomputed from raw energies and compared to paper gold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_total_energies.csv": "structural_audit",
+    "step_02_dominant_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative energies (kJ/mol) and CCSD(T)//MP2/6-31G** total energies (Hartree) for all species in the three dominant reaction channels, taken from the paper's Table 1.",
+      "source_provenance": "Paper's Table 1, CCSD(T)//MP2/6-31G** column for Reaction(2)-(5) species involved in the three dominant channels.",
+      "generation_method": "Extracted directly from the published Table 1 in the paper; the set of species matches the reproduction scope (R1+R2, INT2, TS2, P2, INT4, TS4, P4, P2+R2, INT3, TS3, P3, INT4+R2, INT5, TS5, P5).",
+      "why_not_fabricated": "Values are the paper's own computed numbers for the same CCSD(T)//MP2/6-31G** level and zero-point corrected energies, ensuring the gold is authoritative for this reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "total_energy_hartree",
+            "relative_energy_kJmol",
+            "reference"
+          ],
+          "units": {
+            "total_energy_hartree": "Hartree",
+            "relative_energy_kJmol": "kJ/mol"
+          }
+        },
+        "description": "Total CCSD(T)//MP2/6-31G** energies with zero-point correction, relative energies, and reference state for all relevant species."
+      },
+      {
+        "file": "step_02_dominant_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "channel": "string",
+            "barrier_kJmol": "float",
+            "exothermicity_kJmol": "float"
+          },
+          "units": {
+            "barrier_kJmol": "kJ/mol",
+            "exothermicity_kJmol": "kJ/mol"
+          }
+        },
+        "description": "Barriers and exothermicities for the three dominant reaction channels derived from the relative energies."
+      }
+    ],
+    "notes": "The checker recomputes relative energies and derived barriers/exothermicities from the total energies CSV, then compares the barrier/exothermicity values in the JSON to paper-reported hidden values within a tolerance. The CSV structure is audited for completeness and plausible units."
+  },
+  "steps": [
+    {
+      "id": "csv_check",
+      "output_file": "step_01_total_energies.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "description": "Check CSV schema, presence of required species, internal consistency of relative energies, and agreement with paper's gold relative energies within tolerance.",
+      "params": {
+        "species_gold": [
+          {
+            "species": "R1+R2",
+            "relative_energy_kJmol": 0.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "INT2",
+            "relative_energy_kJmol": -91.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "TS2",
+            "relative_energy_kJmol": -78.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "P2",
+            "relative_energy_kJmol": -239.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "INT4",
+            "relative_energy_kJmol": -180.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "TS4",
+            "relative_energy_kJmol": -174.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "P4",
+            "relative_energy_kJmol": -404.0,
+            "reference": "R1+R2"
+          },
+          {
+            "species": "P2+R2",
+            "relative_energy_kJmol": 0.0,
+            "reference": "P2+R2"
+          },
+          {
+            "species": "INT3",
+            "relative_energy_kJmol": -41.0,
+            "reference": "P2+R2"
+          },
+          {
+            "species": "TS3",
+            "relative_energy_kJmol": 80.0,
+            "reference": "P2+R2"
+          },
+          {
+            "species": "P3",
+            "relative_energy_kJmol": -122.0,
+            "reference": "P2+R2"
+          },
+          {
+            "species": "INT4+R2",
+            "relative_energy_kJmol": 0.0,
+            "reference": "INT4+R2"
+          },
+          {
+            "species": "INT5",
+            "relative_energy_kJmol": -30.0,
+            "reference": "INT4+R2"
+          },
+          {
+            "species": "TS5",
+            "relative_energy_kJmol": 25.0,
+            "reference": "INT4+R2"
+          },
+          {
+            "species": "P5",
+            "relative_energy_kJmol": -158.0,
+            "reference": "INT4+R2"
+          }
+        ],
+        "relative_tolerance_kJmol": 4.0,
+        "internal_consistency_tolerance_kJmol": 0.5
+      }
+    },
+    {
+      "id": "json_check",
+      "output_file": "step_02_dominant_barriers.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Check JSON structure and accuracy of barriers and exothermicities against paper values within tolerance.",
+      "params": {
+        "gold_barriers": [
+          {
+            "channel": "Reaction3",
+            "barrier_kJmol": 13.0,
+            "exothermicity_kJmol": 91.0
+          },
+          {
+            "channel": "Reaction4",
+            "barrier_kJmol": 6.0,
+            "exothermicity_kJmol": 180.0
+          },
+          {
+            "channel": "Reaction5",
+            "barrier_kJmol": 55.0,
+            "exothermicity_kJmol": 30.0
+          }
+        ],
+        "tolerance_kJmol": 4.0
+      }
+    }
+  ]
+}

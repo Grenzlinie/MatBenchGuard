@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Calculate elemental reference total energies",
+    "role": "process",
+    "action": "Run DFT total energy calculations using the FLAPW method (elk code) with the PBE functional for bcc Fe, bcc Cr, and diamond Si. Store the total energies for later use.",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute total energies of elemental bulk references required for formation energy calculation.",
+    "output_schema": "object with keys for each element and their total energies in eV per atom"
+  },
+  {
+    "id": "step_02",
+    "title": "Calculate compound total energies",
+    "role": "process",
+    "action": "Run DFT calculations for Fe2CrSi in the L21 structure (a=5.679 Å), Fe2CrSi in the A15 structure (a=4.545 Å), Fe3Si in the D03 structure (a=5.654 Å), and Cr3Si in the A15 structure (a=4.560 Å) using the same DFT method.",
+    "output_file": "",
+    "evidence": "compound_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute total energies of the four crystalline compounds for which formation energies are needed.",
+    "output_schema": "object with keys for each compound and their total energies in eV per formula unit"
+  },
+  {
+    "id": "step_03",
+    "title": "Compute formation energies and decomposition reaction energy",
+    "role": "scored",
+    "action": "From the total energies obtained in steps 1 and 2, compute the formation energy per formula unit for each compound as E_formation = E_total - sum of elemental reference energies. For Fe2CrSi, report both the L21 and A15 values. Then compute the decomposition reaction energy per formula unit for 3Fe2CrSi → 2Fe3Si + Cr3Si as E_reaction = (2*E_Fe3Si + E_Cr3Si) - 3*E_Fe2CrSi, using the lower of the two Fe2CrSi formation energies as the reactant energy. Write the results to step_01_formation_energies.json.",
+    "output_file": "step_01_formation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derives the formation energies and decomposition reaction energy, which are the main reproducibility target.",
+    "output_schema": "{\"Fe2CrSi_L21\": <formation energy in eV/f.u.>, \"Fe2CrSi_A15\": <formation energy in eV/f.u.>, \"Fe3Si\": <formation energy in eV/f.u.>, \"Cr3Si\": <formation energy in eV/f.u.>, \"reaction_energy_per_fu\": <reaction energy in eV/f.u.>}"
+  }
+]

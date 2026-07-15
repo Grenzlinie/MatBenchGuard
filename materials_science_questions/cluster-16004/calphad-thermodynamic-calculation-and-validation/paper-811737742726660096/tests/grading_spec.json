@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes invariant points, phase boundaries, and model parameters from the submitted TDB files using pycalphad. Paper-reported values provide the hidden gold.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "Re_Y.tdb": "exact_match",
+    "Ni_Re.tdb": "exact_match",
+    "Ni_Re_Y.tdb": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "Re_Y.tdb",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Thermo-Calc TDB format text file containing thermodynamic parameters for the Re-Y system (liquid, hcp, bcc, Re2Y). The checker will parse this TDB and recompute the phase diagram to compare invariant points (eutectic temperature/composition, peritectic temperature) to the paper-reported hidden gold."
+        },
+        "description": "Assessed thermodynamic database for the Re-Y binary system."
+      },
+      {
+        "file": "Ni_Re.tdb",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Thermo-Calc TDB format text file containing thermodynamic parameters for the Ni-Re system (liquid, hcp, fcc, bcc). The checker will parse this TDB and recompute the phase diagram to compare liquidus/solidus against hidden reference data."
+        },
+        "description": "Remodeled thermodynamic database for the Ni-Re binary system."
+      },
+      {
+        "file": "Ni_Re_Y.tdb",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Thermo-Calc TDB format text file combining Re-Y, Ni-Re, and Ni-Y binaries for ternary calculations. The checker will parse this TDB and compute the isothermal section at 1000 K and liquidus projection, verifying the fcc+hcp+Ni17Y2 three-phase region and invariant reactions against hidden reference data."
+        },
+        "description": "Ternary thermodynamic database for the Ni-Re-Y system."
+      }
+    ],
+    "notes": "Scored TDB files are verified by recomputing phase equilibria with pycalphad and comparing invariant reaction temperatures/compositions and phase boundaries to the paper's reported experimental values. Tolerances are set to account for toolchain differences (DFT code, CALPHAD implementation) and are not disclosed to the agent."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for Re-Y invariant points and Ni-Re model parameters taken from the paper.",
+      "source_provenance": "Paper text: eutectic at 1723 K, 95 at.% Y; peritectic at 2793 K, ~37 at.% Y; Table 2 & 3 parameters.",
+      "generation_method": "Directly transcribed from paper's reported values.",
+      "why_not_fabricated": "Values are the paper's own reported quantitative results, verifiable against the published paper."
+    }
+  ],
+  "steps": [
+    {
+      "id": "rey_check",
+      "output_file": "Re_Y.tdb",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": {
+        "eutectic_T_K": 1723,
+        "tol_T": 50,
+        "eutectic_comp_Y": 0.95,
+        "tol_comp": 0.02,
+        "peritectic_T_K": 2793,
+        "peritectic_comp_Y": 0.37
+      }
+    },
+    {
+      "id": "nire_check",
+      "output_file": "Ni_Re.tdb",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "gold": {
+        "liquid_L0": 16000,
+        "hcp_L0_A": 12396,
+        "hcp_L0_B": 7.99,
+        "fcc_L0_A": 27246,
+        "fcc_L0_B": -2.44,
+        "fcc_L1_A": -16906,
+        "bcc_L0": 27558,
+        "tol_A": 100.0,
+        "tol_B": 1.0
+      }
+    },
+    {
+      "id": "nirey_check",
+      "output_file": "Ni_Re_Y.tdb",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "gold": {
+        "binary_composition_xRe": 0.5,
+        "test_T_K": 1000,
+        "grid_x_Y": [
+          0.001,
+          0.05,
+          0.1,
+          0.15,
+          0.2
+        ],
+        "grid_x_Re": [
+          0.001,
+          0.075,
+          0.15,
+          0.225,
+          0.3
+        ]
+      }
+    }
+  ]
+}

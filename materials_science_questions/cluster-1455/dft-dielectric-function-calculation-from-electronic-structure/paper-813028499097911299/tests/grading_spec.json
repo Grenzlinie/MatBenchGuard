@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The main claim is a compression-induced peak near 4.5 eV; the ratio of ε₂ at the peak for -8% relative to 0% is recomputed directly from the agent's dielectric_function.csv. Band gap trend is structural, but the load‑bearing dielectric peak is recomputed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap_vs_strain.csv": "structural_audit",
+    "dielectric_function.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_vs_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_percent",
+            "band_gap_eV"
+          ],
+          "columns": {
+            "strain_percent": "int, biaxial strain in percent",
+            "band_gap_eV": "float, DFT-PBE indirect band gap in eV"
+          },
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "DFT-PBE band gap of single-layer GeS at biaxial strains -8%, 0%, +8%."
+      },
+      {
+        "file": "dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_percent",
+            "energy_eV",
+            "epsilon1",
+            "epsilon2"
+          ],
+          "columns": {
+            "strain_percent": "int, biaxial strain in percent",
+            "energy_eV": "float, photon energy in eV",
+            "epsilon1": "float, real part of dielectric function (dimensionless)",
+            "epsilon2": "float, imaginary part of dielectric function (dimensionless)"
+          },
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "In-plane averaged real and imaginary parts of the dielectric function for strains -8%, 0%, +8% over 0-8 eV."
+      }
+    ],
+    "notes": "The checker will recompute the peak ratio of epsilon2 near 4.5 eV for strain -8% relative to 0% and verify the strain-induced band gap trend."
+  },
+  "steps": [
+    {
+      "id": "band_gap_trend",
+      "output_file": "band_gap_vs_strain.csv",
+      "weight": 0.3,
+      "kind": "trend",
+      "description": "Verify strain-induced band gap trend: gap(-8%) < gap(0%) - 0.2 eV and |gap(+8%) - gap(0%)| ≤ 0.1 eV."
+    },
+    {
+      "id": "dielectric_peak",
+      "output_file": "dielectric_function.csv",
+      "weight": 0.7,
+      "kind": "recompute_ratio",
+      "description": "Recompute the ratio of ε₂ at peak near 4.5 eV for strain -8% relative to 0%; require ratio > 1.3.",
+      "peak_window": [
+        4.2,
+        4.8
+      ],
+      "strain_neg": -8,
+      "strain_ref": 0,
+      "min_ratio": 1.3
+    }
+  ]
+}

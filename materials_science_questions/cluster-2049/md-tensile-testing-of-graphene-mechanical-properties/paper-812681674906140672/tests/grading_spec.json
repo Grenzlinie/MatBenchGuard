@@ -1,0 +1,55 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of extracted modulus from raw simulation data infeasible because raw P‑h data CSV is not a guaranteed output; checker validates reported modulus against paper gold and checks internal consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "summary.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold elastic modulus from COMSOL validation",
+      "source_provenance": "paper Fig. 3(d): mean fitted modulus from COMSOL simulated indentation is 107.1 GPa",
+      "generation_method": "directly taken from paper text",
+      "why_not_fabricated": "paper‑reported value, verified against the source"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "extracted_modulus": "float, units: GPa",
+            "percentage_error": "float, units: percent"
+          },
+          "description": "Scored artifact with extracted modulus from plateau fitting and percentage error relative to 103 GPa."
+        },
+        "description": "Validated extracted elastic modulus and its error against the known input modulus of the COMSOL simulation."
+      }
+    ],
+    "notes": "The checker will compare the agent's reported extracted_modulus and percentage_error against hidden reference values and tolerances derived from the paper's COMSOL validation outcome. The exact gold values and tolerances are not disclosed in this public contract."
+  },
+  "steps": [
+    {
+      "id": "step_shape",
+      "output_file": "summary.json",
+      "kind": "shape_check",
+      "weight": 0.0,
+      "target": true
+    },
+    {
+      "id": "step_result",
+      "output_file": "summary.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target_modulus": 107.1,
+      "input_modulus": 103.0,
+      "pct_tolerance_abs": 1.0
+    }
+  ]
+}

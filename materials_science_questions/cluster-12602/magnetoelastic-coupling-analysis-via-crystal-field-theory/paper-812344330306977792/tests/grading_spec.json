@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes expected B, tricritical point, and wing critical point from the same publicly‑stated model parameters and checks agreement within tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "B_coefficient.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "B_value"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "B_value": "dimensionless"
+          }
+        },
+        "description": "Cubic coefficient B at four pressures (P=0, 0.5, 1.0, 1.5 GPa) evaluated at T=Tc(P)."
+      },
+      {
+        "file": "tricritical_point.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "P_t_GPa",
+            "T_t_K"
+          ],
+          "items": {
+            "P_t_GPa": "float",
+            "T_t_K": "float"
+          }
+        },
+        "description": "Tricritical point coordinates (pressure, temperature) where A=0 and B=0 simultaneously."
+      },
+      {
+        "file": "wing_critical_point.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "pressure_GPa",
+            "T_cr_K",
+            "H_cr_T",
+            "m_cr"
+          ],
+          "items": {
+            "pressure_GPa": "float",
+            "T_cr_K": "float",
+            "H_cr_T": "float",
+            "m_cr": "float"
+          }
+        },
+        "description": "Wing critical point at P=1.4 GPa (temperature, magnetic field, reduced magnetization)."
+      }
+    ],
+    "notes": "All outputs are derived from the exchange-striction Landau model with given material parameters. The agent must implement the formulas for Tc(P), B, and C as described in the steps. The checker will compare against independently computed reference values and the paper's reported gold (with tolerance)."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "step_compute_b",
+      "output_file": "B_coefficient.csv",
+      "weight": 0.3,
+      "kind": "recompute_scalar",
+      "description": "Cubic coefficient B at four pressures evaluated at T=Tc(P)."
+    },
+    {
+      "id": "step_tricritical",
+      "output_file": "tricritical_point.json",
+      "weight": 0.35,
+      "kind": "recompute_scalar",
+      "description": "Tricritical point (P_t, T_t)."
+    },
+    {
+      "id": "step_wing_critical",
+      "output_file": "wing_critical_point.json",
+      "weight": 0.35,
+      "kind": "recompute_scalar",
+      "description": "Wing critical point at P=1.4 GPa (T_cr, H_cr, m_cr)."
+    }
+  ]
+}

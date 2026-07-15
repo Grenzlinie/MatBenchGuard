@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_relax",
+    "title": "Structure relaxation",
+    "role": "process",
+    "action": "Set up the rutile RuO2 unit cell (space group P4_2/mnm, 6 atoms) with initial experimental lattice parameters, and perform a full geometry optimization (relaxation of atomic positions and cell parameters) using Quantum ESPRESSO with appropriate pseudopotentials and the GGA functional.",
+    "output_file": "",
+    "evidence": "relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The relaxed structure is the starting point for all subsequent property calculations.",
+    "output_schema": "Not scored; relaxed atomic positions and cell parameters are consumed by later steps."
+  },
+  {
+    "id": "step_02_structure_and_elastic",
+    "title": "Structure and elastic properties",
+    "role": "scored",
+    "action": "From the relaxed structure, compute the elastic constants (c11, c33, c44, c66, c12, c13) and bulk modulus (B0) by applying finite strains and fitting energy-strain or stress-strain relations. Extract the equilibrium lattice constants a, c, and internal coordinate u from the relaxation. Write all these values to structure_and_elastic.json.",
+    "output_file": "structure_and_elastic.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored JSON containing lattice parameters (a, c, u) in Å, bulk modulus B0 in GPa, and elastic constants (c11, c33, c44, c66, c12, c13) in GPa.",
+    "output_schema": "{\"a\": float, \"c\": float, \"u\": float, \"B0\": float, \"c11\": float, \"c33\": float, \"c44\": float, \"c66\": float, \"c12\": float, \"c13\": float}"
+  },
+  {
+    "id": "step_03_elec_struct",
+    "title": "Electronic structure calculation",
+    "role": "process",
+    "action": "Perform a self-consistent field (SCF) calculation on the relaxed structure to obtain wavefunctions and Kohn-Sham eigenvalues. Compute the electronic band structure along high-symmetry lines and the total/projected density of states (DOS) as intermediate data.",
+    "output_file": "",
+    "evidence": "bands.dat.gnu",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Intermediate step required to produce wavefunctions for later optical calculations.",
+    "output_schema": "Not scored; wavefunctions are used in the next step."
+  },
+  {
+    "id": "step_04_dielectric",
+    "title": "Dielectric function calculation",
+    "role": "process",
+    "action": "Using the SCF wavefunctions and eigenvalues, compute the imaginary part of the dielectric function epsilon2(omega) for two polarizations (E⊥c and E//c) via the dipole transition matrix elements. Obtain the real part epsilon1(omega) through numerical Kramers-Kronig transformation.",
+    "output_file": "",
+    "evidence": "epsilon.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Intermediate step that generates the full frequency-dependent dielectric function used to extract optical properties.",
+    "output_schema": "Not scored; epsilon1 and epsilon2 spectra are processed in the next step."
+  },
+  {
+    "id": "step_05_optical",
+    "title": "Optical properties extraction",
+    "role": "scored",
+    "action": "From the computed epsilon1 and epsilon2, calculate the static refractive index n(0) for both polarizations. Identify the main peak of epsilon2(omega) for each polarization (position in eV and magnitude). Additionally, extract the peak positions and magnitudes of the electron energy loss spectrum L(omega) for both polarizations, and the positions of the first main peaks of the extinction coefficient k(omega) for both polarizations. Write all results to optical_properties.json.",
+    "output_file": "optical_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored JSON containing static refractive indices n(0) for E⊥c and E//c, main epsilon2 peak position/magnitude for each polarization, electron energy loss peak positions/magnitudes for both polarizations, and extinction coefficient peak positions for both polarizations.",
+    "output_schema": "{\"n0_perp\": float, \"n0_par\": float, \"eps2_peak_perp_pos\": float (eV), \"eps2_peak_perp_mag\": float, \"eps2_peak_par_pos\": float (eV), \"eps2_peak_par_mag\": float, \"eloss_peak_perp_pos\": float (eV), \"eloss_peak_perp_mag\": float, \"eloss_peak_par_pos\": float (eV), \"eloss_peak_par_mag\": float, \"ext_peak_perp_pos\": float (eV), \"ext_peak_par_pos\": float (eV)}"
+  }
+]

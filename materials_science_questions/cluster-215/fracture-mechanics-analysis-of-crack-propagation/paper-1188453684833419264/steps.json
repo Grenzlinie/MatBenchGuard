@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Load AE event data",
+    "role": "process",
+    "action": "Download the granite beam and skull fracture AE event datasets from the public repositories. Parse each dataset into tables containing event time, amplitude, and duration for all 8 experiments (6 granite beams, 2 skull fracture locations).",
+    "output_file": "",
+    "evidence": "ae_data_load.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute normalized cumulative AE energy Ω(t)",
+    "role": "process",
+    "action": "For each experiment, compute event energy as amplitude × duration, cumulative energy over time, then normalize by the median event energy to obtain the dimensionless response Ω(t).",
+    "output_file": "",
+    "evidence": "omega_curves.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute AE energy rate and acceleration",
+    "role": "process",
+    "action": "Apply a finite-difference scheme with down-sampling to Ω(t) to compute the rate dΩ/dt and acceleration d²Ω/dt². Use down-sampling factors f_d = 500 for five longer granite beam tests, f_d = 50 for the 35‑second granite test, and f_d = 20 for both skull fracture tests.",
+    "output_file": "",
+    "evidence": "rate_accel.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Fit Voight law, predict failure time, and write results",
+    "role": "scored",
+    "action": "For each experiment: (1) determine the onset of the final failure cascade as the period after the initial rate decline where dΩ/dt begins to increase monotonically; (2) perform linear regression on log(d²Ω/dt² / (dΩ/dt)) vs log(dΩ/dt) over that cascade to extract α = slope + 1 and η = exp(intercept); (3) compute the inverse rate 1/(dΩ/dt) and apply a moving‑window linear regression (window sizes: c_win = 100 for five longer rock tests, c_win = 50 for the 35‑second rock test, c_win = 5 for both skull tests) to predict failure time t_c as the x‑intercept; (4) determine the actual failure time as the time of the last AE event; (5) write results_summary.csv with columns: experiment, material, actual_failure_time_seconds, predicted_failure_time_seconds, alpha, eta.",
+    "output_file": "results_summary.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing fitted Voight law exponent α, coefficient η, actual failure time, and predicted failure time for all 8 experiments.",
+    "output_schema": "columns: experiment (string), material (string), actual_failure_time_seconds (float), predicted_failure_time_seconds (float), alpha (float), eta (float)"
+  }
+]

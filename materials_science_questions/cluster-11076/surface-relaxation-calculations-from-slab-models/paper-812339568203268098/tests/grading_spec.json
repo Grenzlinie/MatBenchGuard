@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Peak location is recomputed from the raw CSV profile and compared to the paper-reported 1 % BZ with tolerance; no external ground truth file needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_diffraction_profile.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden tolerance for peak location and intensity",
+      "source_provenance": "Paper Fig. 1 and text: persistent feature at ~1 % BZ, length scale 250±25 Å; peak intensity visible relative to main beam but reduced; we require intensity ≥0.1 after normalization.",
+      "generation_method": "Derived from paper description; tolerance of ±0.15 % BZ accounts for resolution and implementation spread; intensity floor 0.1 ensures a distinct feature.",
+      "why_not_fabricated": "Based on explicit statements in the paper (1 % BZ, position independent of temperature, peak distinct enough to be observed)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_diffraction_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_percent_BZ",
+            "intensity"
+          ],
+          "units": {
+            "k_percent_BZ": "% BZ",
+            "intensity": "arbitrary units (normalized)"
+          }
+        },
+        "description": "Simulated SPA-LEED diffraction intensity profile that must exhibit a clear peak near 1% Brillouin Zone."
+      }
+    ],
+    "notes": "The physical target is the peak location at approximately 1% BZ. The hidden checker will verify the peak position and a minimum intensity threshold; agents must genuinely run the FK energy minimization and diffraction calculation to produce a correct profile."
+  },
+  "steps": [
+    {
+      "id": "step_01_peak_location",
+      "output_file": "step_01_diffraction_profile.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target": 1.0,
+      "tolerance_abs": 0.15,
+      "config": {
+        "peak_center_percent_bz": 1.0,
+        "peak_tolerance": 0.15,
+        "min_peak_intensity": 0.1,
+        "specular_exclusion_radius": 0.2
+      }
+    }
+  ]
+}

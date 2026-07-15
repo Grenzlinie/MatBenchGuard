@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recompute from raw DFT outputs in the checker sandbox is impossible; compare reported relative energies to paper gold within ±5 kJ/mol tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative energies for all stationary points and the SiNC→SiCN barrier from the original paper.",
+      "source_provenance": "Paper Table 2 and Table 3.",
+      "generation_method": "Directly transcribed from the published paper (the reference solution writes these known constants).",
+      "why_not_fabricated": "These are the exact reported values from the paper's main result, verified against the text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "total_energy_hartree",
+            "relative_energy_kJmol"
+          ],
+          "units": {
+            "total_energy_hartree": "hartree",
+            "relative_energy_kJmol": "kJ/mol"
+          }
+        },
+        "description": "Stationary-point energies for ICN and INC adsorption on the Si(100)-(2x1) single-dimer cluster at B3LYP/LanL2DZ+6-31G*. Contains 11 rows covering all minima and transition states from the paper's potential-energy diagram."
+      }
+    ],
+    "notes": "The checker compares each reported relative_energy_kJmol to gold reference values (derived from the original paper) and also verifies that the SiNC→SiCN barrier computed as TS4_relative minus SiNC_relative matches the paper's value within an appropriate tolerance."
+  },
+  "steps": [
+    {
+      "id": "energy_table",
+      "output_file": "step_01_energies.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "tolerance": 5.0,
+      "gold": {
+        "ICN1": -54.2,
+        "ICN2": -192.9,
+        "SiNC": -344.5,
+        "SiCN": -376.7,
+        "TS1": -38.4,
+        "TS2": -29.7,
+        "TS3": -116.2,
+        "TS4": -255.6,
+        "INC2": -34.9,
+        "TS5": -30.6,
+        "INC1": -37.9
+      },
+      "expected_structures": [
+        "ICN1",
+        "ICN2",
+        "SiNC",
+        "SiCN",
+        "TS1",
+        "TS2",
+        "TS3",
+        "TS4",
+        "INC2",
+        "TS5",
+        "INC1"
+      ]
+    },
+    {
+      "id": "barrier",
+      "output_file": "step_01_energies.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "threshold_or_better",
+      "tolerance": 5.0,
+      "gold": 88.9,
+      "note": "Barrier SiNC→TS4 computed as TS4_relative − SiNC_relative"
+    }
+  ]
+}

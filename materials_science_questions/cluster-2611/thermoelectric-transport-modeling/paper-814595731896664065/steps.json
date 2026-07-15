@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Structure Optimization of Perovskites",
+    "role": "process",
+    "action": "Using Quantum ESPRESSO GGA-PBE, add missing hydrogen atoms to the organic cations (MA, FA) and fully relax the atomic positions of (MA)PbI3, (MA)SnI3, (FA)PbI3, (FA)SnI3 while keeping the experimental lattice parameters fixed. The lattice parameters are: (MA)PbI3: a=b=6.3115, c=6.3161 Å, space group P4mm; (MA)SnI3: a=b=6.2302, c=6.2316 Å, P4mm; (FA)PbI3: a=b=8.9817, c=11.006 Å, P3m1; (FA)SnI3: a=6.3286, b=8.9554, c=8.9463 Å, Amm2. Converge forces below 0.005 eV/Å.",
+    "output_file": "",
+    "evidence": "optimized_structures.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Optimized atomic coordinates for the four perovskite compounds.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "DFT Electronic Structure of Perovskites",
+    "role": "process",
+    "action": "From the optimized structures, perform a non-self-consistent field (nscf) GGA-PBE calculation with Quantum ESPRESSO on a dense k-mesh to obtain the Kohn-Sham eigenvalues needed for transport. Use the same pseudopotentials and plane-wave cut-off as in step01.",
+    "output_file": "",
+    "evidence": "perovskite_eigenvalues.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Kohn-Sham eigenvalues on a dense k-mesh for the four perovskites.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "DFT Electronic Structure of Bi2Te3",
+    "role": "process",
+    "action": "Obtain a Bi2Te3 unit cell from a public database (e.g., hexagonal Bi2Te3, space group R-3m). Relax the structure if needed and compute the Kohn-Sham eigenvalues on a dense k-mesh using the same GGA-PBE parameters as for the perovskites.",
+    "output_file": "",
+    "evidence": "bi2te3_eigenvalues.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Kohn-Sham eigenvalues on a dense k-mesh for Bi2Te3.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "Raw Transport Coefficients Calculation",
+    "role": "scored",
+    "action": "Using BoltzTraP2 with a constant relaxation time τ = 2×10⁻¹⁴ s and lattice thermal conductivity κL = 1.2 W m⁻¹ K⁻¹, compute the Seebeck coefficient S, electrical conductivity σ, electron thermal conductivity κe, power factor S²σ, and figure of merit ZT as a function of chemical potential μ (range −1.0 to +1.0 eV, at least 100 points) at 400 K for (MA)PbI3, (MA)SnI3, (FA)PbI3, (FA)SnI3, and Bi2Te3. Save the complete dataset to transport_properties.json.",
+    "output_file": "transport_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Raw transport data for all five compounds. Points are evenly spaced in chemical potential. The checker will recompute ZT from S, σ, κe and verify internal consistency.",
+    "output_schema": "JSON object with a top-level key for each compound: \"(MA)PbI3\", \"(MA)SnI3\", \"(FA)PbI3\", \"(FA)SnI3\", \"Bi2Te3\". Each key maps to a list of data points, where each point is an object with fields: mu (chemical potential in eV), S (Seebeck coefficient in μV/K), sigma (electrical conductivity in (Ω·m)⁻¹), kappa_e (electron thermal conductivity in W m⁻¹ K⁻¹), PF (power factor in W m⁻¹ K⁻²), ZT (dimensionless)."
+  },
+  {
+    "id": "step05",
+    "title": "Maximum ZT and Carrier Concentration Summary",
+    "role": "scored",
+    "action": "From the raw transport data, extract for each compound the chemical potential, the maximum ZT, and the corresponding carrier concentration (in units of 10¹⁹ cm⁻³). For perovskites consider only the electron-doped region (μ > 0); for Bi2Te3 consider only the hole-doped region (μ < 0). Write the summary to max_ZT_summary.json.",
+    "output_file": "max_ZT_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of optimum ZT and carrier density for the five compounds.",
+    "output_schema": "JSON object with a key for each compound (same as above). Each value is an object with fields: max_ZT (float), carrier_concentration (float, in 10¹⁹ cm⁻³), doping_region (string, either \"electron\" or \"hole\")."
+  }
+]

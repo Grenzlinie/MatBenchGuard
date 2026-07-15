@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute adsorption loadings are method-dependent; structural trends are preserved across reasonable implementations. T3 structural is the strongest feasible tier.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "ethanol_isotherms.csv": "structural_audit",
+    "water_isotherms.csv": "structural_audit",
+    "mixture_selectivity.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ethanol_isotherms.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ZIF",
+            "Temperature (K)",
+            "Pressure (kPa)",
+            "Loading (mmol/g)"
+          ]
+        },
+        "description": "Absolute ethanol uptake isotherms for ZIF-1, -3, -7, -9."
+      },
+      {
+        "file": "water_isotherms.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ZIF",
+            "Temperature (K)",
+            "Pressure (kPa)",
+            "Loading (mmol/g)"
+          ]
+        },
+        "description": "Absolute water uptake isotherms for ZIF-1, -3, -7, -9."
+      },
+      {
+        "file": "mixture_selectivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ZIF",
+            "Temperature (K)",
+            "Pressure (kPa)",
+            "Selectivity"
+          ]
+        },
+        "description": "Ethanol/water adsorption selectivity for the four ZIFs."
+      }
+    ],
+    "notes": "Scoring is structural: the checker verifies that the computed isotherms and selectivities obey the paper's reported structural trends (e.g., relative ordering among ZIFs, hydrophobic character of certain ZIFs, selectivity ranking) without requiring an exact numerical match to any reported values."
+  },
+  "steps": [
+    {
+      "id": "ethanol_ordering",
+      "output_file": "ethanol_isotherms.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "description": "Verify that for each temperature (323 K and 373 K), at every pressure point, the loading order is ZIF-9 > ZIF-7 > ZIF-3 > ZIF-1.",
+      "conditions": {
+        "temperatures": [
+          323,
+          373
+        ],
+        "zif_order": [
+          "ZIF-9",
+          "ZIF-7",
+          "ZIF-3",
+          "ZIF-1"
+        ],
+        "tolerance": 1e-06
+      }
+    },
+    {
+      "id": "water_hydrophobicity",
+      "output_file": "water_isotherms.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "description": "Check that ZIF-1 and ZIF-3 show negligible water uptake (<= 0.5 mmol/g at all pressures) and that ZIF-7 and ZIF-9 exhibit significant uptake (> 1.0 mmol/g) at the highest pressure present.",
+      "conditions": {
+        "threshold_low": 0.5,
+        "threshold_high": 1.0,
+        "zif_low": [
+          "ZIF-1",
+          "ZIF-3"
+        ],
+        "zif_high": [
+          "ZIF-7",
+          "ZIF-9"
+        ]
+      }
+    },
+    {
+      "id": "mixture_selectivity",
+      "output_file": "mixture_selectivity.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "description": "At 1 kPa, verify the selectivity order ZIF-1 > ZIF-3 > ZIF-7 ≈ ZIF-9, with ZIF-7 and ZIF-9 within 20% relative difference.",
+      "conditions": {
+        "pressure": 1.0,
+        "zif_order": [
+          "ZIF-1",
+          "ZIF-3",
+          "ZIF-7",
+          "ZIF-9"
+        ],
+        "closeness_pair": [
+          "ZIF-7",
+          "ZIF-9"
+        ],
+        "closeness_tol": 0.2,
+        "temperature_list": [
+          323,
+          373
+        ]
+      }
+    }
+  ]
+}

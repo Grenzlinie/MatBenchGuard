@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Oscillation amplitudes are recomputed from the agent's ACD profiles; the trend (Cs amplitude > no-Cs amplitude) is the verifiable claim.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "acd_z_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z",
+            "ACD_no_Cs",
+            "ACD_Cs"
+          ],
+          "units": {
+            "z": "Angstrom",
+            "ACD_no_Cs": "e/Ang^3",
+            "ACD_Cs": "e/Ang^3"
+          }
+        },
+        "description": "Average charge density along the z-direction (perpendicular to surface). Checker verifies that oscillation amplitude in the grain-boundary region is larger when Cs is present."
+      },
+      {
+        "file": "acd_x_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "ACD_no_Cs",
+            "ACD_Cs"
+          ],
+          "units": {
+            "x": "Angstrom",
+            "ACD_no_Cs": "e/Ang^3",
+            "ACD_Cs": "e/Ang^3"
+          }
+        },
+        "description": "Average charge density along the x-direction (parallel to cleavage). Same structural audit as the z profile."
+      }
+    ],
+    "notes": "Both ACD profiles must be computed from the DFT charge densities of the relaxed clean and Cs-inserted slabs. The oscillation amplitudes are checked in a spatial window around the grain boundary (exact boundaries defined by the checker)."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "check_acd_z",
+      "output_file": "acd_z_profile.csv",
+      "weight": 0.6,
+      "check": {
+        "type": "amplitude_trend",
+        "window": [
+          10.0,
+          20.0
+        ],
+        "coord_column": "z",
+        "amp_no_cs_col": "ACD_no_Cs",
+        "amp_cs_col": "ACD_Cs"
+      }
+    },
+    {
+      "id": "check_acd_x",
+      "output_file": "acd_x_profile.csv",
+      "weight": 0.4,
+      "check": {
+        "type": "amplitude_trend",
+        "window": [
+          10.0,
+          20.0
+        ],
+        "coord_column": "x",
+        "amp_no_cs_col": "ACD_no_Cs",
+        "amp_cs_col": "ACD_Cs"
+      }
+    }
+  ]
+}

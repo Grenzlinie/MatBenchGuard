@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recompute from raw artifacts (phonon DOS, alpha2F) not available in verifier sandbox; compare reported values to paper gold with tolerances.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_I43d_results.json": "structural_audit",
+    "step_02_P1_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for Y2C3 P1 EPC properties from Table I of the paper",
+      "source_provenance": "Paper Table I, row 'Mode 4' for Y2C3 [I-43d]",
+      "generation_method": "copied directly from the published table: λ = 0.92, ω_log = 219.6 K, Tc = 9.3 K",
+      "why_not_fabricated": "These are the paper's own reported numbers for the main stabilization scenario, verified across the paper's text and Table I."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_I43d_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "imaginary_phonon_freqs_cm-1": "list of floats (cm⁻¹)",
+            "flat_band_present": "boolean",
+            "band_edges_Gamma_N_eV": "object with keys Gamma, N (float, eV)"
+          }
+        },
+        "description": "Imaginary phonon modes and flat band presence in the high-symmetry I-43d structure."
+      },
+      {
+        "file": "step_02_P1_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lowest_phonon_freq_Gamma_THz": "float (THz)",
+            "lambda_epc": "float (dimensionless)",
+            "omega_log_K": "float (K)",
+            "Tc_K": "float (K)"
+          }
+        },
+        "description": "Electron-phonon coupling quantities and Tc for the stabilized P1 structure, compared to paper reference values."
+      }
+    ],
+    "notes": "The paper also reports results under pressure (20, 30 GPa), with large electronic smearing, and for several other compounds. Those are explicitly excluded from the reproduction scope to keep the task focused."
+  },
+  "steps": [
+    {
+      "id": "step1_check",
+      "output_file": "step_01_I43d_results.json",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "config": {
+        "max_abs_energy_eV": 0.05,
+        "max_band_diff_eV": 0.02
+      }
+    },
+    {
+      "id": "step2_check",
+      "output_file": "step_02_P1_results.json",
+      "kind": "result_compare",
+      "weight": 0.6,
+      "config": {
+        "lambda_gold": 0.92,
+        "lambda_rel_tol": 0.2,
+        "omega_log_gold_K": 219.6,
+        "omega_log_rel_tol": 0.2,
+        "tc_gold_K": 9.3,
+        "tc_abs_tol_K": 2.0
+      }
+    }
+  ]
+}

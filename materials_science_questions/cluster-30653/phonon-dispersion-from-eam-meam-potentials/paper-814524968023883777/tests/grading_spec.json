@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker refits Simon equation to agent melting data points and compares to paper gold; checks self-consistency of reported Simon fit; verifies curve overlap.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tp_melting_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "melting_temperature_K"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "melting_temperature_K": "K"
+          }
+        },
+        "description": "Melting data from the two-phase method. The checker recomputes the Simon equation parameters from these points and compares to hidden gold values."
+      },
+      {
+        "file": "sm_melting_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "melting_temperature_K"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "melting_temperature_K": "K"
+          }
+        },
+        "description": "Melting data from the shock melting method. The checker recomputes the Simon equation parameters from these points and compares to hidden gold values."
+      },
+      {
+        "file": "simon_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "method_tp": {
+              "type": "object",
+              "required": [
+                "Tm0",
+                "a",
+                "b"
+              ],
+              "units": {
+                "Tm0": "K",
+                "a": "GPa",
+                "b": "dimensionless"
+              }
+            },
+            "method_sm": {
+              "type": "object",
+              "required": [
+                "Tm0",
+                "a",
+                "b"
+              ],
+              "units": {
+                "Tm0": "K",
+                "a": "GPa",
+                "b": "dimensionless"
+              }
+            }
+          }
+        },
+        "description": "Agent-reported Simon fit parameters for both methods. The checker recomputes the fit from the CSV data and checks this file for consistency."
+      }
+    ],
+    "notes": "All three scored artifacts are required. The checker refits the Simon equation from the raw CSV data, compares the resulting parameters with hidden paper gold, and also verifies that the simon_fit.json parameters are consistent with the recomputed fit."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Simon equation parameters for TP and SM melting curves, plus tolerances for RMSE and curve overlap.",
+      "source_provenance": "Paper Table 1 and Eqs. (6)-(7).",
+      "generation_method": "Extracted directly from the paper; Tm0, a, b values are given in the paper.",
+      "why_not_fabricated": "Values are taken from the published paper."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_tp_data",
+      "output_file": "tp_melting_curve.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "description": "Validate TP CSV and compute RMSE between agent's melting temperatures and paper Simon equation Tm0*(P/a+1)^b. Score based on RMSE <= tolerance.",
+      "tolerances": {
+        "rmse_tp": 30.0
+      },
+      "gold_params": {
+        "Tm0": 1250.0,
+        "a": 28.25,
+        "b": 0.59
+      },
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "check_sm_data",
+      "output_file": "sm_melting_curve.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "description": "Validate SM CSV and compute RMSE between agent's melting temperatures and paper Simon equation Tm0*(P/a+1)^b. Score based on RMSE <= tolerance.",
+      "tolerances": {
+        "rmse_sm": 30.0
+      },
+      "gold_params": {
+        "Tm0": 1250.0,
+        "a": 22.97,
+        "b": 0.55
+      },
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "check_simon_fit",
+      "output_file": "simon_fit.json",
+      "kind": "consistency_check",
+      "weight": 0.1,
+      "description": "Refit Simon equation from each CSV, compare computed parameters to agent-reported simon_fit.json. Full credit if parameters match within 1e-4.",
+      "target_policy": "reference_match",
+      "gold_tp_params": {
+        "Tm0": 1250.0,
+        "a": 28.25,
+        "b": 0.59
+      },
+      "gold_sm_params": {
+        "Tm0": 1250.0,
+        "a": 22.97,
+        "b": 0.55
+      }
+    },
+    {
+      "id": "check_curve_overlap",
+      "output_file": null,
+      "kind": "curve_overlap",
+      "weight": 0.1,
+      "description": "Check that melting temperatures from TP and SM CSVs agree within 50 K at shared pressures.",
+      "tolerance_overlap": 50.0,
+      "target_policy": "exact_match"
+    }
+  ]
+}

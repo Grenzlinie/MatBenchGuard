@@ -1,0 +1,44 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the expected temperature shift from the same input data and the correct hidden pressure (689 MPa) using the integrated Clapeyron equation; this directly verifies the computation the agent was required to perform.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "temperature_shifts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "line",
+            "T1_K",
+            "delta_V_ml_per_mol",
+            "T2_K",
+            "delta_T_K"
+          ],
+          "units": {
+            "T1_K": "K",
+            "delta_V_ml_per_mol": "ml mol⁻¹",
+            "T2_K": "K",
+            "delta_T_K": "K"
+          }
+        },
+        "description": "Computed temperature shifts and final temperatures for each phase boundary data point and pure-Al control, compared against the paper's reported ΔT values"
+      }
+    ],
+    "notes": "The hidden checker reads the agent's CSV, extracts delta_T_K, and compares each value to the paper's reported gold with a tolerance of ±0.5 K. T₂ values are also validated for consistency."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "temperature_shifts.csv",
+      "weight": 1.0,
+      "kind": "recompute_temperature_shift",
+      "description": "Recompute the correct T2 and ΔT for each data point using the Clapeyron equation with the actual pressure of 689 MPa (the value underlying the paper's reported temperature shifts) and the given enthalpy changes. Score each row's ΔT accuracy against the recomputed value.",
+      "tolerance_abs": 0.5
+    }
+  ]
+}

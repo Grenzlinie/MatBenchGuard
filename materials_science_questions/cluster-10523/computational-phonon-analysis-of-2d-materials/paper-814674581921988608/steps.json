@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for α‑, β‑, γ‑, 6,6,12‑graphyne and graphene using Quantum ESPRESSO with PBE pseudopotentials to obtain relaxed lattice constants and atomic positions.",
+    "output_file": "",
+    "evidence": "optimization_logs.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relax all structures to equilibrium geometries once; the optimized structures are used in all subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Electronic band structure calculation",
+    "role": "process",
+    "action": "Compute electronic band structures along standard high‑symmetry k‑point paths for each relaxed material using Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "band_data.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce raw electronic band energies along high‑symmetry paths for all five materials.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Band gap and Dirac point classification",
+    "role": "scored",
+    "action": "Analyze the computed electronic band structures to determine the band gap (valence‑to‑conduction energy difference at each k‑point) and identify Dirac points (single k‑point crossings between the top valence and bottom conduction bands). Produce a JSON file with the classification for each material.",
+    "output_file": "band_gap_dirac.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Classification of electronic properties: band gaps and Dirac point locations.",
+    "output_schema": "{\"type\":\"object\", \"required\":[\"materials\"], \"properties\":{\"materials\":{\"type\":\"object\", \"additionalProperties\":{\"type\":\"object\", \"required\":[\"band_gap_ev\",\"dirac_points\"], \"properties\":{\"band_gap_ev\":{\"type\":\"number\"},\"dirac_points\":{\"type\":\"array\", \"items\":{\"type\":\"string\"}}}}}}}"
+  },
+  {
+    "id": "step_04",
+    "title": "Phonon dispersion calculation",
+    "role": "process",
+    "action": "Compute phonon dispersions for all materials using density functional perturbation theory (DFPT) as implemented in Quantum ESPRESSO and post‑processed with PHONOPY. Use the supercell dimensions and Γ‑centered k‑point grids specified in the original study.",
+    "output_file": "",
+    "evidence": "phonon_data.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain phonon frequencies and force constants for subsequent thermal transport analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Ballistic transport calculations",
+    "role": "process",
+    "action": "From the electronic band structures, compute electronic transmission spectra. From the phonon dispersions, compute phonon transmission spectra. Then calculate the electronic transport coefficients (electrical conductance G, Seebeck coefficient S, electronic thermal conductance κ_el) using the standard ballistic transport formulas, and phonon thermal conductance κ_ph for all materials at 300 K.",
+    "output_file": "",
+    "evidence": "transport_data.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Intermediate transport quantities required to compute ZT.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Thermoelectric figure of merit ZT",
+    "role": "scored",
+    "action": "Compute the thermoelectric figure of merit ZT = S² G T / (κ_el + κ_ph) as a function of chemical potential for γ‑graphyne at 300 K using the transport coefficients from the previous step, and extract the maximum ZT value. Output the result as a JSON file.",
+    "output_file": "ZT_gamma_graphyne.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Maximum ZT for γ‑graphyne at 300 K.",
+    "output_schema": "{\"type\":\"object\", \"required\":[\"max_ZT_300K\"], \"properties\":{\"max_ZT_300K\":{\"type\":\"number\"}}}"
+  }
+]

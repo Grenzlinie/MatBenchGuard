@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "result-level compare (T0)",
+  "scoring_justification": "The main results (Tc, κ_T, χ, η_s, η_B) are reported in CSVs; recomputing them from raw MC/MD trajectories is infeasible for the verdict, so we compare reported values to paper-reported reference values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for Tc, κ_T, χ, η_s, η_B from the paper's figures and text.",
+      "source_provenance": "Paper: Subir K. Das et al., Phase Transitions 77, 823-834 (2004).",
+      "generation_method": "Extracted from Fig.1 (Tc=1.638), Fig.2 inset (κ_T values), Fig.3 inset (χ values), Fig.5 (η_s, η_B).",
+      "why_not_fabricated": "Values are read from the published paper's figures and explicitly quoted in the text where available."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "coexistence_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "T",
+            "x_B_coex"
+          ]
+        },
+        "description": "Coexistence curve data and the fitted critical temperature T_c."
+      },
+      {
+        "file": "static_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "kappa_T",
+            "chi"
+          ]
+        },
+        "description": "Isothermal compressibility κ_T and concentration susceptibility χ at the studied temperatures."
+      },
+      {
+        "file": "viscosities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "eta_s",
+            "eta_B",
+            "eta_B_eta_s_ratio"
+          ]
+        },
+        "description": "Shear viscosity η_s, bulk viscosity η_B, and their ratio η_B/η_s determined via Green-Kubo integrals."
+      }
+    ],
+    "notes": "All quantities are reported in Lennard-Jones reduced units. The checker compares the agent's reported values against the paper's published results with appropriate tolerances and also verifies qualitative trends (e.g., monotonic increase of η_B near coexistence, η_B/η_s > 2.5 at T=1.4)."
+  },
+  "steps": [
+    {
+      "id": "step_coexistence",
+      "output_file": "coexistence_data.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "Tc": {
+          "value": 1.638,
+          "tolerance": 0.02
+        }
+      },
+      "description": "Check that the fitted critical temperature Tc is within 0.02 of the paper's value 1.638."
+    },
+    {
+      "id": "step_static",
+      "output_file": "static_properties.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": {
+        "reference": {
+          "1.4": {
+            "kappa_T": 0.03,
+            "chi": 0.4
+          },
+          "1.6": {
+            "kappa_T": 0.024,
+            "chi": 0.25
+          },
+          "1.7": {
+            "kappa_T": 0.022,
+            "chi": 0.2
+          },
+          "3.0": {
+            "kappa_T": 0.016,
+            "chi": 0.1
+          },
+          "6.0": {
+            "kappa_T": 0.012,
+            "chi": 0.05
+          }
+        },
+        "tolerances": {
+          "kappa_T": {
+            "rel_tol": 0.3,
+            "abs_tol": 0.005
+          },
+          "chi": {
+            "rel_tol": 0.3,
+            "abs_tol": 0.05
+          }
+        }
+      },
+      "description": "Check that κ_T and χ at each temperature are within 30% relative tolerance (or small absolute tol) of the paper's reference values."
+    },
+    {
+      "id": "step_viscosities",
+      "output_file": "viscosities.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": {
+        "reference": {
+          "1.4": {
+            "eta_s": 1.5,
+            "eta_B": 5.0,
+            "ratio": 3.33
+          },
+          "1.6": {
+            "eta_s": 1.5,
+            "eta_B": 4.0,
+            "ratio": 2.67
+          },
+          "1.7": {
+            "eta_s": 1.5,
+            "eta_B": 3.5,
+            "ratio": 2.33
+          },
+          "3.0": {
+            "eta_s": 1.3,
+            "eta_B": 2.0,
+            "ratio": 1.54
+          },
+          "6.0": {
+            "eta_s": 1.2,
+            "eta_B": 1.5,
+            "ratio": 1.25
+          }
+        },
+        "tolerances": {
+          "eta_s": {
+            "rel_tol": 0.2
+          },
+          "eta_B": {
+            "rel_tol": 0.2
+          },
+          "ratio": {
+            "rel_tol": 0.15
+          }
+        },
+        "trends": {
+          "eta_B_monotonic": "increasing as T decreases"
+        }
+      },
+      "description": "Check that η_s, η_B, and ratio at each T are within 20% relative tolerance of paper values, and that η_B increases monotonically as T decreases."
+    }
+  ]
+}

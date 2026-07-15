@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "ZT_elec is a final derived scalar from heavy DFT and Boltzmann transport simulations; recomputing from raw artifacts is impractical in a lightweight checker.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "zt_elec_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported ZT_elec thresholds for hybrids at 100 K and minimum for layered CsPbI3",
+      "source_provenance": "Paper Table 1 (SnSe‑hBN and SnSe‑CsPbI₃ 100 K rows) and text (‘ZT=2.5’ for 3‑layer and 2.49 for 4‑layer at 150 K)",
+      "generation_method": "Values extracted directly from the paper: 0.985, 0.991, 2.5, 2.49; lower thresholds set at 2.0 per experimental plan.",
+      "why_not_fabricated": "These are the exact reported numbers; the reference solve.sh reproduces them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zt_elec_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "SnSe_hBN",
+            "SnSe_CsPbI3",
+            "layered_CsPbI3"
+          ],
+          "properties": {
+            "SnSe_hBN": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Maximum ZT_elec for SnSe‑hBN at temperatures 100 K to 1000 K (step 100 K). Keys are the temperature in Kelvin as strings."
+            },
+            "SnSe_CsPbI3": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Maximum ZT_elec for SnSe‑CsPbI3 at temperatures 100 K to 1000 K (step 100 K)."
+            },
+            "layered_CsPbI3": {
+              "type": "object",
+              "required": [
+                "3-layer",
+                "4-layer"
+              ],
+              "properties": {
+                "3-layer": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "150": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "150"
+                  ]
+                },
+                "4-layer": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "150": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "150"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Scored artifact: maximum ZT_elec values for the two hybrid systems from 100 K to 1000 K, and for 3‑layer and 4‑layer CsPbI3 at 150 K. Checked against hidden paper‑reported thresholds and monotonic temperature trend."
+      }
+    ],
+    "notes": "The checker verifies (1) the ZT_elec at 100 K for SnSe‑hBN and SnSe‑CsPbI3 meets or exceeds the paper’s hidden threshold, (2) the ZT_elec for 3‑layer and 4‑layer CsPbI3 at 150 K is ≥ 2.0, and (3) the ZT_elec values for each hybrid decrease monotonically with increasing temperature (structural audit)."
+  },
+  "steps": [
+    {
+      "id": "hybrid_threshold_100K",
+      "output_file": "zt_elec_results.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "description": "ZT_elec at 100 K for SnSe‑hBN and SnSe‑CsPbI₃ must be at least as good as the paper’s reported values.",
+      "reference": [
+        0.985,
+        0.991
+      ],
+      "tolerance_abs": 0.2,
+      "field_path": [
+        "SnSe_hBN.100",
+        "SnSe_CsPbI3.100"
+      ]
+    },
+    {
+      "id": "layered_threshold_150K",
+      "output_file": "zt_elec_results.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "description": "ZT_elec at 150 K for 3‑layer and 4‑layer CsPbI₃ must be ≥ 2.0.",
+      "reference": [
+        2.0,
+        2.0
+      ],
+      "tolerance_abs": 1.0,
+      "field_path": [
+        "layered_CsPbI3.3-layer.150",
+        "layered_CsPbI3.4-layer.150"
+      ]
+    },
+    {
+      "id": "hybrid_trend_monotonic",
+      "output_file": "zt_elec_results.json",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "description": "ZT_elec for each hybrid must decrease (or stay constant) monotonically from 100 K to 1000 K.",
+      "temperatures": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900,
+        1000
+      ]
+    }
+  ]
+}

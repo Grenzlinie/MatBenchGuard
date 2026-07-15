@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent's predicted volume fractions are compared to the paper's experimental measurements (Table II) within absolute tolerances, as recomputing from raw artifacts is infeasible without re-running the full microstructural model which the verifier sandbox cannot do.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_predictions.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental volume fraction measurements (gold) for comparison with agent predictions.",
+      "source_provenance": "Paper Table II, microstructural data for reference iron.",
+      "generation_method": "Extracted directly from the source paper (l=10,15,35,55,95 mm rows).",
+      "why_not_fabricated": "These are the real experimental data the paper reports; they serve as the authoritative reference for validating the model's predictions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "l",
+            "graphite",
+            "ferrite",
+            "pearlite",
+            "iron_carbide"
+          ],
+          "units": {
+            "l": "mm",
+            "graphite": "vol%",
+            "ferrite": "vol%",
+            "pearlite": "vol%",
+            "iron_carbide": "vol%"
+          }
+        },
+        "description": "Predicted volume fractions of graphite, ferrite, pearlite, and iron carbide at five positions along the bar, to be compared against hidden experimental reference values."
+      }
+    ],
+    "notes": "The hidden checker compares each predicted value to the corresponding measured volume fraction from the paper’s Table II, applying per‑phase tolerances (wider for iron carbide at 10 mm to accommodate known model underestimation). The three required process steps (heat flow, nodule count, state variable integration) are not scored but are enforced because the downstream scored step is load‑bearing."
+  },
+  "checks": [
+    {
+      "id": "check_predictions",
+      "output_file": "step_01_predictions.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "target_policy": "reference_match",
+      "hidden_gold": [
+        {
+          "l": 10,
+          "graphite": 11.4,
+          "ferrite": 44.2,
+          "pearlite": 16.2,
+          "iron_carbide": 28.2
+        },
+        {
+          "l": 15,
+          "graphite": 11.7,
+          "ferrite": 69.2,
+          "pearlite": 13.3,
+          "iron_carbide": 5.8
+        },
+        {
+          "l": 35,
+          "graphite": 10.3,
+          "ferrite": 62.8,
+          "pearlite": 26.9,
+          "iron_carbide": 0.0
+        },
+        {
+          "l": 55,
+          "graphite": 12.3,
+          "ferrite": 55.0,
+          "pearlite": 32.7,
+          "iron_carbide": 0.0
+        },
+        {
+          "l": 95,
+          "graphite": 10.5,
+          "ferrite": 47.2,
+          "pearlite": 42.3,
+          "iron_carbide": 0.0
+        }
+      ],
+      "tolerances": {
+        "graphite": 3.0,
+        "ferrite": 3.0,
+        "pearlite": 3.0,
+        "iron_carbide": 3.0
+      },
+      "special_tolerances": {
+        "iron_carbide": {
+          "10": 5.0
+        }
+      },
+      "description": "Compares each predicted volume fraction against the gold experimental value using absolute tolerance. Fraction of 20 predictions within tolerance is the score."
+    }
+  ]
+}

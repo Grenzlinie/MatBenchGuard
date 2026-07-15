@@ -1,0 +1,236 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities are produced by DFT/NEGF calculations; recomputing them from raw outputs is infeasible in the verifier sandbox. Therefore we compare the agent's reported values to the paper's reported gold with tolerances, along with structural consistency checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "properties.json": "exact_match",
+    "currents_26V.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for defect properties (formation energy, band gap, magnetic moment) from Table I",
+      "source_provenance": "paper Table I",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "values are directly cited from the published paper"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for currents at 2.6V from Section III text",
+      "source_provenance": "paper text Section III",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "values are directly cited from the published paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "defect",
+              "formation_energy",
+              "band_gap",
+              "magnetic_moment"
+            ],
+            "properties": {
+              "defect": {
+                "type": "string"
+              },
+              "formation_energy": {
+                "type": "number",
+                "units": "eV"
+              },
+              "band_gap": {
+                "type": "number",
+                "units": "eV"
+              },
+              "magnetic_moment": {
+                "type": "number",
+                "units": "μB"
+              }
+            }
+          }
+        },
+        "description": "Computed defect formation energies, band gaps, and magnetic moments for pristine and all defective blue phosphorene supercells."
+      },
+      {
+        "file": "currents_26V.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "defect",
+              "current_zigzag",
+              "current_armchair"
+            ],
+            "properties": {
+              "defect": {
+                "type": "string"
+              },
+              "current_zigzag": {
+                "type": "number",
+                "units": "μA"
+              },
+              "current_armchair": {
+                "type": "number",
+                "units": "μA"
+              }
+            }
+          }
+        },
+        "description": "NEGF-calculated current at 2.6 V bias along zigzag and armchair directions for each system."
+      }
+    ],
+    "notes": "All numeric values to three decimal places. The defect names must exactly match the list: pristine, SV(5|9), DV(5|8|5)-1, DV(555|777), DV(5555|6|7777), DV(5|8|5)-2, SW(55|77)-1, SW(55|77)-2."
+  },
+  "steps": [
+    {
+      "id": "properties_check",
+      "output_file": "properties.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "config": {
+        "tolerances": {
+          "formation_energy": 0.05,
+          "band_gap": 0.05,
+          "magnetic_moment": 0.01,
+          "current": 0.005
+        },
+        "defect_order": [
+          "pristine",
+          "SV(5|9)",
+          "DV(5|8|5)-1",
+          "DV(555|777)",
+          "DV(5555|6|7777)",
+          "DV(5|8|5)-2",
+          "SW(55|77)-1",
+          "SW(55|77)-2"
+        ],
+        "gold": [
+          {
+            "defect": "pristine",
+            "formation_energy": 0.0,
+            "band_gap": 1.988,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "SV(5|9)",
+            "formation_energy": 2.424,
+            "band_gap": 0.516,
+            "magnetic_moment": 0.997
+          },
+          {
+            "defect": "DV(5|8|5)-1",
+            "formation_energy": 2.842,
+            "band_gap": 1.305,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "DV(555|777)",
+            "formation_energy": 2.836,
+            "band_gap": 1.467,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "DV(5555|6|7777)",
+            "formation_energy": 2.933,
+            "band_gap": 1.507,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "DV(5|8|5)-2",
+            "formation_energy": 2.95,
+            "band_gap": 1.146,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "SW(55|77)-1",
+            "formation_energy": 1.47,
+            "band_gap": 1.758,
+            "magnetic_moment": 0.0
+          },
+          {
+            "defect": "SW(55|77)-2",
+            "formation_energy": 1.404,
+            "band_gap": 1.784,
+            "magnetic_moment": 0.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "currents_check",
+      "output_file": "currents_26V.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "config": {
+        "tolerances": {
+          "current": 0.005
+        },
+        "defect_order": [
+          "pristine",
+          "SV(5|9)",
+          "DV(5|8|5)-1",
+          "DV(555|777)",
+          "DV(5555|6|7777)",
+          "DV(5|8|5)-2",
+          "SW(55|77)-1",
+          "SW(55|77)-2"
+        ],
+        "gold": [
+          {
+            "defect": "pristine",
+            "current_zigzag": 0.052,
+            "current_armchair": 0.109
+          },
+          {
+            "defect": "SV(5|9)",
+            "current_zigzag": 3.08,
+            "current_armchair": 2.155
+          },
+          {
+            "defect": "DV(5|8|5)-1",
+            "current_zigzag": 0.398,
+            "current_armchair": 0.524
+          },
+          {
+            "defect": "DV(555|777)",
+            "current_zigzag": 0.276,
+            "current_armchair": 0.256
+          },
+          {
+            "defect": "DV(5555|6|7777)",
+            "current_zigzag": 0.934,
+            "current_armchair": 0.922
+          },
+          {
+            "defect": "DV(5|8|5)-2",
+            "current_zigzag": 0.77,
+            "current_armchair": 0.384
+          },
+          {
+            "defect": "SW(55|77)-1",
+            "current_zigzag": 0.155,
+            "current_armchair": 0.394
+          },
+          {
+            "defect": "SW(55|77)-2",
+            "current_zigzag": 0.193,
+            "current_armchair": 0.612
+          }
+        ]
+      }
+    }
+  ]
+}

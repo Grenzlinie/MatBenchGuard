@@ -1,0 +1,947 @@
+![](./images/811110695566311425_1.jpg)
+
+Journal of Molecular Structure (Theochem) 422 (1998) 89-98
+
+# Halon thermochemistry: ab initio calculations of the enthalpies of formation of fluoroethanes
+
+R.J. Berry $^{a, *}$, C.J. Ehlers $^{a}$, D.R. Burgess Jr $^{b}$, M.R. Zachariah $^{b}$, M.R. Nyden $^{c}$, M. Schwartz $^{a,d}$
+
+$^{a}$ Center for Computational Modeling of Nonstructural Materials, Wright Laboratory, Materials Directorate, Wright-Patterson AFB, OH 45433, USA
+$^{b}$ Chemical Science and Technology Laboratory, National Institute of Standards and Technology, Gaithersburg, MD 20899, USA
+$^{c}$ Building and Fire Research Laboratory, National Institute of Standards and Technology, Gaithersburg, MD 20899, USA
+$^{d}$ Department of Chemistry, University of North Texas, Denton, TX 76203, USA
+
+Received 16 October 1996; accepted 12 February 1997
+
+## Abstract
+The ab initio G2, G2(MP2), CBS-4 and CBS-Q quantum mechanical protocols and the parameterized BAC-MP4 procedure were used to calculate the enthalpies of formation $(\Delta_{f}H^{0})$ of ethane and the complete series of fluoroethanes, $C_{2}H_{x}F_{6-x}, x=0-5$. Results from all methods exhibited significant negative deviations from experiment. With the exception of the CBS-4 and BAC-MP4 procedures, the negative errors in the calculated enthalpies were observed to be linearly dependent upon the number of C-F bonds in the molecule. Application of a bond additivity correction (BAC) parameter, $\Delta_{C-F}$, derived in an earlier investigation of fluoro- and chlorofluoromethanes, removed some although not all of the systematic deviations. Introduction of a heavy atom interaction parameter, representing the effect of an attached carbon on the C-F bond error, yielded corrected enthalpies which agree with experiment to within the reported uncertainties. The BAC-MP4 method, which has already been parameterized with generalized BACs, yields calculated enthalpies which average approximately $10\ \text{kJ mol}^{-1}$ below the experimental values of $\Delta_{f}H^{0}$ in the fluoroethanes. © 1998 Elsevier Science B.V.
+
+Keywords: Fluoroethane; Heat of formation; Bond additivity correction; Thermochemistry; Ab initio
+
+## 1. Introduction
+Because of their lower ozone depletion potential, C1 and C2 hydrofluorocarbons (HFCs) have been proposed as interim replacements for the chlorofluorocarbons (CFCs) and halon fire suppressants [1]. In order to enable accurate modeling of the fire suppression capabilities of HFCs and other potential halon replacements, we have recently performed ab initio quantum mechanical calculations of the enthalpies of formation $(\Delta_{f}H^{0})$ of fluoromethanes [2] and chlorofluoromethanes [3]. (The systems investigated in [3] include methane, the four fluoromethanes, the four chloromethanes, and the six mixed species.)
+
+In this study, we extend these calculations to the C2 HFCs and report the results of G2(MP2), G2, CBS-4, CBS-Q and BAC-MP4 calculations of enthalpies of formation of ethane and the complete series of fluoroethanes, $C_{2}H_{x}F_{6-x}, x=0-5$. The results are presented below.
+
+* Corresponding author.
+
+0166-1280/97/$17.00 © 1998 Elsevier Science B.V. All rights reserved.
+PII S0166-1280(97)00075-4
+
+<table>
+<caption>Table 1
+Comparison of calculated relative conformational energies a with experiment</caption>
+<thead>
+<tr>
+<th></th>
+<th>![](./images/811110695566311425_2.jpg)</th>
+<th>![](./images/811110695566311425_3.jpg)</th>
+<th>![](./images/811110695566311425_4.jpg)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HF/6-31G(d)</td>
+<td>-1.8 (-1.6)</td>
+<td>8.1 (8.0)</td>
+<td>8.3 (8.3)</td>
+</tr>
+<tr>
+<td>BAC-MP4</td>
+<td>0.4 (0.7)</td>
+<td>6.7 (6.7)</td>
+<td>6.8 (6.9)</td>
+</tr>
+<tr>
+<td>G2/MP2</td>
+<td>3.1 (3.4)</td>
+<td>5.4 (5.4)</td>
+<td>5.9 (5.9)</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>3.2 (3.4)</td>
+<td>5.4 (5.4)</td>
+<td>5.9 (5.9)</td>
+</tr>
+<tr>
+<td>CBS-4</td>
+<td>4.2 (4.5)</td>
+<td>4.8 (4.8)</td>
+<td>6.7 (6.7)</td>
+</tr>
+<tr>
+<td>CBS-Q</td>
+<td>3.2 (3.2)</td>
+<td>6.0 (6.0)</td>
+<td>6.7 (6.7)</td>
+</tr>
+<tr>
+<td>Expt.</td>
+<td>2.5±0.4 [17]</td>
+<td>6.7±1.7 [20]</td>
+<td>4.9±0.8 [20]</td>
+</tr>
+</tbody>
+</table>
+
+$^{a}\Delta(\Delta_{f}H^{\circ})$ represents the enthalpy difference of the second conformer minus that of the first, at 0 K (at 298 K in parentheses) in kJ mol⁻¹. The experiments assumed $\Delta H$ to be independent of temperature.
+
+## 2. Computational methods
+
+The ab initio calculations were performed using the GAUSSIAN code [4-6] on HP-PARisk, CRAY Y-MP, CRAY X-MP, SUN-Sparc and SGI Power-Challenge computers.¹ Details of these calculations are described in an earlier paper [2] as well as the original articles that pertain to the BAC-MP4 [7-9], G2 [10-12], and CBS family of methods [13-16].
+
+## 3. Results and discussion
+
+For each of the three molecules, 1,2-difluoroethane, 1,1,2-trifluoroethane and 1,1,2,2-tetrafluoroethane, two stable conformations can be generated by twisting about the C–C bond. Table 1 lists the relative stabilities of these conformers computed at the HF/6-31G(d), BAC-MP4, G2(MP2), G2, CBS-4 and CBS-Q levels of theory. In general, these calculations agree with experiments [17,18] on which conformer is more stable and on the magnitude of energy that separates the two forms. An exception is the HF/6-31G(d) result for 1,2-difluoroethane where the $C_{2h}$ conformer is calculated about 1.8 kJ mol⁻¹ more stable than the $C_{2}$ form. This disagrees with experiment, G2 and CBS results which predict the $C_{2}$ conformer to be more stable by about 3 kJ mol⁻¹. The optimized geometries of the most stable fluoroethane conformers at the HF/6-31G(d) and MP2/6-31G(d) levels are presented in Table 2. For 1,2-difluoroethane the geometry of the $C_{2}$ conformer is displayed. This conformer was also chosen for subsequent enthalpy computations.
+
+Vibrational frequencies for the optimized geometries computed at the HF/6-31G(d) level are listed in Table 3. The ground state electronic energies required for the BAC-MP4, G2(MP2), G2, CBS-4 and CBS-Q enthalpy calculations are displayed in Table 4.
+
+The reported experimental enthalpies of formation of the fluoroethanes with their estimated uncertainties were taken from [19-22] and are presented in the second column of Table 5(A). The remaining columns of the table contain the enthalpies calculated by the various ab initio methods. For molecules with two
+
+---
+¹ Certain commercial equipment, instruments, or materials are identified in this paper in order to specify the experimental procedure adequately. In no case does such identification imply recommendation or endorsement by the National Institute of Standards and Technology, nor does it imply that the materials or equipment are necessarily the best available for the purpose.
+
+**Table 2**
+Geometries¹ optimized with the 6-31G(d) basis set¹
+
+<table>
+  <tr>
+    <th>Formula</th>
+    <th></th>
+    <th>Parameter</th>
+    <th>HF</th>
+    <th>MP2</th>
+  </tr>
+  <tr>
+    <td rowspan="4">CH₃-CH₃</td>
+    <td rowspan="4">![](./images/811110695566311425_5.jpg)</td>
+    <td>C-H</td>
+    <td>1.086</td>
+    <td>1.093</td>
+  </tr>
+  <tr>
+    <td>C-C</td>
+    <td>1.527</td>
+    <td>1.524</td>
+  </tr>
+  <tr>
+    <td>C-C-H</td>
+    <td>111.2</td>
+    <td>111.2</td>
+  </tr>
+  <tr>
+    <td>H-C-H</td>
+    <td>107.7</td>
+    <td>107.7</td>
+  </tr>
+  <tr>
+    <td rowspan="12">CH₃-CH₂F</td>
+    <td rowspan="12">![](./images/811110695566311425_6.jpg)</td>
+    <td>C1-C2</td>
+    <td>1.512</td>
+    <td>1.509</td>
+  </tr>
+  <tr>
+    <td>C1-H6,7</td>
+    <td>1.083</td>
+    <td>1.094</td>
+  </tr>
+  <tr>
+    <td>C1-F8</td>
+    <td>1.373</td>
+    <td>1.399</td>
+  </tr>
+  <tr>
+    <td>C2-H4,3</td>
+    <td>1.084</td>
+    <td>1.092</td>
+  </tr>
+  <tr>
+    <td>C2-H5</td>
+    <td>1.086</td>
+    <td>1.093</td>
+  </tr>
+  <tr>
+    <td>C1-C2-H3,4</td>
+    <td>110.5</td>
+    <td>110.2</td>
+  </tr>
+  <tr>
+    <td>C1-C2-H5</td>
+    <td>110.3</td>
+    <td>110.5</td>
+  </tr>
+  <tr>
+    <td>C2-C1-H6,7</td>
+    <td>111.6</td>
+    <td>111.7</td>
+  </tr>
+  <tr>
+    <td>C2-C1-F8</td>
+    <td>109.5</td>
+    <td>109.2</td>
+  </tr>
+  <tr>
+    <td>H5-C2-C1-F8</td>
+    <td>180.0</td>
+    <td>180.0</td>
+  </tr>
+  <tr>
+    <td>H3,4-C2-C1-F8</td>
+    <td>±60.0</td>
+    <td>±59.9</td>
+  </tr>
+  <tr>
+    <td>H6,7-C1-C2-H5</td>
+    <td>±60.9</td>
+    <td>±61.0</td>
+  </tr>
+  <tr>
+    <td rowspan="10">CH₂F-CH₂F</td>
+    <td rowspan="10">![](./images/811110695566311425_7.jpg)</td>
+    <td>C1-C2</td>
+    <td>1.504</td>
+    <td>1.501</td>
+  </tr>
+  <tr>
+    <td>C1-F8, C2-F3</td>
+    <td>1.366</td>
+    <td>1.392</td>
+  </tr>
+  <tr>
+    <td>C1-H6, C2-H4</td>
+    <td>1.082</td>
+    <td>1.093</td>
+  </tr>
+  <tr>
+    <td>C1-H7, C2-H5</td>
+    <td>1.083</td>
+    <td>1.095</td>
+  </tr>
+  <tr>
+    <td>C1-C2-F3, C2-C1-F8</td>
+    <td>109.9</td>
+    <td>109.5</td>
+  </tr>
+  <tr>
+    <td>C1-C2-H4, C2-C1-H6</td>
+    <td>110.5</td>
+    <td>110.3</td>
+  </tr>
+  <tr>
+    <td>C1-C2-H5, C2-C1-H7</td>
+    <td>110.1</td>
+    <td>110.3</td>
+  </tr>
+  <tr>
+    <td>F3-C2-C1-F8</td>
+    <td>-69.4</td>
+    <td>-69.0</td>
+  </tr>
+  <tr>
+    <td>H4-C2-C1-F8, H6-C1-C2-F3</td>
+    <td>50.2</td>
+    <td>50.4</td>
+  </tr>
+  <tr>
+    <td>H5-C2-C1-F8, H7-C1-C2-F3</td>
+    <td>171.3</td>
+    <td>171.5</td>
+  </tr>
+</table>
+
+stable conformers (i.e. CH₂F-CH₂F, CH₂F-CHF₂, and CHF₂-CHF₂) the listed enthalpy is a thermal average of the two computed enthalpies. The quantities in parentheses represent the deviations from experiment. The deviations in the ab initio enthalpies are also plotted in Fig. 1 (filled triangles and solid lines).
+
+One observes from the RMS and average errors in Table 5(A) (also given in Table 6(A)) that the G2(MP2), G2 and CBS-Q enthalpies exhibit large negative deviations from experiment. Furthermore, from Fig. 1(A), Fig. 1(B) and Fig. 1(D), one sees that these negative errors are systematic with an approximately linear dependence upon the number of C-F ($n_{\text{CF}}$) bonds in the molecule. (Fits of $\Delta_{f}H^{0}(\text{calc})-\Delta_{f}H^{0}(\text{expt})$ vs. $n_{\text{CF}}$ to second-order polynomials yielded statistically insignificant quadratic terms.) The CBS-4 enthalpies also show negative deviations from the experimental values. However, for this method the errors are approximately constant, as indicated by the nearly zero slope of the least squares solid line in Fig. 1(C).
+
+Table 2
+(continued)
+
+<table>
+  <thead>
+    <tr>
+      <th>Formula</th>
+      <th></th>
+      <th>Parameter</th>
+      <th>HF</th>
+      <th>MP2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CH₃-CHF₂</td>
+      <td rowspan="12">![](./images/811110695566311425_8.jpg)</td>
+      <td>C1-C2</td>
+      <td>1.502</td>
+      <td>1.499</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-F7,8</td>
+      <td>1.346</td>
+      <td>1.373</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-H6</td>
+      <td>1.079</td>
+      <td>1.093</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-H3,4,5</td>
+      <td>1.083</td>
+      <td>1.091</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-C2-H3,5</td>
+      <td>110.1</td>
+      <td>110.1</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-C2-H4</td>
+      <td>109.3</td>
+      <td>108.6</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-C1-H6</td>
+      <td>113.8</td>
+      <td>114.5</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-C1-F7,8</td>
+      <td>110.0</td>
+      <td>109.7</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H4-C2-C1-F7,8</td>
+      <td>±58.9</td>
+      <td>±58.8</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H4-C2-C1-H6</td>
+      <td>180.0</td>
+      <td>180.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H3,5-C2-C1-H6</td>
+      <td>±60.2</td>
+      <td>±60.4</td>
+    </tr>
+    <tr>
+      <td>CH₂F-CHF₂</td>
+      <td>C1-C2</td>
+      <td>1.506</td>
+      <td>1.505</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td rowspan="18">![](./images/811110695566311425_9.jpg)</td>
+      <td>C1-F3</td>
+      <td>1.362</td>
+      <td>1.388</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-H7,8</td>
+      <td>1.081</td>
+      <td>1.092</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-H4</td>
+      <td>1.078</td>
+      <td>1.092</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-F5</td>
+      <td>1.338</td>
+      <td>1.364</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-F6</td>
+      <td>1.343</td>
+      <td>1.371</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-C1-F3</td>
+      <td>108.5</td>
+      <td>108.3</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-C1-H7</td>
+      <td>109.7</td>
+      <td>109.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-C1-H8</td>
+      <td>110.0</td>
+      <td>110.2</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-C2-H4</td>
+      <td>113.1</td>
+      <td>113.5</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-C2-F5</td>
+      <td>110.0</td>
+      <td>109.5</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-C2-F6</td>
+      <td>108.1</td>
+      <td>107.8</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H4-C2-C1-F3</td>
+      <td>54.3</td>
+      <td>55.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F5-C2-C1-F3</td>
+      <td>-67.2</td>
+      <td>-66.4</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F6-C2-C1-F3</td>
+      <td>175.1</td>
+      <td>176.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H7-C1-C2-H4</td>
+      <td>173.7</td>
+      <td>174.3</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H8-C1-C2-H4</td>
+      <td>-65.1</td>
+      <td>-64.6</td>
+    </tr>
+    <tr>
+      <td>CH₃-CF₃</td>
+      <td>C-C</td>
+      <td>1.500</td>
+      <td>1.495</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-F</td>
+      <td>1.325</td>
+      <td>1.353</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td rowspan="5">![](./images/811110695566311425_10.jpg)</td>
+      <td>C-H</td>
+      <td>1.082</td>
+      <td>1.090</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-C-F</td>
+      <td>111.6</td>
+      <td>111.6</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-C-H</td>
+      <td>109.4</td>
+      <td>109.2</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F-C-F</td>
+      <td>107.2</td>
+      <td>107.2</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H-C-H</td>
+      <td>109.5</td>
+      <td>109.7</td>
+    </tr>
+  </tbody>
+</table>
+
+The four ab initio procedures have been found to yield very accurate enthalpies of formation in most non-halogenated species. From these results, and from previous work on fluorinated [2] and chlorinated [3] hydrocarbons it is clear that these methods exhibit severe, unacceptable errors relative to reported experimental enthalpies.
+
+## 4. Bond additivity corrections
+
+When the errors in $\Delta_{\mathrm{f}} H^{\circ}$ are observed to be systematically dependent upon the number of bonds of a given type in a molecule, they can, in principle, be removed by the application of bond additivity corrections (BACs), originally introduced by Melius in his
+
+Table 2
+(continued)
+
+<table>
+  <thead>
+    <tr>
+      <th>Formula</th>
+      <th></th>
+      <th>Parameter</th>
+      <th>HF</th>
+      <th>MP2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CHF₂-CHF₂</td>
+      <td rowspan="8">![](./images/811110695566311425_11.jpg)</td>
+      <td>C-F</td>
+      <td>1.336</td>
+      <td>1.362</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-C</td>
+      <td>1.510</td>
+      <td>1.511</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-H</td>
+      <td>1.078</td>
+      <td>1.092</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-C-F</td>
+      <td>108.5</td>
+      <td>108.2</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C-C-H</td>
+      <td>112.1</td>
+      <td>112.2</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F-C-F</td>
+      <td>108.4</td>
+      <td>108.8</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F-C-H</td>
+      <td>109.6</td>
+      <td>109.7</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H-C-C-H</td>
+      <td>180.0</td>
+      <td>180.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td></td>
+      <td>F-C-C-H</td>
+      <td>±58.8</td>
+      <td>±58.8</td>
+    </tr>
+    <tr>
+      <td>CH₂F-CF₃</td>
+      <td rowspan="10">![](./images/811110695566311425_12.jpg)</td>
+      <td>C1-C2</td>
+      <td>1.508</td>
+      <td>1.507</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-F8</td>
+      <td>1.356</td>
+      <td>1.382</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C1-H6,7</td>
+      <td>1.080</td>
+      <td>1.092</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-F3,4</td>
+      <td>1.318</td>
+      <td>1.344</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>C2-F5</td>
+      <td>1.324</td>
+      <td>1.352</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F3,4-C2-C1</td>
+      <td>111.7</td>
+      <td>111.6</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F5-C2-C1</td>
+      <td>109.1</td>
+      <td>109.1</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F8-C1-C2</td>
+      <td>108.7</td>
+      <td>108.5</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>H6,7-C1-C2</td>
+      <td>109.2</td>
+      <td>109.1</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td>F3,4-C2-C1-F8</td>
+      <td>60.5</td>
+      <td>60.5</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td></td>
+      <td>F5-C2-C1-F8</td>
+      <td>180.0</td>
+      <td>180.0</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td></td>
+      <td>H6,7-C1-C2-F5</td>
+      <td>60.4</td>
+      <td>60.3</td>
+    </tr>
+  </tbody>
+</table>
+
+BAC-MP4 method [7-9]. The correction, $\Delta_{\text{BAC}}$, is of the form:
+
+$$
+\Delta_{\mathrm{BAC}}=\sum_{\mathrm{C}-\mathrm{X}} n_{\mathrm{C}-\mathrm{X}} \Delta_{\mathrm{C}-\mathrm{X}} \tag{1}
+$$
+
+In this equation, $n_{\text{C-X}}$ is the number of a given type of bond and $\Delta_{\text{C-X}}$ is the BAC parameter representing the error associated with this bond type. The parameters are determined via a linear fit of Eq. (1) to the calculated deviations of the ab initio enthalpies from experiment. In our earlier investigation on the thermochemistry of the chlorofluoromethanes [3], it was found that, for the same four ab initio methods, the application of C-F and C-Cl BAC parameters removed all systematic error and yielded corrected enthalpies of formation whose RMS deviations from experiment were significantly below the RMS uncertainties in the literature data. It was also observed that values of $\Delta_{\text{C-H}}$ were smaller than the parameter's standard deviation and that its exclusion had no impact on the quality of the fit.
+
+Because of the close similarity of the fluoroethanes (C2s) to the fluoromethanes (C1s) in the earlier work, it would be reasonable to expect that the same C-F BAC parameter should also correct the systematic errors found in this study. The results of this procedure are displayed in Table 6(B). The second column contains the values of $\Delta_{\text{C-F}}$ from [3], with their estimated standard deviations. The next two pairs of columns represent the RMS and average errors for the C1s and C2s, respectively. As noted above, the values of RMS1 and AVE1 demonstrate that the application of a single C-F BAC does indeed remove virtually all systematic errors in $\Delta_{\mathrm{f}} H^{\mathrm{o}}$ for the fluoromethanes; note that resulting RMS deviations are significantly smaller than the RMS experimental uncertainty of 4.1 kJ mol⁻¹. From RMS2 in Table 6, one sees, of course, that the same BAC also yields a substantial decrease in RMS deviations in the C2s. However, in contrast to the C1s, the comparatively large negative values of AVE2 reveals that not all of the negative systematic
+
+<table><tbody><tr><td>Formula</td><td></td><td>Parameter</td><td>HF</td><td>MP2</td></tr><tr><td rowspan="11">CHF₂-CF₃</td><td rowspan="11">![](./images/811110695566311425_13.jpg)</td><td>C1-C2</td><td>1.517</td><td>1.519</td></tr><tr><td>C1-H3</td><td>1.077</td><td>1.091</td></tr><tr><td>C1-F7,8</td><td>1.330</td><td>1.357</td></tr><tr><td>C2-F4,5</td><td>1.317</td><td>1.344</td></tr><tr><td>C2-F6</td><td>1.311</td><td>1.338</td></tr><tr><td>F4,5-C2-C1</td><td>109.7</td><td>109.6</td></tr><tr><td>F6-C2-C1</td><td>111.4</td><td>111.0</td></tr><tr><td>H3-C1-C2</td><td>111.1</td><td>111.5</td></tr><tr><td>F7,8-C1-C2</td><td>108.6</td><td>108.2</td></tr><tr><td>F4,5-C2-C1-H3</td><td>±59.5</td><td>±59.6</td></tr><tr><td>H3-C1-C2-F6</td><td>180.0</td><td>180.0</td></tr><tr><td></td><td></td><td>F7,8-C1-C2-F6</td><td>±59.2</td><td>±59.2</td></tr><tr><td rowspan="4">CF₃-CF₃</td><td rowspan="4">![](./images/811110695566311425_14.jpg)</td><td>C-C</td><td>1.526</td><td>1.528</td></tr><tr><td>C-F</td><td>1.311</td><td>1.339</td></tr><tr><td>C-C-F</td><td>109.8</td><td>109.7</td></tr><tr><td>F-C-F</td><td>109.1</td><td>109.3</td></tr></tbody></table>
+
+$^{a}$Bonds in angstroms and angles in degrees.
+
+error has been removed by the BAC. In principle, this problem could be remedied by refitting $\Delta_{C-F}$ to minimize the RMS residuals in the fluoroethanes. However, this yields a larger value for the parameter, which would overcorrect enthalpies in the C1s.
+
+Further, it is physically unrealistic that the error due to a C-F bond should differ in the two series.
+
+An alternative approach to eliminate the remaining systematic error would be via the addition of a second BAC, $\Delta_{C-C}$, to account for the presence of a C-C
+
+<table><thead><tr><td>Formula</td><td>Frequencies</td></tr></thead><tbody><tr><td>$CH_{3}-CH_{3}$</td><td>291,794,794,948,1194,1194,1382,1410,1468,1468,1473,1473,2857,2862,2901,2901,2924,2924</td></tr><tr><td>$CH_{3}-CH_{2}F$</td><td>244,393,783,867,1043,1107,1169,1269,1381,1417,1453,1469,1503,2869,2896,2925,2929,2948</td></tr><tr><td>$CH_{2}F-CH_{2}F$</td><td>134,310,483,854,894,1081,1099,1117,1235,1272,1395,1434,1481,1484,2895,2909,2946,2959</td></tr><tr><td>$CH_{3}-CHF_{2}$</td><td>230,364,449,548,846,957,1119,1146,1159,1375,1391,1432,1455,1458,2883,2948,2952,2968</td></tr><tr><td>$CH_{2}F-CHF_{2}$</td><td>114,235,413,465,559,896,1081,1111,1124,1154,1238,1332,1402,1457,1486,2923,2971,2986</td></tr><tr><td>$CH_{3}-CF_{3}$</td><td>224,350,350,522,522,577,811,977,977,1263,1263,1277,1429,1453,1453,2899,2974,2974</td></tr><tr><td>$CHF_{2}-CHF_{2}$</td><td>85,196,348,406,476,523,607,1094,1123,1139,1148,1165,1306,1362,1390,1480,2986,2995</td></tr><tr><td>$CH_{2}F-CF_{3}$</td><td>105,208,341,398,516,530,646,828,980,1101,1200,1216,1303,1315,1448,1485,2935,2990</td></tr><tr><td>$CHF_{2}-CF_{3}$</td><td>72,201,235,351,406,505,559,569,706,859,1131,1169,1217,1256,1324,1385,1466,2996</td></tr><tr><td>$CF_{3}-CF_{3}$</td><td>62,205,205,337,370,370,504,504,602,602,691,793,1110,1274,1274,1280,1280,1453</td></tr></tbody></table>
+
+$^{a}$ Scaled vibrational frequencies in $cm^{-1}$ (scale factor = 0.8929).
+
+**Table 4**
+Ground state electronic energies $^{\mathrm{a}}$ required for theoretical calculations of $\Delta_{\mathrm{f}} H^{\circ}$
+
+| Species                | $E_{0}[\mathrm{MP4}]^{\mathrm{b}}$ | $E_{0}(\mathrm{G2-MP2})^{\mathrm{c}}$ | $E_{0}(\mathrm{G2})^{\mathrm{c}}$ | $E_{0}(\mathrm{CBS-4})$ | $E_{0}(\mathrm{CBS-Q})$ |
+|------------------------|------------------------------------|---------------------------------------|-----------------------------------|-------------------------|-------------------------|
+| $\mathrm{CH}_{3}-\mathrm{CH}_{3}$ | $-79.504268$                       | $-79.628927$                          | $-79.630880$                      | $-79.661123$            | $-79.629733$            |
+| $\mathrm{CH}_{3}-\mathrm{CH}_{2} \mathrm{F}$ | $-178.518355$                     | $-178.780125$                         | $-178.784905$                     | $-178.826645$           | $-178.792938$           |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CH}_{2} \mathrm{F}, C_{2}$ | $-277.528464$                    | $-277.926913$                         | $-277.934520$                     | $-277.987567$           | $-277.951773$           |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CH}_{2} \mathrm{F}, C_{2 \mathrm{h}}$ | $-277.528307$                   | $-277.925717$                         | $-277.933322$                     | $-277.985952$           | $-277.950561$           |
+| $\mathrm{CH}_{3}-\mathrm{CHF}_{2}$ | $-277.553127$                     | $-277.947537$                         | $-277.955404$                     | $-278.009455$           | $-277.972744$           |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CHF}_{2}, C_{1}$ | $-376.560332$                    | $-377.090245$                         | $-377.100959$                     | $-377.165854$           | $-377.127549$           |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CHF}_{2}, C_{\mathrm{s}}$ | $-376.557785$                   | $-377.088174$                         | $-377.098887$                     | $-377.164009$           | $-377.125252$           |
+| $\mathrm{CH}_{3}-\mathrm{CF}_{3}$ | $-376.597813$                     | $-377.122026$                         | $-377.133221$                     | $-377.200227$           | $-377.159685$           |
+| $\mathrm{CHF}_{2}-\mathrm{CHF}_{2}, C_{2 \mathrm{h}}$ | $-475.589845$                   | $-476.251263$                         | $-476.265103$                     | $-476.341879$           | $-476.300885$           |
+| $\mathrm{CHF}_{2}-\mathrm{CHF}_{2}, C_{2}$ | $-475.587244$                    | $-476.249031$                         | $-476.262876$                     | $-476.339335$           | $-476.298354$           |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CF}_{3}$ | $-475.601799$                    | $-476.261476$                         | $-476.275549$                     | $-476.353260$           | $-476.311047$           |
+| $\mathrm{CHF}_{2}-\mathrm{CF}_{3}$ | $-574.628427$                     | $-575.419525$                         | $-575.436748$                     | $-575.526124$           | $-575.481282$           |
+| $\mathrm{CF}_{3}-\mathrm{CF}_{3}$ | $-673.666813$                     | $-674.587245$                         | $-674.607849$                     | $-674.709745$           | $-674.660947$           |
+
+$^{\mathrm{a}}$ In hartree.
+$^{\mathrm{b}}$ Basis set: 6-31G(d,p). Required for the BAC-MP4 calculations. Geometry optimized at the HF/6-31G(d) level.
+$^{\mathrm{c}}$ Geometry optimized at the MP2/6-31G(d) level.
+
+**Table 5**
+Experimental and calculated enthalpies of formation $^{\mathrm{a}}$
+
+### A. Ab initio enthalpies
+
+| Molecule               | Expt.                  | G2(MP2)               | G2                    | CBS-4                 | CBS-Q                 |
+|------------------------|------------------------|-----------------------|-----------------------|-----------------------|-----------------------|
+| $\mathrm{CH}_{3}-\mathrm{CH}_{3}$ | $-84.1 \pm 0.4$ [19]  | $-83.1$ (1.0)         | $-86.0$ (-1.9)        | $-92.1$ (-8.0)        | $-81.5$ (2.6)         |
+| $\mathrm{CH}_{3}-\mathrm{CH}_{2} \mathrm{F}$ | $-263.2 \pm 1.6$ [20] | $-279.5$ (-16.3)      | $-279.7$ (-16.5)      | $-277.7$ (-14.5)      | $-274.1$ (-10.9)      |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CH}_{2} \mathrm{F}$ | $-433.9 \pm 11.8$ [21] | $-462.3$ (-28.4)    | $-459.8$ (-25.9)      | $-447.5$ (-13.6)      | $-457.5$ (-23.6)      |
+| $\mathrm{CH}_{3}-\mathrm{CHF}_{2}$ | $-500.8 \pm 6.3$ [20] | $-518.3$ (-17.5)      | $-516.4$ (-15.6)      | $-508.5$ (-7.7)       | $-510.0$ (-9.2)       |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CHF}_{2}$ | $-664.8 \pm 4.2$ [22] | $-691.7$ (-26.9)    | $-687.0$ (-22.2)      | $-669.1$ (-4.3)       | $-680.0$ (-15.2)      |
+| $\mathrm{CH}_{3}-\mathrm{CF}_{3}$ | $-745.6 \pm 1.6$ [20] | $-775.4$ (-29.8)      | $-772.1$ (-26.5)      | $-760.0$ (-14.4)      | $-764.4$ (-18.8)      |
+| $\mathrm{CHF}_{2}-\mathrm{CHF}_{2}$ | $-877.8 \pm 17.6$ [21] | $-913.2$ (-35.4)    | $-906.6$ (-28.8)      | $-881.3$ (-3.5)       | $-898.6$ (-20.8)      |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CF}_{3}$ | $-895.8 \pm 4.2$ [20] | $-940.2$ (-44.4)    | $-934.2$ (-38.4)      | $-912.0$ (-16.2)      | $-925.0$ (-29.2)      |
+| $\mathrm{CHF}_{2}-\mathrm{CF}_{3}$ | $-1104.6 \pm 4.6$ [20] | $-1153.9$ (-49.3)    | $-1145.9$ (-41.3)     | $-1116.1$ (-11.5)     | $-1135.2$ (-30.6)     |
+| $\mathrm{CF}_{3}-\mathrm{CF}_{3}$ | $-1342.7 \pm 6.3$ [20] | $-1392.9$ (-30.2)    | $-1383.7$ (-41.0)     | $-1348.5$ (-5.8)      | $-1371.0$ (-28.3)     |
+| RMS                    | $\pm 7.7$              | $33.4$                | $28.4$                | $10.9$                | $20.9$                |
+| AVE                    |                        | $-29.7$               | $-25.8$               | $-10.0$               | $-18.4$               |
+
+### B. Enthalpies calculated with bond additivity corrections
+
+| Molecule               | BAC-MP4                | G2(MP2) [BAC]         | G2 [BAC]              | CBS-4 [BAC]           | CBS-Q [BAC]           |
+|------------------------|------------------------|-----------------------|-----------------------|-----------------------|-----------------------|
+| $\mathrm{CH}_{3}-\mathrm{CH}_{3}$ | $-86.9$ (-2.8)         | $-83.1$ (1.0)         | $-86.0$ (-1.9)        | $-92.1$ (-8.0)        | $-81.5$ (2.6)         |
+| $\mathrm{CH}_{3}-\mathrm{CH}_{2} \mathrm{F}$ | $-272.4$ (-9.2)        | $-269.9$ (-6.7)       | $-271.6$ (-8.4)       | $-275.2$ (-12.0)      | $-268.2$ (-5.0)       |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CH}_{2} \mathrm{F}$ | $-446.0$ (-12.1)       | $-443.1$ (-9.2)       | $-443.7$ (-9.8)       | $-442.6$ (-8.7)       | $-445.8$ (-11.9)      |
+| $\mathrm{CH}_{3}-\mathrm{CHF}_{2}$ | $-505.3$ (-4.5)        | $-499.1$ (1.7)        | $-500.3$ (0.5)        | $-503.6$ (-2.8)       | $-498.3$ (2.5)        |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CHF}_{2}$ | $-671.5$ (-6.7)        | $-663.0$ (1.8)        | $-662.8$ (2.0)        | $-661.7$ (3.1)        | $-662.4$ (2.4)        |
+| $\mathrm{CH}_{3}-\mathrm{CF}_{3}$ | $-755.4$ (-9.8)        | $-746.7$ (-1.1)       | $-747.9$ (-2.3)       | $-752.6$ (-7.0)       | $-746.9$ (-1.3)       |
+| $\mathrm{CHF}_{2}-\mathrm{CHF}_{2}$ | $-883.3$ (-5.5)        | $-874.9$ (2.9)        | $-874.3$ (3.5)        | $-871.5$ (6.3)        | $-875.2$ (2.6)        |
+| $\mathrm{CH}_{2} \mathrm{F}-\mathrm{CF}_{3}$ | $-913.3$ (-17.5)       | $-901.9$ (-6.1)       | $-901.9$ (-6.1)       | $-902.2$ (-6.4)       | $-901.6$ (-5.8)       |
+| $\mathrm{CHF}_{2}-\mathrm{CF}_{3}$ | $-1124.1$ (-19.5)      | $-1106.0$ (-1.4)      | $-1105.5$ (-0.9)      | $-1103.8$ (0.8)       | $-1105.9$ (-1.3)      |
+| $\mathrm{CF}_{3}-\mathrm{CF}_{3}$ | $-1357.0$ (-14.3)      | $-1335.4$ (7.3)       | $-1335.3$ (7.4)       | $-1333.8$ (8.9)       | $-1335.8$ (6.9)       |
+| RMS                    | $11.5$                 | $4.9$                 | $5.3$                 | $7.2$                 | $5.3$                 |
+| AVE                    | $-10.2$                | $1.0$                 | $-1.6$                | $-2.6$                | $-0.8$                |
+
+$^{\mathrm{a}}$Enthalpies of formation $(\Delta_{\mathrm{f}} H^{\circ})$ at 298 K in kJ mol$^{-1}$. Values in parentheses represent deviations from experiment.
+
+![](./images/811110695566311425_15.jpg)
+
+Fig. 1. Deviations of calculated enthalpies of formation of fluoroethanes from experiment: (A) G2; (B) G2(MP2); (C) CBS-4; (D) CBS-Q. (▲) Original errors; (O) BAC errors; (——————) BACs plotted as a function of the number of C-F bonds; (- - -) errors in $\Delta_{f}H^{0}(BAC)$.
+
+bond in the fluoroethanes. However, this has the effect of increasing the error in ethane, where the ab initio enthalpies are in excellent agreement with experiment for all but the CBS-4 method (Table 5(A)). Further- more, these methods have been applied with great success to the prediction of $\Delta_{f}H^{0}$ in numerous non fluorinated organic species with one or more $C-C$ bonds. Hence, the introduction of a $C-C$ bond addi tivity correction would not be consistent with these earlier results.
+
+In order to explore further the source of the remain- ing systematic errors in the fluoroethanes, we refer to the results of our earlier investigation of the chloro- fluoromethanes [3]. In that work, it was discussed at some length how trends and curvature in plots of $\Delta_{f}H^{0}($ calc $)-\Delta_{f}H^{0}($ expt $)$ vs. $n_{C-F}$ (at fixed $n_{C-Cl}$ ) and vs. $n_{C-Cl}$ (at fixed $n_{C-F}$ ) provided definitive evidence of "heavy atom'' interactions (also utilized by Melius in the BAC-MP4 method [7-9]); i.e. the presence of one $C-F$ bond increases the error due to either a sec ond fluorine or a chlorine atom on the same carbon. In the earlier work, it was decided not to include heavy atom interactions since the RMS residuals using linearly independent BACs were already below the experimental uncertainties in the chlorofluoro- methanes. In contrast, for the fluoroethanes, the com- paratively large residual errors (RMS2) and negative average deviations (AVE2) indicate that the intro- duction of a heavy atom interaction parameter is necessary in this series to account for enhanced errors due to the presence of a second carbon atom attached to the carbon containing the $C-C$ bond. In the spirit ofthe BAC-MP4 procedure, one may write:
+$$\Delta_{\mathrm{BAC}}=n_{\mathrm{C}-\mathrm{F}} \Delta_{\mathrm{C}-\mathrm{F}} f_{\mathrm{C}}\qquad(2)$$
+where $f_{C}$ is the interaction parameter representing the impact of a second attached carbon on the error due to the $C-F$ bond. This has no impact on the $C 1 ~s$ since fc = 1 if there is no second carbon.
+
+One may solve for $f_{C}$ via linear regression (con strained to pass through the origin) to fit $\Delta_{BAC}$ to the deviations of the ab initio enthalpies from experiment, with the product $n_{C-F} \Delta_{C-F}$ as the independent vari able. The resultant values of the interaction parameter
+
+<table>
+<caption>Table 6 Fluoroalkane bond additivity correction parameters and the resulting errors computed by regression analysis<sup>a</sup></caption>
+<thead>
+<tr>
+<th>Method</th>
+<th>$\Delta_{C-F}$</th>
+<th>$f_C$</th>
+<th>RMS1<sup>b</sup></th>
+<th>AVE1<sup>b</sup></th>
+<th>RMS2<sup>c</sup></th>
+<th>AVE2<sup>c</sup></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expt.</td>
+<td></td>
+<td></td>
+<td>$\pm$ 4.1</td>
+<td></td>
+<td>$\pm$ 7.7</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="7">A. Ab initio</td>
+</tr>
+<tr>
+<td>G2(MP2)</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>18.4</td>
+<td>–15.7</td>
+<td>33.4</td>
+<td>–29.7</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>14.8</td>
+<td>–13.1</td>
+<td>28.4</td>
+<td>–25.8</td>
+</tr>
+<tr>
+<td>CBS-4</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>2.8</td>
+<td>–1.7</td>
+<td>10.9</td>
+<td>–10.0</td>
+</tr>
+<tr>
+<td>CBS-Q</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>8.6</td>
+<td>–6.9</td>
+<td>20.9</td>
+<td>–18.4</td>
+</tr>
+<tr>
+<td colspan="7">B. $\Delta_{C-F}$</td>
+</tr>
+<tr>
+<td>G2(MP2) [BAC]</td>
+<td>–7.98 $\pm$ 0.38</td>
+<td>0.0</td>
+<td>2.6</td>
+<td>0.2</td>
+<td>7.3</td>
+<td>–5.8</td>
+</tr>
+<tr>
+<td>G2 [BAC]</td>
+<td>–6.51 $\pm$ 0.41</td>
+<td>0.0</td>
+<td>3.2</td>
+<td>–0.1</td>
+<td>7.6</td>
+<td>–6.3</td>
+</tr>
+<tr>
+<td>CBS-4 [BAC]</td>
+<td>–1.28 $\pm$ 0.74</td>
+<td>0.0</td>
+<td>3.3</td>
+<td>0.9</td>
+<td>8.6</td>
+<td>–6.5</td>
+</tr>
+<tr>
+<td>CBS-Q [BAC]</td>
+<td>–3.51 $\pm$ 0.55</td>
+<td>0.0</td>
+<td>1.6</td>
+<td>0.1</td>
+<td>9.7</td>
+<td>–7.7</td>
+</tr>
+<tr>
+<td colspan="7">C. $\Delta_{C-F} + f_C$</td>
+</tr>
+<tr>
+<td>G2(MP2) [BAC]</td>
+<td>–7.98 $\pm$ 0.38</td>
+<td>1.20 $\pm$ 0.06</td>
+<td>2.6</td>
+<td>0.2</td>
+<td>5.3</td>
+<td>–1.6</td>
+</tr>
+<tr>
+<td>G2 [BAC]</td>
+<td>–6.51 $\pm$ 0.41</td>
+<td>1.24 $\pm$ 0.08</td>
+<td>3.2</td>
+<td>–0.1</td>
+<td>5.2</td>
+<td>–1.2</td>
+</tr>
+<tr>
+<td>CBS4[BAC]</td>
+<td>–1.28 $\pm$ 0.74</td>
+<td>1.92 $\pm$ 0.57</td>
+<td>3.3</td>
+<td>0.9</td>
+<td>7.2</td>
+<td>–2.6</td>
+</tr>
+<tr>
+<td>CBS-Q [BAC]</td>
+<td>–3.51 $\pm$ 0.55</td>
+<td>1.67 $\pm$ 0.14</td>
+<td>1.6</td>
+<td>0.1</td>
+<td>5.3</td>
+<td>–0.8</td>
+</tr>
+</tbody>
+</table>
+
+<sup>a</sup> Units: kJ mol<sup>–1</sup>.
+<sup>b</sup> Fluoromethanes (C1).
+<sup>c</sup> Fluoroethanes (C2).
+
+are shown in the third column of Table 6(C). The estimated errors in $f_C$ may be obtained from either (a) the standard deviation of the parameter obtained from the least squares fit, or (b) the variation in the parameter when $\Delta_{C-F}$ is varied between its upper and lower limits ($\Delta_{C-F} \pm \sigma$). The estimates given in the table represent the larger of these two values. The very large value of $\sigma(f_C)$ for the CBS-4 method is a consequence of the large error in $\Delta_{C-F}$ for this method and the fact that, as mentioned above, errors in the CBS-4 enthalpies of formation are largely random.
+
+It is very satisfying to observe from RMS2 in Table 6(C) that the RMS residuals using a C–F BAC with an $f_C$ interaction parameter are reduced significantly. Further, the much smaller negative values of AVE2, relative to Table 6(B), indicates that almost all of the remaining systematic error has been removed from the BAC-corrected enthalpies of formation. The removal of systematic error is also demonstrated in Fig. 1, in which errors in the BAC-corrected enthalpies of formation (open circles and dashed line) are clustered about $\Delta_f H^0(\text{cal}) - \Delta_f H^0(\text{exp}) = 0$. Individual BAC-corrected enthalpies of formation in the fluoromethanes, using $\Delta_{C-F}$ from [3] and $f_C$ from this work (Table 6(C)) are presented in Table 5(B).
+
+Finally, the first column of Table 5(B) contains errors in enthalpies of formation of the fluoroethanes calculated using the Melius BAC-MP4 procedure [7–9]. It was shown in [3] that calculated enthalpies using this method are in excellent agreement with experimental results for the fluoromethanes. There are, however, rather large residual systematic errors in predicted values of $\Delta_f H^0$ of the fluoroethanes, as illustrated by the RMS and average errors of 11.5 and –10.2 kJ mol<sup>–1</sup>, respectively. From the table, it is seen that calculated enthalpies of the C2 series are uniformly more negative than results from the literature. Thus, it would appear that the C–C BAC and interaction parameters derived in the BAC-MP4 method to fit data in predominantly non-halogenated organics do not adequately characterize the systematic errors in fluoroethanes.
+
+### 5. Summary and conclusions
+
+Enthalpies of formation of the fluoroethanes calculated by the G2, G2(MP2), CBS-4 and CBS-Q
+
+quantum mechanical procedures were found to exhibit substantial negative deviations from experiment which are proportional to the number of C-F bonds in the molecule. The application of a C-F bond addi- tivity correction, $\Delta_{C-F}$, derived in an earlier investiga tion of fluoro- and chlorofluoromethanes, removed some, although not all, of the systematic errors. Intro- duction of a further heavy atom interaction parameter, f_C, to account for the impact of a second attached carbon on the C-F bond, yielded BAC-corrected enthalpies with RMS errors within the reported experimental uncertainties.
+
+Additional calculations on fluoroethylenes and acetylenes, fluorocarbon radicals and reactive transition states are in progress to assess the capability of ab initio procedures with bond additivity corrections to predict accurate enthalpies of formation in these species.
+
+## Acknowledgements
+This work was supported by the Air Force Office of Scientific Research. The authors acknowledge the Materials Directorate and Wright Laboratory for providing the computational and other resources for this work. M.S. acknowledges the Robert A. Welch Foundation (Grant B-657) for support of this research.
+
+## References
+[1] (a) R.E.J. Banks, Fluorine Chem. 67 (1994) 193. (b) W.L. Grosshandler, R.G. Gann, W.M. Pitts, (Eds.), Evaluation of alternative in-flight fire suppressants for full-scale testing in simulated aircraft engine nacelles and dry bays. NIST Special Publication, 1994, p. 861.
+
+[2] R.J. Berry, D.R. Burgess, Jr., M.R. Nyden, M.R. Zachariah, M. Schwartz, Halon thermochemistry: ab initio calculations of the enthalpies of formation of fluoromethanes. J. Phys. Chem. 99 (1995) 17145.
+
+[3] R.J. Berry, D.R. Burgess, Jr., M.R. Nyden, M.R. Zachariah, M. Schwartz, Halon thermochemistry: calculated enthalpies of for- mation of chlorofluoromethanes, J. Phys. Chem. 100 (1996) 7405.
+
+[4] M.J. Frisch, M. Head-Gordon, G.W. Trucks, J.B. Foresman. H.B. Schlegel, K. Raghavachari, M. Robb, J.S. Binkley, C. Gonzalez, D.J. Defrees, D.J. Fox, R.A. Whiteside, R. Seeger, C.F. Melius, J. Baker, R.L. Martin, L.R. Kahn, J.J.P. Stewart, S. Topiol, J.A. Pople, GAUSSIAN 90, Revision F, Gaussian, Inc., Pittsburgh, PA, 1990.
+
+[5] M.J. Frisch, G.W. Trucks, M. Head-Gordon, P.M.W. Gill, M.W. Wong, J.B. Foresman, B.G. Johnson, H.B. Schlegel, M.A. Robb. E.S. Replogle. R. Gomperts, J.L. Andres, K. Raghavachari, J.S. Binkley, C. Gonzalez, R.L. Martin, D.J. Fox, D.J. Defrees, J. Baker, J.J.P. Stewart, J.A. Pople, GAUSSIAN92, Revision F.4, Gaussian, Inc., Pittsburgh, PA, 1992.
+
+[6] M.J. Frisch, G.W. Trucks, H.B. Schlegel. P.M.W. Gill, B.G. Johnson. M.A. Robb. J.R. Cheeseman. T.A. Keith, G.A. Petersson. J.A. Montgomery. K. Raghavachari. M.A. Al-Laham, V.G. Zakrzewski, J.V. Ortiz, J.B. Foresman, J. Cioslowski, B.B. Stefanov, A. Nanayakkara, M. Challacombe, C.Y. Peng, P.Y. Ayala, W. Chen, M.W. Wong, J.L. Andres, E.S. Replogle. R. Gomperts, R.L. Martin. D.J. Fox. J.S. Binkley, D.J. Defrees, J. Baker, J.P. Stewart, M. Head-Gordon, C. Gonzalez, J.A. Pople, GAUSSIAN 94. Revision A.1, Gaussian, Inc., Pittsburgh, PA, 1995.
+
+[7] C.F. Melius, Thermochemistry of hydrocarbon intermediates in combustion. Applications of the BAC-MP4 method. in: Springer-Verlag DFVLR Lecture Notes. Springer-Verlag. Berlin, 1990.
+
+[8] C.F. Melius, Thermochemical modeling. I. Application to decomposition of energetic materials, in: Chemistry and Physics of Energetic Materials. NATO ASI Series C. Vol.309, Kluwer Academic. Boston. 1990. pp. 21-49.
+
+[9] (a) P. Ho, C.F. Melius, J. Phys. Chem. 94 (1990) 5120. (b) M.D. Allendorf, C.F. Melius, J. Phys. Chem. 97 (1993) 720.
+
+[10] J.A. Pople, M. Head-Gordon, D.J. Fox, K. Raghavachari. L.A. Curtiss, J. Chem. Phys. 90 (1989) 5622.
+
+[11] L.A. Curtiss, C. Jones, G.W. Trucks, K. Raghavachari, J.A. Pople, J. Chem. Phys. 93 (1990) 2537.
+
+[12] L.A. Curtiss, K. Raghavachari. G.W. Trucks, J.A. Pople, J. Chem. Phys. 94 (1991) 7221.
+
+[13] (a) G.A. Petersson, M.A. Al-Laham, J. Chem. Phys. 94 (1991)6081. (b) G.A. Petersson. T.G. Tensfeldt, J.A. Montgomery, Jr., J. Chem. Phys. 94 (1991) 6091. (c) J.A. Montgomery. Jr., J.W. Ochterski, G.A. Petersson, J. Chem. Phys. 101 (1994)5900.
+
+[14] J.W. Ochterski, G.A. Petersson, J.A. Montgomery, Jr., J. Chem. Phys. 104 (1996) 2598.
+
+[15] (a) M.R. Nyden, G.A. Petersson, J. Chem. Phys. 75 (1981)1843. (b) G.A. Petersson, M.R. Nyden, J. Chem. Phys. 75(1981) 3423. (c) G.A. Petersson, S.L. Licht, J. Chem. Phys.75 (1981) 4556. (d) G.A. Petersson, A.K. Yee, A. Bennett, J. Chem. Phys. 83 (1985) 5105. (e) G.A. Petersson, M. Braunstein, J. Chem. Phys. 83 (1985) 5129.
+
+[16] (a) G.A. Petersson, Proc. Natl. Acad. Sci. U.S.A. 71 (1974)2795. (b) J.J. Wendolowski, G.A. Petersson, J. Chem. Phys. 62(1975) 1016. (c) S.L. Light, G.A. Petersson, J. Chem. Phys. 62(1975) 2015, 3562. (d) M.R. Nyden, G.A. Petersson, Int. J. Quantum Chem. 17 (1980) 975.
+
+[17] J.R. Durig, J. Liu, T.S. Little, V Kalasinsky, F. J. Phys. Chem.96 (1992) 8224.
+
+[18] V.F. Kalasinsky, H.V. Anjaria, T.S. Little, J. Phys. Chem. 86(1982) 1351.
+
+[19] W. Tsang, R.F. Hampson, J. Phys. Chem. Ref. Data 15 (1986) 1087.
+
+[20] S.S. Chen, A.S. Rodgers, J. Chao, R.C. Wilhoit, B.J. Zwo- linski, J. Phys. Chem. Ref. Data 4 (1975) 441.
+
+[21] D.R. Burgess, M.R. Zachariah, Jr., W. Tsang, P.R. Westmore- land, Thermochemical and chemical kinetic data for fluorinated hydrocarbons, Prog. Energy Combust. Sci. 21 (1996) 453.
+
+[22] J.A. Lacher, H.A. Skinner, J. Chem. Soc. A (1968) 1034.

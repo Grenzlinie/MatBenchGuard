@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The claim is about relative peak shifts and secondary peak presence; we recompute peaks from the raw Raman CSVs and verify the structural trend (Δν ≥ 5 cm⁻¹, secondary separation ≥ 5 cm⁻¹). No absolute metric recomputation against hidden gold is meaningful, so T3 structural is the strongest feasible tier.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [],
+  "target_policies": {
+    "ideal_raman.csv": "structural_audit",
+    "intermixed_raman.csv": "structural_audit",
+    "peak_positions.json": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ideal_raman.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "intensity"
+          ]
+        },
+        "description": "Raman spectrum of the ideal superlattice. Checked for correct two-column format and non-empty content."
+      },
+      {
+        "file": "intermixed_raman.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "intensity"
+          ]
+        },
+        "description": "Disorder-averaged Raman spectrum of the intermixed superlattice. Checked for format and non-empty content."
+      },
+      {
+        "file": "peak_positions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ideal_main_peak": "number (cm⁻¹)",
+            "intermixed_main_peak": "number (cm⁻¹)",
+            "intermixed_secondary_peak": "number or null"
+          }
+        },
+        "description": "Extracted AlAs-like LO peak positions. The checker validates that the ideal main peak is positive, the intermixed main peak is downshifted relative to the ideal, and that a secondary lower-frequency peak appears in the intermixed spectrum."
+      }
+    ],
+    "notes": "Scoring is structural: the key reward comes from verifying the relative frequency shift between ideal and intermixed main peaks (trend) and the presence of a secondary peak. The CSV files contribute minor format/completeness checks."
+  },
+  "steps": [
+    {
+      "id": "ideal_csv_check",
+      "output_file": "ideal_raman.csv",
+      "weight": 0.05,
+      "kind": "file_format",
+      "required_columns": [
+        "frequency",
+        "intensity"
+      ],
+      "min_rows": 1
+    },
+    {
+      "id": "intermixed_csv_check",
+      "output_file": "intermixed_raman.csv",
+      "weight": 0.05,
+      "kind": "file_format",
+      "required_columns": [
+        "frequency",
+        "intensity"
+      ],
+      "min_rows": 1
+    },
+    {
+      "id": "peak_relationship",
+      "output_file": "peak_positions.json",
+      "weight": 0.9,
+      "kind": "recompute_metric",
+      "metric": "peak_shift_delta",
+      "freq_range": [
+        350,
+        410
+      ],
+      "delta_min": 5.0,
+      "secondary_sep_min": 5.0,
+      "secondary_rel_intensity": 0.1
+    }
+  ]
+}

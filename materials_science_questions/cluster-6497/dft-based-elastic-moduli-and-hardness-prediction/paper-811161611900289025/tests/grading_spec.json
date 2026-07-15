@@ -1,0 +1,181 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Predicted bulk moduli are recomputed from the agent's fitted power-law parameters and the supplied compound data, then compared against paper's experimental bulk moduli (relative tolerance 20%). The fitted parameters themselves are compared to paper gold (T0) because the exact fitting subset is not fully deterministic from the public description.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_fitted_parameters.csv": "exact_match",
+    "step_02_predicted_B.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported power-law parameters (m, C) for five bonding groups (Table 3) and experimental bulk moduli for 10 compounds (Table 4).",
+      "source_provenance": "Paper Table 3 and Table 4",
+      "generation_method": "Extracted directly from the paper's tables; no synthesis.",
+      "why_not_fabricated": "Values are the paper's own published experimental data and fitted parameters, traceable to the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_fitted_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Group",
+            "m",
+            "C"
+          ],
+          "units": {
+            "Group": "string (sp3, spd, 3d, 4d, 5d4f)",
+            "m": "dimensionless exponent",
+            "C": "GPa·nm^m (preterm)"
+          }
+        },
+        "description": "Fitted power-law exponent m and preterm C for each of the five bonding-mode groups."
+      },
+      {
+        "file": "step_02_predicted_B.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "Predicted_B_GPa"
+          ],
+          "units": {
+            "Compound": "string",
+            "Predicted_B_GPa": "float (GPa)"
+          }
+        },
+        "description": "Predicted bulk moduli (GPa) for the listed AB compounds, computed via geometric-mean formula using the fitted group parameters."
+      }
+    ],
+    "notes": "All scoring uses hidden paper-reported reference values. The instruction provides the required interatomic distances and classification table; no external datasets need to be fetched."
+  },
+  "steps": [
+    {
+      "id": "fitted_parameters",
+      "output_file": "step_01_fitted_parameters.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Compare agent's fitted m and C for each of the five bonding groups against paper-reported gold values with tolerances (|Δm| ≤ 0.01, |ΔC| ≤ 0.001).",
+      "gold": {
+        "sp3": {
+          "m": -3.6,
+          "C": 0.525
+        },
+        "spd": {
+          "m": -4.25,
+          "C": 0.174
+        },
+        "3d": {
+          "m": -5.14,
+          "C": 0.151
+        },
+        "4d": {
+          "m": -7.27,
+          "C": 0.02
+        },
+        "5d4f": {
+          "m": -8.24,
+          "C": 0.007
+        }
+      }
+    },
+    {
+      "id": "predicted_B",
+      "output_file": "step_02_predicted_B.csv",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "description": "Recompute predicted bulk moduli from agent's fitted parameters (step_01_fitted_parameters.csv) using the provided compound list and geometric-mean formula, then compare to hidden experimental bulk moduli (relative error ≤ 20% scores 1, partial credit beyond).",
+      "compounds": [
+        {
+          "Compound": "CaO",
+          "d_nm": 0.2405,
+          "metal_group": "3d",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 134.7
+        },
+        {
+          "Compound": "SrO",
+          "d_nm": 0.258,
+          "metal_group": "4d",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 87.3
+        },
+        {
+          "Compound": "BaO",
+          "d_nm": 0.2762,
+          "metal_group": "5d4f",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 85.7
+        },
+        {
+          "Compound": "CoO",
+          "d_nm": 0.2133,
+          "metal_group": "3d",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 183.3
+        },
+        {
+          "Compound": "MnO",
+          "d_nm": 0.223,
+          "metal_group": "spd",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 153
+        },
+        {
+          "Compound": "FeO",
+          "d_nm": 0.214,
+          "metal_group": "3d",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 181.3
+        },
+        {
+          "Compound": "NiO",
+          "d_nm": 0.2084,
+          "metal_group": "3d",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 138.3
+        },
+        {
+          "Compound": "ZnO",
+          "d_nm": 0.2001,
+          "metal_group": "spd",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 143.3
+        },
+        {
+          "Compound": "EuO",
+          "d_nm": 0.2572,
+          "metal_group": "5d4f",
+          "A": 1,
+          "B": 1,
+          "B_exp_GPa": 92
+        },
+        {
+          "Compound": "Sc2O3",
+          "d_nm": 0.2134,
+          "metal_group": "3d",
+          "A": 2,
+          "B": 3,
+          "B_exp_GPa": 197
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_1",
+    "title": "Generate FE mesh of the fractured periodic RVE",
+    "role": "process",
+    "action": "Construct a 3D unit cube geometry with three parallel planar fractures normal to the x‑axis, equally spaced with spacing 1/3, modeled as thin layers. Define matrix material (E=100 GPa, ν=0.3) and fracture layer parameters (normal stiffness kn=20 GPa/m, shear stiffness ks=kn/2, thickness t=0.001). Assign the fracture material as a linear elastic solid with Young's modulus E_f = kn * t and Poisson's ratio ν_f (initially 0). Generate a conforming hexahedral mesh using FEniCS that resolves the fracture thickness with at least one element through-the-thickness. Save mesh information to evidence file.",
+    "output_file": "",
+    "evidence": "mesh_info.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the finite element mesh used in all subsequent homogenization runs. The mesh is not scored, but its existence is required to execute step 2.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Homogenization and effective moduli computation",
+    "role": "scored",
+    "action": "For the base case (ν_f = 0): apply periodic boundary conditions, solve the linear elastic FE problem for six independent deformation modes (three uniaxial, three shear) under small strains. Compute volume-averaged stresses and derive the effective stiffness tensor, then extract the effective Young's moduli E_xx, E_yy, E_zz and shear moduli G_xy, G_xz, G_yz. Next, set ν_f = 0.3 (keeping other parameters) and repeat the entire homogenization. Record all extracted moduli and the percentage change in E_xx (relative to the base case) in a JSON file.",
+    "output_file": "effective_moduli.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The JSON file contains the effective elastic constants for the two fracture Poisson's ratio cases and the resulting change in the Young's modulus in the direction normal to the first fracture set (E_xx).",
+    "output_schema": "{\n  \"base_case\": {\n    \"fracture_nu\": 0.0,\n    \"E11\": float,\n    \"E22\": float,\n    \"E33\": float,\n    \"G12\": float,\n    \"G13\": float,\n    \"G23\": float\n  },\n  \"nonzero_nu_case\": {\n    \"fracture_nu\": 0.3,\n    \"E11\": float,\n    \"E22\": float,\n    \"E33\": float,\n    \"G12\": float,\n    \"G13\": float,\n    \"G23\": float\n  },\n  \"percent_change_E11\": float\n}"
+  }
+]

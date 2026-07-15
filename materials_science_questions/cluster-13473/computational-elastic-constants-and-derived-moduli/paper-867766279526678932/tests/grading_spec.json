@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main claim is about the qualitative shape and trends of three curves (stress-strain peak and flow plateau, mean yield stress increase then decrease, localization index peak and decay). Exact numeric agreement would depend on implementation details and parameter fitting; scoring structural trends ensures a correct reproduction is identifiable without relying on a digitized gold curve that could mismatch a valid implementation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stage1_stress_strain.csv": "structural_audit",
+    "stage2_mean_yield_stress.csv": "structural_audit",
+    "stage3_localization_index.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "structural_scoring_criteria",
+      "source_provenance": "paper figures 5 and 6 for GQ glass with rejuvenation",
+      "generation_method": "derived qualitative trends and approximate numeric ranges from paper and mesoscopic model scaling",
+      "why_not_fabricated": "trends are the central claim of the paper; numeric ranges are plausible based on the disclosed model parameters and atomistic stress units"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stage1_stress_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress": "arbitrary unit"
+          }
+        },
+        "description": "Macroscopic stress-strain curve Sigma(gamma) for the GQ glass with rejuvenation. Scored by RMSE against hidden reference curve; lower RMSE is better."
+      },
+      {
+        "file": "stage2_mean_yield_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "mean_threshold"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "mean_threshold": "arbitrary unit"
+          }
+        },
+        "description": "Evolution of the spatially averaged local yield stress bar_sigma_c(gamma) for the GQ glass. Scored by RMSE and qualitative trend (initial increase, subsequent decrease) against hidden reference."
+      },
+      {
+        "file": "stage3_localization_index.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "LOC"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "LOC": "dimensionless"
+          }
+        },
+        "description": "Localization index LOC(gamma) for the GQ glass. Scored by RMSE and qualitative check of peak and subsequent decay against hidden reference."
+      }
+    ],
+    "notes": "The three scored artifacts are produced by a single EPM simulation run; they are separated for scoring clarity. The hidden checker holds digitised reference curves from the paper and evaluates RMSE within tolerances, plus qualitative feature checks."
+  },
+  "steps": [
+    {
+      "id": "step_stress_strain",
+      "output_file": "stage1_stress_strain.csv",
+      "weight": 0.4,
+      "kind": "rubric",
+      "description": "Stress-strain curve: peak existence, post-peak trend, plateau range"
+    },
+    {
+      "id": "step_mean_yield_stress",
+      "output_file": "stage2_mean_yield_stress.csv",
+      "weight": 0.35,
+      "kind": "rubric",
+      "description": "Mean yield stress evolution: initial increase, subsequent decrease, start > end, max strain"
+    },
+    {
+      "id": "step_localization_index",
+      "output_file": "stage3_localization_index.csv",
+      "weight": 0.25,
+      "kind": "rubric",
+      "description": "Localization index: peak existence, decay, max value range"
+    }
+  ]
+}

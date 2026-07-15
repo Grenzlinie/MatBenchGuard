@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The paper's headline quantities (dipole moment and QTAIM topological parameters) are reported as specific numerical values derived from a costly multipole refinement and QTAIM analysis that cannot be re-executed in the lightweight verifier sandbox. We therefore compare the agent's self-reported results to the paper's published values with appropriate tolerances, taking the paper as the authoritative gold.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for dipole moment, R1 threshold, and QTAIM parameters for three bonds from the paper's Tables 2 and 4",
+      "source_provenance": "Paper DOI 10.1021/cg901239v, Table 1 (R1 values), text (dipole moment 42.4 D), Table 2 (covalent bond N1-C8), Table 4 (intermolecular bonds N3-H3N...O2 and N2-H2N...O4)",
+      "generation_method": "Direct transcription of published numerical values; tolerances set as specified in the approved plan (R1 <0.015, dipole ±2.0 D, ρ ±15%, ∇²ρ ±20%, G/V/H ±25%).",
+      "why_not_fabricated": "All values are the exact paper-reported numbers; they are not synthetic or arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_00_refinement_R1.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the R1 residual.",
+          "unit": "dimensionless"
+        },
+        "description": "The R1 residual of the aspherical atom refinement against I>3σ(I) reflections. A lower value is better."
+      },
+      {
+        "file": "step_01_dipole_moment.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the dipole moment magnitude.",
+          "unit": "Debye"
+        },
+        "description": "Magnitude of the molecular dipole moment computed from the experimental charge density."
+      },
+      {
+        "file": "step_02_topological_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "N3-H3N...O2",
+            "N2-H2N...O4",
+            "N1-C8"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "N3-H3N...O2": {
+              "type": "object",
+              "required": [
+                "rho",
+                "nabla2",
+                "G",
+                "V",
+                "H"
+              ],
+              "properties": {
+                "rho": {
+                  "type": "number",
+                  "unit": "e/Å³"
+                },
+                "nabla2": {
+                  "type": "number",
+                  "unit": "e/Å⁵"
+                },
+                "G": {
+                  "type": "number",
+                  "unit": "kJ mol⁻¹ per a.u. volume"
+                },
+                "V": {
+                  "type": "number",
+                  "unit": "kJ mol⁻¹ per a.u. volume"
+                },
+                "H": {
+                  "type": "number",
+                  "unit": "kJ mol⁻¹ per a.u. volume"
+                }
+              }
+            },
+            "N2-H2N...O4": {
+              "$ref": "#/properties/N3-H3N...O2"
+            },
+            "N1-C8": {
+              "$ref": "#/properties/N3-H3N...O2"
+            }
+          }
+        },
+        "description": "QTAIM topological parameters for two strong charge‑assisted hydrogen bonds and one covalent imine bond."
+      }
+    ],
+    "notes": "The refinement R1 quality check ensures the underlying charge‑density model is properly reproduced, which is essential for the dipole moment and topological properties that follow. The checker compares the dipole moment and topological parameters to hidden paper‑reported values within appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_00_refinement_r1",
+      "output_file": "step_00_refinement_R1.txt",
+      "weight": 0.15,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "target": 0.015,
+      "tolerance": 0.0,
+      "notes": "R1 must be <= 0.015 for full credit; partial credit if between 0.015 and 0.03."
+    },
+    {
+      "id": "step_01_dipole_moment",
+      "output_file": "step_01_dipole_moment.txt",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "target": 42.4,
+      "tolerance": 2.0,
+      "notes": "Dipole moment in Debye; tolerance ±2.0 D."
+    },
+    {
+      "id": "step_02_topological_properties",
+      "output_file": "step_02_topological_properties.json",
+      "weight": 0.45,
+      "kind": "rubric",
+      "target_policy": "reference_match",
+      "gold": {
+        "N3-H3N...O2": {
+          "rho": 0.26,
+          "nabla2": 7.74,
+          "G": 173.01,
+          "V": -135.49,
+          "H": 37.53
+        },
+        "N2-H2N...O4": {
+          "rho": 0.37,
+          "nabla2": 5.49,
+          "G": 159.14,
+          "V": -168.9,
+          "H": -9.76
+        },
+        "N1-C8": {
+          "rho": 2.65,
+          "nabla2": -28.53,
+          "G": 1067.6,
+          "V": -2910.97,
+          "H": -1843.37
+        }
+      },
+      "tolerances": {
+        "rho": 0.15,
+        "nabla2": 0.2,
+        "G": 0.25,
+        "V": 0.25,
+        "H": 0.25
+      },
+      "notes": "QTAIM parameters: relative tolerance per field. Score = fraction of all 15 (3 bonds × 5 fields) that are within tolerance."
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1: B_V,G_V,k,H_V recomputed from C11,C12,C44; stress peaks extracted from curves; compare to paper golds with tolerances/threshold.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match",
+    "stress_strain_curves.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for elastic constants, moduli, hardness, and ideal strengths",
+      "source_provenance": "Paper Table II (B_V=162, G_V=165, k=1.02, H_V=37.5, σ_min=35.1, τ_min=28.0) and text; elastic constants C11=406, C12=40, C44=153 are derived to match the reported B_V, G_V using cubic formulas (C11 = 3*B_V - 2*G_V? consistency check used). Lattice constant 4.540 Å from XRD refinement.",
+      "generation_method": "extracted directly from paper and used to set the consistent elastic constants that reproduce the paper's reported moduli.",
+      "why_not_fabricated": "values are taken from the paper's own reported data (Table II) and are consistent with the paper's reported elastic moduli; the elastic constants are chosen to produce exactly the paper's B_V and G_V, making the gold faithful to the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "lattice_constant_A": {
+              "type": "number",
+              "unit": "Å"
+            },
+            "C11": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "C12": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "C44": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "B_V": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "G_V": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "k": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "H_V": {
+              "type": "number",
+              "unit": "GPa"
+            }
+          },
+          "required": [
+            "lattice_constant_A",
+            "C11",
+            "C12",
+            "C44",
+            "B_V",
+            "G_V",
+            "k",
+            "H_V"
+          ]
+        },
+        "description": "Elastic constants (C11,C12,C44), Voigt-Reuss-Hill bulk and shear moduli (B_V,G_V), Pugh ratio k, and Chen-predicted Vickers hardness H_V for zinc-blende BP."
+      },
+      {
+        "file": "stress_strain_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "columns": [
+            "deformation_mode",
+            "strain",
+            "stress"
+          ],
+          "column_types": {
+            "deformation_mode": "string",
+            "strain": "number (dimensionless)",
+            "stress": "number (GPa)"
+          },
+          "required_columns": [
+            "deformation_mode",
+            "strain",
+            "stress"
+          ]
+        },
+        "description": "Stress-strain curves for uniaxial tensile and pure shear deformations. The deformation_mode column identifies the loading direction (tensile_100, tensile_110, tensile_111, shear_110_001, shear_100_010, shear_111_11-2)."
+      }
+    ],
+    "notes": "Hidden checker recomputes derived quantities from elastic_constants.json (evidence from step_02) to verify results.json. It also extracts maximum stress per deformation mode from stress_strain_curves.csv and compares minimum strengths to paper gold with tolerance."
+  },
+  "steps": [
+    {
+      "id": "results",
+      "output_file": "results.json",
+      "weight": 0.4,
+      "kind": "recompute",
+      "fields": {
+        "lattice_constant_A": {
+          "target": 4.54,
+          "tolerance_abs": 0.02
+        },
+        "C11": {
+          "target": 406,
+          "tolerance_abs": 30
+        },
+        "C12": {
+          "target": 40,
+          "tolerance_abs": 10
+        },
+        "C44": {
+          "target": 153,
+          "tolerance_abs": 15
+        },
+        "B_V": {
+          "target": 162,
+          "tolerance_rel": 0.05
+        },
+        "G_V": {
+          "target": 165,
+          "tolerance_rel": 0.05
+        },
+        "k": {
+          "target": 1.0185,
+          "tolerance_abs": 0.05
+        },
+        "H_V": {
+          "target": 37.5,
+          "tolerance_abs": 2
+        }
+      },
+      "sub_weights": {
+        "lattice_constant_A": 0.05,
+        "C11": 0.1,
+        "C12": 0.1,
+        "C44": 0.1,
+        "B_V": 0.15,
+        "G_V": 0.15,
+        "k": 0.15,
+        "H_V": 0.2
+      }
+    },
+    {
+      "id": "stress_strain_curves",
+      "output_file": "stress_strain_curves.csv",
+      "weight": 0.6,
+      "kind": "recompute",
+      "modes": [
+        "tensile_100",
+        "tensile_110",
+        "tensile_111",
+        "shear_110_001",
+        "shear_100_010",
+        "shear_111_11-2"
+      ],
+      "min_tensile_gold": 35.1,
+      "min_shear_gold": 28.0,
+      "tol_rel_down": 0.05,
+      "peak_field": "stress"
+    }
+  ]
+}

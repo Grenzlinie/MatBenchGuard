@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_training_data",
+    "title": "Generate all-candidate training data for four grain boundaries",
+    "role": "process",
+    "action": "For each of the four training boundaries Σ5[001]/(210), Σ5[001]/(310), Σ17[001]/(410), Σ17[001]/(350): construct periodic CSL supercells, generate all rigid-body translation candidates (step size 0.1 Å in x and z, 0.1 Å steps in y from 1.0 to 1.5 Å), perform lattice statics relaxation using the Cleri-Rosato EAM potential (fixed far atoms, fixed volume), and compute grain-boundary energy for each candidate.",
+    "output_file": "",
+    "evidence": "training_energies_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the full set of relaxed configurations and energies for the training boundaries.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_descriptor_selection",
+    "title": "Select training subset and compute standardized descriptors",
+    "role": "process",
+    "action": "From the computed training data, select 800 configurations (the most stable and metastable, i.e., the 800 configurations with the lowest grain-boundary energies). For each selected initial (unrelaxed) configuration, compute the 83 geometrical descriptors (minimum/maximum bond lengths, atomic density, derived nonlinear combinations, as listed in the paper's supplementary information). Standardize all descriptors to zero mean and unit variance (store scaling parameters).",
+    "output_file": "",
+    "evidence": "training_features_standardized.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Prepares the training data for SVR: descriptor vectors and corresponding energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_svr_training",
+    "title": "Train ε‑SVR predictor",
+    "role": "process",
+    "action": "Using the standardized descriptor vectors and the corresponding grain-boundary energies of the selected 800 points, train an ε‑SVR with a Gaussian (RBF) kernel. Use the reported optimal hyperparameters: margin ε = 0.01, penalty C = 1000, kernel coefficient γ = 10⁻⁴. Save the trained model.",
+    "output_file": "",
+    "evidence": "svr_model.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Builds the predictor that maps initial descriptors to predicted grain-boundary energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_virtual_screening",
+    "title": "Virtual screening of 13 test grain boundaries",
+    "role": "process",
+    "action": "For each of the 13 test [001] symmetric tilt CSL boundaries (Σ13/(230), Σ25/(430), Σ25/(710), Σ29/(520), Σ29/(730), Σ37/(610), Σ37/(750), Σ41/(910), Σ41/(540), Σ53/(720), Σ53/(950), Σ61/(11 1 0), Σ125/(11 2 0)): generate all initial configurations with the same translation grid, compute descriptors (using the same standardization parameters), apply the trained SVR to predict the energy of each configuration, and select the configuration with the minimum predicted energy.",
+    "output_file": "",
+    "evidence": "selected_candidates.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Screens all candidate configurations for each test boundary and chooses the one with the lowest SVR‑predicted energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_final_relaxation",
+    "title": "Single relaxation for selected candidates and report final energies",
+    "role": "scored",
+    "action": "For each test boundary, take the configuration selected in step 04 and perform a single lattice statics relaxation with the same EAM potential to obtain the accurate grain-boundary energy. Collect the results and write the final predicted energies.",
+    "output_file": "predicted_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final grain boundary energies for the 13 test boundaries, obtained by one relaxation per boundary.",
+    "output_schema": "CSV with columns: boundary_name (string, e.g., 'Sigma13/(230)'), misorientation_angle_deg (float), predicted_energy_Jm2 (float). One row per test boundary."
+  }
+]

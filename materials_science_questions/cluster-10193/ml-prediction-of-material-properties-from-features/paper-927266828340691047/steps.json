@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Load and preprocess perovskite database",
+    "role": "process",
+    "action": "Load the Jacobs et al. perovskite database and extract compositions, target property values (k*, D*, k_chem, D_chem, ASR) at 500°C, DFT-calculated O p-band center values, and electrolyte types. Preprocess into a structured tabular format ready for feature generation.",
+    "output_file": "",
+    "evidence": "preprocessed_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Structured CSV with compositions, targets, and O p-band center values for the 500°C dataset.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Generate elemental features",
+    "role": "process",
+    "action": "Using MAST-ML's ElementalFeatureGenerator, compute composition-based elemental features (composition-weighted averages, maxima, minima, differences, and categorical encodings of tabulated elemental properties) for every perovskite composition.",
+    "output_file": "",
+    "evidence": "elemental_features.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Feature matrix with composition index and elemental descriptor columns.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Train random forest models with elemental features",
+    "role": "process",
+    "action": "For each target property at 500°C (k*, D*, k_chem, D_chem, ASR), train a random forest regressor using the elemental features generated in the previous step. For ASR, additionally include one-hot encoding of electrolyte type.",
+    "output_file": "",
+    "evidence": "rf_models.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Serialized trained random forest models, one per property.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Train O p-band center linear regression models",
+    "role": "process",
+    "action": "For each target property at 500°C, train a univariate linear regression model using the DFT-calculated O p-band center as the sole feature.",
+    "output_file": "",
+    "evidence": "lr_models.pkl",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Serialized trained linear regression models, one per property.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Cross-validate and compute MAE and percentage reduction",
+    "role": "scored",
+    "action": "Using the trained random forest and linear regression models, perform 25 repeats of 5-fold cross-validation on the dataset for each catalytic property at 500°C. For each split compute the MAE. Average over all splits to obtain the mean MAE for the random forest (MAE_ML) and for the linear model (MAE_O_pband). Compute the percentage reduction as 100 * (MAE_ML - MAE_O_pband) / MAE_O_pband. Write a CSV file with columns: property, MAE_ML, MAE_O_pband, percent_reduction.",
+    "output_file": "comparison_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with computed MAEs and percentage reduction for each of the five properties.",
+    "output_schema": "Columns: property (string: one of k*, D*, k_chem, D_chem, ASR), MAE_ML (float), MAE_O_pband (float), percent_reduction (float)."
+  }
+]

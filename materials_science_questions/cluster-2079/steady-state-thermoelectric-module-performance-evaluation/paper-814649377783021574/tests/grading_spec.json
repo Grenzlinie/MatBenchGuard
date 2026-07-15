@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing deltaT from the agent's raw simulation output is infeasible because the agent only submits the final computed values, not the full temperature field.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_temperature_differences.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ΔT values for variants A-1 and B-5 from the paper",
+      "source_provenance": "Paper Table 3 (A1, cooling line 35°C ΔT=26.22) and Table 4 (B5, HTC 10 W/m²K ΔT=17.21)",
+      "generation_method": "Directly transcribed from the paper",
+      "why_not_fabricated": "These are the exact numbers reported in the paper's simulation results, serving as the gold for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_temperature_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "A1_deltaT",
+            "B5_deltaT"
+          ],
+          "properties": {
+            "A1_deltaT": {
+              "type": "number",
+              "description": "ΔT in °C for variant A-1"
+            },
+            "B5_deltaT": {
+              "type": "number",
+              "description": "ΔT in °C for variant B-5"
+            }
+          },
+          "units": {
+            "A1_deltaT": "°C",
+            "B5_deltaT": "°C"
+          }
+        },
+        "description": "Computed temperature difference across the TEG surfaces for the two representative design variants. The checker verifies these values against hidden references and threshold conditions to confirm the power requirement fulfillment."
+      }
+    ],
+    "notes": "The ΔT values directly support the paper's central claim: variant A-1 meets the 2 mW power requirement, while B-5 does not reliably meet it. The checker uses tolerance and threshold checks on ΔT, not direct power comparison."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_temperature_differences.json",
+      "weight": 1.0,
+      "kind": "custom",
+      "A1_reference": 26.22,
+      "A1_tolerance": 2.0,
+      "A1_threshold": 25.0,
+      "B5_reference": 17.21,
+      "B5_tolerance": 2.0,
+      "B5_threshold_low": 15.0,
+      "B5_threshold_high": 20.0
+    }
+  ]
+}

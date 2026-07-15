@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_structure_optimization",
+    "title": "Structure optimization of cubic graphene",
+    "role": "process",
+    "action": "Optimize the cubic graphene crystal structure using DFT (GGA-PBE) starting from the provided space group, lattice constant, and Wyckoff positions. Relax atomic positions and cell parameters until convergence.",
+    "output_file": "",
+    "evidence": "optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required prerequisite for all subsequent phonon calculations. The optimized structure is used to generate the supercell for force constant calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_harmonic_ifcs",
+    "title": "Harmonic force constants and phonon dispersion",
+    "role": "process",
+    "action": "Using the optimized structure, generate a supercell and perform DFT calculations to compute the second-order interatomic force constants and phonon dispersion via PHONOPY.",
+    "output_file": "",
+    "evidence": "FORCE_CONSTANTS",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Yields the harmonic force constants needed for the Raman spectrum and as input to anharmonic calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_raman_scored",
+    "title": "Raman-active mode frequencies",
+    "role": "scored",
+    "action": "Compute the Raman spectrum of cubic graphene from the second-order force constants using Phonopy-Spectroscopy or equivalent. Identify the three Raman-active modes (T2g, A1g, Eg) and extract their frequencies. Write the frequencies to raman_active_frequencies.json.",
+    "output_file": "raman_active_frequencies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reproduces the Raman fingerprint frequencies. The output contains the frequencies of the three Raman-active modes.",
+    "output_schema": "{\n  \"T2g_frequency\": <float>,\n  \"A1g_frequency\": <float>,\n  \"Eg_frequency\": <float>,\n  \"unit\": \"cm^-1\"\n}"
+  },
+  {
+    "id": "step_anharmonic_ifcs",
+    "title": "Anharmonic (third-order) force constants",
+    "role": "process",
+    "action": "Using phono3py and DFT, compute the third-order interatomic force constants for cubic graphene on the supercell. Apply translational invariance constraints as needed.",
+    "output_file": "",
+    "evidence": "THIRD_ORDER_IFC",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Necessary to solve the phonon Boltzmann transport equation. The anharmonic scattering information is contained in these third-order force constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_thermal_conductivity_scored",
+    "title": "Lattice thermal conductivity at 300 K",
+    "role": "scored",
+    "action": "Using the second-order and third-order force constants and a sufficiently dense q-grid, run ShengBTE to solve the phonon Boltzmann equation and obtain the lattice thermal conductivity at 300 K. Write the value to thermal_conductivity_300K.json.",
+    "output_file": "thermal_conductivity_300K.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main headline result. The output is the isotropic lattice thermal conductivity at room temperature.",
+    "output_schema": "{\n  \"thermal_conductivity_300K\": {\n    \"value\": <float>,\n    \"unit\": \"W/mK\"\n  }\n}"
+  }
+]

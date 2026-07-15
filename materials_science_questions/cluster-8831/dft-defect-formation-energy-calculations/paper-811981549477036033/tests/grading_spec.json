@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputed eight reaction energies from the agent's reported total energies (eV) using the paper's stoichiometric definitions and compared to paper-reported gold within tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reaction_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reaction energies (kJ/mol) from paper Table/Results section",
+      "source_provenance": "DOI:10.1080/10420150108214062, text pages 257-258",
+      "generation_method": "extracted directly from paper prose",
+      "why_not_fabricated": "values are the paper's own reported results for the same eight reactions"
+    }
+  ],
+  "gold_reaction_energies": {
+    "water_absorption_forsterite": 230.1,
+    "water_absorption_MgO": 513.6,
+    "water_absorption_alpha_quartz": 107.9,
+    "SiO2_replacement_forsterite": -5.9,
+    "SiO2_replacement_alpha_quartz": -24.8,
+    "MgO_replacement_M1_forsterite": 25.0,
+    "MgO_replacement_M2_forsterite": 113.4,
+    "MgO_replacement_MgO": 66.9
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reaction_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energies": "object",
+            "reaction_energies": "object"
+          },
+          "items": {
+            "total_energies": {
+              "forsterite": "float (eV)",
+              "MgO": "float (eV)",
+              "alpha_quartz": "float (eV)",
+              "H2O_isolated": "float (eV)",
+              "forsterite_H2O_absorbed": "float (eV)",
+              "MgO_H2O_absorbed": "float (eV)",
+              "alpha_quartz_H2O_absorbed": "float (eV)",
+              "forsterite_Si_vacancy": "float (eV)",
+              "alpha_quartz_Si_vacancy": "float (eV)",
+              "forsterite_Mg_vacancy_M1": "float (eV)",
+              "forsterite_Mg_vacancy_M2": "float (eV)",
+              "MgO_vacancy": "float (eV)"
+            },
+            "reaction_energies": {
+              "water_absorption_forsterite": "float (kJ/mol)",
+              "water_absorption_MgO": "float (kJ/mol)",
+              "water_absorption_alpha_quartz": "float (kJ/mol)",
+              "SiO2_replacement_forsterite": "float (kJ/mol)",
+              "SiO2_replacement_alpha_quartz": "float (kJ/mol)",
+              "MgO_replacement_M1_forsterite": "float (kJ/mol)",
+              "MgO_replacement_M2_forsterite": "float (kJ/mol)",
+              "MgO_replacement_MgO": "float (kJ/mol)"
+            }
+          }
+        },
+        "description": "JSON file containing all DFT total energies (eV) and the eight reaction energies (kJ/mol) computed from them. The hidden checker recomputes the reaction energies from the provided total energies and compares to the paper's reference values."
+      }
+    ],
+    "notes": "Total energies must be in eV; reaction energies in kJ/mol. The checker recomputes each reaction energy from the provided total energies using the paper's stoichiometric equations and compares the recomputed values against hidden gold tolerances and sign checks. Reward is the fraction of reaction energies within tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_13_reaction_energies",
+      "output_file": "reaction_energies.json",
+      "kind": "custom_reaction_energies",
+      "weight": 1.0,
+      "description": "Validate that the eight reported reaction energies match the paper's gold values within tolerance (30 kJ/mol absolute or 15% relative, whichever larger) and have correct signs.",
+      "tolerance_abs_kJmol": 30.0,
+      "tolerance_rel": 0.15
+    }
+  ]
+}

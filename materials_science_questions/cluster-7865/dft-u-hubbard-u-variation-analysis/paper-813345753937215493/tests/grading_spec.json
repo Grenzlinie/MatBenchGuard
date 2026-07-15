@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The key results are the insulating band gap for AFM-b and metallic for others, and the total energy ordering. These are structural properties that can be verified from reported values without full recomputation.",
+  "pass_threshold": 0.75,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "AFM-a": {
+              "band_gap": "float (eV)",
+              "total_energy_per_Ru": "float (meV relative to lowest)"
+            },
+            "AFM-b": {
+              "band_gap": "float (eV)",
+              "total_energy_per_Ru": "float (meV relative to lowest)"
+            },
+            "AFM-c": {
+              "band_gap": "float (eV)",
+              "total_energy_per_Ru": "float (meV relative to lowest)"
+            }
+          },
+          "units": {
+            "band_gap": "eV",
+            "total_energy_per_Ru": "meV/Ru"
+          }
+        },
+        "description": "Band gaps and relative total energies for AFM-a, AFM-b, AFM-c. The checker verifies that AFM‑b band gap meets an insulating threshold and that total energy ordering follows AFM‑b < AFM‑c < AFM‑a."
+      }
+    ],
+    "notes": "The checker will compare the reported band gaps against a hidden insulating threshold and validate the relative total energy ordering. Tolerances and exact thresholds are hidden; the task is to reproduce the computational workflow, not to guess numbers."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Insulating band gap threshold for AFM-b and metallic threshold for AFM-a, AFM-c; reference relative total energies for ordering consistency",
+      "source_provenance": "Paper Table I and text: band gap ~0.1 eV for AFM-b; AFM-a and AFM-c metallic. Relative energies: AFM-a 11.9 meV/Ru, AFM-b 0, AFM-c 6.0 meV/Ru.",
+      "generation_method": "Direct transcription from paper",
+      "why_not_fabricated": "Values are taken from the paper's reported results, not invented."
+    }
+  ],
+  "steps": [
+    {
+      "id": "band_gap_check",
+      "output_file": "results.json",
+      "weight": 0.6,
+      "kind": "custom",
+      "params": {
+        "afm_b_insulating_threshold": 0.05,
+        "afm_ac_metallic_threshold": 0.01
+      }
+    },
+    {
+      "id": "energy_ordering_check",
+      "output_file": "results.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "params": {
+        "zero_tol": 0.001,
+        "ordering_violation_penalty": 0.0
+      }
+    }
+  ]
+}

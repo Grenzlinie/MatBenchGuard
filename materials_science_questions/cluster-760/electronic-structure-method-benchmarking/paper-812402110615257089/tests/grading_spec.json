@@ -1,0 +1,193 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes average absolute deviations from the agent's raw CSV and hidden experimental values, and checks norbornenone values against paper-reported ranges.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "alpha_D_table.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "experimental specific rotations for molecules 1-11,13",
+      "source_provenance": "Table 5 of the paper, 'Experiment' column, values from [9] corrected to 100% ee.",
+      "generation_method": "Transcribed directly from the paper's Table 5 experimental column.",
+      "why_not_fabricated": "These are the actual literature values used in the paper's own evaluation; they are public but hidden to force recomputation."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported average absolute deviations for B3LYP, CCSD, CC2, HF",
+      "source_provenance": "Section 3 (Results) and Abstract of the paper; computed from Table 5 values for molecules 1-11 and 13.",
+      "generation_method": "Computed from the paper's Table 5 values using the same aggregation as the paper (mean absolute deviation); verified against the paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's main quantitative claims; used as monotonic threshold targets."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "norbornenone (molecule 14) CCSD and B3LYP reference values and tolerance ranges",
+      "source_provenance": "Table 5 (molecule 14 row) and discussion in Section 3.",
+      "generation_method": "Values taken from the paper: CCSD = -740.6, B3LYP = -1215.8; tolerance window of ±50 set as per the approved reproduction plan to allow for implementation differences.",
+      "why_not_fabricated": "These are the specific paper-reported computed values; a correct reproduction should fall near these numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "alpha_D_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule_id",
+            "HF",
+            "B3LYP",
+            "CC2",
+            "CCSD"
+          ],
+          "units": {
+            "HF": "degrees [dm (g/cm3)]^-1",
+            "B3LYP": "degrees [dm (g/cm3)]^-1",
+            "CC2": "degrees [dm (g/cm3)]^-1",
+            "CCSD": "degrees [dm (g/cm3)]^-1"
+          }
+        },
+        "description": "Computed specific rotations [α]_D for each molecule and method, from which the checker recomputes the average absolute deviations relative to experimental [α]_D values and verifies the relative accuracy ordering."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "csv_shape",
+      "output_file": "alpha_D_table.csv",
+      "kind": "structural",
+      "weight": 0.02,
+      "description": "Ensure CSV has exactly 13 rows and required columns are numeric."
+    },
+    {
+      "id": "mad_hf",
+      "output_file": "alpha_D_table.csv",
+      "kind": "recompute_mad",
+      "column": "HF",
+      "target": 32.2,
+      "weight": 0.17,
+      "molecule_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13
+      ],
+      "description": "Recompute mean absolute deviation for HF over molecules 1-11,13 and score monotonic threshold."
+    },
+    {
+      "id": "mad_b3lyp",
+      "output_file": "alpha_D_table.csv",
+      "kind": "recompute_mad",
+      "column": "B3LYP",
+      "target": 19.4,
+      "weight": 0.17,
+      "molecule_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13
+      ]
+    },
+    {
+      "id": "mad_cc2",
+      "output_file": "alpha_D_table.csv",
+      "kind": "recompute_mad",
+      "column": "CC2",
+      "target": 24.7,
+      "weight": 0.17,
+      "molecule_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13
+      ]
+    },
+    {
+      "id": "mad_ccsd",
+      "output_file": "alpha_D_table.csv",
+      "kind": "recompute_mad",
+      "column": "CCSD",
+      "target": 19.8,
+      "weight": 0.17,
+      "molecule_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        13
+      ]
+    },
+    {
+      "id": "norborn_ccsd",
+      "output_file": "alpha_D_table.csv",
+      "kind": "value_range",
+      "column": "CCSD",
+      "molecule_id": 14,
+      "gold": -740.6,
+      "tolerance": 50.0,
+      "weight": 0.15,
+      "description": "Check CCSD value for norbornenone within tolerance window."
+    },
+    {
+      "id": "norborn_b3lyp",
+      "output_file": "alpha_D_table.csv",
+      "kind": "value_range",
+      "column": "B3LYP",
+      "molecule_id": 14,
+      "gold": -1215.8,
+      "tolerance": 50.0,
+      "weight": 0.15,
+      "description": "Check B3LYP value for norbornenone within tolerance window."
+    }
+  ],
+  "experimental_values": {
+    "1": -18.7,
+    "2": 58.8,
+    "3": 51.2,
+    "4": 129.0,
+    "5": 42.0,
+    "6": 57.6,
+    "7": 103.8,
+    "8": -16.8,
+    "9": 78.2,
+    "10": -103.4,
+    "11": -175.6,
+    "13": 81.0
+  }
+}

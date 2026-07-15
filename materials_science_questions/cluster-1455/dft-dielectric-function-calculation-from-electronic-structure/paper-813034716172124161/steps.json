@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step0",
+    "title": "Prepare C60 monomer geometry",
+    "role": "process",
+    "action": "Obtain a C60 monomer geometry: either from a public molecular database or built from the known icosahedral structure; optionally optimize geometry at the DFT/PBE level using NWChem to match the paper's approach.",
+    "output_file": "",
+    "evidence": "monomer.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The monomer atomic coordinates are needed as input for the DFT polarizability calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Construct C60 dimer geometry",
+    "role": "process",
+    "action": "Construct a C60 dimer: take two copies of the monomer geometry and place them with a centre-of-mass separation of approximately 13.8 Å and relative orientation matching the nearest-neighbour packing in the fcc C60 crystal.",
+    "output_file": "",
+    "evidence": "dimer.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The dimer geometry is needed to compute the polarizability of a molecular aggregate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute frequency-dependent polarizability α(ω)",
+    "role": "process",
+    "action": "Using NWChem, compute the real part of the frequency-dependent molecular polarizability α(ω) for: (a) C60 monomer with PBE, (b) C60 monomer with B3LYP, (c) C60 dimer with PBE. Perform calculations at frequencies covering 1–6 eV with a fine grid. Save α values to CSV files.",
+    "output_file": "",
+    "evidence": "alpha_monomer_pbe.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The polarizability data α(ω) is the central computational output that feeds the dielectric function and absorption calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute absorption spectrum for monomer (PBE)",
+    "role": "scored",
+    "action": "From the α(ω) data for monomer (PBE), compute the real dielectric function ε_r(ω) via the Clausius-Mossotti relation using the C60 crystal number density. Apply Kramers-Kronig transform to obtain ε_i(ω). Compute molar absorptivity Mμ(ω) using Eq. (7) of the paper. Output a JSON array of objects (each with energy_ev, epsilon_r, epsilon_i, absorption) for energies from 1.0 to 6.0 eV in steps of at most 0.1 eV.",
+    "output_file": "monomer_pbe_spectrum.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the absorption spectrum derived from PBE polarizability; the checker will extract the first major peak and verify its energy against a hidden reference.",
+    "output_schema": "array of objects: { energy_ev: float, epsilon_r: float, epsilon_i: float, absorption: float }"
+  },
+  {
+    "id": "step4",
+    "title": "Compute absorption spectrum for monomer (B3LYP)",
+    "role": "scored",
+    "action": "From the α(ω) data for monomer (B3LYP), repeat the same procedure as in step3 to obtain the absorption spectrum. Output the same JSON format.",
+    "output_file": "monomer_b3lyp_spectrum.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact analogous to step3 but using the B3LYP functional, to assess functional sensitivity.",
+    "output_schema": "array of objects: { energy_ev: float, epsilon_r: float, epsilon_i: float, absorption: float }"
+  },
+  {
+    "id": "step5",
+    "title": "Compute absorption spectrum for dimer (PBE)",
+    "role": "scored",
+    "action": "From the α(ω) data for dimer (PBE), repeat the procedure to obtain the absorption spectrum. Output JSON.",
+    "output_file": "dimer_pbe_spectrum.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact for the dimer absorption spectrum, used to examine aggregation-induced spectral changes and the shoulder near 2.75 eV.",
+    "output_schema": "array of objects: { energy_ev: float, epsilon_r: float, epsilon_i: float, absorption: float }"
+  },
+  {
+    "id": "step6",
+    "title": "Extract peak positions and compute functional sensitivity",
+    "role": "scored",
+    "action": "From the three absorption spectra, identify the first major absorption peak (local maximum of absorption above 2 eV) for each system. For the dimer spectrum, check for a shoulder (local maximum between 2.55 and 2.95 eV with absorption ≥ 10% of the main peak). Compute functional sensitivity percentage = 100 * |E_peak(PBE) – E_peak(B3LYP)| / average of the two peak energies. Output a JSON object with keys: monomer_pbe_peak1_ev, monomer_b3lyp_peak1_ev, dimer_pbe_peak1_ev, shoulder_energy_ev (or null), functional_sensitivity_percent.",
+    "output_file": "results_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregate summary of the derived peak characteristics and functional sensitivity, cross-checked against the raw spectra.",
+    "output_schema": "object: { monomer_pbe_peak1_ev: float, monomer_b3lyp_peak1_ev: float, dimer_pbe_peak1_ev: float, shoulder_energy_ev: float|null, functional_sensitivity_percent: float }"
+  }
+]

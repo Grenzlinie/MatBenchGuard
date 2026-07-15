@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the expansion ratios from the same crystal structure (bundled CIF) using the point-charge model, then compares agent's ratios within tolerance. No trust in agent's self-reported numbers.",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "expansion_ratios.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_a",
+            "delta_b",
+            "delta_c",
+            "ratio_vector"
+          ],
+          "properties": {
+            "delta_a": {
+              "type": "number",
+              "description": "Relative expansion along a-axis"
+            },
+            "delta_b": {
+              "type": "number",
+              "description": "Relative expansion along b-axis, normalized to 1.0"
+            },
+            "delta_c": {
+              "type": "number",
+              "description": "Relative expansion along c-axis"
+            },
+            "ratio_vector": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Ordered vector [delta_a, delta_b, delta_c]"
+            }
+          },
+          "description": "Relative lattice expansion ratios derived from point-charge model forces."
+        },
+        "description": "Point-charge Coulomb model anisotropic expansion ratios; delta_b is exactly 1.0 by normalization, and the checker recomputes the ratios from the same crystal structure for comparison with a tolerance."
+      }
+    ],
+    "notes": "The task reproduces only the separable point-charge model subresult. The remaining experimental conductivity analyses and structural interpretations are omitted because the necessary raw data and sample-specific details are not publicly available."
+  },
+  "hidden_assets": [
+    {
+      "path": "tests/structure.cif",
+      "purpose": "Crystal structure of Li4SiO4 (monoclinic, Z=14, all 42 Li sites) for force recomputation.",
+      "source_provenance": "Crystallography Open Database COD 1001797 / Tranqui et al. (1979)",
+      "generation_method": "Downloaded from COD and bundled into tests/. Contains fractional coordinates for all atoms.",
+      "why_not_fabricated": "Real experimental structure from published paper; no synthetic data."
+    }
+  ],
+  "steps": [
+    {
+      "id": "compute_ratios",
+      "output_file": "expansion_ratios.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Agent's submitted expansion ratios checked by recomputing from bundled CIF; partial credit given for correct δb, δa, δc within tolerance.",
+      "tolerance": {
+        "delta_b": 1e-06,
+        "delta_a": 0.1,
+        "delta_c": 0.1
+      }
+    }
+  ]
+}

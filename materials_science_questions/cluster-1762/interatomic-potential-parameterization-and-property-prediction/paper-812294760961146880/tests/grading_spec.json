@@ -1,0 +1,56 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the expected coefficients A and B from the provided ion data (inline), then compares the agent's fitted constants to these recomputed values. This verifies the regression was performed correctly.",
+  "pass_threshold": 0.8,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Inline ion data (Hepler 1957 Table I) used to recompute the gold coefficients A and B.",
+      "source_provenance": "Hepler 1957 Table I, transcribed from the paper markdown.",
+      "generation_method": "Manually transcribed from the published table in the paper; no synthetic data.",
+      "why_not_fabricated": "Data is a direct transcription of the published experimental compilation and is required to independently verify the regression."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "cation_A": "number",
+            "cation_B": "number",
+            "anion_A": "number",
+            "anion_B": "number"
+          }
+        },
+        "description": "Coefficients A and B of the partial molal volume equation (V = A·r³ − B·z²/r) for cations and anions, obtained by linear regression of V/r³ against z²/r⁴ on the provided ion data."
+      }
+    ],
+    "notes": "The ion data table is provided as a resource; the agent does not need to compile it from the literature. The fitted constants are compared against hidden reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_02_fit_constants",
+      "output_file": "constants.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "tolerance": {
+        "method": "max_abs_or_rel",
+        "abs_tol": 0.5,
+        "rel_tol": 0.1
+      },
+      "fields": [
+        "cation_A",
+        "cation_B",
+        "anion_A",
+        "anion_B"
+      ]
+    }
+  ],
+  "inline_ion_data": "ion_name,charge_z,radius_r_angstrom,V_ion_cc_per_mol,ion_type\nLi+,1,0.78,-0.9,cation\nNa+,1,0.98,-1.4,cation\nK+,1,1.33,8.8,cation\nRb+,1,1.49,13.8,cation\nCs+,1,1.65,21.2,cation\nAg+,1,1.13,-0.9,cation\nTl+,1,1.49,14.8,cation\nMg++,2,0.78,-20.7,cation\nCa++,2,1.06,-17.5,cation\nSr++,2,1.27,-18.0,cation\nBa++,2,1.43,-12.1,cation\nCd++,2,1.03,-15.0,cation\nPb++,2,1.32,-15.9,cation\nZn++,2,0.83,-21.9,cation\nFe++,2,0.83,-21.2,cation\nCo++,2,0.82,-18.5,cation\nNi++,2,0.78,-24.4,cation\nMn++,2,0.80,-18.1,cation\nAl+++,3,0.83,-44.6,cation\nLa+++,3,1.22,-38.0,cation\nTh+4,4,1.10,-54.2,cation\nOH-,1,1.40,-5.4,anion\nF-,1,1.33,-2.2,anion\nCl-,1,1.81,18.0,anion\nBr-,1,1.96,24.9,anion\nI-,1,2.20,36.5,anion"
+}

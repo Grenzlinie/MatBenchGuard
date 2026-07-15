@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Recomputing the metrics from raw artifacts is infeasible because the verifier does not have access to the 20% test‑set band gaps or the feature matrix. The agent’s reported feature importances and model metrics are compared to paper‑derived reference values (feature percentages ±3% tolerance, R² threshold ≥0.90) with monotonic scoring.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "model_evaluation.json": "threshold_or_better",
+    "feature_importances.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference values for feature importance percentages and model performance thresholds",
+      "source_provenance": "Paper Fig. 3A (feature importance percentages) and the paper’s model evaluation scatter plot (implies high R²); R² threshold of 0.90 is a conservative lower bound consistent with the plot and the reference oracle’s 0.93.",
+      "generation_method": "Feature importance percentages are taken directly from the paper’s text (37.94%, 5.27%, 4.32%). R² threshold is set to 0.90, which is below the oracle’s reported 0.93 and within typical GBR performance for band‑gap prediction; it ensures a genuine reproduction can achieve full credit while a random guess fails.",
+      "why_not_fabricated": "All gold values are the actual numbers reported in the paper; they define the paper’s claimed result. The R² threshold is derived from the paper’s stated model accuracy and provides a meaningful lower bound for a correct re‑run."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "model_evaluation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "r_squared": "number",
+            "mae": "number",
+            "rmse": "number"
+          },
+          "units": {
+            "mae": "eV",
+            "rmse": "eV"
+          }
+        },
+        "description": "Model test-set performance metrics (R², MAE, RMSE). R² must meet or exceed the hidden threshold derived from the paper's reported accuracy."
+      },
+      {
+        "file": "feature_importances.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "feature_name",
+            "importance_percent"
+          ],
+          "units": {
+            "importance_percent": "percentage"
+          }
+        },
+        "description": "Feature importance percentages from the trained GBR model, sorted descending. Must contain the key features identified in the paper; importance values are compared to hidden reference values within an absolute tolerance."
+      }
+    ],
+    "notes": "The DFT screening pipeline is excluded because it relies on the proprietary PWmat package, for which no open-source equivalent can reproduce exact values. This task focuses on the ML feature importance analysis using only public data and open-source tools."
+  },
+  "steps": [
+    {
+      "id": "model_eval",
+      "output_file": "model_evaluation.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "params": {
+        "threshold_r2": 0.9,
+        "mae_max": 0.3,
+        "rmse_max": 0.4
+      },
+      "description": "Model evaluation metrics: R² must be ≥0.90; MAE ≤0.30 eV and RMSE ≤0.40 eV earn full credit for their sub‑scores, with monotonic decay outside those bounds."
+    },
+    {
+      "id": "feature_importances",
+      "output_file": "feature_importances.csv",
+      "weight": 0.6,
+      "kind": "feature_compare",
+      "target_policy": "reference_match",
+      "params": {
+        "target_features": [
+          {
+            "name": "fraction of p-orbital valence",
+            "importance": 37.94,
+            "tolerance": 3.0,
+            "match_type": "exact"
+          },
+          {
+            "name": "maximum of electronegativity",
+            "importance": 5.27,
+            "tolerance": 3.0,
+            "match_type": "exact"
+          },
+          {
+            "name": "fraction of d-orbital valence",
+            "importance": 4.32,
+            "tolerance": 3.0,
+            "match_type": "exact"
+          },
+          {
+            "name": "most of melting temperature",
+            "importance": 0,
+            "tolerance": 0,
+            "match_type": "presence",
+            "note": "feature must appear with importance > 0"
+          },
+          {
+            "name": "mean of covalent radius",
+            "importance": 0,
+            "tolerance": 0,
+            "match_type": "presence",
+            "note": "feature must appear with importance > 0"
+          }
+        ],
+        "top_feature_name": "fraction of p-orbital valence"
+      },
+      "description": "Feature importance ranking: the five above features must be present; exact‑match features must have importance within ±3 percentage points; the top feature must be 'fraction of p‑orbital valence'."
+    }
+  ]
+}

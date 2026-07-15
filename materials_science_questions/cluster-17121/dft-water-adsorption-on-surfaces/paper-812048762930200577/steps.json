@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_build",
+    "title": "Build surface slab models",
+    "role": "process",
+    "action": "Construct periodic slab models for diamond (001) surface with 12 carbon layers, bottom C fixed and H-passivated, (2x1) surface reconstruction, and >15 Å vacuum. Generate initial atomic configurations for (2x1):0.5H&0.5(OH) (aligned), (2x2):0.5H&0.5(OH) (alternating rows), (2x1):OH (aligned), (2x2):OH (antiparallel), and the bare (2x1) slab for energy referencing.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Structure generation step that prepares all input geometries for the DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dft",
+    "title": "Run DFT geometry relaxations and total energy calculations",
+    "role": "process",
+    "action": "For each surface slab model, perform spin-paired DFT calculations with GGA exchange-correlation using plane-wave pseudopotential code. Optimize atomic positions (except bottom two layers fixed) and compute total energies. Use a kinetic energy cutoff of 425 eV and a 2x2x1 k-point mesh.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computationally heavy step that produces relaxed geometries and total energies needed by the scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_energy",
+    "title": "Extract relative energies and energy differences",
+    "role": "scored",
+    "action": "From the DFT output, retrieve the total energies of the (2x1):0.5H&0.5(OH), (2x2):0.5H&0.5(OH), (2x1):OH (aligned), and (2x2):OH (antiparallel) configurations. Compute the energy difference between (2x2) and (2x1) at half ML per (1x1) unit cell, and the difference between the antiparallel (2x2):OH and aligned (2x1):OH per (2x2) unit cell. Write the total energies and these differences to energies.json.",
+    "output_file": "energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored: the stability ordering and magnitude of energy differences are the primary quantitative claims.",
+    "output_schema": "JSON object with keys: halfML_2x1 (float, eV), halfML_2x2 (float, eV), fullML_2x1_aligned (float, eV), fullML_2x2_antiparallel (float, eV), halfML_energy_diff_per_1x1 (float, eV), fullML_energy_diff_per_2x2 (float, eV)"
+  },
+  {
+    "id": "step_geom",
+    "title": "Extract geometric parameters",
+    "role": "scored",
+    "action": "From the relaxed atomic coordinates, extract the following geometric parameters for each of the four hydroxylated surface configurations. For halfML_2x1: C-C dimer length, C-C subsurface length (C_H-C), C-C subsurface length (C_OH-C), C-H bond length, C-O bond length, O-H bond length, H···OH hydrogen bond distance, H-O-C angle, H-C_S-C_S angle, O-C_S-C_S angle. For halfML_2x2: C-C dimer length (C_H-C_H), C-C dimer length (C_OH-C_OH), C-C subsurface length (C_H-C), C-C subsurface length (C_OH-C), C-H bond length, C-O bond length (top site), C-O bond length (bridge site), O-H bond length, H···OH hydrogen bond distance (bridge site), H···OH hydrogen bond distance (dimer site), H-O-C angle (bridge site OH), H-O-C angle (dimer site OH), H-C_S-C_S angle, O-C_S-C_S angle (C_H), O-C_S-C_S angle (C_OH). For fullML_2x1_aligned: C-C dimer length, C-C subsurface length, C-O bond length (top site), C-O bond length (bridge site), O-H bond length, H···OH hydrogen bond distance (bridge site), H···OH hydrogen bond distance (dimer site), H-O-C angle (bridge site OH), H-O-C angle (dimer site OH), O-C_S-C_S angle (bridge site), O-C_S-C_S angle (dimer site). For fullML_2x2_antiparallel: C-C dimer length, C-C subsurface length (a), C-C subsurface length (b), C-O bond length (top site), C-O bond length (bridge site), O-H bond length (a), O-H bond length (b), H···OH hydrogen bond distance (bridge site), H···OH hydrogen bond distance (dimer site), H-O-C angle (bridge site OH), H-O-C angle (dimer site OH), O-C_S-C_S angle (bridge site), O-C_S-C_S angle (dimer site). Write the results to geometries.csv with columns: structure, parameter, value, unit. Use units 'Angstrom' for lengths and 'degree' for angles.",
+    "output_file": "geometries.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored: the bond lengths and angles provide geometric evidence for the H-bonding and dipole alignment mechanisms.",
+    "output_schema": "CSV with columns: structure (string, e.g. 'halfML_2x2'), parameter (string, e.g. 'C-C dimer length'), value (float), unit (string, e.g. 'Angstrom')"
+  }
+]

@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute d-band center values depend on DFT implementation details; scoring structural inequalities (range broadening, element-specific range thresholds, overall span) rather than exact value matching.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "surface_dband_centers.csv": "metric_recompute",
+    "ranges_summary.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for structural inequalities derived from the paper's reported d-band center ranges (Figure 3 and text).",
+      "source_provenance": "Paper JACS 2022, 144, 3365-3369: monometallic Pt ε_d range -2.37 to -2.57 eV (range 0.20 eV); NM-HEA Pt range -2.07 to -3.46 eV (range 1.39 eV); overall NM-HEA surface ε_d span approximately -3.4 to -2.0 eV.",
+      "generation_method": "Extracted directly from the paper's narrative and Figure 3; broadened thresholds (+/-0.3 eV for overall span) and factor 1.2 for broadening adopted from the approved plan's verification method.",
+      "why_not_fabricated": "All thresholds are grounded in the paper's reported quantities and the planned tolerances; no synthetic gold numbers were invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "surface_dband_centers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model_type",
+            "element",
+            "atom_index",
+            "epsilon_d"
+          ],
+          "units": {
+            "epsilon_d": "eV"
+          }
+        },
+        "description": "Table of every surface atom's local d-band center. The checker recomputes per-element ranges from this CSV and verifies required structural relationships (range broadening, overall span)."
+      },
+      {
+        "file": "ranges_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "monometallic",
+            "NMHEA",
+            "overall_NMHEA"
+          ],
+          "items": {
+            "monometallic": {
+              "element": {
+                "min": "float",
+                "max": "float",
+                "range": "float"
+              }
+            },
+            "NMHEA": {
+              "element": {
+                "min": "float",
+                "max": "float",
+                "range": "float"
+              }
+            },
+            "overall_NMHEA": {
+              "min": "float",
+              "max": "float"
+            }
+          }
+        },
+        "description": "Aggregated summary of epsilon_d ranges. The checker may validate structure and consistency with the CSV, but primary scoring is based on recomputation from the CSV."
+      }
+    ],
+    "notes": "The workflow covers only the DFT-based d-band center analysis. Experimental spectra, HER activity, LDOS profile shape comparisons, and supervised learning regression are excluded per the defined scope. The agent must produce both artifacts; scoring is weighted primarily on the CSV via recomputed structural inequalities."
+  },
+  "steps": [
+    {
+      "id": "csv_dband",
+      "output_file": "surface_dband_centers.csv",
+      "kind": "structural",
+      "weight": 0.9,
+      "description": "Recompute per-element epsilon_d ranges from the raw CSV and verify three structural relations: (1) for each of the 8 elements, NMHEA range > 1.2 * monometallic range; (2) Pt NMHEA range > 1.0 eV AND Pt monometallic range < 0.5 eV; (3) overall NMHEA surface epsilon_d min ≤ -3.1 eV AND max ≥ -2.3 eV. Reward is a weighted average of these checks (broadening 0.4, Pt 0.3, span 0.3)."
+    },
+    {
+      "id": "json_ranges",
+      "output_file": "ranges_summary.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Validate that the JSON summary contains the required keys and that its values match the recomputed per-element ranges from the CSV within 0.01 eV absolute tolerance."
+    }
+  ]
+}

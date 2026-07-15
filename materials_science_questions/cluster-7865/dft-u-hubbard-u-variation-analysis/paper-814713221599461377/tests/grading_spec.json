@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Main checks rely on toleranced result-level comparison of band gaps and structural validation of trends (monotonicity with U/α) and spin-state energy grouping. T1 recompute from raw DFT outputs is infeasible in a lightweight verification environment.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold band gap values for PBE+U (U=3,5,7 eV) and HSE (α=0.05,0.25), and spin-state energy degeneracy bounds",
+      "source_provenance": "paper text (Steps 5,6,7,8 for band gaps; Table I and discussion for spin-state degeneracy)",
+      "generation_method": "direct extraction from paper statements and tables",
+      "why_not_fabricated": "These are the exact values reported in the paper (LS band gaps: 0.6, 1.5, 2.3 eV for U=3,5,7; 0.2 eV for α=0.05; 2.4 eV for α=0.25). The α=0.15 band gap is required to lie in the experimental range 0.3–0.9 eV. Spin-state energies must be within 0.15 eV of each other per the paper's conclusion."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required_fields": [
+              "method",
+              "parameter",
+              "spin_state",
+              "band_gap_eV",
+              "total_energy_eV"
+            ]
+          }
+        },
+        "description": "Compiled band gaps (eV) and total electronic energies (eV) for LaCoO3 low-spin and spin-excited states computed with PBE+U (U=3.0,5.0,7.0 eV) and HSE (α=0.05,0.15,0.25). The checker compares each quantity to hidden paper-reported reference values using specified tolerances."
+      }
+    ],
+    "notes": "The intermediate evidence files (pbeu_ls_bandgaps.json, hse_ls_bandgaps.json, spin_energies_u3.json) are produced by the process steps but are not part of the scored contract. The solver must run the actual DFT calculations to obtain all entries in dft_results.json."
+  },
+  "steps": [
+    {
+      "id": "file_schema",
+      "output_file": "dft_results.json",
+      "weight": 0.02,
+      "kind": "custom",
+      "config": {}
+    },
+    {
+      "id": "pbeu_ls_bandgaps",
+      "output_file": "dft_results.json",
+      "weight": 0.38,
+      "kind": "custom",
+      "config": {
+        "gold_bandgaps": {
+          "3.0": 0.6,
+          "5.0": 1.5,
+          "7.0": 2.3
+        },
+        "tolerance": 0.3,
+        "parameter_key": "parameter",
+        "method": "PBE+U",
+        "spin_state": "LS"
+      }
+    },
+    {
+      "id": "hse_ls_bandgaps",
+      "output_file": "dft_results.json",
+      "weight": 0.35,
+      "kind": "custom",
+      "config": {
+        "gold_exact": {
+          "0.05": 0.2,
+          "0.25": 2.4
+        },
+        "tolerance_exact": 0.2,
+        "range_alpha": 0.15,
+        "range_low": 0.3,
+        "range_high": 0.9,
+        "method": "HSE",
+        "spin_state": "LS",
+        "parameter_key": "parameter"
+      }
+    },
+    {
+      "id": "spin_energies_u3",
+      "output_file": "dft_results.json",
+      "weight": 0.25,
+      "kind": "custom",
+      "config": {
+        "method": "PBE+U",
+        "parameter": 3.0,
+        "max_diff_eV": 0.15,
+        "spin_states": [
+          "LS",
+          "IS_FM",
+          "LS-HS_1:1_FM"
+        ]
+      }
+    }
+  ]
+}

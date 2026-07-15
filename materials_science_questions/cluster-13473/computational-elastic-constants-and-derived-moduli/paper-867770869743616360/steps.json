@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Generate random close packings",
+    "role": "process",
+    "action": "Generate random close packings of n=27 identical spheres in a periodic cell using the iterative volume perturbation and conjugate‑gradient energy minimization algorithm. Converge to volume fraction ≈0.64. Save sphere center coordinates.",
+    "output_file": "",
+    "evidence": "packing_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the uniform Voronoi seeds required for grain creation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Create nanocrystalline Cu configurations",
+    "role": "process",
+    "action": "Using the sphere center coordinates as Voronoi seeds, perform standard Voronoi tessellation. Fill each grain with a randomly oriented fcc Cu crystallite (lattice parameter 0.3615 nm). Adjust supercell dimensions to achieve target grain diameters of approximately 5, 10, and 15 nm. Output the atomic configurations in LAMMPS data format.",
+    "output_file": "",
+    "evidence": "configurations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces three fully dense nanocrystalline Cu configurations for MD.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "MD relaxation, tensile tests, and elastic data",
+    "role": "scored",
+    "action": "For each configuration: (1) Relax at 300 K under NPT/zero‑external‑stress using the Mishin EAM potential until the potential energy stabilizes. (2) Run a uniaxial tensile test at 300 K in NσT ensemble with strain rate 5e8 s⁻¹; record stress‑strain. Compute overall Young's modulus by a linear fit to stress‑strain where strain < 0.3%. (3) After relaxation, perform Common Neighbor Analysis (CNA) to identify grain core atoms; compute core volume fraction φ_core = (N_core × 0.0118 nm³) / V_system. Compile the three data rows and write elastic_data.csv.",
+    "output_file": "elastic_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Collects overall Young's modulus and core volume fraction for three grain sizes.",
+    "output_schema": "Columns: d_nm (float), phi_core (float), E_overall_GPa (float). Three rows."
+  },
+  {
+    "id": "step_04a",
+    "title": "Fit Reuss model for grain core and boundary moduli",
+    "role": "scored",
+    "action": "Fit the Reuss model E = 1/(phi_core/E_core + (1-phi_core)/E_GB) to the three data points in elastic_data.csv using least‑squares fitting. Output the fitted parameters E_core and E_GB in reuss_fit_params.txt.",
+    "output_file": "reuss_fit_params.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Provides the fitted Young's moduli of grain core and grain boundary.",
+    "output_schema": "Two lines: E_core_GPa = <value>, E_GB_GPa = <value>."
+  },
+  {
+    "id": "step_04b",
+    "title": "Compute elastic modulus ratio",
+    "role": "scored",
+    "action": "From the fitted E_core and E_GB, compute the ratio E_GB/E_core and write the single float to ratio.txt.",
+    "output_file": "ratio.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Final headline quantity: ratio of grain boundary Young's modulus to grain interior modulus.",
+    "output_schema": "Single floating-point number."
+  }
+]

@@ -1,0 +1,325 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Thermodynamic functions are recomputed from the agent's submitted phonon model parameters and compared to both the agent's reported values and paper gold; phonon parameters are compared to paper gold; high-temperature coefficients are compared to paper gold. The primary output (entropy/enthalpy) is recomputed from raw artifact, meeting T1 criteria.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phonon_parameters.json": "reference_match",
+    "thermodynamic_functions_298.csv": "reference_match",
+    "high_t_cpm_coefficients.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Bi4Ta2O11",
+            "Bi7Ta3O18",
+            "Bi3TaO7"
+          ],
+          "properties": {
+            "Bi4Ta2O11": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "Theta",
+                  "alpha",
+                  "degeneracy"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "Theta": {
+                    "type": "number",
+                    "units": "K"
+                  },
+                  "alpha": {
+                    "type": "number",
+                    "units": "K⁻¹"
+                  },
+                  "degeneracy": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "Bi7Ta3O18": {
+              "$ref": "#/properties/Bi4Ta2O11"
+            },
+            "Bi3TaO7": {
+              "$ref": "#/properties/Bi4Ta2O11"
+            }
+          }
+        },
+        "description": "Fitted phonon model parameters: Debye and Einstein characteristic temperatures (K), anharmonic coefficients (K⁻¹), and degeneracies for each oxide. The array for each oxide must contain exactly 6 entries in order: D, E1, E2, E3, E4, E5."
+      },
+      {
+        "file": "thermodynamic_functions_298.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "Cpm_298",
+            "Hm_minus_H0",
+            "Sm_298"
+          ],
+          "columns": {
+            "compound": {
+              "type": "string"
+            },
+            "Cpm_298": {
+              "type": "number",
+              "units": "J K⁻¹ mol⁻¹"
+            },
+            "Hm_minus_H0": {
+              "type": "number",
+              "units": "J mol⁻¹"
+            },
+            "Sm_298": {
+              "type": "number",
+              "units": "J K⁻¹ mol⁻¹"
+            }
+          }
+        },
+        "description": "Standard molar heat capacity, relative enthalpy, and standard molar entropy at 298.15 K for Bi4Ta2O11, Bi7Ta3O18, Bi3TaO7."
+      },
+      {
+        "file": "high_t_cpm_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "A",
+            "B",
+            "C"
+          ],
+          "columns": {
+            "compound": {
+              "type": "string"
+            },
+            "A": {
+              "type": "number",
+              "units": "J K⁻¹ mol⁻¹"
+            },
+            "B": {
+              "type": "number",
+              "units": "J K⁻² mol⁻¹"
+            },
+            "C": {
+              "type": "number",
+              "units": "J K mol⁻¹"
+            }
+          }
+        },
+        "description": "High-temperature C_pm polynomial coefficients A, B, C for each oxide."
+      }
+    ],
+    "notes": "All values are compared to the paper-reported reference using appropriate relative tolerances. The low-temperature linear fit step is required as a preliminary analysis but its output is not scored."
+  },
+  "steps": [
+    {
+      "id": "phonon",
+      "output_file": "phonon_parameters.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": {
+        "Bi4Ta2O11": [
+          {
+            "mode": "D",
+            "Theta": 94,
+            "alpha": 5e-05,
+            "degeneracy": 3
+          },
+          {
+            "mode": "E1",
+            "Theta": 91,
+            "alpha": 5e-05,
+            "degeneracy": 6
+          },
+          {
+            "mode": "E2",
+            "Theta": 202,
+            "alpha": 5e-05,
+            "degeneracy": 8
+          },
+          {
+            "mode": "E3",
+            "Theta": 257,
+            "alpha": 9e-05,
+            "degeneracy": 10
+          },
+          {
+            "mode": "E4",
+            "Theta": 533,
+            "alpha": 0.0002,
+            "degeneracy": 10
+          },
+          {
+            "mode": "E5",
+            "Theta": 759,
+            "alpha": 0.0002,
+            "degeneracy": 14
+          }
+        ],
+        "Bi7Ta3O18": [
+          {
+            "mode": "D",
+            "Theta": 82,
+            "alpha": 8e-05,
+            "degeneracy": 3
+          },
+          {
+            "mode": "E1",
+            "Theta": 73,
+            "alpha": 9e-05,
+            "degeneracy": 8
+          },
+          {
+            "mode": "E2",
+            "Theta": 154,
+            "alpha": 9e-05,
+            "degeneracy": 12
+          },
+          {
+            "mode": "E3",
+            "Theta": 256,
+            "alpha": 0.00012,
+            "degeneracy": 16
+          },
+          {
+            "mode": "E4",
+            "Theta": 418,
+            "alpha": 0.00025,
+            "degeneracy": 20
+          },
+          {
+            "mode": "E5",
+            "Theta": 820,
+            "alpha": 0.0003,
+            "degeneracy": 25
+          }
+        ],
+        "Bi3TaO7": [
+          {
+            "mode": "D",
+            "Theta": 98,
+            "alpha": 5e-05,
+            "degeneracy": 3
+          },
+          {
+            "mode": "E1",
+            "Theta": 91,
+            "alpha": 0.0001,
+            "degeneracy": 4
+          },
+          {
+            "mode": "E2",
+            "Theta": 235,
+            "alpha": 0.0001,
+            "degeneracy": 6
+          },
+          {
+            "mode": "E3",
+            "Theta": 271,
+            "alpha": 0.00015,
+            "degeneracy": 6
+          },
+          {
+            "mode": "E4",
+            "Theta": 533,
+            "alpha": 0.0001,
+            "degeneracy": 8
+          },
+          {
+            "mode": "E5",
+            "Theta": 899,
+            "alpha": 0.0001,
+            "degeneracy": 6
+          }
+        ]
+      }
+    },
+    {
+      "id": "thermo",
+      "output_file": "thermodynamic_functions_298.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": {
+        "Bi4Ta2O11": {
+          "Cpm_298": 363.17,
+          "Hm_minus_H0": 66566,
+          "Sm_298": 449.6
+        },
+        "Bi7Ta3O18": {
+          "Cpm_298": 602.74,
+          "Hm_minus_H0": 109760,
+          "Sm_298": 743.0
+        },
+        "Bi3TaO7": {
+          "Cpm_298": 235.16,
+          "Hm_minus_H0": 44265,
+          "Sm_298": 304.3
+        }
+      }
+    },
+    {
+      "id": "hight",
+      "output_file": "high_t_cpm_coefficients.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "Bi4Ta2O11": {
+          "A": 445.8,
+          "B": 0.005451,
+          "C": 7489000
+        },
+        "Bi7Ta3O18": {
+          "A": 699.0,
+          "B": 0.052762,
+          "C": 9956000
+        },
+        "Bi3TaO7": {
+          "A": 251.6,
+          "B": 0.06705,
+          "C": 3237000
+        }
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "phonon model parameters (Table 2)",
+      "source_provenance": "extracted from Table 2 of the paper",
+      "generation_method": "direct transcription of published values",
+      "why_not_fabricated": "These are the paper's own fitted results, used as the reference gold for reproduction."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "thermodynamic functions at 298.15 K (Table 3)",
+      "source_provenance": "extracted from Table 3 of the paper",
+      "generation_method": "direct transcription of published values",
+      "why_not_fabricated": "These are the paper's reported standard values, serving as gold targets."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "high-temperature Cpm polynomial coefficients (Eqs. 4-6)",
+      "source_provenance": "extracted from Eqs. 4-6 of the paper",
+      "generation_method": "direct transcription of published coefficients",
+      "why_not_fabricated": "These are the paper's reported polynomial fits, used as gold for validation."
+    }
+  ]
+}

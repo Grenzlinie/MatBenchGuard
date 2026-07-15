@@ -1,0 +1,244 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputes aggregate structural outcome percentages and temperature intervals from per_simulation_classification.csv, then compares to paper‑reported values. A consistency cross‑check of disorder_structural_outcomes.json against the raw CSV is also performed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "per_simulation_classification.csv": "metric_recompute",
+    "disorder_structural_outcomes.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values (percentages and temperature intervals) extracted from the paper (Figs. 5‑6 and Section 3).",
+      "source_provenance": "Paper text and taskability scope conclusion",
+      "generation_method": "Direct transcription from the paper",
+      "why_not_fabricated": "Values are the actual reported quantitative claims of the publication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "per_simulation_classification.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "size_nm",
+            "vacancy_fraction",
+            "run_id",
+            "relaxation_structure",
+            "heating_structure",
+            "T_min_K",
+            "T_max_K"
+          ],
+          "units": {
+            "size_nm": "nm",
+            "vacancy_fraction": "",
+            "run_id": "",
+            "relaxation_structure": "",
+            "heating_structure": "",
+            "T_min_K": "K",
+            "T_max_K": "K"
+          }
+        },
+        "description": "Raw per-simulation structural classification for all runs. The checker recomputes the aggregate outcome probabilities and temperature intervals from this file."
+      },
+      {
+        "file": "disorder_structural_outcomes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "description": "Top-level JSON object with keys for each condition (e.g., 'D3nm_vac20'). Each condition contains 'relaxation_stage' (object with 'FCC_percent' and 'amorphous_percent'), 'heating_stage' (object with 'Dh_percent','Ih_percent','FCC_percent','twinned_FCC_percent','complex_percent'), and 'temperature_intervals' (object with keys 'Dh','Ih','FCC', each containing 'T_min_K' and 'T_max_K')."
+        },
+        "description": "Aggregate structural outcome probabilities and dominant temperature intervals. The checker compares these against the paper’s reference values (hidden) within tolerances."
+      }
+    ],
+    "notes": "The checker recomputes the aggregate statistics from per_simulation_classification.csv and then compares those recomputed values to the paper‑reported percentages and temperature intervals with appropriate tolerances. It also cross‑checks disorder_structural_outcomes.json against the recomputed aggregates for self‑consistency."
+  },
+  "steps": [
+    {
+      "id": "heating_gold",
+      "output_file": "per_simulation_classification.csv",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "gold": {
+        "D3nm_vac20": {
+          "heating_percents": {
+            "Dh": 10,
+            "Ih": 40,
+            "FCC": 50,
+            "twinned_FCC": 0,
+            "complex": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 100,
+              "T_max_K": 100
+            },
+            "Ih": {
+              "T_min_K": 240,
+              "T_max_K": 440
+            }
+          }
+        },
+        "D3nm_vac25": {
+          "heating_percents": {
+            "Dh": 30,
+            "Ih": 50,
+            "twinned_FCC": 20,
+            "FCC": 0,
+            "complex": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 60,
+              "T_max_K": 220
+            },
+            "Ih": {
+              "T_min_K": 220,
+              "T_max_K": 340
+            },
+            "twinned_FCC": {
+              "T_min_K": 160,
+              "T_max_K": 240
+            }
+          }
+        },
+        "D3nm_vac30": {
+          "heating_percents": {
+            "Dh": 10,
+            "Ih": 60,
+            "FCC": 30,
+            "twinned_FCC": 0,
+            "complex": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 80,
+              "T_max_K": 240
+            },
+            "Ih": {
+              "T_min_K": 240,
+              "T_max_K": 360
+            },
+            "FCC": {
+              "T_min_K": 80,
+              "T_max_K": 240
+            }
+          }
+        },
+        "D4nm_vac20": {
+          "heating_percents": {
+            "Dh": 60,
+            "twinned_FCC": 40,
+            "FCC": 0,
+            "Ih": 0,
+            "complex": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 140,
+              "T_max_K": 260
+            },
+            "twinned_FCC": {
+              "T_min_K": 200,
+              "T_max_K": 300
+            }
+          }
+        },
+        "D4nm_vac25": {
+          "heating_percents": {
+            "Dh": 60,
+            "complex": 30,
+            "Ih": 10,
+            "twinned_FCC": 0,
+            "FCC": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 400,
+              "T_max_K": 500
+            },
+            "complex": {
+              "T_min_K": 100,
+              "T_max_K": 150
+            },
+            "Ih": {
+              "T_min_K": 250,
+              "T_max_K": 300
+            }
+          }
+        },
+        "D4nm_vac30": {
+          "heating_percents": {
+            "Dh": 40,
+            "Ih": 20,
+            "FCC": 20,
+            "complex": 20,
+            "twinned_FCC": 0
+          },
+          "intervals": {
+            "Dh": {
+              "T_min_K": 80,
+              "T_max_K": 200
+            },
+            "Ih": {
+              "T_min_K": 240,
+              "T_max_K": 380
+            },
+            "FCC": {
+              "T_min_K": 140,
+              "T_max_K": 180
+            },
+            "complex": {
+              "T_min_K": 280,
+              "T_max_K": 380
+            }
+          }
+        }
+      },
+      "tolerance_percent": 10.0,
+      "tolerance_temp_K": 20.0
+    },
+    {
+      "id": "relaxation_gold",
+      "output_file": "per_simulation_classification.csv",
+      "kind": "recompute_metric",
+      "weight": 0.1,
+      "gold": {
+        "D3nm_vac20": {
+          "FCC": 30,
+          "amorphous": 70
+        },
+        "D3nm_vac25": {
+          "FCC": 0,
+          "amorphous": 100
+        },
+        "D3nm_vac30": {
+          "FCC": 0,
+          "amorphous": 100
+        },
+        "D4nm_vac25": {
+          "FCC": 0,
+          "amorphous": 100
+        },
+        "D4nm_vac30": {
+          "FCC": 0,
+          "amorphous": 100
+        }
+      },
+      "tolerance_percent": 10.0
+    },
+    {
+      "id": "json_consistency",
+      "output_file": "disorder_structural_outcomes.json",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "tolerance_float": 0.01
+    }
+  ]
+}

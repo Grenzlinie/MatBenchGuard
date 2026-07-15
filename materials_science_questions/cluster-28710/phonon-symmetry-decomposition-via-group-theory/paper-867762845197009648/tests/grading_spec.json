@@ -1,0 +1,201 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Total decomposition is recomputed from per-orbit irreps and multiplicities, then compared to paper's known result; all quantities are deterministic integers so exact matching is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_phonon_decomposition.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold irrep lists, total decomposition, and mode counts from the paper's Eq. (3), Eq. (4), and Table V.",
+      "source_provenance": "paper",
+      "generation_method": "Extracted directly from the paper's published equations and tables.",
+      "why_not_fabricated": "These are the paper's own reported deterministic group-theory results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phonon_decomposition.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "orbit_decompositions",
+            "total_decomposition",
+            "mode_counts"
+          ],
+          "properties": {
+            "orbit_decompositions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "orbit",
+                  "multiplicity",
+                  "irreps"
+                ],
+                "properties": {
+                  "orbit": {
+                    "type": "string"
+                  },
+                  "multiplicity": {
+                    "type": "integer"
+                  },
+                  "irreps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "total_decomposition": {
+              "type": "object",
+              "description": "Mapping from irrep label (string) to integer multiplicity"
+            },
+            "mode_counts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "orbit",
+                  "activity",
+                  "polarization",
+                  "count"
+                ],
+                "properties": {
+                  "orbit": {
+                    "type": "string"
+                  },
+                  "activity": {
+                    "type": "string",
+                    "enum": [
+                      "IR",
+                      "Raman"
+                    ]
+                  },
+                  "polarization": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Zone-center phonon displacement representation decomposition and mode classification for the tetragonal I4/mmm phase. The checker verifies that the total decomposition equals the weighted sum of per-orbit decompositions and that all irrep multiplicities and mode counts per orbit exactly match the paper's reported values."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "orbit_decompositions",
+      "output_file": "step_01_phonon_decomposition.json",
+      "kind": "custom",
+      "field_path": "orbit_decompositions",
+      "weight": 0.4,
+      "gold_orbits": [
+        {
+          "orbit": "a",
+          "multiplicity": 2,
+          "irreps": [
+            "Γ5−",
+            "Γ3−"
+          ]
+        },
+        {
+          "orbit": "e",
+          "multiplicity": 3,
+          "irreps": [
+            "Γ5−",
+            "Γ3−",
+            "Γ5+",
+            "Γ1+"
+          ]
+        },
+        {
+          "orbit": "g",
+          "multiplicity": 1,
+          "irreps": [
+            "Γ5−",
+            "Γ5−",
+            "Γ4−",
+            "Γ3−",
+            "Γ5+",
+            "Γ5+",
+            "Γ2+",
+            "Γ1+"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "total_decomposition",
+      "output_file": "step_01_phonon_decomposition.json",
+      "kind": "custom",
+      "field_path": "total_decomposition",
+      "weight": 0.4,
+      "gold_total": {
+        "Γ5−": 7,
+        "Γ4−": 1,
+        "Γ3−": 6,
+        "Γ5+": 5,
+        "Γ1+": 4,
+        "Γ2+": 1
+      }
+    },
+    {
+      "id": "mode_counts",
+      "output_file": "step_01_phonon_decomposition.json",
+      "kind": "custom",
+      "field_path": "mode_counts",
+      "weight": 0.2,
+      "gold_mode_counts": [
+        {
+          "orbit": "a",
+          "activity": "IR",
+          "polarization": "x,y from Γ5− (doubly degenerate), z from Γ3−",
+          "count": "1 each"
+        },
+        {
+          "orbit": "a",
+          "activity": "Raman",
+          "polarization": "none",
+          "count": "0"
+        },
+        {
+          "orbit": "e",
+          "activity": "IR",
+          "polarization": "x,y from Γ5−, z from Γ3−",
+          "count": "1 each"
+        },
+        {
+          "orbit": "e",
+          "activity": "Raman",
+          "polarization": "x,y from Γ5+, z^2 from Γ1+",
+          "count": "1 each"
+        },
+        {
+          "orbit": "g",
+          "activity": "IR",
+          "polarization": "x,y from two Γ5−, z from Γ3−",
+          "count": "2 (doubly degenerate) each for x/y, 1 for z"
+        },
+        {
+          "orbit": "g",
+          "activity": "Raman",
+          "polarization": "two Γ5+ pairs, Γ2+, Γ1+",
+          "count": "2 (doubly degenerate) each for x,y, 1 for Γ2+, 1 for Γ1+"
+        }
+      ]
+    }
+  ]
+}

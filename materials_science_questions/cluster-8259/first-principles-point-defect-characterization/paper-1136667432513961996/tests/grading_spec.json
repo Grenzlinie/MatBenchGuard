@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Recomputing DFT-derived quantities from raw artifacts is infeasible in the verifier sandbox; therefore we compare the agent's reported numbers to the paper's gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for scored quantities (polarization, barriers, magnetic moment, mid-gap presence).",
+      "source_provenance": "Paper text and figures: Conclusion paragraph states 'defect complex induces a spontaneous polarization of about 32 μC/cm²'; Fig. 4b shows barrier ~0.1 eV for neutral Ti_Sr; Fig. 4c similarly ~0.1 eV for compensated complex; Fig. S1 indicates 2 μB magnetic moment; Fig. 3 shows two localized mid-gap states.",
+      "generation_method": "Extracted from explicit numeric statements in the paper.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's reported results and are traceable to those locations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "polarization_TiSr_VSr_compensated_muC_per_cm2",
+            "barrier_A_B_neutral_TiSr_eV",
+            "barrier_A_B_compensated_eV",
+            "magnetic_moment_neutral_TiSr_muB",
+            "has_localized_midgap_states_neutral_TiSr",
+            "pristine_band_gap_eV"
+          ],
+          "properties": {
+            "polarization_TiSr_VSr_compensated_muC_per_cm2": {
+              "type": "number"
+            },
+            "barrier_A_B_neutral_TiSr_eV": {
+              "type": "number"
+            },
+            "barrier_A_B_compensated_eV": {
+              "type": "number"
+            },
+            "magnetic_moment_neutral_TiSr_muB": {
+              "type": "number"
+            },
+            "has_localized_midgap_states_neutral_TiSr": {
+              "type": "boolean"
+            },
+            "pristine_band_gap_eV": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Final scored artifact containing the headline quantities: polarization of compensated complex, switching barriers, magnetic moment, presence of localized mid-gap states, and the pristine band gap (informational, not scored)."
+      }
+    ],
+    "notes": "Only results.json is scored. The process-step evidence files (pristine.json, relaxed_defects.out, neutral_analysis.json, polarization.json, barrier_neutral.json, barrier_compensated.json) are not directly scored but are required to produce the final values. The hidden gold values and tolerances are defined in grading_spec.json."
+  },
+  "steps": [
+    {
+      "id": "step_1_polarization",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "polarization_TiSr_VSr_compensated_muC_per_cm2",
+      "target_value": 32.0,
+      "tolerance": 5.0,
+      "weight": 0.3
+    },
+    {
+      "id": "step_2_barrier_neutral",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "barrier_A_B_neutral_TiSr_eV",
+      "target_value": 0.1,
+      "tolerance": 0.1,
+      "weight": 0.2
+    },
+    {
+      "id": "step_3_barrier_compensated",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "barrier_A_B_compensated_eV",
+      "target_value": 0.1,
+      "tolerance": 0.1,
+      "weight": 0.2
+    },
+    {
+      "id": "step_4_magnetic_moment",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "magnetic_moment_neutral_TiSr_muB",
+      "target_value": 2.0,
+      "tolerance": 0.5,
+      "weight": 0.2
+    },
+    {
+      "id": "step_5_midgap_boolean",
+      "output_file": "results.json",
+      "kind": "boolean",
+      "field": "has_localized_midgap_states_neutral_TiSr",
+      "target_value": true,
+      "weight": 0.1
+    }
+  ]
+}

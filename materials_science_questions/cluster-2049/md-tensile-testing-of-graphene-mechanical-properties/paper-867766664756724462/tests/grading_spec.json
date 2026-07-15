@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The computational workflow (LAMMPS simulation) cannot be re-run inside the lightweight checker; we compare the agent's reported stress concentration factor and implied strength to the paper-reported gold values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold stress concentration factor K=6.0 and implied strength 20.0 GPa",
+      "source_provenance": "Paper section 3.5: 'overall the presence of these two simple defect pairs can give rise to a stress concentration of the order of 6' and 'reduce the strength from 130 GPa to around 20 GPa'.",
+      "generation_method": "Values taken from the paper's narrative description of the molecular mechanics simulation results.",
+      "why_not_fabricated": "Directly quoted from the paper; the same numbers are used as reference targets for the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "stress_concentration_factor": "float",
+            "implied_strength_GPa": "float"
+          }
+        },
+        "description": "JSON file containing the computed stress concentration factor (dimensionless) and the implied tensile strength (in GPa) of the defective graphene monolayer."
+      }
+    ],
+    "notes": "The checker reads the two values from summary.json and compares them against hidden paper-reported reference values within tolerances. Both values must be within tolerance to receive full credit."
+  },
+  "steps": [
+    {
+      "id": "summary_shape",
+      "output_file": "summary.json",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "target": null,
+      "tolerance": null,
+      "fields": [
+        "stress_concentration_factor",
+        "implied_strength_GPa"
+      ]
+    },
+    {
+      "id": "summary_K",
+      "output_file": "summary.json",
+      "kind": "numeric",
+      "field": "stress_concentration_factor",
+      "target": 6.0,
+      "tolerance_rel": 0.2,
+      "weight": 0.45
+    },
+    {
+      "id": "summary_implied",
+      "output_file": "summary.json",
+      "kind": "numeric",
+      "field": "implied_strength_GPa",
+      "target": 20.0,
+      "tolerance_abs": 5.0,
+      "tolerance_rel": 0.25,
+      "weight": 0.45
+    },
+    {
+      "id": "summary_consistency",
+      "output_file": "summary.json",
+      "kind": "consistency",
+      "fields": [
+        "stress_concentration_factor",
+        "implied_strength_GPa"
+      ],
+      "weight": 0.05,
+      "target": 130.0,
+      "tolerance_abs": 15.0
+    }
+  ]
+}

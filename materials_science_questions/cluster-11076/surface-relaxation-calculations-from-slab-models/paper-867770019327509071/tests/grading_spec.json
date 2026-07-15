@@ -1,0 +1,205 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing from raw artifacts is infeasible because the agent only submits the final aggregated results; DFT and tight-binding calculations are not submitted and cannot be rerun by the checker.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for each thin-film system and bulk, used as exact-match targets with tolerances.",
+      "source_provenance": "Paper Table I and Fig. 4 data: lattice constants, magnetic states, Co moments, and AHE/ANE conductivities extracted from the paper's reported values.",
+      "generation_method": "Copy numbers directly from the paper's Table I and digitized transport data (Fig. 4). Verify against solve.sh reference which writes identical values.",
+      "why_not_fabricated": "All numbers are the actual reported results of the paper; no synthetic/fabricated holdout."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduction_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bulk",
+            "sn_end_monolayer",
+            "sn_end_bilayer",
+            "sn_end_trilayer",
+            "s_end_monolayer",
+            "s_end_bilayer",
+            "s_end_trilayer"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bulk": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "sn_end_monolayer": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "sn_end_bilayer": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "sn_end_trilayer": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "s_end_monolayer": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "s_end_bilayer": {
+              "$ref": "#/definitions/system_entry"
+            },
+            "s_end_trilayer": {
+              "$ref": "#/definitions/system_entry"
+            }
+          },
+          "definitions": {
+            "system_entry": {
+              "type": "object",
+              "required": [
+                "in_plane_lattice_const_A",
+                "co_layer_distance_A",
+                "magnetic_state",
+                "co_moment_muB",
+                "anomalous_hall_conductivity_e2_per_h",
+                "anomalous_nernst_conductivity_kB_T_5meV"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "in_plane_lattice_const_A": {
+                  "type": "number",
+                  "description": "Optimized in-plane lattice constant (Å)"
+                },
+                "co_layer_distance_A": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "description": "Co layer distance (Å); null for monolayer"
+                },
+                "magnetic_state": {
+                  "type": "string",
+                  "description": "Magnetic ground state description, e.g. 'FM ∥ c', 'interlayer AFM ∥ b''', 'interlayer ferri ∥ c'"
+                },
+                "co_moment_muB": {
+                  "type": [
+                    "number",
+                    "array"
+                  ],
+                  "description": "Co local magnetic moment per ion in μB. For multi-layer systems an array of layer-resolved values.",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "anomalous_hall_conductivity_e2_per_h": {
+                  "type": "number",
+                  "description": "Anomalous Hall conductivity σH at Fermi level in units of e²/h"
+                },
+                "anomalous_nernst_conductivity_kB_T_5meV": {
+                  "type": "number",
+                  "description": "Anomalous Nernst conductivity αN at k_B T = 5 meV in units of (e/ħ)*(kB/e)"
+                }
+              }
+            }
+          }
+        },
+        "description": "Final scored artifact containing all target quantities: optimized structural parameters, magnetic ground state, magnetic moments, and transport conductivities for the six thin-film systems and the bulk reference."
+      }
+    ],
+    "notes": "The checker compares each numerical field to the hidden paper-reported values with predetermined tolerances. The magnetic_state field is compared by exact case-insensitive string match. The co_moment_muB field may be a single number or an array of layer-resolved values; the checker compares each value individually."
+  },
+  "steps": [
+    {
+      "id": "reproduction_results",
+      "output_file": "reproduction_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Compare all target quantities against paper-reported values with tolerances; score is the fraction of systems (out of 7) with all fields within tolerance and correct magnetic state."
+    }
+  ],
+  "gold": {
+    "bulk": {
+      "in_plane_lattice_const_A": 5.358,
+      "co_layer_distance_A": 4.403,
+      "magnetic_state": "FM ∥ c",
+      "co_moment_muB": [
+        0.35
+      ],
+      "anomalous_hall_conductivity_e2_per_h": 0.9,
+      "anomalous_nernst_conductivity_kB_T_5meV": 0.2
+    },
+    "sn_end_monolayer": {
+      "in_plane_lattice_const_A": 5.325,
+      "co_layer_distance_A": null,
+      "magnetic_state": "FM ∥ c",
+      "co_moment_muB": [
+        0.415
+      ],
+      "anomalous_hall_conductivity_e2_per_h": 3.0,
+      "anomalous_nernst_conductivity_kB_T_5meV": 0.0
+    },
+    "sn_end_bilayer": {
+      "in_plane_lattice_const_A": 5.355,
+      "co_layer_distance_A": 4.434,
+      "magnetic_state": "FM ∥ c",
+      "co_moment_muB": [
+        0.372,
+        0.372
+      ],
+      "anomalous_hall_conductivity_e2_per_h": 4.5,
+      "anomalous_nernst_conductivity_kB_T_5meV": -0.5
+    },
+    "sn_end_trilayer": {
+      "in_plane_lattice_const_A": 5.37,
+      "co_layer_distance_A": 4.436,
+      "magnetic_state": "FM ∥ c",
+      "co_moment_muB": [
+        0.365,
+        0.362,
+        0.365
+      ],
+      "anomalous_hall_conductivity_e2_per_h": 3.5,
+      "anomalous_nernst_conductivity_kB_T_5meV": -0.3
+    },
+    "s_end_monolayer": {
+      "in_plane_lattice_const_A": 5.194,
+      "co_layer_distance_A": null,
+      "magnetic_state": "FM ∥ c",
+      "co_moment_muB": [
+        1.01
+      ],
+      "anomalous_hall_conductivity_e2_per_h": -0.34,
+      "anomalous_nernst_conductivity_kB_T_5meV": -0.1
+    },
+    "s_end_bilayer": {
+      "in_plane_lattice_const_A": 5.276,
+      "co_layer_distance_A": 4.41,
+      "magnetic_state": "interlayer AFM ∥ b'",
+      "co_moment_muB": [
+        0.339,
+        0.339
+      ],
+      "anomalous_hall_conductivity_e2_per_h": 0.0,
+      "anomalous_nernst_conductivity_kB_T_5meV": 0.0
+    },
+    "s_end_trilayer": {
+      "in_plane_lattice_const_A": 5.31,
+      "co_layer_distance_A": 4.412,
+      "magnetic_state": "interlayer ferri ∥ c",
+      "co_moment_muB": [
+        0.207,
+        0.08,
+        0.207
+      ],
+      "anomalous_hall_conductivity_e2_per_h": -2.71,
+      "anomalous_nernst_conductivity_kB_T_5meV": -0.2
+    }
+  },
+  "tolerances": {
+    "in_plane_lattice_const_A": 0.01,
+    "co_layer_distance_A": 0.01,
+    "co_moment_muB": 0.005,
+    "anomalous_hall_conductivity_e2_per_h": 0.1,
+    "anomalous_nernst_conductivity_kB_T_5meV": 0.1
+  }
+}

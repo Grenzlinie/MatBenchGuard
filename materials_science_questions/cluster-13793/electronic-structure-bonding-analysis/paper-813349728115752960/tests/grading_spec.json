@@ -1,0 +1,241 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energy is recomputed from total_energies.csv and compared to paper gold; other quantities are checked against paper values with exact_match tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "yap_optimized_lattice.csv": "exact_match",
+    "total_energies.csv": "exact_match",
+    "formation_energy.txt": "exact_match",
+    "mulliken_charges.csv": "exact_match",
+    "mulliken_overlap.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "lattice parameters (a,b,c)",
+      "source_provenance": "paper Table 1",
+      "generation_method": "extracted from the published paper's Table 1",
+      "why_not_fabricated": "values are the exact optimized lattice parameters reported in the paper"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "total energies of YAP, Y2O3, Al2O3",
+      "source_provenance": "paper Table 1",
+      "generation_method": "extracted from the published paper's Table 1",
+      "why_not_fabricated": "values are the paper's reported total energies"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "formation energy gold (-3.73 eV)",
+      "source_provenance": "paper text (Eq. 1 and surrounding discussion)",
+      "generation_method": "value taken from the paper's result rounding of -3.7265 to -3.73 eV",
+      "why_not_fabricated": "the paper explicitly states the formation energy is -3.73 eV"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Mulliken atomic charges",
+      "source_provenance": "paper Table 2",
+      "generation_method": "extracted from Table 2",
+      "why_not_fabricated": "values are the paper's reported Mulliken charge populations"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Mulliken bond overlap populations",
+      "source_provenance": "paper Table 3",
+      "generation_method": "extracted from Table 3",
+      "why_not_fabricated": "values are the paper's reported overlap populations and bond lengths"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "yap_optimized_lattice.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "parameter",
+            "value_angstrom",
+            "reference"
+          ],
+          "columns": {
+            "parameter": "string, one of a, b, c",
+            "value_angstrom": "float",
+            "reference": "string, 'calculated'"
+          }
+        },
+        "description": "Optimized lattice parameters a, b, c of orthorhombic YAlO3 crystal."
+      },
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "total_energy_eV"
+          ],
+          "columns": {
+            "system": "string, one of YAP, Y2O3, Al2O3",
+            "total_energy_eV": "float"
+          }
+        },
+        "description": "Total energies of YAP, Y2O3, and Al2O3 in eV."
+      },
+      {
+        "file": "formation_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": [
+            "value"
+          ],
+          "value": "float"
+        },
+        "description": "Formation energy of YAlO3 computed from total energies, in eV."
+      },
+      {
+        "file": "mulliken_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom",
+            "s",
+            "p",
+            "d",
+            "total",
+            "mulliken_charge"
+          ],
+          "columns": {
+            "atom": "string, e.g., O_a, O_b, Al, Y",
+            "s": "float",
+            "p": "float",
+            "d": "float",
+            "total": "float",
+            "mulliken_charge": "float"
+          }
+        },
+        "description": "Mulliken atomic charges for symmetry-inequivalent atoms in YAlO3."
+      },
+      {
+        "file": "mulliken_overlap.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "bond",
+            "population",
+            "length_angstrom"
+          ],
+          "columns": {
+            "bond": "string, e.g., O-Al, O-Y, O-O",
+            "population": "float",
+            "length_angstrom": "float"
+          }
+        },
+        "description": "Mulliken bond overlap populations for distinct bonds in YAlO3."
+      }
+    ],
+    "notes": "All scored outputs are compared against the paper's reported values with appropriate tolerances (exact_match policy). The verifier recomputes the formation energy from total_energies.csv for cross-checking. Mulliken steps are load-bearing; they cannot be faked without running the DFT simulation."
+  },
+  "steps": [
+    {
+      "id": "yap_optimized_lattice",
+      "output_file": "yap_optimized_lattice.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "description": "Lattice parameters a,b,c within 0.02 Å of paper's optimized values.",
+      "target": {
+        "a": 5.3584,
+        "b": 7.417,
+        "c": 5.1975
+      },
+      "tolerance": 0.02
+    },
+    {
+      "id": "total_energies",
+      "output_file": "total_energies.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "description": "Total energies of YAP, Y2O3, Al2O3 within 0.1 eV of paper values.",
+      "target": {
+        "YAP": -5015.704,
+        "Y2O3": -6860.625,
+        "Al2O3": -3163.33
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "formation_energy",
+      "output_file": "formation_energy.txt",
+      "kind": "recompute",
+      "weight": 0.2,
+      "description": "Formation energy recomputed from total_energies.csv and compared to paper gold -3.73 eV.",
+      "target": -3.73,
+      "tolerance": 0.1
+    },
+    {
+      "id": "mulliken_charges",
+      "output_file": "mulliken_charges.csv",
+      "kind": "table",
+      "weight": 0.2,
+      "description": "Mulliken charges for O_a,O_b,Al,Y within 0.2 e of paper Table 2.",
+      "target": {
+        "O_a": {
+          "total": 6.93,
+          "charge": -0.93
+        },
+        "O_b": {
+          "total": 6.93,
+          "charge": -0.93
+        },
+        "Al": {
+          "total": 1.59,
+          "charge": 1.41
+        },
+        "Y": {
+          "total": 9.62,
+          "charge": 1.38
+        }
+      },
+      "tolerance": 0.2
+    },
+    {
+      "id": "mulliken_overlap",
+      "output_file": "mulliken_overlap.csv",
+      "kind": "table",
+      "weight": 0.2,
+      "description": "Overlap populations for O-Al,O-Y,O-O bonds within 0.05 of paper Table 3.",
+      "target": {
+        "O-Al": [
+          0.34,
+          0.34
+        ],
+        "O-Y": [
+          0.22,
+          0.28,
+          0.1,
+          0.12
+        ],
+        "O-O": [
+          -0.06,
+          -0.11,
+          -0.12,
+          -0.06
+        ]
+      },
+      "tolerance": 0.05
+    }
+  ]
+}

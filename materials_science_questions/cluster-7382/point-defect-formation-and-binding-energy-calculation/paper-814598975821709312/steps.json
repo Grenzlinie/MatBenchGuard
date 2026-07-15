@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_dft",
+    "title": "DFT structure relaxation and total energy calculations",
+    "role": "process",
+    "action": "Construct bcc tungsten supercells for perfect and defect configurations (substitutional and interstitial: bridge, ⟨111⟩ dumbbell, ⟨110⟩ dumbbell) for solutes Ti, V, Zr, Nb, Hf, Ta, Re and the self-interstitial, using multiple supercell sizes. Run DFT geometry relaxations with PBE-GGA, PAW pseudopotentials, and an open-source code (e.g. Quantum ESPRESSO or GPAW), saving relaxed total energies and lattice vectors.",
+    "output_file": "",
+    "evidence": "dft_calculations.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Perform all DFT total-energy calculations for perfect and defective supercells.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_analysis",
+    "title": "Finite-size scaling and semicore correction",
+    "role": "process",
+    "action": "Compute raw formation energies from the DFT total energies using the formation energy formula with chemical potentials from cohesive energies. Extrapolate to the infinite-size limit by fitting formation energies versus inverse system size. Determine the semicore correction shift by comparing calculations with and without W 5p semicore states on selected configurations, and add this shift to the extrapolated energies to yield final formation energies for all substitutional and interstitial defects.",
+    "output_file": "",
+    "evidence": "scaling_analysis.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Extrapolate raw formation energies to the dilute limit and apply semicore corrections.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_formation_csv",
+    "title": "Write final formation energies CSV",
+    "role": "scored",
+    "action": "Compile the final corrected formation energies for all substitutional and interstitial defects (bridge, ⟨111⟩, ⟨110⟩) for solutes Ti, V, Zr, Nb, Hf, Ta, Re and for the self-interstitial W into a CSV file. Each row corresponds to one defect, with columns: element (str), defect_type (str), formation_energy_eV (float).",
+    "output_file": "formation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the final formation energies. Scored by comparison to paper values and by verifying that for Ti, V, Re the bridge interstitial energy is lower than the 111 and 110 dumbbell energies.",
+    "output_schema": "CSV with columns: element (str), defect_type (str, one of: sub, bridge, 111, 110), formation_energy_eV (float)."
+  },
+  {
+    "id": "step4_binding_csv",
+    "title": "Compute and write binding energies CSV",
+    "role": "scored",
+    "action": "Using the final formation energies, compute the binding energy between a self-interstitial atom and a solute atom for each solute as E_b = E_f([X-W]_lowest) - E_f([W-W]_lowest) - E_f(X_sub), where 'lowest' denotes the most stable interstitial configuration. Output the results to a CSV file with columns: element (str) and binding_energy_eV (float, negative indicates attraction).",
+    "output_file": "binding_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing binding energies between self-interstitial atoms and substitutional solutes. Scoring verifies that for Ti, V, Re the binding energy is negative.",
+    "output_schema": "CSV with columns: element (str), binding_energy_eV (float)."
+  }
+]

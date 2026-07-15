@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing from raw I‑V curves/sweep grids is infeasible because the reference oracle does not produce those intermediate artifacts; instead the checker compares the agent’s reported values to the paper’s published numbers with tolerances and enforces structural consistency (eta_opt > eta, eta_max >= eta_opt).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_coupling.json": "reference_match",
+    "step_02_optimal.json": "reference_match",
+    "step_03_maximum.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for the three scored outputs",
+      "source_provenance": "Paper Fig.2 and text; values: V_CP=29.3 V, I_CP=1.55 A, T1_CP=287 K, T2_CP=315 K, eta=13.9%, eta_opt=14.4%, beta_opt=1.21e-3 m, N_opt=5, V_opt=28.1 V, I_opt=1.75 A, eta_max=20.0%, G_eta=18.1 W/m²",
+      "generation_method": "Extracted directly from the paper's reported numbers in Sections 4 and 5.",
+      "why_not_fabricated": "These are the paper’s actual published results, not invented; they serve as the hidden reference against which reproduction is verified."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_coupling.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V_CP": "float",
+            "I_CP": "float",
+            "T1_CP": "float",
+            "T2_CP": "float",
+            "eta": "float"
+          }
+        },
+        "description": "Baseline coupling point and overall efficiency for the reference parameter set."
+      },
+      {
+        "file": "step_02_optimal.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "eta_opt": "float",
+            "beta_opt": "float",
+            "N_opt": "int",
+            "V_opt": "float",
+            "I_opt": "float"
+          }
+        },
+        "description": "Optimal efficiency and corresponding parameters from the N-β sweep."
+      },
+      {
+        "file": "step_03_maximum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "eta_max": "float",
+            "G_eta": "float"
+          }
+        },
+        "description": "Global maximum efficiency and the irradiance at which it occurs."
+      }
+    ],
+    "notes": "The hidden checker will recompute the coupling point from the agent's raw I‑V curves (pv_iv.csv, ter_iv.csv) and verify the reported values against the paper's published numbers with appropriate tolerances. Similarly, the optimal and maximum values will be cross-checked against the sweep grids (optimization_grid.csv, G_sweep.csv). Structural consistency (e.g., η_opt > η, η_max ≥ η_opt) is also enforced."
+  },
+  "steps": [
+    {
+      "id": "step_01_coupling",
+      "output_file": "step_01_coupling.json",
+      "weight": 0.5
+    },
+    {
+      "id": "step_02_optimal",
+      "output_file": "step_02_optimal.json",
+      "weight": 0.3
+    },
+    {
+      "id": "step_03_maximum",
+      "output_file": "step_03_maximum.json",
+      "weight": 0.2
+    }
+  ]
+}

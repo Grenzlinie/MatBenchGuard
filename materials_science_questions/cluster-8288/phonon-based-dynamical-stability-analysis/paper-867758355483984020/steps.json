@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1_dft_lattice",
+    "title": "DFT lattice optimization for each compound in L2₁ structure",
+    "role": "process",
+    "action": "For each of the eight Heusler compounds (Ni₂MnGa, Ni₂MnAl, Ni₂MnIn, Ni₂MnGe, Co₂MnGa, Co₂MnGe, Ni₂TiGa, Fe₂MnGa), set up the cubic L2₁ structure (space group Fm-3m, Wyckoff positions 4a (0,0,0) for Y, 4b (1/2,1/2,1/2) for Z, 8c (1/4,1/4,1/4) for X). Perform spin-polarized DFT variable-cell relaxation using PAW/GGA until forces are converged. Save the optimized lattice constant (a), total magnetic moment per formula unit, and magnetic order type.",
+    "output_file": "",
+    "evidence": "lattice_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file listing for each compound the optimized cubic lattice parameter a (Å), the total magnetic moment per formula unit (μ_B), and the magnetic order type (e.g., FM, NM, FerriM).",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_supercell_forces",
+    "title": "Supercell displacement force calculations",
+    "role": "process",
+    "action": "For each compound, using the optimized lattice constant from step 1, construct a 1×5×1 periodic supercell based on the conventional tetragonal cell (aₜ = a/√2, cₜ = a) with the long axis along [110], containing ten consecutive (110) atomic planes. For each symmetrically independent atom, displace the atom by a small amplitude along each Cartesian direction (±x, ±y, ±z) and compute the Hellmann–Feynman forces on all atoms via static DFT. Store the displacement vectors and resulting force tensors for every atom.",
+    "output_file": "",
+    "evidence": "forces_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compressed archive (JSON or HDF5/NumPy archive) containing the displacement vectors and the corresponding force tensors on every atom for each compound.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_phonon_analysis",
+    "title": "Phonon dispersion analysis and output generation",
+    "role": "scored",
+    "action": "From the stored forces, build the force-constant matrix within the harmonic approximation. Truncate force constants beyond five atomic planes (set to zero). Construct the dynamical matrix for the five allowed wave vectors along [110]: q = [ζ, ζ, 0] with ζ = 0.0, 0.25, 0.5, 0.75, 1.0. Diagonalize the dynamical matrix to obtain phonon frequencies and eigenvectors. Identify the TA₂ branch (lowest transverse acoustic mode with [1‑10] polarization) and extract its frequencies at each ζ. Identify the optical T₂g mode at Γ (the mode with [1‑10] polarization involving only the X atoms) and record its frequency. Write a single JSON file containing these results for all eight compounds.",
+    "output_file": "phonon_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Phonon dispersion data along [110] for all compounds, containing TA₂ branch frequencies and the Γ‑point T₂g optical mode frequency.",
+    "output_schema": "A JSON object where each key is a compound name (e.g., \"Ni2MnGa\"). The value is an object with: \"zeta\" (list of five floats), \"TA2\" (list of five floats; imaginary frequencies as negative values), and \"T2g_at_Gamma\" (float, frequency of the T₂g optical mode at ζ=0 in THz)."
+  }
+]

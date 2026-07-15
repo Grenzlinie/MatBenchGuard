@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_geometry_opt",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "For each of the four compounds (CuAlS2, CuGaS2, CuInS2, AgGaS2), perform DFT geometry optimization starting from the experimental lattice constants (provided in the task). Use GGA-PBE pseudopotentials, a 5×5×2 k-point grid, and appropriate energy cutoffs. Converge forces and stress to tight thresholds.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_electronic",
+    "title": "Electronic structure calculation",
+    "role": "process",
+    "action": "For each optimized structure, run a self-consistent DFT calculation to obtain Kohn-Sham eigenvalues and wavefunctions on a suitable grid. This step produces the electronic ground state required for optical property calculations.",
+    "output_file": "",
+    "evidence": "electronic_structure.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dielectric",
+    "title": "Optical dielectric function calculation",
+    "role": "process",
+    "action": "Using the wavefunctions and eigenvalues, compute the imaginary part ε₂(ω) via dipole matrix elements. Obtain the real part ε₁(ω) by Kramers-Kronig transformation. Apply 0.25 eV Gaussian smearing. Produce raw ω, ε₁, ε₂ data for each compound.",
+    "output_file": "",
+    "evidence": "dielectric_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_postprocess",
+    "title": "Post-processing and fitting",
+    "role": "scored",
+    "action": "From the DFT results: extract the calculated band gap, apply scissor operator shifts (1.55 eV for CuAlS2, 1.5 eV for others) to obtain corrected gaps, compute the static refractive index n₀ = sqrt(ε₁(ω=0)), generate the n(λ) curve and fit the Sellmeier equation n = A + B/(1 - (C/λ)²) - Dλ². Collect the optimized lattice constants a, c, and volume. Write all quantities to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the headline numerical results (lattice constants, corrected band gaps, static refractive index, Sellmeier parameters) for all four compounds.",
+    "output_schema": "{\"compounds\": [{\"compound_name\": \"string\", \"optimized_a\": \"float (Å)\", \"optimized_c\": \"float (Å)\", \"optimized_volume\": \"float (Å³)\", \"band_gap_calculated\": \"float (eV)\", \"scissor_shift\": \"float (eV)\", \"band_gap_corrected\": \"float (eV)\", \"refractive_index_n0\": \"float\", \"sellmeyer_A\": \"float\", \"sellmeyer_B\": \"float\", \"sellmeyer_C_nm\": \"float (nm)\", \"sellmeyer_D\": \"float (nm⁻²)\"}]}"
+  }
+]

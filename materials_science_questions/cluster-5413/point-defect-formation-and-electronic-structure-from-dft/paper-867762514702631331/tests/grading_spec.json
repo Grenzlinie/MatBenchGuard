@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker compares formation energies to paper gold with tolerance and recomputes the ordering of Sevac vs others from the same CSV. Gap state booleans are compared directly to paper-reported expectations. No raw DFT recompute is needed because the agent submits the final formation energy values; this is an acceptable result-level comparison.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "exact_match",
+    "gap_state_passivation.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "formation energy gold values (eV) from Table I for the four defects under W-rich and Se-rich conditions, isolated and supported.",
+      "source_provenance": "Table I of the source paper (First Principles Study of Intrinsic and Extrinsic Point Defects in Monolayer WSe2).",
+      "generation_method": "Directly transcribed from Table I numerical entries.",
+      "why_not_fabricated": "These are the actual formation energies the paper reports and serve as the authoritative reference for the reproduction task."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected gap state presence (boolean) for pristine, Sevac, and Sevac+O.",
+      "source_provenance": "Paper abstract and Section III B 2 (gap states passivation by O) and conclusions.",
+      "generation_method": "Extracted from the paper's explicit statements: pristine has no gap states, Sevac introduces gap states, and O_passivated Sevac removes them.",
+      "why_not_fabricated": "These are the paper's own conclusions about gap state passivation, required to verify the agent's electronic structure analysis."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect",
+            "condition",
+            "substrate",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Formation energies of Seᵥₐc, Wᵥₐc, Sew, 2Seᵥₐc for isolated and supported monolayer WSe₂ under W‑rich and Se‑rich chemical potentials. The checker compares each reported formation energy to hidden paper‑reported values within an absolute tolerance and verifies that Seᵥₐc has the lowest formation energy among the four defects for each substrate/condition combination."
+      },
+      {
+        "file": "gap_state_passivation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "has_gap_states"
+          ]
+        },
+        "description": "Gap‑state presence for pristine (false), Seᵥₐc (true), and oxygen‑passivated Seᵥₐc (false) in isolated monolayer WSe₂. The checker verifies these exact boolean expectations."
+      }
+    ],
+    "notes": "The task covers the main intrinsic defect formation energies and the passivation of gap states by oxygen. Ionization energies, STM simulation, extrinsic defects beyond O passivation, and functional benchmarks are omitted per taskability scope."
+  },
+  "steps": [
+    {
+      "id": "check_formation_values",
+      "output_file": "formation_energies.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "target_policy": "exact_match",
+      "tolerance_abs": 0.3,
+      "gold": {
+        "Sevac|W-rich|isolated": 2.31,
+        "Sevac|W-rich|supported": 2.2,
+        "Sevac|Se-rich|isolated": 2.92,
+        "Sevac|Se-rich|supported": 2.82,
+        "Wvac|W-rich|isolated": 5.01,
+        "Wvac|W-rich|supported": 5.09,
+        "Wvac|Se-rich|isolated": 3.78,
+        "Wvac|Se-rich|supported": 3.87,
+        "Sew|W-rich|isolated": 5.34,
+        "Sew|W-rich|supported": 5.51,
+        "Sew|Se-rich|isolated": 3.49,
+        "Sew|Se-rich|supported": 3.66,
+        "2Sevac|W-rich|isolated": 3.86,
+        "2Sevac|W-rich|supported": 3.78,
+        "2Sevac|Se-rich|isolated": 5.09,
+        "2Sevac|Se-rich|supported": 5.01
+      }
+    },
+    {
+      "id": "check_formation_ordering",
+      "output_file": "formation_energies.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "target_policy": "structural_audit"
+    },
+    {
+      "id": "check_gap_states",
+      "output_file": "gap_state_passivation.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "target_policy": "exact_match",
+      "expected": {
+        "pristine": false,
+        "Sevac": true,
+        "Sevac+O": false
+      }
+    }
+  ]
+}

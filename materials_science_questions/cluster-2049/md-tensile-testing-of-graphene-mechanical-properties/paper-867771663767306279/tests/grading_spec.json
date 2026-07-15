@@ -1,0 +1,136 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The headline results are the computed inverse quality factors; no raw intermediate artifacts exist that would allow a more stringent recompute. Comparing the submitted values to the paper-reported gold with logarithmic tolerances is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results_Q_inv.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for Q^{-1} at 300 K and dominant mechanism",
+      "source_provenance": "Paper Table II: static_charges_SiO2 1e-6 (range 1e-7 – 1e-6), ohmic_graphene_gate 1e-2, velcro_effect 0.0, two_level_systems 1e-22, attachment_losses 1e-5 (range 1e-6 – 1e-5), thermoelastic_losses 1e-7, dominant_mechanism 'ohmic_graphene_gate'.",
+      "generation_method": "Representative values selected from the published ranges in Table II and the paper's conclusion that ohmic losses dominate. The ohmic value 0.01 matches the paper's explicit scalar; static, attachment and thermoelastic are taken at the upper bound of their ranges to be consistent with the paper's estimates at 300 K; velcro is absent per paper; TLS is 1e-22 as given.",
+      "why_not_fabricated": "All gold values are directly traceable to the paper's Table II and conclusions. They are not invented; the paper explicitly reports these orders of magnitude and the dominance of ohmic losses. The representative single values are consistent with the ranges and the solve.sh uses the same numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results_Q_inv.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "static_charges_SiO2",
+            "ohmic_graphene_gate",
+            "velcro_effect",
+            "two_level_systems",
+            "attachment_losses",
+            "thermoelastic_losses",
+            "dominant_mechanism"
+          ],
+          "properties": {
+            "static_charges_SiO2": {
+              "type": "number"
+            },
+            "ohmic_graphene_gate": {
+              "type": "number"
+            },
+            "velcro_effect": {
+              "type": "number"
+            },
+            "two_level_systems": {
+              "type": "number"
+            },
+            "attachment_losses": {
+              "type": "number"
+            },
+            "thermoelastic_losses": {
+              "type": "number"
+            },
+            "dominant_mechanism": {
+              "type": "string",
+              "enum": [
+                "static_charges_SiO2",
+                "ohmic_graphene_gate",
+                "velcro_effect",
+                "two_level_systems",
+                "attachment_losses",
+                "thermoelastic_losses"
+              ]
+            }
+          }
+        },
+        "description": "Inverse quality factors Q^{-1} at 300 K for each dissipation mechanism and the dominant mechanism name."
+      }
+    ],
+    "notes": "The Velcro effect value must be 0.0 (or null) as deemed absent. The dominant_mechanism should be the key of the mechanism with the largest Q^{-1} value."
+  },
+  "steps": [
+    {
+      "id": "check_static_charges_SiO2",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "static_charges_SiO2",
+      "target": 1e-06,
+      "tolerance_factor": 5.0,
+      "weight": 0.2
+    },
+    {
+      "id": "check_ohmic_graphene_gate",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "ohmic_graphene_gate",
+      "target": 0.01,
+      "tolerance_factor": 5.0,
+      "weight": 0.3
+    },
+    {
+      "id": "check_velcro_effect",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "velcro_effect",
+      "target": 0.0,
+      "tolerance_factor": null,
+      "weight": 0.05
+    },
+    {
+      "id": "check_two_level_systems",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "two_level_systems",
+      "target": 1e-22,
+      "tolerance_factor": 100.0,
+      "weight": 0.1
+    },
+    {
+      "id": "check_attachment_losses",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "attachment_losses",
+      "target": 1e-05,
+      "tolerance_factor": 5.0,
+      "weight": 0.15
+    },
+    {
+      "id": "check_thermoelastic_losses",
+      "output_file": "results_Q_inv.json",
+      "kind": "numeric_log_tol",
+      "field": "thermoelastic_losses",
+      "target": 1e-07,
+      "tolerance_factor": 5.0,
+      "weight": 0.1
+    },
+    {
+      "id": "check_dominant_mechanism",
+      "output_file": "results_Q_inv.json",
+      "kind": "json_field_exact",
+      "field": "dominant_mechanism",
+      "expected": "ohmic_graphene_gate",
+      "weight": 0.1
+    }
+  ]
+}

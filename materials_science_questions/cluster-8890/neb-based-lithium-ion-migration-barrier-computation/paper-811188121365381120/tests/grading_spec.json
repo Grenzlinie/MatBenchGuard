@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible because MD simulations cannot be rerun in the verifier; scoring based on structural features (sign crossovers, amplitude trend) and eutectic reference points.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "D_LiTh_vs_concentration.csv": "reference_match",
+    "density_enthalpy_vs_concentration.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected number of sign crossovers (5) and amplitude ratio threshold for D_LiTh; eutectic density (4.15 g/cm³) and enthalpy (-27.85 kJ/g) for density_enthalpy check",
+      "source_provenance": "Paper Fig. 9(a) for crossovers and amplitude trend; Fig. 2 and text for density value; Fig. 3(a) and text for enthalpy value",
+      "generation_method": "extracted from paper text and figures",
+      "why_not_fabricated": "values are directly taken from the paper's reported data and claims"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "D_LiTh_vs_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ThF4_mol_percent",
+            "D_LiTh_m2_per_s"
+          ],
+          "units": {
+            "ThF4_mol_percent": "mol%",
+            "D_LiTh_m2_per_s": "m²/s"
+          }
+        },
+        "description": "Maxwell-Stefan diffusivity D_{LiTh} at 1200 K for a set of ThF4 mole fractions. Values are compared against hidden gold; scoring verifies sign crossovers and trend."
+      },
+      {
+        "file": "density_enthalpy_vs_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "ThF4_mol_percent",
+            "density_g_per_cm3",
+            "specific_enthalpy_kJ_per_g"
+          ],
+          "units": {
+            "ThF4_mol_percent": "mol%",
+            "density_g_per_cm3": "g/cm³",
+            "specific_enthalpy_kJ_per_g": "kJ/g"
+          }
+        },
+        "description": "Density and specific enthalpy at 1273 K as functions of ThF4 concentration, compared to hidden gold values and square-root fit trend."
+      }
+    ],
+    "notes": "The hidden checker compares D_LiTh values against reference data from the paper's Fig. 9(a), checking for five sign crossovers and amplitude decay. Density/enthalpy are compared against Fig. 2 and Fig. 3(a) with tolerances and fitted square-root function parameters."
+  },
+  "steps": [
+    {
+      "id": "dlith",
+      "output_file": "D_LiTh_vs_concentration.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "description": "Verify oscillatory diffusion pattern: number of sign crossovers and amplitude decay ratio.",
+      "params": {
+        "expected_sign_changes": 5,
+        "amplitude_ratio_max": 0.2,
+        "small_concentration": 6.0,
+        "large_concentration": 45.0
+      }
+    },
+    {
+      "id": "density_enthalpy",
+      "output_file": "density_enthalpy_vs_concentration.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Verify eutectic density/enthalpy and monotonic concentration trends.",
+      "params": {
+        "eutectic_mol_pct": 22.0,
+        "target_density": 4.15,
+        "density_tolerance": 0.15,
+        "target_enthalpy": -27.85,
+        "enthalpy_tolerance": 1.0
+      }
+    }
+  ]
+}

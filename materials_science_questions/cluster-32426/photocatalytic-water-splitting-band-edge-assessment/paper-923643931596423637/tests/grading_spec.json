@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The checker cannot recompute DFT energies; it verifies structural trends (adsorption ranking, Fermi-level doping sign, endothermicity ordering, and overall reaction energy bound) against hidden thresholds derived from the paper's reported values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected adsorption energy ranking (species order from most negative to least) for pristine and vacancy surfaces",
+      "source_provenance": "Paper Table 1, adsorption energies",
+      "generation_method": "Read the numeric values from the paper's Table 1 and sort each surface to obtain the ranking: pristine C < CH < O < OH < H2O; vacancy O < CH < OH < C < H2O.",
+      "why_not_fabricated": "Directly extracted from the paper's computed results; these hidden rankings are used to check the structural order of agent's output."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Fermi-level shift thresholds: O/vacancy near zero (|E_F| ≤ 0.05 eV), OH species > 0.1 eV",
+      "source_provenance": "Paper text (O/V restores Dirac point E_F=0; OH leads to n-doping with E_F > 0.1 eV) and Table 1 values.",
+      "generation_method": "Thresholds set from paper's statements and tolerances.",
+      "why_not_fabricated": "Derived from the physical claim in the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reaction energy overall range [0.4, 0.8] eV for H2O/V → O/V + H2",
+      "source_provenance": "Paper equation (2) with ΔrE = 0.60 eV, plus tolerance to account for code differences.",
+      "generation_method": "Set range around paper's reported value.",
+      "why_not_fabricated": "Based on the paper's explicit reaction energy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "surface_type",
+            "adsorption_energy",
+            "fermi_level_shift"
+          ],
+          "units": {
+            "adsorption_energy": "eV",
+            "fermi_level_shift": "eV"
+          }
+        },
+        "description": "Table of adsorption energies and Fermi-level shifts for H2O, OH, O, C, CH on pristine and Se-defective Bi2Se3 surfaces."
+      },
+      {
+        "file": "reaction_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "reaction",
+            "delta_E"
+          ],
+          "units": {
+            "delta_E": "eV"
+          }
+        },
+        "description": "Table of reaction energies for the three water-splitting steps at a Se vacancy."
+      }
+    ],
+    "notes": "The scored artifacts are checked for structural trends: adsorption energy ranking, Fermi-level sign/near-zero for O/V, endothermicity, and reaction energy ordering. No exact reproduction of VASP numbers is required; tolerances account for code/functional differences."
+  },
+  "steps": [
+    {
+      "id": "adsorption_ranking",
+      "output_file": "computed_data.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "config": {
+        "gold_ranking": {
+          "pristine": [
+            "C",
+            "CH",
+            "O",
+            "OH",
+            "H2O"
+          ],
+          "vacancy": [
+            "O",
+            "CH",
+            "OH",
+            "C",
+            "H2O"
+          ]
+        }
+      }
+    },
+    {
+      "id": "fermi_shifts",
+      "output_file": "computed_data.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "config": {
+        "o_vac_abs_max": 0.05,
+        "oh_min": 0.1
+      }
+    },
+    {
+      "id": "reaction_trends",
+      "output_file": "reaction_energies.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "config": {
+        "overall_range": [
+          0.4,
+          0.8
+        ]
+      }
+    }
+  ]
+}

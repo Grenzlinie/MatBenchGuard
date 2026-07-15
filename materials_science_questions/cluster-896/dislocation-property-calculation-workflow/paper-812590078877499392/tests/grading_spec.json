@@ -1,0 +1,215 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "FWHM is recomputed from the agent‑submitted angular correlation CSV files; scalar results are compared to hidden paper gold with tolerance (reference_match), which is the conventional approach for a compute‑driven re‑run.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "vacancy_results.json": "reference_match",
+    "dislocation_results.json": "reference_match",
+    "angular_correlation_vacancy.csv": "metric_recompute",
+    "angular_correlation_dislocation_z.csv": "metric_recompute",
+    "angular_correlation_dislocation_x.csv": "metric_recompute",
+    "angular_correlation_dislocation_y.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold scalar values for vacancy and dislocation electron density fractions, lifetimes, and hollow‑core radius; gold FWHM values for the four angular correlation curves.",
+      "source_provenance": "Extracted from the paper: electron density at vacancy centre 24% (text); vacancy lifetime 243 ps (text); dislocation core radius 0.85 Å (text); dislocation centre electron density 37% (text); dislocation lifetime 229 ps (text). The FWHM values are estimated from the published figures (Fig. 2 and Fig. 5) and rounded to reasonable significant digits.",
+      "generation_method": "Direct reading from paper sentences for scalars; FWHM approximated from figure curves using the known free‑electron parabola width as a reference, then adding tolerances that comfortably accommodate correct re‑implementations.",
+      "why_not_fabricated": "All values are the paper’s own reported quantities; no synthetic labels or invented numbers are used. The FWHM targets, although approximated from figures, are consistent with the physical model and the reference oracle will produce curves whose FWHM falls within the chosen tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "vacancy_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "electron_density_center_fraction_of_bulk": "float",
+            "positron_lifetime_ps": "float"
+          }
+        },
+        "description": "Vacancy electron density at centre (fraction of bulk) and trapped positron lifetime in picoseconds. Checker compares each scalar to the paper's reference value within a tolerance."
+      },
+      {
+        "file": "dislocation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hole_radius_angstrom": "float",
+            "electron_density_center_fraction_of_bulk": "float",
+            "positron_lifetime_ps": "float"
+          }
+        },
+        "description": "Calibrated hollow-core radius (angstrom), electron density at core centre (fraction of bulk), and positron lifetime (ps) for the dislocation. Checker compares each scalar to the paper's reference value within a tolerance."
+      },
+      {
+        "file": "angular_correlation_vacancy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "I(p)"
+          ],
+          "units": {
+            "p": "angstrom^-1",
+            "I(p)": "normalized arbitrary units"
+          }
+        },
+        "description": "Angular correlation curve for a vacancy. Checker recomputes the full width at half maximum (FWHM) from this data and compares it to the paper's reference FWHM; also verifies the curve is non-negative and monotonic decreasing from p=0."
+      },
+      {
+        "file": "angular_correlation_dislocation_z.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "I_z(p)"
+          ],
+          "units": {
+            "p": "angstrom^-1",
+            "I_z(p)": "normalized arbitrary units"
+          }
+        },
+        "description": "Angular correlation curve for a dislocation, momentum component parallel to the line. Checker recomputes FWHM and compares to paper reference; checks shape constraints."
+      },
+      {
+        "file": "angular_correlation_dislocation_x.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "I_x(p)"
+          ],
+          "units": {
+            "p": "angstrom^-1",
+            "I_x(p)": "normalized arbitrary units"
+          }
+        },
+        "description": "Angular correlation curve for a dislocation, momentum component perpendicular to the line (x). Checker recomputes FWHM and compares to paper reference; checks shape constraints."
+      },
+      {
+        "file": "angular_correlation_dislocation_y.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p",
+            "I_y(p)"
+          ],
+          "units": {
+            "p": "angstrom^-1",
+            "I_y(p)": "normalized arbitrary units"
+          }
+        },
+        "description": "Angular correlation curve for a dislocation, momentum component perpendicular to the line (y). Checker recomputes FWHM and compares to paper reference; checks shape constraints."
+      }
+    ],
+    "notes": "The dislocation calibration step is load-bearing: the reported hole radius, electron density, and lifetime depend on a correct iterative fit to the known experimental lifetime. Angular correlation curves must exhibit the documented anisotropy (FWHM ratio between z and x/y components)."
+  },
+  "steps": [
+    {
+      "id": "vacancy_scalars",
+      "output_file": "vacancy_results.json",
+      "kind": "json_scalars",
+      "weight": 0.15,
+      "description": "Verify vacancy electron density fraction and positron lifetime match paper gold within absolute tolerances.",
+      "fields": {
+        "electron_density_center_fraction_of_bulk": {
+          "target": 0.24,
+          "tolerance_abs": 0.02
+        },
+        "positron_lifetime_ps": {
+          "target": 243,
+          "tolerance_abs": 10
+        }
+      }
+    },
+    {
+      "id": "dislocation_scalars",
+      "output_file": "dislocation_results.json",
+      "kind": "json_scalars",
+      "weight": 0.3,
+      "description": "Verify dislocation hollow‑core radius, electron density fraction, and lifetime match paper gold within absolute tolerances.",
+      "fields": {
+        "hole_radius_angstrom": {
+          "target": 0.85,
+          "tolerance_abs": 0.02
+        },
+        "electron_density_center_fraction_of_bulk": {
+          "target": 0.37,
+          "tolerance_abs": 0.02
+        },
+        "positron_lifetime_ps": {
+          "target": 229,
+          "tolerance_abs": 10
+        }
+      }
+    },
+    {
+      "id": "ac_vacancy",
+      "output_file": "angular_correlation_vacancy.csv",
+      "kind": "acp_fwhm",
+      "weight": 0.15,
+      "description": "Compute FWHM from the vacancy angular correlation CSV, verify monotonic decrease and non‑negativity, and compare FWHM to hidden gold.",
+      "target_fwhm": 1.8,
+      "tolerance_abs": 0.15,
+      "check_monotonic": true,
+      "check_nonneg": true
+    },
+    {
+      "id": "ac_dislocation_z",
+      "output_file": "angular_correlation_dislocation_z.csv",
+      "kind": "acp_fwhm",
+      "weight": 0.15,
+      "description": "Compute FWHM from the dislocation z CSV, verify shape, compare FWHM to gold, and check anisotropy (z narrower than x and y).",
+      "target_fwhm": 1.65,
+      "tolerance_abs": 0.15,
+      "check_monotonic": true,
+      "check_nonneg": true,
+      "anisotropy_ratio_max": 0.92
+    },
+    {
+      "id": "ac_dislocation_x",
+      "output_file": "angular_correlation_dislocation_x.csv",
+      "kind": "acp_fwhm",
+      "weight": 0.15,
+      "description": "Compute FWHM from the dislocation x CSV, verify shape, compare FWHM to gold, and check that x and y FWHM are nearly equal.",
+      "target_fwhm": 1.9,
+      "tolerance_abs": 0.15,
+      "check_monotonic": true,
+      "check_nonneg": true,
+      "cross_file_close": "angular_correlation_dislocation_y.csv"
+    },
+    {
+      "id": "ac_dislocation_y",
+      "output_file": "angular_correlation_dislocation_y.csv",
+      "kind": "acp_fwhm",
+      "weight": 0.1,
+      "description": "Compute FWHM from the dislocation y CSV, verify shape, compare FWHM to gold, and check that y and x FWHM are nearly equal.",
+      "target_fwhm": 1.9,
+      "tolerance_abs": 0.15,
+      "check_monotonic": true,
+      "check_nonneg": true,
+      "cross_file_close": "angular_correlation_dislocation_x.csv"
+    }
+  ]
+}

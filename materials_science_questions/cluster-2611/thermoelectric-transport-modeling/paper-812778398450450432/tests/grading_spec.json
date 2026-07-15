@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw BoltzTraP outputs not possible in checker sandbox; rely on agent-reported PF and phonon values compared to paper gold, supplemented by PF trend and S²σ consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optimum_transport.csv": "reference_match",
+    "mg2c_phonon.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold optimum power factors (PF_max) and Mg2C phonon frequencies",
+      "source_provenance": "Paper Table 1 (PF values for τ=4×10⁻¹⁴ s) and Table 2 (Mg2C frequencies)",
+      "generation_method": "Extracted from the paper's reported values; inline in grading_spec.steps.pf_values.gold and steps.phonon_values.gold",
+      "why_not_fabricated": "Directly quoted from the published paper; the agent’s computed numbers should lie near these if the methodology is correctly followed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimum_transport.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "temperature",
+            "PF_max",
+            "S_max",
+            "sigma_at_max",
+            "carrier_concentration"
+          ],
+          "units": {
+            "temperature": "K",
+            "PF_max": "W/mK^2",
+            "S_max": "V/K",
+            "sigma_at_max": "S/m",
+            "carrier_concentration": "cm^-3"
+          }
+        },
+        "description": "Optimum power factor, Seebeck coefficient, electrical conductivity, and carrier concentration for Be2C, BeMgC, Mg2C at 300, 500, 800 K under constant relaxation time τ = 4×10⁻¹⁴ s."
+      },
+      {
+        "file": "mg2c_phonon.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "TO": "array of floats (cm⁻¹)",
+            "Raman": "float (cm⁻¹)",
+            "LO": "float (cm⁻¹)",
+            "LO-TO_split": "float (cm⁻¹)"
+          }
+        },
+        "description": "Zone-centre phonon frequencies (TO, Raman, LO) and LO-TO splitting for Mg2C."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "shape_transport",
+      "output_file": "optimum_transport.csv",
+      "kind": "csv_schema",
+      "weight": 0.02,
+      "required_columns": [
+        "compound",
+        "temperature",
+        "PF_max",
+        "S_max",
+        "sigma_at_max",
+        "carrier_concentration"
+      ],
+      "min_rows": 9
+    },
+    {
+      "id": "pf_values",
+      "output_file": "optimum_transport.csv",
+      "kind": "reference_match",
+      "weight": 0.55,
+      "gold": [
+        {
+          "compound": "Be2C",
+          "temperature": 300,
+          "pf": 0.00678
+        },
+        {
+          "compound": "Be2C",
+          "temperature": 500,
+          "pf": 0.01393
+        },
+        {
+          "compound": "Be2C",
+          "temperature": 800,
+          "pf": 0.02633
+        },
+        {
+          "compound": "BeMgC",
+          "temperature": 300,
+          "pf": 0.00988
+        },
+        {
+          "compound": "BeMgC",
+          "temperature": 500,
+          "pf": 0.0194
+        },
+        {
+          "compound": "BeMgC",
+          "temperature": 800,
+          "pf": 0.03594
+        },
+        {
+          "compound": "Mg2C",
+          "temperature": 300,
+          "pf": 0.0171
+        },
+        {
+          "compound": "Mg2C",
+          "temperature": 500,
+          "pf": 0.031
+        },
+        {
+          "compound": "Mg2C",
+          "temperature": 800,
+          "pf": 0.0582
+        }
+      ],
+      "pf_tol_rel": 0.1
+    },
+    {
+      "id": "pf_trend",
+      "output_file": "optimum_transport.csv",
+      "kind": "structural_trend",
+      "weight": 0.1,
+      "order": {
+        "Mg2C": 3,
+        "BeMgC": 2,
+        "Be2C": 1
+      }
+    },
+    {
+      "id": "pf_consistency",
+      "output_file": "optimum_transport.csv",
+      "kind": "recompute_consistency",
+      "weight": 0.03,
+      "consistency_tol_rel": 0.1
+    },
+    {
+      "id": "shape_phonon",
+      "output_file": "mg2c_phonon.json",
+      "kind": "json_schema",
+      "weight": 0.02,
+      "required_keys": [
+        "TO",
+        "Raman",
+        "LO",
+        "LO-TO_split"
+      ]
+    },
+    {
+      "id": "phonon_values",
+      "output_file": "mg2c_phonon.json",
+      "kind": "reference_match",
+      "weight": 0.28,
+      "gold": {
+        "TO": [
+          421.78
+        ],
+        "Raman": 389.18,
+        "LO": 635.99,
+        "LO-TO_split": 214.21
+      },
+      "phonon_tol_abs": 10.0
+    }
+  ]
+}

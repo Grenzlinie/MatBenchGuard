@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "DFT geometry optimization and elastic constants – PBE",
+    "role": "process",
+    "action": "Perform full geometry optimization of naphthalene P2_1/a using the PBE functional, followed by calculation of the elastic stiffness tensor from energy‑strain expansions.",
+    "output_file": "",
+    "evidence": "pbe_elastic_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the raw PBE elastic constants and records computational details.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "DFT geometry optimization and elastic constants – LDA",
+    "role": "process",
+    "action": "Perform the same calculations as step 1 but using the LDA functional.",
+    "output_file": "",
+    "evidence": "lda_elastic_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the raw LDA elastic constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Assemble elastic constants table",
+    "role": "scored",
+    "action": "Extract the 13 independent elastic constants (C11, C22, C33, C12, C13, C23, C44, C55, C66, C15, C25, C35, C46) for LDA and PBE from the DFT runs. Compute the arithmetic average (PBE+LDA)/2 for each constant. Collect the values into a single table.",
+    "output_file": "elastic_constants.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with one row per functional (LDA, PBE, PL/2) and columns for each elastic constant (GPa).",
+    "output_schema": "functional: str; C11,C22,C33,C12,C13,C23,C44,C55,C66,C15,C25,C35,C46: float"
+  },
+  {
+    "id": "step_4",
+    "title": "Compute polycrystalline mechanical properties",
+    "role": "scored",
+    "action": "From the elastic constants in step 3, apply the Voigt-Reuss-Hill averaging scheme to compute the isotropic polycrystalline bulk modulus (B), shear modulus (G), Young's modulus (E), Poisson's ratio (mu), and Vickers hardness (H) for each functional (LDA, PBE, PL/2). Use standard VRH formulas.",
+    "output_file": "mechanical_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with one row per functional and columns for the derived mechanical properties.",
+    "output_schema": "functional: str; B,G,E,H (GPa): float; mu: float"
+  },
+  {
+    "id": "step_5",
+    "title": "Compute acoustic properties",
+    "role": "scored",
+    "action": "Using the bulk and shear moduli from step 4 and the crystal density (from the optimized PL/2 volume), compute longitudinal (v_p), transverse (v_s), and average sound velocities, the Debye temperature, and the acoustic Grüneisen parameter for each functional.",
+    "output_file": "acoustic_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with one row per functional and columns for the acoustic quantities.",
+    "output_schema": "functional: str; v_s,v_p,v_avg (m/s): float; Theta_D (K): float; gamma_a: float"
+  }
+]

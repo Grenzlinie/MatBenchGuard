@@ -1,0 +1,151 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "T0 result-level compare; the checker reads the agent's reported kappa and structure values against hidden paper gold with tolerances and ordering checks. Full recompute from raw DFT/BTE artifacts is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermal_conductivity_results.json": "reference_match",
+    "optimized_structures.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported kappa values and structural parameters (Table 1 and text).",
+      "source_provenance": "Paper: J. Phys. Chem. Lett. 2018, Table 1 and main text (kappa values).",
+      "generation_method": "Extracted directly from the paper and used as hidden reference.",
+      "why_not_fabricated": "These are the exact values reported in the paper, serving as ground truth for reproduction comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "graphene": "object",
+            "planar_C3N": "object",
+            "penta_graphene": "object",
+            "penta_CN2": "object"
+          },
+          "properties": {
+            "graphene": {
+              "kappa_300K": "float"
+            },
+            "planar_C3N": {
+              "kappa_300K": "float"
+            },
+            "penta_graphene": {
+              "kappa_300K": "float"
+            },
+            "penta_CN2": {
+              "kappa_300K": "float"
+            }
+          }
+        },
+        "description": "Room‑temperature (300 K) lattice thermal conductivity for the four materials, obtained from the iterative solution of the phonon BTE. Units: W m⁻¹ K⁻¹."
+      },
+      {
+        "file": "optimized_structures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "graphene": "object",
+            "planar_C3N": "object",
+            "penta_graphene": "object",
+            "penta_CN2": "object"
+          },
+          "properties": {
+            "graphene": {
+              "a": "float (lattice constant in Å)",
+              "l1": "float (C–C bond length in Å)"
+            },
+            "planar_C3N": {
+              "a": "float",
+              "l1": "float (C–C bond length)",
+              "l2": "float (C–N bond length)"
+            },
+            "penta_graphene": {
+              "a": "float",
+              "h": "float (inter‑layer distance in Å)",
+              "l1": "float",
+              "l2": "float",
+              "theta1": "float (bond angle in degrees)",
+              "theta2": "float"
+            },
+            "penta_CN2": {
+              "a": "float",
+              "h": "float",
+              "l1": "float",
+              "l2": "float",
+              "theta1": "float",
+              "theta2": "float"
+            }
+          }
+        },
+        "description": "Optimized lattice constants and structural parameters extracted from the DFT ground‑state geometries."
+      }
+    ],
+    "notes": "The checker compares the reported κ_L to the hidden gold within a 30% relative tolerance and verifies the correct ordering (penta‑CN₂ > penta‑graphene; planar C₃N < graphene). Structural parameters are checked within 2% of the paper‑reported values. Full credit requires both tolerance and trend conditions; partial credit may be awarded for correct trend alone."
+  },
+  "steps": [
+    {
+      "id": "step_04_kappa",
+      "output_file": "thermal_conductivity_results.json",
+      "weight": 0.6,
+      "kind": "custom",
+      "description": "Compare reported kappa to hidden gold with ordering and 30% relative tolerance.",
+      "hidden": {
+        "ref_kappa": {
+          "graphene": 3094.98,
+          "planar_C3N": 103.02,
+          "penta_graphene": 252.95,
+          "penta_CN2": 660.71
+        },
+        "tolerance_relative": 0.3
+      }
+    },
+    {
+      "id": "step_05_structure",
+      "output_file": "optimized_structures.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Compare reported structural parameters to hidden gold with 2% relative tolerance.",
+      "hidden": {
+        "ref_struct": {
+          "graphene": {
+            "a": 2.46434,
+            "l1": 1.42279
+          },
+          "planar_C3N": {
+            "a": 4.86036,
+            "l1": 1.40326,
+            "l2": 1.40288
+          },
+          "penta_graphene": {
+            "a": 3.64071,
+            "h": 1.205,
+            "l1": 1.54972,
+            "l2": 1.33904,
+            "theta1": 112.32,
+            "theta2": 113.49
+          },
+          "penta_CN2": {
+            "a": 3.31294,
+            "h": 1.528,
+            "l1": 1.46831,
+            "l2": 1.44767,
+            "theta1": 105.83,
+            "theta2": 107.74
+          }
+        },
+        "tolerance_relative": 0.02
+      }
+    }
+  ]
+}

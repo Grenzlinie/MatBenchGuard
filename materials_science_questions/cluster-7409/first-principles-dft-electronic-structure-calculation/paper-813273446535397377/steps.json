@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_00",
+    "title": "GGA+U relaxation and in‑gap energy calculation",
+    "role": "process",
+    "action": "Construct a 320‑atom SrTiO3 supercell in the oxygen‑octahedron rotated structure (ORS) with lattice constant a = 3.977 Å and initial rotation θ = 6.5° about the c‑axis, containing a neutral oxygen vacancy at the V_Ra and V_Rc sites. Perform GGA+U structural relaxation (forces < 0.05 eV/Å, Γ‑only k‑point sampling) using the rotationally invariant +U method with U_eff = 4.36 eV on Ti 3d orbitals. After relaxation, compute the energy of the highest occupied localized in‑gap state relative to the conduction band minimum (CBM) for V_Ra and V_Rc. Record the energies (in eV) in `/app/outputs/gap_energies.json` with keys `V_Ra_E_gap` and `V_Rc_E_gap`.",
+    "output_file": "",
+    "evidence": "gap_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The GGA+U relaxation yields the localized in‑gap state energies that are the paper's co‑equal headline result. The agent must produce these energies as a structured evidence artifact.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01",
+    "title": "Build ORS supercell and vacancy models for HSE06",
+    "role": "process",
+    "action": "Construct a 320‑atom SrTiO3 supercell in the oxygen‑octahedron rotated structure (ORS) with lattice constant a = 4.06 Å and initial rotation angle θ = 6.5° about the c‑axis. Create two supercell structure files: one containing a neutral oxygen vacancy at the V_Ra site (oxygen displaced by the rotation) and one containing a neutral oxygen vacancy at the V_Rc site (oxygen on the rotation axis).",
+    "output_file": "",
+    "evidence": "supercell_structures.bundle",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the initial structures for HSE06 DFT relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "HSE06 relaxation, rotation analysis, and integration of GGA+U energies",
+    "role": "scored",
+    "action": "Perform full structural relaxation (forces < 0.05 eV/Å) of the V_Ra and V_Rc supercells using the HSE06 hybrid functional with Γ‑only k‑point sampling. After relaxation, compute the oxygen‑octahedron rotation angle θ for each TiO6 octahedron. Extract the maximum θ among octahedra near the vacancy for V_Ra (V_Ra_max_theta), the maximum θ near the vacancy for V_Rc (V_Rc_max_theta), and the average θ of octahedra far from the vacancy (far_theta_avg). Additionally, read the GGA+U in‑gap energies from `gap_energies.json` (produced in step_00) and include them in the same output file under the keys V_Ra_E_gap and V_Rc_E_gap (in eV). Write all values to `/app/outputs/rotation_angles.json`.",
+    "output_file": "rotation_angles.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the rotation angles and the GGA+U calculated in‑gap state energies, all derived from the DFT calculations. The combined output allows the verifier to score both the rotation magnitudes and the electronic structure results.",
+    "output_schema": "object with keys V_Ra_max_theta (degrees), V_Rc_max_theta (degrees), far_theta_avg (degrees), V_Ra_E_gap (eV), V_Rc_E_gap (eV)"
+  }
+]

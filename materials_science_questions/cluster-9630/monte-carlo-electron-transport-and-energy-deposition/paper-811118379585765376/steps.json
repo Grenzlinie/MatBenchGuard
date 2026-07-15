@@ -1,0 +1,80 @@
+[
+  {
+    "id": "1",
+    "title": "Implement Monte Carlo simulation code",
+    "role": "process",
+    "action": "Implement a Monte Carlo simulation of hydrogen atom implantation in amorphous targets. The code must model: (i) straight-line motion between discrete elastic nuclear collisions with continuous inelastic electronic energy loss; (ii) nuclear elastic scattering using the universal Kalbitzer–Oetzmann cross section, with total nuclear cross section N^{-2/3} and maximum scattering angle π; (iii) scattering angle θ sampled via the normalized integral equation using a uniform random number, and azimuthal angle φ=2πR; (iv) mean free paths: total λ_T = N^{-1/3}, and species-resolved mean free paths λ_Si = λ_T/(1-c) and λ_H = λ_T/c; (v) collision partner selected by a random number, and individual free path S = -λ_T ln(R); (vi) continuous inelastic energy loss along each segment using the corrected Lindhard–Scharff form Se = C K_LS √E, with Bragg mixing for mixed-composition targets; (vii) termination when H atom energy falls below 0.5 eV or the atom exits the target surface. Use atom number density N = 5×10^20 cm⁻³, correction factors C=1.38 for Si and C=1.0 for H.",
+    "output_file": "",
+    "evidence": "implementation_report.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The agent must write the simulation code according to the physical model. The optional evidence file can document the algorithm and parameters used.",
+    "output_schema": ""
+  },
+  {
+    "id": "2",
+    "title": "Run simulation for pure amorphous silicon (a-Si)",
+    "role": "scored",
+    "action": "Using the Monte Carlo code, simulate hydrogen implantation into pure amorphous silicon (c=0) at incident energies: 15, 30, 50, 100, 200, 500, 1000 eV. For each energy, run at least 10,000 trajectories and record the final projected depth of each implanted atom. Write a JSON Lines file where each line is a JSON object with keys 'energy' (float, eV) and 'depth' (float, angstrom).",
+    "output_file": "trajectories_aSi.jsonl",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw per-trajectory final depths for the a-Si simulation. The checker will regroup depths by energy, recompute the mean projected range (MPR) and standard deviation (Sigma), and compare those statistics to the hidden gold.",
+    "output_schema": "A text file with one JSON object per line. Required keys per object: energy (float, eV), depth (float, angstrom)."
+  },
+  {
+    "id": "3",
+    "title": "Run simulation for hydrogenated amorphous silicon (a-Si:H, 30% H)",
+    "role": "scored",
+    "action": "Simulate hydrogen implantation into a-Si:H with H atomic concentration c=0.3 at the same seven energies as step 2: 15, 30, 50, 100, 200, 500, 1000 eV. For each energy, run at least 10,000 trajectories and output a JSON Lines file with keys 'energy' and 'depth'.",
+    "output_file": "trajectories_aSiH30.jsonl",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw final depths for the a-Si:H (30% H) simulation. Same recomputation and scoring as step 2.",
+    "output_schema": "Same schema as step 2: JSON Lines, keys 'energy' (eV) and 'depth' (angstrom)."
+  },
+  {
+    "id": "4",
+    "title": "Run concentration sweep at 1000 eV",
+    "role": "scored",
+    "action": "Simulate at a fixed incident energy of 1000 eV for hydrogen concentrations c = 0.1 and 0.2. For each concentration, run at least 10,000 trajectories and record final depths. Output a JSON Lines file with keys 'energy', 'concentration', 'depth'.",
+    "output_file": "trajectories_concsweep.jsonl",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw final depths for the concentration-dependence study at 1000 eV. The checker will recompute MPR and Sigma per concentration.",
+    "output_schema": "JSON Lines: {\"energy\": 1000.0, \"concentration\": <float>, \"depth\": <float>}. energy in eV, concentration in at% (e.g., 0.1, 0.2), depth in angstrom."
+  },
+  {
+    "id": "5",
+    "title": "Compute summary statistics (MPR and Sigma)",
+    "role": "scored",
+    "action": "From the trajectory data produced in steps 2–4, compute for each unique (energy, concentration) condition the mean projected range (MPR) and standard deviation (Sigma) of the depth distribution. Output a CSV file with columns: energy (eV), concentration (at%), mpr (angstrom), sigma (angstrom).",
+    "output_file": "simulation_summary.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Aggregated table of MPR and Sigma for all simulation conditions. The checker validates these against the hidden gold and cross-checks with its own recomputation from the raw trajectories.",
+    "output_schema": "CSV table with header: energy,concentration,mpr,sigma. energy: float (eV); concentration: float (at%); mpr: float (angstrom); sigma: float (angstrom)."
+  },
+  {
+    "id": "6",
+    "title": "Compute Sigma/MPR ratio for a-Si",
+    "role": "scored",
+    "action": "For the a-Si simulation results (concentration=0), compute the ratio Sigma/MPR at each incident energy. Output a CSV file with columns: energy (eV), ratio (dimensionless).",
+    "output_file": "ratio_aSi.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The ratio of the standard deviation to the mean projected range as a function of energy for a-Si. The checker verifies the ratio is approximately constant, as expected from the paper.",
+    "output_schema": "CSV table with header: energy,ratio. energy: float (eV); ratio: float (dimensionless)."
+  }
+]

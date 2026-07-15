@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full lattice energy minimization (Madelung sum + repulsion sums + 2D optimization per compound) is computationally heavy and cannot be rerun in the verifier sandbox; the agent's output (u,v) is therefore compared directly against hidden paper theoretical values with tolerance, and monotonic trend is verified.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "predicted_positions.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference u,v values for YVO4, NdVO4, ErVO4 from Model II theoretical calculations (Table V).",
+      "source_provenance": "Paper Table V, \"Theo., Model II\" row for each compound.",
+      "generation_method": "Extracted directly from the paper; cross-checked with the reference solve.sh CSV output.",
+      "why_not_fabricated": "Values are the paper's actual reported theoretical (u,v) for Model II, exactly as used in the paper's own comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predicted_positions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            {
+              "name": "compound",
+              "type": "string",
+              "description": "Compound identifier, e.g., YVO4, NdVO4, CeVO4"
+            },
+            {
+              "name": "Z",
+              "type": "integer",
+              "description": "Atomic number of the rare-earth (or Y) cation"
+            },
+            {
+              "name": "u",
+              "type": "float",
+              "description": "Oxygen fractional coordinate u in Wyckoff site 16h"
+            },
+            {
+              "name": "v",
+              "type": "float",
+              "description": "Oxygen fractional coordinate v in Wyckoff site 16h"
+            }
+          ]
+        },
+        "description": "Predicted oxygen positional parameters (u,v) from lattice energy minimization using Model II repulsion constants."
+      }
+    ],
+    "notes": "The CSV must include all 14 tetragonal vanadates: CeVO4, PrVO4, NdVO4, SmVO4, EuVO4, GdVO4, TbVO4, DyVO4, HoVO4, ErVO4, TmVO4, YbVO4, LuVO4, and YVO4. LaVO4 is excluded because it is monoclinic. The checker will compare the u,v values for the three calibration compounds (YVO4, NdVO4, ErVO4) against hidden reference values within tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_calib_Y",
+      "output_file": "predicted_positions.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "compound": "YVO4",
+      "gold_u": 0.1868,
+      "gold_v": 0.3302,
+      "tolerance": 0.002
+    },
+    {
+      "id": "step_calib_Nd",
+      "output_file": "predicted_positions.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "compound": "NdVO4",
+      "gold_u": 0.18,
+      "gold_v": 0.3284,
+      "tolerance": 0.002
+    },
+    {
+      "id": "step_calib_Er",
+      "output_file": "predicted_positions.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "compound": "ErVO4",
+      "gold_u": 0.1858,
+      "gold_v": 0.3234,
+      "tolerance": 0.002
+    },
+    {
+      "id": "step_trend",
+      "output_file": "predicted_positions.csv",
+      "kind": "vector",
+      "weight": 0.1,
+      "required_compounds": [
+        "CeVO4",
+        "PrVO4",
+        "NdVO4",
+        "SmVO4",
+        "EuVO4",
+        "GdVO4",
+        "TbVO4",
+        "DyVO4",
+        "HoVO4",
+        "ErVO4",
+        "TmVO4",
+        "YbVO4",
+        "LuVO4",
+        "YVO4"
+      ]
+    }
+  ]
+}

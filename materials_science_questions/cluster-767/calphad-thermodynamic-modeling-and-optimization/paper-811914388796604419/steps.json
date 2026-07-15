@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_data_prep",
+    "title": "Prepare experimental data arrays",
+    "role": "process",
+    "action": "Parse the provided inline experimental liquidus data (temperature, composition) and enthalpy-of-mixing data (composition, enthalpy) into structured numeric arrays. Exclude the one liquidus point that was marked as an outlier in the original evaluation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Data preparation step: cleaning and structuring the raw input data arrays for subsequent regression.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_enthalpy_fit",
+    "title": "Fit enthalpy-of-mixing polynomial",
+    "role": "process",
+    "action": "Perform a least-squares regression on the enthalpy data of [71Pre] (the higher-accuracy calorimetric dataset) to determine the coefficients A and B in the subregular solution model ΔmixH = X_Ge * X_Bi (A + B X_Bi). Use the full composition range data.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Regression to obtain the enthalpy model coefficients (A, B in J/mol).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_entropy_optimization",
+    "title": "Optimize excess entropy parameters using full liquidus data",
+    "role": "process",
+    "action": "Using the fitted enthalpy polynomial from step_02, the pure-component fusion Gibbs energy functions, and the complete liquidus dataset (all included data points), perform a nonlinear regression/optimization to determine the excess entropy polynomial coefficients C and D in the model S^ex = X_Ge X_Bi (C + D X_Bi) (J/mol·K). Assume temperature independence of the excess entropy. The objective is to minimize the sum of squared deviations between calculated and experimental liquidus temperatures across all data points. This step requires a phase equilibrium solver within the optimization loop.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core optimization step that solves for the excess entropy coefficients, which together with the enthalpy coefficients define the excess Gibbs energy G^ex = H^ex - T S^ex.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_output_gibbs_params",
+    "title": "Output Redlich-Kister parameters for the liquid excess Gibbs energy",
+    "role": "scored",
+    "action": "Write the four subregular solution parameters that define the excess Gibbs energy of the liquid: A, B (from step_02) and C, D (from step_03).",
+    "output_file": "excess_gibbs_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The excess Gibbs energy model is G^ex = X_Ge X_Bi [ (A - C*T) + (B - D*T) X_Bi ]. The artifact records the constants A, B, C, D.",
+    "output_schema": "CSV with columns: parameter (string, one of 'A', 'B', 'C', 'D'), value (float, units: A and B in J/mol; C and D in J/(mol·K)). Example row: 'A', 12350"
+  },
+  {
+    "id": "step_05_compute_eutectic",
+    "title": "Compute liquidus boundaries and eutectic point",
+    "role": "scored",
+    "action": "Using the complete thermodynamic model for the liquid (excess + ideal) and the pure solid references (assume negligible solid solubility), compute the liquidus boundaries by solving equal chemical potentials along the two-phase regions. Determine the eutectic temperature and composition where the two liquidus branches intersect.",
+    "output_file": "eutectic_point.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The assessed eutectic point from the thermodynamic model.",
+    "output_schema": "CSV with columns: property (string, one of 'temperature_C', 'composition_at_percent_Bi'), value (float, units: °C or at.% Bi). Example row: 'temperature_C', 271.35"
+  }
+]

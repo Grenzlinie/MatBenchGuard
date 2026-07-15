@@ -1,0 +1,67 @@
+[
+  {
+    "id": "gen_ionic_densities",
+    "title": "Generate ionic charge densities",
+    "role": "process",
+    "action": "Use an atomic DFT code (e.g., PySCF) to compute the valence charge densities of isolated La3+, Cu2+, and O2- ions applying a Watson sphere stabilization for O2-. Produce spherically averaged densities rho_alpha(r) for each ion.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute ionic charge densities required for the Gordon-Kim pair potentials.",
+    "output_schema": ""
+  },
+  {
+    "id": "fit_pair_potentials",
+    "title": "Compute and fit short-range pair potentials",
+    "role": "process",
+    "action": "From the ionic densities, calculate the short-range pair potentials Phi_alpha_beta(R) between all ion pairs using the Gordon-Kim method (overlap model). Fit each short-range potential to a two-exponential form (alpha+ * exp(-beta+ * R) - alpha- * exp(-beta- * R)). Use nominal charges for the Coulomb part initially.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Construct the pairwise potentials that define the ionic reference model.",
+    "output_schema": ""
+  },
+  {
+    "id": "add_covalence",
+    "title": "Add covalent term and set effective charges",
+    "role": "process",
+    "action": "For the Cu–O_xy nearest-neighbour interaction, add the fitted covalent exponential term -α exp(-β R) with parameters α=2.114 a.u. and β=0.796 a.u. Use effective ionic charges: Cu+1.6, O_xy-1.8, O_z-2, La+3. The modified pair potentials become the input for the subsequent energy minimization and phonon calculation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Augment the ionic model with covalence to produce the Ecov≠0 model.",
+    "output_schema": ""
+  },
+  {
+    "id": "minimize_structure",
+    "title": "Energy minimization and structural parameter extraction",
+    "role": "scored",
+    "action": "Using the augmented pair potentials from the previous step, minimize the total ionic energy E = (1/2) Σ' Φ_αβ(|R_β^b - R_α^0|) with respect to the tetragonal structural parameters a, c/a, z(Oz), z(La). Record the optimized parameters as the Ecov≠0 model structure.",
+    "output_file": "structural_params.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored output containing the minimized structural parameters for the covalence-including model.",
+    "output_schema": "JSON object with keys: a (float, in Angstrom), c_over_a (float), z_Oz (float), z_La (float). Example: {\"a\": 3.69, \"c_over_a\": 3.38, \"z_Oz\": 0.189, \"z_La\": 0.362}"
+  },
+  {
+    "id": "phonon_stability",
+    "title": "Phonon calculation and stability verification",
+    "role": "scored",
+    "action": "Construct the dynamical matrix from the same augmented pair potentials for the Ecov≠0 structure. Compute phonon frequencies at high-symmetry points (Γ and X). Extract the frequencies of the two Eu modes at Γ and the Eg mode at X. Record the frequencies (in THz); all three must be positive, indicating that these previously unstable modes are now stabilized.",
+    "output_file": "mode_stabilities.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored output containing the computed frequencies of the previously unstable modes; positive values demonstrate stabilization.",
+    "output_schema": "JSON object with keys: E_u_mode_1_frequency_THz (float), E_u_mode_2_frequency_THz (float), E_g_mode_frequency_THz (float). Example: {\"E_u_mode_1_frequency_THz\": 1.5, \"E_u_mode_2_frequency_THz\": 3.2, \"E_g_mode_frequency_THz\": 0.8}"
+  }
+]

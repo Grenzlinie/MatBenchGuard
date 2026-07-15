@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_bulk_tail_correction",
+    "title": "Bulk liquid tail correction",
+    "role": "process",
+    "action": "Compute the free energy difference between the full Lennard-Jones potential and the truncated potential (cut-off 2.5σ) for the uniform bulk liquid using numerical integration of the potential tail, assuming uniform radial distribution function.",
+    "output_file": "",
+    "evidence": "evidence_bulk_tail.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Long-range tail correction for the bulk liquid.",
+    "output_schema": "Single number in units of ε."
+  },
+  {
+    "id": "step_slab_separation",
+    "title": "Monte Carlo slab separation free energy",
+    "role": "process",
+    "action": "Using Monte Carlo simulations and Bennett's acceptance ratio method, gradually separate the bulk liquid into slabs with hard walls by increasing the slab separation parameter Δ from 0 to beyond the cut-off distance. Record the cumulative free energy change Fc - Fb.",
+    "output_file": "",
+    "evidence": "evidence_slab_separation.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Monte Carlo slab separation process.",
+    "output_schema": "JSON containing cumulative free energy in units of ε."
+  },
+  {
+    "id": "step_cutoff_increase",
+    "title": "Cut-off distance increase free energy",
+    "role": "process",
+    "action": "Using Bennett's method, compute the free energy difference between the slab system with potential cut-off 2.5σ and with cut-off 5.0σ.",
+    "output_file": "",
+    "evidence": "evidence_cutoff_increase.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Free energy change due to increasing the potential cut-off distance.",
+    "output_schema": "Single number in units of ε."
+  },
+  {
+    "id": "step_surface_relaxation",
+    "title": "Surface relaxation free energy",
+    "role": "process",
+    "action": "Relax the hard walls by moving them outward symmetrically, sample the density at the walls via Monte Carlo, and integrate the force (kT times density) to obtain the relaxation free energy Fe - Fd.",
+    "output_file": "",
+    "evidence": "evidence_relaxation.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Free energy change due to surface relaxation.",
+    "output_schema": "JSON containing relaxation free energy in units of ε."
+  },
+  {
+    "id": "step_tail_correction_surface",
+    "title": "Free surface tail correction",
+    "role": "process",
+    "action": "Compute the free energy correction from the potential tail beyond 5.0σ to infinity for the free-surface slab, assuming uniform density.",
+    "output_file": "",
+    "evidence": "evidence_surface_tail.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Long-range tail correction for the free-surface slab.",
+    "output_schema": "Single number in units of ε."
+  },
+  {
+    "id": "step_final_results",
+    "title": "Surface tension and excess internal energy",
+    "role": "scored",
+    "action": "Sum all free energy contributions (Fb-Fa, Fc-Fb, Fd-Fc, Fe-Fd, Ff-Fe) to obtain total free energy of surface creation. Compute the total surface area. Calculate surface tension γ = ΔF_total / (2 * Lx * Ly) and convert to dyn/cm using argon parameters (ε/k = 119.8 K, σ = 3.405 Å). Compute excess internal energy Us from the average potential energies of the bulk and free-surface states and convert to erg/cm². Write the results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregate all computed free energy differences and convert to macroscopic surface tension and excess internal energy.",
+    "output_schema": "JSON object with keys: total_free_energy (float, units of ε), surface_tension (float, dyn/cm), excess_internal_energy (float, erg/cm²), stages : { Fb_minus_Fa: float, Fc_minus_Fb: float, Fd_minus_Fc: float, Fe_minus_Fd: float, Ff_minus_Fe: float }."
+  }
+]

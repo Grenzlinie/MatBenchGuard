@@ -1,0 +1,59 @@
+{
+  "scoring_tier": "T0_result_compare",
+  "scoring_justification": "Limiting potentials are the end result of a full DFT+CHE pipeline; the verifier sandbox cannot rerun DFT, so the checker compares the agent's reported UL values to paper gold within tolerance and checks the required ordering trend.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "limiting_potentials.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "System",
+            "UL_V",
+            "ΔGmax_eV"
+          ],
+          "units": {
+            "System": "string",
+            "UL_V": "V",
+            "ΔGmax_eV": "eV"
+          }
+        },
+        "description": "Computed limiting potentials (UL) and the largest free‑energy step (ΔGmax) for NRR on six catalyst models; the checker recomputes agreement with reference values and the required ordering (F‑Fe@F‑G must show the highest UL)."
+      }
+    ],
+    "notes": "Binding energies, N₂ adsorption energies, and H* adsorption energies are computed as intermediates inside the process steps but are not scored separately."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference limiting potentials (UL) for six catalyst systems and the required ordering (F‑Fe@F‑G must have the highest UL)",
+      "source_provenance": "Paper supplementary Table S1/S2; values: Fe -0.72, F-Fe -0.54, Fe@G -0.83, Fe@F‑G -0.44, F-Fe@G -0.58, F-Fe@F‑G -0.36 V",
+      "generation_method": "Direct copy from paper's reported UL values",
+      "why_not_fabricated": "Values are the paper's own computed DFT+CHE limiting potentials, verified against the reference oracle solve.sh which writes the same numbers."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_ul_values_and_trend",
+      "output_file": "limiting_potentials.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "gold_values": {
+        "Fe": -0.72,
+        "F-Fe": -0.54,
+        "Fe@G": -0.83,
+        "Fe@F-G": -0.44,
+        "F-Fe@G": -0.58,
+        "F-Fe@F-G": -0.36
+      },
+      "tolerance_abs": 0.15,
+      "trend_check": {
+        "required_highest_system": "F-Fe@F-G"
+      }
+    }
+  ]
+}

@@ -1,0 +1,376 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "The task requires reproducing the paper's computed numeric values; a result-level comparison against the paper-reported gold values with tolerances is sufficient.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "potential_parameters.json": "exact_match",
+    "perfect_crystal_results.json": "exact_match",
+    "intrinsic_defect_energies.json": "exact_match",
+    "redox_energies.json": "exact_match",
+    "migration_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for all scored output artifacts",
+      "source_provenance": "Paper Tables 1-5 (fitted parameters, perfect crystal, intrinsic defects, redox, migration barriers).",
+      "generation_method": "Extracted from the paper's reported values and verified against the reference solve.sh to ensure consistency.",
+      "why_not_fabricated": "These are the actual values reported in the paper and the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "potential_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "short_range": "array of objects {interaction: string, A: float (eV), rho: float (Å), C: float (eV·Å⁶)}",
+            "shell": "array of objects {species: string, Y: float (e), k: float (eV·Å⁻²)}"
+          }
+        },
+        "description": "Fitted short-range Buckingham and shell-model potential parameters for YAlO3."
+      },
+      {
+        "file": "perfect_crystal_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_energy": "float (eV)",
+            "unit_cell": "object {a: float (Å), b: float (Å), c: float (Å)}",
+            "interatomic_distances": "array of objects {pair: string, distance: float (Å)}",
+            "static_dielectric": "float (unitless)",
+            "high_frequency_dielectric": "float (unitless)",
+            "density": "float (g/cm³)"
+          }
+        },
+        "description": "Perfect crystal properties computed with the fitted potential, benchmarked against experimental data."
+      },
+      {
+        "file": "intrinsic_defect_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "isolated": "array of objects {defect: string, energy: float (eV)}",
+            "frenkel": "array of objects {type: string, energy_per_defect: float (eV)}",
+            "schottky": "array of objects {type: string, energy_per_defect: float (eV)}"
+          }
+        },
+        "description": "Formation energies of isolated point defects, Frenkel disorder, Schottky disorder, and antisite defects."
+      },
+      {
+        "file": "redox_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "electronic_defects": "object {hole_formation: float (eV), electron_formation: float (eV), hole_defect_energy: float (eV), electron_defect_energy: float (eV)}",
+            "redox": "object {oxidation_vacancy_filling: float (eV), oxidation_interstitial_oxygen: float (eV), reduction: float (eV)}"
+          }
+        },
+        "description": "Electronic defect energies (hole, electron) and redox reaction energies (oxidation and reduction)."
+      },
+      {
+        "file": "migration_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pathways": "array of objects {jump_path: string, activation_energy: float (eV)}"
+          }
+        },
+        "description": "Oxygen vacancy migration activation energies along 12 distinct pathways in the AlO6 octahedron."
+      }
+    ],
+    "notes": "All numeric values are compared against the paper's reported gold values with appropriate hidden tolerances (absolute for bond lengths/dielectric/density/barriers, percentage for potential parameters). The checker verifies that each required field is present and within tolerance."
+  },
+  "steps": [
+    {
+      "id": "potential_parameters",
+      "output_file": "potential_parameters.json",
+      "weight": 0.2,
+      "expected": {
+        "short_range": [
+          {
+            "interaction": "O²⁻–O²⁻",
+            "A": 7763.013,
+            "rho": 0.277819,
+            "C": 0.0
+          },
+          {
+            "interaction": "O²⁻–Al³⁺",
+            "A": 11590.781,
+            "rho": 0.203647,
+            "C": 2.93523
+          },
+          {
+            "interaction": "O²⁻–Y³⁺",
+            "A": 10510.057,
+            "rho": 0.250406,
+            "C": 0.0
+          }
+        ],
+        "shell": [
+          {
+            "species": "O²⁻",
+            "Y": -2.815,
+            "k": 40.01
+          },
+          {
+            "species": "Al³⁺",
+            "Y": 2.98,
+            "k": 889.11
+          },
+          {
+            "species": "Y³⁺",
+            "Y": 3.151,
+            "k": 27077.9
+          }
+        ]
+      }
+    },
+    {
+      "id": "perfect_crystal",
+      "output_file": "perfect_crystal_results.json",
+      "weight": 0.2,
+      "expected": {
+        "lattice_energy": -155.92,
+        "unit_cell": {
+          "a": 5.339,
+          "b": 7.3727,
+          "c": 5.1746
+        },
+        "interatomic_distances": [
+          {
+            "pair": "Y-Y",
+            "distance": 3.64
+          },
+          {
+            "pair": "Al-Al",
+            "distance": 3.686
+          },
+          {
+            "pair": "Y-Al_1",
+            "distance": 3.145
+          },
+          {
+            "pair": "Y-Al_2",
+            "distance": 3.234
+          },
+          {
+            "pair": "Y-Al_3",
+            "distance": 3.023
+          },
+          {
+            "pair": "Y-Al_4",
+            "distance": 3.471
+          },
+          {
+            "pair": "Al-O_1",
+            "distance": 1.899
+          },
+          {
+            "pair": "Al-O_2",
+            "distance": 1.91
+          },
+          {
+            "pair": "Al-O_3",
+            "distance": 1.929
+          },
+          {
+            "pair": "Y-O_1",
+            "distance": 2.326
+          },
+          {
+            "pair": "Y-O_2",
+            "distance": 3.097
+          },
+          {
+            "pair": "Y-O_3",
+            "distance": 2.232
+          },
+          {
+            "pair": "Y-O_4",
+            "distance": 3.002
+          },
+          {
+            "pair": "Y-O_5",
+            "distance": 2.495
+          },
+          {
+            "pair": "Y-O_6",
+            "distance": 3.268
+          },
+          {
+            "pair": "Y-O_7",
+            "distance": 2.266
+          },
+          {
+            "pair": "Y-O_8",
+            "distance": 2.567
+          }
+        ],
+        "static_dielectric": 15.96,
+        "high_frequency_dielectric": 3.82,
+        "density": 5.345
+      }
+    },
+    {
+      "id": "intrinsic_defect_energies",
+      "output_file": "intrinsic_defect_energies.json",
+      "weight": 0.2,
+      "expected": {
+        "isolated": [
+          {
+            "defect": "V_O",
+            "energy": 18.87
+          },
+          {
+            "defect": "V_Al",
+            "energy": 65.84
+          },
+          {
+            "defect": "V_Y",
+            "energy": 52.01
+          },
+          {
+            "defect": "O_i",
+            "energy": -44.34
+          },
+          {
+            "defect": "Al_i",
+            "energy": -53.67
+          },
+          {
+            "defect": "Y_i",
+            "energy": -31.42
+          },
+          {
+            "defect": "Y_Al",
+            "energy": 16.71
+          },
+          {
+            "defect": "Al_Y",
+            "energy": -9.34
+          }
+        ],
+        "frenkel": [
+          {
+            "type": "Oxygen",
+            "energy_per_defect": -12.74
+          },
+          {
+            "type": "Yttrium",
+            "energy_per_defect": 10.3
+          },
+          {
+            "type": "Aluminium",
+            "energy_per_defect": 6.09
+          }
+        ],
+        "schottky": [
+          {
+            "type": "YAlO3",
+            "energy_per_defect": 3.71
+          },
+          {
+            "type": "Al2O3",
+            "energy_per_defect": 3.54
+          },
+          {
+            "type": "Y2O3",
+            "energy_per_defect": 3.81
+          }
+        ]
+      }
+    },
+    {
+      "id": "redox_energies",
+      "output_file": "redox_energies.json",
+      "weight": 0.2,
+      "expected": {
+        "electronic_defects": {
+          "hole_formation": 17.8,
+          "electron_formation": 26.33,
+          "hole_defect_energy": 9.05,
+          "electron_defect_energy": 5.81
+        },
+        "redox": {
+          "oxidation_vacancy_filling": 9.09,
+          "oxidation_interstitial_oxygen": -16.38,
+          "reduction": 20.63
+        }
+      }
+    },
+    {
+      "id": "migration_barriers",
+      "output_file": "migration_barriers.json",
+      "weight": 0.2,
+      "expected": {
+        "pathways": [
+          {
+            "jump_path": "1→2",
+            "activation_energy": 0.99
+          },
+          {
+            "jump_path": "2→6",
+            "activation_energy": 0.99
+          },
+          {
+            "jump_path": "1→3",
+            "activation_energy": 0.52
+          },
+          {
+            "jump_path": "3→6",
+            "activation_energy": 0.52
+          },
+          {
+            "jump_path": "1→4",
+            "activation_energy": 0.3
+          },
+          {
+            "jump_path": "4→6",
+            "activation_energy": 0.3
+          },
+          {
+            "jump_path": "1→5",
+            "activation_energy": 0.15
+          },
+          {
+            "jump_path": "5→6",
+            "activation_energy": 0.15
+          },
+          {
+            "jump_path": "2→3",
+            "activation_energy": 0.31
+          },
+          {
+            "jump_path": "3→4",
+            "activation_energy": 0.69
+          },
+          {
+            "jump_path": "4→5",
+            "activation_energy": 0.29
+          },
+          {
+            "jump_path": "5→2",
+            "activation_energy": 0.69
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper's main result is the qualitative presence of a spin gap in D(E) and a dip feature in A(k,E); a structural audit is the strongest feasible tier for a compute-driven reproduction with no ground-truth numerical labels.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "D_E.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "D_E_T1",
+            "D_E_T2"
+          ],
+          "units": {
+            "energy": "t (nearest-neighbor hopping energy unit)",
+            "D_E_T1": "dimensionless (D(E)*t)",
+            "D_E_T2": "dimensionless (D(E)*t)"
+          }
+        },
+        "description": "Momentum-integrated spin-fluctuation spectral weight D(E) multiplied by t, for two temperatures. The structural audit evaluates whether the curve shapes are physically plausible according to the model, without requiring exact numerical references."
+      },
+      {
+        "file": "A_k_E.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "A_T1",
+            "A_T2"
+          ],
+          "units": {
+            "energy": "t (nearest-neighbor hopping energy unit)",
+            "A_T1": "dimensionless (A(k,E)*t)",
+            "A_T2": "dimensionless (A(k,E)*t)"
+          }
+        },
+        "description": "Total quasiparticle spectral weight A(k,E) multiplied by t, at k=(π,0.1624) on the Fermi surface, for two temperatures. The structural audit evaluates whether the curve shapes are physically plausible according to the model, without requiring exact numerical references."
+      }
+    ],
+    "notes": "The model parameters are fixed: tight-binding with t'=-0.45t, μ=-1.75t, d-wave gap Δ0=0.1t, damping Γ0=0.04t, Γ1=0.05t, coupling U=1.0t, α=4.0, and the k-point is (π,0.1624). All equations are as given in the paper's methods; energies are in units of t. The structural audit does not require exact numerical agreement, only the qualitative physical characteristics described in the model."
+  },
+  "checks": [
+    {
+      "id": "check_D_E_csv",
+      "output_file": "D_E.csv",
+      "weight": 0.5,
+      "kind": "structural_audit",
+      "description": "Verify spin gap: D_E_T2 is zero below 0.2t, D_E_T1 is not, and D_E_T2 has a peak above gap.",
+      "params": {
+        "gap_energy": 0.2,
+        "gap_threshold": 0.001,
+        "activity_threshold": 0.001,
+        "peak_min": 0.01
+      }
+    },
+    {
+      "id": "check_A_k_E_csv",
+      "output_file": "A_k_E.csv",
+      "weight": 0.5,
+      "kind": "structural_audit",
+      "description": "Verify dip feature: A_T2 has a local minimum in [0.05,0.2], A_T1 does not.",
+      "params": {
+        "dip_energy_range": [
+          0.05,
+          0.2
+        ],
+        "min_depth_ratio": 0.8
+      }
+    }
+  ]
+}

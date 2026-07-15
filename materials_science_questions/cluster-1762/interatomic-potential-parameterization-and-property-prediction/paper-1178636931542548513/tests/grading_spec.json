@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Activation energy is recomputed from D_total vs T; anisotropy and range checks are purely derived from the artifact; no need to trust agent-reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "msd_diffusion_coefficients.json": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "msd_diffusion_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "temperatures": "array of numbers (K)",
+            "D_total": "array of numbers (cm^2/s)",
+            "activation_energy": "number (eV)",
+            "D_a_1473K": "number (cm^2/s)",
+            "D_b_1473K": "number (cm^2/s)",
+            "D_c_1473K": "number (cm^2/s)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "temperatures": "K",
+            "D_total": "cm^2/s",
+            "activation_energy": "eV",
+            "D_a_1473K": "cm^2/s",
+            "D_b_1473K": "cm^2/s",
+            "D_c_1473K": "cm^2/s"
+          }
+        },
+        "description": "Computed oxygen diffusion coefficients, activation energy, and directional components confirming one-dimensional transport."
+      }
+    ],
+    "notes": "The activation energy and anisotropy condition are the main scored targets; activation energy is compared to a hidden reference within tolerance, and the directional components must show a ratio D_a/D_b > 10 and D_c negligible relative to D_b to confirm one-dimensional transport."
+  },
+  "steps": [
+    {
+      "id": "activation_energy_check",
+      "output_file": "msd_diffusion_coefficients.json",
+      "kind": "custom",
+      "weight": 0.4,
+      "reference_activation_energy": 0.78,
+      "tolerance_activation_energy": 0.15
+    },
+    {
+      "id": "diffusion_anisotropy_check",
+      "output_file": "msd_diffusion_coefficients.json",
+      "kind": "custom",
+      "weight": 0.4,
+      "min_anisotropy_ratio_a_over_b": 10,
+      "max_c_over_b": 0.1
+    },
+    {
+      "id": "total_diffusion_range_check",
+      "output_file": "msd_diffusion_coefficients.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "min_D_total_1473": 1e-07,
+      "max_D_total_1473": 0.0001,
+      "min_D_total_2273": 1e-06,
+      "max_D_total_2273": 0.0005,
+      "check_monotonic": true
+    }
+  ]
+}

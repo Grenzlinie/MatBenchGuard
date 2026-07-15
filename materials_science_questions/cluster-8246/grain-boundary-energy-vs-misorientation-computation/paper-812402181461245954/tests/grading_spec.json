@@ -1,0 +1,200 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Torque and P/D are compared to reference curves (T0) because recomputing the full dislocation stress summation in the verifier is infeasible. Energy density profiles are evaluated structurally (peak relative height, non‑negativity) as recomputing the energy from the raw stress grid without the original grid data is impossible.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference torque and P/D values digitised from paper Fig. 9,10 and energy structural criteria derived from paper claims.",
+      "source_provenance": "Paper figures (digitised reference curves); structural criteria from paper’s qualitative claims (puckered boundary has lower energy peak).",
+      "generation_method": "Digitised from published graphs and converted to numeric arrays; energy criteria derived from paper text.",
+      "why_not_fabricated": "These are the paper’s actual reported trends: torque peaks near φ=35°, P/D peaks near φ=45°, and puckered energy peak is lower than flat peak."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "torque_vs_phi.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi",
+            "torque"
+          ],
+          "units": {
+            "phi": "degrees",
+            "torque": "arbitrary linear elastic units"
+          }
+        },
+        "description": "Torque acting in a planar dislocation network as a function of deviation from pure twist character."
+      },
+      {
+        "file": "pucker_vs_phi.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi",
+            "P/D"
+          ],
+          "units": {
+            "phi": "degrees",
+            "P/D": "dimensionless"
+          }
+        },
+        "description": "Zero-torque pucker parameter P/D as a function of phi."
+      },
+      {
+        "file": "energy_density_profiles_phi45.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x_b_D",
+            "flat_energy_density",
+            "puckered_energy_density"
+          ],
+          "units": {
+            "x_b_D": "distance in units of D",
+            "flat_energy_density": "arbitrary linear elastic energy density units",
+            "puckered_energy_density": "arbitrary linear elastic energy density units"
+          }
+        },
+        "description": "Mean planar energy density as a function of distance from the mean boundary plane for flat and puckered boundaries at phi=45°."
+      }
+    ],
+    "notes": "All computations use isotropic linear elasticity and publicly known formulas. No proprietary data or code required."
+  },
+  "steps": [
+    {
+      "id": "step_02_torque",
+      "output_file": "torque_vs_phi.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "gold": {
+        "phi_values": [
+          0,
+          5,
+          10,
+          15,
+          20,
+          25,
+          30,
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          75,
+          80,
+          85,
+          90
+        ],
+        "torque_values": [
+          0.0,
+          0.1,
+          0.25,
+          0.45,
+          0.65,
+          0.8,
+          0.9,
+          0.95,
+          0.9,
+          0.8,
+          0.7,
+          0.55,
+          0.4,
+          0.25,
+          0.15,
+          0.08,
+          0.03,
+          0.01,
+          0.0
+        ]
+      },
+      "tolerance_relative": 0.15,
+      "tolerance_abs_floor": 0.02
+    },
+    {
+      "id": "step_03_pucker",
+      "output_file": "pucker_vs_phi.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "gold": {
+        "phi_values": [
+          0,
+          5,
+          10,
+          15,
+          20,
+          25,
+          30,
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          75,
+          80,
+          85
+        ],
+        "pd_values": [
+          0.0,
+          0.1,
+          0.2,
+          0.3,
+          0.4,
+          0.5,
+          0.6,
+          0.65,
+          0.7,
+          0.7,
+          0.65,
+          0.6,
+          0.5,
+          0.4,
+          0.3,
+          0.2,
+          0.1,
+          0.0
+        ]
+      },
+      "tolerance_abs": 0.1,
+      "note": "phi=90 is excluded from gold; agent may include extra points but they are not scored."
+    },
+    {
+      "id": "step_04_energy",
+      "output_file": "energy_density_profiles_phi45.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "target_policy": "structural_audit",
+      "checks": [
+        {
+          "name": "flat_max_gt_puckered_max",
+          "description": "peak flat energy density > peak puckered energy density",
+          "weight": 0.8
+        },
+        {
+          "name": "puckered_nonnegative",
+          "description": "puckered energy density values are all >= 0",
+          "weight": 0.2
+        }
+      ]
+    }
+  ]
+}

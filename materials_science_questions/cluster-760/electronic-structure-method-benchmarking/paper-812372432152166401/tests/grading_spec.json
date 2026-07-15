@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute energies depend on the DFT implementation and basis set; relative signs (quartet vs doublet) and trend peaks (stability maxima at n=2 and n=5) are robust across equivalent methods and are the paper's core claims.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "spin_energies.json": "structural_audit",
+    "binding_energies.json": "structural_audit",
+    "fragmentation_energies.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "spin_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "cluster": "string",
+            "doublet_energy": "float (Hartree)",
+            "quartet_energy": "float (Hartree)",
+            "delta_E_eV": "float (eV)",
+            "ground_state_spin": "string (doublet or quartet)",
+            "all_freq_positive": "bool"
+          },
+          "description": "One object per cluster size n=1 to 6."
+        },
+        "description": "Ground-state spin multiplicity per cluster size, with an indication that all vibrational frequencies are positive. The structural audit verifies the sign of the doublet-quartet energy difference and that all frequencies are positive."
+      },
+      {
+        "file": "binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "cluster": "string",
+            "binding_energy_per_atom": "float (eV)"
+          },
+          "description": "One object per cluster size n=1 to 6."
+        },
+        "description": "Size-dependent binding energy per atom. The structural audit checks for consistency with expected stability trends."
+      },
+      {
+        "file": "fragmentation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "cluster": "string",
+            "FE1_Y_Si_n": "float (eV)",
+            "FE2_Si_YSi_{n-1}": "float (eV)"
+          },
+          "description": "One object per cluster size n=1 to 6."
+        },
+        "description": "Fragmentation energies for two channels. The structural audit checks for consistency with expected stability trends."
+      }
+    ],
+    "notes": "All outputs are arrays ordered by n=1 to 6. The absolute numerical values are not required to match the paper exactly; the structural audit checks relative ordering and peak locations. The agent must use the same DFT method (B3LYP) and a comparable all-electron basis set."
+  },
+  "steps": [
+    {
+      "id": "step_spin",
+      "output_file": "spin_energies.json",
+      "weight": 0.4,
+      "check": {
+        "type": "structural_spin"
+      }
+    },
+    {
+      "id": "step_binding",
+      "output_file": "binding_energies.json",
+      "weight": 0.3,
+      "check": {
+        "type": "structural_binding"
+      }
+    },
+    {
+      "id": "step_fragmentation",
+      "output_file": "fragmentation_energies.json",
+      "weight": 0.3,
+      "check": {
+        "type": "structural_fragmentation"
+      }
+    }
+  ]
+}

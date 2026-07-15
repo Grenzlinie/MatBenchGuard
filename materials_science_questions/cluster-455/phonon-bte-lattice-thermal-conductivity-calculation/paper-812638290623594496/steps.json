@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_relax",
+    "title": "DFT structural relaxation",
+    "role": "process",
+    "action": "Perform relaxation of internal atomic coordinates of Bi2Se3 using the experimental lattice parameters (a=4.138 Å, c=28.64 Å) with Quantum ESPRESSO pw.x. Use PBE functional and scalar‑relativistic norm‑conserving pseudopotentials. The output is a relaxed geometry suitable for subsequent phonon calculations.",
+    "output_file": "",
+    "evidence": "relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain a stable geometry with the experimental lattice parameters for harmonic and anharmonic phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_phonons",
+    "title": "Harmonic phonon calculation",
+    "role": "process",
+    "action": "Compute harmonic force constants, phonon dispersion, and group velocities using Quantum ESPRESSO ph.x on a regular q‑point grid, starting from the relaxed structure of step_01. Born effective charges may be calculated but LO‑TO splitting can be omitted (screened by doping).",
+    "output_file": "",
+    "evidence": "phonons.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate phonon frequencies and group velocities needed for thermal conductivity.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_anharmonic",
+    "title": "Anharmonic third-order force constants",
+    "role": "process",
+    "action": "Compute third-order anharmonic force constants using the d3q.x module of Quantum ESPRESSO, employing the relaxed structure and the same q‑point grid as step_02.",
+    "output_file": "",
+    "evidence": "d3q.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the anharmonic coupling matrix elements for phonon‑phonon scattering rate calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_intrinsic_lifetimes",
+    "title": "Intrinsic phonon relaxation times",
+    "role": "process",
+    "action": "Combine harmonic and anharmonic data to compute intrinsic phonon‑phonon scattering rates (linewidths / relaxation times) using the thermal2.x code or equivalent post‑processing, integrating over a fine q‑mesh.",
+    "output_file": "",
+    "evidence": "lifetimes.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Produce the intrinsic phonon lifetimes τ_{ph-ph}(q,ν) and group velocities for each mode.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_bulk_kappa",
+    "title": "Bulk thermal conductivity with defects",
+    "role": "scored",
+    "action": "Using the intrinsic phonon lifetimes, group velocities, and frequencies from step_04, implement the single‑mode approximation (SMA) for lattice thermal conductivity. Add Rayleigh point‑defect scattering from Se vacancies at 100 ppm concentration. Add boundary scattering from intercalated Bi2 layers using the finite‑size model with characteristic length L_inter=5 µm and fully absorbing surfaces (f_a=1, f_r=0). Combine scattering rates via Matthiessen's rule, compute renormalized velocities, and evaluate in‑plane (κ∥) and out‑of‑plane (κ⊥) thermal conductivity for temperatures from 2 K to 400 K. Write the results to 'bulk_thermal_conductivity.csv'.",
+    "output_file": "bulk_thermal_conductivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature‑dependent bulk lattice thermal conductivity including point defect and boundary scattering.",
+    "output_schema": "CSV with header: T, kappa_parallel, kappa_perp. T in K, kappa values in W/m·K. Rows covering 2 K to 400 K; finer spacing at low T (≤100 K) e.g. every 10 K, above every 50 K."
+  },
+  {
+    "id": "step_06_thin_film_kappa",
+    "title": "Out‑of‑plane thermal conductivity of thin films",
+    "role": "scored",
+    "action": "Using the same intrinsic phonon data as step_04, apply the finite‑size boundary scattering model for thin films: for each thickness L in [18, 30, 53, 105, 191] nm, set phonon boundary scattering rate as τ_a⁻¹ = v_z/L (rough surface limit f_a=1, f_r=0). Combine boundary scattering with intrinsic scattering via Matthiessen's rule, use renormalized velocities, and compute the out‑of‑plane thermal conductivity κ⊥ at 300 K for each L. Write the results to 'thin_film_thermal_conductivity.csv'.",
+    "output_file": "thin_film_thermal_conductivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Thickness‑dependent out‑of‑plane lattice thermal conductivity of Bi2Se3 thin films at room temperature.",
+    "output_schema": "CSV with header: thickness_nm, kappa_perp. thickness_nm integer, kappa_perp in W/m·K. Rows for thicknesses 18, 30, 53, 105, 191 nm."
+  }
+]

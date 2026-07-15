@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_build_supercells",
+    "title": "Build defect supercell models",
+    "role": "process",
+    "action": "Construct 64-atom diamond supercells for pristine bulk, substitutional boron (neutral and -1), interstitial hydrogen (H⁺ at bond-center), B-H complex (neutral), boron pair B₂ (neutral, -1, -2), B₂H₁ (neutral, -1), and B₂H₂ (neutral) using the known diamond lattice constant and defect geometries. Output coordinate files suitable for Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "supercell_coordinates.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates starting structures for all DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_dft_calculations",
+    "title": "Run DFT total-energy calculations",
+    "role": "process",
+    "action": "For each defect configuration from step 1, perform geometry optimization and total-energy calculation using Quantum ESPRESSO with LDA, norm-conserving pseudopotentials, a plane-wave cutoff of 300 Ry, and a 2×2×2 Monkhorst-Pack k-point mesh. For charged defects, use a compensating uniform background charge. Record the final relaxed geometry and total energy.",
+    "output_file": "",
+    "evidence": "dft_relaxed_structures_and_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Executes DFT to obtain total energies and relaxed structures for all defect species.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_binding_energies",
+    "title": "Compute defect binding energies",
+    "role": "scored",
+    "action": "From DFT total energies, compute formation energies using chemical potentials for C (bulk diamond), B (alpha-boron), H (H₂ molecule) and a point-charge Madelung correction. Then calculate binding energies: B-H (BH⁰ → H⁺ + B⁻), B-B pair (B₂ → 2 B_s), first H to B₂ (B₂H₁⁻ → B₂²⁻ + H⁺), and B₂H₂ relative to B₂ + H₂* (lowest-energy two-H configuration in diamond). Report values in eV.",
+    "output_file": "binding_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calculates the main headline binding energies from DFT total energies and reports them in a structured file. This artifact is scored against the paper's reported values.",
+    "output_schema": "JSON object with keys: B_H_binding_energy_eV (float), B_B_binding_energy_eV (float), B2H1_binding_energy_eV (float), B2H2_binding_energy_eV (float)."
+  },
+  {
+    "id": "step4_vibrational_modes",
+    "title": "Compute local vibrational mode frequencies",
+    "role": "scored",
+    "action": "From relaxed geometries, construct dynamical matrix using DFT-derived force constants for defect core atoms and a valence-force potential for the host. Diagonalize to obtain harmonic frequencies. For B-H complex, compute the highest-frequency H-related mode for isotopic combinations ¹¹BH, ¹¹BD, ¹⁰BH, ¹⁰BD. For neutral B₂H₁, compute the highest-frequency mode for ¹¹BH¹¹B and ¹⁰BH¹¹B. Report frequencies in cm⁻¹.",
+    "output_file": "vibrational_frequencies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Computes isotopic vibrational frequencies for B-H and B₂H₁ complexes, providing a second independent check on the DFT results.",
+    "output_schema": "CSV with columns: defect (string, e.g. 'B1H1' or 'B2H1_neutral'), isotope (string, e.g. '11BH'), mode_frequency_cm-1 (float)."
+  }
+]

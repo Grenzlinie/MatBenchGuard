@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_load_data",
+    "title": "Load and prepare measurement data",
+    "role": "process",
+    "action": "Load the provided CSV files (fused_silica_indices.csv, calcium_fluoride_indices.csv, duv_wavelengths.csv). For each sample, remove any measurements marked as 'not obs.' or otherwise incomplete, keeping only complete (wavelength, index) pairs.",
+    "output_file": "",
+    "evidence": "data_preprocessing.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Read and clean the input tables to form per-sample datasets suitable for regression.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_fit_and_evaluate",
+    "title": "Fit quadratic polynomials and compute n(193.39) and dn/dλ",
+    "role": "scored",
+    "action": "For each sample (8 fused silica: A1, A2, A3, B1, B2, B3, C1, C2; 3 calcium fluoride: A1, A2, B) perform a least-squares fit of the model n(λ)=a0 + a1*λ + a2*λ^2 to its (wavelength, index) data. Evaluate the fitted polynomial at λ = 193.39 nm to obtain the refractive index, and compute the dispersion dn/dλ = a1 + 2*a2*193.39. Write the results to fitted_indices.csv.",
+    "output_file": "fitted_indices.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Refractive index and dispersion at 193.39 nm obtained by polynomial interpolation for all measured samples.",
+    "output_schema": "CSV with columns: sample (string), material (either 'fused_silica' or 'calcium_fluoride'), n_193.39 (float), dn_dlambda (float)"
+  },
+  {
+    "id": "step_03_output_coefficients",
+    "title": "Write fitted polynomial coefficients",
+    "role": "scored",
+    "action": "Extract the fitted coefficients a0, a1, a2 for each sample from the polynomials obtained in step 2, and write them to fitted_coefficients.csv.",
+    "output_file": "fitted_coefficients.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Quadratic polynomial coefficients n(λ)=a0 + a1*λ + a2*λ^2 that best fit the measured index data for each sample.",
+    "output_schema": "CSV with columns: sample (string), material (string), a0 (float), a1 (float), a2 (float)"
+  }
+]

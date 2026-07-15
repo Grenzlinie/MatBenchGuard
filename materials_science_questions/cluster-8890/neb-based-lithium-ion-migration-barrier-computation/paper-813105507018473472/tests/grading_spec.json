@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Volumes are compared to hidden paper-reported values with tolerances and swelling factor consistency recomputed from the agent's volumes; barriers are checked against a threshold and a structural trend (n8 >= n16).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold unit-cell volumes (paper Fig 1) and acceptable ranges for swelling factors and barrier thresholds.",
+      "source_provenance": "Paper Fig 1 and text; barriers from statement 'barriers are 0.2-0.3 eV' and 'depend on n' (n8>=n16).",
+      "generation_method": "Exact reported volumes extracted; barrier range and trend derived from paper text.",
+      "why_not_fabricated": "Directly taken from the paper's quantitative results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "volumes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "structure1": "number (volume in Å³)",
+            "structure2": "number (volume in Å³)",
+            "structure3": "number (volume in Å³)",
+            "structure4": "number (volume in Å³)",
+            "structure6": "number (volume in Å³)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "structure1": "Å³",
+            "structure2": "Å³",
+            "structure3": "Å³",
+            "structure4": "Å³",
+            "structure6": "Å³"
+          }
+        },
+        "description": "Computed unit-cell volumes for the five LiNafion·nDMSO periodic structures."
+      },
+      {
+        "file": "barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "n8": "number (barrier in eV)",
+            "n16": "number (barrier in eV)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "n8": "eV",
+            "n16": "eV"
+          }
+        },
+        "description": "NEB‑computed Li‑ion migration barriers for the n=8 and n=16 systems."
+      }
+    ],
+    "notes": "Volumes are compared to published reference values with a relative tolerance. Valid barriers must fall within the reported 0.2–0.3 eV window and satisfy n8 ≥ n16 (structural consistency)."
+  },
+  "steps": [
+    {
+      "id": "volumes",
+      "output_file": "volumes.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "target_policy": "exact_match",
+      "gold": {
+        "structure1": 713.1,
+        "structure2": 1002.3,
+        "structure3": 3153.7,
+        "structure4": 3551.1,
+        "structure6": 4768.6
+      },
+      "rel_tolerance": 0.05,
+      "rel_max_decay": 0.15,
+      "swelling_checks": {
+        "dry": "structure1",
+        "n8_structures": [
+          "structure3",
+          "structure4"
+        ],
+        "n16_structure": "structure6",
+        "swelling_range_n8": [
+          4.0,
+          6.0
+        ],
+        "swelling_range_n16": [
+          6.0,
+          8.0
+        ],
+        "swelling_weight": 0.3
+      }
+    },
+    {
+      "id": "barriers",
+      "output_file": "barriers.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "target_policy": "threshold_or_better",
+      "max_barrier": 0.3,
+      "decay_width": 0.2,
+      "structural_weight": 0.2,
+      "n8_n16_trend": "n8 >= n16"
+    }
+  ]
+}

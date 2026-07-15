@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Headline effective exponents are compared to paper-derived gold, as recomputing from raw SCOZA fields is infeasible without running the full PDE solver in the verifier. The scaled EOS check recomputes δ from agent's data (T1), but overall tier is T0 because the main scored artifact uses result-level compare.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_effective_exponents.tsv": "reference_match",
+    "step_02_scaled_eos.tsv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold effective exponent values and tolerances, derived from the paper's figures and textual descriptions.",
+      "source_provenance": "Extracted from Figs. 1-6 and text of the paper: 'we find γ near 1.25', 'δ=5', 'β≈0.35', etc.",
+      "generation_method": "Read approximate curve values at specified (γ_r³, t) coordinates from the paper, cross-checked with known asymptotic limits.",
+      "why_not_fabricated": "Values correspond to the paper's own reported and plotted effective exponents; they are the best available reference for a reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_effective_exponents.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            "gamma_r3",
+            "t",
+            "exponent_type",
+            "exponent_value"
+          ],
+          "types": {
+            "gamma_r3": "float",
+            "t": "float",
+            "exponent_type": "string (one of gamma, delta, alpha, beta, gamma_prime, alpha_prime)",
+            "exponent_value": "float"
+          },
+          "sorting": "gamma_r3, exponent_type, t"
+        },
+        "description": "Effective critical exponents for each interaction range and reduced temperature; main scored artifact."
+      },
+      {
+        "file": "step_02_scaled_eos.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            "t",
+            "x",
+            "y",
+            "temperature_type"
+          ],
+          "types": {
+            "t": "float",
+            "x": "float",
+            "y": "float",
+            "temperature_type": "string (supercritical or subcritical)"
+          }
+        },
+        "description": "Scaled equation-of-state data for γ_r³=0.34."
+      }
+    ],
+    "notes": "The verifier recomputes logarithmic derivative metrics on effective_exponents.tsv and checks the scaling slope (δ) on scaled_eos.tsv against a hidden reference. The instruction now requires the agent to determine β and δ from Step 2, eliminating the explicit gold leak."
+  },
+  "steps": [
+    {
+      "id": "effective_exponents",
+      "output_file": "step_01_effective_exponents.tsv",
+      "kind": "numeric",
+      "weight": 0.8,
+      "metal": "paper_effective_exponents",
+      "tolerance_rel": 0.07,
+      "tolerance_abs": 0.05,
+      "gold_points": [
+        {
+          "gamma_r3": 0.34,
+          "t": 0.01,
+          "exponent_type": "gamma",
+          "value": 1.25
+        },
+        {
+          "gamma_r3": 0.34,
+          "t": 0.1,
+          "exponent_type": "gamma",
+          "value": 1.6
+        },
+        {
+          "gamma_r3": 0.34,
+          "t": 0.001,
+          "exponent_type": "delta",
+          "value": 4.95
+        },
+        {
+          "gamma_r3": 0.34,
+          "t": 0.01,
+          "exponent_type": "beta",
+          "value": 0.35
+        },
+        {
+          "gamma_r3": 0.34,
+          "t": 0.1,
+          "exponent_type": "beta",
+          "value": 0.5
+        },
+        {
+          "gamma_r3": 0.1,
+          "t": 0.01,
+          "exponent_type": "gamma",
+          "value": 1.4
+        },
+        {
+          "gamma_r3": 0.7,
+          "t": 0.01,
+          "exponent_type": "gamma",
+          "value": 1.15
+        }
+      ]
+    },
+    {
+      "id": "scaled_eos",
+      "output_file": "step_02_scaled_eos.tsv",
+      "kind": "metric_recompute",
+      "weight": 0.2,
+      "delta_target": 5.0,
+      "delta_tolerance": 0.8
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T0 result-level compare applied: recompute from raw DFT logs is infeasible because the verifier sandbox cannot re-run DFT and the oracle does not produce raw logs; comparing agent-reported JSON values against paper‑reported gold with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_moments_bond.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_moment_per_Co": "number (μB)",
+            "Co_N_bond_length": "number (Å)"
+          }
+        },
+        "description": "Total magnetic moment per Co atom and the Co–N bond length in the N‑nearest‑neighbour configuration."
+      },
+      {
+        "file": "step_02_formation_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_near": "number (eV)",
+            "E_far": "number (eV)",
+            "formation_energy_near": "number (eV)",
+            "formation_energy_far": "number (eV)",
+            "delta_E_near_far": "number (eV)"
+          }
+        },
+        "description": "Formation energies for N doping near and far from Co, and their difference."
+      },
+      {
+        "file": "step_03_exchange_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_FM": "number (eV)",
+            "E_AFM": "number (eV)",
+            "delta_E_FM_AFM": "number (eV)"
+          }
+        },
+        "description": "Total energies of ferromagnetic and antiferromagnetic two‑Co+N configurations and the energy difference."
+      }
+    ],
+    "notes": "All values are compared against the paper’s reported numbers with generous tolerances to absorb DFT code/pseudopotential differences. The energy differences must follow the correct trends (N near favoured, FM favoured)."
+  },
+  "steps": [
+    {
+      "id": "step_n_near",
+      "output_file": "step_01_moments_bond.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "targets": {
+        "total_moment": {
+          "value": 2.0,
+          "tolerance": 0.5,
+          "unit": "μB"
+        },
+        "bond_length": {
+          "value": 1.7,
+          "tolerance": 0.1,
+          "unit": "Å"
+        }
+      }
+    },
+    {
+      "id": "step_formation",
+      "output_file": "step_02_formation_energy.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "targets": {
+        "formation_energy_near": {
+          "value": 2.785,
+          "tolerance": 0.5,
+          "unit": "eV"
+        },
+        "formation_energy_far": {
+          "value": 4.225,
+          "tolerance": 0.5,
+          "unit": "eV"
+        },
+        "delta_E_near_far": {
+          "value": -1.44,
+          "lower_threshold": -1.14,
+          "unit": "eV"
+        }
+      }
+    },
+    {
+      "id": "step_exchange",
+      "output_file": "step_03_exchange_energy.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "targets": {
+        "delta_E_FM_AFM": {
+          "value": -0.5,
+          "lower_threshold": -0.3,
+          "unit": "eV"
+        }
+      }
+    }
+  ]
+}

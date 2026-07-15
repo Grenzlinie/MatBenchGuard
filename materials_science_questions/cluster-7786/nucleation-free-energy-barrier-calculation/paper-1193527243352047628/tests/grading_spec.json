@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker recomputes expected coefficients and barrier prefactors from the public surface energies and Wulff geometry formulas; compares agent's values within tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "nucleation_constants.json": "exact_match",
+    "barrier_prefactors.json": "threshold_or_better"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "nucleation_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "alpha_3",
+            "beta_3",
+            "alpha_5",
+            "beta_5"
+          ],
+          "properties": {
+            "alpha_3": {
+              "type": "number",
+              "unit": "J/m²"
+            },
+            "beta_3": {
+              "type": "number"
+            },
+            "alpha_5": {
+              "type": "number",
+              "unit": "J/m²"
+            },
+            "beta_5": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Geometry-dependent coefficients derived from the surface energies and Wulff construction. α in J/m², β dimensionless."
+      },
+      {
+        "file": "barrier_prefactors.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "G3_over_h_DeltaMu",
+            "G5_over_h_DeltaMu"
+          ],
+          "properties": {
+            "G3_over_h_DeltaMu": {
+              "type": "number"
+            },
+            "G5_over_h_DeltaMu": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Nucleation barrier prefactors per unit height (constants multiplying 1/Δμ). The checker will also verify that G3_over_h_DeltaMu > G5_over_h_DeltaMu."
+      }
+    ],
+    "notes": "All values are deterministic given the provided surface energies. The derivation follows the Wulff construction and the algebraic steps described in the paper's supplementary information."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "nucleation_constants.json",
+      "kind": "recompute",
+      "weight": 0.4,
+      "tolerance": 0.02
+    },
+    {
+      "id": "step_02",
+      "output_file": "barrier_prefactors.json",
+      "kind": "recompute",
+      "weight": 0.6,
+      "tolerance": 0.04
+    }
+  ]
+}

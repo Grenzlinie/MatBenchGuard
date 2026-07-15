@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Exact paper-reported absorption edge values are not available numerically; only qualitative figure and approximate difference reported. Scoring uses internal artifact consistency and structural plausibility (non-negativity, plausible energy range, Moss–Burstein shift, monotonicity).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "absorption_spectra.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "photon_energy_eV",
+            "alpha_n2e18_cm_minus1",
+            "alpha_n5e18_cm_minus1"
+          ],
+          "units": {
+            "photon_energy_eV": "eV",
+            "alpha_n2e18_cm_minus1": "cm^-1",
+            "alpha_n5e18_cm_minus1": "cm^-1"
+          }
+        },
+        "description": "Computed absorption coefficient α(ω) of InAs substrates at T=300 K as a function of photon energy for electron densities 2×10^18 cm⁻³ and 5×10^18 cm⁻³."
+      },
+      {
+        "file": "absorption_edges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "n2e18_edge_eV",
+            "n5e18_edge_eV"
+          ],
+          "properties": {
+            "n2e18_edge_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "n5e18_edge_eV": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Photon energies at which the absorption coefficient equals 100 cm⁻¹ for each doping level, extracted from the CSV."
+      }
+    ],
+    "notes": "The checker will recompute absorption edge energies from absorption_spectra.csv, compare them to hidden gold values (±5 meV), and verify the Moss–Burstein shift (edge for n=5×10^18 > n=2×10^18 by ≥5 meV). The absorption_edges.json values are checked for consistency with the CSV-based recomputation."
+  },
+  "steps": [
+    {
+      "id": "check_spectra",
+      "output_file": "absorption_spectra.csv",
+      "weight": 0.7,
+      "kind": "structural",
+      "description": "Recompute edge energies and verify physical plausibility (non-negativity, range, Moss-Burstein shift, monotonicity)."
+    },
+    {
+      "id": "check_edges_json",
+      "output_file": "absorption_edges.json",
+      "weight": 0.3,
+      "kind": "consistency",
+      "description": "Verify JSON edge energies are consistent with recomputed values from CSV (tolerance ±0.001 eV)."
+    }
+  ]
+}

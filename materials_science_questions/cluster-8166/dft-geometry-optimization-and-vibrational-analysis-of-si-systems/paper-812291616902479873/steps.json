@@ -1,0 +1,67 @@
+[
+  {
+    "id": "s1",
+    "title": "AM1 geometry optimization of silatrane compounds",
+    "role": "process",
+    "action": "Perform full AM1 geometry optimizations for the four hydroxysilatrane derivatives HOSi(OCH₂CH₂)ₙ(OH)₃₋ₙNH₃₋ₙ with n = 0, 1, 2, 3 using MOPAC. No symmetry constraints are imposed. Save the optimized coordinates or restart files for use in subsequent single‑point calculations.",
+    "output_file": "",
+    "evidence": "am1_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtaining semiempirical geometries serves as the structural baseline for all later bonding analyses and the reference for the constrained scan.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "6-31G(d) geometry optimization of n=0 and n=1",
+    "role": "process",
+    "action": "Perform full SCF/6-31G(d) geometry optimizations for the n = 0 and n = 1 compounds using GAMESS, again without symmetry constraints. Save the optimized geometries and the associated wavefunction files.",
+    "output_file": "",
+    "evidence": "ab_initio_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Higher‑level ab initio structures provide a reference for verifying that the qualitative bonding conclusions are not an artifact of the AM1 geometries.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Single‑point 6-31G(d) wavefunction generation",
+    "role": "process",
+    "action": "For each AM1‑optimized geometry (n=0–3) and each 6‑31G(d)‑optimized geometry (n=0,1), run a single‑point SCF/6‑31G(d) calculation using GAMESS to obtain wavefunction files suitable for Bader analysis. Ensure consistent basis set and computational settings across all runs.",
+    "output_file": "",
+    "evidence": "sp_wavefunction_generation.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides a uniform set of electron densities on which a consistent Bader AIM analysis can be performed.",
+    "output_schema": ""
+  },
+  {
+    "id": "s4",
+    "title": "Bader analysis of Si–N bond critical points",
+    "role": "scored",
+    "action": "For every wavefunction file produced in step s3, use MultiWFN (or an equivalent Bader AIM tool) to locate the Si–N bond critical point and extract the following: the Si–N interatomic distance R (Å), the electron density ρ(r_b) (au), the Laplacian ∇²ρ(r_b) (au), and the polarity metric d_Si (%) = 100 × (distance of r_b from Si center) / R. Collect all results into a CSV file with one row per (n, method) combination, covering n = 0,1,2,3 for 6‑31G(d)//AM1 and n = 0,1 for 6‑31G(d)//6‑31G(d).",
+    "output_file": "step_01_bcp_analysis.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact quantifying the existence and character of the Si–N bond through bond critical point metrics.",
+    "output_schema": "CSV with header: n,method,R_SiN,rho,laplacian,d_Si. n: integer; method: string e.g. '6-31G(d)//AM1'; R_SiN, rho, laplacian, d_Si are floating‑point numbers (R_SiN in Å, rho and laplacian in au, d_Si in %). Expect at least 6 rows (4 from AM1 geometries, 2 from ab initio geometries)."
+  },
+  {
+    "id": "s5",
+    "title": "Constrained Si–N energy scan for hydroxysilatrane (n=3)",
+    "role": "scored",
+    "action": "Using the AM1‑optimized geometry of hydroxysilatrane (n=3) from step s1, perform a series of AM1 constrained optimizations (using MOPAC) in which the Si–N distance is held fixed at several values between 2.15 Å and the equilibrium length. For each fixed distance record the AM1 total energy. Determine the energy difference between the constrained energy at R(Si–N) = 2.15 Å and the fully optimized AM1 energy. Write that single energy cost (kcal/mol) as a floating‑point number to the output file.",
+    "output_file": "step_02_energy_cost.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact reporting the energy required to contract the Si–N bond to a crystal‑like distance, supporting the role of crystal packing forces.",
+    "output_schema": "A single line containing a positive floating‑point number (e.g. 5.23). Value must be > 0 and ≤ 6.0 kcal/mol."
+  }
+]

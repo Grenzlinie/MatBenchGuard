@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute from raw trajectories; only aggregated CSVs are submitted. Compare agent's reported values to paper-derived gold using tolerances and structural checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "potential_energy_ratio.csv": "reference_match",
+    "transition_temperatures.csv": "exact_match",
+    "single_chain_probability.csv": "reference_match",
+    "rdf_g6.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for transition temperatures T0* and chain probabilities P1, and analytic model parameters for energy ratio verification.",
+      "source_provenance": "Paper-reported best-fit T0* (g=3:0.340, 4:0.350, 5:0.380, 7:0.417) and approximate P1 from Fig.8 (g=3:1.0,4:1.0,5:0.8,6:0.6,7:0.3,8:0.0,9:0.0).",
+      "generation_method": "T0* directly from paper text; P1 approximated from paper's Figure 8 with tolerance of ±0.1.",
+      "why_not_fabricated": "These are the paper's own reported numbers, and the analytic model (Eq.13) is the exact formula from the paper. The reference solver will produce outputs that match these gold values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "potential_energy_ratio.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "g",
+            "T_star",
+            "ratio"
+          ]
+        },
+        "description": "Normalized average potential energy ratio. Checked against reference values within tolerance."
+      },
+      {
+        "file": "transition_temperatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "g",
+            "T0_star"
+          ]
+        },
+        "description": "Characteristic structural transition temperature for each cluster size. Checked within tolerance."
+      },
+      {
+        "file": "single_chain_probability.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "g",
+            "P1"
+          ]
+        },
+        "description": "Probability of a single simple virtual chain at T*=0.71. Checked against reference within tolerance."
+      },
+      {
+        "file": "rdf_g6.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_star",
+            "G"
+          ]
+        },
+        "description": "Radial distribution function G(r) for the central atom of a 6-atom cluster at T*=0.46. First peak location and height, and plateau value are checked."
+      }
+    ],
+    "notes": "All scored artifacts are numerically verifiable against paper-reported curves with appropriate tolerances. No gold values are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "energy_ratio",
+      "output_file": "potential_energy_ratio.csv",
+      "weight": 0.4,
+      "description": "Check normalized potential energy ratio matches the virtual chains model prediction (Eq.13) with the paper's T0* values within tolerance 0.1."
+    },
+    {
+      "id": "transition_temp",
+      "output_file": "transition_temperatures.csv",
+      "weight": 0.25,
+      "description": "Check T0* values match paper's best-fit (0.340,0.350,0.380,0.417) within ±0.02."
+    },
+    {
+      "id": "chain_prob",
+      "output_file": "single_chain_probability.csv",
+      "weight": 0.2,
+      "description": "Check P1 values match paper's Fig.8 within ±0.1."
+    },
+    {
+      "id": "rdf_g6",
+      "output_file": "rdf_g6.csv",
+      "weight": 0.15,
+      "description": "Check RDF of g=6 cluster: first peak near r*≈1.0, height≈1.5, plateau in [2,3] ≈0.2-0.3."
+    }
+  ]
+}

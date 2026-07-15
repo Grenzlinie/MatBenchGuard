@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Peak energies are recomputed from the raw DOS curve using peak‑finding (scipy.signal.find_peaks) and compared to the paper's theoretical values. Doublets are averaged; tolerance ±1.0 eV.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dos_curve.csv": "metric_recompute",
+    "dos_peaks.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold peak energies for matching and ordering check",
+      "source_provenance": "Paper Table 1 'Present work Theory' column; doublets averaged",
+      "generation_method": "For doublets (B: -2.8/-3.1, f: 8.6/9.6, h: 13.3/14.4) the average is used; single values taken directly. Tolerances are ±1.0 eV as stated in the approved plan.",
+      "why_not_fabricated": "Values are directly from the paper's reported theoretical results; no invention."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "dos"
+          ],
+          "items": {},
+          "units": {
+            "energy_eV": "eV relative to VBM",
+            "dos": "arbitrary"
+          }
+        },
+        "description": "Raw density of states curve. The hidden checker refits dominant peaks and compares their energies and ordering to the paper's theoretical values."
+      },
+      {
+        "file": "dos_peaks.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "required": {},
+          "items": {
+            "peak": "string",
+            "energy_eV": "number"
+          },
+          "required_columns": [],
+          "units": {
+            "energy_eV": "eV relative to VBM"
+          }
+        },
+        "description": "Identified peak labels and energies. Checker verifies correct relative ordering and consistency with the refitted peaks from dos_curve.csv."
+      }
+    ],
+    "notes": "No specific convergence parameters are mandated; the solving agent selects k‑point mesh, energy cutoffs, and smearing. The checker tolerances are designed to absorb legitimate implementation spread while requiring a qualitatively correct DOS."
+  },
+  "steps": [
+    {
+      "id": "step1_peak_recompute",
+      "output_file": "dos_curve.csv",
+      "weight": 0.8,
+      "kind": "recompute_peak_match",
+      "parameters": {
+        "tolerance": 1.0,
+        "gold_peaks": [
+          {
+            "label": "A",
+            "expected": -1.0
+          },
+          {
+            "label": "B",
+            "expected": -2.95
+          },
+          {
+            "label": "C",
+            "expected": -4.9
+          },
+          {
+            "label": "D",
+            "expected": -6.0
+          },
+          {
+            "label": "d",
+            "expected": 6.8
+          },
+          {
+            "label": "e",
+            "expected": 7.7
+          },
+          {
+            "label": "f",
+            "expected": 9.1
+          },
+          {
+            "label": "g",
+            "expected": 11.0
+          },
+          {
+            "label": "h",
+            "expected": 13.85
+          }
+        ]
+      }
+    },
+    {
+      "id": "step2_ordering_and_consistency",
+      "output_file": "dos_peaks.json",
+      "weight": 0.2,
+      "kind": "ordering_and_consistency",
+      "parameters": {
+        "tolerance": 1.0,
+        "valence_order": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "conduction_order": [
+          "d",
+          "e",
+          "f",
+          "g",
+          "h"
+        ]
+      }
+    }
+  ]
+}

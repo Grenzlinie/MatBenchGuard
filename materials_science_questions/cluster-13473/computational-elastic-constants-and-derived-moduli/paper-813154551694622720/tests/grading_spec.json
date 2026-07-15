@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Yield stress, plateau stress, and density trends are recomputed from the raw stress_strain.csv; correlation length is compared to paper reference with tolerance. This prevents a bare self-reported scalar from passing and verifies mechanical response features.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for yield stress, plateau stress, density thresholds, and correlation length taken from the paper.",
+      "source_provenance": "Polymer Science Series A, Vol. 56, No. 2, 2014, pp. 222-230 – text 'σ_y ~195 MPa', 'σ ~190 MPa', 'N_c = 11.6' (Fig. 12 caption for ε -28 to -28.2%); density description from Fig. 1.",
+      "generation_method": "Direct transcription from the paper's reported numerical results.",
+      "why_not_fabricated": "Values are the actual paper-reported figures, not artificially generated."
+    }
+  ],
+  "target_policies": {
+    "stress_strain.csv": "structural_audit",
+    "correlation_length.txt": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress",
+            "density"
+          ],
+          "units": {
+            "strain": "% (negative engineering strain)",
+            "stress": "MPa",
+            "density": "g/cm³"
+          }
+        },
+        "description": "Stress-strain and density-strain data from uniaxial compression simulation. The checker extracts characteristic quantities (yield stress, plateau stress, etc.) and compares them to reference values."
+      },
+      {
+        "file": "correlation_length.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single decimal number representing the nonaffine displacement correlation length along the chain, in number of CH2 groups."
+        },
+        "description": "Nonaffine displacement correlation length extracted from the simulation trajectory near ε = -28%."
+      }
+    ],
+    "notes": "The hidden checker will derive yield stress, plateau stress, and validate the stress-strain curve shape from stress_strain.csv, then compare both the derived quantities and the correlation length to the paper-reported reference."
+  },
+  "steps": [
+    {
+      "id": "step_ss_structure",
+      "output_file": "stress_strain.csv",
+      "kind": "structure",
+      "weight": 0.1,
+      "description": "Validate CSV: required columns, at least 50 rows, numeric values."
+    },
+    {
+      "id": "step_ss_yield",
+      "output_file": "stress_strain.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "metric": "abs_error",
+      "target": 195,
+      "tolerance_abs": 39,
+      "description": "Maximum stress in strain range [-15%,0%] (yield stress) must be within ±20% of paper value (195 MPa)."
+    },
+    {
+      "id": "step_ss_plateau",
+      "output_file": "stress_strain.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "metric": "abs_error",
+      "target": 190,
+      "tolerance_abs": 38,
+      "description": "Average stress in strain range [-30%,-25%] (plateau flow stress) must be within ±20% of paper value (190 MPa)."
+    },
+    {
+      "id": "step_ss_density",
+      "output_file": "stress_strain.csv",
+      "kind": "set",
+      "weight": 0.1,
+      "checks": [
+        "initial density (ε ≈ 0%) between 0.99 and 1.0 g/cm³",
+        "maximum density ≥ 1.0 g/cm³",
+        "density at ε ≈ -30% < initial density"
+      ],
+      "description": "Density must show initial value ~0.996, a peak above 1.0, and final value lower than initial."
+    },
+    {
+      "id": "step_cl",
+      "output_file": "correlation_length.txt",
+      "kind": "numeric",
+      "weight": 0.5,
+      "metric": "abs_error",
+      "target": 11.6,
+      "tolerance_abs": 2.32,
+      "description": "Correlation length must be within ±20% of paper value (11.6 CH2 groups)."
+    }
+  ]
+}

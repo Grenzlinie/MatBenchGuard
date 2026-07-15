@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_system_prep",
+    "title": "System preparation",
+    "role": "process",
+    "action": "Build all initial simulation boxes and topologies for IFT and contact‑angle setups. Generate calcite slab with [10‑14] termination, solvate with water/CO₂/ethanol using the specified force fields (Xiao et al. for calcite, SPC/E water, EPM2 CO₂, OPLS‑AA ethanol). Prepare input files for IFT systems (box 48.57 × 50 × 100 Å³, 3000 H₂O + 2000 CO₂ + 0/100/200 ethanol) and for contact‑angle systems (box 48.57 × 270 × 120 Å³, 4000 H₂O + 14000 CO₂, with ethanol counts 0, 500, 850, 1200).",
+    "output_file": "",
+    "evidence": "topology_files_list.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_ift_sim",
+    "title": "IFT simulation",
+    "role": "process",
+    "action": "Run NPT molecular dynamics simulations for IFT systems using GROMACS at T=323 K and pressures 5, 10, 20, 30, 40, 50 MPa for ethanol loadings 0, 100, 200 molecules. Each simulation runs at least 20 ns equilibration + 4 ns production, repeated five times per condition. Use Parrinello‑Rahman barostat (Z‑direction) and Nosé‑Hoover thermostat with separate temperature control for solid and fluid when applicable.",
+    "output_file": "",
+    "evidence": "ift_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_ift_analysis",
+    "title": "IFT analysis and reporting",
+    "role": "scored",
+    "action": "Compute interfacial tension from the pressure tensor using the mechanical formula γ = ½ L_z [P_zz − ½(P_xx+P_yy)] over the last 4 ns of each trajectory. Average over replicates. Write results to ift_results.csv with columns pressure_Mpa, ethanol_molecules, ift_mN_per_m.",
+    "output_file": "ift_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Interfacial tension values for each (pressure, ethanol) condition.",
+    "output_schema": "Columns: pressure_Mpa (float), ethanol_molecules (int 0/100/200), ift_mN_per_m (float). One row per condition."
+  },
+  {
+    "id": "step_04_contact_angle_sim",
+    "title": "Contact angle simulation",
+    "role": "process",
+    "action": "Run NPT MD simulations of a cylindrical water droplet on calcite in CO₂ atmosphere with ethanol (systems S0–S3: 0, 500, 850, 1200 ethanol) at 323 K and 20 MPa using GROMACS. Each simulation runs 40 ns (after equilibration), repeated three times. Use separate thermostats for solid and fluid.",
+    "output_file": "",
+    "evidence": "ca_simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_contact_angle_analysis",
+    "title": "Contact angle analysis and reporting",
+    "role": "scored",
+    "action": "Extract the three‑phase contact angle from 2D water oxygen density profiles using a circle‑fit procedure (de Ruijter et al.) for each replicate. Average over replicates and compute standard deviation. Write results to contact_angle_results.csv with columns system, contact_angle_deg, std_dev_deg.",
+    "output_file": "contact_angle_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Three-phase water‑calcite‑CO₂ contact angles for systems S0–S3.",
+    "output_schema": "Columns: system (string 'S0'/'S1'/'S2'/'S3'), contact_angle_deg (float), std_dev_deg (float)."
+  },
+  {
+    "id": "step_06_ff_sensitivity",
+    "title": "Force‑field sensitivity simulation",
+    "role": "process",
+    "action": "Repeat the contact angle simulation for system S3 using the calcite force field of Shen et al. (J. Phys. Chem. C 2013, 117, 6904‑6913) instead of Xiao et al. Run one NPT simulation at 323 K and 20 MPa for 40 ns and record the resulting contact angle. This is a qualitative robustness check and not scored.",
+    "output_file": "",
+    "evidence": "sensitivity_angle.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  }
+]

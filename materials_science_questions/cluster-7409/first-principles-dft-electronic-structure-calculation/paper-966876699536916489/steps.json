@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_geometry_optimization",
+    "title": "Geometry optimization of Co-GCN",
+    "role": "process",
+    "action": "Build a 2×2 supercell of heptazine-based graphitic carbon nitride (GCN) with a single Co atom at the cavity center coordinated to two hydroxy groups. Perform spin-polarized DFT geometry optimization using PBE+U (U_eff=3.0 eV on Co 3d) with optB86b-vdW correction and plane-wave basis. Relax atomic positions until forces are below the convergence threshold. Save the relaxed structure for subsequent steps.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed ground-state atomic structure of the Co-doped GCN model needed for all subsequent electronic structure and dynamics calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_electronic_summary",
+    "title": "Electronic structure summary and midgap states",
+    "role": "scored",
+    "action": "Using the optimized geometry, compute spin-polarized electronic structure (PDOS, orbital energies) with PBE+U and HSE06 (or scale the PBE+U gap using an HSE06 reference). Identify the band gap and the energies of all midgap defect states relative to the valence band maximum for the spin-up and spin-down channels. Determine whether each midgap state is occupied. Output a structured JSON file containing the band gaps and the list of midgap states with their properties.",
+    "output_file": "electronic_summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of electronic structure: PBE+U band gap, HSE-scaled band gap, and for both spin channels a list of midgap state labels, their energies relative to VBM (eV), and occupation status.",
+    "output_schema": "{\"type\": \"object\", \"required\": [\"bandgap_PBEpU\", \"bandgap_HSEscaled\", \"midgap_states\"], \"properties\": {\"bandgap_PBEpU\": {\"type\": \"number\", \"units\": \"eV\"}, \"bandgap_HSEscaled\": {\"type\": \"number\", \"units\": \"eV\"}, \"midgap_states\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"required\": [\"spin\", \"state_label\", \"energy_rel_VBM\", \"occupied\"], \"properties\": {\"spin\": {\"type\": \"string\"}, \"state_label\": {\"type\": \"string\"}, \"energy_rel_VBM\": {\"type\": \"number\", \"units\": \"eV\"}, \"occupied\": {\"type\": \"boolean\"}}}}}}"
+  },
+  {
+    "id": "step_03_energy_nac_table",
+    "title": "Canonically averaged energy gaps and nonadiabatic couplings",
+    "role": "scored",
+    "action": "Run adiabatic molecular dynamics at 300 K for 5 ps on the optimized geometry using spin-polarized PBE+U DFT. For the spin-down channel, extract the energy gaps and nonadiabatic couplings (NAC) between VBM, defect states d1, d2, d3, and CBM at each MD step. Compute canonically averaged raw (PBE+U) energies and NAC, then scale them using the HSE06/PBE+U gap ratio to obtain the final scaled values. Output a CSV with the averaged raw and scaled energies and NAC for each orbital pair as required.",
+    "output_file": "table1_energy_nac.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV containing canonically averaged energy gaps (eV) and absolute nonadiabatic couplings (meV) for spin-down state pairs VBM-d1, d1-d2, d2-d3, d3-CBM, VBM-CBM, with raw (PBE+U) and scaled values.",
+    "output_schema": "{\"type\": \"table\", \"required_columns\": [\"orbitals\", \"energy\", \"scaled_energy\", \"NAC\", \"scaled_NAC\"], \"units\": {\"energy\": \"eV\", \"scaled_energy\": \"eV\", \"NAC\": \"meV\", \"scaled_NAC\": \"meV\"}}"
+  },
+  {
+    "id": "step_04_timescales",
+    "title": "Charge carrier dynamics time scales from NAMD",
+    "role": "scored",
+    "action": "Perform nonadiabatic molecular dynamics (NAMD) using the DISH algorithm as implemented in PYXAID with the scaled NA Hamiltonian from the previous step. Simulate charge carrier dynamics for both spin-up and spin-down channels independently, using 100 random initial configurations and 100 stochastic DISH trajectories per configuration (effective ~1 ns total). Track excited state (ES), trapped hole, and ground state (GS) populations. Fit the relevant portions of the population curves to exponential functions to extract time scales for ES decay, trapped hole rise, and GS rise, including uncertainties estimated from trajectory sub-sets. Report the fitted time constants and their uncertainties in a CSV.",
+    "output_file": "table2_timescales.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Charge carrier dynamics time scales: excited state decay, trapped hole rise, and ground state rise for both spin channels, each with a time constant (ps) and its uncertainty (1 standard deviation).",
+    "output_schema": "{\"type\": \"table\", \"required_columns\": [\"spin\", \"process\", \"timescale_ps\", \"uncertainty_ps\"], \"units\": {\"timescale_ps\": \"ps\", \"uncertainty_ps\": \"ps\"}}"
+  }
+]

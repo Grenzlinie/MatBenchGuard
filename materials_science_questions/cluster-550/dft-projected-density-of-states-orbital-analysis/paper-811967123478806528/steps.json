@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_geo_opt",
+    "title": "Geometry optimization of supercells",
+    "role": "process",
+    "action": "For each system (undoped PZT and A‑site substituted PZT with Sc, Y, La, Sb, Bi), build a 2×2×4 supercell of Pb(Zr0.25Ti0.75)O3 with one Pb vacancy at the cell centre and two Pb atoms replaced by the respective dopant to maintain electroneutrality. Use experimental lattice constants a=b=7.892 Å, c/a=2.094. Relax atomic positions using DFT‑GGA (PBE) with Quantum ESPRESSO until forces converge. Save the final relaxed atomic coordinates for all systems in a single structured file.",
+    "output_file": "",
+    "evidence": "relaxed_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_o2_mu",
+    "title": "Oxygen chemical potential from isolated O₂ molecule",
+    "role": "process",
+    "action": "Compute the total energy of an isolated O₂ molecule (bond length ~1.21 Å) using the same GGA‑PBE functional. Extract the oxygen chemical potential μ_O = E(O₂)/2 and save the value.",
+    "output_file": "",
+    "evidence": "mu_O.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_dos",
+    "title": "Electronic structure and DOS calculation",
+    "role": "process",
+    "action": "On the relaxed structures, run a self‑consistent field (SCF) calculation followed by a non‑SCF density of states (DOS) calculation using a meta‑GGA functional (TPSS) with a dense k‑mesh. Save the total DOS for each system as a two‑column CSV file (Energy in eV, DOS in states/eV).",
+    "output_file": "",
+    "evidence": "dos_{dopant}.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_optical",
+    "title": "Optical absorption spectrum calculation",
+    "role": "process",
+    "action": "Using the same meta‑GGA electronic structure, compute the frequency‑dependent dielectric function and derive the absorption coefficient α(E). Save the absorption spectrum for each system as a two‑column CSV file (Energy in eV, α in cm⁻¹).",
+    "output_file": "",
+    "evidence": "absorption_{dopant}.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_vacancy_energies",
+    "title": "Oxygen vacancy total energy calculations",
+    "role": "process",
+    "action": "For each system (undoped perfect, Pb‑deficient, and all doped systems), create a neutral oxygen vacancy defect supercell (remove one O atom). Perform a static GGA‑PBE energy calculation on the relaxed geometry (keeping ionic positions fixed). Collect the total energies of all perfect and defective supercells in a structured JSON file.",
+    "output_file": "",
+    "evidence": "vacancy_total_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_results",
+    "title": "Extract energy, optical, structural, and defect properties",
+    "role": "scored",
+    "action": "Read the DOS CSV files and locate the valence band maximum (VBM) and conduction band minimum (CBM) to determine energy band gaps. Read the absorption spectra, apply Tauc’s formula for a direct allowed transition, and extract optical band gaps. Compute the average Ti‑O‑Ti bond angle from the relaxed atomic coordinates. Compute oxygen vacancy formation energies using the formula E_f = E_defect − E_perfect + μ_O. Assemble all quantities per system into a single JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Energy band gaps, optical band gaps, Ti‑O‑Ti bond angles, and oxygen vacancy formation energies for undoped, Pb‑deficient, Sc‑, Y‑, La‑, Sb‑, and Bi‑substituted PZT.",
+    "output_schema": "{\"systems\": [{\"dopant\": \"none\"|\"Pb-deficient\"|\"Sc\"|\"Y\"|\"La\"|\"Sb\"|\"Bi\", \"energy_band_gap\": <float|null>, \"optical_band_gap\": <float|null>, \"Ti-O-Ti_bond_angle\": <float|null>, \"oxygen_vacancy_formation_energy\": <float|null>}]}"
+  }
+]

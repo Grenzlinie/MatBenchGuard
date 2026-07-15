@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_potential",
+    "title": "Construct interatomic pair potentials",
+    "role": "process",
+    "action": "Implement the universal Rose energy function U = U0(1+a)exp(-a) with a = b(1 - r/r0) + c(1 - r/r0)^2 + d(1 - r/r0)^3. Use the following potential parameters:\n- Cr–Cr: b=5.58, c=2.79, d=5.58, U0=−0.6345 eV, r0=0.262 nm, rk=0.350 nm\n- Nb–Nb: b=5.19, c=0.64, d=3.11, U0=−1.1274 eV, r0=0.297 nm, rk=0.400 nm\n- Cr–Nb: b=4.80, c=−1.51, d=0.63, U0=−0.8810 eV, r0=0.280 nm, rk=0.375 nm\nCreate the required potential definition (e.g., tabulated potentials or analytic formulas) for the chosen MD engine.",
+    "output_file": "",
+    "evidence": "potential_parameters.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Potential parameter file containing the three Rose universal pair potentials.",
+    "output_schema": "Text file with the parameter values (b, c, d, U0, r0, rk) for Cr-Cr, Nb-Nb, Cr-Nb."
+  },
+  {
+    "id": "step_geometry",
+    "title": "Generate bicrystal initial configurations",
+    "role": "process",
+    "action": "Build cylindrical Cr-Nb bicrystal models for each tensile orientation using the following geometric parameters:\n- <100>: 1168 atoms total (712 Cr + 456 Nb), length 4.63 nm (2.24 nm Cr + 2.39 nm Nb), Cr diameter 2.080 nm, Nb diameter 1.980 nm.\n- <110>: 1190 atoms total (702 Cr + 488 Nb), length 4.81 nm (2.36 nm Cr + 2.45 nm Nb), Cr diameter 2.060 nm, Nb diameter 2.034 nm.\n- <111>: 1221 atoms total (637 Cr + 584 Nb), length 3.93 nm (1.70 nm Cr + 2.23 nm Nb), Cr diameter 2.355 nm, Nb diameter 2.349 nm.\nEnsure the crystallographic orientation aligns the tensile axis along the given direction and that the Cr-Nb interface consists of a single chain of atoms through the centre.",
+    "output_file": "",
+    "evidence": "initial_configurations.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Log file confirming the generation of three initial bicrystal configurations.",
+    "output_schema": "Free-form text log listing atom counts and box dimensions for each orientation."
+  },
+  {
+    "id": "step_simulation",
+    "title": "Run MD tensile simulation",
+    "role": "process",
+    "action": "For each orientation, perform a constant-strain-rate molecular dynamics tensile simulation at 300 K. Elongate the bicrystal by 0.0001 nm per iteration with a time step of 5 fs, applying thermalization every 50 iterations. Continue until failure (loss of load-bearing ability). Record per-step atomic positions, potential energy, number of pair interactions, and stress.",
+    "output_file": "",
+    "evidence": "simulation_summary.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "JSON summary of simulation runs including strain ranges and number of steps.",
+    "output_schema": "JSON object with keys per orientation containing start strain, end strain, number of steps, and final failure flag."
+  },
+  {
+    "id": "step_properties",
+    "title": "Derive mechanical properties and export results",
+    "role": "scored",
+    "action": "From the simulation trajectories, compute the engineering stress‑strain curves for each orientation. Determine Young's modulus (initial linear region), yield stress (using a 0.2% offset or equivalent consistent criterion), ultimate tensile strength, total elongation at failure, and work of deformation up to failure. Report all values in a single CSV file.",
+    "output_file": "tensile_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Elastic and strength properties of Cr-Nb bicrystals under tension along <100>, <110>, and <111> crystallographic directions.",
+    "output_schema": "Columns: orientation (string), elongation_at_failure_percent (float), Young_modulus_GPa (float), yield_strength_GPa (float), total_elongation_percent (float), work_of_deformation_GJm3 (float), ultimate_strength_GPa (float). One row per orientation."
+  }
+]

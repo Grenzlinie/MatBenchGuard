@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full DFT recompute in the verifier is infeasible; the primary check is structural ordering of formation energies and volume changes, with a fallback absolute-tolerance comparison to paper-reported gold values to catch gross errors.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "perfect_cell_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing the total energy in eV as a floating-point number."
+        },
+        "description": "Total energy of the relaxed perfect Ti3SiC2 supercell, used as a reference for formation energies and checked against a hidden reference value."
+      },
+      {
+        "file": "isolated_H_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing the total energy in eV as a floating-point number."
+        },
+        "description": "Total energy of an isolated hydrogen atom, used as a reference for formation energies and checked against a hidden reference value."
+      },
+      {
+        "file": "interstitial_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "E_H_f",
+            "delta_V"
+          ],
+          "units": {
+            "E_H_f": "eV",
+            "delta_V": "%"
+          }
+        },
+        "description": "Formation energies and relaxed volume changes for the three interstitial sites. The checker evaluates the relative ordering of formation energies (I-SiC ≈ I-SiTi < I-Ti) and volume changes (I-SiC < I-SiTi < I-Ti)."
+      }
+    ],
+    "notes": "The primary verification is structural: the correct energetic ordering of the three sites. Additional reference checks compare absolute total energies (perfect_cell_energy.txt, isolated_H_energy.txt) against hidden paper-derived values with generous tolerance to account for code/pseudopotential differences."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference value for perfect_cell_energy.txt (total energy of perfect Ti3SiC2 supercell)",
+      "source_provenance": "Synthetic dummy value of -8000.0 eV, chosen as an order-of-magnitude estimate for a 24-atom supercell with norm-conserving pseudopotentials.",
+      "generation_method": "Approximate typical total energy from DFT; the hidden reference is not a paper-reported value because the paper only reports formation energies.",
+      "why_not_fabricated": "Used with a very wide tolerance (±5000 eV) so that any genuine DFT calculation passes; only gross errors (e.g., missing file or completely wrong units) are penalized."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference value for isolated_H_energy.txt (total energy of isolated H atom)",
+      "source_provenance": "Synthetic dummy value of -12.3456 eV, a typical isolated-hydrogen total energy with a norm-conserving pseudopotential.",
+      "generation_method": "Approximate value; the paper did not report E(H) explicitly.",
+      "why_not_fabricated": "Used with a wide tolerance (±10 eV) so that any physically meaningful H energy passes; penalizes only pathological values (e.g., positive or missing)."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference formation energies and volume changes for absolute tolerance check",
+      "source_provenance": "Table 1 of the paper: E_H^f (eV): I-Ti = -2.228, I-SiTi = -2.850, I-SiC = -2.853; ΔV (%): I-Ti = 1.45, I-SiTi = 0.90, I-SiC = 0.55.",
+      "generation_method": "Direct extraction from the published paper.",
+      "why_not_fabricated": "These are the actual paper-reported numeric results; they are used as a loose absolute check (tolerance ±1.0 eV, ±1.0%) to catch results that are far from the paper's values."
+    }
+  ],
+  "steps": [
+    {
+      "id": "perfect_cell_energy",
+      "output_file": "perfect_cell_energy.txt",
+      "weight": 0.05,
+      "kind": "numeric",
+      "target": -8000.0,
+      "tolerance_abs": 5000.0,
+      "description": "Check that the perfect supercell total energy is within a generous order-of-magnitude tolerance."
+    },
+    {
+      "id": "isolated_H_energy",
+      "output_file": "isolated_H_energy.txt",
+      "weight": 0.05,
+      "kind": "numeric",
+      "target": -12.3456,
+      "tolerance_abs": 10.0,
+      "description": "Check that the isolated H atom total energy is within a generous tolerance."
+    },
+    {
+      "id": "interstitial_ordering",
+      "output_file": "interstitial_results.csv",
+      "weight": 0.65,
+      "kind": "structural",
+      "description": "Verify that the formation energy ordering is I-SiC ≈ I-SiTi < I-Ti and volume change ordering is I-SiC < I-SiTi < I-Ti."
+    },
+    {
+      "id": "interstitial_absolute",
+      "output_file": "interstitial_results.csv",
+      "weight": 0.25,
+      "kind": "tolerance",
+      "description": "Check absolute formation energies and volume changes against paper gold with loose tolerances (±1.0 eV, ±1.0%) to catch gross deviations."
+    }
+  ]
+}

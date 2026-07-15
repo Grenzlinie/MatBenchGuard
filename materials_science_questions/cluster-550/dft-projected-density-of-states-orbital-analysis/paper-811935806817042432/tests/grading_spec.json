@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of PDOS orbital fraction infeasible because total PDOS column not in output contract; band gap and angle are recomputed, PDOS checked structurally for positive contribution.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_FeTP_band_gap.txt": "threshold_or_better",
+    "step_03_FeTP_PDOS.csv": "metric_recompute",
+    "step_02_FeTP_NO_results.txt": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference thresholds for FeTP NO band gap (≥0.5 eV) and Fe–N–O angle (148° ±10°). Derived from paper-reported angle ~148° and metal-insulator transition with gap >0.5 eV per task scope.",
+      "source_provenance": "Paper (Surface and Interface Analysis 2008) reports Fe–N–O angle ~148°; task specification defines insulating band gap >0.5 eV.",
+      "generation_method": "Extracted from paper text and task design; angle tolerance 10° to account for DFT toolchain differences.",
+      "why_not_fabricated": "The angle is the paper’s reported value; the gap threshold is derived from the metal-insulator transition claim (insulating requires finite gap)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_FeTP_band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing either a floating-point number (eV) or the word 'metallic'."
+        },
+        "description": "Majority-spin band gap of isolated FeTP, extracted from the computed band structure."
+      },
+      {
+        "file": "step_03_FeTP_PDOS.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "d_yz_Fe",
+            "pz_meso_C",
+            "pz_beta_C"
+          ],
+          "units": {
+            "energy": "eV",
+            "d_yz_Fe": "states/eV/atom",
+            "pz_meso_C": "states/eV/atom",
+            "pz_beta_C": "states/eV/atom"
+          }
+        },
+        "description": "Projected density of states of Fe d_yz, meso-C p_z, and β-C p_z orbitals for FeTP within ±1 eV of the Fermi level."
+      },
+      {
+        "file": "step_02_FeTP_NO_results.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Line 1: band gap in eV; line 2: Fe–N–O angle in degrees."
+        },
+        "description": "Band gap of FeTP–NO complex and Fe–N–O adsorption geometry angle."
+      }
+    ],
+    "notes": "The checker recomputes the FeTP band gap metric from the raw band structure CSV (provided as process evidence) and compares the submitted text against a threshold. The PDOS fraction is recomputed from the CSV and compared against a threshold. The FeTP–NO gap and angle are extracted from the two-line file and checked against paper-comparable tolerances."
+  },
+  "steps": [
+    {
+      "id": "fetp_bandgap",
+      "output_file": "step_01_FeTP_band_gap.txt",
+      "kind": "recompute_metallic_gap",
+      "weight": 0.4,
+      "target_threshold": 0.1,
+      "description": "Check if the majority-spin band gap is <= 0.1 eV (or explicitly metallic)."
+    },
+    {
+      "id": "fetpno_results",
+      "output_file": "step_02_FeTP_NO_results.txt",
+      "kind": "recompute_gap_angle",
+      "weight": 0.4,
+      "gap_threshold": 0.5,
+      "angle_target": 148.0,
+      "angle_tolerance": 10.0
+    },
+    {
+      "id": "fetp_pdos",
+      "output_file": "step_03_FeTP_PDOS.csv",
+      "kind": "structural_pdos",
+      "weight": 0.2,
+      "pdos_threshold": 0.1,
+      "energy_range": [
+        -1.0,
+        1.0
+      ],
+      "description": "Validate PDOS data and ensure combined contribution of target orbitals > 0.1 within ±1 eV."
+    }
+  ]
+}

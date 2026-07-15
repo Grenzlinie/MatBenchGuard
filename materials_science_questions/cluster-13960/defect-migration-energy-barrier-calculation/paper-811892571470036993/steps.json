@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Optimize bulk Pt lattice constant",
+    "role": "process",
+    "action": "Perform spin-polarized DFT calculation on bulk fcc Pt to determine the equilibrium lattice constant a. Use the same pseudopotential and functional as later steps. Store the optimized lattice constant.",
+    "output_file": "",
+    "evidence": "bulk_lattice_optimization.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Optimize the Pt bulk lattice constant to fix the bottom layers of the slab. This provides the reference geometry for slab construction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Construct slab supercells and endpoint structures",
+    "role": "process",
+    "action": "Using the optimized lattice constant, build a five-layer 3×3 Pt(111) slab with vacuum. Place a surface vacancy at the topmost layer center and the impurity (Au or Co) in the second layer center. Create all endpoint structures for the segregation cycle: structure 1 (impurity in second layer, vacancy on surface), structure 2 (impurity on surface, vacancy in second layer), structure 3 (intralayer Pt movement, vacancy in second layer), and structure 4 (interlayer Pt movement, vacancy on surface). Bottom two layers are fixed at bulk positions; top three layers are free to relax. Generate configurations for both Au and Co impurities.",
+    "output_file": "",
+    "evidence": "slab_structures.traj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate all required initial and final geometries for NEB pathways.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "DFT geometry relaxation of endpoint structures",
+    "role": "process",
+    "action": "Relax all endpoint structures (1–4 for Au and Co) using spin-polarized DFT with PBE functional, plane-wave cutoff ~350 eV, 4×4×1 k‑points, and force convergence 1×10⁻⁴ eV/Å. Top three layers free, bottom two fixed. Save relaxed coordinates and total energies.",
+    "output_file": "",
+    "evidence": "relaxed_endpoints.pickle",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain relaxed geometries and energies of all stationary states for use as NEB endpoints.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "NEB calculations for Au segregation pathways",
+    "role": "process",
+    "action": "Run nudged elastic band calculations for three elementary steps (1→2 impurity migration, 2→3 intralayer Pt movement, 3→4 interlayer Pt migration) using the relaxed Au endpoints. Use at least 5 images and the same DFT settings. Save the energy profile (image energies) for each step.",
+    "output_file": "",
+    "evidence": "au_neb_profiles.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute minimum-energy paths for the Au vacancy-mediated segregation cycle.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Extract Au segregation barriers and total energy change",
+    "role": "scored",
+    "action": "From the Au NEB profiles, determine the activation barrier for step 1→2 (energy of highest image minus energy of state 1), the barrier for the rate-determining step TS3 (step 3→4, highest image energy minus energy of state 3), and the total energy change ΔE(state 4) − ΔE(state 1). Write these three values (in eV) to step_01_au_barriers.json.",
+    "output_file": "step_01_au_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact: Au segregation barriers and total energy change. The checker compares reported values to the paper's reference within tolerances.",
+    "output_schema": "{\"impurity\": \"string (Au)\", \"barrier_step1_2_eV\": \"number (eV)\", \"barrier_TS3_eV\": \"number (eV)\", \"delta_E_total_1_to_4_eV\": \"number (eV)\"}"
+  },
+  {
+    "id": "step_06",
+    "title": "NEB calculations for Co segregation pathways",
+    "role": "process",
+    "action": "Run nudged elastic band calculations for the same three elementary steps using the relaxed Co endpoints. Same DFT settings and number of images as for Au. Save the energy profile for each step.",
+    "output_file": "",
+    "evidence": "co_neb_profiles.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute minimum-energy paths for the Co vacancy-mediated segregation cycle.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Extract Co segregation barriers and total energy change",
+    "role": "scored",
+    "action": "From the Co NEB profiles, determine the activation barrier for step 1→2, the barrier for the rate-determining step TS3 (step 3→4), and the total energy change ΔE(state 4) − ΔE(state 1). Write these three values (in eV) to step_02_co_barriers.json.",
+    "output_file": "step_02_co_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact: Co segregation barriers and total energy change. The checker compares reported values to the paper's reference within tolerances.",
+    "output_schema": "{\"impurity\": \"string (Co)\", \"barrier_step1_2_eV\": \"number (eV)\", \"barrier_TS3_eV\": \"number (eV)\", \"delta_E_total_1_to_4_eV\": \"number (eV)\"}"
+  }
+]

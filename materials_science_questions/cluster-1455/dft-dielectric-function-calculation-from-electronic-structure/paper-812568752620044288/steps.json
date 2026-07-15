@@ -1,0 +1,80 @@
+[
+  {
+    "id": "prepare_eos_scan",
+    "title": "Supercell generation and total-energy scan for equation of state",
+    "role": "process",
+    "action": "Construct 2×2×2 supercells for KCl (Fm3m) and K0.5Rb0.5Cl (Fd3m) with Rb substitution. Using an FP-LAPW code with GGA-PBE, perform total-energy calculations at multiple volumes around the expected equilibrium for each compound. Output the calculated energies vs volume.",
+    "output_file": "",
+    "evidence": "eos_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "fit_eos",
+    "title": "Equation-of-state fitting and structural properties",
+    "role": "scored",
+    "action": "Fit the total-energy vs volume data to the Birch-Murnaghan equation of state. Extract equilibrium lattice constant a0, bulk modulus B, and pressure derivative B' for both KCl and K0.5Rb0.5Cl. Write the results.",
+    "output_file": "structural_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted structural parameters from EOS for KCl and the alloy.",
+    "output_schema": "JSON object with keys 'KCl' and 'K0.5Rb0.5Cl', each an object with 'a0' (float, Å), 'B' (float, GPa), 'Bprime' (float)."
+  },
+  {
+    "id": "run_scf",
+    "title": "Self-consistent field (SCF) calculation",
+    "role": "process",
+    "action": "Using the equilibrium lattice constants, perform self-consistent DFT calculation for KCl and K0.5Rb0.5Cl to obtain the ground-state charge density and Kohn-Sham eigenvalues on a suitable k-mesh. Record convergence evidence.",
+    "output_file": "",
+    "evidence": "scf_converged.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "band_structure",
+    "title": "Band structure and direct band gap",
+    "role": "scored",
+    "action": "Compute non-self-consistent band structure along high-symmetry paths for both compounds. Determine the direct band gap (VBM and CBM at Γ). Write the band gap values and gap nature.",
+    "output_file": "band_gap.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Direct band gap in eV and nature for both materials.",
+    "output_schema": "JSON object with keys 'KCl' (float), 'K0.5Rb0.5Cl' (float), and 'nature' (string, expected 'direct')."
+  },
+  {
+    "id": "optical_properties",
+    "title": "Optical dielectric function and derived constants",
+    "role": "scored",
+    "action": "From Kohn-Sham eigenvalues and momentum matrix elements, compute the complex dielectric function ε(ω) up to 13.5 eV. Derive static dielectric constant ε1(0), refractive index n(0), ε1 peak, two main ε2 peaks, and the peak of extinction coefficient k with its energy. Write all values.",
+    "output_file": "optical_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Key optical constants and spectral features derived from the dielectric function.",
+    "output_schema": "JSON object with keys 'KCl' and 'K0.5Rb0.5Cl'. Each contains: 'epsilon1_0' (float), 'n_0' (float), 'epsilon1_peak' (object with 'energy' (float, eV) and 'value' (float)), 'epsilon2_peaks' (list of two objects, each with 'energy' (float) and 'value' (float)), 'k_peak' (object with 'energy' (float, eV) and 'value' (float))."
+  },
+  {
+    "id": "thermoelectric_transport",
+    "title": "Thermoelectric transport coefficients",
+    "role": "scored",
+    "action": "Compute the Seebeck coefficient and electrical conductivity as functions of temperature using semi-classical Boltzmann theory (BoltzTraP2) based on the SCF band energies. Extract values at 50 K and 800 K for both compounds. Write the results.",
+    "output_file": "thermoelectric_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Thermoelectric coefficients at two temperatures.",
+    "output_schema": "JSON object with keys 'KCl' and 'K0.5Rb0.5Cl'. Each contains: 'Seebeck_50K' (float, μV/K), 'Seebeck_800K' (float), 'conductivity_50K' (float, Ω⁻¹ cm⁻¹), 'conductivity_800K' (float)."
+  }
+]

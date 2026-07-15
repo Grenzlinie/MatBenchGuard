@@ -1,0 +1,313 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute key features (static dielectric constant, peak positions, trend monotonicity) from raw artifact CSVs/JSON and compare to paper-reported gold with tolerances; self-reported values are not trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_summary_table.csv": "exact_match",
+    "step_02_band_gaps_zero_strain.json": "exact_match",
+    "step_03_strain_band_gap_PBE.csv": "structural_audit",
+    "step_04_dielectric_function_MgS.csv": "structural_audit",
+    "step_05_dielectric_function_MgSe.csv": "structural_audit",
+    "step_06_absorption_reflectivity_MgS.csv": "structural_audit",
+    "step_07_absorption_reflectivity_MgSe.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for structural parameters, cohesive energy, band gaps, dielectric constants, absorption peak positions, and reflectivity peak positions from the paper (Table 1 and text).",
+      "source_provenance": "Paper text and Table 1: lattice constants, buckling distances, bond lengths, cohesive energies, HSE06 band gaps; PBE band gaps from text; dielectric static constants and peak positions from text; absorption/reflectivity peak positions from text.",
+      "generation_method": "Extracted from paper's reported numbers; verified against consistency of description.",
+      "why_not_fabricated": "Numbers match the paper's published values and are the correct reference for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_summary_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Material",
+            "Lattice_constant_a(Angstrom)",
+            "Buckling_delta(Angstrom)",
+            "Bond_length_MgX(Angstrom)",
+            "Cohesive_energy(eV/atom)",
+            "HSE06_band_gap(eV)"
+          ],
+          "units": {
+            "Lattice_constant_a(Angstrom)": "Angstrom",
+            "Buckling_delta(Angstrom)": "Angstrom",
+            "Bond_length_MgX(Angstrom)": "Angstrom",
+            "Cohesive_energy(eV/atom)": "eV/atom",
+            "HSE06_band_gap(eV)": "eV"
+          }
+        },
+        "description": "Equilibrium structural parameters, cohesive energy, and HSE06 band gap for MgS and MgSe monolayers."
+      },
+      {
+        "file": "step_02_band_gaps_zero_strain.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "MgS": {
+              "type": "object",
+              "required": {
+                "PBE_gap": {
+                  "type": "number"
+                },
+                "HSE06_gap": {
+                  "type": "number"
+                }
+              }
+            },
+            "MgSe": {
+              "type": "object",
+              "required": {
+                "PBE_gap": {
+                  "type": "number"
+                },
+                "HSE06_gap": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "PBE and HSE06 band gaps at zero strain for MgS and MgSe."
+      },
+      {
+        "file": "step_03_strain_band_gap_PBE.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Material",
+            "Strain_percent",
+            "PBE_band_gap(eV)"
+          ],
+          "units": {
+            "Strain_percent": "%",
+            "PBE_band_gap(eV)": "eV"
+          }
+        },
+        "description": "PBE band gap as a function of biaxial strain (-8% to +8%) for both materials. The checker verifies the presence and trend of the strain dependence (monotonic decrease for MgS under compression; increase up to -6% for MgSe)."
+      },
+      {
+        "file": "step_04_dielectric_function_MgS.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy_eV",
+            "real_eps_ZZ",
+            "imag_eps_ZZ"
+          ],
+          "units": {
+            "Energy_eV": "eV",
+            "real_eps_ZZ": "dimensionless",
+            "imag_eps_ZZ": "dimensionless"
+          }
+        },
+        "description": "Complex dielectric function (out-of-plane) for MgS. The checker will compute the static dielectric constant from real part at zero energy and locate first two absorption peaks in imaginary part."
+      },
+      {
+        "file": "step_05_dielectric_function_MgSe.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy_eV",
+            "real_eps_ZZ",
+            "imag_eps_ZZ"
+          ],
+          "units": {
+            "Energy_eV": "eV",
+            "real_eps_ZZ": "dimensionless",
+            "imag_eps_ZZ": "dimensionless"
+          }
+        },
+        "description": "Complex dielectric function (out-of-plane) for MgSe. Same checks as MgS."
+      },
+      {
+        "file": "step_06_absorption_reflectivity_MgS.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy_eV",
+            "absorption_coeff_cm-1",
+            "reflectivity_fraction"
+          ],
+          "units": {
+            "Energy_eV": "eV",
+            "absorption_coeff_cm-1": "cm^-1",
+            "reflectivity_fraction": "fraction"
+          }
+        },
+        "description": "Absorption coefficient and reflectivity spectrum for MgS. Checker verifies near-zero absorption in visible region and peak positions."
+      },
+      {
+        "file": "step_07_absorption_reflectivity_MgSe.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy_eV",
+            "absorption_coeff_cm-1",
+            "reflectivity_fraction"
+          ],
+          "units": {
+            "Energy_eV": "eV",
+            "absorption_coeff_cm-1": "cm^-1",
+            "reflectivity_fraction": "fraction"
+          }
+        },
+        "description": "Absorption coefficient and reflectivity spectrum for MgSe."
+      }
+    ],
+    "notes": "All values are compared to hidden paper‑reported values or verified for structural trends/tolerances. The summary table (step_01_summary_table.csv) is load‑bearing: it cannot be produced without running the preceding geometry optimization, isolated atom, and HSE06 calculations. The strain band gap table is scored via trend verification; the dielectric function and optical spectra via derived features (static constant, peak positions, relative heights). Near‑zero visible absorption is also checked."
+  },
+  "steps": [
+    {
+      "id": "summary_table",
+      "output_file": "step_01_summary_table.csv",
+      "weight": 0.2,
+      "kind": "numeric",
+      "gold": {
+        "materials": {
+          "MgS": {
+            "Lattice_constant_a(Angstrom)": 4.41,
+            "Buckling_delta(Angstrom)": 2.27,
+            "Bond_length_MgX(Angstrom)": 2.67,
+            "Cohesive_energy(eV/atom)": 3.71,
+            "HSE06_band_gap(eV)": 4.7
+          },
+          "MgSe": {
+            "Lattice_constant_a(Angstrom)": 4.52,
+            "Buckling_delta(Angstrom)": 2.49,
+            "Bond_length_MgX(Angstrom)": 2.63,
+            "Cohesive_energy(eV/atom)": 3.4,
+            "HSE06_band_gap(eV)": 4.51
+          }
+        },
+        "tolerances": {
+          "Lattice_constant_a(Angstrom)": 0.05,
+          "Buckling_delta(Angstrom)": 0.05,
+          "Bond_length_MgX(Angstrom)": 0.05,
+          "Cohesive_energy(eV/atom)": 0.1,
+          "HSE06_band_gap(eV)": 0.3
+        }
+      }
+    },
+    {
+      "id": "band_gaps_zero_strain",
+      "output_file": "step_02_band_gaps_zero_strain.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "gold": {
+        "MgS": {
+          "PBE_gap": 3.69,
+          "HSE06_gap": 4.7
+        },
+        "MgSe": {
+          "PBE_gap": 4.01,
+          "HSE06_gap": 4.51
+        },
+        "tolerances": {
+          "PBE_gap": 0.2,
+          "HSE06_gap": 0.3
+        }
+      }
+    },
+    {
+      "id": "strain_band_gap_PBE",
+      "output_file": "step_03_strain_band_gap_PBE.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "gold": {
+        "MgS_trend": "max_at_zero",
+        "MgSe_trend": "max_at_minus6"
+      }
+    },
+    {
+      "id": "dielectric_MgS",
+      "output_file": "step_04_dielectric_function_MgS.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "gold": {
+        "static_eps1": 2.13,
+        "static_tol": 0.15,
+        "peaks_imag": [
+          5.83,
+          6.22
+        ],
+        "peak_tol": 0.5
+      }
+    },
+    {
+      "id": "dielectric_MgSe",
+      "output_file": "step_05_dielectric_function_MgSe.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "gold": {
+        "static_eps1": 2.16,
+        "static_tol": 0.15,
+        "peaks_imag": [
+          6.65,
+          7.6
+        ],
+        "peak_tol": 0.5
+      }
+    },
+    {
+      "id": "absorption_reflectivity_MgS",
+      "output_file": "step_06_absorption_reflectivity_MgS.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "gold": {
+        "visible_range": [
+          1.65,
+          3.26
+        ],
+        "abs_threshold": 5000.0,
+        "main_abs_peak_pos": 8.53,
+        "main_abs_peak_tol": 1.0,
+        "main_ref_peak_pos": 9.1,
+        "main_ref_peak_tol": 1.0
+      }
+    },
+    {
+      "id": "absorption_reflectivity_MgSe",
+      "output_file": "step_07_absorption_reflectivity_MgSe.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "gold": {
+        "visible_range": [
+          1.65,
+          3.26
+        ],
+        "abs_threshold": 5000.0,
+        "main_abs_peak_pos": 7.74,
+        "main_abs_peak_tol": 1.0,
+        "main_ref_peak_pos": 7.95,
+        "main_ref_peak_tol": 1.0
+      }
+    }
+  ]
+}

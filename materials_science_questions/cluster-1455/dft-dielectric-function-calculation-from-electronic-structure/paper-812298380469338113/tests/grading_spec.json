@@ -1,0 +1,216 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "T0 result-level compare is appropriate because the raw artifacts are the computed scalar values themselves; the checker cannot re-execute the whole simulation. The paper's reported calculated properties (Table I) serve as hidden gold, and the agent's values are compared against them with realistic tolerances that accommodate implementation differences while requiring a genuine simulation run.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for energy, lattice parameters, and dielectric constants from the source paper.",
+      "source_provenance": "Table I of Grimes & Lagerlöf, J. Am. Ceram. Soc., 74 [2] 270-73 (1991).",
+      "generation_method": "Directly extracted from the 'Calc' columns of Table I: total lattice energy (eV), lattice parameters (nm), and dielectric constants (ε0, ε∞).",
+      "why_not_fabricated": "The values are the paper's actual reported calculated results, used to define the ground truth for result-level comparison."
+    }
+  ],
+  "target_policies": {
+    "step_01_energy_ranking.json": "reference_match",
+    "step_02_lattice_parameters.json": "reference_match",
+    "step_03_dielectric_constants.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energy_ranking.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": {},
+          "items": {
+            "type": "object",
+            "required": [
+              "polymorph",
+              "total_lattice_energy_eV"
+            ],
+            "properties": {
+              "polymorph": {
+                "type": "string"
+              },
+              "total_lattice_energy_eV": {
+                "type": "number"
+              }
+            }
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Total lattice energy (eV) for each CoO polymorph. The array must contain exactly three objects with polymorph values 'rock_salt', 'zinc_blende', 'wurtzite'."
+      },
+      {
+        "file": "step_02_lattice_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": {},
+          "items": {
+            "type": "object",
+            "required": [
+              "polymorph",
+              "a_nm"
+            ],
+            "properties": {
+              "polymorph": {
+                "type": "string"
+              },
+              "a_nm": {
+                "type": "number"
+              },
+              "c_nm": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          },
+          "required_columns": [],
+          "units": {
+            "a_nm": "nm",
+            "c_nm": "nm"
+          }
+        },
+        "description": "Relaxed lattice parameters (a in nm, c in nm where applicable) for each CoO polymorph."
+      },
+      {
+        "file": "step_03_dielectric_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": {},
+          "items": {
+            "type": "object",
+            "required": [
+              "polymorph"
+            ],
+            "properties": {
+              "polymorph": {
+                "type": "string"
+              },
+              "epsilon_0": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "epsilon_inf": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "epsilon_0_11": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "epsilon_0_33": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "epsilon_inf_11": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "epsilon_inf_33": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Static (ε0) and high-frequency (ε∞) dielectric constants for each CoO polymorph. For rock salt and zinc blende, use epsilon_0, epsilon_inf; for wurtzite, use the 11 and 33 components."
+      }
+    ],
+    "notes": "All values are to be obtained from a single lattice simulation run using the specified potentials and OSPE. The checker compares each reported quantity to reference values (from Table I of the original study) with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_energy",
+      "output_file": "step_01_energy_ranking.json",
+      "weight": 0.5,
+      "kind": "result_compare",
+      "gold": {
+        "rock_salt": -39.92,
+        "zinc_blende": -39.53,
+        "wurtzite": -39.65
+      },
+      "tolerance_energy_abs": 0.1
+    },
+    {
+      "id": "step_lattice",
+      "output_file": "step_02_lattice_parameters.json",
+      "weight": 0.3,
+      "kind": "result_compare",
+      "gold": {
+        "rock_salt": {
+          "a_nm": 0.4274
+        },
+        "zinc_blende": {
+          "a_nm": 0.457
+        },
+        "wurtzite": {
+          "a_nm": 0.322,
+          "c_nm": 0.509
+        }
+      },
+      "tolerance_a_relative": 0.02,
+      "tolerance_c_relative": 0.06
+    },
+    {
+      "id": "step_dielectric",
+      "output_file": "step_03_dielectric_constants.json",
+      "weight": 0.2,
+      "kind": "result_compare",
+      "gold": {
+        "rock_salt": {
+          "epsilon_0": 12.21,
+          "epsilon_inf": 5.64,
+          "epsilon_0_11": null,
+          "epsilon_0_33": null,
+          "epsilon_inf_11": null,
+          "epsilon_inf_33": null
+        },
+        "zinc_blende": {
+          "epsilon_0": 5.89,
+          "epsilon_inf": 3.79,
+          "epsilon_0_11": null,
+          "epsilon_0_33": null,
+          "epsilon_inf_11": null,
+          "epsilon_inf_33": null
+        },
+        "wurtzite": {
+          "epsilon_0": null,
+          "epsilon_inf": null,
+          "epsilon_0_11": 5.38,
+          "epsilon_0_33": 7.36,
+          "epsilon_inf_11": 3.62,
+          "epsilon_inf_33": 4.22
+        }
+      },
+      "tolerance_relative": 0.1
+    }
+  ]
+}

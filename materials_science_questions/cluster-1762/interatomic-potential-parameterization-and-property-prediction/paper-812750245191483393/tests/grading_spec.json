@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute peaks from raw ε₂ spectrum when provided; fallback to submitted peaks if spectrum missing. Both compared to paper-reported gold peaks within tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold peak positions for Cr and Fe ε₂ spectra",
+      "source_provenance": "Paper text: Cr peaks at 1.56, 2.31, 3.13 eV; Fe peaks at 1.4, 2.8, 4.2 eV.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Directly quoted from paper's reported peak positions"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cr_e2_peaks.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "peak_id",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "ε₂ peak positions for chromium; the hidden checker recomputes peaks from the agent's raw ε₂ evidence and compares with paper‑reported gold."
+      },
+      {
+        "file": "fe_e2_peaks.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "peak_id",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "ε₂ peak positions for iron; the hidden checker recomputes peaks from the agent's raw ε₂ evidence and compares with paper‑reported gold."
+      }
+    ],
+    "notes": "The checker will obtain the full ε₂ spectra from the process evidence files (e2_spectrum_cr.csv, e2_spectrum_fe.csv) and independently run a peak‑finding algorithm; the submitted scored peak files must be consistent with those recomputed peaks."
+  },
+  "steps": [
+    {
+      "id": "cr_peaks",
+      "output_file": "cr_e2_peaks.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "gold_peaks": [
+        1.56,
+        2.31,
+        3.13
+      ],
+      "tolerance": 0.2,
+      "evidence_file": "e2_spectrum_cr.csv"
+    },
+    {
+      "id": "fe_peaks",
+      "output_file": "fe_e2_peaks.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "gold_peaks": [
+        1.4,
+        2.8,
+        4.2
+      ],
+      "tolerance": 0.2,
+      "evidence_file": "e2_spectrum_fe.csv"
+    }
+  ]
+}

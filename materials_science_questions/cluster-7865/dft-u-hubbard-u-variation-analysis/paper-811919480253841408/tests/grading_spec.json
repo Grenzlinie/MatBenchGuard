@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing band gaps from raw DFT .bands files is impractical (requires a DFT parser) and the verifier cannot re-run DFT. Instead we compare agent-reported gaps to hidden paper gold (T0 result‑level) with generous tolerances and verify structural consistency for integrated DOS.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.csv": "reference_match",
+    "integrated_dos_IB.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gaps from paper Table 1 and gold integrated DOS from paper text",
+      "source_provenance": "Paper Table 1 and text (Section 3)",
+      "generation_method": "extracted directly from the paper",
+      "why_not_fabricated": "Values are the exact numbers reported in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "U",
+            "Delta_E_VI_plus",
+            "Delta_E_I_plus",
+            "Delta_E_IC_plus",
+            "Delta_E_VC_minus"
+          ],
+          "units": {
+            "Delta_E_VI_plus": "eV",
+            "Delta_E_I_plus": "eV",
+            "Delta_E_IC_plus": "eV",
+            "Delta_E_VC_minus": "eV"
+          }
+        },
+        "description": "Band gaps extracted from DFT calculations for each Cr concentration and Hubbard U value. Compared against paper Table 1 with tolerances."
+      },
+      {
+        "file": "integrated_dos_IB.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "U",
+            "DOS_below_Ef",
+            "DOS_above_Ef"
+          ],
+          "units": {
+            "DOS_below_Ef": "electrons per 64-atom cell",
+            "DOS_above_Ef": "electrons per 64-atom cell"
+          }
+        },
+        "description": "Integrated DOS of the intermediate band below and above the Fermi level, confirming partial occupation and U insensitivity. Compared against paper-reported values and U=0 baseline."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "band_gaps_check",
+      "output_file": "band_gaps.csv",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "tolerance": 0.05,
+      "gold_table": {
+        "rows": [
+          {
+            "concentration": "1/32",
+            "U": 0,
+            "Delta_E_VI_plus": 0.24,
+            "Delta_E_I_plus": 0.31,
+            "Delta_E_IC_plus": 1.22,
+            "Delta_E_VC_minus": 1.56
+          },
+          {
+            "concentration": "1/32",
+            "U": 3,
+            "Delta_E_VI_plus": 0.24,
+            "Delta_E_I_plus": 0.37,
+            "Delta_E_IC_plus": 1.16,
+            "Delta_E_VC_minus": 1.57
+          },
+          {
+            "concentration": "1/32",
+            "U": 6,
+            "Delta_E_VI_plus": 0.21,
+            "Delta_E_I_plus": 0.41,
+            "Delta_E_IC_plus": 1.16,
+            "Delta_E_VC_minus": 1.56
+          },
+          {
+            "concentration": "2/32",
+            "U": 0,
+            "Delta_E_VI_plus": 0.19,
+            "Delta_E_I_plus": 0.52,
+            "Delta_E_IC_plus": 1.1,
+            "Delta_E_VC_minus": 1.68
+          },
+          {
+            "concentration": "2/32",
+            "U": 3,
+            "Delta_E_VI_plus": 0.16,
+            "Delta_E_I_plus": 0.53,
+            "Delta_E_IC_plus": 1.11,
+            "Delta_E_VC_minus": 1.66
+          },
+          {
+            "concentration": "2/32",
+            "U": 6,
+            "Delta_E_VI_plus": 0.13,
+            "Delta_E_I_plus": 0.55,
+            "Delta_E_IC_plus": 1.12,
+            "Delta_E_VC_minus": 1.64
+          }
+        ]
+      }
+    },
+    {
+      "id": "integrated_dos_check",
+      "output_file": "integrated_dos_IB.csv",
+      "kind": "reference_consistency",
+      "weight": 0.3,
+      "tolerance_direct": 0.2,
+      "tolerance_deviation": 0.5,
+      "gold_rows": {
+        "1/32": {
+          "U0": {
+            "below": 2,
+            "above": 1
+          }
+        },
+        "2/32": {
+          "U0": {
+            "below": 4,
+            "above": 2
+          }
+        }
+      }
+    }
+  ]
+}

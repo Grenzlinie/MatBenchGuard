@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare parameters and OCP data",
+    "role": "process",
+    "action": "Obtain and digitize the open-circuit potential curves for hard-carbon (Gu & Wang 2000) and NMC (Awarke et al. 2013). Compile all electrode, separator, and electrolyte parameters from the source paper as listed in Table I. Implement the reduced-order model (ROM) formulas for A_max(R_s, C_rate) and m_rate(R_s, C_rate) as described, along with the effective diffusivity relation D_s^eff = D_s (1 - f_bb)^γ with γ=7.5.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute concentration gradients with ROM (γ=7.5)",
+    "role": "scored",
+    "action": "For each combination of particle radius R_s (2.5, 5.0, 7.5, 10.0, 12.5, 15.0 μm) and C-rate (1, 2, 3, 4, 5, 6, 8, 10 C), run a 1D radial diffusion simulation of a single delithiation (constant surface flux) using the ROM to compute microcrack density f_bb and effective diffusivity with γ=7.5. Record the absolute difference between lithium concentration at particle center and surface at the end of delithiation as the surface concentration gradient (in mol/m³).",
+    "output_file": "concentration_gradients.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of surface concentration gradient for each particle radius and C-rate, produced by the 1D radial diffusion model using the ROM with γ=7.5.",
+    "output_schema": "Columns: particle_radius_um (float), C_rate (float), surface_concentration_gradient_mol_m3 (float). One row per (R_s, C_rate) combination, 48 rows."
+  },
+  {
+    "id": "step_03",
+    "title": "Simulate cycling with ROM and output capacity fade",
+    "role": "scored",
+    "action": "Implement the 1D porous electrode model (anode/separator/cathode) with linearized Butler-Volmer kinetics and the ROM for anode particle degradation. Use anode particle radius 10 μm, hard-carbon OCP, and NMC cathode OCP. Simulate 5 CCCV charge / CC discharge cycles at C-rates of 2C and 4C, recording the discharge capacity (in Ah) for each cycle.",
+    "output_file": "capacity_fade.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Discharge capacity for each cycle at 2C and 4C, obtained from the full 1D electrode model incorporating the ROM.",
+    "output_schema": "Columns: cycle_number (int), C_rate (float), discharge_capacity_Ah (float). Two groups: C_rate=2 with cycles 1–5, and C_rate=4 with cycles 1–5 (10 rows total)."
+  }
+]

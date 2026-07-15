@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build and optimize surface models",
+    "role": "process",
+    "action": "Construct the two slab models: Pd‑CeO₂ (rhombohedral Pd₄ cluster on CeO₂(111)) and Pd‑iC‑CeO₂ (four C–H species inserted at the interface). Optimize geometries with DFT (PBE+U, D3 dispersion) until forces converge. Ensure the correct Ce³⁺ reduction pattern (one Ce³⁺ in Pd‑CeO₂, five Ce³⁺ in Pd‑iC‑CeO₂).",
+    "output_file": "",
+    "evidence": "model_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Prepare the starting geometries for all subsequent calculations. The agent must build these models from scratch using the slab setup parameters given in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "CH₄ activation barrier calculation",
+    "role": "scored",
+    "action": "Adsorb CH₄ on both optimized surfaces, then locate the transition state for the first C–H bond breaking (CH₄* → CH₃* + H*) using the climbing‑image nudged elastic band (CI‑NEB) method. Compute the activation energy E_act = E(TS) − E(initial state).",
+    "output_file": "ch4_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This step produces the activation energy for methane dissociation, which is the rate‑limiting step on Pd‑iC‑CeO₂. The resulting barriers are directly comparable to the paper's reported values.",
+    "output_schema": "[ { \"system\": \"Pd-CeO2\"|\"Pd-iC-CeO2\", \"step\": \"CH4_activation\", \"activation_energy_eV\": <float> } ]"
+  },
+  {
+    "id": "step_03",
+    "title": "H₂O₂ adsorption and decomposition to OH*",
+    "role": "process",
+    "action": "Adsorb H₂O₂ on both surfaces and decompose it to 2OH* species. Record the relaxed co‑adsorbed OH structures for use in the Eley–Rideal mechanism.",
+    "output_file": "",
+    "evidence": "oh_structures.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the surface OH* groups required for the Eley–Rideal initial states. The structures are needed as input for step_04.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Eley–Rideal‑like pathway barriers for methanol formation",
+    "role": "scored",
+    "action": "Set up the initial states: on Pd‑iC‑CeO₂, co‑adsorb CH₃*, H*, and 2OH*; on Pd‑CeO₂, co‑adsorb CH₃*, 2OH*, and OH_int*. Introduce the 8H₂O·2OH(aq) complex. Use CI‑NEB to determine the reaction paths for (i) formation of CH₂OH* and (ii) formation of CH₃OH(aq) on each catalyst. Report the activation barriers.",
+    "output_file": "er_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This is the key computational claim of the paper. The barriers for CH₂OH and CH₃OH formation via the solvated Eley–Rideal mechanism are reported and compared between the two catalysts.",
+    "output_schema": "[ { \"system\": \"Pd-CeO2\"|\"Pd-iC-CeO2\", \"step\": \"CH2OH_formation\"|\"CH3OH_formation\", \"activation_energy_eV\": <float> } ]"
+  }
+]

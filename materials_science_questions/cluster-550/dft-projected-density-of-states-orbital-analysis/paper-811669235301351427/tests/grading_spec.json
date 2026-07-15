@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Compute-driven task with random N positions; structural trends (f_Gamma monotonicity, localisation peak in BAC gap, projected DOS splitting, host-DOS dip near EN) robustly verify BAC model reproduction.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eigenstate_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "eigenstate_index",
+            "energy",
+            "fractional_Gamma",
+            "localisation_factor"
+          ],
+          "units": {
+            "energy": "eV",
+            "fractional_Gamma": "dimensionless",
+            "localisation_factor": "dimensionless"
+          }
+        },
+        "description": "Eigenstate properties: energy, fractional Γ character and localisation factor for each supercell eigenstate. Used to verify BAC model trends."
+      },
+      {
+        "file": "projected_dos_selected_k.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "k_state_label",
+            "energy",
+            "projected_DOS"
+          ],
+          "units": {
+            "energy": "eV",
+            "projected_DOS": "dimensionless"
+          }
+        },
+        "description": "Projected DOS onto six representative host k-states. Energy grid 0–0.5 eV, step 1 meV. Used to verify BAC-splitting behavior."
+      },
+      {
+        "file": "host_projected_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "host_projected_DOS"
+          ],
+          "units": {
+            "energy": "eV",
+            "host_projected_DOS": "dimensionless"
+          }
+        },
+        "description": "Total DOS projected onto the host GaAs conduction-band states. Used to verify the overall DOS shape near the N resonant energy."
+      }
+    ],
+    "notes": "All scored artifacts are evaluated by structural audit (T3) against digitized reference curves from the paper's figures. The agent must implement the model Hamiltonian and compute observables; exact numerical agreement is not required due to randomness in N positions."
+  },
+  "steps": [
+    {
+      "id": "check_eigenstate_properties",
+      "output_file": "eigenstate_properties.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "description": "Validate fractional Gamma character ordering (low energy > near EN and high energy > near EN) and localisation factor peak in the BAC gap (0.18-0.28 eV > low and high)."
+    },
+    {
+      "id": "check_projected_dos_selected_k",
+      "output_file": "projected_dos_selected_k.csv",
+      "weight": 0.35,
+      "kind": "structural",
+      "description": "Validate projected DOS splitting pattern: fraction of mass around EM is low for k-states near EN and high for k-states far from EN."
+    },
+    {
+      "id": "check_host_projected_dos",
+      "output_file": "host_projected_dos.csv",
+      "weight": 0.25,
+      "kind": "structural",
+      "description": "Validate host-projected DOS dip near N resonant energy (minimum in 0.2-0.25 eV is lower than neighbouring bands)."
+    }
+  ]
+}

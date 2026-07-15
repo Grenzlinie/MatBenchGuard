@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Supercell construction",
+    "role": "process",
+    "action": "Construct a (2×2×2) supercell of the B20 MnSi crystal structure and remove three Si atoms from specific Si-III Wyckoff positions to achieve a composition corresponding to x≈0.52.",
+    "output_file": "",
+    "evidence": "supercell.pwi",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the atomic configuration for the defect supercell. The exact Si vacancy sites (three Si-III positions) are as described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Geometry relaxation",
+    "role": "process",
+    "action": "Perform spin-polarized DFT geometry relaxation of the defect supercell using the GGA functional, optimizing both atomic positions and cell parameters.",
+    "output_file": "",
+    "evidence": "relax.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Relax the supercell to its minimum-energy structure before the electronic structure calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Self-consistent field calculation with spin-orbit coupling",
+    "role": "process",
+    "action": "Run a spin-polarized self-consistent field (SCF) calculation on the relaxed structure using Quantum Espresso with spin-orbit coupling. Save the output file containing total energy, atomic magnetic moments, and the density of states data.",
+    "output_file": "",
+    "evidence": "scf.out",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The SCF calculation is required to obtain the ground-state electronic structure and magnetic moments. The output file will be used for property extraction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Extract average magnetic moment",
+    "role": "scored",
+    "action": "Parse the SCF output to read the magnetic moment of each Mn atom. Compute the average magnetic moment per Mn atom (total moment / number of Mn atoms) and write the result as a single floating-point number to magnetic_moment.txt.",
+    "output_file": "magnetic_moment.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This file contains the computed average magnetic moment per Mn atom in μB. The value is compared against the paper's DFT range to verify the vacancy model.",
+    "output_schema": "A single line containing a decimal number (float) representing the average magnetic moment per Mn atom in units of Bohr magneton (μB). Example: 1.234"
+  },
+  {
+    "id": "step5",
+    "title": "Extract spin-polarized density of states",
+    "role": "scored",
+    "action": "From the SCF output, extract the spin-polarized density of states (DOS) data: energy, majority-spin DOS, minority-spin DOS. Write the data to dos.dat as a TSV file with three columns. Ensure the energy grid covers at least -2 to +2 eV around the Fermi level (E=0).",
+    "output_file": "dos.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "This file contains the total DOS for both spin channels. It will be checked for half-metallicity by verifying a gap in the majority-spin channel at the Fermi level.",
+    "output_schema": "TSV file with three columns: energy (eV), majority-spin DOS (states/eV), minority-spin DOS (states/eV). The first line may be a header. Energy values are relative to the Fermi level (E=0). At least 100 data points spanning from -2 to +2 eV."
+  }
+]

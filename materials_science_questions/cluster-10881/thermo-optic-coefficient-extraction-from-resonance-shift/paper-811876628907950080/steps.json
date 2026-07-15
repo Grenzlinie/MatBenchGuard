@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_saha",
+    "title": "Solve Saha equations for argon plasma particle densities",
+    "role": "process",
+    "action": "Implement Saha ionization equations for argon (first and second ionization, E1=15.759 eV, E2=27.629 eV) at pressure 1 atm, using standard partition functions. For temperatures from 5000 K to 20000 K in steps of about 500 K, numerically solve the cubic equation for electron density N_e, then compute N1, N2, N_a, and temperature derivatives dN_e/dT, dN_i/dT, dN_a/dT using the given formulas. Save the resulting arrays to an evidence CSV file.",
+    "output_file": "",
+    "evidence": "saha_densities.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute particle number densities and their temperature derivatives needed for refractive index calculations. The output evidence file contains T, N_e, N_i, N_a, dN_e/dT, dN_i/dT, dN_a/dT.",
+    "output_schema": "T, N_e, N_i, N_a, dN_e/dT, dN_i/dT, dN_a/dT"
+  },
+  {
+    "id": "step_532nm_thermo",
+    "title": "Compute refractive index and dn/dT for λ=532 nm",
+    "role": "scored",
+    "action": "Using the densities from the Saha solution, compute the refractive index (n-1) = 1.05959e-23*(N_a+0.67N_i) - 1.2623e-22*N_e, its temperature derivative dn/dT = 1.05959e-23*(dN_a/dT+0.67 dN_i/dT) - 1.2623e-22*dN_e/dT, and the relative measurement error e = 1e-5 / (|dn/dT| * T). Output a CSV with columns: T, N_e, n-1, dn/dT, e.",
+    "output_file": "thermo_optic_data_532nm.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored CSV containing the computed thermo-optic quantities for probe wavelength 532 nm.",
+    "output_schema": "T: number (K), N_e: number (cm^-3), n-1: number, dn/dT: number (K^-1), e: number"
+  },
+  {
+    "id": "step_532nm_intervals",
+    "title": "Determine applicable temperature intervals for λ=532 nm",
+    "role": "scored",
+    "action": "From the computed thermo-optic data for 532 nm, find contiguous temperature intervals where e ≤ threshold for thresholds 0.10, 0.12, 0.15, 0.20. Report the lower and upper temperature bounds of the main interval for each threshold. Output a CSV with columns: error_threshold, T_lower (K), T_upper (K).",
+    "output_file": "error_intervals_532nm.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored CSV reporting the temperature ranges where moiré deflectometry is applicable at 532 nm for given error tolerances.",
+    "output_schema": "error_threshold: number (0.1, 0.12, 0.15, 0.20), T_lower: number (K), T_upper: number (K)"
+  },
+  {
+    "id": "step_808nm_thermo",
+    "title": "Compute refractive index and dn/dT for λ=808 nm",
+    "role": "scored",
+    "action": "Reuse the Saha densities. For λ=808 nm (8080 Å), compute the wavelength-dependent constants f_atom = (1/L)*(A + B/(808e-7 cm)²) and f_e = -4.46e-14*(808e-7 cm)², using the same A, B, L as for 532 nm. Compute n-1 = f_atom*(N_a+0.67N_i) + f_e*N_e, dn/dT = f_atom*(dN_a/dT+0.67 dN_i/dT) + f_e*dN_e/dT, and e = 1e-5/(|dn/dT|*T). Output a CSV with columns: T, N_e, n-1, dn/dT, e.",
+    "output_file": "thermo_optic_data_808nm.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored CSV for probe wavelength 808 nm.",
+    "output_schema": "T: number (K), N_e: number (cm^-3), n-1: number, dn/dT: number (K^-1), e: number"
+  },
+  {
+    "id": "step_808nm_intervals",
+    "title": "Determine applicable temperature intervals for λ=808 nm",
+    "role": "scored",
+    "action": "From the computed thermo-optic data for 808 nm, find temperature intervals where e ≤ 0.10, 0.12, 0.15, 0.20. Output a CSV with columns: error_threshold, T_lower (K), T_upper (K).",
+    "output_file": "error_intervals_808nm.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored CSV reporting applicable temperature ranges at 808 nm.",
+    "output_schema": "error_threshold: number (0.1, 0.12, 0.15, 0.20), T_lower: number (K), T_upper: number (K)"
+  }
+]

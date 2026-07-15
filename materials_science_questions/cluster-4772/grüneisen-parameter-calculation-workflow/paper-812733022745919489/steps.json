@@ -1,0 +1,67 @@
+[
+  {
+    "id": "gen_ice_ih",
+    "title": "Generate ice Ih structure",
+    "role": "process",
+    "action": "Create a proton-disordered hexagonal ice Ih unit cell (space group P6₃/mmc, 8 water molecules) satisfying the Bernal–Fowler ice rules. This structure is the starting configuration for all subsequent calculations.",
+    "output_file": "",
+    "evidence": "iceIh_structure.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The initial hydrogen-disordered ice Ih configuration.",
+    "output_schema": ""
+  },
+  {
+    "id": "quasiharmonic",
+    "title": "Quasiharmonic normal mode calculations",
+    "role": "process",
+    "action": "For a set of volumes spanning the expected equilibrium volume, energy-minimize the ice Ih structure using the TIP4P/2005 potential, compute the Hessian matrix, and diagonalize to obtain normal mode frequencies ω_j(V) and potential energy U_q(V) for each volume.",
+    "output_file": "",
+    "evidence": "modes_data.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Volume-dependent normal mode frequencies and quenched potential energies, stored in a binary NumPy archive.",
+    "output_schema": ""
+  },
+  {
+    "id": "thermal_expansivity",
+    "title": "Compute thermal expansivity α(T)",
+    "role": "scored",
+    "action": "From the stored ω_j(V) and U_q(V), compute the quantum vibrational free energy A(T,V) for temperatures from 0 to 100 K (step 5 K). At each temperature, minimize the Gibbs free energy G(T,p)=A+pV with p=0.1 MPa to find the equilibrium volume V₀(T). Calculate the thermal expansivity α(T) = (1/V₀) dV₀/dT via finite differences. Output the table to alpha_vs_T.csv.",
+    "output_file": "alpha_vs_T.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Thermal expansivity versus temperature for ice Ih at 0.1 MPa.",
+    "output_schema": "CSV with columns: T (K), alpha (K⁻¹). T from 0 to 100 K in steps of 5 K."
+  },
+  {
+    "id": "gruneisen_freq",
+    "title": "Mode Grüneisen parameter frequency analysis",
+    "role": "scored",
+    "action": "From ω_j at two nearby volumes, compute mode Grüneisen parameters γ_j = −∂ ln ω_j / ∂ ln V using central finite differences. Compute mode heat capacities C_j at T=30 K via the quantum harmonic oscillator formula. Bin modes by frequency in 10 cm⁻¹ bins (range 0–200 cm⁻¹) and compute the average γ_j C_j per bin. Save the binned results to gamma_C_vs_freq.csv.",
+    "output_file": "gamma_C_vs_freq.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Frequency-resolved mode Grüneisen parameter times heat capacity at T=30 K for ice Ih.",
+    "output_schema": "CSV with columns: low_freq (cm⁻¹), high_freq (cm⁻¹), gamma_C (J mol⁻¹ K⁻¹). Bins of width 10 cm⁻¹ from 0 to 200 cm⁻¹."
+  },
+  {
+    "id": "total_gamma_cv",
+    "title": "Total γ C_V at 30 K",
+    "role": "scored",
+    "action": "Sum the mode products γ_j C_j over all modes to obtain the total γ C_V at T=30 K. Output the value to total_gamma_CV.csv.",
+    "output_file": "total_gamma_CV.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total Grüneisen parameter times heat capacity at T=30 K.",
+    "output_schema": "CSV with columns: T (K), gamma_CV (J mol⁻¹ K⁻¹). Contains a single row for T=30 K."
+  }
+]

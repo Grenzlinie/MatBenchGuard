@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute Young's modulus values depend on the force field and simulation details; the paper's results are specific to COMPASS. We instead check mandatory structural trends: modulus monotonically increases with length for dry and wet, wet > dry at each length, intersheet deformation > 90% for all lengths, and face‑to‑face interaction energy grows in magnitude with length while edge‑to‑edge remains nearly constant.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "youngs_modulus_vs_length.csv": "structural_audit",
+    "deformation_components.csv": "structural_audit",
+    "interaction_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "youngs_modulus_vs_length.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "GO_length_nm",
+            "modulus_dry_GPa",
+            "modulus_wet_GPa"
+          ]
+        },
+        "description": "Young's modulus for each GO length and moisture state. Verified by checking monotonic increase with length and wet > dry."
+      },
+      {
+        "file": "deformation_components.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "GO_length_nm",
+            "intersheet_deformation_percent",
+            "sheet_deformation_percent"
+          ]
+        },
+        "description": "Deformation breakdown per GO length. Verified by checking intersheet deformation > 90% for all lengths."
+      },
+      {
+        "file": "interaction_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "GO_length_nm",
+            "face_to_face_energy",
+            "edge_to_edge_energy"
+          ]
+        },
+        "description": "Face‑to‑face and edge‑to‑edge interaction energies per GO length. Verified by checking face‑to‑face increase with length while edge‑to‑edge remains low and constant."
+      }
+    ],
+    "notes": "All scored outputs are structural; the checker validates qualitative trends (monotonicity, dominance, relative magnitudes) rather than absolute numeric equality with the paper."
+  },
+  "steps": [
+    {
+      "id": "youngs_modulus_trends",
+      "output_file": "youngs_modulus_vs_length.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "config": {
+        "wet_gt_dry": true,
+        "monotonic_dry": true,
+        "monotonic_wet": true
+      }
+    },
+    {
+      "id": "deformation_trends",
+      "output_file": "deformation_components.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "config": {
+        "intersheet_min": 90,
+        "sum_tolerance": 0.5
+      }
+    },
+    {
+      "id": "interaction_energy_trends",
+      "output_file": "interaction_energies.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "config": {
+        "face_increase_magnitude": true,
+        "edge_constant_tol": 1.0
+      }
+    }
+  ]
+}

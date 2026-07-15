@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_dft",
+    "title": "DFT+U Spin-Polarized Total-Energy Calculations",
+    "role": "process",
+    "action": "Perform spin-polarized DFT+U (PBEsol functional, Hubbard U=5.0 eV, J=1.0 eV on Ag 4d) total-energy calculations for the five Li–Ag–F ternary structures and the binary references LiF and AgF2, using the specified magnetic configurations (FM, AFM, and for LiAgF3-2 also AFM2). Use the provided CIFs for the ternary compounds and obtain the binary structures from public databases. Write a log file as evidence.",
+    "output_file": "",
+    "evidence": "dft_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Runs the heavy DFT+U calculations that are the core of the reproduction. The resulting total energies feed the scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_total_energies",
+    "title": "Collect Total Energies",
+    "role": "scored",
+    "action": "Extract converged total energies (in eV) from the DFT output files and write them to total_energies.json. The JSON must contain keys for all structures and their magnetic configurations.",
+    "output_file": "total_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Raw total energies from DFT+U calculations for all structures and spin configurations; the checker recomputes superexchange constants and convex hull energies from this file.",
+    "output_schema": "JSON object with keys: 'LiAgF3-1', 'LiAgF3-2', 'Li2AgF4-1', 'Li2AgF4-2', 'Li2AgF4-3', 'LiF', 'AgF2'. Each value is an object with keys 'E_FM' and 'E_AFM' (float, eV); 'LiAgF3-2' additionally has 'E_AFM2'."
+  },
+  {
+    "id": "step_03_j_values",
+    "title": "Compute Magnetic Superexchange Constants J",
+    "role": "scored",
+    "action": "Using the total energies from step_02_total_energies and the Heisenberg model energy expressions (provided in the instructions), compute magnetic superexchange constants J (in meV) for each structure: LiAgF3-1 (single J), LiAgF3-2 (J1 and J2), Li2AgF4-1 (single J), Li2AgF4-2 (single J), Li2AgF4-3 (single J). Output to j_values.json.",
+    "output_file": "j_values.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The main magnetic property targeted by the reproduction. The checker will recompute J from total_energies.json and compare to hidden paper values.",
+    "output_schema": "JSON object with keys: 'LiAgF3-1', 'LiAgF3-2_J1', 'LiAgF3-2_J2', 'Li2AgF4-1', 'Li2AgF4-2', 'Li2AgF4-3'. Each value is a float (meV)."
+  },
+  {
+    "id": "step_04_convex_hull",
+    "title": "Compute Convex Hull Energies",
+    "role": "scored",
+    "action": "From the total energies of ternary compounds and binary references (LiF, AgF2) in total_energies.json, calculate the energy above the convex hull (ΔE) for each ternary structure, defined as the total energy of the compound minus the sum of energies of the equivalent proportion of LiF and AgF2. Convert to kJ/mol (per formula unit). Write to convex_hull.json.",
+    "output_file": "convex_hull.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Thermodynamic stability metric; the checker will recompute ΔE from the raw energies and compare to the paper's reported convex hull positions.",
+    "output_schema": "JSON object with keys: 'LiAgF3-1', 'LiAgF3-2', 'Li2AgF4-1', 'Li2AgF4-2', 'Li2AgF4-3'. Each value is a float (kJ/mol)."
+  }
+]

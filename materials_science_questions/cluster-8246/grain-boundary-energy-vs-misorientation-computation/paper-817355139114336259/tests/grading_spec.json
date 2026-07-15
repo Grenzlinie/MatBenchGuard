@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute GB energies from atomic coordinates in the checker sandbox; rely on result-level comparison of self-reported energies against paper gold with monotonic ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "gb_energy_summary.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold energies for Morse and Cleri-Rosato potentials from the paper.",
+      "source_provenance": "Paper text: Morse final 0.738 J/m2, vacancy 0.916, CSL 7.834; Cleri-Rosato final 0.501, vacancy 0.580, CSL 14.861. Verified against solve.sh oracle output.",
+      "generation_method": "Extracted directly from the paper's numeric results.",
+      "why_not_fabricated": "Values are the actual reported grain boundary energies from the source publication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gb_energy_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "potential_type": "string",
+            "initial_CSL_energy_Jm2": "float",
+            "vacancy_relaxed_energy_Jm2": "float",
+            "final_energy_Jm2": "float"
+          },
+          "items": {},
+          "units": {
+            "initial_CSL_energy_Jm2": "J/m²",
+            "vacancy_relaxed_energy_Jm2": "J/m²",
+            "final_energy_Jm2": "J/m²"
+          }
+        },
+        "description": "Summary of grain‑boundary energies after each construction stage. The checker will verify that final_energy_Jm2 ≤ hidden upper threshold (lower is better), that vacancy_relaxed_energy_Jm2 > final_energy_Jm2, and initial_CSL_energy_Jm2 > vacancy_relaxed_energy_Jm2."
+      }
+    ],
+    "notes": "The checker enforces both absolute energy thresholds (monotonic with lower being better) and structural ordering (energy steadily decreases through the pipeline). The chosen potential must be stated, and the corresponding hidden thresholds are applied."
+  },
+  "steps": [
+    {
+      "id": "energy_summary",
+      "output_file": "gb_energy_summary.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "params": {
+        "gold_morse": {
+          "initial_CSL_energy_Jm2": 7.834,
+          "vacancy_relaxed_energy_Jm2": 0.916,
+          "final_energy_Jm2": 0.738
+        },
+        "gold_cleri_rosato": {
+          "initial_CSL_energy_Jm2": 14.861,
+          "vacancy_relaxed_energy_Jm2": 0.58,
+          "final_energy_Jm2": 0.501
+        },
+        "tolerance_abs": {
+          "initial": 0.5,
+          "vacancy": 0.1,
+          "final": 0.05
+        }
+      }
+    }
+  ]
+}

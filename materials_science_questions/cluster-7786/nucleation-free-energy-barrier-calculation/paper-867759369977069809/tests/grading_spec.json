@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker solves the same quadratic (7) using the model parameters to recompute θ_g2 and computes the total enthalpy magnitude from the coefficient expressions to obtain H1/ΔHm, comparing them to the agent's reported values. For residual entropy, the checker recomputes the expected ratio from the agent's predicted enthalpy fractions and the given constants and compares to the reported ratio and S_Rg. All quantities are fully determined by the model and given parameters.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "model_predictions.json": "reference_match",
+    "residual_entropy.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for model predictions and residual entropy fraction",
+      "source_provenance": "Paper Table 1, text (θ_g2=-0.58398, H2/ΔHm=0.105, H1/ΔHm=0.0925), experimental mean ratios 0.11 and 0.0932, conclusion of 23.6% residual entropy",
+      "generation_method": "Extracted from paper statements and table entries; verified against solve.sh reference",
+      "why_not_fabricated": "These are the exact numbers the paper reports as its predictions and the claimed experimental agreement; they are the hidden reference against which the agent's reproduction is compared."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "model_predictions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "theta_g2": "number",
+            "H2_over_dHm_predicted": "number",
+            "H1_over_dHm_predicted": "number",
+            "experimental_mean_H2_over_dHm": "number",
+            "experimental_mean_H1_over_dHm": "number",
+            "agreement_statement": "string"
+          },
+          "items": {},
+          "units": {
+            "theta_g2": "dimensionless",
+            "H2_over_dHm_predicted": "dimensionless",
+            "H1_over_dHm_predicted": "dimensionless",
+            "experimental_mean_H2_over_dHm": "dimensionless",
+            "experimental_mean_H1_over_dHm": "dimensionless",
+            "agreement_statement": "text"
+          }
+        },
+        "description": "Predicted model quantities (θ_g2, frozen enthalpy fraction, endothermic latent heat fraction), the supplied experimental mean fractions, and an agreement statement."
+      },
+      {
+        "file": "residual_entropy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "S_Rg": "number",
+            "S_m": "number",
+            "S_Rg_over_S_m": "number"
+          },
+          "items": {},
+          "units": {
+            "S_Rg": "J.K⁻¹.mol⁻¹",
+            "S_m": "J.K⁻¹.mol⁻¹",
+            "S_Rg_over_S_m": "dimensionless"
+          }
+        },
+        "description": "Computed glass residual entropy S_Rg, melting entropy S_m, and their ratio, compared to the paper's hidden reference value (23.6%)."
+      }
+    ],
+    "notes": "The experimental constants needed for step_02 are fully provided in the step's action; no external datasets need to be fetched. The predicted quantities from step_01 must be used consistently in step_02."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "model_predictions.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "params": {
+        "epsilon_gs0": 0.217,
+        "theta0g": -1.0,
+        "theta0m": -0.6666666666666666,
+        "Delta_eps": 0.105,
+        "expected_theta_g2": -0.58398,
+        "theta_g2_tol": 0.001,
+        "expected_H2": 0.105,
+        "H2_tol": 0.001,
+        "expected_H1": 0.0925,
+        "H1_tol": 0.001,
+        "expected_expt_H2": 0.11,
+        "expected_expt_H1": 0.0932,
+        "expt_tol": 0.005
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "residual_entropy.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "params": {
+        "expected_S_m": 4.72,
+        "expected_S_Rg_over_S_m": 0.236,
+        "S_m_tol": 0.02,
+        "ratio_tol": 0.01,
+        "S_Rg_tol": 0.02,
+        "delta_Hm": 5.33,
+        "T_geff": 1.164,
+        "sum_frac": 0.1975
+      }
+    }
+  ]
+}

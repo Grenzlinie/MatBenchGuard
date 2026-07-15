@@ -1,0 +1,155 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities can be recomputed from agent artifacts using paper‑reported gold values; isotherm recomputed from agent's own chemical potential coefficients plus hidden gas‑phase reference.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dissociation_adsorption_energy.txt": "reference_match",
+    "chemical_potential_coefficients.csv": "reference_match",
+    "isotherm_data.csv": "metric_recompute",
+    "diffusion_arrhenius_parameters.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported target values for adsorption energy, chemical potential coefficients, gas‑phase reference parameters, and diffusion parameters.",
+      "source_provenance": "paper sections 3.2, equations (1)–(2), Figure 3, Figure 6",
+      "generation_method": "extracted directly from paper text and equation fits as reported",
+      "why_not_fabricated": "values are the paper's own published quantitative results; no synthetic data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dissociation_adsorption_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "decoding": "two key-value lines",
+          "required_keys": [
+            "adsorption_energy (kJ/mol)",
+            "max_barrier (kJ/mol)"
+          ],
+          "units": "kJ/mol"
+        },
+        "description": "Adsorption energy of I₂ dissociation on Zr(0001) and the maximum NEB barrier."
+      },
+      {
+        "file": "chemical_potential_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "coefficient",
+            "value"
+          ],
+          "units": {
+            "value": "kJ/mol"
+          }
+        },
+        "description": "Fitted coefficients c0–c6 for the electronic chemical potential of adsorbed iodine."
+      },
+      {
+        "file": "isotherm_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "P(bar)",
+            "theta"
+          ],
+          "column_types": {
+            "T(K)": "float",
+            "P(bar)": "float",
+            "theta": "float"
+          }
+        },
+        "description": "Computed iodine adsorption isotherms: temperature, iodine partial pressure (bar), and surface coverage."
+      },
+      {
+        "file": "diffusion_arrhenius_parameters.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "decoding": "three key-value lines",
+          "required_keys": [
+            "electronic_barrier (kJ/mol)",
+            "activation_energy_Q (kJ/mol)",
+            "prefactor_D0 (m^2/s)"
+          ],
+          "units": {
+            "electronic_barrier": "kJ/mol",
+            "activation_energy_Q": "kJ/mol",
+            "prefactor_D0": "m^2/s"
+          }
+        },
+        "description": "Electronic diffusion barrier and effective Arrhenius parameters for iodine surface diffusion on Zr(0001)."
+      }
+    ],
+    "notes": "All scored outputs are compared to the paper's reported values using appropriate tolerances. The agent must re-run the full computational pipeline; no pre-computed results are provided."
+  },
+  "steps": [
+    {
+      "id": "adsorption",
+      "output_file": "dissociation_adsorption_energy.txt",
+      "weight": 0.25,
+      "kind": "scalar",
+      "gold": {
+        "adsorption_energy": -600.0,
+        "max_barrier": 0.0,
+        "tolerance_adsorption": 50.0,
+        "tolerance_barrier": 5.0
+      }
+    },
+    {
+      "id": "chem_pot",
+      "output_file": "chemical_potential_coefficients.csv",
+      "weight": 0.25,
+      "kind": "csv_scalar",
+      "gold": {
+        "c0": -273.1,
+        "c1": -51.22,
+        "c2": 489.1,
+        "c3": -161.5,
+        "c4": -1e-05,
+        "c5": -0.00371,
+        "c6": 0.00681
+      }
+    },
+    {
+      "id": "isotherm",
+      "output_file": "isotherm_data.csv",
+      "weight": 0.25,
+      "kind": "table_recompute",
+      "gold": {
+        "gas_phase_c0": 23.88,
+        "gas_phase_c1": -0.13,
+        "gas_phase_c2": -9e-06,
+        "R_kJ": 0.008314462618,
+        "factor_tol": 2.0
+      }
+    },
+    {
+      "id": "diffusion",
+      "output_file": "diffusion_arrhenius_parameters.txt",
+      "weight": 0.25,
+      "kind": "scalar",
+      "gold": {
+        "electronic_barrier": 7.0,
+        "Q": 6.78,
+        "D0": 2e-08,
+        "tol_barrier": 2.0,
+        "tol_Q": 1.0,
+        "factor_D0": 2.0
+      }
+    }
+  ]
+}

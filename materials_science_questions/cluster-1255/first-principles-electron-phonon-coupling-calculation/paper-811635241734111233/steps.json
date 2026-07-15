@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01",
+    "title": "Build initial PtH structure",
+    "role": "process",
+    "action": "Construct the hexagonal P6₃/mmc PtH unit cell with Pt at Wyckoff 2c (fractional coordinates 0.333, 0.667, 0.25) and H at 2a (0.0, 0.0, 0.0). Use sensible initial lattice parameters (e.g., a=2.70 Å, c=4.53 Å) as a starting point for optimization.",
+    "output_file": "",
+    "evidence": "initial_structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Create the starting crystal structure for subsequent DFT geometry optimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Geometry optimization and lattice constants",
+    "role": "scored",
+    "action": "Perform DFT geometry optimization at fixed pressures of 113, 130, and 160 GPa. For each pressure, relax atomic positions and cell parameters. Extract the optimized hexagonal lattice constants a and c in Å.",
+    "output_file": "lattice_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the DFT-optimized lattice constants a and c at three pressures. The hidden checker will compare to reference values with appropriate tolerance.",
+    "output_schema": "JSON object with string keys '113', '130', '160' (GPa). Each value is an object with numeric fields 'a' and 'c' in Å. Example: {\"113\": {\"a\": 2.70, \"c\": 4.53}, \"130\": {\"a\": 2.674, \"c\": 4.493}, \"160\": {\"a\": 2.645, \"c\": 4.436}}"
+  },
+  {
+    "id": "step03",
+    "title": "Phonon and electron-phonon coupling calculation",
+    "role": "process",
+    "action": "Using the relaxed structures from step02, compute phonon dispersion, dynamical matrices, and electron-phonon coupling matrix elements via DFPT at pressures 113, 130, and 160 GPa. Output intermediate data (e.g., λ, α²F(ω), ω_log) for post-processing.",
+    "output_file": "",
+    "evidence": "epc_intermediate.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Runs the density-functional perturbation theory (DFPT) workflow needed to extract λ and ω_log. The outputs are used by step04 to derive the scored EPC properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04",
+    "title": "Extract EPC parameters and Tc",
+    "role": "scored",
+    "action": "From the electron-phonon coupling data, extract the coupling strength λ and the logarithmic average phonon frequency ω_log (in Kelvin) at each pressure. Compute the superconducting transition temperature Tc using the Allen-Dynes modified McMillan formula with a Coulomb pseudopotential μ* = 0.1.",
+    "output_file": "epc_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing λ, ω_log, and Tc at the three pressures. This step is load-bearing: the values cannot be obtained without running the full phonon/EPC pipeline. The hidden checker will compare to reference values and verify that Tc decreases monotonically with pressure.",
+    "output_schema": "JSON object with string keys '113', '130', '160'. Each value is an object with numeric fields: 'lambda' (dimensionless), 'omega_log_K' (in K), 'Tc_K' (in K). Example: {\"113\": {\"lambda\": 0.85, \"omega_log_K\": 328.66, \"Tc_K\": 17.2}, \"130\": {\"lambda\": 0.62, \"omega_log_K\": 591.01, \"Tc_K\": 15.1}, \"160\": {\"lambda\": 0.53, \"omega_log_K\": 658.56, \"Tc_K\": 9.7}}"
+  },
+  {
+    "id": "step05",
+    "title": "Simulate powder XRD pattern",
+    "role": "scored",
+    "action": "Using the structure relaxed at 113 GPa from step02, simulate the powder X-ray diffraction pattern with a wavelength of 0.3344 Å. Output the 2θ positions (in degrees) and relative intensities.",
+    "output_file": "xrd_pattern.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing the simulated powder XRD pattern at 113 GPa. The hidden checker will compare peak positions and relative intensities to a reference pattern via cross-correlation.",
+    "output_schema": "CSV with two columns: 'two_theta' (float, in degrees) and 'intensity' (float, relative units). Wavelength = 0.3344 Å. Includes peaks from the relaxed structure."
+  }
+]

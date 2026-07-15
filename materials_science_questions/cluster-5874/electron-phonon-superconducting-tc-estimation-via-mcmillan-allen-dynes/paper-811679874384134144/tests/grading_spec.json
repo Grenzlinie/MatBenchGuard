@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "T1 recompute from raw LAPW outputs is infeasible because the required intermediate (lapw_output.json) is not a scored artifact with a standardized schema. We therefore use a combination of result-level comparison for η and recomputation from the agent’s own η to verify Tc, plus structural checks (grid/monotonicity).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for η and representative Tc",
+      "source_provenance": "Paper Table I and Fig. 6 / text",
+      "generation_method": "Extracted from published paper: η_total = 14.588 eV/Å² at a=4.60 a.u.; Tc ≈ 10 K at ω=1250 K, μ*=0.11.",
+      "why_not_fabricated": "These are the paper’s own reported numbers, the direct target of the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "hopfield_eta.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lattice_constant",
+            "pressure_gpa",
+            "eta_total_eV_Ang2"
+          ]
+        },
+        "description": "Computed total Hopfield parameter η for fcc boron at a=4.60 a.u. (307 GPa)."
+      },
+      {
+        "file": "tc_vs_params.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega_K",
+            "mu_star",
+            "Tc_K"
+          ]
+        },
+        "description": "Superconducting critical temperature Tc as a function of RMS phonon frequency and Coulomb pseudopotential, covering ω=1200..1400 K and μ*=0.09..0.13."
+      }
+    ],
+    "notes": "The checker verifies the reported η_total against a hidden reference value and checks Tc at a specific (ω,μ*) point and overall monotonic trends."
+  },
+  "steps": [
+    {
+      "id": "eta_check",
+      "output_file": "hopfield_eta.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 14.588,
+      "tolerance_rel": 0.15,
+      "schema": {
+        "required_columns": [
+          "lattice_constant",
+          "pressure_gpa",
+          "eta_total_eV_Ang2"
+        ],
+        "expected_rows": 1
+      }
+    },
+    {
+      "id": "tc_check",
+      "output_file": "tc_vs_params.csv",
+      "kind": "rubric",
+      "weight": 0.6,
+      "sub_checks": {
+        "grid_completeness": {
+          "weight": 0.1667,
+          "omega_range": [
+            1200,
+            1400,
+            50
+          ],
+          "mu_range": [
+            0.09,
+            0.13,
+            0.01
+          ]
+        },
+        "monotonicity": {
+          "weight": 0.25
+        },
+        "representative_point": {
+          "weight": 0.25,
+          "omega": 1250,
+          "mu_star": 0.11,
+          "target_Tc": 10.0,
+          "tol_abs": 2.0
+        },
+        "consistency_recompute": {
+          "weight": 0.3333,
+          "tolerance": 0.5
+        }
+      }
+    }
+  ]
+}

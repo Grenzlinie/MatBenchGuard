@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes alpha from agent-beta_self and beta_exch, checks consistency, and then compares all three coefficients against paper Fig.2 gold with tolerance (±10% or 0.05 absolute, whichever larger). Also enforces structural relations and physical trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for beta_self, beta_exch, alpha per condition from paper Fig.2",
+      "source_provenance": "Digitized from Figure 2 of the paper (Matsumoto, Fluid Phase Equilibria 125 (1996) 195-203). Values are the reported ratios for each temperature.",
+      "generation_method": "Direct reading of the data points in the figure; the reference solution writes exactly these numbers.",
+      "why_not_fabricated": "These are the published experimental results that the reproduction aims to recover."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "temperature_K",
+            "beta_self",
+            "beta_exch",
+            "alpha"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "beta_self": "1",
+            "beta_exch": "1",
+            "alpha": "1"
+          }
+        },
+        "description": "Computed self-reflection ratio, molecular exchange ratio, and condensation coefficient for each system and temperature."
+      }
+    ],
+    "notes": "The checker will compare the reported coefficients to hidden reference values from the original study (using tolerance to account for statistical fluctuations) and verify that molecular exchange is non-zero and that the condensation coefficient decreases with increasing temperature."
+  },
+  "steps": [
+    {
+      "id": "results_check",
+      "description": "Validate results.csv content: correct columns, rows, alpha consistency, numerical values within tolerance, trend and sign checks.",
+      "output_file": "results.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "gold_conditions": [
+        {
+          "system": "argon",
+          "temperature_K": 80,
+          "beta_self": 0.05,
+          "beta_exch": 0.0,
+          "alpha": 0.95
+        },
+        {
+          "system": "argon",
+          "temperature_K": 100,
+          "beta_self": 0.05,
+          "beta_exch": 0.1,
+          "alpha": 0.85
+        },
+        {
+          "system": "argon",
+          "temperature_K": 120,
+          "beta_self": 0.15,
+          "beta_exch": 0.3,
+          "alpha": 0.55
+        },
+        {
+          "system": "water",
+          "temperature_K": 350,
+          "beta_self": 0.05,
+          "beta_exch": 0.45,
+          "alpha": 0.5
+        },
+        {
+          "system": "water",
+          "temperature_K": 425,
+          "beta_self": 0.15,
+          "beta_exch": 0.65,
+          "alpha": 0.2
+        },
+        {
+          "system": "water",
+          "temperature_K": 500,
+          "beta_self": 0.25,
+          "beta_exch": 0.7,
+          "alpha": 0.05
+        }
+      ],
+      "tolerance_relative": 0.1,
+      "tolerance_absolute": 0.05
+    }
+  ]
+}

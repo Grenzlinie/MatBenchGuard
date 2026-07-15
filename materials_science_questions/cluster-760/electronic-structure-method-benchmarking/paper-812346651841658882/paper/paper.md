@@ -1,0 +1,7152 @@
+![](./images/812346651841658882_1.jpg)
+
+Accurate energetics of small molecules containing third-row atoms Ga-Kr: A comparison of advanced ab initio and density functional theory
+
+Scott Yockel, Benjamin Mintz, and Angela K. Wilson
+
+Citation: *The Journal of Chemical Physics* **121**, 60 (2004); doi: 10.1063/1.1755675
+View online: http://dx.doi.org/10.1063/1.1755675
+View Table of Contents: http://scitation.aip.org/content/aip/journal/jcp/121/1?ver=pdfcov
+Published by the AIP Publishing
+
+Articles you may be interested in
+Assessment of G3(MP2)//B3 theory including a pseudopotential for molecules containing first-, second-, and third-row representative elements
+J. Chem. Phys. **139**, 184108 (2013); 10.1063/1.4826519
+
+Implementation of pseudopotential in the G3 theory for molecules containing first-, second-, and non-transition third-row atoms
+J. Chem. Phys. **135**, 034106 (2011); 10.1063/1.3609241
+
+Truncation of the correlation consistent basis sets: Extension to third-row (Ga-Kr) molecules
+J. Chem. Phys. **122**, 134106 (2005); 10.1063/1.1867412
+
+Interaction of lead atom with atmospheric hydroxyl radical. An ab initio and density functional theory study of the resulting complexes PbOH and HPbO
+J. Chem. Phys. **121**, 7207 (2004); 10.1063/1.1784431
+
+Extension of complete basis set model chemistries to molecules containing third row atoms Ga-Kr
+J. Chem. Phys. **118**, 6137 (2003); 10.1063/1.1558474
+
+![](./images/812346651841658882_2.jpg)
+
+# Accurate energetics of small molecules containing third-row atoms Ga-Kr:
+A comparison of advanced *ab initio* and density functional theory
+
+Scott Yockel, Benjamin Mintz, and Angela K. Wilson⁰⁾
+Department of Chemistry, University of North Texas, Denton, Texas 76203-5070
+
+Received 17 March 2004; accepted 5 April 2004
+
+Advanced *ab initio* [coupled cluster theory through quasiperturbative triple excitations CCSD(T)] and density functional (B3LYP) computational chemistry approaches were used in combination with the standard and augmented correlation consistent polarized valence basis sets [cc-p*Vn*Z and aug-cc-p*Vn*Z, where *n*=D(2), T(3), Q(4), and 5] to investigate the energetic and structural properties of small molecules containing third-row Ga-Kr atoms. These molecules were taken from the Gaussian-2 (G2) extended test set for third-row atoms. Several different schemes were used to extrapolate the calculated energies to the complete basis set (CBS) limit for CCSD(T) and the Kohn–Sham (KS) limit for B3LYP. Zero point energy and spin orbital corrections were included in the results. Overall, CCSD(T) atomization energies, ionization energies, proton affinities, and electron affinities are in good agreement with experiment, within 1.1 kcal/mol when the CBS limit has been determined using a series of two basis sets of at least triple zeta quality. For B3LYP, the overall mean absolute deviation from experiment for the three properties and the series of molecules is more significant at the KS limit, within 2.3 and 2.6 kcal/mol for the cc-p*Vn*Z and aug-cc-p*Vn*Z basis set series, respectively. © 2004 *American Institute of Physics*. [DOI: 10.1063/1.1755675]
+
+## I. INTRODUCTION
+
+Over the last decade, there has been growing interest in the thermochemical and energetic properties of third-row (Ga-Kr) molecules. This is due to their importance in areas such as semiconductor, organometallic, and atmospheric chemistry. To illustrate, AsH₃ is used in the fabrication of GaAs, which is used in the semiconductor industry; HOBr is believed to have a role in ozone depletion; and germanium species are important in chemical vapor deposition mechanisms leading to the formation of films for new ceramic materials.
+
+With this increased interest in third-row molecules comes the need for reliable theoretical predictions of structural and energetic properties of these systems. For first and second row atoms, there have been a large number of benchmark studies demonstrating the effectiveness of specific theoretical treatments in the accurate description of electronic structure. Examples include the correlation consistent benchmark series by Dunning *et al.*;¹⁻⁵ the G1, G2, and G3 studies by Pople *et al.*;⁶⁻⁸ and the CBS-*n* work by Petersson *et al.*⁹,¹⁰ Unlike the case for Gaussian-*n* and CBS-*n* methods,¹¹⁻¹⁶ there are few such extended studies using the recently developed correlation consistent basis sets for third-row atoms.¹⁷
+
+The correlation consistent basis sets of Dunning and co-workers¹⁸⁻²⁰ are unique among basis sets in that their systematic construction has provided the means to isolate errors arising from basis set and method errors. Thus, determining the *inherent accuracy* of correlated electronic structure methods can be studied. The systematic convergence behavior of energetics and other properties resulting from the use of a series of sets enables determination of the complete basis set (CBS) limit, or Kohn–Sham (KS) limit as in the case of density functional theory. At the CBS limit, basis set saturation is reached, and only errors due to the selection of the method remain. This enables an understanding of the true performance of electron correlation methods to be ascertained in the calculation of molecular properties and energetics without relying upon embedded empirical parameters to achieve accuracy as is the case in composite approaches such as G2 and G3.
+
+In this work, we investigated the performance of the recently published correlation consistent basis sets²¹ for third-row atoms with advanced *ab initio* (CCSD(T)) and density functional (B3LYP) methods. The CCSD(T) method was selected due to its well-established reliability in accurate molecular property prediction, and B3LYP was chosen due to its success in structural prediction, and usefulness in thousands of studies, in part, to its low computational cost comparatively. Calculations were done on the set of third-row molecules from the Gaussian-2 (G2) extended test set. This G2 test set represents a collection of accurate experimental data including nineteen atomization energies, fifteen ionization potentials, four electron affinities, and two proton affinities. For these third-row systems, we determined optimized structures, atomization energies, ionization energies, electron affinities, and proton affinities for each method and level of basis set. Additionally, we compared several schemes for extrapolation of the calculated energies to the CBS and KS limits and contrasted our results to energies obtained from the composite G2 and G3 methods.
+
+Thousands of studies have been done using the family of correlation consistent basis sets for first row (B-Ne) and
+
+⁰⁾Author to whom correspondence should be addressed. Fax: (940) 565-4318. Electronic mail: akwilson@unt.edu
+
+second row (Al–Ar) atoms, resulting in some of the most accurate theoretical predictions to date for a wide range of molecules and their molecular properties and energetics. There have been several recent studies such as those by Peterson *et al.*,²²⁻²⁵ and Schaefer *et al.*²⁶⁻²⁹ that have used the correlation consistent basis sets for interesting third-row applications. It is anticipated that the third-row basis sets will see similar usefulness as is the case for the first and second row basis set families once the reliability of the sets has been further established through extended studies such as the present work and the standard diatomic benchmarks of Wilson and Dunning.¹⁷
+
+## II. METHODOLOGY
+
+In this study, the advanced *ab initio* coupled cluster method, CCSD(T),³⁰⁻³² was used. This method includes single and double excitations plus an approximated triple excitation. Additionally, the hybrid density functional method chosen was Becke’s three-parameter exchange functional (B3) (Ref. 33) coupled with Lee, Yang, and Parr’s (LYP) (Ref. 34) correlation functional. In both cases, the basis sets employed were the standard and augmented correlation consistent basis sets. All CCSD(T) calculations have been performed with the MOLPRO (Ref. 35) chemistry software package, and all B3LYP calculations were done with GAUSSIAN 98 (Ref. 36) software package. The default numerical grid (75, 302) in GAUSSIAN 98 was used to evaluate the density functional theory integrals. This grid includes 75 radial shells and 302 angular points per shell, resulting in approximately 7000 quadrature points per atom. In general, this grid is known to provide energies accurate to five places past the decimal.
+
+Optimized structures and frequencies were obtained for both CCSD(T) and B3LYP at each level of basis set. Zero point energy (ZPE) corrections were applied to the total energy for each molecule. Spin–orbit corrections were made to the total energy. As the magnitude of the spin–orbit effect on first row atoms is below one millihartree, it was not included. For systems containing second row atoms, the corrections were determined using the Moore tables.³⁷ For third-row atoms and molecules, spin–orbit corrections have been obtained from Blaudeau and Curtiss configuration interaction calculations,³⁸ just as in G2 and G3 theory for third-row systems, which have only 0.10 mhartree mean absolute deviation from experiment. Frozen core calculations were done, without inclusion of the 3*d* orbitals in the valence space.
+
+Several approaches to establish complete basis set (CBS) and Kohn–Sham (KS) limits have been used. The first is the two-point extrapolation scheme introduced by Halkier *et al.*,³⁹
+
+$$
+D_{e}(\infty)=\frac{\left(D_{e}(n) \times n^{3}\right)-\left(D_{e}(n-1) \times(n-1)^{3}\right)}{n^{3}-(n-1)^{3}}, \quad(1)
+$$
+
+where $D_{e}(n)$ is the dissociation energy at the *n*th zeta level, *n* is the cardinal number of the zeta level, and $D_{e}(\infty)$ represents the dissociation energy at the CBS limit (for *ab initio* methods) or the KS limit (for DFT methods). For example, when $n=3$, the extrapolation includes energies obtained using the cc-pVTZ and cc-pVDZ basis sets. Similarly, this extrapolation scheme can be used for other energies, such as ionization energies.
+
+A second approach, Feller’s exponential extrapolation,⁴⁰ was also used,
+
+$$
+D_{e}(n)=D_{e}(\infty)+A e^{-B n}, \quad(2)
+$$
+
+where *A* and *B* are parameters determined in the fit. This exponential extrapolation was implemented in two ways. In the first implementation, a given property was extrapolated as in Eq. (2)—denoted as the “$\text{CBS}_{\text{prop}}$” exponential extrapolation. In the second formulation of Feller’s scheme, extrapolations were done using the total energies for both the atoms and the molecule, rather than directly using the dissociation energies,
+
+$$
+E(n)=E(\infty)+A e^{-B n}. \quad(3)
+$$
+
+Once the CBS, or KS limits were determined for the total energies of the atoms and molecules, the dissociation energy was then obtained from these data—denoted as the “$\text{CBS}_{\text{total}}$” exponential extrapolation.
+
+## III. RESULTS AND DISCUSSION
+
+### A. Geometry
+
+Optimized bond lengths and bond angles are reported in Table I for B3LYP and CCSD(T) for each level of basis set. Overall, the bond lengths and angles are in good agreement with experiment, with most calculated bond lengths within 0.01 Å, and most calculated bond angles within 1° of experiment at the quintuple zeta basis set level. Noted, however, are several exceptions such as $\text{GeH}_{4}$, where CCSD(T)/aug-cc-pVQZ predicts a Ge–H bond length of 1.541 Å, whereas experiment predicts 1.514 Å. An earlier G2 study¹² predicts a Ge–H bond length of 1.543 Å, which is in good agreement with the current prediction. B3LYP and CCSD(T) provide similar geometries in most cases. Exceptions include BrF, BrCl, and $\text{Br}_{2}$, which are 0.01, 0.02, and 0.03 Å nearer to experiment with CCSD(T) than with B3LYP at the quintuple zeta level of basis set. In general, both B3LYP and CCSD(T) result in bond lengths that slightly overestimate those from experiment.
+
+The CCSD(T) calculated bond lengths for GaCl and NaBr are in largest disagreement ($\sim 0.05$ Å) with experiment. As illustrated by Hofmann *et al.*⁴¹ and Petrie,⁴² the inclusion of the inner valence 2*s* and 2*p* orbitals for Na in the correlation space for coupled cluster calculations is important when Na is bonded to a highly electronegative species such as F. Similarly, Radom and Duke¹⁴ have included 3*d* orbitals in their correlation space for third-row electrop-ositive elements which are bonded to electronegative atoms. For example, in GaO they noted that there is significant orbital mixing between the oxygen’s 2*s* and gallium’s 3*d* orbitals. For such compounds, neglect of this orbital mixing, as in the standard frozen-core approximation, leads to an appre-
+
+<table>
+<caption>TABLE I. Optimized geometries from B3LYP and CCSD(T) calculations. Bond length ($R$) is reported in angstrom and angle ($A$) is in degrees.</caption>
+<thead>
+<tr>
+<th rowspan="2"></th>
+<th rowspan="2">Basis set</th>
+<th colspan="2">B3LYP</th>
+<th colspan="2">CCSD(T)</th>
+<th rowspan="2">Expt.$^{\text{a}}$</th>
+</tr>
+<tr>
+<th>cc-p$VnZ$</th>
+<th>aug-cc-p$VnZ$</th>
+<th>cc-p$VnZ$</th>
+<th>aug-cc-p$VnZ$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$\text{GeH}_4$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>$n=$D</td>
+<td>1.542</td>
+<td>1.541</td>
+<td>1.543</td>
+<td>1.546</td>
+<td>1.514$^{\text{b}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.534</td>
+<td>1.534</td>
+<td>1.542</td>
+<td>1.542</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.533</td>
+<td>1.533</td>
+<td>1.541</td>
+<td>1.541</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5$^{\text{c}}$</td>
+<td>1.533</td>
+<td>1.533</td>
+<td>1.541</td>
+<td>1.541</td>
+<td></td>
+</tr>
+<tr>
+<td>AsH</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.545</td>
+<td>1.543</td>
+<td>1.542</td>
+<td>1.544</td>
+<td>1.535</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.536</td>
+<td>1.535</td>
+<td>1.535</td>
+<td>1.536</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.534</td>
+<td>1.534</td>
+<td>1.533</td>
+<td>1.534</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.534</td>
+<td>1.534</td>
+<td>1.533</td>
+<td>1.534</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{AsH}^+$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.547</td>
+<td>1.547</td>
+<td>1.538</td>
+<td>1.541</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.539</td>
+<td>1.539</td>
+<td>1.534</td>
+<td>1.535</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.537</td>
+<td>1.537</td>
+<td>1.533</td>
+<td>1.534</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.537</td>
+<td>1.537</td>
+<td>1.534</td>
+<td>1.534</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{AsH}_2$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.539</td>
+<td>1.538</td>
+<td>1.534</td>
+<td>1.537</td>
+<td>1.518$^{\text{d}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.530</td>
+<td>1.530</td>
+<td>1.529</td>
+<td>1.530</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.528</td>
+<td>1.528</td>
+<td>1.528</td>
+<td>1.528</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.528</td>
+<td>1.528</td>
+<td>1.528</td>
+<td>1.528</td>
+<td></td>
+</tr>
+<tr>
+<td>$A$</td>
+<td>D</td>
+<td>90.7</td>
+<td>90.9</td>
+<td>91.1</td>
+<td>90.9</td>
+<td>90.7$^{\text{d}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>90.9</td>
+<td>90.9</td>
+<td>91.2</td>
+<td>91.0</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>90.9</td>
+<td>90.9</td>
+<td>91.1</td>
+<td>91.1</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>91.0</td>
+<td>91.0</td>
+<td>91.2</td>
+<td>91.1</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{AsH}_2^+$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.541</td>
+<td>1.542</td>
+<td>1.532</td>
+<td>1.536</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.533</td>
+<td>1.533</td>
+<td>1.529</td>
+<td>1.530</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.532</td>
+<td>1.532</td>
+<td>1.528</td>
+<td>1.529</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.532</td>
+<td>1.532</td>
+<td>1.528</td>
+<td>1.529</td>
+<td></td>
+</tr>
+<tr>
+<td>$A$</td>
+<td>D</td>
+<td>91.0</td>
+<td>90.9</td>
+<td>91.9</td>
+<td>91.6</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>90.9</td>
+<td>90.9</td>
+<td>91.8</td>
+<td>91.7</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>91.0</td>
+<td>91.0</td>
+<td>91.8</td>
+<td>91.7</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>91.0</td>
+<td>91.0</td>
+<td>91.8</td>
+<td>91.7</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{AsH}_3$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.534</td>
+<td>1.533</td>
+<td>1.529</td>
+<td>1.532</td>
+<td>1.511$^{\text{d}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.525</td>
+<td>1.525</td>
+<td>1.524</td>
+<td>1.525</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.523</td>
+<td>1.523</td>
+<td>1.523</td>
+<td>1.524</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.523</td>
+<td>1.523</td>
+<td>1.523</td>
+<td>1.524</td>
+<td></td>
+</tr>
+<tr>
+<td>$A$</td>
+<td>D</td>
+<td>91.9</td>
+<td>92.0</td>
+<td>92.5</td>
+<td>92.4</td>
+<td>92.1$^{\text{d}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>92.1</td>
+<td>92.2</td>
+<td>92.6</td>
+<td>92.4</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>92.2</td>
+<td>92.2</td>
+<td>92.5</td>
+<td>92.5</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>92.2</td>
+<td>92.2</td>
+<td>92.5</td>
+<td>92.6</td>
+<td></td>
+</tr>
+<tr>
+<td>SeH</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.484</td>
+<td>1.483</td>
+<td>1.478</td>
+<td>1.481</td>
+<td>1.475</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.476</td>
+<td>1.475</td>
+<td>1.473</td>
+<td>1.474</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.474</td>
+<td>1.474</td>
+<td>1.472</td>
+<td>1.473</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.474</td>
+<td>1.474</td>
+<td>1.472</td>
+<td>1.472</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{SeH}^+$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.503</td>
+<td>1.504</td>
+<td>1.496</td>
+<td>1.499</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.496</td>
+<td>1.496</td>
+<td>1.491</td>
+<td>1.492</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.496</td>
+<td>1.495</td>
+<td>1.490</td>
+<td>1.491</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.494</td>
+<td>1.494</td>
+<td>1.472</td>
+<td>1.491</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{SeH}^-$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.493</td>
+<td>1.486</td>
+<td>1.487</td>
+<td>1.486</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.481</td>
+<td>1.478</td>
+<td>1.478</td>
+<td>1.479</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.479</td>
+<td>1.477</td>
+<td>1.477</td>
+<td>1.478</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.477</td>
+<td>1.477</td>
+<td>1.477</td>
+<td>1.468</td>
+<td></td>
+</tr>
+<tr>
+<td>$\text{SeH}_2$</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>$R$</td>
+<td>D</td>
+<td>1.479</td>
+<td>1.479</td>
+<td>1.473</td>
+<td>1.476</td>
+<td>1.460$^{\text{d}}$</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.471</td>
+<td>1.471</td>
+<td>1.468</td>
+<td>1.469</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.470</td>
+<td>1.470</td>
+<td>1.468</td>
+<td>1.468</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5</td>
+<td>1.469</td>
+<td>1.469</td>
+<td>1.468</td>
+<td>1.468</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<table><caption>TABLE I. (Continued.)</caption>
+<tbody><tr><td rowspan="2" colspan="2">Basis set</td><td colspan="2">B3LYP</td><td colspan="2">CCSD(T)</td><td rowspan="2">Expt.a</td></tr>
+<tr><td>cc-pVnZ</td><td>aug-cc-pVnZ</td><td>cc-pVnZ</td><td>aug-cc-pVnZ</td></tr>
+<tr><td colspan="7">SeH₂⁺</td></tr>
+<tr><td>A</td><td>D</td><td>91.1</td><td>91.2</td><td>91.3</td><td>91.3</td><td>90.6d</td></tr>
+<tr><td></td><td>T</td><td>91.3</td><td>91.3</td><td>91.3</td><td>91.1</td><td></td></tr>
+<tr><td></td><td>Q</td><td>91.3</td><td>91.3</td><td>91.3</td><td>91.3</td><td></td></tr>
+<tr><td></td><td>5</td><td>91.3</td><td>91.3</td><td>91.3</td><td>91.3</td><td></td></tr>
+<tr><td>R</td><td>D</td><td>1.497</td><td>1.497</td><td>1.488</td><td>1.492</td><td></td></tr>
+<tr><td></td><td>T</td><td>1.489</td><td>1.489</td><td>1.484</td><td>1.486</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.488</td><td>1.488</td><td>1.484</td><td>1.484</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.488</td><td>1.488</td><td>1.484</td><td>1.484</td><td></td></tr>
+<tr><td colspan="7">HBr</td></tr>
+<tr><td>A</td><td>D</td><td>91.7</td><td>91.5</td><td>92.0</td><td>91.7</td><td></td></tr>
+<tr><td></td><td>T</td><td>91.6</td><td>91.6</td><td>91.8</td><td>91.7</td><td></td></tr>
+<tr><td></td><td>Q</td><td>91.6</td><td>91.6</td><td>91.8</td><td>91.8</td><td></td></tr>
+<tr><td></td><td>5</td><td>91.6</td><td>91.6</td><td>91.8</td><td>91.8</td><td></td></tr>
+<tr><td>R</td><td>D</td><td>1.433</td><td>1.432</td><td>1.426</td><td>1.429</td><td>1.414</td></tr>
+<tr><td></td><td>T</td><td>1.425</td><td>1.424</td><td>1.420</td><td>1.421</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.424</td><td>1.424</td><td>1.420</td><td>1.421</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.423</td><td>1.423</td><td>1.421</td><td>1.421</td><td></td></tr>
+<tr><td colspan="7">HBr⁺</td></tr>
+<tr><td>R</td><td>D</td><td>1.468</td><td>1.469</td><td>1.457</td><td>1.460</td><td>1.448</td></tr>
+<tr><td></td><td>T</td><td>1.460</td><td>1.460</td><td>1.452</td><td>1.453</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.459</td><td>1.459</td><td>1.452</td><td>1.453</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.459</td><td>1.459</td><td>1.453</td><td>1.453</td><td></td></tr>
+<tr><td colspan="7">GaCl</td></tr>
+<tr><td>R</td><td>D</td><td>2.260</td><td>2.271</td><td>2.249</td><td>2.281</td><td>2.202</td></tr>
+<tr><td></td><td>T</td><td>2.243</td><td>2.246</td><td>2.255</td><td>2.265</td><td></td></tr>
+<tr><td></td><td>Q</td><td>2.242</td><td>2.242</td><td>2.257</td><td>2.261</td><td></td></tr>
+<tr><td></td><td>5</td><td>2.240</td><td>2.240</td><td>2.257</td><td>2.259</td><td></td></tr>
+<tr><td colspan="7">GeO</td></tr>
+<tr><td>R</td><td>D</td><td>1.644</td><td>1.648</td><td>1.665</td><td>1.671</td><td>1.625</td></tr>
+<tr><td></td><td>T</td><td>1.630</td><td>1.632</td><td>1.649</td><td>1.653</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.629</td><td>1.629</td><td>1.649</td><td>1.650</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.629</td><td>1.629</td><td>1.648</td><td>1.648</td><td></td></tr>
+<tr><td colspan="7">As₂</td></tr>
+<tr><td>R</td><td>D</td><td>2.112</td><td>2.113</td><td>2.147</td><td>2.151</td><td>2.103</td></tr>
+<tr><td></td><td>T</td><td>2.105</td><td>2.105</td><td>2.135</td><td>2.135</td><td></td></tr>
+<tr><td></td><td>Q</td><td>2.105</td><td>2.104</td><td>2.128</td><td>2.129</td><td></td></tr>
+<tr><td></td><td>5</td><td>2.104</td><td>2.104</td><td>2.126</td><td>2.126</td><td></td></tr>
+<tr><td colspan="7">GeS₂</td></tr>
+<tr><td>R</td><td>D</td><td>2.026</td><td>2.027</td><td>2.033</td><td>2.040</td><td></td></tr>
+<tr><td></td><td>T</td><td>2.014</td><td>2.014</td><td>2.023</td><td>2.024</td><td></td></tr>
+<tr><td></td><td>Q</td><td>2.011</td><td>2.010</td><td>2.016</td><td>2.017</td><td></td></tr>
+<tr><td></td><td>5</td><td>2.010</td><td>2.010</td><td>2.013</td><td>2.014</td><td></td></tr>
+<tr><td colspan="7">KrF₂</td></tr>
+<tr><td>R</td><td>D</td><td>1.921</td><td>1.911</td><td>2.012</td><td>1.921</td><td>1.875d</td></tr>
+<tr><td></td><td>T</td><td>1.891</td><td>1.893</td><td>1.885</td><td>1.886</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.889</td><td>1.890</td><td>1.875</td><td>1.876</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.890</td><td>1.890</td><td>1.873</td><td>1.873</td><td></td></tr>
+<tr><td colspan="7">BrCl</td></tr>
+<tr><td>R</td><td>D</td><td>2.194</td><td>2.191</td><td>2.200</td><td>2.205</td><td>2.136</td></tr>
+<tr><td></td><td>T</td><td>2.170</td><td>2.170</td><td>2.163</td><td>2.164</td><td></td></tr>
+<tr><td></td><td>Q</td><td>2.166</td><td>2.166</td><td>2.150</td><td>2.151</td><td></td></tr>
+<tr><td></td><td>5</td><td>2.163</td><td>2.163</td><td>2.144</td><td>2.144</td><td></td></tr>
+<tr><td colspan="7">BrF</td></tr>
+<tr><td>R</td><td>D</td><td>1.804</td><td>1.796</td><td>1.819</td><td>1.801</td><td>1.759</td></tr>
+<tr><td></td><td>T</td><td>1.774</td><td>1.775</td><td>1.769</td><td>1.770</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.771</td><td>1.772</td><td>1.762</td><td>1.762</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.771</td><td>1.771</td><td>1.760</td><td>1.760</td><td></td></tr>
+<tr><td colspan="7">BrF⁺</td></tr>
+<tr><td>R</td><td>D</td><td>1.726</td><td>1.717</td><td>1.740</td><td>1.724</td><td></td></tr>
+<tr><td></td><td>T</td><td>1.691</td><td>1.692</td><td>1.686</td><td>1.688</td><td></td></tr>
+<tr><td></td><td>Q</td><td>1.689</td><td>1.689</td><td>1.680</td><td>1.681</td><td></td></tr>
+<tr><td></td><td>5</td><td>1.688</td><td>1.688</td><td>1.678</td><td>1.678</td><td></td></tr>
+</tbody></table>
+
+<table><caption>TABLE I. (Continued.)</caption>
+<tbody>
+<tr>
+<td rowspan="2">
+</td>
+<td rowspan="2">
+Basis set
+</td>
+<td colspan="2">
+B3LYP
+</td>
+<td colspan="2">
+CCSD(T)
+</td>
+<td rowspan="2">
+Expt.a
+</td>
+</tr>
+<tr>
+<td>
+cc-pVnZ
+</td>
+<td>
+aug-cc-pVnZ
+</td>
+<td>
+cc-pVnZ
+</td>
+<td>
+aug-cc-pVnZ
+</td>
+</tr>
+<tr>
+<td colspan="7">
+BrO
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+1.771
+</td>
+<td>
+1.755
+</td>
+<td>
+1.795
+</td>
+<td>
+1.773
+</td>
+<td>
+1.717
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.732
+</td>
+<td>
+1.729
+</td>
+<td>
+1.735
+</td>
+<td>
+1.731
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.727
+</td>
+<td>
+1.725
+</td>
+<td>
+1.725
+</td>
+<td>
+1.723
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+1.725
+</td>
+<td>
+1.724
+</td>
+<td>
+1.721
+</td>
+<td>
+1.721
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+BrO−
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+1.899
+</td>
+<td>
+1.854
+</td>
+<td>
+1.915
+</td>
+<td>
+1.868
+</td>
+<td>
+1.814e
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.839
+</td>
+<td>
+1.823
+</td>
+<td>
+1.832
+</td>
+<td>
+1.821
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.826
+</td>
+<td>
+1.819
+</td>
+<td>
+1.817
+</td>
+<td>
+1.812
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+1.822
+</td>
+<td>
+1.817
+</td>
+<td>
+1.811
+</td>
+<td>
+1.809
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+HOBr
+</td>
+</tr>
+<tr>
+<td>
+$R$(Br–O)
+</td>
+<td>
+D
+</td>
+<td>
+1.873
+</td>
+<td>
+1.864
+</td>
+<td>
+1.888
+</td>
+<td>
+1.874
+</td>
+<td>
+1.834f
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.844
+</td>
+<td>
+1.844
+</td>
+<td>
+1.840
+</td>
+<td>
+1.840
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.841
+</td>
+<td>
+1.841
+</td>
+<td>
+1.833
+</td>
+<td>
+1.832
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+1.840
+</td>
+<td>
+1.840
+</td>
+<td>
+1.830
+</td>
+<td>
+1.829
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+$R$(H–O)
+</td>
+<td>
+D
+</td>
+<td>
+0.975
+</td>
+<td>
+0.971
+</td>
+<td>
+0.974
+</td>
+<td>
+0.973
+</td>
+<td>
+0.961f
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+0.966
+</td>
+<td>
+0.967
+</td>
+<td>
+0.965
+</td>
+<td>
+0.967
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+0.965
+</td>
+<td>
+0.965
+</td>
+<td>
+0.964
+</td>
+<td>
+0.965
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+0.965
+</td>
+<td>
+0.965
+</td>
+<td>
+0.964
+</td>
+<td>
+0.964
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+$A$
+</td>
+<td>
+D
+</td>
+<td>
+101.7
+</td>
+<td>
+103.4
+</td>
+<td>
+100.8
+</td>
+<td>
+102.7
+</td>
+<td>
+102.3f
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+103.2
+</td>
+<td>
+103.7
+</td>
+<td>
+102.3
+</td>
+<td>
+103.1
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+103.6
+</td>
+<td>
+103.8
+</td>
+<td>
+102.9
+</td>
+<td>
+103.3
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+103.8
+</td>
+<td>
+103.8
+</td>
+<td>
+103.2
+</td>
+<td>
+103.3
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+HOBr+
+</td>
+</tr>
+<tr>
+<td>
+$R$(Br–O)
+</td>
+<td>
+D
+</td>
+<td>
+1.763
+</td>
+<td>
+1.758
+</td>
+<td>
+1.770
+</td>
+<td>
+1.765
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.735
+</td>
+<td>
+1.736
+</td>
+<td>
+1.729
+</td>
+<td>
+1.731
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.733
+</td>
+<td>
+1.733
+</td>
+<td>
+1.724
+</td>
+<td>
+1.724
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+1.732
+</td>
+<td>
+1.732
+</td>
+<td>
+1.721
+</td>
+<td>
+1.721
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+$R$(H–O)
+</td>
+<td>
+D
+</td>
+<td>
+0.996
+</td>
+<td>
+0.991
+</td>
+<td>
+0.993
+</td>
+<td>
+0.991
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+0.986
+</td>
+<td>
+0.986
+</td>
+<td>
+0.984
+</td>
+<td>
+0.985
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+0.985
+</td>
+<td>
+0.985
+</td>
+<td>
+0.983
+</td>
+<td>
+0.983
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+0.985
+</td>
+<td>
+0.985
+</td>
+<td>
+0.983
+</td>
+<td>
+0.983
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+$A$
+</td>
+<td>
+D
+</td>
+<td>
+108.9
+</td>
+<td>
+109.4
+</td>
+<td>
+107.6
+</td>
+<td>
+108.2
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+109.8
+</td>
+<td>
+109.9
+</td>
+<td>
+108.4
+</td>
+<td>
+108.8
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+110.0
+</td>
+<td>
+110.0
+</td>
+<td>
+108.8
+</td>
+<td>
+109.0
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+110.0
+</td>
+<td>
+110.0
+</td>
+<td>
+109.1
+</td>
+<td>
+109.1
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+Br2
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+2.335
+</td>
+<td>
+2.335
+</td>
+<td>
+2.346
+</td>
+<td>
+2.353
+</td>
+<td>
+2.281
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+2.315
+</td>
+<td>
+2.316
+</td>
+<td>
+2.311
+</td>
+<td>
+2.313
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+2.314
+</td>
+<td>
+2.315
+</td>
+<td>
+2.298
+</td>
+<td>
+2.299
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+2.314
+</td>
+<td>
+2.314
+</td>
+<td>
+2.294
+</td>
+<td>
+2.294
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+Br2+
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+2.240
+</td>
+<td>
+2.242
+</td>
+<td>
+2.252
+</td>
+<td>
+2.259
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+2.222
+</td>
+<td>
+2.224
+</td>
+<td>
+2.220
+</td>
+<td>
+2.223
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+2.220
+</td>
+<td>
+2.221
+</td>
+<td>
+2.210
+</td>
+<td>
+2.210
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+2.220
+</td>
+<td>
+2.220
+</td>
+<td>
+2.210
+</td>
+<td>
+2.206
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+BBr
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+1.916
+</td>
+<td>
+1.913
+</td>
+<td>
+1.920
+</td>
+<td>
+1.927
+</td>
+<td>
+1.888
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.903
+</td>
+<td>
+1.901
+</td>
+<td>
+1.906
+</td>
+<td>
+1.907
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.900
+</td>
+<td>
+1.900
+</td>
+<td>
+1.904
+</td>
+<td>
+1.904
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+1.900
+</td>
+<td>
+1.900
+</td>
+<td>
+1.903
+</td>
+<td>
+1.903
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+NaBr
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+2.519
+</td>
+<td>
+2.526
+</td>
+<td>
+2.554
+</td>
+<td>
+2.580
+</td>
+<td>
+2.502
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+2.527
+</td>
+<td>
+2.527
+</td>
+<td>
+2.558
+</td>
+<td>
+2.563
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+2.522
+</td>
+<td>
+2.523
+</td>
+<td>
+2.556
+</td>
+<td>
+2.558
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5g
+</td>
+<td>
+2.520
+</td>
+<td>
+</td>
+<td>
+2.551
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+NaBr+
+</td>
+</tr>
+<tr>
+<td>
+$R$
+</td>
+<td>
+D
+</td>
+<td>
+2.979
+</td>
+<td>
+2.979
+</td>
+<td>
+3.046
+</td>
+<td>
+3.028
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+2.928
+</td>
+<td>
+2.926
+</td>
+<td>
+2.983
+</td>
+<td>
+2.997
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+2.922
+</td>
+<td>
+2.920
+</td>
+<td>
+2.988
+</td>
+<td>
+2.992
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5
+</td>
+<td>
+2.914
+</td>
+<td>
+</td>
+<td>
+2.988
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td colspan="7">
+CH3Br
+</td>
+</tr>
+<tr>
+<td>
+$R$(C–H)
+</td>
+<td>
+D
+</td>
+<td>
+1.097
+</td>
+<td>
+1.093
+</td>
+<td>
+1.084
+</td>
+<td>
+1.099
+</td>
+<td>
+1.082h
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+T
+</td>
+<td>
+1.084
+</td>
+<td>
+1.084
+</td>
+<td>
+1.085
+</td>
+<td>
+1.086
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+Q
+</td>
+<td>
+1.083
+</td>
+<td>
+1.083
+</td>
+<td>
+1.084
+</td>
+<td>
+1.084
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+5c
+</td>
+<td>
+1.083
+</td>
+<td>
+1.083
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+<caption>TABLE I. (Continued.)</caption>
+<tbody>
+<tr>
+<td rowspan="2"></td>
+<td rowspan="2">Basis set</td>
+<td colspan="2">B3LYP</td>
+<td colspan="2">CCSD(T)</td>
+<td rowspan="2">Expt.a</td>
+</tr>
+<tr>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+</tr>
+<tr>
+<td>R(C–Br)</td>
+<td>D</td>
+<td>1.957</td>
+<td>1.960</td>
+<td>1.947</td>
+<td>1.963</td>
+<td>1.934b</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.954</td>
+<td>1.954</td>
+<td>1.948</td>
+<td>1.948</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>1.952</td>
+<td>1.952</td>
+<td>1.944</td>
+<td>1.944</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>1.952</td>
+<td>1.952</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A(H–C–H)</td>
+<td>D</td>
+<td>109.9</td>
+<td>110.0</td>
+<td>111.2</td>
+<td>111.1</td>
+<td>111.2h</td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>110.0</td>
+<td>110.0</td>
+<td>111.0</td>
+<td>111.2</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Q</td>
+<td>110.0</td>
+<td>110.0</td>
+<td>111.1</td>
+<td>111.1</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>110.0</td>
+<td>110.0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CH₄Br⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>R(C–H)</td>
+<td>D</td>
+<td>1.097</td>
+<td>1.094</td>
+<td>1.099</td>
+<td>1.098</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.085</td>
+<td>1.085</td>
+<td>1.084</td>
+<td>1.085</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Qc</td>
+<td>1.084</td>
+<td>1.084</td>
+<td>1.086</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>1.084</td>
+<td>1.084</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>R(C–Br)</td>
+<td>D</td>
+<td>2.003</td>
+<td>2.008</td>
+<td>2.018</td>
+<td>2.024</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.995</td>
+<td>1.995</td>
+<td>1.998</td>
+<td>1.998</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Qc</td>
+<td>1.993</td>
+<td>1.993</td>
+<td>1.993</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>1.992</td>
+<td>1.992</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>R(Br–H)</td>
+<td>D</td>
+<td>1.452</td>
+<td>1.451</td>
+<td>1.443</td>
+<td>1.446</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>1.444</td>
+<td>1.444</td>
+<td>1.438</td>
+<td>1.439</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Qc</td>
+<td>1.443</td>
+<td>1.443</td>
+<td>1.439</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>1.443</td>
+<td>1.443</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A(H–C–H)</td>
+<td>D</td>
+<td>109.6</td>
+<td>109.7</td>
+<td>113.5</td>
+<td>113.6</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>109.6</td>
+<td>109.6</td>
+<td>113.3</td>
+<td>113.4</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Qc</td>
+<td>109.6</td>
+<td>109.6</td>
+<td>113.3</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>109.6</td>
+<td>109.6</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A(H–Br–C)</td>
+<td>D</td>
+<td>97.3</td>
+<td>97.3</td>
+<td>96.9</td>
+<td>102.0</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>T</td>
+<td>97.3</td>
+<td>97.3</td>
+<td>102.4</td>
+<td>102.3</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>Qc</td>
+<td>97.3</td>
+<td>97.3</td>
+<td>97.1</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>5c</td>
+<td>97.3</td>
+<td>97.3</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+aFrom Ref. 52 unless otherwise noted.
+bFrom Ref. 53.
+cDue to computational requirements, optimization was not performed for all levels of the quadruple and quintuple zeta basis sets, particularly as the structural parameters are near convergence at the next lower-level basis set.
+dFrom Ref. 54.
+eFrom Ref. 55.
+fFrom Ref. 56.
+gNo Peterson or Dunning aug-cc-pV5Z basis set is available for Na.
+hFrom Ref. 57.
+
+<table>
+<caption>TABLE II. Mean absolute deviation of bond length (Å) and angle (°) from experiment. The two-point extrapolation scheme as presented in Eq. (1) has been used to determine the KS and CBS limits for the B3LYP and CCSD(T) bond lengths, respectively.</caption>
+<tbody>
+<tr>
+<td rowspan="3">Basis set</td>
+<td colspan="4">Bond length (Å)</td>
+<td colspan="4">Angle (°)</td>
+</tr>
+<tr>
+<td colspan="2">B3LYP</td>
+<td colspan="2">CCSD(T)</td>
+<td colspan="2">B3LYP</td>
+<td colspan="2">CCSD(T)</td>
+</tr>
+<tr>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+</tr>
+<tr>
+<td>n=D</td>
+<td>0.028</td>
+<td>0.027</td>
+<td>0.037</td>
+<td>0.037</td>
+<td>0.44</td>
+<td>0.52</td>
+<td>0.50</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>T</td>
+<td>0.015</td>
+<td>0.015</td>
+<td>0.017</td>
+<td>0.018</td>
+<td>0.50</td>
+<td>0.60</td>
+<td>0.32</td>
+<td>0.34</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>0.013</td>
+<td>0.013</td>
+<td>0.014</td>
+<td>0.014</td>
+<td>0.60</td>
+<td>0.64</td>
+<td>0.39</td>
+<td>0.42</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0.012</td>
+<td>0.012</td>
+<td>0.014</td>
+<td>0.011</td>
+<td>0.65</td>
+<td>0.66</td>
+<td>0.50</td>
+<td>0.64</td>
+</tr>
+<tr>
+<td>KS/CBS Limit</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D–Ta</td>
+<td>0.010</td>
+<td>0.010</td>
+<td>0.016</td>
+<td>0.013</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>T–Qa</td>
+<td>0.012</td>
+<td>0.012</td>
+<td>0.013</td>
+<td>0.013</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q–5a</td>
+<td>0.011</td>
+<td>0.011</td>
+<td>0.013</td>
+<td>0.010</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+aThe “D–T” scheme uses double and triple zeta results in the extrapolation; the “T–Q” scheme uses triple and quadruple zeta results; and the “Q–5” scheme uses quadruple and quintuple zeta results.
+
+<table>
+<caption>TABLE III. B3LYP and CCSD(T) atomization energies in kcal/mol.</caption>
+<thead>
+<tr>
+<th rowspan="2">
+</th>
+<th colspan="2">B3LYP</th>
+<th colspan="2">CCSD(T)</th>
+<th rowspan="2">Expt.</th>
+</tr>
+<tr>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GeH₄→Ge+4H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>n=D</td>
+<td>268.93</td>
+<td>268.10</td>
+<td>255.26</td>
+<td>257.10</td>
+<td>270.5ª</td>
+</tr>
+<tr>
+<td>T</td>
+<td>272.21</td>
+<td>272.41</td>
+<td>267.45</td>
+<td>268.75</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>273.21</td>
+<td>273.38</td>
+<td>271.27</td>
+<td>272.86</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>273.62</td>
+<td>273.58</td>
+<td>272.10</td>
+<td>273.48</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>AsH→As+H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>66.10</td>
+<td>66.03</td>
+<td>53.05</td>
+<td>56.99</td>
+<td>64.6ᵇ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>67.15</td>
+<td>67.17</td>
+<td>60.24</td>
+<td>61.68</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>67.30</td>
+<td>67.35</td>
+<td>62.37</td>
+<td>62.89</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>67.33</td>
+<td>67.37</td>
+<td>62.96</td>
+<td>63.21</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>AsH₂→As+2H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>134.85</td>
+<td>134.62</td>
+<td>118.27</td>
+<td>121.02</td>
+<td>131.1ᵇ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>136.81</td>
+<td>136.81</td>
+<td>127.26</td>
+<td>127.92</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>137.09</td>
+<td>137.17</td>
+<td>130.33</td>
+<td>130.58</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>137.13</td>
+<td>137.20</td>
+<td>131.19</td>
+<td>131.17</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>AsH₃→As+3H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>206.66</td>
+<td>206.15</td>
+<td>183.83</td>
+<td>189.42</td>
+<td>206.0ᵇ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>209.23</td>
+<td>209.18</td>
+<td>198.20</td>
+<td>200.70</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>209.59</td>
+<td>209.70</td>
+<td>202.80</td>
+<td>203.04</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>209.63</td>
+<td>209.73</td>
+<td>204.05</td>
+<td>203.84</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>SeH→Se+H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>74.56</td>
+<td>75.18</td>
+<td>67.47</td>
+<td>68.79</td>
+<td>74.3ᶜ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>75.98</td>
+<td>76.07</td>
+<td>71.90</td>
+<td>72.22</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>75.92</td>
+<td>76.20</td>
+<td>73.64</td>
+<td>73.94</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>76.24</td>
+<td>76.30</td>
+<td>74.11</td>
+<td>74.27</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>SeH₂→Se+2H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>150.08</td>
+<td>150.83</td>
+<td>138.16</td>
+<td>142.19</td>
+<td>153.2ᶜ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>152.30</td>
+<td>152.40</td>
+<td>146.74</td>
+<td>148.34</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>152.36</td>
+<td>152.65</td>
+<td>150.34</td>
+<td>151.18</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>152.72</td>
+<td>152.83</td>
+<td>151.18</td>
+<td>151.77</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>HBr→Br+H</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>83.42</td>
+<td>84.30</td>
+<td>79.34</td>
+<td>81.73</td>
+<td>86.5ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>84.85</td>
+<td>84.99</td>
+<td>83.72</td>
+<td>84.68</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>85.02</td>
+<td>85.07</td>
+<td>85.45</td>
+<td>85.78</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>85.10</td>
+<td>85.17</td>
+<td>85.91</td>
+<td>86.10</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>GeO→Ge+O</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>145.52</td>
+<td>147.93</td>
+<td>133.94</td>
+<td>141.68</td>
+<td>155.2ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>152.28</td>
+<td>152.90</td>
+<td>148.12</td>
+<td>150.78</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>153.66</td>
+<td>153.73</td>
+<td>152.73</td>
+<td>153.98</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>153.20</td>
+<td>154.12</td>
+<td>154.42</td>
+<td>154.96</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>GeS₂→Ge+2S</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>179.10</td>
+<td>178.91</td>
+<td>161.64</td>
+<td>166.18</td>
+<td>191.7ᵉ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>183.56</td>
+<td>183.97</td>
+<td>180.00</td>
+<td>182.19</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>184.88</td>
+<td>184.92</td>
+<td>188.22</td>
+<td>189.37</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>185.04</td>
+<td>185.84</td>
+<td>191.74</td>
+<td>192.27</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>As₂→2As</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>89.72</td>
+<td>89.80</td>
+<td>68.90</td>
+<td>71.57</td>
+<td>91.3ᶠ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>92.07</td>
+<td>92.22</td>
+<td>80.67</td>
+<td>82.40</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>92.24</td>
+<td>92.41</td>
+<td>85.99</td>
+<td>86.91</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>92.48</td>
+<td>92.56</td>
+<td>88.11</td>
+<td>88.56</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>BrCl→Br+Cl</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>43.88</td>
+<td>44.25</td>
+<td>35.46</td>
+<td>38.43</td>
+<td>51.5ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>47.04</td>
+<td>47.21</td>
+<td>44.92</td>
+<td>46.43</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>47.69</td>
+<td>47.75</td>
+<td>48.58</td>
+<td>49.33</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>48.10</td>
+<td>48.38</td>
+<td>50.28</td>
+<td>50.67</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>BrF→Br+F</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>52.05</td>
+<td>55.82</td>
+<td>40.75</td>
+<td>51.79</td>
+<td>58.9ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>56.89</td>
+<td>57.75</td>
+<td>52.40</td>
+<td>56.32</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>58.23</td>
+<td>58.34</td>
+<td>56.91</td>
+<td>58.45</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>58.33</td>
+<td>58.44</td>
+<td>58.40</td>
+<td>59.04</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>BrO→Br+O</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>D</td>
+<td>50.67</td>
+<td>54.21</td>
+<td>34.62</td>
+<td>44.21</td>
+<td>55.3ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>56.40</td>
+<td>57.25</td>
+<td>47.65</td>
+<td>51.05</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>57.58</td>
+<td>57.80</td>
+<td>51.78</td>
+<td>53.21</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>57.80</td>
+<td>57.92</td>
+<td>53.40</td>
+<td>54.00</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+
+<table><caption>TABLE III. (Continued.)</caption>
+<tbody><tr><td></td><td colspan="2">B3LYP</td><td colspan="2">CCSD(T)</td><td></td></tr>
+<tr><td></td><td>cc-pVnZ</td><td>aug-cc-pVnZ</td><td>cc-pVnZ</td><td>aug-cc-pVnZ</td><td>Expt.</td></tr>
+<tr><td colspan="6"></td></tr>
+<tr><td>BrB→Br+B</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>97.08</td><td>96.88</td><td>92.56</td><td>93.07</td><td>103.5f</td></tr>
+<tr><td>T</td><td>97.33</td><td>97.45</td><td>96.61</td><td>97.16</td><td></td></tr>
+<tr><td>Q</td><td>97.47</td><td>97.60</td><td>98.80</td><td>99.13</td><td></td></tr>
+<tr><td>5</td><td>97.59</td><td>97.65</td><td>99.63</td><td>99.80</td><td></td></tr>
+<tr><td>Br₂→2Br</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>39.30</td><td>38.96</td><td>31.07</td><td>33.09</td><td>45.4d</td></tr>
+<tr><td>T</td><td>41.80</td><td>41.90</td><td>39.21</td><td>40.51</td><td></td></tr>
+<tr><td>Q</td><td>42.23</td><td>42.26</td><td>42.63</td><td>43.28</td><td></td></tr>
+<tr><td>5</td><td>42.41</td><td>42.47</td><td>43.95</td><td>44.31</td><td></td></tr>
+<tr><td>CH₃Br→Br+C+3H</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>348.87</td><td>349.32</td><td>329.23</td><td>334.33</td><td>358.2g</td></tr>
+<tr><td>T</td><td>355.14</td><td>354.96</td><td>348.13</td><td>350.78</td><td></td></tr>
+<tr><td>Q</td><td>355.61</td><td>355.56</td><td>353.70</td><td>354.64</td><td></td></tr>
+<tr><td>5</td><td>355.61</td><td>355.70</td><td>355.43</td><td>355.85</td><td></td></tr>
+<tr><td>GaCl→Ga+Cl</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>104.51</td><td>105.10</td><td>98.36</td><td>101.76</td><td>109.9d</td></tr>
+<tr><td>T</td><td>105.98</td><td>106.11</td><td>104.49</td><td>105.72</td><td></td></tr>
+<tr><td>Q</td><td>106.16</td><td>106.81</td><td>107.35</td><td>107.95</td><td></td></tr>
+<tr><td>5</td><td>106.72</td><td>106.98</td><td>108.51</td><td>108.82</td><td></td></tr>
+<tr><td>KrF₂→Kr+2F</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>10.66</td><td>22.99</td><td>−12.72</td><td>11.71</td><td>21.9d</td></tr>
+<tr><td>T</td><td>22.50</td><td>25.83</td><td>8.57</td><td>18.08</td><td></td></tr>
+<tr><td>Q</td><td>25.96</td><td>26.68</td><td>16.44</td><td>20.24</td><td></td></tr>
+<tr><td>5</td><td>26.48</td><td>26.70</td><td>19.40</td><td>20.76</td><td></td></tr>
+<tr><td>NaBr→Na+Br</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>D</td><td>77.41</td><td>78.54</td><td>75.74</td><td>80.44</td><td>86.2f</td></tr>
+<tr><td>T</td><td>79.80</td><td>80.07</td><td>81.89</td><td>83.21</td><td></td></tr>
+<tr><td>Q</td><td>80.30</td><td>80.40</td><td>85.22</td><td>85.82</td><td></td></tr>
+<tr><td>5h</td><td>80.74</td><td></td><td>86.49</td><td></td><td></td></tr>
+<tr><td colspan="6"></td></tr>
+</tbody></table>
+
+aFrom Refs. 47 and 48.
+bFrom Ref. 58.
+cFrom Ref. 59.
+dFrom Ref. 60.
+eFrom Ref. 61.
+fFrom Ref. 52.
+gFrom Ref. 62.
+hNo Peterson or Dunning aug-cc-pV5Z basis set is available for Na.
+
+ciable amount of error, and is thought to be the reason for the larger differences in bond length between theory and experiment for GaCl.
+
+The bond angles obtained from CCSD(T) are slightly nearer to experiment than those obtained from B3LYP. The maximum deviation in angle from experiment for CCSD(T) occurs for HOBr which deviates by $1.0^{\circ}$. For B3LYP, the largest differences observed are for HOBr $(1.6^{\circ})$ and $CH_{3} Br$ (1.2°).
+
+As shown in Table II, the mean absolute deviation in the bond length from experiment is very similar for B3LYP (0.012 Å for both cc-pV5Z and aug-cc-pV5Z) and for CCSD(T) (0.014 Å for cc-pV5Z and 0.011 Å for aug-cc-pV5Z). These deviations are reduced slightly $(\sim 0.001 \AA)$ by using a two-point extrapolation scheme based upon geometries obtained at the quadruple and quintuple zeta basis set levels $(KS_{Q-5}$ and $CBS_{Q-5})$. However, the mean absolute deviation of 0.010 Å reported for CCSD(T)/aug-cc-pV5Z does not include results for $GeH_{4}$ and $CH_{3} Br$, as optimizations were not performed at this level due to their computational requirements and nearness to a converged geometry as indicated by optimized structures obtained using lower level basis sets.
+
+### B. Atomization energy
+
+Atomization energies calculated with CCSD(T) and B3LYP for all of the G2 third-row test suite molecules, are given in Table III. Atomization energies calculated with CCSD(T) in combination with either the standard or augmented family of correlation consistent basis sets result in the smooth convergence behavior in the energies expected from using these families of basis sets. $^{4,43-45}$ However, the convergence pattern for B3LYP in combination with the series of basis sets was not smooth for all molecules, as there were some cases in which the cc-pVQZ results appeared to be either too high, or too low, for smooth convergence. Examples include $GeH_{4}$, where there is a slight dip upon increasing the basis set from cc-pVQZ to cc-pV5Z, and $SeH_{2}$ where there is a slight dip upon increasing the basis set from cc-pVTZ to cc-pVQZ. Such dips are not observed when diffuse functions are included in the basis set. This unusual behavior has been investigated and discussed in much depth by Wang and Wilson. $^{46}$
+
+KS and CBS limits determined by several different methods-using three two-point extrapolations $CBS_{D-T}$, $CBS_{T-Q}$, $CBS_{Q-5}$ and two exponential extrapolations
+
+<table>
+<caption>TABLE IV. Extrapolated KS and CBS limits for atomization energies in kcal/mol determined using B3LYP and CCSD(T) in combination with cc-pVnZ and aug-cc-pVnZ [where $n$=D(2), T(3), Q(4), 5].</caption>
+<thead>
+<tr>
+<th rowspan="2">KS/CBS limit</th>
+<th colspan="2">B3LYP</th>
+<th colspan="2">CCSD(T)</th>
+<th rowspan="2">G2ª</th>
+<th rowspan="2">G3ᵇ</th>
+<th rowspan="2">Expt.</th>
+</tr>
+<tr>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GeH₄→Ge+4H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-Tᶜ</td>
+<td>273.59</td>
+<td>274.22</td>
+<td>272.58</td>
+<td>273.65</td>
+<td>275.8</td>
+<td>273.0</td>
+<td>270.5ᵈ</td>
+</tr>
+<tr>
+<td>T-Qᶜ</td>
+<td>273.95</td>
+<td>274.09</td>
+<td>274.06</td>
+<td>275.86</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5ᶜ</td>
+<td>272.00</td>
+<td>273.79</td>
+<td>272.98</td>
+<td>274.13</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Propertyᵉ</td>
+<td>272.93</td>
+<td>273.65</td>
+<td>272.64</td>
+<td>274.18</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Totalᶠ</td>
+<td>272.91</td>
+<td>273.55</td>
+<td>272.09</td>
+<td>273.57</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>AsH→As+H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>67.59</td>
+<td>67.64</td>
+<td>63.27</td>
+<td>63.66</td>
+<td>63.2</td>
+<td>64.7</td>
+<td>64.6ᵍ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>67.41</td>
+<td>67.49</td>
+<td>63.92</td>
+<td>63.77</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>67.36</td>
+<td>67.40</td>
+<td>63.58</td>
+<td>63.54</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>67.33</td>
+<td>67.38</td>
+<td>63.22</td>
+<td>63.31</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>67.32</td>
+<td>67.38</td>
+<td>62.90</td>
+<td>63.16</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>AsH₂→As+2H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>137.63</td>
+<td>137.73</td>
+<td>131.05</td>
+<td>130.83</td>
+<td>131.8</td>
+<td>131.9</td>
+<td>131.1ᵍ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>137.29</td>
+<td>137.43</td>
+<td>132.57</td>
+<td>132.52</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>137.17</td>
+<td>137.24</td>
+<td>132.08</td>
+<td>131.78</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>137.13</td>
+<td>137.22</td>
+<td>131.70</td>
+<td>131.71</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>137.10</td>
+<td>137.20</td>
+<td>131.16</td>
+<td>131.17</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>AsH₃→As+3H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>210.31</td>
+<td>210.45</td>
+<td>204.25</td>
+<td>205.45</td>
+<td>205.6</td>
+<td>204.6</td>
+<td>206.0ᵍ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>209.85</td>
+<td>210.07</td>
+<td>206.16</td>
+<td>204.74</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>209.67</td>
+<td>209.76</td>
+<td>205.36</td>
+<td>204.67</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>209.64</td>
+<td>209.76</td>
+<td>204.73</td>
+<td>203.90</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>209.60</td>
+<td>209.73</td>
+<td>204.03</td>
+<td>203.67</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>SeH→Se+H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>76.58</td>
+<td>76.44</td>
+<td>73.76</td>
+<td>73.66</td>
+<td>74.2</td>
+<td>75.4</td>
+<td>74.3ʰ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>75.88</td>
+<td>76.30</td>
+<td>74.91</td>
+<td>75.19</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>76.57</td>
+<td>76.41</td>
+<td>74.60</td>
+<td>74.62</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>76.10</td>
+<td>76.29</td>
+<td>74.49</td>
+<td>74.78</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>76.09</td>
+<td>76.26</td>
+<td>74.18</td>
+<td>74.37</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>SeH₂→Se+2H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>153.23</td>
+<td>153.06</td>
+<td>150.35</td>
+<td>150.93</td>
+<td>152.1</td>
+<td>152.3</td>
+<td>153.2ʰ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>152.41</td>
+<td>152.84</td>
+<td>152.97</td>
+<td>153.26</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>153.10</td>
+<td>153.01</td>
+<td>152.05</td>
+<td>152.39</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>152.58</td>
+<td>152.81</td>
+<td>152.03</td>
+<td>152.54</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>152.55</td>
+<td>152.76</td>
+<td>151.41</td>
+<td>151.94</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>HBr→Br+H</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>85.46</td>
+<td>85.28</td>
+<td>85.56</td>
+<td>85.93</td>
+<td>85.9</td>
+<td>86.7</td>
+<td>86.5ⁱ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>85.14</td>
+<td>85.13</td>
+<td>86.71</td>
+<td>86.58</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>85.19</td>
+<td>85.28</td>
+<td>86.39</td>
+<td>86.44</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>85.08</td>
+<td>85.15</td>
+<td>86.29</td>
+<td>86.32</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>85.07</td>
+<td>85.12</td>
+<td>86.05</td>
+<td>86.16</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>GeO→Ge+O</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>155.13</td>
+<td>154.99</td>
+<td>154.09</td>
+<td>154.62</td>
+<td>155.7</td>
+<td>156.8</td>
+<td>155.2ʲ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>154.66</td>
+<td>154.34</td>
+<td>156.10</td>
+<td>156.31</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>152.71</td>
+<td>154.52</td>
+<td>156.19</td>
+<td>155.99</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>153.48</td>
+<td>154.09</td>
+<td>155.16</td>
+<td>155.54</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>153.04</td>
+<td>153.66</td>
+<td>153.29</td>
+<td>153.87</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>GeS₂→Ge+2S</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>185.44</td>
+<td>186.11</td>
+<td>187.73</td>
+<td>188.93</td>
+<td>193.9</td>
+<td>193.6</td>
+<td>191.7ʲ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>185.84</td>
+<td>185.61</td>
+<td>194.22</td>
+<td>194.60</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>185.21</td>
+<td>186.80</td>
+<td>195.43</td>
+<td>194.39</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>185.22</td>
+<td>188.74</td>
+<td>194.62</td>
+<td>194.70</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>183.95</td>
+<td>183.95</td>
+<td>191.47</td>
+<td>191.87</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>As₂→2As</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>93.06</td>
+<td>93.24</td>
+<td>85.62</td>
+<td>86.95</td>
+<td>91.2</td>
+<td>91.7</td>
+<td>91.3ᵏ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>92.36</td>
+<td>92.55</td>
+<td>89.87</td>
+<td>90.20</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>92.74</td>
+<td>92.72</td>
+<td>90.34</td>
+<td>90.29</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Property</td>
+<td>92.40</td>
+<td>92.51</td>
+<td>89.92</td>
+<td>89.80</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>92.39</td>
+<td>92.51</td>
+<td>87.90</td>
+<td>88.37</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>BrCl→Br+Cl</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D-T</td>
+<td>48.38</td>
+<td>48.46</td>
+<td>48.90</td>
+<td>49.80</td>
+<td>50.0</td>
+<td>51.2</td>
+<td>51.5ⁱ</td>
+</tr>
+<tr>
+<td>T-Q</td>
+<td>48.17</td>
+<td>48.14</td>
+<td>51.25</td>
+<td>51.44</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q-5</td>
+<td>48.53</td>
+<td>49.03</td>
+<td>52.06</td>
+<td>52.07</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<table><caption>TABLE IV. (Continued.)</caption>
+<tbody><tr><td rowspan="2">KS/CBS limit</td><td colspan="2">B3LYP</td><td colspan="2">CCSD(T)</td><td rowspan="2">G2a</td><td rowspan="2">G3b</td><td rowspan="2">Expt.</td></tr><tr><td>cc-pVnZ</td><td>aug-cc-pVnZ</td><td>cc-pVnZ</td><td>aug-cc-pVnZ</td></tr><tr><td>Property</td><td>48.10</td><td>48.35</td><td>51.28</td><td>51.35</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>47.38</td><td>47.63</td><td>50.04</td><td>50.28</td><td></td><td></td><td></td></tr><tr><td colspan="8">BrF→Br+F</td></tr><tr><td>D-T</td><td>58.92</td><td>58.56</td><td>57.30</td><td>58.23</td><td>59.1</td><td>58.6</td><td>58.9i</td></tr><tr><td>T-Q</td><td>59.20</td><td>58.77</td><td>60.20</td><td>60.00</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>58.44</td><td>58.54</td><td>59.96</td><td>59.66</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>58.50</td><td>58.52</td><td>59.42</td><td>59.68</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>57.85</td><td>57.94</td><td>57.87</td><td>58.19</td><td></td><td></td><td></td></tr><tr><td colspan="8">BrO→Br+O</td></tr><tr><td>D-T</td><td>58.82</td><td>58.53</td><td>53.13</td><td>53.92</td><td>53.6</td><td>55.2</td><td>55.3i</td></tr><tr><td>T-Q</td><td>58.43</td><td>58.20</td><td>54.80</td><td>54.79</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>58.03</td><td>58.05</td><td>55.10</td><td>54.83</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>57.86</td><td>57.94</td><td>54.04</td><td>54.33</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>57.34</td><td>57.52</td><td>53.05</td><td>53.44</td><td></td><td></td><td></td></tr><tr><td colspan="8">BrB→Br+B</td></tr><tr><td>D-T</td><td>97.44</td><td>97.69</td><td>98.32</td><td>98.87</td><td>101.2</td><td>102.8</td><td>103.5j</td></tr><tr><td>T-Q</td><td>97.58</td><td>97.70</td><td>100.40</td><td>100.56</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>97.71</td><td>97.70</td><td>100.50</td><td>100.50</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>97.77</td><td>97.66</td><td>100.63</td><td>100.49</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>97.33</td><td>97.25</td><td>99.72</td><td>99.81</td><td></td><td></td><td></td></tr><tr><td colspan="8">Br₂→2Br</td></tr><tr><td>D-T</td><td>42.86</td><td>43.14</td><td>42.64</td><td>43.64</td><td>43.0</td><td>45.5</td><td>45.4i</td></tr><tr><td>T-Q</td><td>42.54</td><td>42.53</td><td>45.13</td><td>45.30</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>42.60</td><td>42.69</td><td>45.34</td><td>45.40</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>42.40</td><td>42.43</td><td>44.94</td><td>44.93</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>42.37</td><td>42.41</td><td>44.16</td><td>44.43</td><td></td><td></td><td></td></tr><tr><td colspan="8">CH₃Br→Br+C+3H</td></tr><tr><td>D-T</td><td>357.78</td><td>357.34</td><td>356.10</td><td>357.70</td><td>357.5</td><td>357.9</td><td>358.2l</td></tr><tr><td>T-Q</td><td>355.94</td><td>356.00</td><td>357.77</td><td>357.46</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>355.61</td><td>355.84</td><td>357.25</td><td>357.12</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>355.63</td><td>355.68</td><td>356.12</td><td>356.09</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>355.30</td><td>355.33</td><td>355.65</td><td>355.75</td><td></td><td></td><td></td></tr><tr><td colspan="8">GaCl→Ga+Cl</td></tr><tr><td>D-T</td><td>106.59</td><td>106.53</td><td>107.08</td><td>107.39</td><td>110.1</td><td>111.4</td><td>109.9i</td></tr><tr><td>T-Q</td><td>106.29</td><td>107.32</td><td>109.43</td><td>109.57</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>107.31</td><td>107.16</td><td>109.72</td><td>109.73</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>106.73</td><td>107.83</td><td>109.54</td><td>109.93</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>106.02</td><td>106.54</td><td>107.39</td><td>107.73</td><td></td><td></td><td></td></tr><tr><td colspan="8">KrF₂→Kr+2F</td></tr><tr><td>D-T</td><td>27.49</td><td>27.03</td><td>17.54</td><td>20.76</td><td>23.8</td><td>22.5</td><td>21.9i</td></tr><tr><td>T-Q</td><td>28.48</td><td>27.30</td><td>22.19</td><td>21.81</td><td></td><td></td><td></td></tr><tr><td>Q-5</td><td>27.03</td><td>26.73</td><td>22.51</td><td>21.31</td><td></td><td></td><td></td></tr><tr><td>Property</td><td>26.92</td><td>26.83</td><td>21.12</td><td>21.11</td><td></td><td></td><td></td></tr><tr><td>Total</td><td>25.86</td><td>25.93</td><td>19.60</td><td>19.93</td><td></td><td></td><td></td></tr><tr><td colspan="8">NaBr→Na+Br</td></tr><tr><td>D-T</td><td>80.80</td><td>80.71</td><td>84.48</td><td>84.37</td><td>86.4</td><td>88.3</td><td>86.2j</td></tr><tr><td>T-Q</td><td>80.66</td><td>80.64</td><td>87.65</td><td>87.73</td><td></td><td></td><td></td></tr><tr><td>Q-5m</td><td>81.21</td><td></td><td>87.83</td><td></td><td></td><td></td><td></td></tr><tr><td>Propertyn</td><td>80.75</td><td>80.49</td><td>88.02</td><td></td><td></td><td></td><td></td></tr><tr><td>Total</td><td>80.39</td><td>78.68</td><td>86.77</td><td>86.77</td><td></td><td></td><td></td></tr></tbody></table>
+
+aGaussian-2 values are from Ref. 11.
+bGaussian-3 values are from Ref. 15. Note G3 includes core-correlation effects and an expanded valence set, as opposed to this current work which does not.
+cTwo-point extrapolation is from Eq. (1). “D-T” in table refers to the $\text{CBS}_{\text{D-T}}$ extrapolation using results from double zeta and triple zeta basis sets. “T-Q” refers to the $\text{CBS}_{\text{T-Q}}$ extrapolation and “Q-5” refers to the $\text{CBS}_{\text{Q-5}}$ extrapolation.
+dFrom Refs. 47 and 48.
+e$\text{CBS}_{\text{prop}}$ extrapolation is from Eq. (2).
+f$\text{CBS}_{\text{total}}$ extrapolation is from Eq. (3).
+gFrom Ref. 58.
+hFrom Ref. 59.
+iFrom Ref. 60.
+jFrom Ref. 61.
+kFrom Ref. 52.
+lFrom Ref. 62.
+mNo Peterson or Dunning aug-cc-pV5Z basis set is available for Na.
+nDue to the near-linearity of energies from the double through quadruple zeta basis sets, exponential extrapolation could not be performed for CCSD(T)/aug-cc-pVnZ.
+
+<table>
+<caption>TABLE V. Calculated ionization energies in eV with B3LYP and CCSD(T) coupled with cc-pVnZ and aug-cc-pVnZ [where n=D(2), T(3), Q(4), 5].</caption>
+<thead>
+<tr>
+<th rowspan="2"></th>
+<th colspan="2">B3LYP</th>
+<th colspan="2">CCSD(T)</th>
+<th rowspan="2">Expt.</th>
+</tr>
+<tr>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+<th>cc-pVnZ</th>
+<th>aug-cc-pVnZ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ga→Ga⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>6.080</td>
+<td>6.094</td>
+<td>5.822</td>
+<td>5.848</td>
+<td>5.999ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>6.100</td>
+<td>6.106</td>
+<td>5.901</td>
+<td>5.910</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>6.087</td>
+<td>6.063</td>
+<td>5.936</td>
+<td>5.937</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>6.076</td>
+<td>6.076</td>
+<td>5.945</td>
+<td>5.945</td>
+</td>
+</tr>
+<tr>
+<td>Ge→Ge⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>7.871</td>
+<td>7.897</td>
+<td>7.674</td>
+<td>7.722</td>
+<td>7.899ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>7.867</td>
+<td>7.853</td>
+<td>7.798</td>
+<td>7.810</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>7.869</td>
+<td>7.869</td>
+<td>7.822</td>
+<td>7.827</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>7.894</td>
+<td>7.857</td>
+<td>7.832</td>
+<td>7.834</td>
+</td>
+</tr>
+<tr>
+<td>As→As⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.630</td>
+<td>9.671</td>
+<td>9.510</td>
+<td>9.584</td>
+<td>9.788ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.654</td>
+<td>9.655</td>
+<td>9.682</td>
+<td>9.700</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.650</td>
+<td>9.650</td>
+<td>9.719</td>
+<td>9.725</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.653</td>
+<td>9.654</td>
+<td>9.730</td>
+<td>9.733</td>
+</td>
+</tr>
+<tr>
+<td>Se→Se⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.898</td>
+<td>9.942</td>
+<td>9.091</td>
+<td>9.241</td>
+<td>9.752ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.938</td>
+<td>9.943</td>
+<td>9.507</td>
+<td>9.558</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.953</td>
+<td>9.944</td>
+<td>9.648</td>
+<td>9.665</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.947</td>
+<td>9.948</td>
+<td>9.691</td>
+<td>9.699</td>
+</td>
+</tr>
+<tr>
+<td>Br→Br⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>11.888</td>
+<td>11.955</td>
+<td>11.285</td>
+<td>11.437</td>
+<td>11.814ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>11.910</td>
+<td>11.912</td>
+<td>11.566</td>
+<td>11.621</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>11.908</td>
+<td>11.909</td>
+<td>11.723</td>
+<td>11.745</td>
+</tr>
+<tr>
+<td>5</td>
+<td>11.909</td>
+<td>11.910</td>
+<td>11.773</td>
+<td>11.782</td>
+</td>
+</tr>
+<tr>
+<td>Kr→Kr⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>13.953</td>
+<td>14.033</td>
+<td>13.504</td>
+<td>13.699</td>
+<td>13.999ᵃ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>13.948</td>
+<td>13.946</td>
+<td>13.701</td>
+<td>13.752</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>13.939</td>
+<td>13.939</td>
+<td>13.868</td>
+<td>13.893</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>13.937</td>
+<td>13.937</td>
+<td>13.923</td>
+<td>13.934</td>
+</td>
+</tr>
+<tr>
+<td>AsH→AsH⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.530</td>
+<td>9.613</td>
+<td>9.352</td>
+<td>9.419</td>
+<td>9.641ᵇ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.593</td>
+<td>9.593</td>
+<td>9.524</td>
+<td>9.551</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.589</td>
+<td>9.589</td>
+<td>9.567</td>
+<td>9.609</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.593</td>
+<td>9.593</td>
+<td>9.581</td>
+<td>9.617</td>
+</td>
+</tr>
+<tr>
+<td>AsH₂→AsH₂⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.468</td>
+<td>9.504</td>
+<td>9.138</td>
+<td>9.242</td>
+<td>9.443ᵇ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.498</td>
+<td>9.497</td>
+<td>9.320</td>
+<td>9.322</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.495</td>
+<td>9.495</td>
+<td>9.369</td>
+<td>9.372</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.498</td>
+<td>9.499</td>
+<td>9.385</td>
+<td>9.379</td>
+</td>
+</tr>
+<tr>
+<td>SeH→SeH⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.881</td>
+<td>9.952</td>
+<td>9.316</td>
+<td>9.469</td>
+<td>9.845ᶜ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.951</td>
+<td>9.958</td>
+<td>9.688</td>
+<td>9.724</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.956</td>
+<td>9.959</td>
+<td>9.812</td>
+<td>9.812</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.962</td>
+<td>9.963</td>
+<td>9.851</td>
+<td>9.839</td>
+</td>
+</tr>
+<tr>
+<td>SeH₂→SeH₂⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>9.775</td>
+<td>9.855</td>
+<td>9.361</td>
+<td>9.576</td>
+<td>9.886ᶜ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>9.851</td>
+<td>9.858</td>
+<td>9.736</td>
+<td>9.801</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>9.855</td>
+<td>9.859</td>
+<td>9.804</td>
+<td>9.840</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>9.861</td>
+<td>9.862</td>
+<td>9.838</td>
+<td>9.861</td>
+</td>
+</tr>
+<tr>
+<td>HBr→HBr⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>11.544</td>
+<td>11.647</td>
+<td>11.159</td>
+<td>11.354</td>
+<td>11.660ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>11.597</td>
+<td>11.603</td>
+<td>11.424</td>
+<td>11.487</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>11.598</td>
+<td>11.601</td>
+<td>11.563</td>
+<td>11.588</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>11.600</td>
+<td>11.602</td>
+<td>11.607</td>
+<td>11.618</td>
+</td>
+</tr>
+<tr>
+<td>BrF→BrF⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>11.636</td>
+<td>11.788</td>
+<td>11.363</td>
+<td>11.564</td>
+<td>11.780ᵈ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>11.616</td>
+<td>11.675</td>
+<td>11.497</td>
+<td>11.614</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>11.637</td>
+<td>11.662</td>
+<td>11.655</td>
+<td>11.702</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>11.655</td>
+<td>11.660</td>
+<td>11.713</td>
+<td>11.730</td>
+</td>
+</tr>
+<tr>
+<td>HOBr→HOBr⁺</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D</td>
+<td>10.435</td>
+<td>10.620</td>
+<td>10.300</td>
+<td>10.559</td>
+<td>10.638ᶜ</td>
+</tr>
+<tr>
+<td>T</td>
+<td>10.480</td>
+<td>10.542</td>
+<td>10.475</td>
+<td>10.559</td>
+</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>10.508</td>
+<td>10.534</td>
+<td>10.607</td>
+<td>10.642</td>
+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>10.528</td>
+<td>10.534</td>
+<td>10.661</td>
+<td>10.667</td>
+</td>
+</tr>
+</tbody>
+</table>
+
+<table>
+ <thead>
+  <tr>
+   <th>
+    TABLE V. (Continued.)
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr>
+   <td>
+   </td>
+   <td colspan="2">
+    B3LYP
+   </td>
+   <td colspan="2">
+    CCSD(T)
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+   </td>
+   <td>
+    cc-pVnZ
+   </td>
+   <td>
+    aug-cc-pVnZ
+   </td>
+   <td>
+    cc-pVnZ
+   </td>
+   <td>
+    aug-cc-pVnZ
+   </td>
+   <td>
+    Expt.
+   </td>
+  </tr>
+  <tr>
+   <td>
+    Br₂→Br₂⁺
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    D
+   </td>
+   <td>
+    10.378
+   </td>
+   <td>
+    10.437
+   </td>
+   <td>
+    10.199
+   </td>
+   <td>
+    10.341
+   </td>
+   <td>
+    10.520d
+   </td>
+  </tr>
+  <tr>
+   <td>
+    T
+   </td>
+   <td>
+    10.341
+   </td>
+   <td>
+    10.340
+   </td>
+   <td>
+    10.329
+   </td>
+   <td>
+    10.388
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    Q
+   </td>
+   <td>
+    10.328
+   </td>
+   <td>
+    10.330
+   </td>
+   <td>
+    10.459
+   </td>
+   <td>
+    10.485
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    5
+   </td>
+   <td>
+    10.330
+   </td>
+   <td>
+    10.331
+   </td>
+   <td>
+    10.502
+   </td>
+   <td>
+    10.514
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    NaBr→NaBr⁺
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    D
+   </td>
+   <td>
+    8.465
+   </td>
+   <td>
+    8.509
+   </td>
+   <td>
+    7.908
+   </td>
+   <td>
+    8.143
+   </td>
+   <td>
+    8.310d
+   </td>
+  </tr>
+  <tr>
+   <td>
+    T
+   </td>
+   <td>
+    8.541
+   </td>
+   <td>
+    8.552
+   </td>
+   <td>
+    8.199
+   </td>
+   <td>
+    8.267
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    Q
+   </td>
+   <td>
+    8.557
+   </td>
+   <td>
+    8.560
+   </td>
+   <td>
+    8.353
+   </td>
+   <td>
+    8.383
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td>
+    5f
+   </td>
+   <td>
+    8.569
+   </td>
+   <td>
+   </td>
+   <td>
+    8.411
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <td colspan="6">
+    aFrom Ref. 37. eFrom Ref. 63.
+   </td>
+  </tr>
+  <tr>
+   <td colspan="6">
+    bFrom Ref. 58. fNo Peterson or Dunning aug-cc-pV5Z basis set is
+   </td>
+  </tr>
+  <tr>
+   <td colspan="6">
+    cFrom Ref. 59. available for Na.
+   </td>
+  </tr>
+  <tr>
+   <td colspan="6">
+    dFrom Ref. 52.
+   </td>
+  </tr>
+ </tbody>
+</table>
+
+$\text{CBS}_{\text{prop}}$ and $\text{CBS}_{\text{total}}$—are provided in Table IV. Table IV also includes G2 and G3 energies obtained from earlier work, which are provided for comparison with the current results. It must be noted that the reported G2 results included spin–orbit corrections for third-row atoms only while the reported G3 results used spin–orbit corrections for all atoms. The present results include corrections for spin–orbit coupling only for second- and third-row atoms.
+
+The $\text{CBS}_{\text{T-Q}}$ two-point extrapolation with the standard correlation consistent basis sets performed the best as compared with the other extrapolation schemes. However, for both the standard and the augmented correlation consistent basis set families, using this $\text{CBS}_{\text{T-Q}}$ extrapolation scheme results in three molecules having atomization energies that differ by more than 2.0 kcal/mol from experiment. These systems are $\text{GeH}_{4}$, $\text{GeS}_{2}$, and BBr for the $\text{CBS}_{\text{T-Q}}$, and their atomization energies also differ by approximately 2.0 kcal/mol or greater as determined by G2. In comparing the exponential extrapolations for the 19 atomization energies, there are eight cases where the $\text{CBS}_{\text{prop}}$ differs from the $\text{CBS}_{\text{total}}$ by more than 1.0 kcal/mol for both the cc-$pVnZ$ and aug-cc-$pVnZ$ series. In every case, the $\text{CBS}_{\text{prop}}$ value is greater than the $\text{CBS}_{\text{total}}$ value. The greatest difference in these two extrapolations is from $\text{GeS}_{2}$, in which they differ by 3.15 kcal/mol. For this case, the $\text{CBS}_{\text{total}}$ is much closer to experiment. The maximum deviation for the cc-$pVnZ$ exponential $\text{CBS}_{\text{prop}}$ limit is 2.92 kcal/mol from $\text{GeS}_{2}$, while the maximum deviation for the aug-cc-$pVnZ$ exponential $\text{CBS}_{\text{prop}}$ limit is 3.68 kcal/mol for $\text{GeH}_{4}$. As noted by Curtiss et al.,11 the large deviation between the theoretically and experimentally based atomization energy for $\text{GeH}_{4}$, suggests that further experimental measurements of the enthalpy of formation for this species are needed, particularly as there has only been one such experiment to date.47,48 However, as shown in Table IV, CCSD(T)/cc-$pVnZ$ and the $\text{CBS}_{\text{total}}$ extrapolation is only 1.59 kcal/mol over the experimental value of 270.5 kcal/mol—just slightly outside of the experimental error bar of $\pm$0.9 kcal/mol. The atomization energy derived from experiment for BBr (103.5 kcal/mol) likely contains significant error, as discussed in earlier work.49
+
+In Table IV for B3LYP, there are several molecules that have errors of approximately 4.0 kcal/mol or larger, for both families of correlation consistent basis sets using the $\text{KS}_{\text{Q-5}}$ extrapolations. These molecules include $\text{AsH}_{2}$, $\text{AsH}_{3}$, $\text{GeS}_{2}$, BBr, $\text{KrF}_{2}$, and NaBr for standard sets and $\text{AsH}_{2}$, $\text{AsH}_{3}$, $\text{GeS}_{2}$, BBr, and $\text{KrF}_{2}$ for the augmented sets. The largest deviation in atomization energy for $\text{KS}_{\text{Q-5}}$ is for $\text{GeS}_{2}$ (6.49 kcal/mol), obtained using the standard correlation consistent basis sets. The B3LYP/aug-cc-$pVnZ$ results in only four molecules with atomization energies within chemical accuracy ($\sim$1 kcal/mol). In comparison to Table IV, the G2(B3LYP) (Ref. 13) method has no atomization energies within chemical accuracy and there are eight molecules which have energy deviations greater than 3.0 kcal/mol from experiment.
+
+### C. Ionization energy
+
+Both CCSD(T) and B3LYP ionization energies can be found in Table V. Overall, CCSD(T) performs well for ionization energies, with the largest difference between results at the quintuple zeta level and experiment of 0.05–0.07 eV. Almost all of the energies converge toward the experimental value from below. For B3LYP, the errors are greater, and are on the order of 0.1–0.2 eV at the quintuple zeta level. Overall, the convergence in ionization energy for B3LYP, with respect to increasing basis set level, is not smooth. However, all of the fluctuations in convergence behavior are slight ($\sim$0.01–0.02 eV, at most), and convergence to a limit is nearly reached for B3LYP results at the triple zeta level.
+
+The KS and CBS limits for ionization energies can be found in Table VI, as well as comparisons to the G2 and G3 results from earlier work.11,15 For the CCSD(T) ionization energy extrapolations, $\text{CBS}_{\text{prop}}$ and $\text{CBS}_{\text{total}}$ differ from experiment for only five cases by more than 0.04 eV ($\sim$1.0 kcal/mol.) In contrast to extrapolation schemes for atomization energies, $\text{CBS}_{\text{prop}}$ and $\text{CBS}_{\text{total}}$ extrapolation schemes result in very similar ionization energy CBS limits. Even the $\text{CBS}_{\text{T-Q}}$ two-point extrapolation does fairly well, with only one molecule, $\text{NaBr}^{+}$, that has an error greater than 0.07 eV. In comparing the G2 method, which has eight of fifteen ionization energy errors above 0.08 eV, CCSD(T)
+
+<table><thead><tr><td rowspan="2"><b>KS/CBS limit</b></td><td colspan="2"><b>B3LYP</b></td><td colspan="2"><b>CCSD(T)</b></td><td rowspan="2"><b>G2ª</b></td><td rowspan="2"><b>G3b</b></td><td rowspan="2"><b>Expt.</b></td></tr><tr><td><b>cc-pVnZ</b></td><td><b>aug-cc-pVnZ</b></td><td><b>cc-pVnZ</b></td><td><b>aug-cc-pVnZ</b></td></tr></thead><tbody><tr><td><b>$Ga→Ga^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>$D-T^{c}$</b></td><td><b>6.108</b></td><td><b>6.111</b></td><td><b>5.934</b></td><td><b>5.936</b></td><td><b>5.93</b></td><td><b>6.00</b></td><td><b>$5.999^{d}$</b></td></tr><tr><td><b>$T-Q^{c}$</b></td><td><b>6.078</b></td><td><b>6.031</b></td><td><b>5.961</b></td><td><b>5.956</b></td><td></td><td></td><td></td></tr><tr><td><b>$Q-5^{c}$</b></td><td><b>6.063</b></td><td><b>6.090</b></td><td><b>5.954</b></td><td><b>5.953</b></td><td></td><td></td><td></td></tr><tr><td><b>Propertye,f</b></td><td><b>5.879</b></td><td><b>…</b></td><td><b>5.954</b></td><td><b>5.952</b></td><td></td><td></td><td></td></tr><tr><td><b>Totalg</b></td><td><b>6.078</b></td><td><b>6.065</b></td><td><b>5.943</b></td><td><b>5.942</b></td><td></td><td></td><td></td></tr><tr><td><b>$Ge→Ge^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>7.866</b></td><td><b>7.835</b></td><td><b>7.850</b></td><td><b>7.847</b></td><td><b>7.80</b></td><td><b>7.90</b></td><td><b>$7.899^{d}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>7.871</b></td><td><b>7.881</b></td><td><b>7.840</b></td><td><b>7.839</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>7.920</b></td><td><b>7.844</b></td><td><b>7.841</b></td><td><b>7.841</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>…</b></td><td><b>…</b></td><td><b>7.832</b></td><td><b>7.834</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>7.884</b></td><td><b>7.864</b></td><td><b>7.829</b></td><td><b>7.831</b></td><td></td><td></td><td></td></tr><tr><td><b>$As→As^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.664</b></td><td><b>9.648</b></td><td><b>9.755</b></td><td><b>9.749</b></td><td><b>9.70</b></td><td><b>9.81</b></td><td><b>$9.788^{d}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.646</b></td><td><b>9.646</b></td><td><b>9.745</b></td><td><b>9.742</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.657</b></td><td><b>9.658</b></td><td><b>9.742</b></td><td><b>9.741</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.657</b></td><td><b>9.652</b></td><td><b>9.732</b></td><td><b>9.734</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.651</b></td><td><b>9.652</b></td><td><b>9.728</b></td><td><b>9.728</b></td><td></td><td></td><td></td></tr><tr><td><b>$Se→Se^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.955</b></td><td><b>9.944</b></td><td><b>9.682</b></td><td><b>9.691</b></td><td><b>9.64</b></td><td><b>9.71</b></td><td><b>$9.752^{d}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.963</b></td><td><b>9.944</b></td><td><b>9.751</b></td><td><b>9.744</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.941</b></td><td><b>9.952</b></td><td><b>9.737</b></td><td><b>9.734</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.951</b></td><td><b>…</b></td><td><b>9.693</b></td><td><b>9.718</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.951</b></td><td><b>9.946</b></td><td><b>9.690</b></td><td><b>9.697</b></td><td></td><td></td><td></td></tr><tr><td><b>$Br→Br^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>11.919</b></td><td><b>11.894</b></td><td><b>11.684</b></td><td><b>11.699</b></td><td><b>11.72</b></td><td><b>11.79</b></td><td><b>$11.814^{d}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>11.907</b></td><td><b>11.907</b></td><td><b>11.839</b></td><td><b>11.835</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>11.910</b></td><td><b>11.910</b></td><td><b>11.824</b></td><td><b>11.822</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>11.910</b></td><td><b>11.909</b></td><td><b>11.840</b></td><td><b>11.852</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>11.909</b></td><td><b>11.909</b></td><td><b>11.782</b></td><td><b>11.789</b></td><td></td><td></td><td></td></tr><tr><td><b>$Kr→Kr^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>13.946</b></td><td><b>13.909</b></td><td><b>13.784</b></td><td><b>13.774</b></td><td><b>13.86</b></td><td><b>13.94</b></td><td><b>$13.999^{d}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>13.933</b></td><td><b>13.934</b></td><td><b>13.990</b></td><td><b>13.995</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>13.935</b></td><td><b>13.935</b></td><td><b>13.981</b></td><td><b>13.978</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>13.936</b></td><td><b>13.938</b></td><td><b>13.988</b></td><td><b>14.112</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>13.937</b></td><td><b>13.938</b></td><td><b>13.944</b></td><td><b>13.954</b></td><td></td><td></td><td></td></tr><tr><td><b>$AsH→AsH^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.619</b></td><td><b>9.585</b></td><td><b>9.596</b></td><td><b>9.606</b></td><td><b>9.54</b></td><td><b>9.68</b></td><td><b>$9.641^{h}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.586</b></td><td><b>9.586</b></td><td><b>9.598</b></td><td><b>9.651</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.597</b></td><td><b>9.598</b></td><td><b>9.595</b></td><td><b>9.625</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.594</b></td><td><b>9.591</b></td><td><b>9.584</b></td><td><b>9.630</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.590</b></td><td><b>9.592</b></td><td><b>9.580</b></td><td><b>9.619</b></td><td></td><td></td><td></td></tr><tr><td><b>$AsH_{2}→AsH_{2}^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.511</b></td><td><b>9.494</b></td><td><b>9.397</b></td><td><b>9.355</b></td><td><b>9.34</b></td><td><b>9.48</b></td><td><b>$9.443^{h}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.492</b></td><td><b>9.493</b></td><td><b>9.405</b></td><td><b>9.408</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.502</b></td><td><b>9.503</b></td><td><b>9.401</b></td><td><b>9.387</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.501</b></td><td><b>9.494</b></td><td><b>9.390</b></td><td><b>9.398</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.496</b></td><td><b>9.497</b></td><td><b>9.384</b></td><td><b>9.382</b></td><td></td><td></td><td></td></tr><tr><td><b>$SeH→SeH^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.980</b></td><td><b>9.960</b></td><td><b>9.845</b></td><td><b>9.831</b></td><td><b>9.80</b></td><td><b>9.84</b></td><td><b>$9.845^{i}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.959</b></td><td><b>9.959</b></td><td><b>9.902</b></td><td><b>9.876</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.968</b></td><td><b>9.967</b></td><td><b>9.893</b></td><td><b>9.868</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.960</b></td><td><b>9.959</b></td><td><b>9.869</b></td><td><b>9.852</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.959</b></td><td><b>9.959</b></td><td><b>9.853</b></td><td><b>9.840</b></td><td></td><td></td><td></td></tr><tr><td><b>$SeH_{2}→SeH_{2}^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>9.883</b></td><td><b>9.859</b></td><td><b>9.894</b></td><td><b>9.896</b></td><td><b>9.85</b></td><td><b>9.90</b></td><td><b>$9.886^{i}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>9.858</b></td><td><b>9.859</b></td><td><b>9.854</b></td><td><b>9.868</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>9.866</b></td><td><b>9.866</b></td><td><b>9.874</b></td><td><b>9.884</b></td><td></td><td></td><td></td></tr><tr><td><b>Property</b></td><td><b>9.859</b></td><td><b>9.859</b></td><td><b>9.836</b></td><td><b>9.859</b></td><td></td><td></td><td></td></tr><tr><td><b>Total</b></td><td><b>9.858</b></td><td><b>9.861</b></td><td><b>9.835</b></td><td><b>9.858</b></td><td></td><td></td><td></td></tr><tr><td><b>$HBr→HBr^{+}$</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td><b>D-T</b></td><td><b>11.619</b></td><td><b>11.584</b></td><td><b>11.536</b></td><td><b>11.543</b></td><td><b>11.58</b></td><td><b>11.63</b></td><td><b>$11.660^{j}$</b></td></tr><tr><td><b>T-Q</b></td><td><b>11.598</b></td><td><b>11.599</b></td><td><b>11.664</b></td><td><b>11.661</b></td><td></td><td></td><td></td></tr><tr><td><b>Q-5</b></td><td><b>11.603</b></td><td><b>11.603</b></td><td><b>11.652</b></td><td><b>11.649</b></td><td></td><td></td><td></td></tr></tbody></table>
+
+TABLE VI. Extrapolated KS and CBS limits for ionization energies in eV determined using B3LYP and CCSD(T) in combination with cc-pVnZ and aug-cc-pVnZ [where $n=$D(2), T(3), Q(4), 5].
+
+<table>
+<caption>TABLE VI. (Continued.)</caption>
+<tbody>
+<tr>
+<td rowspan="2">KS/CBS limit</td>
+<td colspan="2">B3LYP</td>
+<td colspan="2">CCSD(T)</td>
+<td rowspan="2">G2a</td>
+<td rowspan="2">G3b</td>
+<td rowspan="2">Expt.</td>
+</tr>
+<tr>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+<td>cc-pVnZ</td>
+<td>aug-cc-pVnZ</td>
+</tr>
+<tr>
+<td>Property</td>
+<td>11.599</td>
+<td>11.601</td>
+<td>11.660</td>
+<td>11.686</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>11.647</td>
+<td>11.601</td>
+<td>11.617</td>
+<td>11.625</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>BrF→BrF+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D−T</td>
+<td>11.608</td>
+<td>11.627</td>
+<td>11.553</td>
+<td>11.634</td>
+<td>11.71</td>
+<td>11.75</td>
+<td>11.780j</td>
+</tr>
+<tr>
+<td>T−Q</td>
+<td>11.652</td>
+<td>11.653</td>
+<td>11.771</td>
+<td>11.767</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q−5</td>
+<td>11.675</td>
+<td>11.659</td>
+<td>11.773</td>
+<td>11.759</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Propertyk</td>
+<td>11.794</td>
+<td>11.660</td>
+<td>11.745</td>
+<td>11.742</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>11.654</td>
+<td>11.660</td>
+<td>11.750</td>
+<td>11.751</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>HOBr→HOBr+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D−T</td>
+<td>10.499</td>
+<td>10.509</td>
+<td>10.549</td>
+<td>10.559</td>
+<td>10.65</td>
+<td>10.66</td>
+<td>10.638l</td>
+</tr>
+<tr>
+<td>T−Q</td>
+<td>10.528</td>
+<td>10.529</td>
+<td>10.703</td>
+<td>10.703</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q−5</td>
+<td>10.549</td>
+<td>10.533</td>
+<td>10.718</td>
+<td>10.693</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Propertyk</td>
+<td>10.562</td>
+<td>10.534</td>
+<td>10.699</td>
+<td>10.678</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>10.525</td>
+<td>10.534</td>
+<td>10.685</td>
+<td>10.686</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Br2→Br2+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D−T</td>
+<td>10.326</td>
+<td>10.299</td>
+<td>10.385</td>
+<td>10.408</td>
+<td>10.49</td>
+<td>10.53</td>
+<td>10.520j</td>
+</tr>
+<tr>
+<td>T−Q</td>
+<td>10.318</td>
+<td>10.322</td>
+<td>10.553</td>
+<td>10.555</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q−5</td>
+<td>10.333</td>
+<td>10.331</td>
+<td>10.548</td>
+<td>10.544</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Propertyk</td>
+<td>10.327</td>
+<td>10.330</td>
+<td>10.524</td>
+<td>10.526</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>10.328</td>
+<td>10.330</td>
+<td>10.516</td>
+<td>10.524</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>NaBr→NaBr+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D−T</td>
+<td>8.573</td>
+<td>8.571</td>
+<td>8.322</td>
+<td>8.319</td>
+<td>8.41</td>
+<td>8.52</td>
+<td>8.310j</td>
+</tr>
+<tr>
+<td>T−Q</td>
+<td>8.569</td>
+<td>8.566</td>
+<td>8.465</td>
+<td>8.467</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Q−5m</td>
+<td>8.581</td>
+<td></td>
+<td>8.471</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Propertyn</td>
+<td>8.569</td>
+<td>8.562</td>
+<td>8.477</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Total</td>
+<td>8.566</td>
+<td>8.561</td>
+<td>8.424</td>
+<td>8.424</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+aGaussian-2 values are from Ref. 11.
+bGaussian-3 values are from Ref. 15. Note G3 includes core-correlation effects and an expanded valence set, as opposed to this current work which does not.
+cTwo-point extrapolation is from Eq. (1). “D−T” in table refers to the CBSD−T extrapolation using results from double zeta and triple zeta basis sets. “T−Q” refers to the CBST−Q extrapolation and “Q−5” refers to the CBSQ−5 extrapolation.
+dFrom Ref. 37.
+eCBSprop extrapolation is from Eq. (2).
+fNot all B3LYP energies converge systematically as discussed in Ref. 46.
+gCBStotal extrapolation is from Eq. (3).
+hFrom Ref. 58.
+iFrom Ref. 59.
+jFrom Ref. 52.
+kFor aug-cc-pVnZ, only TZ, QZ, and 5Z were used in the extrapolation.
+lFrom Ref. 63.
+mNo Peterson or Dunning aug-cc-pV5Z basis set is available for Na.
+nDue to the near-linearity of energies from the double through quadruple zeta basis sets, exponential extrapolation could not be performed for CCSD(T)/aug-cc-pVnZ.
+
+with the correlation consistent sets performs better for calculating ionization energies when using an extrapolation scheme of triple zeta quality or better. There is also a slight improvement in energy as compared with experiment when using the augmented sets as compared to the standard correlation consistent sets.
+
+For B3LYP, all but six molecules have KS limits greater than 0.08 eV as shown in Table V, and only two molecules, $Ge^{+}$ and $SeH_{2}^{+}$ , are within 0.04 eV of experiment. Approximately half of the systems have ionization energies that are larger than those from experiment values, as shown for Ga, Se, Br, $AsH_{2}$ , SeH, and NaBr.
+
+### D. Electron and proton affinity
+
+The G2 third-row test suite includes only four electron affinities and two proton affinities. The electron affinities are provided in Table VII. The overall results for B3LYP are surprisingly comparable to CCSD(T), as the errors for the aug-cc-pV5Z range from 0.008 to 0.07 eV for B3LYP, and from 0.004 to 0.08 eV for CCSD(T). For B3LYP with the cc-pVnZ series, the energies converge toward a maximum as the basis set level is increased, while the opposite is true for the augmented sets, with the exception of bromine. In each case, except for the $BrO^{-}$ electron affinity calculated with the aug-cc-pVnZ series, the B3LYP values converge toward the experimental values. For CCSD(T), calculated electron affinities smoothly converge toward a maximum value as the basis set size increases, when using either family of basis sets.
+
+Proton affinities are also given in Table VII. Nearly all of the results are within 0.04 eV of experiment. In contrast to the observed electron affinity trends, the proton affinity of
+
+<table>
+ <thead>
+  <tr>
+   <th>
+   </th>
+   <th colspan="2">
+    B3LYP
+   </th>
+   <th colspan="2">
+    CCSD(T)
+   </th>
+   <th>
+   </th>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+   <th>
+    Expt.
+   </th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr>
+   <th>
+    Ge⁻→Ge
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    0.691
+   </td>
+   <td>
+    1.211
+   </td>
+   <td>
+    0.615
+   </td>
+   <td>
+    1.145
+   </td>
+   <td>
+    1.233a
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    0.956
+   </td>
+   <td>
+    1.228
+   </td>
+   <td>
+    0.996
+   </td>
+   <td>
+    1.237
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    1.109
+   </td>
+   <td>
+    1.226
+   </td>
+   <td>
+    1.159
+   </td>
+   <td>
+    1.252
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    1.120
+   </td>
+   <td>
+    1.241
+   </td>
+   <td>
+    1.197
+   </td>
+   <td>
+    1.257
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Br⁻→Br
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    2.725
+   </td>
+   <td>
+    3.451
+   </td>
+   <td>
+    2.042
+   </td>
+   <td>
+    3.155
+   </td>
+   <td>
+    3.364a
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    3.217
+   </td>
+   <td>
+    3.406
+   </td>
+   <td>
+    2.858
+   </td>
+   <td>
+    3.230
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    3.329
+   </td>
+   <td>
+    3.401
+   </td>
+   <td>
+    3.203
+   </td>
+   <td>
+    3.338
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    3.352
+   </td>
+   <td>
+    3.401
+   </td>
+   <td>
+    3.296
+   </td>
+   <td>
+    3.368
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    SeH⁻→SeH
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    1.537
+   </td>
+   <td>
+    2.248
+   </td>
+   <td>
+    1.130
+   </td>
+   <td>
+    2.005
+   </td>
+   <td>
+    2.213b
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    2.016
+   </td>
+   <td>
+    2.233
+   </td>
+   <td>
+    1.826
+   </td>
+   <td>
+    2.151
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    2.131
+   </td>
+   <td>
+    2.231
+   </td>
+   <td>
+    2.079
+   </td>
+   <td>
+    2.178
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    2.166
+   </td>
+   <td>
+    2.232
+   </td>
+   <td>
+    2.153
+   </td>
+   <td>
+    2.198
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    BrO⁻→BrO
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    1.302
+   </td>
+   <td>
+    2.356
+   </td>
+   <td>
+    1.053
+   </td>
+   <td>
+    2.254
+   </td>
+   <td>
+    2.360c
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    1.831
+   </td>
+   <td>
+    2.306
+   </td>
+   <td>
+    1.743
+   </td>
+   <td>
+    2.342
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    2.049
+   </td>
+   <td>
+    2.296
+   </td>
+   <td>
+    2.135
+   </td>
+   <td>
+    2.418
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    2.195
+   </td>
+   <td>
+    2.294
+   </td>
+   <td>
+    2.326
+   </td>
+   <td>
+    2.440
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    H⁺+Br⁻→HBr
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    14.532
+   </td>
+   <td>
+    13.856
+   </td>
+   <td>
+    14.716
+   </td>
+   <td>
+    13.977
+   </td>
+   <td>
+    14.000b
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    14.127
+   </td>
+   <td>
+    13.946
+   </td>
+   <td>
+    14.273
+   </td>
+   <td>
+    14.043
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    14.028
+   </td>
+   <td>
+    13.959
+   </td>
+   <td>
+    14.071
+   </td>
+   <td>
+    13.986
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    14.010
+   </td>
+   <td>
+    13.964
+   </td>
+   <td>
+    14.017
+   </td>
+   <td>
+    13.972
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    H⁺+CH₃Br→CH₄Br⁺
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D
+   </th>
+   <td>
+    6.816
+   </td>
+   <td>
+    6.757
+   </td>
+   <td>
+    6.951
+   </td>
+   <td>
+    6.847
+   </td>
+   <td>
+    6.820d
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T
+   </th>
+   <td>
+    6.829
+   </td>
+   <td>
+    6.831
+   </td>
+   <td>
+    6.901
+   </td>
+   <td>
+    6.880
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q
+   </th>
+   <td>
+    6.839
+   </td>
+   <td>
+    6.839
+   </td>
+   <td>
+    6.846
+   </td>
+   <td>
+    6.840
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    5
+   </th>
+   <td>
+    6.842
+   </td>
+   <td>
+    6.842
+   </td>
+   <td>
+    6.825
+   </td>
+   <td>
+    6.827
+   </td>
+   <td>
+   </td>
+  </tr>
+ </tbody>
+</table>
+
+TABLE VII. Calculated electron and proton affinities in eV with B3LYP and CCSD(T) coupled with cc-pVnZ and aug-cc-pVnZ [where $n$=D(2), T(3), Q(4), 5].
+
+aFrom Ref. 37.
+cFrom Ref. 55.
+bFrom Ref. 64.
+dFrom Ref. 65.
+
+HBr determined using the cc-pVnZ series, converges towards a minimum, while the augmented sets converge towards a maximum. However, the limited number of molecules (two) makes it impossible to identify general trends for the behavior of proton affinities with respect to increasing basis set size.
+
+The KS and CBS limits for electron and proton affinities, as well as the corresponding G2 and G3 energies are given in Table VIII. For electron affinities, the CBS/KS$_{\text{prop}}$ extrapolations in combination with the standard basis set series provides results that are closer to experiment than those given by the CBS/KS$_{\text{total}}$ extrapolations. The only exception to this is for BrO when CCSD(T)/cc-pVnZ is used, in which case the CBS$_{\text{total}}$ result is nearer to experiment. Of the three two-point extrapolation schemes, overall, CBS$_{\text{Q-5}}$ provides energies nearest experiment. For the augmented sets, there is not a clear choice as to which extrapolation scheme works better for these four molecules. Both the CBS$_{\text{prop}}$ and the CBS$_{\text{total}}$ extrapolation schemes provide similar electron affinities when B3LYP or CCSD(T) are used.
+
+The two proton affinities determined with the cc-pVnZ basis set series and the CBS/KS$_{\text{total}}$ extrapolation scheme are nearer to experiment than those determined using the CBS/KS$_{\text{prop}}$ extrapolation scheme, while both extrapolation schemes based upon the aug-cc-pVnZ basis set series result in nearly identical energies. For example, B3LYP coupled with aug-cc-pVnZ gives the same energy for CBS$_{\text{prop}}$ and CBS$_{\text{total}}$, and in CCSD(T) the difference in the two schemes is 0.005 eV for HBr and 0.002 eV for CH₄Br⁺.
+
+## E. Energy summary
+
+In Table IX, the mean absolute deviation from experiment for atomization energies, ionization energies, and electron affinities are summarized for CCSD(T) and B3LYP for each type of CBS and KS fit used. Data for both series of basis sets is provided. For B3LYP, the current results do not point to one obvious best extrapolation scheme to use for all energies. Overall, the two-point KS$_{\text{Q-5}}$ extrapolation for B3LYP with quadruple and quintuple zeta basis sets was consistently nearer to experiment than the other schemes. In general, augmented correlation consistent basis sets provided extrapolated results nearer to experiment than those given by the standard basis sets when B3LYP is used. However, this is not the case for CCSD(T), as the deviation for atomization energy is actually smaller for the standard sets (CBS$_{\text{T-Q}}$ =1.04 and CBS$_{\text{prop}}$=1.15 kcal/mol, respectively) than for the augmented basis sets (CBS$_{\text{T-Q}}$=1.18 and CBS$_{\text{prop}}$ =1.24 kcal/mol, respectively).
+
+Nevertheless, for both the ionization energy and electron affinity calculations, there is significant improvement using the augmented sets with each of the extrapolations schemes over using the standard basis sets. However, for the electron affinities, the data set is too small to provide conclusive statements. Proton affinities have not been included in the summary of energies tables since there are only two in the test set.
+
+In comparison to the previous G2 results, the smallest mean absolute deviations are for CCSD(T) extrapolated ionization energies, in cases where the extrapolation scheme included at least two basis sets of triple zeta or higher quality, whereas the G2 deviation is nearly double this difference. The overall G3 mean absolute deviation from experiment for all of the energies (0.94 kcal/mol) is much nearer to that seen for the CCSD(T) extrapolated results (e.g., CBS$_{\text{Q-5}}$/aug-cc-pVnZ=0.87 kcal/mol).
+
+In comparing the current calculations to G3, it must be noted that in all of the G3 calculations involving the 6-31G($d$) basis set50 for third-row atoms, the $3d$ orbitals are included as part of the valence set, while our work using the correlation consistent basis sets does not contain the $3d$ orbitals in the valence space. Additionally, G3 theory adds the effect of core-correlation via a MP2(full) calculation in combination with the G3Large8 basis set. In the current work, core-correlation effects and an expanded valence space have not been included in the calculations, and as a result, the G3 results appear comparable to the CCSD(T) results we report.
+
+## IV. CONCLUSIONS
+
+This study included 40 energy calculations (19 atomization energies, 15 ionization energies, 4 electron affinities, and 2 proton affinities), 2 electron correlation methods, 8 basis sets, and 5 different extrapolation schemes for molecules
+
+<table>
+ <thead>
+  <tr>
+   <th>
+    TABLE VIII. Extrapolated KS and CBS limits for electron and proton affinities in eV determined using B3LYP and CCSD(T) in combination with cc-pVnZ and aug-cc-pVnZ [where $n = {D(2),\ T(3),\ Q(4),\ 5}$].
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+  </tr>
+  <tr>
+   <th rowspan="2">
+    KS/CBS limit
+   </th>
+   <th colspan="2">
+    B3LYP
+   </th>
+   <th colspan="2">
+    CCSD(T)
+   </th>
+   <th rowspan="2">
+    G2a
+   </th>
+   <th rowspan="2">
+    G3b
+   </th>
+   <th rowspan="2">
+    Expt.
+   </th>
+  </tr>
+  <tr>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr>
+   <th>
+    ${Ge}\rightarrow{Ge}^{-}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–Tc
+   </th>
+   <td>
+    1.067
+   </td>
+   <td>
+    1.236
+   </td>
+   <td>
+    1.156
+   </td>
+   <td>
+    1.276
+   </td>
+   <td>
+    1.22
+   </td>
+   <td>
+    1.25
+   </td>
+   <td>
+    1.233d
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Qc
+   </th>
+   <td>
+    1.221
+   </td>
+   <td>
+    1.225
+   </td>
+   <td>
+    1.278
+   </td>
+   <td>
+    1.263
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5c
+   </th>
+   <td>
+    1.132
+   </td>
+   <td>
+    1.257
+   </td>
+   <td>
+    1.236
+   </td>
+   <td>
+    1.261
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Propertye
+   </th>
+   <td>
+    1.168
+   </td>
+   <td>
+    1.246
+   </td>
+   <td>
+    1.237
+   </td>
+   <td>
+    1.257
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Totalf
+   </th>
+   <td>
+    1.136
+   </td>
+   <td>
+    1.235
+   </td>
+   <td>
+    1.199
+   </td>
+   <td>
+    1.256
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    ${Br}\rightarrow{Br}^{-}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–T
+   </th>
+   <td>
+    3.424
+   </td>
+   <td>
+    3.388
+   </td>
+   <td>
+    3.201
+   </td>
+   <td>
+    3.262
+   </td>
+   <td>
+    3.32
+   </td>
+   <td>
+    3.39
+   </td>
+   <td>
+    3.364d
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Q
+   </th>
+   <td>
+    3.410
+   </td>
+   <td>
+    3.396
+   </td>
+   <td>
+    3.455
+   </td>
+   <td>
+    3.416
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5
+   </th>
+   <td>
+    3.377
+   </td>
+   <td>
+    3.396
+   </td>
+   <td>
+    3.394
+   </td>
+   <td>
+    3.399
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Property
+   </th>
+   <td>
+    3.360
+   </td>
+   <td>
+    3.401
+   </td>
+   <td>
+    3.383
+   </td>
+   <td>
+    3.379
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Total
+   </th>
+   <td>
+    3.353
+   </td>
+   <td>
+    3.401
+   </td>
+   <td>
+    3.332
+   </td>
+   <td>
+    3.381
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    ${SeH}\rightarrow{SeH}^{-}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–T
+   </th>
+   <td>
+    2.217
+   </td>
+   <td>
+    2.226
+   </td>
+   <td>
+    2.119
+   </td>
+   <td>
+    2.213
+   </td>
+   <td>
+    2.21
+   </td>
+   <td>
+    2.23
+   </td>
+   <td>
+    2.213g
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Q
+   </th>
+   <td>
+    2.215
+   </td>
+   <td>
+    2.229
+   </td>
+   <td>
+    2.263
+   </td>
+   <td>
+    2.198
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5
+   </th>
+   <td>
+    2.204
+   </td>
+   <td>
+    2.233
+   </td>
+   <td>
+    2.232
+   </td>
+   <td>
+    2.219
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Property
+   </th>
+   <td>
+    2.176
+   </td>
+   <td>
+    2.234
+   </td>
+   <td>
+    2.205
+   </td>
+   <td>
+    2.199
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Total
+   </th>
+   <td>
+    2.164
+   </td>
+   <td>
+    2.231
+   </td>
+   <td>
+    2.171
+   </td>
+   <td>
+    2.194
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    ${BrO}\rightarrow{BrO}^{-}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–T
+   </th>
+   <td>
+    2.054
+   </td>
+   <td>
+    2.284
+   </td>
+   <td>
+    2.034
+   </td>
+   <td>
+    2.380
+   </td>
+   <td>
+    2.45
+   </td>
+   <td>
+    2.42
+   </td>
+   <td>
+    2.360h
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Q
+   </th>
+   <td>
+    2.209
+   </td>
+   <td>
+    2.289
+   </td>
+   <td>
+    2.421
+   </td>
+   <td>
+    2.473
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5
+   </th>
+   <td>
+    2.347
+   </td>
+   <td>
+    2.293
+   </td>
+   <td>
+    2.526
+   </td>
+   <td>
+    2.464
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Property
+   </th>
+   <td>
+    2.294
+   </td>
+   <td>
+    2.294
+   </td>
+   <td>
+    2.442
+   </td>
+   <td>
+    2.501
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Total
+   </th>
+   <td>
+    2.193
+   </td>
+   <td>
+    2.294
+   </td>
+   <td>
+    2.402
+   </td>
+   <td>
+    2.454
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    ${H^{+} + {Br}^{-}}\rightarrow{HBr}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–T
+   </th>
+   <td>
+    13.957
+   </td>
+   <td>
+    13.984
+   </td>
+   <td>
+    14.087
+   </td>
+   <td>
+    14.070
+   </td>
+   <td>
+    14.01
+   </td>
+   <td>
+    13.98
+   </td>
+   <td>
+    14.000g
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Q
+   </th>
+   <td>
+    13.955
+   </td>
+   <td>
+    13.968
+   </td>
+   <td>
+    13.923
+   </td>
+   <td>
+    13.945
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5
+   </th>
+   <td>
+    13.991
+   </td>
+   <td>
+    13.969
+   </td>
+   <td>
+    13.961
+   </td>
+   <td>
+    13.956
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Property
+   </th>
+   <td>
+    14.001
+   </td>
+   <td>
+    13.963
+   </td>
+   <td>
+    13.960
+   </td>
+   <td>
+    13.967
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Total
+   </th>
+   <td>
+    14.008
+   </td>
+   <td>
+    13.963
+   </td>
+   <td>
+    13.992
+   </td>
+   <td>
+    13.962
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    ${H^{+} + {CH}_{3}{Br}}\rightarrow{{CH}_{4}{Br}^{+}}$
+   </th>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    D–T
+   </th>
+   <td>
+    6.834
+   </td>
+   <td>
+    6.862
+   </td>
+   <td>
+    6.880
+   </td>
+   <td>
+    6.894
+   </td>
+   <td>
+    6.83
+   </td>
+   <td>
+    6.84
+   </td>
+   <td>
+    6.820i
+   </td>
+  </tr>
+  <tr>
+   <th>
+    T–Q
+   </th>
+   <td>
+    6.847
+   </td>
+   <td>
+    6.845
+   </td>
+   <td>
+    6.805
+   </td>
+   <td>
+    6.810
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Q–5
+   </th>
+   <td>
+    6.844
+   </td>
+   <td>
+    6.844
+   </td>
+   <td>
+    6.803
+   </td>
+   <td>
+    6.814
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Property
+   </th>
+   <td>
+    6.848
+   </td>
+   <td>
+    6.841
+   </td>
+   <td>
+    6.812
+   </td>
+   <td>
+    6.822
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Total
+   </th>
+   <td>
+    6.842
+   </td>
+   <td>
+    6.841
+   </td>
+   <td>
+    6.816
+   </td>
+   <td>
+    6.820
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+ </tbody>
+</table>
+
+aGaussian-2 values are from Ref. 11.
+bGaussian-3 values are from Ref. 15. Note G3 includes core-correlation effects and an expanded valence set, as opposed to this current work which does not.
+cTwo-point extrapolation is from Eq. (1). “D–T” in table refers to the ${CBS}_{D - T}$ extrapolation using results from double zeta and triple zeta basis sets. “T–Q” refers to the ${CBS}_{T - Q}$ extrapolation and “Q–5” refers to the ${CBS}_{Q - 5}$ extrapolation.
+dFrom Ref. 37.
+e${CBS}_{prop}$ extrapolation is from Eq. (2).
+f${CBS}_{total}$ extrapolation is from Eq. (3).
+gFrom Ref. 64.
+hFrom Ref. 55.
+iFrom Ref. 65.
+
+containing third-row atoms Ga–Kr. The B3LYP method inconsistently describes ionization energy for these third-row systems when using the correlation consistent sets and extrapolating to the KS limit. The deviation for atomization energies is 2–3 kcal/mol depending on which method of extrapolation is used. For the four electron affinity calculations, B3LYP does perform well.
+
+Using CCSD(T) in combination with the correlation consistent basis sets and extrapolating to the CBS limit proves to be a viable method and basis set combination for obtaining accurate results for these third-row systems. For the 40 energies calculated, the total mean absolute deviation from experiment is 1.03 kcal/mol when using the exponential ${CBS}_{prop}$ limit from the cc-pVnZ for atomization energy and aug-cc-pVnZ for ionization energy and electron affinity. When using the two-point ${CBS}_{T - Q}$ limit and the same basis set combination, the total deviation is 0.98 kcal/mol from experiment. The best agreement with experiment for any single extrapolation procedures examined is for the ${CBS}_{Q - 5}$ scheme used for the augmented correlation consistent basis sets, resulting in a mean absolute error in all energies of only 0.87 kcal/mol.
+
+The CCSD(T) calculations in combination with the correlation consistent basis sets provide a reliable means to per-
+
+<table>
+ <thead>
+  <tr>
+   <th colspan="2">
+    TABLE IX. Mean absolute deviation of from experimental AE, IE, and EA determined using B3LYP and CCSD(T) in combination with cc-pVnZ and aug-cc-pVnZ [where $n =$ D(2), T(3), Q(4), 5].
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    KS/CBS
+   </th>
+   <th>
+    B3LYP
+   </th>
+   <th>
+    B3LYP
+   </th>
+   <th>
+    G2
+   </th>
+   <th>
+    CCSD(T)
+   </th>
+   <th>
+    CCSD(T)
+   </th>
+   <th>
+   </th>
+   <th>
+   </th>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    limita
+   </th>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+   <th>
+    (B3LYP)b
+   </th>
+   <th>
+    cc-pVnZ
+   </th>
+   <th>
+    aug-cc-pVnZ
+   </th>
+   <th>
+    G2c
+   </th>
+   <th>
+    G3d
+   </th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr>
+   <th>
+    AE
+   </th>
+   <th>
+    D–T
+   </th>
+   <td>
+    2.92
+   </td>
+   <td>
+    2.66
+   </td>
+   <td>
+    3.32
+   </td>
+   <td>
+    2.41
+   </td>
+   <td>
+    1.71
+   </td>
+   <td>
+    1.24
+   </td>
+   <td>
+    1.01
+   </td>
+  </tr>
+  <tr>
+   <th>
+    (kcal/mol)
+   </th>
+   <th>
+    T–Q
+   </th>
+   <td>
+    3.05
+   </td>
+   <td>
+    2.71
+   </td>
+   <td>
+   </td>
+   <td>
+    1.04
+   </td>
+   <td>
+    1.18
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Q–5
+   </th>
+   <td>
+    2.91
+   </td>
+   <td>
+    2.53
+   </td>
+   <td>
+   </td>
+   <td>
+    1.11
+   </td>
+   <td>
+    1.06
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Propertye
+   </th>
+   <td>
+    3.12
+   </td>
+   <td>
+    2.90
+   </td>
+   <td>
+   </td>
+   <td>
+    1.15
+   </td>
+   <td>
+    1.24
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Totalf
+   </th>
+   <td>
+    3.29
+   </td>
+   <td>
+    3.37
+   </td>
+   <td>
+   </td>
+   <td>
+    1.64
+   </td>
+   <td>
+    1.52
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    IE
+   </th>
+   <th>
+    D–T
+   </th>
+   <td>
+    0.111
+   </td>
+   <td>
+    0.101
+   </td>
+   <td>
+    0.104
+   </td>
+   <td>
+    0.084
+   </td>
+   <td>
+    0.078
+   </td>
+   <td>
+    0.078
+   </td>
+   <td>
+    0.039
+   </td>
+  </tr>
+  <tr>
+   <th>
+    (eV)
+   </th>
+   <th>
+    T–Q
+   </th>
+   <td>
+    0.108
+   </td>
+   <td>
+    0.104
+   </td>
+   <td>
+   </td>
+   <td>
+    0.041
+   </td>
+   <td>
+    0.037
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Q–5
+   </th>
+   <td>
+    0.101
+   </td>
+   <td>
+    0.108
+   </td>
+   <td>
+   </td>
+   <td>
+    0.041
+   </td>
+   <td>
+    0.028
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Property
+   </th>
+   <td>
+    0.082
+   </td>
+   <td>
+    0.093
+   </td>
+   <td>
+   </td>
+   <td>
+    0.048
+   </td>
+   <td>
+    0.040
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Total
+   </th>
+   <td>
+    0.085
+   </td>
+   <td>
+    0.094
+   </td>
+   <td>
+   </td>
+   <td>
+    0.050
+   </td>
+   <td>
+    0.044
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    EA
+   </th>
+   <th>
+    D–T
+   </th>
+   <td>
+    0.134
+   </td>
+   <td>
+    0.029
+   </td>
+   <td>
+    0.040
+   </td>
+   <td>
+    0.163
+   </td>
+   <td>
+    0.043
+   </td>
+   <td>
+    0.054
+   </td>
+   <td>
+    0.046
+   </td>
+  </tr>
+  <tr>
+   <th>
+    (eV)
+   </th>
+   <th>
+    T–Q
+   </th>
+   <td>
+    0.053
+   </td>
+   <td>
+    0.032
+   </td>
+   <td>
+   </td>
+   <td>
+    0.064
+   </td>
+   <td>
+    0.054
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Q–5
+   </th>
+   <td>
+    0.034
+   </td>
+   <td>
+    0.036
+   </td>
+   <td>
+   </td>
+   <td>
+    0.057
+   </td>
+   <td>
+    0.045
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Property
+   </th>
+   <td>
+    0.043
+   </td>
+   <td>
+    0.034
+   </td>
+   <td>
+   </td>
+   <td>
+    0.030
+   </td>
+   <td>
+    0.050
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+   </th>
+   <th>
+    Total
+   </th>
+   <td>
+    0.081
+   </td>
+   <td>
+    0.031
+   </td>
+   <td>
+   </td>
+   <td>
+    0.039
+   </td>
+   <td>
+    0.040
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    Third-row
+   </th>
+   <th>
+    D–T
+   </th>
+   <td>
+    2.69
+   </td>
+   <td>
+    2.24
+   </td>
+   <td>
+    2.63
+   </td>
+   <td>
+    2.33
+   </td>
+   <td>
+    1.66
+   </td>
+   <td>
+    1.41
+   </td>
+   <td>
+    0.94
+   </td>
+  </tr>
+  <tr>
+   <th>
+    total for
+   </th>
+   <th>
+    T–Q
+   </th>
+   <td>
+    2.55
+   </td>
+   <td>
+    2.29
+   </td>
+   <td>
+   </td>
+   <td>
+    1.05
+   </td>
+   <td>
+    1.05
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    AE, IE,
+   </th>
+   <th>
+    Q–5
+   </th>
+   <td>
+    2.36
+   </td>
+   <td>
+    2.25
+   </td>
+   <td>
+   </td>
+   <td>
+    1.05
+   </td>
+   <td>
+    0.87
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    EA, PA
+   </th>
+   <th>
+    Property
+   </th>
+   <td>
+    2.31
+   </td>
+   <td>
+    2.29
+   </td>
+   <td>
+   </td>
+   <td>
+    1.06
+   </td>
+   <td>
+    1.07
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+  <tr>
+   <th>
+    (kcal/mol)
+   </th>
+   <th>
+    Total
+   </th>
+   <td>
+    2.50
+   </td>
+   <td>
+    2.52
+   </td>
+   <td>
+   </td>
+   <td>
+    1.31
+   </td>
+   <td>
+    1.22
+   </td>
+   <td>
+   </td>
+   <td>
+   </td>
+  </tr>
+ </tbody>
+</table>
+
+aTwo-point extrapolation is from Eq. (1). “D–T” in table refers to the CBSD–T extrapolation using results from double zeta and triple zeta basis sets. “T–Q” refers to the CBST–Q extrapolation and “Q–5” refers to the CBSQ–5 extrapolation.
+bModified Gaussian-2 values are from Ref. 13.
+cGaussian-2 values are from Ref. 11.
+dGaussian-3 values are from Ref. 15. Note G3 includes core-correlation effects and an expanded valence set, as opposed to this current work which does not.
+eCBSpropextrapolation is from Eq. (2).
+fCBStotalextrapolation is from Eq. (3).
+
+form future studies on molecules containing third-row atoms, without the use of empirical correction factors, which can be substantially large.51
+
+## ACKNOWLEDGMENTS
+
+The authors gratefully acknowledge support from a National Science Foundation CAREER Award No. CHE-0239555 and the University of North Texas Faculty Research Grant Program. Computer resources were, in part, provided by the National Computational Science Alliance under No. CHE010021 and utilized the NCSA SGI Origin 2000 and NCSA IBM p690. Additional computational support was provided by Academic Computing Services at the University of North Texas on the UNT Research Cluster. We wish to thank Kirk Peterson for providing us with aug-cc-pVnZ basis sets for Na.
+
+1K. A. Peterson, A. K. Wilson, D. E. Woon, and T. H. Dunning, Jr., Theor. Chem. Acc. 97, 251 (1997).
+2K. A. Peterson, R. A. Kendall, and T. H. Dunning, Jr., J. Chem. Phys. 99, 1930 (1993).
+3K. A. Peterson, R. A. Kendall, and T. H. Dunning, Jr., J. Chem. Phys. 99, 9790 (1993).
+4D. E. Woon and T. H. Dunning, Jr., J. Chem. Phys. 101, 8877 (1994).
+5T. van Mourik, A. K. Wilson, and T. H. Dunning, Jr., Mol. Phys. 96, 529 (1999).
+6J. A. Pople, M. Head-Gordon, D. J. Fox, K. Raghavachari, and L. A. Curtiss, J. Chem. Phys. 90, 5622 (1988).
+7L. A. Curtiss, K. Raghavachari, G. W. Trucks, and J. A. Pople, J. Chem. Phys. 94, 7221 (1991).
+8L. A. Curtiss, K. Raghavachari, P. C. Redfern, V. Rassolov, and J. A. Pople, J. Chem. Phys. 109, 7764 (1998).
+9J. A. Montgomery Jr., M. J. Frisch, J. W. Ochterski, and G. A. Petersson, J. Chem. Phys. 110, 2822 (1999).
+10J. W. Ochterski, G. A. Petersson, and J. A. Montgomery, Jr., J. Chem. Phys. 104, 2598 (1996).
+11L. A. Curtiss, M. P. McGrath, J.-P. Blaudeau, N. E. Davis, R. C. Binning, Jr., and L. Radom, J. Chem. Phys. 103, 6104 (1995).
+12J.-P. Blaudeau, M. P. McGrath, L. A. Curtiss, and L. Radom, J. Chem. Phys. 107, 5016 (1997).
+13P. C. Redfern, J.-P. Blaudeau, and L. A. Curtiss, J. Phys. Chem. A 101, 8701 (1997).
+14B. J. Duke and L. Radom, J. Chem. Phys. 109, 3352 (1998).
+15L. A. Curtiss, P. C. Redfern, V. Rassolov, G. Kedziora, and J. A. Pople, J. Chem. Phys. 114, 9287 (2001).
+16V. Ramakrishna and B. J. Duke, J. Chem. Phys. 118, 6137 (2003).
+17A. K. Wilson and T. H. Dunning, Jr. (unpublished).
+18T. H. Dunning, Jr., J. Chem. Phys. 90, 1007 (1989).
+19D. E. Woon and T. H. Dunning, Jr., J. Chem. Phys. 98, 1358 (1992).
+20R. A. Kendall, T. H. Dunning, Jr., and R. J. Harrison, J. Chem. Phys. 96, 6796 (1992).
+21A. K. Wilson, D. E. Woon, K. A. Peterson, and T. H. Dunning, Jr., J. Chem. Phys. 110, 7667 (1999).
+22T. Azzam, R. Schinke, S. C. Farantos, M. Joyeux, and K. A. Peterson, J. Chem. Phys. 118, 9643 (2003).
+23D. A. Dixon, W. A. de Jong, K. A. Peterson, and J. S. Francisco, J. Phys. Chem. A 106, 4725 (2002).
+24K. A. Peterson, B. A. Flowers, and J. S. Francisco, J. Chem. Phys. 115, 7513 (2001).
+25R. Vetter, T. Ritschel, L. Zulicke, and K. A. Peterson, J. Phys. Chem. A 107, 1405 (2003).
+
+$^{26}$L. Sari, Y. Yamaguchi, and H. F. Schaefer III, J. Chem. Phys. **115**, 5932 (2001).
+
+$^{27}$Q. Li, G. Li, W. Xu, Y. Xie, and H. F. Schaefer III, J. Chem. Phys. **111**, 7945 (1999).
+
+$^{28}$L. Sari, K. A. Peterson, Y. Yamaguchi, and H. F. Schaefer III, J. Chem. Phys. **117**, 10008 (2002).
+
+$^{29}$L. Sari, Y. Yamaguchi, and H. F. Schaefer III, J. Chem. Phys. **119**, 8266 (2003).
+
+$^{30}$K. Raghavachari, G. W. Trucks, J. A. Pople, and M. Head-Gordon, Chem. Phys. Lett. **157**, 479 (1989).
+
+$^{31}$G. D. I. Purvis and R. J. Bartlett, J. Chem. Phys. **76**, 1910 (1982).
+
+$^{32}$J. D. Watts, J. Gauss, and R. J. Bartlett, J. Chem. Phys. **98**, 8718 (1993).
+
+$^{33}$A. D. Becke, J. Chem. Phys. **98**, 5648 (1993).
+
+$^{34}$C. Lee, W. Yang, and R. G. Parr, Phys. Rev. B **37**, 785 (1988).
+
+$^{35}$MOLPRO, a package of *ab initio* programs designed by H.-J. Werner and P. J. Knowles, version 2002.1, R. D. Amos, A. Bernhardsson, A. Berning *et al.*
+
+$^{36}$M. J. Frisch, G. W. Trucks, H. B. Schlegel *et al.*, GAUSSIAN 98, Revision A.1x, Gaussian, Inc., Pittsburgh, PA, 2001.
+
+$^{37}$C. E. Moore, Natl. Bur. Stand. Circ. (U. S.) **467**, 1 (1952).
+
+$^{38}$J.-P. Blaudeau and L. A. Curtiss, Int. J. Quantum Chem. **61**, 943 (1997).
+
+$^{39}$A. Haliker, T. Helgaker, P. Jorgensen, W. Klopper, H. Koch, J. Olsen, and A. K. Wilson, Chem. Phys. Lett. **286**, 243 (1998).
+
+$^{40}$D. Feller, J. Chem. Phys. **96**, 6104 (1992).
+
+$^{41}$H. Hofmann, E. Hansele, and T. Clark, J. Comput. Chem. **11**, 1147 (1990).
+
+$^{42}$S. Petrie, J. Phys. Chem. A **102**, 6138 (1998).
+
+$^{43}$D. Feller and K. A. Peterson, J. Chem. Phys. **108**, 154 (1998).
+
+$^{44}$D. Feller and D. A. Dixon, J. Chem. Phys. **115**, 3484 (2001).
+
+$^{45}$D. Feller and K. A. Peterson, J. Chem. Phys. **110**, 8384 (1999).
+
+$^{46}$N. X. Wang and A. K. Wilson (unpublished).
+
+$^{47}$B. Ruscic, M. Schwarz, and J. Berkowitz, J. Chem. Phys. **92**, 1865 (1990).
+
+$^{48}$S. R. Gunn and L. G. Green, J. Phys. Chem. **65**, 779 (1961).
+
+$^{49}$M. W. Chase, Jr., J. Phys. Chem. Ref. Data Monograph No. 9 (1985). NIST-JANAF Thermochemical Tables, 4th ed.
+
+$^{50}$V. A. Rassolov, M. A. Ratner, J. A. Pople, P. C. Redfern, and L. A. Curtiss, J. Comput. Chem. **22**, 976 (2001).
+
+$^{51}$N. Haworth, A. K. Wilson, and L. Radom (unpublished).
+
+$^{52}$K. Huber and G. Herzberg, *Molecular Spectra and Molecular Structure 4* (Van Nostrand, Princeton, 1979).
+
+$^{53}$K. Ohno, H. Matsumura, Y. Endo, and E. Hirota, J. Mol. Spectrosc. **118**, 1 (1986).
+
+$^{54}$J. H. Callomon, E. Hirota, K. Kuchitsu, W. J. Lafferty, A. G. Maki, and C. S. Pote, *Structure Data of Free Polyatomic Molecules*, Vol. 7, in Landolt- Bornstein, New Series, Group II (Springer, Berlin, 1976).
+
+$^{55}$M. K. Gilles, M. L. Polak, and W. C. Lineberger, J. Chem. Phys. **96**, 8012 (1992).
+
+$^{56}$Y. Koga, H. Takeo, S. Kondo, M. Sugie, C. Matsumura, G. A. McRae, and E. A. Cohen, J. Mol. Spectrosc. **138**, 467 (1998).
+
+$^{57}$G. Graner, J. Mol. Spectrosc. **90**, 394 (1981).
+
+$^{58}$J. Berkowitz, J. Chem. Phys. **89**, 7065 (1988).
+
+$^{59}$S. T. Gibson, J. P. Greene, and J. Berkowitz, J. Chem. Phys. **85**, 4815 (1986).
+
+$^{60}$L. V. Gurvich, I. V. Veyts, and C. B. Alcock, *Thermodynamic Properties of Individual Substances*, 4th ed. (Hemisphere, New York, 1989).
+
+$^{61}$P. A. G. O'Hare and L. A. Curtiss, J. Chem. Thermodyn. **27**, 643 (1995).
+
+$^{62}$S. A. Kudchadker and A. P. Kudchadker, J. Phys. Chem. Ref. Data **4**, 457 (1975).
+
+$^{63}$B. Ruscic and J. Berkowitz, J. Chem. Phys. **101**, 7795 (1994).
+
+$^{64}$S. Lias, J. E. Bartmess, J. F. Liebman, J. L. Holmes, R. D. Levin, and W. G. Mallard, J. Phys. Chem. Ref. Data Suppl. **17**, 1 (1998).
+
+$^{65}$M. N. Glukhovtsev, J. E. Szulejko, T. B. McMahon, J. W. Gauld, A. P. Scott, B. J. Smith, A. Pross, and L. Radom, J. Phys. Chem. **98**, 13099 (1994).

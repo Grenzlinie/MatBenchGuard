@@ -1,0 +1,67 @@
+[
+  {
+    "id": "geo_opt",
+    "title": "Geometry optimization under hydrostatic pressure",
+    "role": "process",
+    "action": "Using the α-RDX CIF as initial structure, perform DFT geometry optimization (variable-cell relaxation) at pressures 0, 5, 10, 15, 20, 25, 30, 35, 40 GPa with GGA-PBE exchange-correlation functional and a dispersion correction (e.g., Grimme D2). Save the optimized lattice parameters and atomic positions for each pressure.",
+    "output_file": "",
+    "evidence": "geo_opt.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required process step to obtain the relaxed structures needed for all subsequent calculations. Evidence is a log file recording the optimization cycles.",
+    "output_schema": ""
+  },
+  {
+    "id": "elastic_constants",
+    "title": "Elastic constants calculation via finite differences",
+    "role": "process",
+    "action": "For each optimized structure, apply a set of small deformations and compute the resulting stress tensor from static DFT calculations. Extract the nine independent elastic constants C_ij for the orthorhombic cell and write them to a CSV file (elastic_constants.csv).",
+    "output_file": "",
+    "evidence": "elastic_constants.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Necessary intermediate that stores the computed elastic constants; the downstream mechanical-properties step depends on it. The evidence file is provided for optional structural-plausibility checks.",
+    "output_schema": ""
+  },
+  {
+    "id": "mechanical_properties",
+    "title": "Mechanical properties and ductility indicators",
+    "role": "scored",
+    "action": "Read the elastic constants from elastic_constants.csv, compute bulk modulus B_H, shear modulus G_H, B_H/G_H ratio, Poisson's ratio v, and C12-C44 using Voigt-Reuss-Hill averaging, following the formulas given in the paper. Write a CSV file with columns: pressure (GPa), B_H (GPa), G_H (GPa), B_H_G_H, v, C12_C44 (GPa) for pressures 0,5,10,15,20,25,30,35,40 GPa.",
+    "output_file": "step_01_mechanical_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing the pressure-dependent mechanical ductility indicators. The load-bearing nature forces genuine execution of the geometry optimization and elastic-constant steps.",
+    "output_schema": "CSV with header: pressure (int), B_H (float), G_H (float), B_H_G_H (float), v (float), C12_C44 (float)."
+  },
+  {
+    "id": "band_gap_calculation",
+    "title": "Electronic band gap calculation",
+    "role": "scored",
+    "action": "Using the electronic structure from DFT, determine the band gap (energy difference between valence-band maximum and conduction-band minimum) at each pressure. Write a CSV with columns: pressure (GPa), band_gap (eV).",
+    "output_file": "step_02_band_gap.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact reporting the pressure-dependent band gap. The actual DFT run occurs during this step; the checker compares the reported gaps to the paper's values.",
+    "output_schema": "CSV with header: pressure (int), band_gap (float)."
+  },
+  {
+    "id": "static_refractive_index",
+    "title": "Static refractive index from optical dielectric function",
+    "role": "scored",
+    "action": "Using the electronic structure (wavefunctions and eigenvalues) from the DFT calculation at 0 GPa, compute the imaginary part of the dielectric function via momentum matrix elements, obtain the real part by Kramers-Kronig transformation, and extract the static refractive index n(0) for the three independent polarization directions (100), (010), (001). Write a CSV with columns: direction, static_refractive_index_n0.",
+    "output_file": "step_03_static_refractive_index.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing the static refractive index at 0 GPa for the three polarization directions. The checker compares the values to the paper's reported values.",
+    "output_schema": "CSV with header: direction (string: 100, 010, 001), static_refractive_index_n0 (float)."
+  }
+]

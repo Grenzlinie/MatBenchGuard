@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T0: direct comparison of agent's reported values to paper gold values with tolerances; recompute from raw is infeasible because only final summary numbers are output.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold entropy and free energy values for scoring",
+      "source_provenance": "Paper Table III and text: Bi extrapolated=3.13, graphical=9.31, total=12.44; Bi2O3 extrapolated=6.22, graphical=29.96, total=36.18; free energy=-118000 cal",
+      "generation_method": "Extracted from the paper's reported results",
+      "why_not_fabricated": "These are the exact values reported in the paper, which the solving agent must reproduce through numerical integration."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "entropy_contributions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Bi": {
+              "extrapolated_0_56.2_K": "float (cal/(K·mol))",
+              "graphical_56.2_298.1_K": "float (cal/(K·mol))",
+              "total_S_298_K": "float (cal/(K·mol))"
+            },
+            "Bi2O3": {
+              "extrapolated_0_56.2_K": "float (cal/(K·mol))",
+              "graphical_56.2_298.1_K": "float (cal/(K·mol))",
+              "total_S_298_K": "float (cal/(K·mol))"
+            }
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "The computed entropy contributions and total standard entropy for Bi and Bi2O3. These values are compared against reference values within a hidden tolerance."
+      },
+      {
+        "file": "free_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "free_energy_Bi2O3": "float (cal)",
+            "unit": "string (value 'cal')"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "The calculated standard free energy of formation of Bi2O3, compared to the reference within a hidden tolerance."
+      }
+    ],
+    "notes": "All required input parameters (Cp data, Debye temperatures, entropy of O2, heat of formation) are provided in the task instruction. The agent must perform numerical integration (e.g., trapezoidal or Simpson's rule) to obtain the graphical contributions. No external data downloads are needed beyond the inline table."
+  },
+  "steps": [
+    {
+      "id": "step1_entropy",
+      "output_file": "entropy_contributions.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold": {
+        "Bi": {
+          "extrapolated_0_56.2_K": 3.13,
+          "graphical_56.2_298.1_K": 9.31,
+          "total_S_298_K": 12.44
+        },
+        "Bi2O3": {
+          "extrapolated_0_56.2_K": 6.22,
+          "graphical_56.2_298.1_K": 29.96,
+          "total_S_298_K": 36.18
+        }
+      },
+      "tol_entropy": 0.5,
+      "tol_consistency": 0.01
+    },
+    {
+      "id": "step2_free_energy",
+      "output_file": "free_energy.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold_free_energy": -118000,
+      "tol_free_energy": 1000,
+      "gold_unit": "cal"
+    }
+  ]
+}

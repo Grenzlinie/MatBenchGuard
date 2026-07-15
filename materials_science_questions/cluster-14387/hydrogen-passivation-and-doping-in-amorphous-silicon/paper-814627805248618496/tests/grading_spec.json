@@ -1,0 +1,153 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The main results are derived from DFT calculations that cannot be recomputed in the verifier; scoring compares agent-reported values to paper gold with tolerances and internal consistency checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "sio2_p_energies.json": "exact_match",
+    "sinc_p_substitutional_energies.json": "exact_match",
+    "sinc_p_interstitial_energies.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for SiO2:P barrier reductions and offsets",
+      "source_provenance": "paper text (Results section, Fig. 2a, Table 1)",
+      "generation_method": "extracted from paper: alpha_homo_offset = -0.41 eV, beta_lumo_offset = 0.01 eV, electron barrier reduction = 97%, hole barrier reduction = 85%",
+      "why_not_fabricated": "values are the paper's reported numbers"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for substitutional P ionization",
+      "source_provenance": "paper text (Results, Fig. 4a)",
+      "generation_method": "extracted: ionization_energy = 0.51 eV, ionization_probability = exp(-0.51/kT) = 2.7e-9 at 300 K",
+      "why_not_fabricated": "values are the paper's reported numbers"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for interstitial P gap states",
+      "source_provenance": "paper text (Results, Fig. 4b)",
+      "generation_method": "extracted: homo_offset = 0.57 eV, lumo_offset = -0.46 eV, optical_transition_energy = 1.72 eV",
+      "why_not_fabricated": "values are the paper's reported numbers"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sio2_p_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "sio2_p_homo_ev",
+            "oh_sinc_homo_ev",
+            "alpha_homo_offset_ev",
+            "sio2_p_lumo_ev",
+            "oh_sinc_lumo_ev",
+            "beta_lumo_offset_ev",
+            "electron_barrier_reduction_pct",
+            "hole_barrier_reduction_pct"
+          ],
+          "items": {
+            "sio2_p_homo_ev": "number (eV)",
+            "oh_sinc_homo_ev": "number (eV)",
+            "alpha_homo_offset_ev": "number (eV)",
+            "sio2_p_lumo_ev": "number (eV)",
+            "oh_sinc_lumo_ev": "number (eV)",
+            "beta_lumo_offset_ev": "number (eV)",
+            "electron_barrier_reduction_pct": "number (%)",
+            "hole_barrier_reduction_pct": "number (%)"
+          }
+        },
+        "description": "Contains the computed HOMO/LUMO energies for SiO2:P and OH-SiNC, the derived offsets, and the resulting electron and hole transport barrier reduction percentages. The offsets and reduction percentages are the scored quantities; the raw energies provide context."
+      },
+      {
+        "file": "sinc_p_substitutional_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "oh_sinc_lumo_ev",
+            "substitutional_homo_relative_to_lumo_ev",
+            "ionization_energy_ev",
+            "ionization_probability_300K"
+          ],
+          "items": {
+            "oh_sinc_lumo_ev": "number (eV)",
+            "substitutional_homo_relative_to_lumo_ev": "number (eV)",
+            "ionization_energy_ev": "number (eV)",
+            "ionization_probability_300K": "number"
+          }
+        },
+        "description": "Contains the OH-SiNC LUMO energy, the substitutional P HOMO relative to that LUMO, the resulting ionization energy, and ionization probability at 300 K. The ionization energy and probability are scored."
+      },
+      {
+        "file": "sinc_p_interstitial_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "oh_sinc_homo_ev",
+            "oh_sinc_lumo_ev",
+            "interstitial_homo_ev",
+            "interstitial_homo_relative_to_sinc_homo_ev",
+            "interstitial_lumo_ev",
+            "interstitial_lumo_relative_to_sinc_lumo_ev",
+            "optical_transition_energy_ev"
+          ],
+          "items": {
+            "oh_sinc_homo_ev": "number (eV)",
+            "oh_sinc_lumo_ev": "number (eV)",
+            "interstitial_homo_ev": "number (eV)",
+            "interstitial_homo_relative_to_sinc_homo_ev": "number (eV)",
+            "interstitial_lumo_ev": "number (eV)",
+            "interstitial_lumo_relative_to_sinc_lumo_ev": "number (eV)",
+            "optical_transition_energy_ev": "number (eV)"
+          }
+        },
+        "description": "Contains the reference OH-SiNC band edge energies, the two gap state energies for interstitial P, their offsets from the SiNC edges, and the optical recombination transition energy. The offsets and transition energy are scored."
+      }
+    ],
+    "notes": "The scored quantities are the offsets and derived properties; the raw reference energies (OH-SiNC HOMO/LUMO) must be computed correctly from the DFT step to serve as the baseline for scoring."
+  },
+  "steps": [
+    {
+      "id": "sio2_p_barrier",
+      "output_file": "sio2_p_energies.json",
+      "weight": 0.5,
+      "kind": "rubric",
+      "gold": {
+        "alpha_homo_offset": -0.41,
+        "beta_lumo_offset": 0.01,
+        "electron_barrier_reduction_pct": 97.0,
+        "hole_barrier_reduction_pct": 85.0
+      }
+    },
+    {
+      "id": "substitutional_ionization",
+      "output_file": "sinc_p_substitutional_energies.json",
+      "weight": 0.25,
+      "kind": "rubric",
+      "gold": {
+        "ionization_energy": 0.51,
+        "ionization_probability": 2.7e-09
+      }
+    },
+    {
+      "id": "interstitial_gap_states",
+      "output_file": "sinc_p_interstitial_energies.json",
+      "weight": 0.25,
+      "kind": "rubric",
+      "gold": {
+        "interstitial_homo_offset": 0.57,
+        "interstitial_lumo_offset": -0.46,
+        "optical_transition_energy": 1.72
+      }
+    }
+  ]
+}

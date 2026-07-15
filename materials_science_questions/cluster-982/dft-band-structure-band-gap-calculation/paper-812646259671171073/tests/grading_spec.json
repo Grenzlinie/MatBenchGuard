@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "exact_match",
+  "scoring_justification": "Compute-driven DFT: checker compares reported band gap value and type to paper's hidden reference with tolerance; recomputing from raw DFT output is not feasible in the verifier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap value and type from the paper.",
+      "source_provenance": "Paper text: 'The total DOS reveals an energy gap with Eg = 4.01 eV' and 'The electronic band dispersion curves … indicates that the VBM is located at point Γ and the CBM between points T and P', hence indirect.",
+      "generation_method": "Extracted from the paper's reported DFT HSEsol results.",
+      "why_not_fabricated": "Directly taken from the source paper's numerical statement and conclusion; no synthetic data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "band_gap_eV",
+            "band_gap_type",
+            "method"
+          ],
+          "properties": {
+            "band_gap_eV": {
+              "type": "number",
+              "description": "Computed band gap in eV"
+            },
+            "band_gap_type": {
+              "type": "string",
+              "enum": [
+                "direct",
+                "indirect"
+              ],
+              "description": "Whether the band gap is direct or indirect"
+            },
+            "method": {
+              "type": "string",
+              "description": "Description of the DFT code and functional used"
+            }
+          }
+        },
+        "description": "Band gap value and type computed by DFT. The checker compares the numeric gap against the paper's reported value (with a tolerance) and the gap type against the expected type (indirect)."
+      }
+    ],
+    "notes": "The hidden checker uses the paper-reported values (4.01 eV, indirect) with an appropriate tolerance for the gap value. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "02_band_gap",
+      "output_file": "band_gap_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "rubric": [
+        {
+          "sub_id": "gap_value",
+          "description": "Band gap value within 0.25 eV of reference 4.01 eV",
+          "weight": 0.5,
+          "target": 4.01,
+          "tolerance": 0.25,
+          "type": "numeric_abs_tolerance"
+        },
+        {
+          "sub_id": "gap_type",
+          "description": "Band gap type equals 'indirect'",
+          "weight": 0.5,
+          "target": "indirect",
+          "type": "exact_string"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute the formation energy ordering (ic < ib) from the agent's JSON, check that the transition level falls within the paper-reported acceptable window, and recompute the intensity reduction ratio from the CSV profile; no self-reported metrics are trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.json": "structural_audit",
+    "transition_levels.json": "reference_match",
+    "simulated_intensity_profiles.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Formation energy ordering ic < ib from paper text Fig.2/3 and DFT prediction",
+      "source_provenance": "Paper main text: DFT formation energy ordering i_c < i_b < i_a.",
+      "generation_method": "Extracted directly from the paper's statement of energetic favouribility.",
+      "why_not_fabricated": "This is the paper's own reported trend; we verify the agent's computed energies follow the same ordering."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Deep acceptor transition level window: above VBM = 2.3–2.9 eV corresponding to E_C – 1.9 to E_C – 2.5 eV with Eg = 4.8 eV.",
+      "source_provenance": "Paper states the epsilon(-2/-3) transition level falls between E_C-1.9 and E_C-2.5 eV; the band gap is 4.8 eV.",
+      "generation_method": "Converted from the paper's deep acceptor range using the known band gap of β-Ga2O3 (4.8 eV).",
+      "why_not_fabricated": "These are the paper's reported values translated to eV above VBM; they are the authoritative targets for this verification."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Intensity reduction threshold of ≥ 15% (ratio ≤ 0.85) for Ga1 columns adjacent to interstitials.",
+      "source_provenance": "Paper Fig. 3 and text describing the significant reduction in Ga1 column intensity adjacent to interstitials, stated as ≥ 15%.",
+      "generation_method": "Directly derived from the paper's description of the characteristic vacancy‑interstitial signature.",
+      "why_not_fabricated": "This threshold comes from the paper's own experimental and simulated intensity line profiles."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "system": "string",
+            "charge_states": "array of integers",
+            "formation_energies": "object with keys of the form <site>_<charge> (e.g., 'ic_0', 'ib_-2'), each value an object with mu_O (float, eV), mu_Ga (float, eV), energy_eV (float)",
+            "data_source": "string"
+          }
+        },
+        "description": "Formation energies of 2V_Ga1–Ga_i complexes at i_c and i_b sites, enabling verification of energetic ordering."
+      },
+      {
+        "file": "transition_levels.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": {
+              "defect": "string (e.g., '2V_Ga1–Ga_i^c')",
+              "transition": "string (e.g., '-/2-')",
+              "level_eV": "float (eV above VBM)",
+              "method": "string"
+            }
+          }
+        },
+        "description": "Thermodynamic charge-state transition levels for the defect complexes (ic and ib), to be compared against the paper-reported deep acceptor range."
+      },
+      {
+        "file": "simulated_intensity_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "distance_nm",
+            "intensity_defect_free",
+            "intensity_with_defect"
+          ],
+          "units": {
+            "distance_nm": "nanometers",
+            "intensity_defect_free": "arbitrary intensity",
+            "intensity_with_defect": "arbitrary intensity"
+          }
+        },
+        "description": "Line profiles of HAADF intensity across Ga1 columns, showing at least 15% reduction in intensity adjacent to interstitials relative to defect-free."
+      }
+    ],
+    "notes": "All scored artifacts are produced by the agent's computational workflow. DFT and multislice steps must be executed; the process step output (relaxed structures) is required. The checker re-derives the ordering, transition level range, and intensity reduction from these artifacts."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "formation_energies.json",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "description": "Verify that for each charge state the formation energy of the ic complex is lower than that of the ib complex (i_c < i_b), as predicted by DFT in the paper.",
+      "rule": "For every common charge state present, energy(ic_<charge>) < energy(ib_<charge>)."
+    },
+    {
+      "id": "transition_levels",
+      "output_file": "transition_levels.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Check that the deep acceptor transition level (eV above VBM) falls within the paper-reported window E_C – 1.9 to E_C – 2.5 eV, i.e. between 2.3 and 2.9 eV above VBM (with Eg = 4.8 eV).",
+      "lower": 2.3,
+      "upper": 2.9
+    },
+    {
+      "id": "simulated_intensity_profiles",
+      "output_file": "simulated_intensity_profiles.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Recompute the ratio of the peak Ga1 column intensity with defect to that of the defect‑free column, and verify it is ≤ 0.85 (≥ 15% reduction).",
+      "threshold": 0.85
+    }
+  ]
+}

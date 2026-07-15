@@ -1,0 +1,361 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The task verifies vibrational frequency monotonic trends (structural), supplemented by absolute scalar comparisons to paper reference within tolerances (result-level compare). Since raw recompute from artifacts is not feasible without running the full ab initio workflow, structural consistency and reference comparison are used.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "geometries.json": "reference_match",
+    "frequencies.json": "reference_match",
+    "relative_energies.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometries.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "species",
+              "state_label",
+              "R_SiS",
+              "r_XH",
+              "alpha",
+              "method",
+              "total_energy"
+            ],
+            "properties": {
+              "species": {
+                "type": "string"
+              },
+              "state_label": {
+                "type": "string"
+              },
+              "R_SiS": {
+                "type": "number",
+                "unit": "bohr"
+              },
+              "r_XH": {
+                "type": "number",
+                "unit": "bohr"
+              },
+              "alpha": {
+                "type": "number",
+                "unit": "degree"
+              },
+              "method": {
+                "type": "string"
+              },
+              "total_energy": {
+                "type": "number",
+                "unit": "hartree relative to -686.0"
+              }
+            }
+          }
+        },
+        "description": "Equilibrium geometries (bond distances, angle, total energy) for all eight HSiS/SiSH species and ions at MP2/basis I level."
+      },
+      {
+        "file": "frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "species",
+              "state_label",
+              "omega_SiS",
+              "omega_XH",
+              "omega_HAB",
+              "scaling_factor"
+            ],
+            "properties": {
+              "species": {
+                "type": "string"
+              },
+              "state_label": {
+                "type": "string"
+              },
+              "omega_SiS": {
+                "type": "number",
+                "unit": "cm⁻¹"
+              },
+              "omega_XH": {
+                "type": "number",
+                "unit": "cm⁻¹"
+              },
+              "omega_HAB": {
+                "type": "number",
+                "unit": "cm⁻¹"
+              },
+              "scaling_factor": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Scaled HF vibrational frequencies (0.90 factor) for SiS stretch, XH stretch, and HAB bend of all species. The scorer will also enforce the monotonic trend ω(SiS) increases in order anion < neutral < cation within each isomer family (structural audit)."
+      },
+      {
+        "file": "relative_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "isomerization_neutral",
+            "isomerization_cation",
+            "isomerization_anion_ground",
+            "isomerization_anion_singlet",
+            "IP_HSiS",
+            "IP_SiSH",
+            "EA_HSiS_to_X1A",
+            "EA_HSiS_to_13A",
+            "EA_SiSH_to_X3A",
+            "EA_SiSH_to_11A"
+          ],
+          "properties": {
+            "isomerization_neutral": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "isomerization_cation": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "isomerization_anion_ground": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "isomerization_anion_singlet": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "IP_HSiS": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "IP_SiSH": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "EA_HSiS_to_X1A": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "EA_HSiS_to_13A": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "EA_SiSH_to_X3A": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "EA_SiSH_to_11A": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Key relative energetics derived from MP4(SDQT)/basis II energies and zero-point corrections from scaled HF frequencies."
+      }
+    ],
+    "notes": "The checking will compare submitted geometries, frequencies, and relative energies against the paper's reported values within published tolerances (0.02 bohr / 1 degree / 0.005 hartree for geometries, 20 cm⁻¹ for frequencies, 0.05 eV for relative energies). Additionally, a structural audit will verify that ω(SiS) increases in the order anion < neutral < cation within each isomer family. The overall score is the fraction of checks passed; passing threshold is 0.7."
+  },
+  "steps": [
+    {
+      "id": "step_geometry_check",
+      "output_file": "geometries.json",
+      "weight": 0.3,
+      "kind": "custom_numeric_compare",
+      "references": [
+        {
+          "species": "HSiS",
+          "state_label": "X²A'",
+          "R_SiS": 3.74,
+          "r_XH": 2.861,
+          "alpha": 120.8,
+          "total_energy": -1.2085
+        },
+        {
+          "species": "SiSH",
+          "state_label": "X²A'",
+          "R_SiS": 4.067,
+          "r_XH": 2.559,
+          "alpha": 99.4,
+          "total_energy": -1.202
+        },
+        {
+          "species": "HSiS⁺",
+          "state_label": "X¹Σ⁺",
+          "R_SiS": 3.615,
+          "r_XH": 2.791,
+          "alpha": 180.0,
+          "total_energy": -0.9165
+        },
+        {
+          "species": "SiSH⁺",
+          "state_label": "X¹A'",
+          "R_SiS": 3.934,
+          "r_XH": 2.591,
+          "alpha": 88.0,
+          "total_energy": -0.9356
+        },
+        {
+          "species": "HSiS⁻",
+          "state_label": "X¹A'",
+          "R_SiS": 3.932,
+          "r_XH": 2.965,
+          "alpha": 102.4,
+          "total_energy": -1.2816
+        },
+        {
+          "species": "HSiS⁻",
+          "state_label": "¹³A''",
+          "R_SiS": 3.919,
+          "r_XH": 2.864,
+          "alpha": 122.1,
+          "total_energy": -1.2338
+        },
+        {
+          "species": "SiSH⁻",
+          "state_label": "X³A''",
+          "R_SiS": 4.441,
+          "r_XH": 2.551,
+          "alpha": 97.9,
+          "total_energy": -1.2334
+        },
+        {
+          "species": "SiSH⁻",
+          "state_label": "¹¹A'",
+          "R_SiS": 4.167,
+          "r_XH": 2.57,
+          "alpha": 105.5,
+          "total_energy": -1.2131
+        }
+      ],
+      "tolerance_R_SiS": 0.02,
+      "tolerance_r_XH": 0.02,
+      "tolerance_alpha": 1.0,
+      "tolerance_total_energy": 0.005
+    },
+    {
+      "id": "step_frequencies_check",
+      "output_file": "frequencies.json",
+      "weight": 0.3,
+      "kind": "custom_numeric_with_trend",
+      "references": [
+        {
+          "species": "HSiS",
+          "state_label": "X²A'",
+          "omega_SiS": 671,
+          "omega_XH": 1935,
+          "omega_HAB": 612
+        },
+        {
+          "species": "HSiS⁺",
+          "state_label": "X¹Σ⁺",
+          "omega_SiS": 784,
+          "omega_XH": 2164,
+          "omega_HAB": 451
+        },
+        {
+          "species": "HSiS⁻",
+          "state_label": "X¹A'",
+          "omega_SiS": 557,
+          "omega_XH": 1677,
+          "omega_HAB": 749
+        },
+        {
+          "species": "HSiS⁻",
+          "state_label": "¹³A''",
+          "omega_SiS": 530,
+          "omega_XH": 1908,
+          "omega_HAB": 617
+        },
+        {
+          "species": "SiSH",
+          "state_label": "X²A'",
+          "omega_SiS": 459,
+          "omega_XH": 2507,
+          "omega_HAB": 668
+        },
+        {
+          "species": "SiSH⁺",
+          "state_label": "X¹A'",
+          "omega_SiS": 590,
+          "omega_XH": 2434,
+          "omega_HAB": 509
+        },
+        {
+          "species": "SiSH⁻",
+          "state_label": "X³A''",
+          "omega_SiS": 306,
+          "omega_XH": 2516,
+          "omega_HAB": 575
+        },
+        {
+          "species": "SiSH⁻",
+          "state_label": "¹¹A'",
+          "omega_SiS": 365,
+          "omega_XH": 2434,
+          "omega_HAB": 619
+        }
+      ],
+      "tolerance_omega": 20.0,
+      "structural_trends": {
+        "HSiS_family": {
+          "anion_species": "HSiS⁻",
+          "anion_state": "X¹A'",
+          "neutral_species": "HSiS",
+          "neutral_state": "X²A'",
+          "cation_species": "HSiS⁺",
+          "cation_state": "X¹Σ⁺"
+        },
+        "SiSH_family": {
+          "anion_species": "SiSH⁻",
+          "anion_state": "X³A''",
+          "neutral_species": "SiSH",
+          "neutral_state": "X²A'",
+          "cation_species": "SiSH⁺",
+          "cation_state": "X¹A'"
+        }
+      }
+    },
+    {
+      "id": "step_rel_energies_check",
+      "output_file": "relative_energies.json",
+      "weight": 0.4,
+      "kind": "custom_dict_compare",
+      "expected": {
+        "isomerization_neutral": 0.18,
+        "isomerization_cation": 0.58,
+        "isomerization_anion_ground": 1.43,
+        "isomerization_anion_singlet": 1.84,
+        "IP_HSiS": 8.09,
+        "IP_SiSH": 7.34,
+        "EA_HSiS_to_X1A": 2.16,
+        "EA_HSiS_to_13A": 1.02,
+        "EA_SiSH_to_X3A": 0.91,
+        "EA_SiSH_to_11A": 0.5
+      },
+      "tolerance_eV": 0.05
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for geometries, frequencies, and relative energies extracted from paper's Tables II, III, V, VII, VIII.",
+      "source_provenance": "Paper text and tables",
+      "generation_method": "Manually transcribed from the paper's reported values",
+      "why_not_fabricated": "Values are directly taken from the published paper and are used as ground truth for result-level comparison."
+    }
+  ]
+}

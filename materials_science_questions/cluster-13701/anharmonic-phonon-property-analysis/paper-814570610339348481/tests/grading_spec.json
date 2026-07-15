@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Spearman rank correlations and mean TIC ratio directly from the CSV artifact; no trust in agent's reported summary.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m_ratio",
+            "eps_ratio",
+            "TIC_EMD_40K",
+            "bulk_DoS_overlap",
+            "DMM_TIC_40K",
+            "AMM_TIC_40K",
+            "IPS_overlap",
+            "IPSA_TIC_40K",
+            "TIC_EMD_5K",
+            "high_mismatch"
+          ],
+          "units": {
+            "TIC_EMD_40K": "MW/m^2K",
+            "DMM_TIC_40K": "MW/m^2K",
+            "AMM_TIC_40K": "MW/m^2K",
+            "IPSA_TIC_40K": "MW/m^2K",
+            "TIC_EMD_5K": "MW/m^2K"
+          }
+        },
+        "description": "Final table containing all computed quantities for every interface in the grid, from which the checker recomputes Spearman rank correlations, the 40K/5K TIC ratio, and IPSA–EMD agreement."
+      }
+    ],
+    "notes": "The checker will compute (1) Spearman rank correlation between TIC_EMD_40K and bulk_DoS_overlap, (2) Spearman rank correlation between TIC_EMD_40K and IPS_overlap, (3) for the high_mismatch subset the mean TIC_EMD_40K/mean TIC_EMD_5K ratio, and (4) Spearman rank correlation between TIC_EMD_40K and IPSA_TIC_40K. Threshold tolerances are hidden."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden thresholds for rank correlation and TIC ratio",
+      "source_provenance": "derived from paper qualitative trends (Figures 2,5a,5b); thresholds set to be achievable by a correct reproduction while excluding random/uninformed guesses",
+      "generation_method": "chosen based on expected qualitative relationships: low DoS correlation (<0.5), high IPS correlation (>0.6), TIC ratio >1.2",
+      "why_not_fabricated": "These thresholds are not random; they reflect the paper's claims of weak/absent correlation with bulk DoS overlap and strong correlation with IPS overlap, and anharmonic suppression at low temperature."
+    }
+  ],
+  "steps": [
+    {
+      "id": "corr_dos",
+      "output_file": "results.csv",
+      "weight": 0.35,
+      "kind": "custom",
+      "description": "Recompute Spearman rank correlation between TIC_EMD_40K and bulk_DoS_overlap; expect low correlation.",
+      "threshold_low": 0.5,
+      "monotonic": "lower_is_better"
+    },
+    {
+      "id": "corr_ips",
+      "output_file": "results.csv",
+      "weight": 0.35,
+      "kind": "custom",
+      "description": "Recompute Spearman rank correlation between TIC_EMD_40K and IPS_overlap; expect high correlation.",
+      "threshold_high": 0.6,
+      "monotonic": "higher_is_better"
+    },
+    {
+      "id": "ratio_tic",
+      "output_file": "results.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "description": "Recompute mean TIC_EMD_40K / mean TIC_EMD_5K for high_mismatch subset; expect ratio > 1.2.",
+      "threshold_ratio": 1.2,
+      "monotonic": "higher_is_better"
+    }
+  ]
+}

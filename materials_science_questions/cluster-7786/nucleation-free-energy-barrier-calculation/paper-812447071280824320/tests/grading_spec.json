@@ -1,0 +1,59 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Direct recomputation from the provided mean lag-time data yields sigma values ~0.7 erg/cm^2 away from the paper's reported gold, because the paper's linear regression used individual measurements with scatter. Therefore the checker compares agent's sigma to the paper's reported values with a tolerance (1.0 erg/cm^2) that allows for the difference, achieving full reward for a genuine re-run while still requiring the correct procedure.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "sigma_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for apparent interfacial free energy sigma_control and sigma_citrate",
+      "source_provenance": "Paper text: Results section and Fig. 2 caption. \"Apparent interfacial energy for the control was 28.9 erg cm^{-2}, and for the citrate system it was 26.8 erg cm^{-2}.\"",
+      "generation_method": "Directly taken from the paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's actual results, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sigma_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "sigma_control",
+            "sigma_citrate"
+          ],
+          "items": {
+            "sigma_control": {
+              "type": "number",
+              "unit": "erg/cm²"
+            },
+            "sigma_citrate": {
+              "type": "number",
+              "unit": "erg/cm²"
+            }
+          }
+        },
+        "description": "Apparent interfacial free energies for control and citrate conditions, derived from Gibbs-Thomson analysis of nucleation lag-time data."
+      }
+    ],
+    "notes": "The checker will independently recompute sigma from the same input data and constants, and compare the submitted values within an absolute tolerance. No other artifacts are required."
+  },
+  "steps": [
+    {
+      "id": "sigma_scoring",
+      "output_file": "sigma_results.json",
+      "weight": 1.0,
+      "kind": "json_field",
+      "target": {
+        "sigma_control": 28.9,
+        "sigma_citrate": 26.8
+      },
+      "tolerance_abs": 1.0
+    }
+  ]
+}

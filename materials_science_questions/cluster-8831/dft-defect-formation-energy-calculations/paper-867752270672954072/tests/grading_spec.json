@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Recomputing pair binding energies and band gap from raw DFT outputs is infeasible in a verifier; instead compare reported quantities to paper-reported references with tolerances and structural ordering.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference pair binding energies and band gap for scoring",
+      "source_provenance": "Paper Fig. 1 (PbTe ~1.0 eV), Fig. 2 (SnTe/GeTe ~0.5 eV), text (band gap 78.2 meV).",
+      "generation_method": "Values taken from paper discussion; the reference solve.sh uses these exact values.",
+      "why_not_fabricated": "These are the paper-reported approximate values, used as thresholds for trend and absolute tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pair_energetics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "PbTe": {
+              "Eb_2nd_nn": "number",
+              "Eb_5th_nn": "number"
+            },
+            "SnTe": {
+              "Eb_2nd_nn": "number",
+              "Eb_5th_nn": "number"
+            },
+            "GeTe": {
+              "Eb_2nd_nn": "number",
+              "Eb_5th_nn": "number"
+            }
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "PbTe.Eb_2nd_nn": "eV",
+            "PbTe.Eb_5th_nn": "eV",
+            "SnTe.Eb_2nd_nn": "eV",
+            "SnTe.Eb_5th_nn": "eV",
+            "GeTe.Eb_2nd_nn": "eV",
+            "GeTe.Eb_5th_nn": "eV"
+          }
+        },
+        "description": "Pair binding energies for (Ag,Sb) in each host. Hidden checker compares reported values to reference values within tolerances and checks that Eb_2nd_nn > Eb_5th_nn for each host."
+      },
+      {
+        "file": "band_gap_report.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "PbTe_AgSb_2nd_nn_bandgap": "number"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "PbTe_AgSb_2nd_nn_bandgap": "eV"
+          }
+        },
+        "description": "Direct band gap at Gamma for PbTe (Ag,Sb) 2nd n.n. configuration. Compared to expected value within tolerance."
+      }
+    ],
+    "notes": "All energies in electronvolts (eV). Agent must run DFT calculations using the public resources listed. The hidden checker performs result‑level comparison with tolerances and a structural ordering check."
+  },
+  "steps": [
+    {
+      "id": "pair_energetics_existence",
+      "output_file": "pair_energetics.json",
+      "kind": "file_exists",
+      "weight": 0.0,
+      "description": "Ensure file exists and is parseable JSON with required keys"
+    },
+    {
+      "id": "pair_energetics_values",
+      "output_file": "pair_energetics.json",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "target_values": {
+        "PbTe": 1.0,
+        "SnTe": 0.5,
+        "GeTe": 0.5
+      },
+      "tolerance": 0.2,
+      "score_mode": "absolute_tolerance",
+      "description": "Check that reported Eb_2nd_nn values are within ±0.2 eV of paper references for each host"
+    },
+    {
+      "id": "pair_energetics_ordering",
+      "output_file": "pair_energetics.json",
+      "kind": "structural",
+      "weight": 0.25,
+      "required_orderings": [
+        {
+          "host": "PbTe",
+          "field_high": "Eb_2nd_nn",
+          "field_low": "Eb_5th_nn"
+        },
+        {
+          "host": "SnTe",
+          "field_high": "Eb_2nd_nn",
+          "field_low": "Eb_5th_nn"
+        },
+        {
+          "host": "GeTe",
+          "field_high": "Eb_2nd_nn",
+          "field_low": "Eb_5th_nn"
+        }
+      ],
+      "description": "Verify that for each host, Eb_2nd_nn > Eb_5th_nn (preference for 2nd n.n.)"
+    },
+    {
+      "id": "band_gap_existence",
+      "output_file": "band_gap_report.json",
+      "kind": "file_exists",
+      "weight": 0.0,
+      "description": "Ensure file exists and contains key"
+    },
+    {
+      "id": "band_gap_value",
+      "output_file": "band_gap_report.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "target_value": 0.0782,
+      "tolerance": 0.02,
+      "score_mode": "absolute_tolerance",
+      "description": "Check direct band gap at Gamma for PbTe (Ag,Sb) 2nd n.n. within ±20 meV of paper value (78.2 meV)"
+    }
+  ]
+}

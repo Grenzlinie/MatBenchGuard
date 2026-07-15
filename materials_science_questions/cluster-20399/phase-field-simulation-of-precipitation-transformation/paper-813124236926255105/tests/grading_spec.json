@@ -1,0 +1,250 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes MAPE from agent's stress-strain curves against digitized reference curves; extracts temperature extrema and compares to paper values; verifies band angle range. All derived from raw artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stress_strain_curves.csv": "threshold_or_better",
+    "temperature_evolution.csv": "reference_match",
+    "band_angle.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference stress-strain curves for strain rates 1e-3 and 1e-2 s^-1",
+      "source_provenance": "Digitized from simulation curves in Fig.6 of Wendler et al. Acta Mater. 2017",
+      "generation_method": "Manual digitization of published curves; values approximate the paper's own simulation.",
+      "why_not_fabricated": "Curves reproduce the paper's reported simulation results; correct agent output should match closely."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected temperature rise and drop for two strain rates",
+      "source_provenance": "Extracted from temperature evolution curves in Fig.7 of the paper.",
+      "generation_method": "Approximate max/min temperatures from indicated curves.",
+      "why_not_fabricated": "Values correspond to the paper's own simulation predictions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_rate",
+            "strain",
+            "stress"
+          ],
+          "units": {
+            "strain_rate": "s⁻¹",
+            "strain": "1",
+            "stress": "MPa"
+          }
+        },
+        "description": "Engineering stress–strain curves for strain-controlled tensile loading/unloading at 1×10⁻³ s⁻¹ and 1×10⁻² s⁻¹. The checker computes the mean absolute percentage error (MAPE) of the stress values against digitized reference curves from the paper; MAPE < 5% for both rates is required."
+      },
+      {
+        "file": "temperature_evolution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain_rate",
+            "time",
+            "temperature"
+          ],
+          "units": {
+            "strain_rate": "s⁻¹",
+            "time": "s",
+            "temperature": "K"
+          }
+        },
+        "description": "Sample-area-averaged temperature versus time for the two strain rates. The checker extracts the maximum temperature rise (T_max − T0) and minimum temperature drop (T0 − T_min) and compares them to paper‑reported simulation values; both must be within ±0.5 K."
+      },
+      {
+        "file": "band_angle.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "angle": "float"
+          },
+          "units": {
+            "angle": "degrees"
+          }
+        },
+        "description": "Dominant band tilt angle (in degrees) measured from the martensite phase field at the peak strain of the 1×10⁻³ s⁻¹ run. The checker verifies that the reported angle lies within 53°–57°."
+      }
+    ],
+    "notes": "The simulation evidence file (simulation_output.h5) is not scored but must be produced by the process step. The verifier reads only the three scored artifacts; it does not re‑run the FEM simulation."
+  },
+  "steps": [
+    {
+      "id": "stress_strain_curves",
+      "output_file": "stress_strain_curves.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "params": {
+        "tolerance_mape": 0.05,
+        "decay_scale": 0.1,
+        "reference_curves": {
+          "0.001": {
+            "strain": [
+              0.0,
+              0.002,
+              0.004,
+              0.006,
+              0.008,
+              0.01,
+              0.012,
+              0.014,
+              0.016,
+              0.018,
+              0.02,
+              0.021,
+              0.021,
+              0.019,
+              0.017,
+              0.015,
+              0.01425,
+              0.014,
+              0.0135,
+              0.013,
+              0.012,
+              0.01,
+              0.008,
+              0.006,
+              0.004,
+              0.002,
+              0.0
+            ],
+            "stress": [
+              0.0,
+              71.8,
+              143.6,
+              215.4,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              242.0,
+              210.0,
+              178.0,
+              146.0,
+              134.0,
+              134.0,
+              134.0,
+              134.0,
+              80.2,
+              8.4,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "0.01": {
+            "strain": [
+              0.0,
+              0.002,
+              0.004,
+              0.006,
+              0.008,
+              0.01,
+              0.012,
+              0.014,
+              0.016,
+              0.018,
+              0.02,
+              0.021,
+              0.021,
+              0.019,
+              0.017,
+              0.015,
+              0.01425,
+              0.014,
+              0.0135,
+              0.012,
+              0.01,
+              0.008,
+              0.006,
+              0.004,
+              0.002,
+              0.0
+            ],
+            "stress": [
+              0.0,
+              71.8,
+              143.6,
+              242.0,
+              247.3,
+              252.7,
+              258.0,
+              263.3,
+              268.7,
+              274.0,
+              279.3,
+              282.0,
+              282.0,
+              250.0,
+              218.0,
+              186.0,
+              134.0,
+              134.0,
+              84.0,
+              80.0,
+              48.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "temperature_evolution",
+      "output_file": "temperature_evolution.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "params": {
+        "tolerance_temp_k": 0.5,
+        "ambient_T0": 294.65,
+        "expected": {
+          "0.001": {
+            "rise": 2.0,
+            "drop": 1.5
+          },
+          "0.01": {
+            "rise": 4.5,
+            "drop": 3.5
+          }
+        }
+      }
+    },
+    {
+      "id": "band_angle",
+      "output_file": "band_angle.json",
+      "kind": "json_field",
+      "weight": 0.2,
+      "params": {
+        "field": "angle",
+        "min_angle": 53.0,
+        "max_angle": 57.0
+      }
+    }
+  ]
+}

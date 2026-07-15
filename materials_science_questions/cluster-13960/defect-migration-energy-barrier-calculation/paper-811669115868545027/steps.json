@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_0",
+    "title": "Temperature-dependent lattice constant determination",
+    "role": "process",
+    "action": "Using the Ackland potential, determine the stress-free lattice constants a and c of HCP Zr at 600 K and 800 K (e.g., via Parrinello‑Rahman barostat or energy minimization with volume relaxation). Save the computed lattice constants to lattice_constants.json.",
+    "output_file": "",
+    "evidence": "lattice_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provide the cell dimensions for the MD production runs at the two target temperatures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "Formation energy calculation",
+    "role": "scored",
+    "action": "Create simulation cells containing the six interstitial configurations (BC, BS, BO, BT, O, CN) one at a time, perform static energy minimization, and compute the formation energy as E_{N+1} – E_N – E_sub using the Ackland potential. Write the formation energies (eV) to formation_energies.json.",
+    "output_file": "formation_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Production of formation energies for the important self-interstitial configurations.",
+    "output_schema": "JSON object with keys BC, BS, BO, BT, O, CN mapping to formation energies in eV (floats)."
+  },
+  {
+    "id": "step_2",
+    "title": "Molecular statics calculation of migration barriers",
+    "role": "process",
+    "action": "Construct initial and final images for the four jump mechanisms J1, J2, J3, J4 and perform climbing‑image nudged elastic band (CI‑NEB) calculations or constrained energy minimisation along the path to obtain the static energy barriers. Save the barrier energies to ms_barriers.json for documentation.",
+    "output_file": "",
+    "evidence": "ms_barriers.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Static NEB calculation to determine migration energy barriers for the four jump mechanisms; provides reference for comparison with MD-derived barriers.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "MD simulation and diffusion coefficient extraction",
+    "role": "process",
+    "action": "Using the lattice constants from step_0, prepare simulation cells with a self‑interstitial (BC ground state). Run molecular dynamics simulations at 600 K and 800 K with a Langevin thermostat for at least 500 ps each. Analyse the trajectories: locate the interstitial via Wigner‑Seitz cell analysis and compute mean square displacements to obtain diffusion coefficients Dc (c‑axis) and Da (basal plane) at each temperature. Save the Dc, Da values to diffusion_coefficients.json.",
+    "output_file": "",
+    "evidence": "diffusion_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "MD production runs and subsequent analysis to produce diffusion coefficients, which are needed for the Arrhenius fit and anisotropy factor.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Arrhenius fit and anisotropy factor report",
+    "role": "scored",
+    "action": "From the diffusion coefficients at 600 K and 800 K in diffusion_coefficients.json, perform an Arrhenius fit using the decomposition of Dc and Da contributions from the four jump mechanisms. Extract migration activation energies Em and prefactors Do for J1–J4. Compute the diffusional anisotropy factor p = (Dc/Da)^{1/6} at 600 K. Write all values to migration_results.json.",
+    "output_file": "migration_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored output containing the migration energy barriers, prefactors, and anisotropy factor derived from the MD data.",
+    "output_schema": "JSON object with keys J1_Em, J2_Em, J3_Em, J4_Em (eV); J1_Do, J2_Do, J3_Do, J4_Do (cm^2/s); p_factor (dimensionless)."
+  }
+]

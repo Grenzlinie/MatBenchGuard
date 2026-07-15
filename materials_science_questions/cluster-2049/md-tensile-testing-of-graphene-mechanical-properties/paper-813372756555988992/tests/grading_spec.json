@@ -1,0 +1,169 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The main quantities (reaction energies, curvatures, band gaps) are produced by DFT which cannot be recomputed in the verifier. The checker compares the agent's reported values to the hidden gold from the paper within tolerances. The linear fit is audited structurally (slope sign, R², consistency check).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reaction_energies_curvatures.csv": "reference_match",
+    "band_gaps.csv": "reference_match",
+    "curvature_energy_linear_fit.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for reaction energies, curvatures, and band gaps from the paper's Table 2 and Fig. 3.",
+      "source_provenance": "Paper Table 2 (Local atomic curvatures and reaction energies) and Results text (band gap of hydrogenated e ~0.15 eV).",
+      "generation_method": "Direct extraction of the reported numbers.",
+      "why_not_fabricated": "These are exact published numerical results used for reproducibility checking."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reaction_energies_curvatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "A_lambda",
+            "curvature_C1",
+            "curvature_C2",
+            "avg_curvature",
+            "Er_H"
+          ],
+          "units": {
+            "curvature_C1": "1/Å",
+            "curvature_C2": "1/Å",
+            "avg_curvature": "1/Å",
+            "Er_H": "eV"
+          }
+        },
+        "description": "Computed reaction energies and local curvatures for hydrogenation of rippled graphene species b–e. Checker compares to paper's Table 2 within tolerance."
+      },
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "hydrogenated",
+            "band_gap_eV"
+          ],
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Band gaps of pristine rippled graphene (species e) and its C1-C2 hydride, verifying absence of gap in pristine and opening upon hydrogenation."
+      },
+      {
+        "file": "curvature_energy_linear_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "slope",
+            "intercept",
+            "r_squared"
+          ],
+          "items": {
+            "slope": "eV·Å",
+            "intercept": "eV",
+            "r_squared": "dimensionless"
+          }
+        },
+        "description": "Linear fit of reaction energy vs average curvature, verifying approximate linear dependence (negative slope, high R²)."
+      }
+    ],
+    "notes": "Tolerances are hidden. The linear fit is checked for negative slope and R² > 0.9, plus a consistency check on predicted Er_H at a given curvature. All DFT calculations are run by the agent; no precomputed data is provided."
+  },
+  "steps": [
+    {
+      "id": "reaction_energies_curvatures",
+      "output_file": "reaction_energies_curvatures.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "tolerances": {
+        "A_lambda": 0.001,
+        "curvature_C1": 0.02,
+        "curvature_C2": 0.02,
+        "avg_curvature": 0.02,
+        "Er_H": 0.2
+      },
+      "gold_rows": [
+        {
+          "species": "b",
+          "A_lambda": 0.159,
+          "curvature_C1": 0.1068,
+          "curvature_C2": 0.1068,
+          "avg_curvature": 0.1068,
+          "Er_H": 1.46
+        },
+        {
+          "species": "c",
+          "A_lambda": 0.318,
+          "curvature_C1": 0.1393,
+          "curvature_C2": 0.1363,
+          "avg_curvature": 0.1378,
+          "Er_H": 0.53
+        },
+        {
+          "species": "d",
+          "A_lambda": 0.477,
+          "curvature_C1": 0.1689,
+          "curvature_C2": 0.179,
+          "avg_curvature": 0.174,
+          "Er_H": 0.16
+        },
+        {
+          "species": "e",
+          "A_lambda": 0.637,
+          "curvature_C1": 0.1777,
+          "curvature_C2": 0.2163,
+          "avg_curvature": 0.197,
+          "Er_H": -0.17
+        }
+      ]
+    },
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.csv",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "tolerances": {
+        "band_gap_eV": 0.05
+      },
+      "gold_rows": [
+        {
+          "species": "e",
+          "hydrogenated": "false",
+          "band_gap_eV": 0.0
+        },
+        {
+          "species": "e",
+          "hydrogenated": "true",
+          "band_gap_eV": 0.15
+        }
+      ]
+    },
+    {
+      "id": "curvature_energy_linear_fit",
+      "output_file": "curvature_energy_linear_fit.json",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "checks": {
+        "slope_negative": true,
+        "r_squared_min": 0.9,
+        "predicted_er_tol": 0.2,
+        "predicted_at_avg_curvature": 0.197,
+        "predicted_er_target": -0.17
+      }
+    }
+  ]
+}

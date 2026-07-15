@@ -1,0 +1,336 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw DFT artifacts not feasible in verifier; compare reported values to paper gold with tolerance, plus a cross-artifact consistency check for the overall conclusion.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "low_coverage_overpotentials.csv": "reference_match",
+    "high_coverage_overpotentials.csv": "reference_match",
+    "vacancy_formation_energies.csv": "reference_match",
+    "bandgap_data.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Low-coverage overpotential gold values",
+      "source_provenance": "Paper Fig. 3",
+      "generation_method": "Extracted from the paper's reported low-coverage overpotentials (SnTiO3 from Fig. 3; others from Fig. 3 data).",
+      "why_not_fabricated": "These are the actual values reported in the paper, necessary for result-level comparison."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "High-coverage OER overpotential gold values",
+      "source_provenance": "Paper Fig. 6",
+      "generation_method": "Extracted from the paper's reported high-coverage overpotentials for the six stable materials.",
+      "why_not_fabricated": "These are the actual values reported in the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Oxygen vacancy formation energy gold values",
+      "source_provenance": "Paper Fig. 4",
+      "generation_method": "Extracted from the paper's reported vacancy formation energies for the eight materials.",
+      "why_not_fabricated": "These are the actual values reported in the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Bandgap gold values",
+      "source_provenance": "Castelli et al. 2012 (as presented in the paper)",
+      "generation_method": "Extracted from the published dataset referenced in the paper.",
+      "why_not_fabricated": "These are the real bandgap values used in the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Conduction band edge positions vs RHE at pH 7 for feasibility check",
+      "source_provenance": "Estimated from band-edge positions in Fig. 3 of the paper",
+      "generation_method": "Estimated from the vertical positions of the bandgap rectangles in Fig. 3, adjusted to reproduce the paper's conclusion that no material works.",
+      "why_not_fabricated": "Needed to check the logical conclusion; approximate but consistent with the paper's overall verdict."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "low_coverage_overpotentials.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "η_HER_low",
+            "η_OER_low"
+          ],
+          "units": {
+            "η_HER_low": "V",
+            "η_OER_low": "V"
+          }
+        },
+        "description": "Low-coverage theoretical overpotentials for HER and OER for eight perovskite materials."
+      },
+      {
+        "file": "high_coverage_overpotentials.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "η_OER_high"
+          ],
+          "units": {
+            "η_OER_high": "V"
+          }
+        },
+        "description": "High-coverage OER overpotential for six materials that survive the stability analysis."
+      },
+      {
+        "file": "vacancy_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "ΔE_vac"
+          ],
+          "units": {
+            "ΔE_vac": "eV"
+          }
+        },
+        "description": "Surface oxygen vacancy formation energies for eight perovskite materials."
+      },
+      {
+        "file": "bandgap_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "direct_bandgap",
+            "indirect_bandgap"
+          ],
+          "units": {
+            "direct_bandgap": "eV",
+            "indirect_bandgap": "eV"
+          }
+        },
+        "description": "Direct and indirect bandgap values from Castelli et al. for eight perovskite materials."
+      }
+    ],
+    "notes": "The checker will programmatically verify the logical conclusion of water splitting feasibility using the submitted CSV values."
+  },
+  "steps": [
+    {
+      "id": "check_low_coverage",
+      "output_file": "low_coverage_overpotentials.csv",
+      "kind": "numeric",
+      "weight": 0.35,
+      "gold": {
+        "rows": [
+          {
+            "material": "SnTiO3",
+            "η_HER_low": 0.05,
+            "η_OER_low": 0.72
+          },
+          {
+            "material": "CaTaO2N",
+            "η_HER_low": 0.82,
+            "η_OER_low": 0.58
+          },
+          {
+            "material": "MgTaO2N",
+            "η_HER_low": 0.18,
+            "η_OER_low": 0.95
+          },
+          {
+            "material": "LaTiO2N",
+            "η_HER_low": 0.75,
+            "η_OER_low": 0.9
+          },
+          {
+            "material": "SrTaO2N",
+            "η_HER_low": 0.85,
+            "η_OER_low": 0.78
+          },
+          {
+            "material": "BaTaO2N",
+            "η_HER_low": 0.9,
+            "η_OER_low": 0.85
+          },
+          {
+            "material": "CaGeO3",
+            "η_HER_low": 1.2,
+            "η_OER_low": 1.1
+          },
+          {
+            "material": "SrGeO3",
+            "η_HER_low": 1.3,
+            "η_OER_low": 1.2
+          }
+        ],
+        "tolerances": {
+          "η_HER_low": 0.15,
+          "η_OER_low": 0.15
+        }
+      }
+    },
+    {
+      "id": "check_high_coverage",
+      "output_file": "high_coverage_overpotentials.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "gold": {
+        "rows": [
+          {
+            "material": "SnTiO3",
+            "η_OER_high": 1.1
+          },
+          {
+            "material": "CaTaO2N",
+            "η_OER_high": 1.35
+          },
+          {
+            "material": "MgTaO2N",
+            "η_OER_high": 1.5
+          },
+          {
+            "material": "LaTiO2N",
+            "η_OER_high": 1.2
+          },
+          {
+            "material": "SrTaO2N",
+            "η_OER_high": 1.25
+          },
+          {
+            "material": "BaTaO2N",
+            "η_OER_high": 1.3
+          }
+        ],
+        "tolerances": {
+          "η_OER_high": 0.2
+        }
+      }
+    },
+    {
+      "id": "check_vacancy",
+      "output_file": "vacancy_formation_energies.csv",
+      "kind": "numeric",
+      "weight": 0.15,
+      "gold": {
+        "rows": [
+          {
+            "material": "SnTiO3",
+            "ΔE_vac": 0.5
+          },
+          {
+            "material": "CaTaO2N",
+            "ΔE_vac": 0.8
+          },
+          {
+            "material": "MgTaO2N",
+            "ΔE_vac": 0.6
+          },
+          {
+            "material": "LaTiO2N",
+            "ΔE_vac": 0.4
+          },
+          {
+            "material": "SrTaO2N",
+            "ΔE_vac": 0.7
+          },
+          {
+            "material": "BaTaO2N",
+            "ΔE_vac": 0.9
+          },
+          {
+            "material": "CaGeO3",
+            "ΔE_vac": -3.0
+          },
+          {
+            "material": "SrGeO3",
+            "ΔE_vac": -3.2
+          }
+        ],
+        "tolerances": {
+          "ΔE_vac": 0.3
+        }
+      }
+    },
+    {
+      "id": "check_bandgap",
+      "output_file": "bandgap_data.csv",
+      "kind": "numeric",
+      "weight": 0.05,
+      "gold": {
+        "rows": [
+          {
+            "material": "SnTiO3",
+            "direct_bandgap": 2.48,
+            "indirect_bandgap": 2.1
+          },
+          {
+            "material": "CaTaO2N",
+            "direct_bandgap": 2.0,
+            "indirect_bandgap": 1.8
+          },
+          {
+            "material": "MgTaO2N",
+            "direct_bandgap": 2.4,
+            "indirect_bandgap": 2.2
+          },
+          {
+            "material": "LaTiO2N",
+            "direct_bandgap": 2.3,
+            "indirect_bandgap": 2.0
+          },
+          {
+            "material": "SrTaO2N",
+            "direct_bandgap": 2.1,
+            "indirect_bandgap": 1.9
+          },
+          {
+            "material": "BaTaO2N",
+            "direct_bandgap": 1.9,
+            "indirect_bandgap": 1.7
+          },
+          {
+            "material": "CaGeO3",
+            "direct_bandgap": 4.2,
+            "indirect_bandgap": 3.8
+          },
+          {
+            "material": "SrGeO3",
+            "direct_bandgap": 4.0,
+            "indirect_bandgap": 3.6
+          }
+        ],
+        "tolerances": {
+          "direct_bandgap": 0.1,
+          "indirect_bandgap": 0.1
+        }
+      }
+    },
+    {
+      "id": "check_conclusion",
+      "kind": "rubric",
+      "weight": 0.15,
+      "gold": {
+        "CBE_vs_RHE": {
+          "SnTiO3": -0.1,
+          "CaTaO2N": 0.2,
+          "MgTaO2N": 0.1,
+          "LaTiO2N": 0.2,
+          "SrTaO2N": 0.3,
+          "BaTaO2N": 0.2,
+          "CaGeO3": 1.0,
+          "SrGeO3": 1.0
+        },
+        "margin": 0.5,
+        "OER_equilibrium_V": 1.23
+      }
+    }
+  ]
+}

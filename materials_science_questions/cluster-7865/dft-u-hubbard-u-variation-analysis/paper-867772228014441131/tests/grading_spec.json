@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Result-level comparison is necessary because the full DFT+NRG pipeline cannot be re-executed inside the lightweight verifier sandbox; only final numeric outputs are submitted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "kondo_temperatures.json": "reference_match",
+    "zero_bias_conductances.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold reference values for Kondo temperatures and conductance thresholds.",
+      "source_provenance": "Paper Table 3 and text: T_K ~1 K for Co/(4,4) and Co/(8,8), ~10^-4 K for Fe/(8,8); zero-bias conductance ~1 for Co systems (one-channel Kondo) and ~0 for Fe (two-channel Kondo).",
+      "generation_method": "Extracted directly from the paper’s reported quantities. The T_K reference is 1.0 K for Co and 1e-4 K for Fe. The conductance thresholds (Co >0.3, Fe <0.2) are chosen to accommodate scatter while reflecting the expected Kondo channel behaviour.",
+      "why_not_fabricated": "Values are taken from the specific paper (Table 3 and discussion of Fig 5), not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "kondo_temperatures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Co_44": "float (K)",
+            "Co_88": "float (K)",
+            "Fe_88": "float (K)"
+          }
+        },
+        "description": "Predicted Kondo temperatures for the three impurity‑nanotube systems. Compared to hidden paper reference with appropriate tolerance."
+      },
+      {
+        "file": "zero_bias_conductances.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Co_44": "float (dimensionless)",
+            "Co_88": "float (dimensionless)",
+            "Fe_88": "float (dimensionless)"
+          }
+        },
+        "description": "Predicted zero‑bias conductance ratios G/G0 for the three systems. Checker compares against hidden thresholds derived from the paper's expected Kondo channel behavior."
+      }
+    ],
+    "notes": "DFT intermediate results and extracted Anderson parameters are not scored but must be produced as evidence of process execution. The load‑bearing Kondo temperature step guarantees the full pipeline is required."
+  },
+  "steps": [
+    {
+      "id": "kondo_tk_score",
+      "output_file": "kondo_temperatures.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "targets": {
+        "Co_44": {
+          "value": 1.0,
+          "tol_factor": 2.0
+        },
+        "Co_88": {
+          "value": 1.0,
+          "tol_factor": 2.0
+        },
+        "Fe_88": {
+          "value": 0.0001,
+          "tol_factor": 2.0
+        }
+      }
+    },
+    {
+      "id": "conductance_score",
+      "output_file": "zero_bias_conductances.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "targets": {
+        "Co_44": {
+          "min_threshold": 0.3
+        },
+        "Co_88": {
+          "min_threshold": 0.3
+        },
+        "Fe_88": {
+          "max_threshold": 0.2
+        }
+      }
+    }
+  ]
+}

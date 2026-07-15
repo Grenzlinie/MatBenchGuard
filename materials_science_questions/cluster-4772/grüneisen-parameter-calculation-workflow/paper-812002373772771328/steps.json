@@ -1,0 +1,54 @@
+[
+  {
+    "id": "prepare_volume_data",
+    "title": "Prepare volume data",
+    "role": "process",
+    "action": "Read the provided CaIrO3_unit_cell_parameters.csv and compute the unit-cell volume V = a * b * c for each temperature. Write an intermediate CSV file 'volume_data.csv' with columns T (K) and V (Å³) for use in downstream steps.",
+    "output_file": "",
+    "evidence": "volume_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate volume data used as input to fitting steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "fit_thermal_expansion",
+    "title": "Fit linear thermal expansion coefficients",
+    "role": "scored",
+    "action": "Fit a linear thermal expansion model to the unit-cell volume data from 298–1173 K and to each axis length a(T), b(T), c(T) over the same temperature range to obtain reference values at Tr=300 K and coefficients a0 and a1. Write the results to thermal_expansion_coefficients.csv.",
+    "output_file": "thermal_expansion_coefficients.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Linear thermal expansion parameters for volume and each axis.",
+    "output_schema": "CSV with columns: target (string: volume, a_axis, b_axis, c_axis), value_at_Tr (float, unit: Å³ for volume, Å for axes), a0 (float, unit: K⁻¹), a1 (float, unit: K⁻²)."
+  },
+  {
+    "id": "fit_gruneisen",
+    "title": "Fit second-order Grüneisen approximation",
+    "role": "scored",
+    "action": "Implement the second-order Grüneisen approximation with Debye internal energy and fit it to the full-range (113–1173 K) volume data by nonlinear least-squares to obtain Debye temperature θ_D, Q, V0, and b. Similarly, fit the axial Grüneisen approximation to a(T), b(T), c(T) over the full range to obtain per-axis θ_D, Q_A, axis_length_at_0, and b_A. Report all fitted values and their estimated standard uncertainties in fitted_gruneisen_parameters.csv.",
+    "output_file": "fitted_gruneisen_parameters.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Fitted Grüneisen parameters for volume and each axis.",
+    "output_schema": "CSV with columns: parameter (string: theta_D, Q, V0, b for volume; theta_D, Q_A, a0, b_A for a-axis, etc.), fit_target (string: volume, a_axis, b_axis, c_axis), fitted_value (float), fitted_esd (float). Units: theta_D in K, Q in J, V0 in Å³, axis lengths in Å, b dimensionless."
+  },
+  {
+    "id": "compute_incompressibilities",
+    "title": "Derive axial incompressibilities and ratios",
+    "role": "scored",
+    "action": "Using the Q_A values from the axis fits, V0 from the volume fit, and an assumed thermodynamic Grüneisen parameter γ = 1.17 (with γ′ = γ), compute axial incompressibilities κ_a, κ_b, κ_c. Normalize these to the c-axis incompressibility to obtain the ratios κ_a:κ_c, κ_b:κ_c, κ_c:κ_c. Write the ratios to axial_incompressibility_ratios.csv.",
+    "output_file": "axial_incompressibility_ratios.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Axial incompressibility ratios from CaIrO₃ data.",
+    "output_schema": "CSV with columns: axis (string: a, b, c), ratio (float). Ratios dimensionless, normalized such that κ_c:κ_c = 1."
+  }
+]

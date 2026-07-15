@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step01",
+    "title": "Implement the phase-field finite-deformation lithiation model",
+    "role": "process",
+    "action": "Implement the dimensionless phase-field finite-deformation model for reaction-limited two-phase lithiation of silicon in an open-source finite-element framework (e.g., FEniCS). The implementation must include the phase-field evolution equation, mechanical equilibrium, and the ordinary differential equations for the internal deviatoric inelastic deformation variables, using the material parameters and boundary conditions described in the task. This step produces the working finite-element code that all subsequent scored simulations depend on.",
+    "output_file": "",
+    "evidence": "model_implementation.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prerequisite: the agent must build the numerical solver to be used in all downstream simulations. The evidence log documents that the implementation was performed.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Thin-film biaxial stress vs kinetic parameter α",
+    "role": "scored",
+    "action": "Using the implemented model, simulate 1D lithiation of a biaxially constrained thin Si film for at least ten different values of the kinetic parameter α in the range 0.01–1. For each α, after the reaction front has passed, record the dimensionless biaxial compressive stress normalized by Young's modulus in the lithiated phase. Write the pairs (α, normalized stress) to the output CSV.",
+    "output_file": "thin_film_stress_alpha.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reproduces the stress dependence on α (Fig. 2 in the source work). The stress must decrease monotonically with α, and the value at α=0.2 serves as a calibration point.",
+    "output_schema": "Two columns: alpha (float), sigma_film (float). sigma_film is the dimensionless biaxial compressive stress (positive for compression) normalized by the reference Young's modulus."
+  },
+  {
+    "id": "step03",
+    "title": "Spherical particle lithiation evolution",
+    "role": "scored",
+    "action": "Simulate axisymmetric lithiation of a spherical Si particle of initial radius R=35*l0 under constant electrochemical driving force, using the calibrated parameters (α=0.2, volumetric strain θ=2.7 for Li₃.₇₅Si, composition-dependent Young's modulus, etc.). Track the dimensionless time τ, the current Si core radius r_c/l0, and the outer radius r_s/l0 from the start until the core radius nears an equilibrium. Write at least 50 time-series points to the output CSV.",
+    "output_file": "spherical_lithiation_evolution.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Data showing self-limiting lithiation: the core radius decreases and approaches a plateau, while the outer radius increases (Fig. 3a of the source).",
+    "output_schema": "Three columns: dimensionless_time (float), rc (float, current Si core radius normalized by l0), rs (float, outer radius normalized by l0)."
+  },
+  {
+    "id": "step04",
+    "title": "Equilibrium core radius vs particle size",
+    "role": "scored",
+    "action": "For each particle size R/l0 in the set {10, 15, 20, 30, 40, 50}, run the spherical lithiation simulation to equilibrium and record the equilibrium core radius r_ce/l0. Compute the normalized ratio r_ce/R. Write the pairs (R_over_l0, rce_over_R) to the output CSV.",
+    "output_file": "equilibrium_core_radius.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Size dependence of the self-limiting core fraction (Fig. 3b of the source). The ratio rce_over_R must increase monotonically with R/l0.",
+    "output_schema": "Two columns: R_over_l0 (float), rce_over_R (float)."
+  },
+  {
+    "id": "step05",
+    "title": "Energy release rate for surface cracks in a lithiated spherical particle",
+    "role": "scored",
+    "action": "For a spherical particle of initial radius R=30*l0, simulate lithiation to three states: r_c/R = 0.2, 0.5, 0.8. At each state, introduce a surface crack of depth a/R and compute the energy release rate G by evaluating the change in elastic energy with respect to crack area. Vary a/R from near 0 to at least 0.5, producing at least 10 points per lithiation state. Write the crack depth a/R, lithiation state r_c/R, and normalized energy release rate G/(l0*Y0) to the output CSV.",
+    "output_file": "energy_release_rate.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Energy release rate as a function of crack depth at different lithiation stages (source Fig. 4b). Each lithiation state curve must exhibit a single maximum in G.",
+    "output_schema": "Three columns: a_over_R (float), rc_over_R (float, lithiation state indicator), G_normalized (float)."
+  },
+  {
+    "id": "step06",
+    "title": "Maximum energy release rate vs particle size",
+    "role": "scored",
+    "action": "Repeat the fracture analysis for several particle radii R/l0 (e.g., 10, 15, 20, 30, 40, 50). For each size, determine the maximum energy release rate G_max (peak of the G vs a/R curve at full lithiation). Write the pairs (R_over_l0, G_max_normalized) to the output CSV.",
+    "output_file": "gmax_vs_R.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Data to determine the critical particle size for fracture avoidance. The intersection of G_max with the fracture energy Γ≈0.1*l0*Y0 gives the critical radius R* (source value near 28*l0).",
+    "output_schema": "Two columns: R_over_l0 (float), G_max_normalized (float)."
+  }
+]

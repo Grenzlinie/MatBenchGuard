@@ -1,0 +1,366 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Geometric parameters are compared element-wise to paper gold; scaled frequencies are checked by recomputing RMSE against gold sorted frequency lists.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "geometric_parameters.json": "exact_match",
+    "scaled_frequencies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold bond lengths and angles from Table 1",
+      "source_provenance": "Paper Table 1, HF and B3LYP columns",
+      "generation_method": "direct copy from paper",
+      "why_not_fabricated": "values are the paper's reported optimized geometric parameters"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold scaled frequencies (sorted) from Table 2",
+      "source_provenance": "Paper Table 2, scaled frequency columns (HF Freq.(a), B3LYP Freq.(b))",
+      "generation_method": "sorted the paper's reported scaled frequencies ascending",
+      "why_not_fabricated": "values are the paper's own reported scaled harmonic frequencies"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometric_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hf": {
+              "bond_lengths": {
+                "unit": "Å"
+              },
+              "bond_angles": {
+                "unit": "degrees"
+              }
+            },
+            "b3lyp": {
+              "bond_lengths": {
+                "unit": "Å"
+              },
+              "bond_angles": {
+                "unit": "degrees"
+              }
+            }
+          },
+          "properties": {
+            "hf": {
+              "bond_lengths": {
+                "P1-O1": "float",
+                "P1-O2": "float",
+                "P1-O3": "float",
+                "P1-O4": "float",
+                "N1-C5": "float",
+                "N1-C1": "float",
+                "N2-C5": "float",
+                "C1-C2": "float",
+                "C2-C3": "float",
+                "C3-C4": "float",
+                "C4-C5": "float",
+                "O3-N1": "float",
+                "O4-N2": "float",
+                "N1-H7": "float",
+                "N2-H8": "float",
+                "N2-H9": "float"
+              },
+              "bond_angles": {
+                "O3-P1-O4": "float",
+                "O3-P1-O1": "float",
+                "O4-P1-O1": "float",
+                "O3-P1-O2": "float",
+                "O4-P1-O2": "float",
+                "O1-P1-O2": "float",
+                "C2-C1-N1": "float",
+                "C1-C2-C3": "float",
+                "C4-C3-C2": "float",
+                "C3-C4-C5": "float",
+                "C5-N1-C1": "float",
+                "N2-C5-N1": "float",
+                "N2-C5-C4": "float",
+                "N1-C5-C4": "float",
+                "N1-H7-O3": "float",
+                "N1-H8-O4": "float"
+              }
+            },
+            "b3lyp": {
+              "bond_lengths": {
+                "P1-O1": "float",
+                "P1-O2": "float",
+                "P1-O3": "float",
+                "P1-O4": "float",
+                "N1-C5": "float",
+                "N1-C1": "float",
+                "N2-C5": "float",
+                "C1-C2": "float",
+                "C2-C3": "float",
+                "C3-C4": "float",
+                "C4-C5": "float",
+                "O3-N1": "float",
+                "O4-N2": "float",
+                "N1-H7": "float",
+                "N2-H8": "float",
+                "N2-H9": "float"
+              },
+              "bond_angles": {
+                "O3-P1-O4": "float",
+                "O3-P1-O1": "float",
+                "O4-P1-O1": "float",
+                "O3-P1-O2": "float",
+                "O4-P1-O2": "float",
+                "O1-P1-O2": "float",
+                "C2-C1-N1": "float",
+                "C1-C2-C3": "float",
+                "C4-C3-C2": "float",
+                "C3-C4-C5": "float",
+                "C5-N1-C1": "float",
+                "N2-C5-N1": "float",
+                "N2-C5-C4": "float",
+                "N1-C5-C4": "float",
+                "N1-H7-O3": "float",
+                "N1-H8-O4": "float"
+              }
+            }
+          }
+        },
+        "description": "Optimized bond lengths (Å) and bond angles (°) from HF/6‑311++G(d,p) and B3LYP/6‑311++G(d,p) calculations. Every value is compared to the paper‑reported optimized parameters with an absolute tolerance."
+      },
+      {
+        "file": "scaled_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hf": "array of 57 floats",
+            "b3lyp": "array of 57 floats"
+          },
+          "items": {
+            "unit": "cm⁻¹"
+          }
+        },
+        "description": "Scaled harmonic vibrational frequencies (cm⁻¹) for 57 normal modes, sorted in ascending order. The checker recomputes RMSE and Pearson R² against hidden experimental frequencies and verifies that the relative performance of the two methods matches the expected ranking."
+      }
+    ],
+    "notes": "Scaling factors are provided in the public step description and must be applied. The initial molecular geometry is not provided; the agent builds connectivity from the formula (C5H7N2)(H2PO4). The score for geometric parameters uses an absolute tolerance; the frequency score uses recomputed RMSE/R² with trend requirements."
+  },
+  "steps": [
+    {
+      "id": "geom_check",
+      "output_file": "geometric_parameters.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "target_policy": "exact_match",
+      "config": {
+        "gold_hf_lengths": {
+          "P1-O1": 1.599,
+          "P1-O2": 1.598,
+          "P1-O3": 1.489,
+          "P1-O4": 1.477,
+          "N1-C5": 1.336,
+          "N1-C1": 1.349,
+          "N2-C5": 1.32,
+          "C1-C2": 1.351,
+          "C2-C3": 1.415,
+          "C3-C4": 1.356,
+          "C4-C5": 1.422,
+          "O3-N1": 2.607,
+          "O4-N2": 2.752,
+          "N1-H7": 1.049,
+          "N2-H8": 1.022,
+          "N2-H9": 0.992
+        },
+        "gold_hf_angles": {
+          "O3-P1-O4": 117.5,
+          "O3-P1-O1": 107.3,
+          "O4-P1-O1": 110.0,
+          "O3-P1-O2": 109.1,
+          "O4-P1-O2": 108.5,
+          "O1-P1-O2": 103.7,
+          "C2-C1-N1": 121.8,
+          "C1-C2-C3": 117.1,
+          "C4-C3-C2": 121.1,
+          "C3-C4-C5": 119.5,
+          "C5-N1-C1": 122.8,
+          "N2-C5-N1": 119.7,
+          "N2-C5-C4": 122.6,
+          "N1-C5-C4": 117.7,
+          "N1-H7-O3": 174.1,
+          "N1-H8-O4": 175.7
+        },
+        "gold_b3lyp_lengths": {
+          "P1-O1": 1.633,
+          "P1-O2": 1.631,
+          "P1-O3": 1.521,
+          "P1-O4": 1.505,
+          "N1-C5": 1.36,
+          "N1-C1": 1.352,
+          "N2-C5": 1.335,
+          "C1-C2": 1.37,
+          "C2-C3": 1.411,
+          "C3-C4": 1.373,
+          "C4-C5": 1.422,
+          "O3-N1": 2.558,
+          "O4-N2": 2.703,
+          "N1-H7": 1.102,
+          "N2-H8": 1.05,
+          "N2-H9": 1.007
+        },
+        "gold_b3lyp_angles": {
+          "O3-P1-O4": 118.3,
+          "O3-P1-O1": 106.0,
+          "O4-P1-O1": 110.7,
+          "O3-P1-O2": 109.2,
+          "O4-P1-O2": 107.8,
+          "O1-P1-O2": 103.9,
+          "C2-C1-N1": 121.8,
+          "C1-C2-C3": 117.6,
+          "C4-C3-C2": 120.7,
+          "C3-C4-C5": 119.9,
+          "C5-N1-C1": 122.4,
+          "N2-C5-N1": 119.3,
+          "N2-C5-C4": 123.2,
+          "N1-C5-C4": 117.6,
+          "N1-H7-O3": 174.7,
+          "N1-H8-O4": 177.1
+        },
+        "tol_length": 0.02,
+        "tol_angle": 1.5
+      }
+    },
+    {
+      "id": "freq_check",
+      "output_file": "scaled_frequencies.json",
+      "weight": 0.6,
+      "kind": "custom",
+      "target_policy": "reference_match",
+      "config": {
+        "gold_hf_sorted": [
+          32,
+          40,
+          83,
+          89,
+          124,
+          169,
+          193,
+          210,
+          259,
+          346,
+          382,
+          403,
+          413,
+          419,
+          460,
+          491,
+          504,
+          509,
+          537,
+          603,
+          714,
+          751,
+          791,
+          811,
+          816,
+          830,
+          857,
+          949,
+          965,
+          971,
+          977,
+          983,
+          996,
+          1034,
+          1056,
+          1064,
+          1097,
+          1121,
+          1173,
+          1207,
+          1273,
+          1339,
+          1401,
+          1458,
+          1529,
+          1623,
+          1656,
+          1662,
+          2369,
+          2785,
+          2799,
+          2819,
+          2829,
+          2843,
+          3273,
+          3499,
+          3501
+        ],
+        "gold_b3lyp_sorted": [
+          29,
+          38,
+          86,
+          102,
+          141,
+          181,
+          194,
+          223,
+          259,
+          340,
+          390,
+          402,
+          411,
+          417,
+          463,
+          466,
+          490,
+          515,
+          547,
+          616,
+          709,
+          746,
+          777,
+          815,
+          828,
+          836,
+          862,
+          936,
+          950,
+          966,
+          970,
+          987,
+          1015,
+          1042,
+          1046,
+          1115,
+          1123,
+          1145,
+          1161,
+          1257,
+          1307,
+          1358,
+          1427,
+          1481,
+          1528,
+          1617,
+          1656,
+          1662,
+          2060,
+          2785,
+          3051,
+          3069,
+          3078,
+          3094,
+          3520,
+          3680,
+          3683
+        ],
+        "rmse_threshold": 15.0
+      }
+    }
+  ]
+}

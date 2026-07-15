@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap and Schottky temperature are recomputed from the submitted DOS/EHC arrays and compared to paper-derived reference values with tolerances; full recompute from raw curves is feasible and eliminates trust in self-reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dos_ehc_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap (eV) and Schottky temperature (K) for each parameter set, derived from the paper's Figures 3, 7, 11 (band gap) and 5, 9, 13 (Schottky) via visual estimation and conversion to eV.",
+      "source_provenance": "Paper figures (Int. J. Mod. Phys. B 30, 1750053, 2017) – total DOS and EHC curves for the specified conditions; approximate numeric values read from those curves.",
+      "generation_method": "Read the approximate band gap (in units of t) and Schottky peak temperature (K) from the paper's published plots; convert band gap to eV using t = 3.033 eV.",
+      "why_not_fabricated": "Values are anchored to the paper's own reported data; although approximate, they represent the physical result the reference implementation should reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_ehc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "parameter_sets": "array"
+          },
+          "items": {
+            "parameter_sets[*]": {
+              "type": "object",
+              "required": {
+                "label": "string",
+                "energy": "array of float (eV)",
+                "total_dos": "array of float",
+                "total_ehc": "array of float",
+                "p_y_dos": "array of float",
+                "p_y_ehc": "array of float",
+                "temperature": "array of float (K)"
+              }
+            }
+          },
+          "units": {
+            "energy": "eV",
+            "temperature": "K"
+          }
+        },
+        "description": "Submitted DOS and EHC curves for each parameter set. The checker will compute band gaps and Schottky temperatures from these curves and compare to hidden reference values."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "band_gap_accuracy",
+      "output_file": "dos_ehc_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "gold": {
+        "B=0": 3.79125,
+        "B=0.1": 3.48795,
+        "B=0.15": 3.18465,
+        "B=0.3": 2.57805,
+        "ni=0.005": 3.48795,
+        "ni=0.05": 3.18465,
+        "ni=0.2": 2.57805,
+        "ni=0.5": 1.66815,
+        "nu/t=0.05": 3.48795,
+        "nu/t=0.6": 2.88135,
+        "nu/t=1": 2.27475,
+        "nu/t=2": 1.36485
+      },
+      "tolerance_abs": 0.5,
+      "description": "For each parameter set, recompute band gap from total_dos array (energy interval around E=0 where DOS < 1e-4*max(DOS)), compare to gold band gap in eV, and average score across sets."
+    },
+    {
+      "id": "schottky_temp_accuracy",
+      "output_file": "dos_ehc_results.json",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "gold": {
+        "B=0": 400,
+        "B=0.1": 380,
+        "B=0.15": 360,
+        "B=0.3": 320,
+        "ni=0.005": 380,
+        "ni=0.05": 380,
+        "ni=0.2": 360,
+        "ni=0.5": 340,
+        "nu/t=0.05": 400,
+        "nu/t=0.6": 370,
+        "nu/t=1": 340,
+        "nu/t=2": 280
+      },
+      "tolerance_abs": 30.0,
+      "description": "For each parameter set, extract Schottky temperature as the temperature at maximum total_ehc, compare to gold temperature (K), and average score across sets."
+    }
+  ]
+}

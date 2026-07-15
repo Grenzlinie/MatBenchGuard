@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The primary (+/−) transition level is recomputed from the formation-energy CSV, the raw artifact of the defect calculations. Bond lengths are compared to the paper's fixed deterministic values within tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target bond lengths (Si-H for H⁻, O-H for H⁺, H⁰ distance) and (+/−) transition level for quartz SiO₂.",
+      "source_provenance": "Extracted from the paper: Sec. III.A, Fig. 1 and text: Si-H 1.51 Å (H⁻), O-H 0.98 Å (H⁺), H⁰ distance to O ~2.40 Å; (+/−) level ~5.4 eV above VBM and ~3.6 eV below CBM (band gap 9.0 eV).",
+      "generation_method": "Directly taken from the paper's own reported numbers for quartz SiO₂.",
+      "why_not_fabricated": "These are the exact published results for the target material; they serve as the hidden reference a correct DFT reproduction must match within tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_geometries.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "H_minus": {
+              "type": "object",
+              "required": {
+                "Si_H_bond_length_angstrom": "number",
+                "description": "string"
+              }
+            },
+            "H_zero": {
+              "type": "object",
+              "required": {
+                "distance_to_nearest_oxygen_angstrom": "number",
+                "description": "string"
+              }
+            },
+            "H_plus": {
+              "type": "object",
+              "required": {
+                "O_H_bond_length_angstrom": "number",
+                "description": "string"
+              }
+            }
+          }
+        },
+        "description": "Relaxed bond lengths for the three charge states of interstitial hydrogen in quartz SiO₂."
+      },
+      {
+        "file": "formation_energies_Fermi_level.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Fermi_energy_eV",
+            "Ef_H_minus_eV",
+            "Ef_H_zero_eV",
+            "Ef_H_plus_eV"
+          ],
+          "units": {
+            "Fermi_energy_eV": "eV",
+            "Ef_H_minus_eV": "eV",
+            "Ef_H_zero_eV": "eV",
+            "Ef_H_plus_eV": "eV"
+          }
+        },
+        "description": "Formation energies of H⁻, H⁰, and H⁺ as a function of Fermi energy relative to VBM."
+      },
+      {
+        "file": "charge_transition_levels.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "transition_energy_above_VBM_eV": "number",
+            "transition_energy_below_CBM_eV": "number"
+          }
+        },
+        "description": "The (+/−) charge transition level position relative to the valence band maximum and conduction band minimum."
+      }
+    ],
+    "notes": "The checker will recompute the (+/−) transition level from the formation_energies_Fermi_level.csv by locating the Fermi energy where Ef(H⁻)=Ef(H⁺). The reported charge_transition_levels.json is used for cross-verification but the primary scoring relies on the CSV-derived value."
+  },
+  "steps": [
+    {
+      "id": "step_relaxed_geometries",
+      "output_file": "relaxed_geometries.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_values": {
+        "H_minus.Si_H_bond_length_angstrom": 1.51,
+        "H_zero.distance_to_nearest_oxygen_angstrom": 2.4,
+        "H_plus.O_H_bond_length_angstrom": 0.98
+      },
+      "tolerance_full": 0.05,
+      "tolerance_partial": 0.2
+    },
+    {
+      "id": "step_transition_level_recompute",
+      "output_file": "formation_energies_Fermi_level.csv",
+      "weight": 0.5,
+      "kind": "recompute",
+      "target_transition_VBM": 5.4,
+      "tolerance_VBM": 0.3
+    },
+    {
+      "id": "step_charge_transition_levels_consistency",
+      "output_file": "charge_transition_levels.json",
+      "weight": 0.2,
+      "kind": "consistency",
+      "expected_keys": [
+        "transition_energy_above_VBM_eV",
+        "transition_energy_below_CBM_eV"
+      ],
+      "tolerance_consistency": 0.3
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Headline quantities (lattice constant, band gaps, effective masses) are extracted from DFT output and reported as scalars. The checker cannot recompute DFT, so result-level compare against paper-reported hidden gold with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for DFT-PBE and DFT-vdW lattice constants, band gaps, DFT-PBE effective masses, and absorption peak window",
+      "source_provenance": "Paper Table 1 (a and Eg) and Table 2 (average effective masses for DFT-PBE). Absorption peak reference from experimental Eg range (1.45-1.53 eV) with tolerance.",
+      "generation_method": "Extracted exact numbers from the paper's tables",
+      "why_not_fabricated": "Values are directly quoted from the published paper; no synthetic holdout needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "methods": "object",
+            "absorption_spectrum": "array"
+          },
+          "properties": {
+            "methods": {
+              "type": "object",
+              "required": {
+                "DFT-PBE": "object",
+                "DFT-vdW": "object"
+              },
+              "properties": {
+                "DFT-PBE": {
+                  "type": "object",
+                  "required": {
+                    "a": "number",
+                    "E_g_noSOC": "number",
+                    "E_g_SOC": "number",
+                    "m_h_avg": "number",
+                    "m_e_avg": "number"
+                  }
+                },
+                "DFT-vdW": {
+                  "type": "object",
+                  "required": {
+                    "a": "number",
+                    "E_g_noSOC": "number",
+                    "E_g_SOC": "number",
+                    "m_h_avg": "number",
+                    "m_e_avg": "number"
+                  }
+                }
+              }
+            },
+            "absorption_spectrum": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": {
+                  "energy_eV": "number",
+                  "epsilon2": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "All DFT results: lattice constant a (Å), band gaps (eV) without and with SOC, average effective masses (m₀), and optical absorption spectrum (energy in eV vs ε₂)."
+      }
+    ],
+    "notes": "The checker will compare the reported values to the paper's hidden reference numbers with appropriate tolerances for each quantity. The absorption spectrum is checked for the presence and approximate location of its main peak."
+  },
+  "steps": [
+    {
+      "id": "check_shape",
+      "output_file": "results.json",
+      "kind": "shape_validation",
+      "weight": 0.01,
+      "description": "Validate that results.json exists and has the required structure."
+    },
+    {
+      "id": "check_lattice_constants",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.2,
+      "fields": [
+        "methods.DFT-PBE.a",
+        "methods.DFT-vdW.a"
+      ],
+      "gold": {
+        "DFT-PBE.a": 6.5219,
+        "DFT-vdW.a": 6.4064
+      },
+      "tolerance": 0.1,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_band_gaps_noSOC",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.2,
+      "fields": [
+        "methods.DFT-PBE.E_g_noSOC",
+        "methods.DFT-vdW.E_g_noSOC"
+      ],
+      "gold": {
+        "DFT-PBE.E_g_noSOC": 1.5434,
+        "DFT-vdW.E_g_noSOC": 1.3952
+      },
+      "tolerance": 0.15,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_band_gaps_SOC",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.15,
+      "fields": [
+        "methods.DFT-PBE.E_g_SOC",
+        "methods.DFT-vdW.E_g_SOC"
+      ],
+      "gold": {
+        "DFT-PBE.E_g_SOC": 0.5157,
+        "DFT-vdW.E_g_SOC": 0.4169
+      },
+      "tolerance": 0.1,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_PBE_effective_masses",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.25,
+      "fields": [
+        "methods.DFT-PBE.m_h_avg",
+        "methods.DFT-PBE.m_e_avg"
+      ],
+      "gold": {
+        "DFT-PBE.m_h_avg": 0.21,
+        "DFT-PBE.m_e_avg": 0.428
+      },
+      "tolerance": 0.03,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "check_vdW_effective_masses",
+      "output_file": "results.json",
+      "kind": "structural_plausibility",
+      "weight": 0.04,
+      "fields": [
+        "methods.DFT-vdW.m_h_avg",
+        "methods.DFT-vdW.m_e_avg"
+      ],
+      "description": "Check that vdW effective masses are positive and plausible (0.05 to 2.0 m0) since paper does not report gold."
+    },
+    {
+      "id": "check_absorption_peak",
+      "output_file": "results.json",
+      "kind": "absorption_peak_location",
+      "weight": 0.15,
+      "description": "Check that absorption spectrum has a peak (epsilon2 > 0.01) in energy range 1.2-1.8 eV."
+    }
+  ]
+}

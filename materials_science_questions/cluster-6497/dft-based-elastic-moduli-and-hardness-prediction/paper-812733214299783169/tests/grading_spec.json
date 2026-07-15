@@ -1,0 +1,190 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The agent's outputs are the final computed quantities; comparing them to the paper's published values with appropriate tolerances (T0 result-level compare) is feasible because the verifier sandbox cannot re-run the full simulation. Recomputing from the agent's raw artifacts (e.g., the CSV files) is thus comparison against hidden gold.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "transition_data.csv": "reference_match",
+    "elastic_constants_B3.csv": "reference_match",
+    "soec_vs_pressure.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold transition pressures and volume collapses",
+      "source_provenance": "paper Table 3",
+      "generation_method": "extracted from the paper's reported values",
+      "why_not_fabricated": "these are the exact values reported in the paper's Table 3"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold ambient elastic constants",
+      "source_provenance": "paper Table 4",
+      "generation_method": "extracted from the paper's reported values",
+      "why_not_fabricated": "these are the exact values reported in the paper's Table 4"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_x",
+            "transition_pressure_GPa",
+            "volume_collapse_percent"
+          ]
+        },
+        "description": "Transition pressure (GPa) and relative volume collapse (%) at the B3→B1 transition for six compositions (x=0.0,0.2,0.55,0.81,0.93,1.0)."
+      },
+      {
+        "file": "elastic_constants_B3.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_x",
+            "B_T_GPa",
+            "C44_GPa",
+            "C_s_GPa"
+          ]
+        },
+        "description": "Ambient-pressure bulk modulus B_T, shear modulus C44, and tetragonal modulus C_s for the zinc-blende (B3) phase for the same six compositions."
+      },
+      {
+        "file": "soec_vs_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "C11_GPa",
+            "C12_GPa",
+            "C44_GPa"
+          ]
+        },
+        "description": "Pressure-dependent second-order elastic constants for at least one composition (e.g., ZnTe). Must show a monotonic increase in each constant with pressure and a clear discontinuity (jump) at the phase transition."
+      }
+    ],
+    "notes": "The checker compares the agent's reported transition pressures and volume collapses to hidden paper values with tolerances. Ambient elastic constants are compared similarly. The pressure‑dependent SOEC are checked for the required structural features (monotonic increase, discontinuity) without exact value matching."
+  },
+  "steps": [
+    {
+      "id": "transition_data",
+      "output_file": "transition_data.csv",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "gold": [
+        {
+          "composition_x": 0.0,
+          "transition_pressure_GPa": 10.0,
+          "volume_collapse_percent": 8.1
+        },
+        {
+          "composition_x": 0.2,
+          "transition_pressure_GPa": 11.0,
+          "volume_collapse_percent": 8.5
+        },
+        {
+          "composition_x": 0.55,
+          "transition_pressure_GPa": 12.2,
+          "volume_collapse_percent": 7.8
+        },
+        {
+          "composition_x": 0.81,
+          "transition_pressure_GPa": 12.8,
+          "volume_collapse_percent": 8.4
+        },
+        {
+          "composition_x": 0.93,
+          "transition_pressure_GPa": 13.0,
+          "volume_collapse_percent": 8.3
+        },
+        {
+          "composition_x": 1.0,
+          "transition_pressure_GPa": 13.8,
+          "volume_collapse_percent": 7.6
+        }
+      ],
+      "tolerance": {
+        "transition_pressure_GPa": {
+          "relative": 0.15,
+          "absolute": 0.5
+        },
+        "volume_collapse_percent": {
+          "relative": 0.2
+        }
+      }
+    },
+    {
+      "id": "elastic_constants_B3",
+      "output_file": "elastic_constants_B3.csv",
+      "kind": "reference_match",
+      "weight": 0.3,
+      "gold": [
+        {
+          "composition_x": 0.0,
+          "B_T_GPa": 129.8,
+          "C44_GPa": 103.1,
+          "C_s_GPa": 39.9
+        },
+        {
+          "composition_x": 0.2,
+          "B_T_GPa": 132.0,
+          "C44_GPa": 104.0,
+          "C_s_GPa": 40.9
+        },
+        {
+          "composition_x": 0.55,
+          "B_T_GPa": 146.5,
+          "C44_GPa": 114.2,
+          "C_s_GPa": 41.1
+        },
+        {
+          "composition_x": 0.81,
+          "B_T_GPa": 154.9,
+          "C44_GPa": 118.8,
+          "C_s_GPa": 41.4
+        },
+        {
+          "composition_x": 0.93,
+          "B_T_GPa": 163.3,
+          "C44_GPa": 122.6,
+          "C_s_GPa": 41.7
+        },
+        {
+          "composition_x": 1.0,
+          "B_T_GPa": 156.5,
+          "C44_GPa": 104.2,
+          "C_s_GPa": 52.5
+        }
+      ],
+      "tolerance": {
+        "B_T_GPa": {
+          "relative": 0.15
+        },
+        "C44_GPa": {
+          "relative": 0.15
+        },
+        "C_s_GPa": {
+          "relative": 0.2
+        }
+      }
+    },
+    {
+      "id": "soec_vs_pressure",
+      "output_file": "soec_vs_pressure.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "monotonic_check": true,
+      "jump_threshold": 10.0
+    }
+  ]
+}

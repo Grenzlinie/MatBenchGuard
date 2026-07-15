@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 (recompute) infeasible because the verifier cannot re‑run the full Monte Carlo simulation; no raw per‑electron trajectories are in the scored artifact. T2 (consistency) infeasible because the output does not include intermediate per‑event data for recomputation. We use structural checks (ordering, caps, reduction factor) plus a result‑level comparison of noise values to the paper's Table III gold with 25% relative tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold noise values (Si K cps) from the paper's Table III (calculated intensities) for specimens A, B, C, U.",
+      "source_provenance": "Paper Table III, columns 'Noise (Si)' for W and Ti regions.",
+      "generation_method": "Values copied directly from the published table.",
+      "why_not_fabricated": "These are the paper's own computed results, used as the target for the agent's reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "specimen",
+            "region",
+            "signal_cps",
+            "noise_Si_cps"
+          ],
+          "items": {
+            "specimen": {
+              "type": "string"
+            },
+            "region": {
+              "type": "string"
+            },
+            "signal_cps": {
+              "type": "float",
+              "unit": "cps"
+            },
+            "noise_Si_cps": {
+              "type": "float",
+              "unit": "cps"
+            }
+          }
+        },
+        "description": "Computed X-ray signal and noise intensities for each specimen (A, B, C, U) and each thin-film region (W, Ti)."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "noise_match",
+      "output_file": "simulation_results.csv",
+      "weight": 0.6,
+      "kind": "numeric",
+      "params": {
+        "gold_noise": {
+          "A,W": 106.1,
+          "A,Ti": 10.9,
+          "B,W": 16.5,
+          "B,Ti": 1.8,
+          "C,W": 31.9,
+          "C,Ti": 3.4,
+          "U,W": 0.8,
+          "U,Ti": 0.3
+        },
+        "tolerance_rel": 0.25
+      }
+    },
+    {
+      "id": "structural_checks",
+      "output_file": "simulation_results.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "params": {
+        "checks": [
+          {
+            "desc": "for each specimen, noise_W > noise_Ti",
+            "specimens": [
+              "A",
+              "B",
+              "C",
+              "U"
+            ]
+          },
+          {
+            "desc": "U-shaped noise ≤ 5 cps for both W and Ti",
+            "regions": [
+              "W",
+              "Ti"
+            ]
+          },
+          {
+            "desc": "U-shaped reduction factor >= 5 relative to specimen A for both W and Ti",
+            "regions": [
+              "W",
+              "Ti"
+            ],
+            "factor": 5
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute from raw DFT outputs in verifier; comparing final reported quantities to paper gold with tolerances, plus structural stability checks.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "zb_irc_properties.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for ZB-IrC properties from Table 1 and Table 2, plus stability thresholds from Fig. 2 and DOS.",
+      "source_provenance": "Paper text and tables: total_energy -712.65 eV/f.u., C11 299.3 GPa, C12 265.1 GPa, C44 81.6 GPa, bulk_modulus 276.5 GPa, shear_modulus 55.8 GPa, B_over_G 4.96, hardness_Hv 17.5 GPa; phonon threshold > -1 cm⁻¹ from Fig. 2 absence of imaginary modes; DOS_at_Fermi > 0 from Fig. 3.",
+      "generation_method": "digitized from published tables/figures",
+      "why_not_fabricated": "Values are directly taken from the paper's primary results; they serve as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zb_irc_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "total_energy",
+            "C11",
+            "C12",
+            "C44",
+            "bulk_modulus",
+            "shear_modulus",
+            "B_over_G",
+            "hardness_Hv",
+            "min_phonon_frequency",
+            "DOS_at_Fermi"
+          ],
+          "properties": {
+            "total_energy": {
+              "type": "number",
+              "units": "eV/f.u."
+            },
+            "C11": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "C12": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "C44": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "bulk_modulus": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "shear_modulus": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "B_over_G": {
+              "type": "number"
+            },
+            "hardness_Hv": {
+              "type": "number",
+              "units": "GPa"
+            },
+            "min_phonon_frequency": {
+              "type": "number",
+              "units": "cm^{-1}"
+            },
+            "DOS_at_Fermi": {
+              "type": "number",
+              "units": "states/eV"
+            }
+          },
+          "additionalProperties": false
+        },
+        "description": "JSON file containing the computed key properties of ZB-IrC."
+      }
+    ],
+    "notes": "The verifier will compare each numeric quantity to reference values derived from the paper's reported results, using tolerances appropriate for the computational method. It will also check that min_phonon_frequency > -1 cm^{-1} (no imaginary modes) and DOS_at_Fermi > 0 (metallic)."
+  },
+  "steps": [
+    {
+      "id": "step_properties",
+      "output_file": "zb_irc_properties.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "fields": {
+        "total_energy": {
+          "gold": -712.65,
+          "tol": 0.5
+        },
+        "C11": {
+          "gold": 299.3,
+          "tol": 20.0
+        },
+        "C12": {
+          "gold": 265.1,
+          "tol": 20.0
+        },
+        "C44": {
+          "gold": 81.6,
+          "tol": 10.0
+        },
+        "bulk_modulus": {
+          "gold": 276.5,
+          "tol": 20.0
+        },
+        "shear_modulus": {
+          "gold": 55.8,
+          "tol": 10.0
+        },
+        "B_over_G": {
+          "gold": 4.96,
+          "tol": 0.2
+        },
+        "hardness_Hv": {
+          "gold": 17.5,
+          "tol": 1.0
+        }
+      },
+      "weight_numeric_total": 0.6,
+      "weight_mechanical": 0.2,
+      "weight_phonon": 0.15,
+      "weight_dos": 0.05,
+      "mechanical_checks": [
+        "C11 > 0",
+        "C44 > 0",
+        "C11 > abs(C12)",
+        "C11 + 2*C12 > 0"
+      ],
+      "phonon_threshold": -1.0,
+      "dos_threshold": 0.0
+    }
+  ]
+}

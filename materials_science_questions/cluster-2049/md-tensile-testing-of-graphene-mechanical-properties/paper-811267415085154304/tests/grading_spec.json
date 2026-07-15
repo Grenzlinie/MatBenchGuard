@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing stress and strength from raw MD trajectories is not feasible in the verifier sandbox; we compare reported strengths to paper‑derived gold values with tolerances and enforce structural relationships.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold tensile strengths for pristine graphene (zigzag 100 GPa, armchair 125 GPa) and grain‑boundary ordering trend (5.7° < 27.8°).",
+      "source_provenance": "Paper figures: zigzag pristine ~100 GPa, armchair pristine ~125 GPa (Fig. 3(c) and text); GB strengths increase with tilt angle (Fig. 4(d)).",
+      "generation_method": "Taken directly from the paper's reported numbers for the same conditions.",
+      "why_not_fabricated": "Values are exact reproductions of the paper's own results; the reference solve.sh hardcodes them to match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "tilt_angle",
+            "offset_S",
+            "failure_force",
+            "estimated_strength"
+          ],
+          "units": {
+            "failure_force": "nN",
+            "estimated_strength": "GPa"
+          }
+        },
+        "description": "Table containing cylindrical indentation results: case identifier, tilt angle in degrees (NaN for pristine), lateral offset in Å (NaN for non-offset tests), failure force in nN, and estimated tensile strength in GPa. Includes rows for pristine, grain-boundary centered, offset, and angular misalignment tests. The hidden checker will compare the reported strengths to reference values with tolerance, verify the correct ordering of GB strengths, check that the failure force spread for offset tests is ≤10%, and check that the estimated strengths for angular misalignment tests are within 15% of the aligned case."
+      }
+    ],
+    "notes": "The results.csv must contain rows for all specified cases including angular misalignment tests. The hidden checker performs multiple checks on this single file."
+  },
+  "steps": [
+    {
+      "id": "pristine_strength_check",
+      "output_file": "results.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "description": "Compare reported estimated_strength for pristine zigzag (~100 GPa) and armchair (~125 GPa) to paper gold, each within ±10 GPa.",
+      "target": {
+        "cases": [
+          {
+            "case": "pristine_zigzag",
+            "strength_gold": 100,
+            "tolerance": 10
+          },
+          {
+            "case": "pristine_armchair",
+            "strength_gold": 125,
+            "tolerance": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "gb_ordering",
+      "output_file": "results.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Verify that estimated strength for GB_5.7deg is strictly less than that for GB_27.8deg (both with offset_S=0)."
+    },
+    {
+      "id": "offset_insensitivity",
+      "output_file": "results.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Compute relative spread (max-min)/mean of failure_force for the three offset tests of the 5.7° GB (S=0,40,80 Å); must be ≤10%."
+    }
+  ],
+  "target_policies": {
+    "results.csv": "exact_match"
+  }
+}

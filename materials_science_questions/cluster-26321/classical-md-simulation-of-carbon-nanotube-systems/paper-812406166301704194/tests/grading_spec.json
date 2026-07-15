@@ -1,0 +1,317 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute for QSAR models; T0 reference_match for interaction energies (no exact tabulated data; gold derived from paper's QSAR equations).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "interaction_energies.csv": "reference_match",
+    "qsar_models.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold interaction energies for 17 CNPs derived from paper's QSAR equations (Eqs 2-3) using published descriptors (Table 1).",
+      "source_provenance": "Paper Eqs 2-3 and Table 1.",
+      "generation_method": "Evaluated equations with descriptor values; these are the fitted predictions of the paper's own interaction energies.",
+      "why_not_fabricated": "These numbers are directly computable from the paper's own reported models and descriptors; they represent the paper's best estimate of the interaction energies. The use of ±15% relative tolerance accounts for simulation re-run differences."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "interaction_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "CNP_name",
+            "E_int_total"
+          ],
+          "optional_columns": [
+            "E_int_vdw",
+            "E_int_elec"
+          ],
+          "units": {
+            "E_int_total": "kcal/mol",
+            "E_int_vdw": "kcal/mol",
+            "E_int_elec": "kcal/mol"
+          }
+        },
+        "description": "Table of interaction energies per CNP, calculated from the annealing simulations. The checker compares E_int_total against paper‑reported reference values (hidden) and verifies the among‑family ordering (fullerenes < graphenes < CNTs)."
+      },
+      {
+        "file": "qsar_models.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "fullerenes",
+            "cnt_graphenes",
+            "all"
+          ],
+          "properties": {
+            "fullerenes": {
+              "type": "object",
+              "required": [
+                "equation",
+                "R2",
+                "RMSE",
+                "Q2_CUM",
+                "coefficients"
+              ]
+            },
+            "cnt_graphenes": {
+              "type": "object",
+              "required": [
+                "equation",
+                "R2",
+                "RMSE",
+                "Q2_CUM",
+                "coefficients"
+              ]
+            },
+            "all": {
+              "type": "object",
+              "required": [
+                "equation",
+                "R2",
+                "RMSE",
+                "Q2_CUM",
+                "coefficients"
+              ]
+            }
+          }
+        },
+        "description": "QSAR model coefficients and statistics. The checker re‑fits the same OPLS regressions from the agent's own interaction_energies.csv and descriptors.csv and confirms that the agent's reported R² and Q²_CUM are within 0.1 of the re‑fit values."
+      }
+    ],
+    "notes": "The agent must run the full simulated annealing pipeline to produce the component energies. The QSAR step is load‑bearing: its verification uses a recompute from the agent's own numerical outputs, so faking interaction energies without real simulation yields inconsistent QSAR statistics and fails the check."
+  },
+  "gold_interaction_energies": [
+    {
+      "CNP_name": "C20",
+      "E_int_total": -130.083087
+    },
+    {
+      "CNP_name": "C36",
+      "E_int_total": -110.551974
+    },
+    {
+      "CNP_name": "C60",
+      "E_int_total": -99.141687
+    },
+    {
+      "CNP_name": "C70",
+      "E_int_total": -97.300806
+    },
+    {
+      "CNP_name": "C240",
+      "E_int_total": -89.830749
+    },
+    {
+      "CNP_name": "C20@C60",
+      "E_int_total": -89.367783
+    },
+    {
+      "CNP_name": "C20@C60@C240",
+      "E_int_total": -66.073974
+    },
+    {
+      "CNP_name": "SCNT (10,0)",
+      "E_int_total": -155.642392
+    },
+    {
+      "CNP_name": "SCNT (6,6)",
+      "E_int_total": -148.192816
+    },
+    {
+      "CNP_name": "SCNT (28,0)",
+      "E_int_total": -499.686872
+    },
+    {
+      "CNP_name": "DCNT (10,0)",
+      "E_int_total": -299.678928
+    },
+    {
+      "CNP_name": "DCNT (6,6)",
+      "E_int_total": -298.168206
+    },
+    {
+      "CNP_name": "TCNT (10,0)",
+      "E_int_total": -262.254586
+    },
+    {
+      "CNP_name": "NR (6,6)",
+      "E_int_total": -253.14429
+    },
+    {
+      "CNP_name": "SCNT (16,0)@C60",
+      "E_int_total": -348.13561
+    },
+    {
+      "CNP_name": "MG",
+      "E_int_total": -167.172982
+    },
+    {
+      "CNP_name": "BG",
+      "E_int_total": -126.65256
+    }
+  ],
+  "gold_descriptors": [
+    {
+      "CNP_name": "C20",
+      "Mw": 240.22,
+      "OSA": 1.859,
+      "Vol": 0.234,
+      "SSA": 4659.147,
+      "SDeg": 60
+    },
+    {
+      "CNP_name": "C36",
+      "Mw": 432.396,
+      "OSA": 2.678,
+      "Vol": 0.404,
+      "SSA": 3729.094,
+      "SDeg": 108
+    },
+    {
+      "CNP_name": "C60",
+      "Mw": 720.66,
+      "OSA": 3.812,
+      "Vol": 0.645,
+      "SSA": 3185.747,
+      "SDeg": 180
+    },
+    {
+      "CNP_name": "C70",
+      "Mw": 840.77,
+      "OSA": 4.325,
+      "Vol": 0.75,
+      "SSA": 3098.086,
+      "SDeg": 210
+    },
+    {
+      "CNP_name": "C240",
+      "Mw": 2882.64,
+      "OSA": 13.127,
+      "Vol": 2.538,
+      "SSA": 2742.369,
+      "SDeg": 720
+    },
+    {
+      "CNP_name": "C20@C60",
+      "Mw": 960.88,
+      "OSA": 4.34,
+      "Vol": 0.824,
+      "SSA": 2720.323,
+      "SDeg": 240
+    },
+    {
+      "CNP_name": "C20@C60@C240",
+      "Mw": 3843.52,
+      "OSA": 10.283,
+      "Vol": 3.047,
+      "SSA": 1611.094,
+      "SDeg": 960
+    },
+    {
+      "CNP_name": "SCNT (10,0)",
+      "Mw": 24164.286,
+      "OSA": 108.576,
+      "Vol": 21.858,
+      "SSA": 2705.906,
+      "SDeg": 6010
+    },
+    {
+      "CNP_name": "SCNT (6,6)",
+      "Mw": 25223.1,
+      "OSA": 113.148,
+      "Vol": 22.822,
+      "SSA": 2701.464,
+      "SDeg": 6288
+    },
+    {
+      "CNP_name": "SCNT (28,0)",
+      "Mw": 70291.912,
+      "OSA": 314.016,
+      "Vol": 62.889,
+      "SSA": 2690.28,
+      "SDeg": 1098
+    },
+    {
+      "CNP_name": "DCNT (10,0)",
+      "Mw": 29767.822,
+      "OSA": 65.384,
+      "Vol": 22.949,
+      "SSA": 1322.735,
+      "SDeg": 1495
+    },
+    {
+      "CNP_name": "DCNT (6,6)",
+      "Mw": 27148.064,
+      "OSA": 61.193,
+      "Vol": 21.367,
+      "SSA": 1357.418,
+      "SDeg": 1454
+    },
+    {
+      "CNP_name": "TCNT (10,0)",
+      "Mw": 28069.814,
+      "OSA": 50.583,
+      "Vol": 21.944,
+      "SSA": 1085.212,
+      "SDeg": 2173
+    },
+    {
+      "CNP_name": "NR (6,6)",
+      "Mw": 28266.192,
+      "OSA": 92.495,
+      "Vol": 23.584,
+      "SSA": 1970.605,
+      "SDeg": 3204
+    },
+    {
+      "CNP_name": "SCNT (16,0)@C60",
+      "Mw": 27415.828,
+      "OSA": 109.455,
+      "Vol": 22.416,
+      "SSA": 2404.27,
+      "SDeg": 1091
+    },
+    {
+      "CNP_name": "MG",
+      "Mw": 26763.882,
+      "OSA": 124.221,
+      "Vol": 23.031,
+      "SSA": 2795.087,
+      "SDeg": 6012
+    },
+    {
+      "CNP_name": "BG",
+      "Mw": 27677.568,
+      "OSA": 77.18,
+      "Vol": 22.648,
+      "SSA": 1679.3,
+      "SDeg": 6156
+    }
+  ],
+  "steps": [
+    {
+      "id": "interaction_energies",
+      "output_file": "interaction_energies.csv",
+      "kind": "rubric",
+      "weight": 0.5,
+      "tolerance_rel": 0.15
+    },
+    {
+      "id": "qsar_models",
+      "output_file": "qsar_models.json",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "tolerance_abs": 0.1
+    }
+  ]
+}

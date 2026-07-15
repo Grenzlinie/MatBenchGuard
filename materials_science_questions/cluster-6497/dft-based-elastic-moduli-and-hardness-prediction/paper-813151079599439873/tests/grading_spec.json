@@ -1,0 +1,215 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Paper‑reported transfer energies, elastic constants, and derived moduli are reproduced with tolerances ±0.1 eV, ±5 GPa (±0.01 for ν, ±0.1 for A_Z). Electron‑density–bulk‑modulus correlation is verified by Spearman rank ≥0.8.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "site_preference.json": "reference_match",
+    "elastic_constants.json": "reference_match",
+    "electron_density_bulk_modulus.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold transfer energies and site preference strings for Ti, Ni, W and exchange antisite energy from Table 1.",
+      "source_provenance": "doi:10.1016/j.intermet.2014.02.020 Table 1",
+      "generation_method": "Direct copy from paper Table 1.",
+      "why_not_fabricated": "These are the published results of the original study."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold elastic constants C11, C12, C44 for RuAl, Ru8Al7Ti, Ru7Al8Ni, Ru8Al7W from Tables 2 and 3.",
+      "source_provenance": "doi:10.1016/j.intermet.2014.02.020 Tables 2 and 3.",
+      "generation_method": "Direct copy from paper tables.",
+      "why_not_fabricated": "Published values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Derived moduli (B, G, E, ν, A_Z) computed from the paper's elastic constants using Voigt–Reuss–Hill averaging.",
+      "source_provenance": "Computed from paper‑reported Cij using Eqs. 2–3 of the paper.",
+      "generation_method": "Accurate floating‑point calculation of the paper's own formulas.",
+      "why_not_fabricated": "These are the mathematically correct derived quantities from the paper's own elastic constants."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "site_preference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Ti": "object",
+            "Ni": "object",
+            "W": "object",
+            "E_Antisite_eV": "float"
+          },
+          "items": {
+            "transfer_energy_eV": "float",
+            "site_preference": "string (Al, Ru, random)"
+          }
+        },
+        "description": "Transfer energies and site preference assignments for representative solutes Ti, Ni, W, plus the exchange antisite formation energy."
+      },
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pure_RuAl": "object",
+            "Ru8Al7Ti": "object",
+            "Ru7Al8Ni": "object",
+            "Ru8Al7W": "object"
+          },
+          "items": {
+            "C11_GPa": "float",
+            "C12_GPa": "float",
+            "C44_GPa": "float",
+            "B_GPa": "float",
+            "G_GPa": "float",
+            "E_GPa": "float",
+            "nu": "float",
+            "A_Z": "float"
+          }
+        },
+        "description": "Single-crystal elastic constants and derived polycrystalline moduli for pure RuAl and three ternary alloys at their preferred sites."
+      },
+      {
+        "file": "electron_density_bulk_modulus.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pure_RuAl": "object",
+            "Ru8Al7Ti": "object",
+            "Ru7Al8Ni": "object",
+            "Ru8Al7W": "object"
+          },
+          "items": {
+            "electron_density_el_per_atom": "float",
+            "bulk_modulus_GPa": "float"
+          }
+        },
+        "description": "Electron densities and bulk moduli for the four compositions; used to verify the linear correlation (Spearman rank ≥0.8) and monotonic increase."
+      }
+    ],
+    "notes": "No gold values or tolerances are disclosed here. The checker compares transfer energies and elastic constants to hidden paper-reported references with tolerances, and evaluates the electron-density–bulk-modulus trend via rank correlation."
+  },
+  "steps": [
+    {
+      "id": "site_preference",
+      "output_file": "site_preference.json",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "checks": [
+        {
+          "field": "Ti.transfer_energy_eV",
+          "value": 2.92,
+          "tolerance": 0.1
+        },
+        {
+          "field": "Ti.site_preference",
+          "value": "Al",
+          "exact": true
+        },
+        {
+          "field": "Ni.transfer_energy_eV",
+          "value": -0.1,
+          "tolerance": 0.1
+        },
+        {
+          "field": "Ni.site_preference",
+          "value": "Ru",
+          "exact": true
+        },
+        {
+          "field": "W.transfer_energy_eV",
+          "value": 3.62,
+          "tolerance": 0.1
+        },
+        {
+          "field": "W.site_preference",
+          "value": "Al",
+          "exact": true
+        },
+        {
+          "field": "E_Antisite_eV",
+          "value": 1.96,
+          "tolerance": 0.05
+        }
+      ]
+    },
+    {
+      "id": "elastic_constants",
+      "output_file": "elastic_constants.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "compositions": {
+        "pure_RuAl": {
+          "C11_GPa": 309.9,
+          "C12_GPa": 148.3,
+          "C44_GPa": 125.8,
+          "B_GPa": 202.2,
+          "G_GPa": 105.3,
+          "E_GPa": 269.3,
+          "nu": 0.278,
+          "A_Z": 1.56
+        },
+        "Ru8Al7Ti": {
+          "C11_GPa": 316.0,
+          "C12_GPa": 149.3,
+          "C44_GPa": 116.1,
+          "B_GPa": 204.8667,
+          "G_GPa": 101.65,
+          "E_GPa": 261.7,
+          "nu": 0.2871,
+          "A_Z": 1.3929
+        },
+        "Ru7Al8Ni": {
+          "C11_GPa": 292.4,
+          "C12_GPa": 145.2,
+          "C44_GPa": 120.8,
+          "B_GPa": 194.2667,
+          "G_GPa": 99.03,
+          "E_GPa": 254.0,
+          "nu": 0.2822,
+          "A_Z": 1.6413
+        },
+        "Ru8Al7W": {
+          "C11_GPa": 342.7,
+          "C12_GPa": 153.9,
+          "C44_GPa": 113.4,
+          "B_GPa": 216.8333,
+          "G_GPa": 105.37,
+          "E_GPa": 272.0,
+          "nu": 0.2909,
+          "A_Z": 1.201
+        }
+      },
+      "tolerances": {
+        "C11_GPa": 5.0,
+        "C12_GPa": 5.0,
+        "C44_GPa": 5.0,
+        "B_GPa": 5.0,
+        "G_GPa": 5.0,
+        "E_GPa": 5.0,
+        "nu": 0.01,
+        "A_Z": 0.1
+      }
+    },
+    {
+      "id": "electron_density",
+      "output_file": "electron_density_bulk_modulus.json",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "cross_check_bulk_modulus": true,
+      "spearman_min": 0.8
+    }
+  ]
+}

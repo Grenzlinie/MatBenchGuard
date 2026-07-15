@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing the OER overpotential from the agent's submitted ΔG values is unreliable given the reference's synthetic ΔG data; the verifier sandbox also cannot re-run the full DFT pipeline. Instead, the self-reported overpotential is compared to the paper's published values (0.67 eV / 0.37 eV) with threshold_or_better policy and a tolerance that absorbs legitimate toolchain spread.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "free_energy_diagram.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference overpotential values for the perfect and oxygen‑vacancy In₂O₃ {001} surfaces",
+      "source_provenance": "Paper text and DFT calculation section: overpotential 0.67 eV for the perfect surface and 0.37 eV for the oxygen‑vacancy surface.",
+      "generation_method": "Extracted directly from the reported numbers in the paper's description of Fig. 6.",
+      "why_not_fabricated": "These are the paper's own published overpotentials; they are used solely as a hidden comparison target for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energy_diagram.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "perfect_surface": "object containing ΔG1–ΔG4 in eV",
+            "vacancy_surface": "object containing ΔG1–ΔG4 in eV",
+            "overpotential": "object containing 'perfect' and 'vacancy' overpotentials in eV"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "ΔG1": "eV",
+            "ΔG2": "eV",
+            "ΔG3": "eV",
+            "ΔG4": "eV",
+            "overpotential.perfect": "eV",
+            "overpotential.vacancy": "eV"
+          }
+        },
+        "description": "Gibbs free‑energy diagram for the OER on perfect and oxygen‑vacancy In2O3 {001} facets, including the derived overpotentials."
+      }
+    ],
+    "notes": "All ΔG values must be given in eV, referenced to the same energy conventions. The overpotential is defined as max(ΔG₁,ΔG₂,ΔG₃,ΔG₄) − 1.23 V. The checker will verify the overpotential values against the paper's reported hidden threshold; a lower (better) overpotential meets the threshold and earns full credit."
+  },
+  "steps": [
+    {
+      "id": "perfect_overpotential",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.49,
+      "target": 0.67,
+      "tolerance_abs": 0.05,
+      "lower_is_better": true,
+      "description": "Self-reported overpotential for the perfect In₂O₃ {001} surface compared to the paper's reported value. Lower overpotential is better."
+    },
+    {
+      "id": "vacancy_overpotential",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.49,
+      "target": 0.37,
+      "tolerance_abs": 0.05,
+      "lower_is_better": true,
+      "description": "Self-reported overpotential for the oxygen‑vacancy In₂O₃ {001} surface compared to the paper's reported value. Lower overpotential is better."
+    },
+    {
+      "id": "deltaG_presence",
+      "output_file": "free_energy_diagram.json",
+      "kind": "structural",
+      "weight": 0.02,
+      "description": "Verify that all four ΔG fields exist for each surface, are numeric, and lie within a plausible energy range (-5 to 10 eV)."
+    }
+  ]
+}

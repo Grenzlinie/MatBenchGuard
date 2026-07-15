@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare VCA pseudopotentials",
+    "role": "process",
+    "action": "Generate Virtual Crystal Approximation (VCA) pseudopotentials for Li/Be, Na/Mg, and K/Ca virtual atoms at the required doping concentrations using norm-conserving pseudopotentials from a public library. The pseudopotentials must be suitable for the DFT code (e.g., Quantum ESPRESSO).",
+    "output_file": "",
+    "evidence": "vca_pseudo_generation.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the pseudopotentials needed for all subsequent DFT and DFPT calculations under the VCA.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "ZPE-corrected structural optimization",
+    "role": "process",
+    "action": "For each alloy system (Li1-xBexH, Na1-xMgxH, K1-xCaxH) at multiple doping levels (including the target maximum doping and at least two lower levels), perform structural optimization including zero-point energy (ZPE) corrections within the quasiharmonic approximation. Obtain optimized lattice parameters for each composition.",
+    "output_file": "",
+    "evidence": "zpe_optimized_structures.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain equilibrium lattice parameters including ZPE contributions, which are necessary for accurate phonon frequencies and e-ph coupling.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute N(E_F) vs doping",
+    "role": "scored",
+    "action": "Using the ZPE-optimized structures, run self-consistent DFT calculations and compute the electronic density of states at the Fermi level, N(E_F), for each doping level. Write the results to a CSV file with columns: system, doping_x, N_EF (in states/eV/atom/spin). Ensure the rows for each system are in order of increasing doping.",
+    "output_file": "N_EF_vs_doping.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulate the computed N(E_F) for all three alloy systems at multiple doping levels to show monotonic increase with doping.",
+    "output_schema": "CSV with columns: system (e.g. 'LiBeH'), doping_x (float), N_EF (float, units: states/eV/atom/spin). Minimum rows per system: LiBeH at doping levels up to x=0.05; NaMgH up to x=0.20; KCaH up to x=0.45, each including the undoped case and at least two doped levels."
+  },
+  {
+    "id": "step_04",
+    "title": "Phonon and e-ph coupling calculations",
+    "role": "process",
+    "action": "For the three alloys at their maximum stable doping (Li0.95Be0.05H, Na0.8Mg0.2H, K0.55Ca0.45H), compute phonon frequencies and eigenvectors on a sufficiently dense q-mesh using DFPT, then Fourier-interpolate to obtain the phonon density of states and dispersion. Compute the screened electron-phonon matrix elements and evaluate phonon linewidths γ(qj) and the isotropic Eliashberg spectral function α²F(ω).",
+    "output_file": "",
+    "evidence": "eliasberg_function.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce the Eliashberg function and phonon linewidths needed to derive the coupling constant λ and to solve the Eliashberg equations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute λ and Tc",
+    "role": "scored",
+    "action": "From the Eliashberg spectral function, compute the average electron-phonon coupling constant λ using λ = 2 ∫ (α²F(ω)/ω) dω. Solve the isotropic Eliashberg gap equations with Coulomb pseudopotential μ* = 0.1 to obtain the superconducting critical temperature Tc (in K) for each of the three alloys. Output the results in a JSON file with keys: 'LiBeH', 'NaMgH', 'KCaH', each an object with keys 'lambda' (float) and 'Tc' (float).",
+    "output_file": "lambda_Tc_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Report the final λ and Tc for Li0.95Be0.05H, Na0.8Mg0.2H, and K0.55Ca0.45H.",
+    "output_schema": "A JSON object with keys: 'LiBeH', 'NaMgH', 'KCaH'. Each value is an object with keys 'lambda' (float) and 'Tc' (float, in K)."
+  }
+]

@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of the complex geometry minimization and energy evaluation is infeasible within the verifier sandbox; scoring verifies the reported final results against the paper's reference values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ground_state_energies.csv": "reference_match",
+    "geometric_magic_numbers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold list of geometric magic numbers",
+      "source_provenance": "paper Fig. 2 caption: 13 magic numbers N=6,11,13,15,19,23,26,29,34,45,53,57,61",
+      "generation_method": "extracted directly from paper",
+      "why_not_fabricated": "these are the paper's reported results"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference energy per atom for Fe N=13",
+      "source_provenance": "paper text: \"density-functional calculations corresponding to N=13 (E(N)/N ≃ −5.2 eV)\" (Fig. 3 discussion)",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "paper-reported reference value"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ground_state_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "energy_per_atom"
+          ],
+          "units": {
+            "energy_per_atom": "eV"
+          }
+        },
+        "description": "Ground-state binding energy per atom for Fe clusters of sizes N=2..80."
+      },
+      {
+        "file": "geometric_magic_numbers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "description": "List of cluster sizes N that are geometric magic numbers."
+      }
+    ],
+    "notes": "The checker will compare the energy per atom at N=13 to a hidden reference, and match the list of magic numbers to a hidden gold list."
+  },
+  "steps": [
+    {
+      "id": "energies",
+      "output_file": "ground_state_energies.csv",
+      "kind": "exact_match",
+      "weight": 0.3,
+      "target": -5.2,
+      "tolerance_abs": 0.5,
+      "column": "energy_per_atom",
+      "where": {
+        "N": 13
+      }
+    },
+    {
+      "id": "magic",
+      "output_file": "geometric_magic_numbers.json",
+      "kind": "set_match",
+      "weight": 0.7,
+      "target_list": [
+        6,
+        11,
+        13,
+        15,
+        19,
+        23,
+        26,
+        29,
+        34,
+        45,
+        53,
+        57,
+        61
+      ]
+    }
+  ]
+}

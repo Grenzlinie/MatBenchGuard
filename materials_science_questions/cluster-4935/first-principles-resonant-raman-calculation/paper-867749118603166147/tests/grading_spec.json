@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of the GP/Bogoliubov simulation is infeasible in the verifier; scoring relies on exact match of roton counts to paper-reported gold (T0) plus structural audit of the dispersion file (T3) and a self-consistency cross-check.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold roton minima counts for g=3,10,15",
+      "source_provenance": "paper-reported trend: for Rashba SOC λ_R=0.2, phonon only at g=3, one roton at g=10, two rotons at g=15 (Fig.4 and associated text)",
+      "generation_method": "extracted integer counts from paper description and figure captions",
+      "why_not_fabricated": "paper explicitly states the number of roton minima increases with interaction strength; these exact counts are the expected result for the chosen parameters"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_03_dispersion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "g",
+            "q_x",
+            "q_y",
+            "omega_lowest"
+          ]
+        },
+        "description": "Raw excitation energies for the lowest Bogoliubov branch; checked for existence, adequate q-point density (≥100 per g), correct columns, and used for a consistency cross-check on the reported roton count."
+      },
+      {
+        "file": "step_04_roton_counts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "g",
+            "num_minima"
+          ]
+        },
+        "description": "Number of local minima in the lowest excitation branch for each interaction strength; compared to the paper-reported hidden gold with exact match (0 for g=3, 1 for g=10, 2 for g=15)."
+      }
+    ],
+    "notes": "step_03_dispersion.csv is required for anti-gaming integrity: the checker will validate it exists, has sufficient q-points, and the agent's reported num_minima is consistent with a simple minima count on the submitted dispersion data."
+  },
+  "steps": [
+    {
+      "id": "dispersion_structural",
+      "output_file": "step_03_dispersion.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "target_policy": "structural_audit",
+      "params": {
+        "min_points_per_g": 100,
+        "q_min": 0.0,
+        "q_max": 6.0
+      }
+    },
+    {
+      "id": "roton_counts",
+      "output_file": "step_04_roton_counts.csv",
+      "kind": "exact_match_with_consistency",
+      "weight": 0.95,
+      "target_policy": "exact_match",
+      "params": {
+        "gold": {
+          "3": 0,
+          "10": 1,
+          "15": 2
+        }
+      }
+    }
+  ]
+}

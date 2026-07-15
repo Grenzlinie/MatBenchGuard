@@ -1,0 +1,138 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute all CNT systems from raw artifacts because only (17,17) raw time series is available; other CNT means and radii of gyration are compared to paper gold with tolerance, and cross‑validation ensures internal consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_d_energy_rmsd.csv": "metric_recompute",
+    "step_02_interaction_strengths.csv": "reference_match",
+    "step_03_rg.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold mean interaction energies and radii of gyration for all CNT diameters, taken from the paper.",
+      "source_provenance": "Paper text: 'mean values and deviations in 15.0-27.5 ns … they are -231.2 ± 3.9, -216.1 ± 4.1, -179.7 ± 5.7, -150.3 ± 2.8, -216.3 ± 6.2 kcal/mol' and 'mean values of R_g in 15-27.5 ns are 10.78 ± 2.12, 11.78 ± 1.18, 11.86 ± 1.07, 12.16 ± 1.17, 14.16 ± 1.29 Å'.",
+      "generation_method": "Directly transcribed from the published article (Current Applied Physics, 2013).",
+      "why_not_fabricated": "These are the exact reported values for the same quantity, same time window, and same systems; they are the ground truth target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_d_energy_rmsd.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ns",
+            "d_d0",
+            "Evdw_int_kcal_mol",
+            "RMSD_A"
+          ],
+          "units": {
+            "time_ns": "ns",
+            "d_d0": "unitless",
+            "Evdw_int_kcal_mol": "kcal/mol",
+            "RMSD_A": "angstrom"
+          }
+        },
+        "description": "Time series of normalized center-of-mass distance, van der Waals interaction energy, and backbone RMSD for the (17,17) CNT system. The checker recomputes the mean interaction energy over 15–27.5 ns and checks the trend of d/d0."
+      },
+      {
+        "file": "step_02_interaction_strengths.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cnt_index",
+            "mean_Evdw_int_kcal_mol",
+            "std_Evdw_int_kcal_mol"
+          ],
+          "units": {
+            "cnt_index": "integer",
+            "mean_Evdw_int_kcal_mol": "kcal/mol",
+            "std_Evdw_int_kcal_mol": "kcal/mol"
+          }
+        },
+        "description": "Mean and standard deviation of the van der Waals interaction energy for each tube size over the time window 15–27.5 ns. The checker compares each mean to the paper's reference values within a hidden tolerance."
+      },
+      {
+        "file": "step_03_rg.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cnt_index",
+            "mean_Rg_A",
+            "std_Rg_A"
+          ],
+          "units": {
+            "mean_Rg_A": "angstrom",
+            "std_Rg_A": "angstrom"
+          }
+        },
+        "description": "Mean and standard deviation of the radius of gyration of HRIP for each tube size over the time window 15–27.5 ns. The checker compares each mean to the paper's reference values within a hidden tolerance."
+      }
+    ],
+    "notes": "All scored artifacts are re-derived from the simulation trajectories. The checker will recompute the mean interaction energy from the (17,17) time series and cross-validate with the summary file. Tolerances are hidden and account for legitimate run-to-run variability."
+  },
+  "steps": [
+    {
+      "id": "step_01_check",
+      "output_file": "step_01_d_energy_rmsd.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "metric": "mean_Evdw_int_kcal_mol",
+      "time_start": 15.0,
+      "time_end": 27.5,
+      "time_column": "time_ns",
+      "value_column": "Evdw_int_kcal_mol",
+      "reference_value": -216.1,
+      "tolerance": 5.0,
+      "max_allowed_dev": 15.0,
+      "require_min_rows": 1000,
+      "trend_time_start": 20.0,
+      "trend_time_end": 27.5,
+      "trend_threshold": 0.6,
+      "trend_required_fraction": 0.8
+    },
+    {
+      "id": "step_02_check",
+      "output_file": "step_02_interaction_strengths.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "gold_means": {
+        "16": -231.2,
+        "17": -216.1,
+        "18": -179.7,
+        "19": -150.3,
+        "20": -216.3
+      },
+      "tolerance": 5.0,
+      "max_allowed_dev": 15.0,
+      "cross_check_file": "step_01_d_energy_rmsd.csv",
+      "cross_check_tolerance": 5.0
+    },
+    {
+      "id": "step_03_check",
+      "output_file": "step_03_rg.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold_means": {
+        "16": 10.78,
+        "17": 11.78,
+        "18": 11.86,
+        "19": 12.16,
+        "20": 14.16
+      },
+      "tolerance": 1.0,
+      "max_allowed_dev": 3.0
+    }
+  ]
+}

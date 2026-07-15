@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "The agent submits only final peak lists; the checker cannot recompute the DFT optical spectra or Eliashberg function from the provided artifacts, so result-level comparison against paper-reported values is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for optical peak energies and dominant phonon energy",
+      "source_provenance": "Optical peaks: paper Fig.1/Fig.3 reports transient spectral features at 2.6, 2.18, 1.95 eV. Dominant phonon energy: paper states a group of phonons with frequencies ~20 meV.",
+      "generation_method": "Directly taken from the paper text and figures. For phonon, the nominal value 20.0 meV is used.",
+      "why_not_fabricated": "These are the exact quantitative findings reported in the paper; no synthetic holdout is needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optical_peaks.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "scaled_peak_energies_eV": "array of three floats"
+          }
+        },
+        "description": "Three main peak energies (eV) extracted from the calculated optical spectrum after a 4% rigid red-shift of the energy axis."
+      },
+      {
+        "file": "eph_peak.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "dominant_phonon_energy_meV": "float"
+          }
+        },
+        "description": "Energy (meV) at which the Eliashberg spectral function α²F(ω) is maximum, corresponding to the phonon group around 20 meV."
+      }
+    ],
+    "notes": "The hidden checker compares each submitted peak energy against the paper-reported values with a tolerance of ±0.05 eV, and checks that the submitted phonon energy lies within the hidden range 18–22 meV. The scoring policies are exact_match with allowed deviation."
+  },
+  "steps": [
+    {
+      "id": "step_optical",
+      "output_file": "optical_peaks.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target_policy": "exact_match",
+      "tolerance": 0.05,
+      "reference": [
+        2.6,
+        2.18,
+        1.95
+      ],
+      "metric": "optical_peak_energies",
+      "field_path": "scaled_peak_energies_eV"
+    },
+    {
+      "id": "step_eph",
+      "output_file": "eph_peak.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "exact_match",
+      "tolerance_low": 18.0,
+      "tolerance_high": 22.0,
+      "reference": 20.0,
+      "metric": "dominant_phonon_energy",
+      "field_path": "dominant_phonon_energy_meV"
+    }
+  ],
+  "target_policies": {
+    "optical_peaks.json": "exact_match",
+    "eph_peak.json": "exact_match"
+  }
+}

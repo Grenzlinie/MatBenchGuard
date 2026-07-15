@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible because DFT and DFPT calculations are too heavy to rerun in the verifier sandbox. T2 consistency would require raw DOS/phonon files not submitted. Structural checks on ordering/monotonicity/trends provide meaningful verification of the paper's conclusions.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_01_total_energies.csv": "structural_audit",
+    "step_02_phonon_stability.csv": "structural_audit",
+    "step_03_NofEF.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "total_energy_per_atom_meV"
+          ],
+          "units": {
+            "total_energy_per_atom_meV": "meV/atom"
+          }
+        },
+        "description": "Total energy per atom for each stoichiometric VN phase. The checker verifies a specific ordering among the six phases."
+      },
+      {
+        "file": "step_02_phonon_stability.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "has_imaginary_modes"
+          ]
+        },
+        "description": "Phonon stability flags for the four phases; the checker verifies a specific pattern of imaginary modes."
+      },
+      {
+        "file": "step_03_NofEF.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_type",
+            "configuration",
+            "N_E_F"
+          ],
+          "units": {
+            "N_E_F": "states/eV/unit cell"
+          }
+        },
+        "description": "Fermi-level DOS for NaCl-based and WC-based structures. The checker verifies monotonic trends and relative shifts for impurity substitutions."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01_total_energies_ordering",
+      "output_file": "step_01_total_energies.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify total energy ordering WC < AsNi < t-VN < NaCl < ZnS < CsCl."
+    },
+    {
+      "id": "step_02_phonon_stability",
+      "output_file": "step_02_phonon_stability.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify NaCl has_imaginary_modes=true, others false."
+    },
+    {
+      "id": "step_03_NofEF_trends",
+      "output_file": "step_03_NofEF.csv",
+      "kind": "structural",
+      "weight": 0.5,
+      "description": "Verify monotonic N(E_F) trends with vacancy concentration and impurity shifts."
+    }
+  ]
+}

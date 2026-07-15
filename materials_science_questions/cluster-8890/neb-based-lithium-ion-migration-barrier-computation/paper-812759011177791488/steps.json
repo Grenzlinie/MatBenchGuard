@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_gen_amor",
+    "title": "Generate amorphous LiSi and Li2Si structures",
+    "role": "process",
+    "action": "Generate at least 5 independent amorphous LiSi configurations (64 Li + 64 Si, supercell ~18.706×9.353×11.486 Å) and at least 5 independent amorphous Li2Si configurations (96 Li + 48 Si, supercell ~15.40×13.23×12.01 Å) using a melt-quench simulated annealing protocol.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required initial configurations for AIMD simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_aimd",
+    "title": "Run AIMD simulations",
+    "role": "process",
+    "action": "Perform ab initio molecular dynamics (NVT, 800 K, Nosé–Hoover thermostat, Verlet integrator, 1.5 fs time step, 15 ps total, Γ-point sampling) for each generated structure to obtain atomic trajectories.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the raw trajectory data needed for all subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_d_li",
+    "title": "Compute Li self-diffusion coefficients from MSD",
+    "role": "process",
+    "action": "From each AIMD trajectory, compute the Li mean-square displacement (MSD), identify the long-time linear region, and extract the Li self-diffusion coefficient D_Li = MSD/(6t) in cm²/s.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces D_Li values required by the scored output steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_lisi_channel",
+    "title": "Compute channel area for LiSi and output correlation data",
+    "role": "scored",
+    "action": "For each LiSi configuration, using snapshots from the first 1000 AIMD steps (sampled every 10 steps), project Si atomic positions onto the yz plane, compute a Si density map, identify low-Si density regions as the diffusion channel, calculate the fraction of the projected plane area that is low-Si, and combine with the corresponding D_Li into a CSV.",
+    "output_file": "lisi_correlation.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with structure_id, D_Li, channel_area_fraction for at least 5 amorphous LiSi structures.",
+    "output_schema": "Columns: structure_id (string), D_Li (float, cm2/s), channel_area_fraction (float, dimensionless). At least 5 rows."
+  },
+  {
+    "id": "step_li2si_micro",
+    "title": "Count Si microstructures for Li2Si and output correlation data",
+    "role": "scored",
+    "action": "For each Li2Si configuration, sample structures every 10 steps over 1000 snapshots from the AIMD trajectory. Count the total number of Si microstructures (isolated atoms, dumbbells, boomerangs, stars, chains) using a 2.5 Å Si–Si cutoff. Sum over all snapshots to obtain total_microstructures. Combine with the corresponding D_Li into a CSV.",
+    "output_file": "li2si_correlation.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with structure_id, D_Li, total_microstructures for at least 5 amorphous Li2Si structures.",
+    "output_schema": "Columns: structure_id (string), D_Li (float, cm2/s), total_microstructures (int). At least 5 rows."
+  }
+]

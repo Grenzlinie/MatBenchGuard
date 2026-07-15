@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The group-theoretical decomposition at Gamma point for this specific crystal structure yields a unique set of integer multiplicities and tensor patterns. Comparing the agent's submitted counts and tensor patterns against the paper's reported values provides a reliable gold. Full recomputation from first principles in the checker is heavy; result-level compare is acceptable.",
+  "pass_threshold": 0.9,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold: expected irrep decomposition counts, acoustic/optical mode classification, Raman tensor forms as reported in the paper.",
+      "source_provenance": "Paper 'A Raman study of the Peierls transition in (TaSe4)2I', Solid State Communications, 56, 947 (1985). Decomposition given in section 2, Table 1, and text.",
+      "generation_method": "Transcribed exactly from the paper's reported values.",
+      "why_not_fabricated": "These are the paper's own published results, used as the reference for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "decomposition_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "irrep_decomposition": {
+              "type": "object",
+              "description": "Multiplicities of irreducible representations A1, A2, B1, B2, E"
+            },
+            "total_modes": {
+              "type": "integer",
+              "description": "Total number of vibrational degrees of freedom (66)"
+            },
+            "acoustic_modes": {
+              "type": "object",
+              "description": "Acoustic mode irreps with degeneracies (A2=1, E=2)"
+            },
+            "optical_modes": {
+              "type": "object",
+              "description": "Optical mode classification including IR_active (A2 count), Raman_active (A1, B1, B2, E counts), and boolean note E_also_IR_active"
+            },
+            "raman_tensor_forms": {
+              "type": "object",
+              "description": "Raman polarizability tensor forms for A1, B1, B2, E (E has two matrices)"
+            }
+          },
+          "notes": "The checker will recompute the decomposition from the public structural information and compare the integer multiplicities exactly and the Raman tensor forms for structural pattern correctness."
+        },
+        "description": "Scored artifact containing the full group-theoretical decomposition and Raman tensor forms."
+      }
+    ],
+    "notes": "The agent must produce the decomposition from first principles using the correlation method; the checker will independently recompute the decomposition and verify integer counts and tensor patterns. No numeric convergence tolerances apply to integer counts."
+  },
+  "steps": [
+    {
+      "id": "group_decomposition",
+      "output_file": "decomposition_results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "rubric": {
+        "description": "Check irrep decomposition, acoustic/optical classification, and Raman tensor forms against paper-reported gold.",
+        "sub_checks": [
+          {
+            "name": "irrep_counts",
+            "weight": 0.4,
+            "details": "A1=7, A2=9, B1=7, B2=7, E=18"
+          },
+          {
+            "name": "total_modes",
+            "weight": 0.05,
+            "details": "total_modes == 66 and sum of irrep counts == 66"
+          },
+          {
+            "name": "acoustic",
+            "weight": 0.1,
+            "details": "acoustic_modes: A2=1, E=2"
+          },
+          {
+            "name": "optical",
+            "weight": 0.2,
+            "details": "optical_modes: IR_active A2=8, Raman_active A1=7, B1=7, B2=7, E=17, E_also_IR_active=True"
+          },
+          {
+            "name": "tensor_patterns",
+            "weight": 0.25,
+            "details": "Tensor forms: A1 diag(a,a,b), B1 diag(c,-c,0), B2 off-diagonal (0 d 0; d 0 0; 0 0 0), E two matrices with e components at (1,3) and (3,1) for one, (2,3) and (3,2) for the other."
+          }
+        ]
+      }
+    }
+  ]
+}

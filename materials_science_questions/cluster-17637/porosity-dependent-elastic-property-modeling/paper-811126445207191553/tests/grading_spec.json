@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute is infeasible because the checker cannot repeat the finite-element simulations required to compute bulk and waveguide SBS gain coefficients from first principles; scoring relies on direct comparison of the agent's reported gain values and parameter sweep characteristics against paper-reported reference values, combined with structural validity checks on the sweep.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_gain.csv": "reference_match",
+    "waveguide_sweep.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference bulk SBS gain coefficients and waveguide optimum parameters from the paper",
+      "source_provenance": "Paper Tables 1 and 2, Figure 2(a). Bulk gain at f=0.85 is 8.2e-10 W^{-1}m, pure Si is 2.4e-12 W^{-1}m. Waveguide optimum: g_P^wg = 193 W^{-1}m^{-1} at f=0.807, d=55 nm.",
+      "generation_method": "Extracted directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the paper's own published results, verified against the reference oracle solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_gain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f",
+            "g_P"
+          ],
+          "units": {
+            "f": "dimensionless",
+            "g_P": "W^{-1}m"
+          }
+        },
+        "description": "Bulk SBS gain coefficient of silicon inverse opals at porosities f=0, 0.75, 0.80, 0.85. The checker compares the reported g_P values against hidden reference values and verifies the enhancement ratio relative to pure silicon."
+      },
+      {
+        "file": "waveguide_sweep.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "f",
+            "d_nm",
+            "g_P_wg"
+          ],
+          "units": {
+            "f": "dimensionless",
+            "d_nm": "nm",
+            "g_P_wg": "W^{-1}m^{-1}"
+          }
+        },
+        "description": "Parameter sweep of waveguide SBS gain coefficient. The checker locates the maximum gain and verifies that its value and optimal (f,d) coordinates lie within acceptable ranges of the paper's optimum."
+      }
+    ],
+    "notes": "The effective_params.json file is an intermediate artifact, not scored. The agent must use it as input for the waveguide step. The instruction will provide reference material constants for silicon and fused silica."
+  },
+  "steps": [
+    {
+      "id": "bulk_gain",
+      "output_file": "bulk_gain.csv",
+      "weight": 0.3,
+      "kind": "rubric",
+      "hidden": {
+        "reference_gain_0": 2.4e-12,
+        "reference_gain_85": 8.2e-10,
+        "gain_85_tolerance_range": [
+          5e-10,
+          1e-09
+        ],
+        "enhancement_ratio_min": 50,
+        "required_porosities": [
+          0,
+          0.85
+        ]
+      }
+    },
+    {
+      "id": "waveguide_sweep",
+      "output_file": "waveguide_sweep.csv",
+      "weight": 0.7,
+      "kind": "rubric",
+      "hidden": {
+        "max_gain_range": [
+          150,
+          250
+        ],
+        "optimal_f_range": [
+          0.78,
+          0.83
+        ],
+        "optimal_d_range": [
+          40,
+          70
+        ],
+        "min_points": 20,
+        "f_range": [
+          0.75,
+          0.85
+        ],
+        "d_range": [
+          20,
+          80
+        ]
+      }
+    }
+  ]
+}

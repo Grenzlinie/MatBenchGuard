@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Bulk properties and RMSAD slice agreement are recomputed from agent-file as relative differences; GB energies compared to hidden reference values from paper for SW potential.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference interfacial energies for Σ11A and Σ11B with Stillinger-Weber potential",
+      "source_provenance": "Table 1 of the paper (Interface Science, 2, 7-16, 1994), SW column",
+      "generation_method": "extracted from the paper's published table",
+      "why_not_fabricated": "These are the exact minimized interfacial energies reported by the authors for the SW potential, used as authoritative target for valid reproduced numerical values."
+    }
+  ],
+  "steps": [
+    {
+      "id": "bulk_consistency",
+      "output_file": "bulk_properties.csv",
+      "description": "Check Möbius-BVK agreement within 0.5% for energy, temperature, pressure, RMSAD across ensembles",
+      "weight": 0.25,
+      "target_policy": "structural_audit",
+      "tolerance": 0.005,
+      "metrics": [
+        "average_energy_eVperatom",
+        "average_temperature_K",
+        "average_pressure_bar",
+        "rmsad_Angstrom"
+      ]
+    },
+    {
+      "id": "rmsad_slices_consistency",
+      "output_file": "rmsad_slices.csv",
+      "description": "Per-slice RMSAD agreement within 1% relative difference",
+      "weight": 0.25,
+      "target_policy": "structural_audit",
+      "tolerance": 0.01
+    },
+    {
+      "id": "gb_minimized_energy_equivalence",
+      "output_file": "gb_energies.csv",
+      "description": "Möbius and BVK minimized energy per atom must match within 0.001 eV/atom for each structure",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "tolerance_ev": 0.001
+    },
+    {
+      "id": "gb_interfacial_energy_gold",
+      "output_file": "gb_energies.csv",
+      "description": "Interfacial energy (Möbius) matches paper values within 5%, and Σ11A < Σ11B",
+      "weight": 0.25,
+      "target_policy": "reference_match",
+      "gold_values": {
+        "Σ11A": 618,
+        "Σ11B": 635
+      },
+      "tolerance_frac": 0.05
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "simulation_id",
+            "pbc_type",
+            "ensemble",
+            "average_energy_eVperatom",
+            "average_temperature_K",
+            "average_pressure_bar",
+            "rmsad_Angstrom"
+          ]
+        },
+        "description": "Verifies that for each ensemble the thermodynamic averages and whole‑box RMSAD agree between Möbius and BVK PBCs within a tight relative tolerance."
+      },
+      {
+        "file": "rmsad_slices.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slice_position_Angstrom",
+            "mobius_rmsad_Angstrom",
+            "bvk_rmsad_Angstrom"
+          ]
+        },
+        "description": "Verifies that for every 5 Å slice the RMSAD values from Möbius and BVK simulations agree within 1% relative difference."
+      },
+      {
+        "file": "gb_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "pbc_type",
+            "minimized_energy_eVperatom",
+            "interfacial_energy_mJperm2"
+          ]
+        },
+        "description": "Compares the minimised energies and interfacial energies to the paper's reported values within tolerances, and checks that Σ11A has lower interfacial energy than Σ11B."
+      }
+    ],
+    "notes": "Only the Stillinger-Weber potential is used. The Tersoff potential and high‑temperature MD observations are not part of the scored reproduction."
+  }
+}

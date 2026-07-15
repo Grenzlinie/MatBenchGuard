@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Main quantitative claims (equilibrium radii, bulk moduli) are compared to the paper’s DLM predictions with tolerances; DOS is verified by structural features because exact DOS intensities depend on the computational method and cannot be directly compared.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper’s DLM values for actinide Wigner-Seitz radii and bulk moduli digitized from Figures 1 and 2",
+      "source_provenance": "Figure 1 and Figure 2 of the paper",
+      "generation_method": "Approximate digitization of the DLM curves capturing the trend and values consistent with the paper’s description and the known δ‑Pu volume",
+      "why_not_fabricated": "The values represent the paper’s central result of improved equilibrium properties; they are approximations of the reported DLM results and serve as the hidden reference against which the agent’s re‑computation is checked."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "actinide_volumes_bulk_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "element",
+            "rws_bohr",
+            "bulk_modulus_gpa"
+          ],
+          "units": {}
+        },
+        "description": "Equilibrium Wigner-Seitz radii and bulk moduli for the fcc actinide series from LSDA+CPA DLM calculations."
+      },
+      {
+        "file": "delta_plutonium_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "dos_states_per_eV_atom"
+          ],
+          "units": {}
+        },
+        "description": "Density of states for δ-Pu at equilibrium volume, computed from the self-consistent DLM calculation."
+      }
+    ],
+    "notes": "The verifier checks radii and bulk moduli against reference values with tolerances, and verifies DOS structural features (peak positions, bandwidth)."
+  },
+  "steps": [
+    {
+      "id": "step1_table",
+      "output_file": "actinide_volumes_bulk_moduli.csv",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "kind": "reference_match_table",
+      "reference": {
+        "elements": [
+          {
+            "element": "Th",
+            "rws_bohr": 3.52,
+            "bulk_modulus_gpa": 55.0
+          },
+          {
+            "element": "Pa",
+            "rws_bohr": 3.38,
+            "bulk_modulus_gpa": 98.0
+          },
+          {
+            "element": "U",
+            "rws_bohr": 3.3,
+            "bulk_modulus_gpa": 130.0
+          },
+          {
+            "element": "Np",
+            "rws_bohr": 3.35,
+            "bulk_modulus_gpa": 110.0
+          },
+          {
+            "element": "Pu",
+            "rws_bohr": 3.42,
+            "bulk_modulus_gpa": 35.0
+          },
+          {
+            "element": "Am",
+            "rws_bohr": 3.58,
+            "bulk_modulus_gpa": 30.0
+          },
+          {
+            "element": "Cm",
+            "rws_bohr": 3.62,
+            "bulk_modulus_gpa": 25.0
+          },
+          {
+            "element": "Bk",
+            "rws_bohr": 3.58,
+            "bulk_modulus_gpa": 30.0
+          }
+        ]
+      },
+      "tolerances": {
+        "rws_rel": 0.05,
+        "bulk_rel": 0.1
+      }
+    },
+    {
+      "id": "step2_dos",
+      "output_file": "delta_plutonium_dos.csv",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "kind": "structural_dos",
+      "peak_checks": {
+        "occupied_range": [
+          -4.0,
+          -0.2
+        ],
+        "unoccupied_range": [
+          0.2,
+          4.0
+        ],
+        "expected_occupied_peak": -2.0,
+        "expected_unoccupied_peak": 2.0,
+        "peak_tol_ev": 0.5,
+        "bandwidth_min": 3.0,
+        "bandwidth_max": 5.0
+      }
+    }
+  ]
+}

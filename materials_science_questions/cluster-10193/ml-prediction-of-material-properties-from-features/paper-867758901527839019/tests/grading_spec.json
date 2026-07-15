@@ -1,0 +1,191 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker recomputes overall site accuracy, compound-level accuracy, and per-element accuracies from prediction CSVs and scores against paper-reported values with monotonic thresholds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "os_icsd_predictions.csv": "metric_recompute",
+    "os_icsd_metrics.json": "structural_audit",
+    "os_icsd_oxide_predictions.csv": "metric_recompute",
+    "os_icsd_oxide_metrics.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold overall site accuracy and per-element accuracies for OS-ICSD and oxide test sets, derived from paper.",
+      "source_provenance": "paper Section Results and Discussion, Table 1, Fig 2",
+      "generation_method": "extracted from paper text and figures",
+      "why_not_fabricated": "values are the paper's reported numbers; no random generation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "os_icsd_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "element",
+            "true_oxidation_state",
+            "predicted_oxidation_state"
+          ],
+          "description": "Each row is an atom site from the OS-ICSD test set. composition is the material formula, element is the element symbol, true_oxidation_state is the ICSD-provided oxidation state, predicted_oxidation_state is the model output."
+        },
+        "description": "Per‑atom site predictions used to recompute overall site accuracy, compound-level accuracy, and per-element accuracies for the OS-ICSD test set."
+      },
+      {
+        "file": "os_icsd_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "overall_site_accuracy",
+            "compound_level_accuracy",
+            "per_element_site_accuracy"
+          ],
+          "units": {
+            "overall_site_accuracy": "percent",
+            "compound_level_accuracy": "percent"
+          }
+        },
+        "description": "Agent‑computed summary metrics for the OS-ICSD evaluation. Checked for structural completeness and plausible ranges."
+      },
+      {
+        "file": "os_icsd_oxide_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "element",
+            "true_oxidation_state",
+            "predicted_oxidation_state"
+          ],
+          "description": "Each row is an atom site from the OS-ICSD-oxide test set."
+        },
+        "description": "Per‑atom site predictions used to recompute overall site accuracy, compound-level accuracy, and per-element accuracies for the oxide test set."
+      },
+      {
+        "file": "os_icsd_oxide_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "overall_site_accuracy",
+            "compound_level_accuracy",
+            "per_element_site_accuracy"
+          ],
+          "units": {
+            "overall_site_accuracy": "percent",
+            "compound_level_accuracy": "percent"
+          }
+        },
+        "description": "Agent‑computed summary metrics for the oxide evaluation. Checked for structural completeness and plausible ranges."
+      }
+    ],
+    "notes": "The checker recomputes site‑level, compound‑level, and per‑element accuracies directly from the prediction CSV files. The metrics JSON files are expected but serve as a structural sanity check; primary scoring relies on the recomputed values from the raw predictions."
+  },
+  "steps": [
+    {
+      "id": "os_icsd_predictions_overall",
+      "output_file": "os_icsd_predictions.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Recompute site accuracy and score against paper gold 96.82% with threshold_or_better.",
+      "gold_site_accuracy": 96.82,
+      "tolerance_fp_floor": 0.5,
+      "decay_factor": 20.0
+    },
+    {
+      "id": "os_icsd_predictions_compound",
+      "output_file": "os_icsd_predictions.csv",
+      "kind": "custom",
+      "weight": 0.15,
+      "description": "Recompute compound-level accuracy; score based on plausible range (>80%) with full credit above 85%.",
+      "min_compound_accuracy": 85.0
+    },
+    {
+      "id": "os_icsd_predictions_per_element",
+      "output_file": "os_icsd_predictions.csv",
+      "kind": "custom",
+      "weight": 0.15,
+      "description": "Recompute per-element accuracies and compare to paper-reported gold values with tolerance ±2%.",
+      "per_element_tolerance": 2.0,
+      "per_element_gold": {
+        "Li": 99.93,
+        "Na": 100.0,
+        "K": 99.96,
+        "Rb": 100.0,
+        "Cs": 100.0,
+        "Be": 100.0,
+        "Mg": 100.0,
+        "Ca": 100.0,
+        "Sr": 100.0,
+        "Ba": 100.0,
+        "Al": 100.0,
+        "Ga": 100.0,
+        "Bi": 100.0,
+        "Sn": 95.12,
+        "Pb": 98.0,
+        "Tl": 99.6,
+        "Fe": 88.63,
+        "Co": 86.89,
+        "Tc": 88.68,
+        "Re": 83.9,
+        "Os": 74.07,
+        "Ir": 87.5,
+        "Pt": 82.54,
+        "Np": 87.3,
+        "C": 77.38,
+        "N": 88.2,
+        "O": 99.9,
+        "F": 99.95,
+        "Br": 99.3,
+        "B": 99.36,
+        "Si": 99.76,
+        "Kr": 100.0
+      }
+    },
+    {
+      "id": "os_icsd_metrics_struct",
+      "output_file": "os_icsd_metrics.json",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Structural audit: required keys present, values in [0,100], per_element dict non-empty."
+    },
+    {
+      "id": "os_icsd_oxide_predictions_overall",
+      "output_file": "os_icsd_oxide_predictions.csv",
+      "kind": "custom",
+      "weight": 0.15,
+      "description": "Recompute site accuracy on oxide test set and score against paper gold 97.61%.",
+      "gold_site_accuracy": 97.61,
+      "tolerance_fp_floor": 0.5,
+      "decay_factor": 20.0
+    },
+    {
+      "id": "os_icsd_oxide_predictions_compound",
+      "output_file": "os_icsd_oxide_predictions.csv",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Recompute compound-level accuracy on oxide test set with threshold 85%.",
+      "min_compound_accuracy": 85.0
+    },
+    {
+      "id": "os_icsd_oxide_metrics_struct",
+      "output_file": "os_icsd_oxide_metrics.json",
+      "kind": "custom",
+      "weight": 0.05,
+      "description": "Structural audit for oxide metrics JSON."
+    }
+  ]
+}

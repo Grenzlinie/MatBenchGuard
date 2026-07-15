@@ -1,0 +1,173 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Artifacts are final FEM simulation result tables; re-running the whole FEM simulation in the checker is infeasible. Compare submitted values to paper-reported reference values and structural constraints with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "baseline_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "resonance_wavelength_nm",
+            "peak_loss_dB_per_cm"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "resonance_wavelength_nm": "nm",
+            "peak_loss_dB_per_cm": "dB/cm"
+          }
+        },
+        "description": "Resonance wavelength and peak loss of the y-polarized core mode for the baseline D-shaped PCF SPR sensor at temperatures 270, 320, and 370 K."
+      },
+      {
+        "file": "ri_dependence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "ri",
+            "peak_loss_dB_per_cm"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "ri": "RIU",
+            "peak_loss_dB_per_cm": "dB/cm"
+          }
+        },
+        "description": "Peak loss as a function of analyte RI at temperatures 270, 320, and 370 K."
+      },
+      {
+        "file": "temp_dependence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "peak_loss_dB_per_cm"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "peak_loss_dB_per_cm": "dB/cm"
+          }
+        },
+        "description": "Peak loss as a function of temperature for fixed analyte RI=1.35."
+      },
+      {
+        "file": "structural_variation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "parameter",
+            "parameter_value",
+            "resonance_wavelength_nm",
+            "peak_loss_dB_per_cm"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "parameter": "string",
+            "parameter_value": "µm or ratio",
+            "resonance_wavelength_nm": "nm",
+            "peak_loss_dB_per_cm": "dB/cm"
+          }
+        },
+        "description": "Resonance wavelength and peak loss for duty ratio 0.4, 0.6 and lattice pitch 5 µm, 10 µm at temperatures 270, 320, and 370 K."
+      }
+    ],
+    "notes": "The agent must implement the full temperature-dependent material models (Sellmeier for fused silica, Drude for gold with temperature-corrected plasma and collision frequencies, and film thickness correction) using the parameters from the paper. An open-source or proprietary full-vectorial FEM solver with cylindrical PML must be used to compute complex effective indices and confinement losses. The output values are compared to hidden reference values derived from the paper’s reported simulation results."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_peak_loss for baseline_results.csv",
+      "source_provenance": "Table 2 of the paper",
+      "generation_method": "directly extracted from the paper: polish depth 0.5Λ, dAu 35 nm, n_a=1.35; peak loss values 26.3632, 22.4136, 19.5412 dB/cm at 270, 320, 370 K",
+      "why_not_fabricated": "these are the exact reported simulation numbers"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_slopes for ri_dependence.csv",
+      "source_provenance": "text of Section 3.3, Fig.5(a)",
+      "generation_method": "paper states linear coefficients of peak loss vs RI: 767.4502, 625.8965, 530.8129 dB/(cm·RIU) at 270, 320, 370 K",
+      "why_not_fabricated": "quoted directly from the paper"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "structural constraints for temp_dependence.csv",
+      "source_provenance": "Section 3.3 and Fig.5(b) – linearity and approximate slope range -0.12 to -0.19 dB/(cm·K)",
+      "generation_method": "derived from paper statements; range is set to [0.05,0.25] to cover legitimate variations",
+      "why_not_fabricated": "based on the paper's reported slope range"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "structural constraints for structural_variation.csv",
+      "source_provenance": "Section 3.2 and Fig.4 – claims that resonance wavelength is almost unaffected, and peak loss ordering",
+      "generation_method": "derived from paper claims: resonance wavelength variation ≤5 nm expected; peak loss ordering (duty 0.6>0.4, pitch 5>10) per text",
+      "why_not_fabricated": "reflects the qualitative claims made in the paper"
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_baseline",
+      "output_file": "baseline_results.csv",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "gold_peak_loss": {
+        "270": 26.3632,
+        "320": 22.4136,
+        "370": 19.5412
+      },
+      "peak_loss_tolerance_pct": 5.0,
+      "peak_loss_tolerance_abs": 1.0,
+      "res_wl_range": [
+        500.0,
+        800.0
+      ]
+    },
+    {
+      "id": "step_ri_dependence",
+      "output_file": "ri_dependence.csv",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "gold_slopes": {
+        "270": 767.4502,
+        "320": 625.8965,
+        "370": 530.8129
+      },
+      "slope_tolerance_pct": 10.0,
+      "slope_tolerance_abs": 0.02
+    },
+    {
+      "id": "step_temp_dependence",
+      "output_file": "temp_dependence.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "r2_threshold": 0.95,
+      "slope_sign": "negative",
+      "slope_range": [
+        0.05,
+        0.25
+      ]
+    },
+    {
+      "id": "step_structural_variation",
+      "output_file": "structural_variation.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "res_wl_variation_max_nm": 5.0
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline metric is the steady-state velocity and crack state; recompute from raw MD trajectories (large atomistic data) is not feasible in verifier sandbox. Checker compares agent-reported terminal velocities to hidden paper-consistent gold (from reference solve.sh) within tolerance, and performs structural consistency checks on time traces.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "steady_state_velocities.csv": "reference_match",
+    "crack_state_low_overload.csv": "exact_match",
+    "time_trace_1.04G0.csv": "structural_audit",
+    "time_trace_1.10G0.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold terminal velocities for step04a and crack states for step04b",
+      "source_provenance": "Derived from reference simulation solution (solve.sh) which reproduces the paper's Fig.3a EAM-Ni (100)[001] results.",
+      "generation_method": "Reference oracle solve.sh hardcodes these values as the expected correct reproduction outcome.",
+      "why_not_fabricated": "Values are directly embedded in grading_spec_json; no external file needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "steady_state_velocities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "overload",
+            "terminal_velocity"
+          ],
+          "units": {
+            "overload": "G/G0 (dimensionless)",
+            "terminal_velocity": "v/c_R (dimensionless)"
+          }
+        },
+        "description": "Terminal steady-state crack-tip velocities at overloads 1.04, 1.10, 1.30, 1.50 relative to the Griffith load. Checker compares to hidden paper-reported values within tolerance."
+      },
+      {
+        "file": "crack_state_low_overload.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "overload",
+            "state"
+          ]
+        },
+        "description": "Crack motion state at low overloads 1.00, 1.02, 1.04 and at high overload 2.00 where branching is expected. States are 'stationary', 'moving', or 'branching'. Checker expects exact string match with hidden paper result for all rows."
+      },
+      {
+        "file": "time_trace_1.04G0.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "v_tip"
+          ],
+          "units": {
+            "time": "r0/c_L",
+            "v_tip": "c_R"
+          }
+        },
+        "description": "Crack-tip velocity vs time for overload 1.04 G0. Checker verifies velocity is non-zero, increases from near zero, and reaches a plateau consistent with the terminal velocity for this overload."
+      },
+      {
+        "file": "time_trace_1.10G0.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time",
+            "v_tip"
+          ],
+          "units": {
+            "time": "r0/c_L",
+            "v_tip": "c_R"
+          }
+        },
+        "description": "Crack-tip velocity vs time for overload 1.10 G0. Checker verifies velocity is non-zero, increases, and reaches a plateau consistent with the terminal velocity for this overload."
+      }
+    ],
+    "notes": "All outputs must be placed under /app/outputs. The process steps generate the simulation data needed to produce the scored artifacts. The hidden checker compares terminal velocities to paper-reported values (±0.05 c_R), checks crack state strings exactly for all overloads including branching at 2.00, performs a qualitative shape check on time traces."
+  },
+  "steps": [
+    {
+      "id": "step04a",
+      "output_file": "steady_state_velocities.csv",
+      "weight": 0.4,
+      "kind": "numeric_tolerance",
+      "tolerance": 0.05,
+      "gold": {
+        "1.04": 0.24,
+        "1.10": 0.4,
+        "1.30": 0.4,
+        "1.50": 0.4
+      }
+    },
+    {
+      "id": "step04b",
+      "output_file": "crack_state_low_overload.csv",
+      "weight": 0.2,
+      "kind": "exact_match",
+      "gold": {
+        "1.00": "stationary",
+        "1.02": "stationary",
+        "1.04": "moving"
+      }
+    },
+    {
+      "id": "step04c",
+      "output_file": "time_trace_1.04G0.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "overload": 1.04
+    },
+    {
+      "id": "step04d",
+      "output_file": "time_trace_1.10G0.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "overload": 1.1
+    }
+  ]
+}

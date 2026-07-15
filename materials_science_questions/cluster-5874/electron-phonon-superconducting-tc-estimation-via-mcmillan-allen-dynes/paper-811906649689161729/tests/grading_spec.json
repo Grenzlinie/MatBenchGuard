@@ -1,0 +1,153 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Recomputing the metrics from raw DFT output is infeasible because the scored artifact is a high-level compiled table without intermediate band/DOS files. Result-level comparison against the paper's GGA values with generous tolerances is the appropriate Tier 0 fallback.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_properties.tsv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for structural/electronic properties of Be2B, AlBeB, MgBeB, NaBeB – the paper’s own GGA results (Tables 1 and 2).",
+      "source_provenance": "Paper Tables 1 and 2; all values are FP-LAPW PBE-GGA numbers as reported in the manuscript.",
+      "generation_method": "Directly transcribed from the paper’s tables with no modification.",
+      "why_not_fabricated": "Values are the exact published reference that the solver must reproduce within tolerance; they are the accepted ground truth for this reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_properties.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "a_Ang",
+            "B_GPa",
+            "Bprime",
+            "VB_eV",
+            "Eg_Gamma_X_eV",
+            "Nv",
+            "N_EF_total_states_per_eV",
+            "B_p_contribution_states_per_eV"
+          ],
+          "units": {
+            "a_Ang": "Angstrom",
+            "B_GPa": "GPa",
+            "Bprime": "dimensionless",
+            "VB_eV": "eV",
+            "Eg_Gamma_X_eV": "eV",
+            "Nv": "integer",
+            "N_EF_total_states_per_eV": "states/eV/cell",
+            "B_p_contribution_states_per_eV": "states/eV/cell"
+          }
+        },
+        "description": "Compiled structural and electronic properties for Be2B, AlBeB, MgBeB, NaBeB."
+      }
+    ],
+    "notes": "The agent must compute these properties using first-principles DFT. No gold values or tolerances are given here."
+  },
+  "steps": [
+    {
+      "id": "numeric_values",
+      "output_file": "computed_properties.tsv",
+      "kind": "numeric_tolerance_check",
+      "weight": 0.9,
+      "description": "Compare agent-reported values per compound to the paper's GGA reference using per-property tolerances (relative or absolute).",
+      "gold": [
+        {
+          "compound": "Be2B",
+          "a_Ang": 4.6,
+          "B_GPa": 145.11,
+          "Bprime": 3.41,
+          "VB_eV": 13.99,
+          "Eg_Gamma_X_eV": 0.66,
+          "Nv": 7,
+          "N_EF_total_states_per_eV": 0.77,
+          "B_p_contribution_states_per_eV": 0.605
+        },
+        {
+          "compound": "AlBeB",
+          "a_Ang": 4.96,
+          "B_GPa": 140,
+          "Bprime": 3.48,
+          "VB_eV": 13.06,
+          "Eg_Gamma_X_eV": 0.0,
+          "Nv": 8,
+          "N_EF_total_states_per_eV": 0.0,
+          "B_p_contribution_states_per_eV": null
+        },
+        {
+          "compound": "MgBeB",
+          "a_Ang": 5.23,
+          "B_GPa": 94,
+          "Bprime": 3.54,
+          "VB_eV": 11.28,
+          "Eg_Gamma_X_eV": 0.37,
+          "Nv": 7,
+          "N_EF_total_states_per_eV": 1.22,
+          "B_p_contribution_states_per_eV": 0.732
+        },
+        {
+          "compound": "NaBeB",
+          "a_Ang": 5.51,
+          "B_GPa": 55.3,
+          "Bprime": 3.7,
+          "VB_eV": 9.31,
+          "Eg_Gamma_X_eV": 1.07,
+          "Nv": 6,
+          "N_EF_total_states_per_eV": 1.83,
+          "B_p_contribution_states_per_eV": 1.097
+        }
+      ],
+      "tolerances": {
+        "a_Ang": {
+          "type": "relative",
+          "value": 0.05
+        },
+        "B_GPa": {
+          "type": "relative",
+          "value": 0.1
+        },
+        "Bprime": {
+          "type": "relative",
+          "value": 0.2
+        },
+        "VB_eV": {
+          "type": "absolute",
+          "value": 0.5
+        },
+        "Eg_Gamma_X_eV": {
+          "type": "absolute",
+          "value": 0.2
+        },
+        "Nv": {
+          "type": "exact"
+        },
+        "N_EF_total_states_per_eV": {
+          "type": "relative",
+          "value": 0.1
+        },
+        "B_p_contribution_states_per_eV": {
+          "type": "special"
+        }
+      }
+    },
+    {
+      "id": "lattice_ordering",
+      "output_file": "computed_properties.tsv",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify that lattice constants satisfy NaBeB > MgBeB > AlBeB > Be2B.",
+      "expected_order": [
+        "NaBeB",
+        "MgBeB",
+        "AlBeB",
+        "Be2B"
+      ]
+    }
+  ]
+}

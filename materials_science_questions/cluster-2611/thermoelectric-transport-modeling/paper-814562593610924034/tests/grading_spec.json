@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The Fermi energies, electrical conductivities, and lattice thermal conductivities are deterministic outputs of the two models with fixed parameters; comparing the agent's computed values to the paper's reported golds with tolerances is sufficient and appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "two_band_model_results.csv": "reference_match",
+    "callaway_model_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Embedded gold Fermi energies, conductivities, and lattice thermal conductivity values from the paper.",
+      "source_provenance": "Paper text: 'Fermi energies corresponded to be −5 meV and 80 meV ... electrical conductivities were estimated to be 3.5×10^4 and 2.6×10^5 S m−1' (Fig. 3(b) and text); for Callaway: 'thermal conductivity (7.6 W m−1 K−1) calculated for InAs NW with 110 nm thickness ... dashed line representing the thermal conductivities calculated for L of 28 nm agreed well with experimental results (approx 3 W m−1 K−1)' (Fig. 4(b) and text).",
+      "generation_method": "Extracted directly from paper narrative and confirmed against reference solve.sh values (which match paper exactly or nearest integer).",
+      "why_not_fabricated": "Values are from the paper's reported results, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "two_band_model_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "measured_Seebeck_uV_per_K",
+            "Fermi_energy_meV",
+            "electrical_conductivity_S_per_m"
+          ],
+          "units": {
+            "sample": "string (undoped or Si-doped)",
+            "measured_Seebeck_uV_per_K": "μV/K",
+            "Fermi_energy_meV": "meV",
+            "electrical_conductivity_S_per_m": "S/m"
+          }
+        },
+        "description": "Derived Fermi energies and electrical conductivities from the two-band model for the two nanowire samples."
+      },
+      {
+        "file": "callaway_model_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "thickness_nm",
+            "lattice_thermal_conductivity_W_per_m_K"
+          ],
+          "units": {
+            "thickness_nm": "nm",
+            "lattice_thermal_conductivity_W_per_m_K": "W/m·K"
+          }
+        },
+        "description": "Lattice thermal conductivities from Callaway model for two effective phonon scattering lengths."
+      }
+    ],
+    "notes": "The outputs are compared against hidden reference values using appropriate tolerances, per the task's scoring model. The artifacts must contain exactly the specified columns and rows."
+  },
+  "steps": [
+    {
+      "id": "step_two_band",
+      "output_file": "two_band_model_results.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Check Fermi energy and electrical conductivity for undoped and Si-doped nanowires.",
+      "expected_rows": {
+        "undoped": {
+          "Fermi_energy_meV": -5,
+          "tolerance_Fermi_meV": 1,
+          "electrical_conductivity_S_per_m": 35000,
+          "tolerance_conductivity": 3500
+        },
+        "Si-doped": {
+          "Fermi_energy_meV": 80,
+          "tolerance_Fermi_meV": 5,
+          "electrical_conductivity_S_per_m": 260000,
+          "tolerance_conductivity": 26000
+        }
+      }
+    },
+    {
+      "id": "step_callaway",
+      "output_file": "callaway_model_results.csv",
+      "kind": "custom",
+      "weight": 0.5,
+      "description": "Check lattice thermal conductivity for 110 nm and 28 nm effective thicknesses.",
+      "expected_rows": {
+        "110": {
+          "lattice_thermal_conductivity_W_per_m_K": 7.6,
+          "tolerance": 1.5
+        },
+        "28": {
+          "lattice_thermal_conductivity_W_per_m_K": 3.0,
+          "tolerance": 0.5
+        }
+      }
+    }
+  ]
+}

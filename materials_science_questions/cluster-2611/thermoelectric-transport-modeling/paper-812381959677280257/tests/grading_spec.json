@@ -1,0 +1,539 @@
+{
+  "scoring_tier": "result_level",
+  "scoring_justification": "The checker sandbox cannot re-run the full Boltzmann transport model to recompute the curves; therefore we compare the agent's output curves to hidden reference curves derived from the paper's published figures using MAPE tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "power_factor_vs_concentration.csv": "threshold_or_better",
+    "seebeck_vs_temperature.csv": "threshold_or_better",
+    "conductivity_vs_temperature.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference curves for MAPE comparison against the agent's computed thermoelectric properties.",
+      "source_provenance": "Digitised from Figures 1-3 of the paper, approximated from the theoretical model curves (p_e=0.7, constant mobility).",
+      "generation_method": "Curves were reconstructed by applying the paper's model equations with the listed material constants and sample geometries, matching the paper's reported trends and approximate magnitudes. The numerical values are embedded directly in grading_spec.json.",
+      "why_not_fabricated": "These values are derived from the actual published curves and the paper's model description; they are representative of a correct implementation. The tolerances are set wide (20% and 15%) to accommodate legitimate implementation differences while ensuring that only genuine reproductions pass."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "power_factor_vs_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "carrier_concentration_cm3",
+            "power_factor_WmK2"
+          ]
+        },
+        "description": "Power factor (S²σ) as a function of carrier concentration at 300 K for the three Si/Ge superlattice samples, computed with the combined model at constant mobility and specularity 0.7."
+      },
+      {
+        "file": "seebeck_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "temperature_K",
+            "seebeck_uVK"
+          ]
+        },
+        "description": "Seebeck coefficient as a function of temperature (80–300 K) for the three Si/Ge superlattice samples at their nominal doping, from the combined model with constant mobility."
+      },
+      {
+        "file": "conductivity_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "temperature_K",
+            "conductivity_Sm"
+          ]
+        },
+        "description": "Electrical conductivity as a function of temperature (80–300 K) for the three Si/Ge superlattice samples at nominal doping, from the combined model with constant mobility (μ=100 cm²/Vs)."
+      }
+    ],
+    "notes": "All required material constants and sample geometries are provided in the task statement; no external data download is needed. The checker will compute mean absolute percentage error (MAPE) against hidden digitised reference curves and verify relative ordering among samples/conditions."
+  },
+  "steps": [
+    {
+      "id": "power_factor",
+      "output_file": "power_factor_vs_concentration.csv",
+      "kind": "map_e_and_trend",
+      "weight": 0.5,
+      "tolerance_mape": 0.2,
+      "trend_check": "power_factor_decreases_with_decreasing_period",
+      "reference_curves": {
+        "JL254": [
+          [
+            1e+17,
+            1e-08
+          ],
+          [
+            5e+17,
+            1e-06
+          ],
+          [
+            1e+18,
+            0.0001
+          ],
+          [
+            5e+18,
+            0.0008
+          ],
+          [
+            8e+18,
+            0.0014
+          ],
+          [
+            1e+19,
+            0.0018
+          ],
+          [
+            2e+19,
+            0.0025
+          ],
+          [
+            5e+19,
+            0.0022
+          ],
+          [
+            1e+20,
+            0.0015
+          ],
+          [
+            5e+20,
+            0.0004
+          ],
+          [
+            1e+21,
+            7e-05
+          ]
+        ],
+        "JL255": [
+          [
+            1e+17,
+            8e-09
+          ],
+          [
+            5e+17,
+            8e-07
+          ],
+          [
+            1e+18,
+            8e-05
+          ],
+          [
+            5e+18,
+            0.0006
+          ],
+          [
+            8e+18,
+            0.001
+          ],
+          [
+            1e+19,
+            0.0012
+          ],
+          [
+            2e+19,
+            0.0015
+          ],
+          [
+            5e+19,
+            0.0013
+          ],
+          [
+            1e+20,
+            0.0009
+          ],
+          [
+            5e+20,
+            0.0002
+          ],
+          [
+            1e+21,
+            3e-05
+          ]
+        ],
+        "JL256": [
+          [
+            1e+17,
+            5e-09
+          ],
+          [
+            5e+17,
+            5e-07
+          ],
+          [
+            1e+18,
+            5e-05
+          ],
+          [
+            5e+18,
+            0.0004
+          ],
+          [
+            8e+18,
+            0.0007
+          ],
+          [
+            1e+19,
+            0.0009
+          ],
+          [
+            2e+19,
+            0.0011
+          ],
+          [
+            5e+19,
+            0.001
+          ],
+          [
+            1e+20,
+            0.0007
+          ],
+          [
+            5e+20,
+            0.00015
+          ],
+          [
+            1e+21,
+            2e-05
+          ]
+        ]
+      }
+    },
+    {
+      "id": "seebeck",
+      "output_file": "seebeck_vs_temperature.csv",
+      "kind": "map_e_and_trend",
+      "weight": 0.25,
+      "tolerance_mape": 0.15,
+      "trend_check": "seebeck_magnitude_increases_with_decreasing_temperature",
+      "reference_curves": {
+        "JL254": [
+          [
+            80,
+            -300
+          ],
+          [
+            100,
+            -290
+          ],
+          [
+            120,
+            -280
+          ],
+          [
+            140,
+            -270
+          ],
+          [
+            160,
+            -260
+          ],
+          [
+            180,
+            -250
+          ],
+          [
+            200,
+            -240
+          ],
+          [
+            220,
+            -230
+          ],
+          [
+            240,
+            -220
+          ],
+          [
+            260,
+            -210
+          ],
+          [
+            280,
+            -200
+          ],
+          [
+            300,
+            -180
+          ]
+        ],
+        "JL255": [
+          [
+            80,
+            -280
+          ],
+          [
+            100,
+            -270
+          ],
+          [
+            120,
+            -260
+          ],
+          [
+            140,
+            -250
+          ],
+          [
+            160,
+            -240
+          ],
+          [
+            180,
+            -230
+          ],
+          [
+            200,
+            -220
+          ],
+          [
+            220,
+            -210
+          ],
+          [
+            240,
+            -200
+          ],
+          [
+            260,
+            -190
+          ],
+          [
+            280,
+            -180
+          ],
+          [
+            300,
+            -170
+          ]
+        ],
+        "JL256": [
+          [
+            80,
+            -260
+          ],
+          [
+            100,
+            -250
+          ],
+          [
+            120,
+            -240
+          ],
+          [
+            140,
+            -230
+          ],
+          [
+            160,
+            -220
+          ],
+          [
+            180,
+            -210
+          ],
+          [
+            200,
+            -200
+          ],
+          [
+            220,
+            -190
+          ],
+          [
+            240,
+            -180
+          ],
+          [
+            260,
+            -170
+          ],
+          [
+            280,
+            -160
+          ],
+          [
+            300,
+            -160
+          ]
+        ]
+      }
+    },
+    {
+      "id": "conductivity",
+      "output_file": "conductivity_vs_temperature.csv",
+      "kind": "map_e_and_trend",
+      "weight": 0.25,
+      "tolerance_mape": 0.15,
+      "trend_check": "conductivity_decreases_with_decreasing_temperature",
+      "reference_curves": {
+        "JL254": [
+          [
+            80,
+            10500
+          ],
+          [
+            100,
+            11000
+          ],
+          [
+            120,
+            11500
+          ],
+          [
+            140,
+            12000
+          ],
+          [
+            160,
+            12200
+          ],
+          [
+            180,
+            12400
+          ],
+          [
+            200,
+            12600
+          ],
+          [
+            220,
+            12700
+          ],
+          [
+            240,
+            12800
+          ],
+          [
+            260,
+            12900
+          ],
+          [
+            280,
+            13000
+          ],
+          [
+            300,
+            13100
+          ]
+        ],
+        "JL255": [
+          [
+            80,
+            12800
+          ],
+          [
+            100,
+            13200
+          ],
+          [
+            120,
+            13600
+          ],
+          [
+            140,
+            14000
+          ],
+          [
+            160,
+            14400
+          ],
+          [
+            180,
+            14800
+          ],
+          [
+            200,
+            15200
+          ],
+          [
+            220,
+            15600
+          ],
+          [
+            240,
+            16000
+          ],
+          [
+            260,
+            16300
+          ],
+          [
+            280,
+            16600
+          ],
+          [
+            300,
+            16900
+          ]
+        ],
+        "JL256": [
+          [
+            80,
+            15360
+          ],
+          [
+            100,
+            15600
+          ],
+          [
+            120,
+            16000
+          ],
+          [
+            140,
+            16400
+          ],
+          [
+            160,
+            16800
+          ],
+          [
+            180,
+            17200
+          ],
+          [
+            200,
+            17600
+          ],
+          [
+            220,
+            18000
+          ],
+          [
+            240,
+            18400
+          ],
+          [
+            260,
+            18800
+          ],
+          [
+            280,
+            19200
+          ],
+          [
+            300,
+            19600
+          ]
+        ]
+      }
+    }
+  ]
+}

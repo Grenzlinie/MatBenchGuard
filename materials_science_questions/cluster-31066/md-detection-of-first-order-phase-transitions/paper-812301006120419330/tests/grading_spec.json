@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Transition temperatures are derived from the submitted c/a and potential energy curves; lattice constants are compared to paper values (T0 with tolerance). Overall a recompute-based verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lattice_constants_300K.csv": "exact_match",
+    "ca_ratio_vs_T.csv": "metric_recompute",
+    "potential_energy_vs_T.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected lattice constants and transition temperatures from paper Table I and Table II",
+      "source_provenance": "Paper Table I and Table II",
+      "generation_method": "Copied directly from the paper's reported values",
+      "why_not_fabricated": "Values are the paper's own reported results, used as reference for scoring reproduction accuracy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_constants_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "a_Angstrom",
+            "c_Angstrom",
+            "c_a_ratio"
+          ],
+          "units": {
+            "a_Angstrom": "Angstrom",
+            "c_Angstrom": "Angstrom",
+            "c_a_ratio": "dimensionless"
+          }
+        },
+        "description": "Simulated lattice constants at 300 K for fcc, hex1, hex2 phases. Missing values for c and c/a for fcc should be empty. The checker compares against hidden reference lattice constants within tolerances."
+      },
+      {
+        "file": "ca_ratio_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "T_K",
+            "c_a_ratio"
+          ],
+          "units": {
+            "T_K": "Kelvin",
+            "c_a_ratio": "dimensionless"
+          }
+        },
+        "description": "Temperature dependence of the lattice ratio c/a for hexagonal phases. The checker re-derives transition temperatures from these curves and compares them to hidden reference transition temperatures."
+      },
+      {
+        "file": "potential_energy_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "T_K",
+            "potential_energy_per_mol_J"
+          ],
+          "units": {
+            "T_K": "Kelvin",
+            "potential_energy_per_mol_J": "J/mol"
+          }
+        },
+        "description": "Potential energy per molecule versus temperature for each phase. The checker re-derives transition temperatures (orientational/structural) from these curves and compares to hidden reference values."
+      }
+    ],
+    "notes": "The hex1 phase may not appear in every simulation; scoring focuses on fcc and hex2. The agent is expected to acquire sufficient computational resources (e.g., remote HPC or GPU-accelerated MD) for the production MD runs."
+  },
+  "steps": [
+    {
+      "id": "step3_lattice",
+      "output_file": "lattice_constants_300K.csv",
+      "weight": 0.25,
+      "target_policy": "exact_match",
+      "description": "Check lattice constants against paper Table I with tolerances: a ±0.15 Å, c ±0.2 Å, c/a ±0.03. Hex1 optional."
+    },
+    {
+      "id": "step4_ca_ratio",
+      "output_file": "ca_ratio_vs_T.csv",
+      "weight": 0.4,
+      "target_policy": "metric_recompute",
+      "description": "Re-derive transition temperatures from c/a vs T curves and compare to paper Table II: hex2 onset 500 K, sat 350 K; hex1 onset 400 K, sat 100 K. Tolerance ±40 K. Check plateau values."
+    },
+    {
+      "id": "step5_potential_energy",
+      "output_file": "potential_energy_vs_T.csv",
+      "weight": 0.35,
+      "target_policy": "metric_recompute",
+      "description": "Detect fcc transition breakpoint near 200 K (±40 K) from potential energy curve; verify slope signatures for hex2 and hex1."
+    }
+  ]
+}

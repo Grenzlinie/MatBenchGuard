@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step01_relax",
+    "title": "Build and relax the R and C one-dimensional boron structures",
+    "role": "process",
+    "action": "Construct the unit cells of the two-atom-wide staggered-row ribbon (R) and the single-atom linear chain (C). Perform variable-cell DFT relaxation using PBE with at least 10 Å vacuum and force convergence below 0.01 eV/Å to obtain equilibrium geometries.",
+    "output_file": "",
+    "evidence": "relaxed_structures.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step producing relaxed atomic geometries required for all subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_energy_strain",
+    "title": "Compute energy–strain curves for R and C phases",
+    "role": "scored",
+    "action": "For each phase, perform a series of fixed-cell DFT total-energy calculations (PBE) at unit-cell lengths corresponding to strains from approximately -5% to +15%. Record the total energy per unit cell as a function of cell length.",
+    "output_file": "step01_energy_strain.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw energy–strain data for both the R and C phases. The hidden checker re-derives all mechanical properties from this file.",
+    "output_schema": "columns: phase (string: R or C), length (float, Å, unit-cell length along the periodic direction), energy (float, eV, total DFT energy per unit cell)"
+  },
+  {
+    "id": "step03_mechanical_properties",
+    "title": "Extract cohesive energy difference, tensile stiffness and equilibrium tension",
+    "role": "scored",
+    "action": "From the energy–strain data, locate the two minima, fit the curvature around each minimum to obtain tensile stiffnesses, compute the cohesive energy difference between the minima, and determine the equilibrium tension via the common tangent construction. Report these derived quantities.",
+    "output_file": "step02_derived_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of principal mechanical results derived from the energy–strain data.",
+    "output_schema": "object with keys: cohesive_energy_difference (float, eV), tensile_stiffness_R (float, eV/Å), tensile_stiffness_C (float, eV/Å), equilibrium_tension (float, nN)"
+  },
+  {
+    "id": "step04_c_bandgap",
+    "title": "Compute the electronic band gap of the antiferromagnetic C phase",
+    "role": "scored",
+    "action": "Using the optimized C-phase structure and a hybrid functional (HSE06), perform a self-consistent field calculation and a band-structure calculation along the Γ→X path. Identify the antiferromagnetic ground state (bond-SDW) and extract the fundamental band gap. Write the band gap value in eV.",
+    "output_file": "step03_band_gap_C.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Electronic band gap of the chain phase computed with a hybrid functional.",
+    "output_schema": "single float in eV"
+  }
+]

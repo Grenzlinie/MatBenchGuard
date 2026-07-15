@@ -1,0 +1,117 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Checker reads agent-reported dft_results.json; compares values against hidden paper gold with tolerable deviations and checks trend patterns. Recompute from raw DFT outputs is not feasible as only the final numeric summary is submitted and the full DFT workflow cannot be re-executed in the verifier sandbox.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values from paper Table 1 (E_ads, d_Ag-O, Δφ, μ) and approximate Bader charge range.",
+      "source_provenance": "Paper Table 1, Section 3.3 text",
+      "generation_method": "Extracted directly from the published values.",
+      "why_not_fabricated": "These are the paper's own computed results; the hidden checker uses them as the gold standard against which the agent's reproduction is compared."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "coverage_data",
+            "bader_charge_Ag_e"
+          ],
+          "properties": {
+            "coverage_data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "coverage",
+                  "E_ads_eV_per_atom",
+                  "d_Ag_O_angstrom",
+                  "Delta_phi_eV",
+                  "mu_D"
+                ],
+                "properties": {
+                  "coverage": {
+                    "type": "string",
+                    "enum": [
+                      "1 ML",
+                      "2 ML",
+                      "4 ML"
+                    ]
+                  },
+                  "E_ads_eV_per_atom": {
+                    "type": "number",
+                    "units": "eV/atom"
+                  },
+                  "d_Ag_O_angstrom": {
+                    "type": "number",
+                    "units": "Å"
+                  },
+                  "Delta_phi_eV": {
+                    "type": "number",
+                    "units": "eV"
+                  },
+                  "mu_D": {
+                    "type": "number",
+                    "units": "D"
+                  }
+                }
+              }
+            },
+            "bader_charge_Ag_e": {
+              "type": "number",
+              "units": "e"
+            }
+          }
+        },
+        "description": "Scored JSON file containing adsorption energies per Ag atom, Ag–O bond lengths, work function changes, dipole moments for 1,2,4 ML Ag coverages, and net Bader charge on Ag."
+      }
+    ],
+    "notes": "The checker compares each numeric field against hidden paper‑reported values with a tolerance and verifies monotonic coverage trends. Meeting or exceeding the reference (more negative Eads, larger d, Δφ, decreasing μ) within tolerance earns full credit."
+  },
+  "gold": {
+    "1 ML": {
+      "E_ads_eV_per_atom": -2.4,
+      "d_Ag_O_angstrom": 2.34,
+      "Delta_phi_eV": 0.27,
+      "mu_D": 1.12
+    },
+    "2 ML": {
+      "E_ads_eV_per_atom": -2.7,
+      "d_Ag_O_angstrom": 2.39,
+      "Delta_phi_eV": 1.15,
+      "mu_D": 0.69
+    },
+    "4 ML": {
+      "E_ads_eV_per_atom": -2.94,
+      "d_Ag_O_angstrom": 2.56,
+      "Delta_phi_eV": 1.95,
+      "mu_D": 0.0
+    },
+    "bader_charge_range": [
+      0.05,
+      0.2
+    ],
+    "tolerances": {
+      "E_ads": 0.1,
+      "d_Ag_O": 0.05,
+      "Delta_phi": 0.1,
+      "mu": 0.1
+    },
+    "trend_eps": 0.02
+  },
+  "steps": [
+    {
+      "id": "dft_result_verification",
+      "output_file": "dft_results.json",
+      "weight": 1.0,
+      "kind": "composite"
+    }
+  ]
+}

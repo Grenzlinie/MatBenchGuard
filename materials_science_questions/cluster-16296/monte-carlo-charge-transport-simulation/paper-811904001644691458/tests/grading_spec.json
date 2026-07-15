@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Load-bearing breakdown range is compared to the paper's gold with tolerance (result-level compare). Emission curve is structurally audited for plateau and avalanche shape. Full recompute of the breakdown from raw logs is infeasible because the verifier cannot re-run the Monte Carlo simulation.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold breakdown range and tolerances",
+      "source_provenance": "Paper conclusion and Table I: breakdown range 11.5-12.5 MV/cm for crystalline SiO₂ from the present work.",
+      "generation_method": "Extracted directly from the paper's text and Table I.",
+      "why_not_fabricated": "These are the paper's own reported numbers, not synthetic."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "emitted_electrons_vs_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "electric_field_strength",
+            "emitted_electron_count"
+          ],
+          "units": {
+            "electric_field_strength": "MV/cm",
+            "emitted_electron_count": "unitless"
+          }
+        },
+        "description": "The emission curve data, verified for structural features (plateau region below 10 MV/cm and a sharp increase around 11-13 MV/cm)."
+      },
+      {
+        "file": "breakdown_range.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "breakdown_range_MV_per_cm": "list of two floats"
+          }
+        },
+        "description": "The extracted breakdown electric field range in MV/cm. Checked against the paper's reported range with a tolerance on each bound."
+      }
+    ],
+    "notes": "The emission curve provides a structural audit; the breakdown range is the primary headline result and is load-bearing."
+  },
+  "steps": [
+    {
+      "id": "step_03_emission_curve",
+      "output_file": "emitted_electrons_vs_field.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "description": "Verify that the emission curve has a plateau region (stable count) at low fields and a sharp increase indicating avalanche at higher fields.",
+      "details": {
+        "plateau_field_range": [
+          3.0,
+          10.0
+        ],
+        "avalanche_field_min": 11.0,
+        "ratio_threshold_low": 1.2,
+        "ratio_threshold_full": 1.5
+      }
+    },
+    {
+      "id": "step_04_determine_breakdown",
+      "output_file": "breakdown_range.json",
+      "weight": 0.85,
+      "kind": "numeric",
+      "description": "Check that the reported breakdown range bounds are within tolerance of the paper's gold range.",
+      "gold_range": [
+        11.5,
+        12.5
+      ],
+      "tolerance": 0.5,
+      "require_json_path": "breakdown_range_MV_per_cm"
+    }
+  ],
+  "target_policies": {
+    "emitted_electrons_vs_field.csv": "structural_audit",
+    "breakdown_range.json": "exact_match"
+  }
+}

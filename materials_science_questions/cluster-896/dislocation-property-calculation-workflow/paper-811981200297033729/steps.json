@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_setup_simulation",
+    "title": "Implement Atomistic Simulation Framework",
+    "role": "process",
+    "action": "Implement the atomistic simulation for a bcc bicrystal. Load the Johnson pair potential and the Finnis-Sinclair N-body potential for alpha-iron. Construct the simulation cell (800 atomic rows in a 20a0x20a0 central region, (100) interface at x=0, lattice parameter a0=0.286 nm). Implement the elastic image construction for a screw dislocation in a bimaterial, conjugate-gradient energy minimization with an applied uniform shear strain, and the measurement of core half-width from the distribution of screw relative displacements across the {110} glide plane.",
+    "output_file": "",
+    "evidence": "simulation_code.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Sets up the complete simulation environment required for the subsequent computations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_homogeneous_reference",
+    "title": "Compute Homogeneous Reference Core Widths",
+    "role": "process",
+    "action": "For each interatomic potential, simulate a homogeneous crystal (no interface) containing a dislocation. Apply a small uniform shear strain to stabilise the dislocation at a Peierls valley equilibrium. After relaxation, compute the core half-width and configuration type. Record these values internally for later inclusion in the scored output files.",
+    "output_file": "",
+    "evidence": "homogeneous_reference_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Establishes baseline core half-widths (~1.6 a0 for the pair potential, ~3 a0 for the N-body potential).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_pair_potential_widths",
+    "title": "Compute Core Widths for Johnson Pair Potential",
+    "role": "scored",
+    "action": "Using the Johnson pair potential, run bicrystal simulations at dislocation positions x = -2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5 a0 from the interface. For each, apply the appropriate uniform shear strain to maintain equilibrium. After conjugate-gradient relaxation, measure the core half-width (in units of a0) and identify the configuration type. Include the homogeneous reference width as a row with position 'homogeneous'. Write a CSV file with columns position_a0, core_width_a0, configuration_type.",
+    "output_file": "core_widths_pair_potential.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored core half-widths for the Johnson pair potential; verifies the asymmetry of core changes at the interface.",
+    "output_schema": "Header: position_a0, core_width_a0, configuration_type. Rows for x = -2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5 and one row with position='homogeneous'. core_width_a0 is a positive float. configuration_type is a string such as '2C', '4C'."
+  },
+  {
+    "id": "step_04_nbody_potential_widths",
+    "title": "Compute Core Widths for N-body Potential",
+    "role": "scored",
+    "action": "Using the Finnis-Sinclair N-body potential, run bicrystal simulations at the same seven dislocation positions as in step 3. For each, apply the appropriate shear strain, relax, measure the core half-width and configuration type. Include the homogeneous reference width as a row. Write a CSV file with columns position_a0, core_width_a0, configuration_type.",
+    "output_file": "core_widths_nbody_potential.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored core half-widths for the N-body potential; validates the dramatic widening and dissociation in the hard medium.",
+    "output_schema": "Same format as core_widths_pair_potential.csv. Rows for x = -2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5 and one row with position='homogeneous'."
+  }
+]

@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Crystal properties are compared to paper-reported simulation averages with tolerances (T0); sorption trend is verified via structural audit (T3) because absolute counts are stochastic and only relative trends are required.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "single_crystal_properties.json": "exact_match",
+    "absorption_counts.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference simulation values (density, lattice constants) from Table 3 and qualitative sorption conditions (presence/absence and ordering) from the paper's Results.",
+      "source_provenance": "Paper Table 3 (simulation) and text: 'The number of the absorbed solvent molecules is 4 and 13 for benzene and chloroform, respectively' and 'no solvent molecules entered into the crystal region for the (010) interface models'.",
+      "generation_method": "Directly extracted from the paper's reported simulation results.",
+      "why_not_fabricated": "These are the exact numbers and trends reported in the source paper, used as hidden gold; no fabrication needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "single_crystal_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "density": "float (g/cm³)",
+            "a": "float (Å)",
+            "b": "float (Å)",
+            "c": "float (Å)",
+            "alpha": "float (degrees)",
+            "beta": "float (degrees)",
+            "gamma": "float (degrees)"
+          }
+        },
+        "description": "Time-averaged density and lattice constants of the δe crystal from the NPT simulation."
+      },
+      {
+        "file": "absorption_counts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "interface",
+            "solvent",
+            "count"
+          ],
+          "units": {
+            "count": "integer"
+          }
+        },
+        "description": "Number of absorbed solvent molecules per interface and solvent. The qualitative trend (presence/absence per face and relative ordering) is scored, not absolute numbers."
+      }
+    ],
+    "notes": "The absolute number of absorbed molecules is stochastic; the checker evaluates only whether absorption occurs on the (100) face, does not occur on the (010) face, and that chloroform count exceeds benzene count on the (100) face. The crystal properties are compared to paper-reported values with tolerances."
+  },
+  "steps": [
+    {
+      "id": "check_single_crystal",
+      "output_file": "single_crystal_properties.json",
+      "kind": "exact_match",
+      "weight": 0.4,
+      "tolerances": {
+        "density": {
+          "target": 0.959,
+          "tol": 0.01
+        },
+        "a": {
+          "target": 17.38,
+          "tol": 0.2
+        },
+        "b": {
+          "target": 11.74,
+          "tol": 0.2
+        },
+        "c": {
+          "target": 7.81,
+          "tol": 0.2
+        },
+        "alpha": {
+          "target": 90.0,
+          "tol": 1.0
+        },
+        "beta": {
+          "target": 90.0,
+          "tol": 1.0
+        },
+        "gamma": {
+          "target": 115.0,
+          "tol": 1.0
+        }
+      }
+    },
+    {
+      "id": "check_absorption",
+      "output_file": "absorption_counts.csv",
+      "kind": "structural_audit",
+      "weight": 0.6,
+      "conditions": {
+        "absorption_100": true,
+        "no_absorption_010": true,
+        "chloroform_more_than_benzene_on_100": true
+      }
+    }
+  ]
+}

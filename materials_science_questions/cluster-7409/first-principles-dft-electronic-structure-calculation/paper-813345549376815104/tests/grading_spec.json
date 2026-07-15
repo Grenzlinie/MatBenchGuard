@@ -1,0 +1,304 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline quantities (band gaps, in-gap levels, binding energies, bond lengths) are produced by full DFT runs; the verifier sandbox cannot recompute them. We therefore compare the agent's reported values to paper-derived gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "electronic_structure_results.json": {
+      "VCP.band_gap_eV": "exact_match",
+      "VCP.in_gap_levels": "exact_match",
+      "VCP.binding_energy_eV": "threshold_or_better",
+      "VCP.average_Pr_O_bond_length_A": "exact_match",
+      "ZCP.band_gap_eV": "exact_match",
+      "ZCP.in_gap_levels": "exact_match",
+      "ZCP.binding_energy_eV": "threshold_or_better",
+      "ZCP.average_Pr_O_bond_length_A": "exact_match",
+      "ZTP.band_gap_eV": "exact_match",
+      "ZTP.in_gap_levels": "exact_match",
+      "ZTP.binding_energy_eV": "threshold_or_better",
+      "ZTP.average_Pr_O_bond_length_A": "exact_match"
+    }
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for electronic structure properties",
+      "source_provenance": "extracted from the paper's text, tables and pre‑computed reference solve.sh which encodes the paper's reported numbers",
+      "generation_method": "hardcoded as inline numeric literals matching the paper (Table 1, text descriptions of band gaps and in‑gap levels)",
+      "why_not_fabricated": "each gold value is the paper's own reported number for the same quantity, same units and same defect configuration; the reference solve.sh produces exactly these values, confirming consistency"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_structure_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "VCP",
+            "ZCP",
+            "ZTP"
+          ],
+          "properties": {
+            "VCP": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "in_gap_levels",
+                "binding_energy_eV",
+                "average_Pr_O_bond_length_A"
+              ],
+              "properties": {
+                "band_gap_eV": {
+                  "type": "number"
+                },
+                "in_gap_levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "energy_above_VBM_eV",
+                      "dominant_orbital"
+                    ],
+                    "properties": {
+                      "energy_above_VBM_eV": {
+                        "type": "number"
+                      },
+                      "dominant_orbital": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "binding_energy_eV": {
+                  "type": "number"
+                },
+                "average_Pr_O_bond_length_A": {
+                  "type": "number"
+                }
+              }
+            },
+            "ZCP": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "in_gap_levels",
+                "binding_energy_eV",
+                "average_Pr_O_bond_length_A"
+              ],
+              "properties": {
+                "band_gap_eV": {
+                  "type": "number"
+                },
+                "in_gap_levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "energy_above_VBM_eV",
+                      "dominant_orbital"
+                    ],
+                    "properties": {
+                      "energy_above_VBM_eV": {
+                        "type": "number"
+                      },
+                      "dominant_orbital": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "binding_energy_eV": {
+                  "type": "number"
+                },
+                "average_Pr_O_bond_length_A": {
+                  "type": "number"
+                }
+              }
+            },
+            "ZTP": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "in_gap_levels",
+                "binding_energy_eV",
+                "average_Pr_O_bond_length_A"
+              ],
+              "properties": {
+                "band_gap_eV": {
+                  "type": "number"
+                },
+                "in_gap_levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "energy_above_VBM_eV",
+                      "dominant_orbital"
+                    ],
+                    "properties": {
+                      "energy_above_VBM_eV": {
+                        "type": "number"
+                      },
+                      "dominant_orbital": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "binding_energy_eV": {
+                  "type": "number"
+                },
+                "average_Pr_O_bond_length_A": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "The required electronic structure parameters for the three defect configurations. The hidden checker compares the reported values to paper reference values. For binding energies, a negative (more stable) value is considered correct."
+      }
+    ],
+    "notes": "All DFT quantities are method-dependent; the hidden tolerances account for typical spread between different DFT implementations (GGA+U). The agent must reproduce the full pipeline, not just print known numbers."
+  },
+  "steps": [],
+  "checks": [
+    {
+      "id": "vcp_band_gap",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "VCP.band_gap_eV",
+      "target": 2.2,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    },
+    {
+      "id": "vcp_in_gap_levels",
+      "output_file": "electronic_structure_results.json",
+      "kind": "in_gap_levels",
+      "field_path": "VCP.in_gap_levels",
+      "target": {
+        "energies": [
+          1.3,
+          2.06
+        ],
+        "tolerance_abs": 0.15,
+        "dominant_orbital_required": "Pr_4f"
+      },
+      "target_policy": "exact_match",
+      "weight": 0.2
+    },
+    {
+      "id": "vcp_binding",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "VCP.binding_energy_eV",
+      "target": -3.3,
+      "target_policy": "threshold_or_better",
+      "weight": 0.1
+    },
+    {
+      "id": "vcp_bond_length",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "VCP.average_Pr_O_bond_length_A",
+      "target": 2.43,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    },
+    {
+      "id": "zcp_band_gap",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZCP.band_gap_eV",
+      "target": 2.2,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    },
+    {
+      "id": "zcp_in_gap_levels",
+      "output_file": "electronic_structure_results.json",
+      "kind": "in_gap_levels",
+      "field_path": "ZCP.in_gap_levels",
+      "target": {
+        "energies": [
+          1.22,
+          2.0
+        ],
+        "tolerance_abs": 0.15,
+        "dominant_orbital_required": "Pr_4f"
+      },
+      "target_policy": "exact_match",
+      "weight": 0.15
+    },
+    {
+      "id": "zcp_binding",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZCP.binding_energy_eV",
+      "target": -0.02,
+      "target_policy": "threshold_or_better",
+      "weight": 0.05
+    },
+    {
+      "id": "zcp_bond_length",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZCP.average_Pr_O_bond_length_A",
+      "target": 2.44,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    },
+    {
+      "id": "ztp_band_gap",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZTP.band_gap_eV",
+      "target": 2.2,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    },
+    {
+      "id": "ztp_in_gap_levels",
+      "output_file": "electronic_structure_results.json",
+      "kind": "in_gap_levels",
+      "field_path": "ZTP.in_gap_levels",
+      "target": {
+        "energies": [
+          1.2,
+          1.92
+        ],
+        "tolerance_abs": 0.15,
+        "dominant_orbital_required": "Pr_4f"
+      },
+      "target_policy": "exact_match",
+      "weight": 0.15
+    },
+    {
+      "id": "ztp_binding",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZTP.binding_energy_eV",
+      "target": -3.16,
+      "target_policy": "threshold_or_better",
+      "weight": 0.05
+    },
+    {
+      "id": "ztp_bond_length",
+      "output_file": "electronic_structure_results.json",
+      "kind": "json_field",
+      "field_path": "ZTP.average_Pr_O_bond_length_A",
+      "target": 2.42,
+      "tolerance_abs": 0.1,
+      "target_policy": "exact_match",
+      "weight": 0.05
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Re-running the full DFT pipeline in the verifier sandbox is infeasible; comparing the agent's computed energies and populations to the paper's published values with appropriate tolerances is the strongest viable check.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "base",
+            "total_energy_3-21G_hartree",
+            "total_energy_6-31Gstar_hartree",
+            "zero_point_energy_kcal_per_mol",
+            "complexation_energy_with_zpe_kcal_per_mol",
+            "complexation_energy_without_zpe_kcal_per_mol"
+          ],
+          "units": {
+            "total_energy_3-21G_hartree": "hartree",
+            "total_energy_6-31Gstar_hartree": "hartree",
+            "zero_point_energy_kcal_per_mol": "kcal/mol",
+            "complexation_energy_with_zpe_kcal_per_mol": "kcal/mol",
+            "complexation_energy_without_zpe_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Computed Al+ complexation energies (with and without ZPE correction) for 12 saturated and unsaturated bases at the 6-31G*//3-21G level."
+      },
+      {
+        "file": "populations.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "base",
+            "sigma_electron_transfer_to_Al",
+            "pi_electron_transfer_to_Al"
+          ],
+          "optional_columns": [
+            "in_plane_pi_electron_transfer"
+          ],
+          "units": {
+            "sigma_electron_transfer_to_Al": "electrons",
+            "pi_electron_transfer_to_Al": "electrons",
+            "in_plane_pi_electron_transfer": "electrons"
+          }
+        },
+        "description": "Mulliken population analysis data (σ and π electron transfer) for a subset of 7 Al+ complexes."
+      },
+      {
+        "file": "geometries.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Standard XYZ format; 12 entries, each with atom count, comment line, and atomic coordinates."
+        },
+        "description": "Optimized 3-21G geometries of all 12 Al+-base complexes, concatenated in a single XYZ file."
+      }
+    ],
+    "notes": "Tolerances for exact_match on energies.csv: 0.5 kcal/mol for complexation energies, 0.001 hartree for total energies. For populations.csv: 0.01 electrons. geometries.xyz is checked for syntax and that it contains 12 entries, not for numerical values."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for complexation energies, total energies, zero-point energies, and population analysis results from the paper's Table I and Table IV",
+      "source_provenance": "Paper: 'Ab initio study...' J. Phys. Chem. 1983. Table I and Table IV.",
+      "generation_method": "Extracted from the paper's tables; checked against solve.sh reference artifacts.",
+      "why_not_fabricated": "These are the actual published results; using them as gold ensures the agent's reproduction matches the paper's reported numbers."
+    }
+  ],
+  "steps": [
+    {
+      "id": "energies_check",
+      "output_file": "energies.csv",
+      "kind": "result_compare",
+      "weight": 0.6,
+      "tolerance_total_3_21G": 0.001,
+      "tolerance_total_6_31Gstar": 0.001,
+      "tolerance_zpe": 1.0,
+      "tolerance_complex_with_zpe": 0.5,
+      "tolerance_complex_without_zpe": 0.5,
+      "gold_rows": [
+        {
+          "base": "NH3",
+          "total_energy_3-21G_hartree": -296.29509,
+          "total_energy_6-31Gstar_hartree": -297.89257,
+          "zero_point_energy_kcal_per_mol": 25.9,
+          "complexation_energy_with_zpe_kcal_per_mol": 32.8,
+          "complexation_energy_without_zpe_kcal_per_mol": 36.0
+        },
+        {
+          "base": "CH3NH2",
+          "total_energy_3-21G_hartree": -335.10996,
+          "total_energy_6-31Gstar_hartree": -336.92208,
+          "zero_point_energy_kcal_per_mol": 46.0,
+          "complexation_energy_with_zpe_kcal_per_mol": 34.9,
+          "complexation_energy_without_zpe_kcal_per_mol": 38.2
+        },
+        {
+          "base": "H2O",
+          "total_energy_3-21G_hartree": -316.0061,
+          "total_energy_6-31Gstar_hartree": -317.70643,
+          "zero_point_energy_kcal_per_mol": 16.2,
+          "complexation_energy_with_zpe_kcal_per_mol": 25.0,
+          "complexation_energy_without_zpe_kcal_per_mol": 27.5
+        },
+        {
+          "base": "CH3OH",
+          "total_energy_3-21G_hartree": -354.82543,
+          "total_energy_6-31Gstar_hartree": -356.73858,
+          "zero_point_energy_kcal_per_mol": 36.7,
+          "complexation_energy_with_zpe_kcal_per_mol": 30.2,
+          "complexation_energy_without_zpe_kcal_per_mol": 32.7
+        },
+        {
+          "base": "CH3CH2OH",
+          "total_energy_3-21G_hartree": -393.65209,
+          "total_energy_6-31Gstar_hartree": -395.7811,
+          "zero_point_energy_kcal_per_mol": 56.8,
+          "complexation_energy_with_zpe_kcal_per_mol": 32.3,
+          "complexation_energy_without_zpe_kcal_per_mol": 34.7
+        },
+        {
+          "base": "(CH3)2O",
+          "total_energy_3-21G_hartree": -393.64444,
+          "total_energy_6-31Gstar_hartree": -395.77046,
+          "zero_point_energy_kcal_per_mol": 56.4,
+          "complexation_energy_with_zpe_kcal_per_mol": 32.0,
+          "complexation_energy_without_zpe_kcal_per_mol": 34.7
+        },
+        {
+          "base": "HF",
+          "total_energy_3-21G_hartree": -339.85018,
+          "total_energy_6-31Gstar_hartree": -341.67713,
+          "zero_point_energy_kcal_per_mol": 6.8,
+          "complexation_energy_with_zpe_kcal_per_mol": 13.0,
+          "complexation_energy_without_zpe_kcal_per_mol": 14.0
+        },
+        {
+          "base": "CH3F",
+          "total_energy_3-21G_hartree": -378.68546,
+          "total_energy_6-31Gstar_hartree": -380.72297,
+          "zero_point_energy_kcal_per_mol": 27.4,
+          "complexation_energy_with_zpe_kcal_per_mol": 22.3,
+          "complexation_energy_without_zpe_kcal_per_mol": 23.1
+        },
+        {
+          "base": "H2CO",
+          "total_energy_3-21G_hartree": -353.63479,
+          "total_energy_6-31Gstar_hartree": -355.5635,
+          "zero_point_energy_kcal_per_mol": 19.8,
+          "complexation_energy_with_zpe_kcal_per_mol": 26.9,
+          "complexation_energy_without_zpe_kcal_per_mol": 28.5
+        },
+        {
+          "base": "CH3CHO",
+          "total_energy_3-21G_hartree": -392.48048,
+          "total_energy_6-31Gstar_hartree": -394.62478,
+          "zero_point_energy_kcal_per_mol": 39.1,
+          "complexation_energy_with_zpe_kcal_per_mol": 34.2,
+          "complexation_energy_without_zpe_kcal_per_mol": 35.8
+        },
+        {
+          "base": "HCN",
+          "total_energy_3-21G_hartree": -332.75383,
+          "total_energy_6-31Gstar_hartree": -334.56726,
+          "zero_point_energy_kcal_per_mol": 12.0,
+          "complexation_energy_with_zpe_kcal_per_mol": 24.2,
+          "complexation_energy_without_zpe_kcal_per_mol": 24.7
+        },
+        {
+          "base": "CH3CN",
+          "total_energy_3-21G_hartree": -371.6074,
+          "total_energy_6-31Gstar_hartree": -373.63446,
+          "zero_point_energy_kcal_per_mol": 31.7,
+          "complexation_energy_with_zpe_kcal_per_mol": 33.4,
+          "complexation_energy_without_zpe_kcal_per_mol": 34.1
+        }
+      ]
+    },
+    {
+      "id": "populations_check",
+      "output_file": "populations.csv",
+      "kind": "result_compare",
+      "weight": 0.3,
+      "tolerance_sigma": 0.01,
+      "tolerance_pi": 0.01,
+      "tolerance_in_plane": 0.01,
+      "gold_rows": [
+        {
+          "base": "NH3",
+          "sigma_electron_transfer_to_Al": 0.24,
+          "pi_electron_transfer_to_Al": null,
+          "in_plane_pi_electron_transfer": null
+        },
+        {
+          "base": "H2O",
+          "sigma_electron_transfer_to_Al": 0.18,
+          "pi_electron_transfer_to_Al": 0.034,
+          "in_plane_pi_electron_transfer": 0.008
+        },
+        {
+          "base": "HF",
+          "sigma_electron_transfer_to_Al": 0.071,
+          "pi_electron_transfer_to_Al": 0.018,
+          "in_plane_pi_electron_transfer": null
+        },
+        {
+          "base": "CH3F",
+          "sigma_electron_transfer_to_Al": 0.151,
+          "pi_electron_transfer_to_Al": 0.026,
+          "in_plane_pi_electron_transfer": null
+        },
+        {
+          "base": "H2CO",
+          "sigma_electron_transfer_to_Al": 0.151,
+          "pi_electron_transfer_to_Al": 0.024,
+          "in_plane_pi_electron_transfer": 0.037
+        },
+        {
+          "base": "HCN",
+          "sigma_electron_transfer_to_Al": 0.176,
+          "pi_electron_transfer_to_Al": 0.012,
+          "in_plane_pi_electron_transfer": null
+        },
+        {
+          "base": "CH3CN",
+          "sigma_electron_transfer_to_Al": 0.212,
+          "pi_electron_transfer_to_Al": 0.016,
+          "in_plane_pi_electron_transfer": null
+        }
+      ]
+    },
+    {
+      "id": "geometries_check",
+      "output_file": "geometries.xyz",
+      "kind": "structural",
+      "weight": 0.1,
+      "expected_entries": 12
+    }
+  ]
+}

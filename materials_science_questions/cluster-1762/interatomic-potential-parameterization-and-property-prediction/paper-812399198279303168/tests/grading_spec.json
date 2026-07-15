@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level comparison against paper Table 3 using absolute tolerances; no raw simulation data is submitted, so full recompute from trajectories is infeasible, but the verifier effectively 'recomputes' the agreement with the reference properties from the agent's reported CSV.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for Cr-Nb bicrystal tensile properties from Table 3 of the source paper.",
+      "source_provenance": "Paper Table 3 (Elastic and Strength Characteristics of Model Cr–Nb Bicrystals).",
+      "generation_method": "Values directly extracted from the paper's Table 3; verified to match the reference solve.sh output.",
+      "why_not_fabricated": "These are the actual published results; using them as gold ensures the agent reproduces the original study's quantitative findings."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tensile_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "orientation",
+            "elongation_at_failure_percent",
+            "Young_modulus_GPa",
+            "yield_strength_GPa",
+            "total_elongation_percent",
+            "work_of_deformation_GJm3",
+            "ultimate_strength_GPa"
+          ],
+          "units": {
+            "Young_modulus_GPa": "GPa",
+            "yield_strength_GPa": "GPa",
+            "ultimate_strength_GPa": "GPa",
+            "elongation_at_failure_percent": "percent",
+            "total_elongation_percent": "percent",
+            "work_of_deformation_GJm3": "GJ/m^3"
+          }
+        },
+        "description": "Derived mechanical properties for Cr-Nb bicrystals pulled along <100>, <110>, <111>. Checker applies tolerances: elongation ±2%, modulus ±10 GPa, strength ±1.5 GPa, work of deformation ±0.1 GJ/m³, and verifies elongation ordering <100> > <110> > <111>."
+      }
+    ],
+    "notes": "Only the mechanical properties CSV is scored. The simulation engines may be LAMMPS or an equivalent MD code."
+  },
+  "steps": [
+    {
+      "id": "tensile_properties",
+      "output_file": "tensile_properties.csv",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Compare each mechanical property for all three orientations against paper gold with tolerances",
+      "properties": [
+        "elongation_at_failure_percent",
+        "Young_modulus_GPa",
+        "yield_strength_GPa",
+        "total_elongation_percent",
+        "work_of_deformation_GJm3",
+        "ultimate_strength_GPa"
+      ],
+      "expected": {
+        "<100>": {
+          "elongation_at_failure_percent": 48,
+          "Young_modulus_GPa": 78,
+          "yield_strength_GPa": 5.2,
+          "total_elongation_percent": 48,
+          "work_of_deformation_GJm3": 0.95,
+          "ultimate_strength_GPa": 22.2
+        },
+        "<110>": {
+          "elongation_at_failure_percent": 32,
+          "Young_modulus_GPa": 123,
+          "yield_strength_GPa": 9.0,
+          "total_elongation_percent": 32,
+          "work_of_deformation_GJm3": 0.39,
+          "ultimate_strength_GPa": 9.6
+        },
+        "<111>": {
+          "elongation_at_failure_percent": 17,
+          "Young_modulus_GPa": 83,
+          "yield_strength_GPa": 5.7,
+          "total_elongation_percent": 17,
+          "work_of_deformation_GJm3": 0.17,
+          "ultimate_strength_GPa": 7.9
+        }
+      },
+      "tolerances_abs": {
+        "elongation_at_failure_percent": 2,
+        "total_elongation_percent": 2,
+        "Young_modulus_GPa": 10,
+        "yield_strength_GPa": 1.5,
+        "ultimate_strength_GPa": 1.5,
+        "work_of_deformation_GJm3": 0.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "For the interface profile we recompute the Gibbs‑Thomson relation from curvature and chemical potential; the velocity curves are scored by structural trends and magnitude bounds.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "velocity_vs_spacing.csv": "structural_audit",
+    "velocity_vs_Dbαβ.csv": "structural_audit",
+    "interface_profile.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "capillary length d_αβ for recomputing the Gibbs‑Thomson relation",
+      "source_provenance": "Derived from the paper’s model (Eqs. 16‑19 with a_α=0, λ̃=1): d_αβ = √2/3 ≈ 0.4714045",
+      "generation_method": "Computed from the phase‑field parameters given in the paper",
+      "why_not_fabricated": "The constant is a material property derivable from the model and needed to recompute the expected μ_GT"
+    }
+  ],
+  "constants": {
+    "d_alpha_beta": 0.4714045
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "velocity_vs_spacing.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "spacing",
+            "velocity"
+          ],
+          "units": {
+            "spacing": "dimensionless L/d",
+            "velocity": "dimensionless V d / D_b"
+          }
+        },
+        "description": "Steady‑state growth velocity as a function of lamellar spacing for Δ=0.8. The checker verifies the curve has a maximum, a steep descending branch at low spacing (fold singularity), monotonic decrease above the maximum, and velocity values within a factor of ~2 of the expected order of magnitude."
+      },
+      {
+        "file": "velocity_vs_Dbαβ.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "D_b_alpha_beta",
+            "velocity"
+          ],
+          "units": {
+            "D_b_alpha_beta": "dimensionless",
+            "velocity": "dimensionless V d / D_b"
+          }
+        },
+        "description": "Steady‑state growth velocity as a function of D_b^{αβ} at fixed spacing L/d=81.5. The checker verifies that velocity decreases monotonically with increasing D_b^{αβ}."
+      },
+      {
+        "file": "interface_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "p_beta",
+            "mu",
+            "kappa",
+            "mu_GT"
+          ],
+          "units": {
+            "x": "position along normal (in units of W or similar)",
+            "p_beta": "phase field (dimensionless)",
+            "mu": "chemical potential (dimensionless units consistent with paper)",
+            "kappa": "curvature (1/W)",
+            "mu_GT": "chemical potential (same units as mu)"
+          }
+        },
+        "description": "Interface profile used to test local equilibrium. The checker recomputes μ_GT = d_{αβ} κ from the provided κ (using the known capillary length) and verifies that the chemical potential μ exhibits a dip below μ_GT in the interface region, indicating breakdown of local equilibrium."
+      }
+    ],
+    "notes": "The agent must implement the multi-phase-field model and run the simulations. No pre‑computed data or gold values are provided. The scored artifacts are obtained from the runs; structural trends and relative magnitudes, not exact numerical matches, are the primary scoring criteria."
+  },
+  "steps": [
+    {
+      "id": "spacing_curve",
+      "output_file": "velocity_vs_spacing.csv",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "description": "Verify the velocity‑vs‑spacing curve has a maximum, a steep ascending left branch (fold singularity), and monotonic decrease on the right branch, plus plausible magnitude."
+    },
+    {
+      "id": "db_alpha_beta_curve",
+      "output_file": "velocity_vs_Dbαβ.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "description": "Verify the velocity‑vs‑Dbαβ curve is monotonically decreasing with a strong drop-off and plausible magnitude."
+    },
+    {
+      "id": "interface_profile",
+      "output_file": "interface_profile.csv",
+      "weight": 0.35,
+      "kind": "metric_recompute",
+      "description": "Recompute μ_GT from κ using the known capillary length and check that the chemical potential μ dips below μ_GT inside the diffuse interface."
+    }
+  ]
+}

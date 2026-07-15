@@ -1,0 +1,61 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing orbital overlaps and spins from raw QC output is infeasible in a lightweight checker; instead we verify structural relationships (ordering, magnitude ranges) that directly support the paper’s central claim of pronounced singlet biradical character and a small cyclization barrier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural thresholds for biradical and energetic checks derived from the paper’s reported values.",
+      "source_provenance": "Paper Table 2, Fig. 1, and textual description of orbital overlaps and spin populations.",
+      "generation_method": "Hand‑selected bounds based on the paper’s reported numbers, widened to accommodate legitimate toolchain spread.",
+      "why_not_fabricated": "The bounds capture the essential qualitative picture (small S_π for Si, larger for C; high localized spins on Si and terminal O; normal σ overlaps; small barrier; large exothermicity). Any honest reproduction will satisfy them while trivial answers (e.g., extremely large overlaps, zero spins, zero barrier) are excluded."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "H2SiOO_MP2_geom_file": "string (path)",
+            "H2SiOO_MP2_energy_hartree": "float",
+            "H2SiOO_planar_imaginary_freq": "boolean",
+            "H2SiOO_GVB_overlaps": "object with keys S_pi, S_Si_Oa, S_Oa_Ob (all float)",
+            "H2SiOO_CASSCF_spins": "object with keys Si, O_terminal (both float)",
+            "H2SiOO_TS_energy_hartree": "float",
+            "H2SiOO_siladioxirane_energy_hartree": "float",
+            "H2COO_GVB_overlaps": "object with keys S_pi, S_C_Oa, S_Oa_Ob (all float)",
+            "H2COO_CASSCF_spins": "object with keys C, O_terminal (both float)"
+          }
+        },
+        "description": "Aggregated reproduction results: MP2 energies and structural flags, GVB orbital overlaps, and CASSCF effective localized spin populations for H₂SiOO and H₂COO."
+      }
+    ],
+    "notes": "All numeric fields are compared to hidden reference values from the original study using absolute tolerances appropriate for a re-run with a different quantum chemistry package."
+  },
+  "steps": [
+    {
+      "id": "results_check",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Structural validation of biradical character and reaction energetics: checks ordering and magnitude bounds on orbital overlaps, spin populations, barrier height, exothermicity, and the imaginary frequency flag.",
+      "criteria": {
+        "imaginary_freq_expected": true,
+        "barrier_max_ha": 0.05,
+        "exothermicity_max_ha": -0.04,
+        "overlap_sigma_min": 0.65,
+        "overlap_pi_Si_max": 0.4,
+        "overlap_pi_C_min": 0.3,
+        "spin_Si_min": 0.5,
+        "spin_O_Si_min": 0.5,
+        "spin_C_max": 0.5,
+        "spin_O_C_max": 0.5
+      }
+    }
+  ]
+}

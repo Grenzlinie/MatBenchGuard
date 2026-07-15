@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_simulate",
+    "title": "Run CASINO Monte Carlo simulations",
+    "role": "process",
+    "action": "Run the CASINO Monte Carlo program for the elements Al, Ag, C, Cu, Au at a set of beam energies covering 1–10 keV (e.g., 1,2,...,10 keV). Use 250,000 primary electrons per simulation. For each condition, save the raw depth distribution (transmitted, backscattered, and cumulative fractions) to files in a designated directory.",
+    "output_file": "",
+    "evidence": "casino_simulation_logs.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_extract_ranges",
+    "title": "Extract electron ranges from simulations",
+    "role": "scored",
+    "action": "For each simulation run, compute the electron range as the maximum depth reached by 99.9% of the 250,000 simulated internal electrons (excluding backscattered). Produce a CSV file containing columns: element (string), beam_energy_keV (float), range_nm (float). One row per condition for all five elements and all energies.",
+    "output_file": "step_01_simulated_ranges.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Simulated electron ranges for C, Al, Cu, Ag, Au as a function of beam energy.",
+    "output_schema": "CSV with header: element,beam_energy_keV,range_nm. element is a string (e.g., 'Al'), beam_energy_keV is a float, range_nm is a float."
+  },
+  {
+    "id": "step_03_fit_parameters",
+    "title": "Fit power-law parameterization",
+    "role": "scored",
+    "action": "Using the simulated internal electron ranges from step_01_simulated_ranges.csv, fit the model R = k * E^n (R in nm, E in keV) separately for each element C, Al, Cu, Ag, Au. Report the fitted parameters n (dimensionless) and k (in nm/keV^n) for each element. Then, using the atomic numbers Z (6, 13, 29, 47, 79) and densities ρ (g/cm³) of the elements, compute the product kρ (in nm·g/cm³/keV^n) and fit second-degree polynomials n(Z) = a0 + a1·Z + a2·Z² and kρ(Z) = b0 + b1·Z + b2·Z². Output a JSON file with these results.",
+    "output_file": "step_02_fit_parameters.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Power-law fit parameters and polynomial coefficients for low-energy electron range parameterization.",
+    "output_schema": "JSON object with keys: 'elements' (object mapping element name, e.g., 'Al', to an object with keys 'n' (float, dimensionless) and 'k' (float, nm/keV^n)), and 'polynomials' (object with keys 'n' and 'k_rho'; each is an object with keys 'a0', 'a1', 'a2' (all floats))."
+  }
+]

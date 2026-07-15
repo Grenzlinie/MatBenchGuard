@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full fit from the agent's model is infeasible in the verifier sandbox without the agent providing the fitted model; direct comparison of the reported parameters to published reference values with tolerances is a legitimate T0 strategy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dispersion_fit_1.5K.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for the six dispersion parameters (sigma0, S, gamma for resonance1 and resonance2) at 1.5 K.",
+      "source_provenance": "Table IV of Loewenstein, Smith, and Morgan, Applied Optics 12, 398 (1973).",
+      "generation_method": "Extracted from the paper's published table for the ordinary ray of crystal quartz at 1.5 K.",
+      "why_not_fabricated": "These are the actual reported numbers; no synthetic holdout is used. The data is from a public peer-reviewed paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dispersion_fit_1.5K.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "resonance1": {
+              "sigma0": "float (cm-1)",
+              "S": "float",
+              "gamma": "float"
+            },
+            "resonance2": {
+              "sigma0": "float (cm-1)",
+              "S": "float",
+              "gamma": "float"
+            }
+          }
+        },
+        "description": "Dispersion parameters (center wavenumber, strength, width) for the two lowest-frequency ordinary-ray resonances of quartz at 1.5 K. The checker compares each parameter to the paper's reference values within tolerances; all parameters must be within allowed absolute deviation. This is a deterministic scalar set, so exact_match within tolerance is used (no monotonic 'better' direction)."
+      }
+    ],
+    "notes": "The target_policy is exact_match because the dispersion parameters are fixed values determined from a specific fitting procedure; 'better' is undefined for a single resonance parameter. The checker will check each numeric value against hidden gold using absolute tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_fit_dispersion",
+      "output_file": "dispersion_fit_1.5K.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold": {
+        "resonance1_sigma0": 131.3,
+        "resonance1_S": 0.0027,
+        "resonance1_gamma": 0.0045,
+        "resonance2_sigma0": 264.4,
+        "resonance2_S": 0.049,
+        "resonance2_gamma": 0.025
+      },
+      "tolerances": {
+        "sigma0": 0.5,
+        "S": 0.0005,
+        "gamma": 0.005
+      }
+    }
+  ]
+}

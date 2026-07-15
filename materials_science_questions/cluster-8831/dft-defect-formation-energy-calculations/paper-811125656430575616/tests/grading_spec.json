@@ -1,0 +1,195 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT-calculated properties (coordinates, donor level, binding energies) cannot be recomputed by the verifier; compare agent-reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "split_antisite_coordinates.json": "reference_match",
+    "donor_level.json": "reference_match",
+    "binding_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference coordinates of the split antisite complex from Table I of the paper (two central As and four nearest neighbors).",
+      "source_provenance": "Paper Table I, column 'Split As antisite'.",
+      "generation_method": "Directly transcribed from the published table.",
+      "why_not_fabricated": "Exact published coordinates; no synthetic or fabricated data."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Donor level below conduction band for split antisite.",
+      "source_provenance": "Paper text: 'the donor level is 0.3 eV below the conduction band'.",
+      "generation_method": "Quoted numeric value from the paper.",
+      "why_not_fabricated": "Paper-reported value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Neutral, charged, and scissors-corrected binding energies.",
+      "source_provenance": "Paper text: neutral 1.4 eV, charged 1.3 eV, scissors-corrected 1.1 eV.",
+      "generation_method": "Quoted numeric values from the paper.",
+      "why_not_fabricated": "Paper-reported values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "split_antisite_coordinates.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "atom",
+              "x",
+              "y",
+              "z"
+            ],
+            "properties": {
+              "atom": {
+                "type": "string"
+              },
+              "x": {
+                "type": "number",
+                "unit": "lattice constant"
+              },
+              "y": {
+                "type": "number",
+                "unit": "lattice constant"
+              },
+              "z": {
+                "type": "number",
+                "unit": "lattice constant"
+              }
+            }
+          }
+        },
+        "description": "Atomic coordinates of the two central As atoms and their four nearest neighbors in the split antisite complex, expressed in units of the GaAs lattice constant with origin at the midpoint between the central atoms."
+      },
+      {
+        "file": "donor_level.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "donor_level_below_cb"
+          ],
+          "properties": {
+            "donor_level_below_cb": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Donor-like electronic level of the split antisite complex relative to the conduction band edge, in eV."
+      },
+      {
+        "file": "binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "neutral",
+            "charged",
+            "scissors_corrected"
+          ],
+          "properties": {
+            "neutral": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "charged": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "scissors_corrected": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Binding energies of the split antisite complex: neutral, charged, and scissors-corrected (shift of conduction-derived states by 0.2 eV)."
+      }
+    ],
+    "notes": "Coordinates are to be compared to the reference geometry with a tolerance; donor level and binding energies are compared to the paper-reported values with appropriate tolerances. The scissors-corrected binding energy must use the protocol of shifting conduction-derived states by 0.2 eV."
+  },
+  "steps": [
+    {
+      "id": "step_coords",
+      "output_file": "split_antisite_coordinates.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "params": {
+        "reference_coords": [
+          {
+            "atom": "As",
+            "x": 0.0828,
+            "y": 0.1953,
+            "z": 0.0132
+          },
+          {
+            "atom": "As",
+            "x": -0.0828,
+            "y": -0.1953,
+            "z": -0.0132
+          },
+          {
+            "atom": "As",
+            "x": 0.3155,
+            "y": 0.2329,
+            "z": 0.3991
+          },
+          {
+            "atom": "As",
+            "x": -0.2388,
+            "y": -0.3308,
+            "z": 0.3787
+          },
+          {
+            "atom": "As",
+            "x": -0.3008,
+            "y": 0.2891,
+            "z": -0.2209
+          },
+          {
+            "atom": "As",
+            "x": 0.2994,
+            "y": -0.3527,
+            "z": -0.1689
+          }
+        ],
+        "tolerance": 0.01
+      }
+    },
+    {
+      "id": "step_donor",
+      "output_file": "donor_level.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "params": {
+        "reference_donor": 0.3,
+        "tolerance_abs": 0.05
+      }
+    },
+    {
+      "id": "step_binding",
+      "output_file": "binding_energies.json",
+      "kind": "custom",
+      "weight": 0.5,
+      "params": {
+        "references": {
+          "neutral": 1.4,
+          "charged": 1.3,
+          "scissors_corrected": 1.1
+        },
+        "tolerance_abs": 0.15
+      }
+    }
+  ]
+}

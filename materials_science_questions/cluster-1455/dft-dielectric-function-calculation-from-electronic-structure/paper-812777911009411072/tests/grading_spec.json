@@ -1,0 +1,247 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Er and ΔE are recomputed from the agent's total energies; magnetic moments and ground states are compared to paper gold with tolerances; half‑metallicity is verified from the supplied DOS files.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "metric_recompute",
+    "dos_nonpolar_bulk.dat": "structural_audit",
+    "dos_nonpolar_surface.dat": "structural_audit",
+    "dos_nonpolar_mixed.dat": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for relative energy Er (eV), ΔE (meV), total magnetic moment (μB), Ni magnetic moments (μB), and magnetic ground state (FM/AFM) for all six defect configurations, sourced from Table 1 of the paper.",
+      "source_provenance": "Paper Table 1, 'The DFT calculation results for energy difference ΔE = E_AFM−E_FM, relative energy Er, total magnetic moment, the magnetic moment per Ni ion, and magnetic ground state in each structure.'",
+      "generation_method": "Extracted directly from the published table; the reference solve.sh reproduces them exactly.",
+      "why_not_fabricated": "These are the paper's reported computational results, used as authoritative reference values for scoring."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "polar_bulk",
+            "polar_surface",
+            "polar_mixed",
+            "nonpolar_bulk",
+            "nonpolar_surface",
+            "nonpolar_mixed"
+          ],
+          "per_config": {
+            "required": [
+              "total_energy_FM",
+              "total_energy_AFM",
+              "Er_eV",
+              "ΔE_meV",
+              "total_magnetic_moment_muB",
+              "magnetic_moment_Ni1_muB",
+              "magnetic_moment_Ni2_muB",
+              "ground_state",
+              "half_metallic"
+            ],
+            "types": {
+              "total_energy_FM": "number (eV)",
+              "total_energy_AFM": "number (eV)",
+              "Er_eV": "number (eV)",
+              "ΔE_meV": "number (meV)",
+              "total_magnetic_moment_muB": "number (μB)",
+              "magnetic_moment_Ni1_muB": "number (μB)",
+              "magnetic_moment_Ni2_muB": "number (μB)",
+              "ground_state": "string ('FM' or 'AFM')",
+              "half_metallic": "boolean"
+            }
+          }
+        },
+        "description": "Summary of computed results for all six defect configurations. The checker will recompute relative energy Er and energy difference ΔE from the reported total energies and compare them (and other fields) to hidden reference values."
+      },
+      {
+        "file": "dos_nonpolar_bulk.dat",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy(eV)",
+            "DOS_up",
+            "DOS_down"
+          ],
+          "units": {
+            "Energy(eV)": "eV",
+            "DOS_up": "states/eV/cell",
+            "DOS_down": "states/eV/cell"
+          }
+        },
+        "description": "Density of states for the non-polar bulk defect. The checker will verify half-metallic behavior at the Fermi level."
+      },
+      {
+        "file": "dos_nonpolar_surface.dat",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy(eV)",
+            "DOS_up",
+            "DOS_down"
+          ],
+          "units": {
+            "Energy(eV)": "eV",
+            "DOS_up": "states/eV/cell",
+            "DOS_down": "states/eV/cell"
+          }
+        },
+        "description": "Density of states for the non-polar surface defect."
+      },
+      {
+        "file": "dos_nonpolar_mixed.dat",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Energy(eV)",
+            "DOS_up",
+            "DOS_down"
+          ],
+          "units": {
+            "Energy(eV)": "eV",
+            "DOS_up": "states/eV/cell",
+            "DOS_down": "states/eV/cell"
+          }
+        },
+        "description": "Density of states for the non-polar mixed defect."
+      }
+    ],
+    "notes": "The pure ZnO dielectric constant calculation (Table 2) and polar-surface DOS-only half-metallicity verification are omitted per the taskability scope; the paper states that for polar surfaces the DOS metallic behavior prevents a gap-based half-metallic check using GGA. All non-polar configurations are included."
+  },
+  "steps": [
+    {
+      "id": "check_results_Er",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "description": "Recompute relative energy Er (eV) for each defect configuration from the submitted total_energy_FM and total_energy_AFM, and compare to paper gold (Table 1).",
+      "target": {
+        "polar_bulk": 0.278,
+        "polar_surface": 0.0,
+        "polar_mixed": 0.232,
+        "nonpolar_bulk": 4.401,
+        "nonpolar_surface": 3.863,
+        "nonpolar_mixed": 4.033
+      },
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "check_results_DeltaE",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "recompute_metric",
+      "description": "Recompute ΔE = E_AFM − E_FM (meV) for each configuration and compare to paper gold (Table 1).",
+      "target": {
+        "polar_bulk": 156.004,
+        "polar_surface": 191.904,
+        "polar_mixed": -0.974,
+        "nonpolar_bulk": 49.486,
+        "nonpolar_surface": 34.446,
+        "nonpolar_mixed": 0.37
+      },
+      "tolerance_abs": 10.0
+    },
+    {
+      "id": "check_results_mag_total",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "reference_match",
+      "description": "Compare the reported total magnetic moment (μB) for each configuration to the paper gold (Table 1).",
+      "target": {
+        "polar_bulk": 4.36,
+        "polar_surface": 3.67,
+        "polar_mixed": 0.8,
+        "nonpolar_bulk": 4.11,
+        "nonpolar_surface": 4.21,
+        "nonpolar_mixed": 4.07
+      },
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "check_results_mag_Ni",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "reference_match",
+      "description": "Compare the reported Ni magnetic moments (μB) for each configuration to the paper gold (Table 1).",
+      "target": {
+        "polar_bulk": [
+          1.5912,
+          1.5612
+        ],
+        "polar_surface": [
+          1.523,
+          1.243
+        ],
+        "polar_mixed": [
+          1.6721,
+          -1.334
+        ],
+        "nonpolar_bulk": [
+          1.5339,
+          1.5737
+        ],
+        "nonpolar_surface": [
+          1.6238,
+          1.393
+        ],
+        "nonpolar_mixed": [
+          1.5843,
+          1.4369
+        ]
+      },
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "check_results_ground_state",
+      "output_file": "results.json",
+      "weight": 0.05,
+      "kind": "reference_match",
+      "description": "Check the reported magnetic ground state (FM/AFM) for each configuration against the paper.",
+      "target": {
+        "polar_bulk": "FM",
+        "polar_surface": "FM",
+        "polar_mixed": "AFM",
+        "nonpolar_bulk": "FM",
+        "nonpolar_surface": "FM",
+        "nonpolar_mixed": "FM"
+      }
+    },
+    {
+      "id": "check_dos_bulk",
+      "output_file": "dos_nonpolar_bulk.dat",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "description": "Verify half‑metallic character in the non‑polar bulk DOS: at the Fermi level one spin channel has DOS < 0.1 states/eV/cell and the other > 0.1 states/eV/cell."
+    },
+    {
+      "id": "check_dos_surface",
+      "output_file": "dos_nonpolar_surface.dat",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "description": "Verify half‑metallic character in the non‑polar surface DOS."
+    },
+    {
+      "id": "check_dos_mixed",
+      "output_file": "dos_nonpolar_mixed.dat",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "description": "Verify half‑metallic character in the non‑polar mixed DOS."
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Cannot recompute magnetic moments or gaps from agent's raw DFT artifacts; compare reported values to paper gold with tolerances suitable for DFT re-runs with different codes.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_04_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold magnetic moments, majority gaps, and half-metallicity booleans from the paper",
+      "source_provenance": "Paper Tables 1 and 3, and textual descriptions of gaps (Fig. 1, Fig. 2, and Section 3.1)",
+      "generation_method": "Extracted verbatim from the paper's reported values; Table 1 gives surface and bulk moments; Table 3 gives interface moments; text states surface gap ranges and interface half-metallicity loss.",
+      "why_not_fabricated": "Every value matches the paper's explicit numbers, either directly from tables or from stated gap ranges (averaged to a single representative value per surface)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_04_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "bulk": {
+              "type": "object",
+              "properties": {
+                "Ba_moment": {
+                  "type": "number"
+                },
+                "C_moment": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "Ba_moment",
+                "C_moment"
+              ]
+            },
+            "surfaces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "Ba_moment": {
+                    "type": "number"
+                  },
+                  "C_moment": {
+                    "type": "number"
+                  },
+                  "half_metallic": {
+                    "type": "boolean"
+                  },
+                  "majority_gap": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "name",
+                  "half_metallic",
+                  "majority_gap"
+                ]
+              }
+            },
+            "interfaces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "Ba_moment": {
+                    "type": "number"
+                  },
+                  "C_moment": {
+                    "type": "number"
+                  },
+                  "half_metallic": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "half_metallic",
+                  "Ba_moment",
+                  "C_moment"
+                ]
+              }
+            }
+          },
+          "required": [
+            "bulk",
+            "surfaces",
+            "interfaces"
+          ]
+        },
+        "description": "Contains computed magnetic moments (μB), half-metallicity booleans, and majority-spin energy gaps (eV) for bulk, three surface terminations, and four interface terminations."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "bulk_moments",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "config": {
+        "gold": {
+          "Ba": 0.12,
+          "C": 1.48
+        },
+        "moment_tolerance": 0.05
+      }
+    },
+    {
+      "id": "surface_moments",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "config": {
+        "gold": {
+          "001": {
+            "Ba": 0.11,
+            "C": 1.54
+          },
+          "111-Ba": {
+            "Ba": 0.06
+          },
+          "111-C": {
+            "C": 2.08
+          }
+        },
+        "moment_tolerance": 0.05
+      }
+    },
+    {
+      "id": "surface_gaps",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "config": {
+        "gold": {
+          "001": 1.67,
+          "111-Ba": 1.2,
+          "111-C": 1.8
+        },
+        "gap_tolerance": 0.1
+      }
+    },
+    {
+      "id": "surface_hm",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.15,
+      "config": {
+        "gold": {
+          "001": true,
+          "111-Ba": true,
+          "111-C": true
+        }
+      }
+    },
+    {
+      "id": "interface_moments",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.2,
+      "config": {
+        "gold": {
+          "Ba-Sn": {
+            "Ba": 0.071,
+            "C": 1.48
+          },
+          "Ba-Se": {
+            "Ba": 0.07,
+            "C": 1.48
+          },
+          "C-Sn": {
+            "Ba": 0.12,
+            "C": 0.286
+          },
+          "C-Se": {
+            "Ba": 0.12,
+            "C": 1.881
+          }
+        },
+        "moment_tolerance": 0.05
+      }
+    },
+    {
+      "id": "interface_hm",
+      "output_file": "step_04_results.json",
+      "kind": "custom",
+      "weight": 0.25,
+      "config": {
+        "gold": {
+          "Ba-Sn": false,
+          "Ba-Se": false,
+          "C-Sn": false,
+          "C-Se": false
+        }
+      }
+    }
+  ]
+}

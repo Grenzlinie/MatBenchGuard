@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Extract stable 2D material candidates from C2DB",
+    "role": "scored",
+    "action": "Query the Computational 2D Materials Database (C2DB) and select all monolayer materials with hull energy ΔE_hull < 50 meV/atom. Write the resulting list of material identifiers (one per line) to the output file.",
+    "output_file": "step_01_materials_list.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "List of C2DB material IDs for the thermodynamically stable monolayer candidates used in the CPD screening.",
+    "output_schema": "Plain text file, no header. One material identifier per line. Exactly 3376 non‑empty lines."
+  },
+  {
+    "id": "step_02",
+    "title": "Compute Pourbaix energies for all materials at six electrochemical conditions",
+    "role": "scored",
+    "action": "For each material ID from step_01, use the Atomic Simulation Environment (ASE) Pourbaix implementation with solid-phase references fetched from the Open Quantum Materials Database (OQMD). Set ionic activities (except H⁺) to 10⁻⁶ mol/L when evaluating the activity product. Compute the Pourbaix energy ΔG_pbx (eV/atom) at the six prescribed pH–potential points: HER acidic (pH=0, U=0 V), HER neutral (pH=7, U=-0.41 V), HER alkaline (pH=14, U=-0.83 V); OER acidic (pH=0, U=1.23 V), OER neutral (pH=7, U=0.82 V), OER alkaline (pH=14, U=0.40 V). Write a CSV file with the results.",
+    "output_file": "step_02_delta_G_pbx.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Per‑material Pourbaix energies for the six electrochemical conditions.",
+    "output_schema": "CSV file with columns: material_id (string), delta_G_pbx_HER_acidic (float), delta_G_pbx_HER_neutral (float), delta_G_pbx_HER_alkaline (float), delta_G_pbx_OER_acidic (float), delta_G_pbx_OER_neutral (float), delta_G_pbx_OER_alkaline (float). One row per material (3376 rows). No missing values."
+  },
+  {
+    "id": "step_03",
+    "title": "Calculate stability summary and histograms",
+    "role": "scored",
+    "action": "From the per‑material ΔG_pbx values in step_02, compute for each of the six conditions: the percentage of materials with ΔG_pbx < 0, the mean ΔG_pbx (eV/atom), and histogram bin edges/counts. For HER conditions, use bins from 0 to 2 eV/atom with a width of 0.1. For OER conditions, use bins from 0 to 8 eV/atom with a width of 0.5. Write a JSON summary file.",
+    "output_file": "step_03_stability_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated statistics and histogram data for the CPD screening.",
+    "output_schema": "JSON object with keys 'HER_acidic', 'HER_neutral', 'HER_alkaline', 'OER_acidic', 'OER_neutral', 'OER_alkaline'. Each value is an object containing: 'stable_percentage' (float, 0–100), 'mean_delta_G' (float, eV/atom), 'histogram_bin_edges' (array of floats), 'histogram_counts' (array of integers). Bin edges for HER span 0 to 2 with step 0.1; OER span 0 to 8 with step 0.5."
+  }
+]

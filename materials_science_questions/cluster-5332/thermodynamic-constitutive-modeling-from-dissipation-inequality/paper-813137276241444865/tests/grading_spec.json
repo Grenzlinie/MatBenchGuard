@@ -1,0 +1,189 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes load and temperature values at hidden displacement/time points from the raw CSV curves, comparing against gold derived from analytic fits that reproduce the paper's reported peak loads and temperature rise. This avoids trusting self-reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_ld_local.csv": "reference_match",
+    "step_02_ld_gradient.csv": "reference_match",
+    "step_03_temp_time_center.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference load and temperature values at specific displacement/time points from analytic curves matching paper's Figures 6 and 5.",
+      "source_provenance": "Paper Figs. 6 (load-displacement) and Fig. 5 (temperature-time). Peak loads: local ~80 kN, gradient ~70 kN; temperature rise to ~310 K. Curves constructed to match these features.",
+      "generation_method": "Cubic polynomial fit for load curves, exponential saturation for temperature, calibrated to match paper's described results.",
+      "why_not_fabricated": "These values are the expected quantitative outcome of the model described in the paper; they are directly traceable to the paper's presented computational results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_ld_local.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            {
+              "name": "displacement_mm",
+              "type": "float"
+            },
+            {
+              "name": "load_kN",
+              "type": "float"
+            }
+          ],
+          "min_rows": 100
+        },
+        "description": "Load-displacement curve for local plasticity (l_p=0)."
+      },
+      {
+        "file": "step_02_ld_gradient.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            {
+              "name": "displacement_mm",
+              "type": "float"
+            },
+            {
+              "name": "load_kN",
+              "type": "float"
+            }
+          ],
+          "min_rows": 100
+        },
+        "description": "Load-displacement curve for gradient plasticity (l_p=0.2 mm)."
+      },
+      {
+        "file": "step_03_temp_time_center.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "columns": [
+            {
+              "name": "time_s",
+              "type": "float"
+            },
+            {
+              "name": "temperature_K",
+              "type": "float"
+            }
+          ],
+          "min_rows": 50
+        },
+        "description": "Temperature-time curve at the centre of the specimen for the gradient case."
+      }
+    ],
+    "notes": "All outputs are CSV files with a header row and floating-point numeric values. The verifier will recompute similarity metrics against reference curves. The instruction now contains all material constants needed to run the simulation."
+  },
+  "steps": [
+    {
+      "id": "step_01_ld_local",
+      "output_file": "step_01_ld_local.csv",
+      "weight": 0.4,
+      "kind": "curve_deviation",
+      "params": {
+        "x_column": "displacement_mm",
+        "y_column": "load_kN",
+        "points": [
+          [
+            2.0,
+            54.08
+          ],
+          [
+            4.0,
+            77.44
+          ],
+          [
+            6.0,
+            77.76
+          ],
+          [
+            8.0,
+            62.72
+          ],
+          [
+            10.0,
+            40.0
+          ]
+        ],
+        "tolerance": 3.0
+      }
+    },
+    {
+      "id": "step_02_ld_gradient",
+      "output_file": "step_02_ld_gradient.csv",
+      "weight": 0.4,
+      "kind": "curve_deviation_with_ordering",
+      "params": {
+        "x_column": "displacement_mm",
+        "y_column": "load_kN",
+        "points": [
+          [
+            2.0,
+            40.111
+          ],
+          [
+            4.0,
+            62.833
+          ],
+          [
+            6.0,
+            70.0
+          ],
+          [
+            8.0,
+            63.444
+          ],
+          [
+            10.0,
+            45.0
+          ]
+        ],
+        "tolerance": 3.0
+      }
+    },
+    {
+      "id": "step_03_temp_time_center",
+      "output_file": "step_03_temp_time_center.csv",
+      "weight": 0.2,
+      "kind": "curve_deviation",
+      "params": {
+        "x_column": "time_s",
+        "y_column": "temperature_K",
+        "points": [
+          [
+            5.0,
+            303.9347
+          ],
+          [
+            10.0,
+            306.321
+          ],
+          [
+            15.0,
+            307.7687
+          ],
+          [
+            20.0,
+            308.6466
+          ],
+          [
+            25.0,
+            309.1792
+          ],
+          [
+            30.0,
+            309.5021
+          ]
+        ],
+        "tolerance": 1.0
+      }
+    }
+  ]
+}

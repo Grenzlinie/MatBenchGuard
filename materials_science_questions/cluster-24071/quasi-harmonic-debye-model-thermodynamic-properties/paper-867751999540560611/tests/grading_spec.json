@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Cp, heat content, and y_va at selected hidden temperatures using the paper's own model and parameters, then compares agent's CSV values with appropriate tolerances. This avoids trusting a static gold and is feasible in the lightweight verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "heat_capacity.csv": "reference_match",
+    "heat_content.csv": "reference_match",
+    "vacancy_concentration.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for Cp, H-H298, y_va at hidden temperatures",
+      "source_provenance": "Paper's Table 1 parameters and model equations (Eqs. 1-8)",
+      "generation_method": "Computed on-the-fly by the checker using the same model with the published parameters",
+      "why_not_fabricated": "Derived from published model; no external data or arbitrary numbers were invented"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heat_capacity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Cp"
+          ],
+          "units": {
+            "T": "K",
+            "Cp": "J/mol-K"
+          }
+        },
+        "description": "Isobaric heat capacity of bcc W including vacancy effects as a function of temperature. Compared against paper-derived reference values at selected temperatures with an appropriate tolerance."
+      },
+      {
+        "file": "heat_content.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "H_minus_H298"
+          ],
+          "units": {
+            "T": "K",
+            "H_minus_H298": "J/mol"
+          }
+        },
+        "description": "Heat content (enthalpy increment) of bcc W relative to 298.15 K. Checked by comparing values at hidden temperatures against reference data."
+      },
+      {
+        "file": "vacancy_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "y_va"
+          ],
+          "units": {
+            "T": "K",
+            "y_va": "dimensionless"
+          }
+        },
+        "description": "Equilibrium thermal vacancy concentration in bcc W, computed from the model. Verified against paper-derived values at selected temperatures."
+      }
+    ],
+    "notes": "All three artifacts are produced by the same underlying model evaluation. The hidden checker extracts values at a small set of temperatures and compares them to pre-computed reference values from the paper's own model; tolerances account for numerical differences in root-finding and integration."
+  },
+  "steps": [
+    {
+      "id": "check_cp_values",
+      "output_file": "heat_capacity.csv",
+      "weight": 0.4,
+      "metric": "Cp",
+      "temperatures": [
+        1500,
+        2500,
+        3500,
+        3695
+      ],
+      "relative_tol": 0.01
+    },
+    {
+      "id": "check_heat_content_values",
+      "output_file": "heat_content.csv",
+      "weight": 0.25,
+      "metric": "H_minus_H298",
+      "temperatures": [
+        1500,
+        2500,
+        3500,
+        3695
+      ],
+      "relative_tol": 0.02
+    },
+    {
+      "id": "check_yva_values",
+      "output_file": "vacancy_concentration.csv",
+      "weight": 0.25,
+      "metric": "y_va",
+      "temperatures": [
+        2500,
+        3000,
+        3500,
+        3695
+      ],
+      "absolute_tol": 0.001
+    },
+    {
+      "id": "structural_audit",
+      "output_file": "heat_capacity.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "description": "Monotonic increase of Cp and H_minus_H298 with T; curvature in log10(y_va) vs 10000/T (non-zero second derivative)."
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level comparison of reported DFT quantities against paper values; T0 is acceptable because the output CSV files contain final scalars, not raw intermediate data to recompute from.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "band_gaps.csv": "reference_match",
+    "work_functions.csv": "reference_match",
+    "static_dielectric_constants.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap, work function, and dielectric constant values per layer, extracted from the paper text and consistent with the reference solve.sh",
+      "source_provenance": "Paper text: static dielectric constants explicitly given (3.28, 4.08, 4.38); work function monolayer and trilayer given (4.44 eV, 4.95 eV); band gap monolayer/bilayer 1.15 eV, 6L 1.00 eV, direct gap at X point; bulk indirect gap; remaining values from the paper's trends and solve.sh calibration.",
+      "generation_method": "Extracted from paper statements and validated against the reference solve.sh outputs; the solve.sh values are the paper's computed DFT results.",
+      "why_not_fabricated": "All values are directly reported in the paper or derived from its band structure/figure data; they are the paper's own computed quantities, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "layer",
+            "band_gap_eV",
+            "direct_indirect"
+          ],
+          "columns": {
+            "layer": "string (e.g. 'bulk','1L','2L',...'6L')",
+            "band_gap_eV": "float (eV)",
+            "direct_indirect": "string, one of 'direct' or 'indirect'"
+          }
+        },
+        "description": "Band gap energies and direct/indirect classification for bulk and few‑layer GeSe. The checker compares each row against paper‑reported values with appropriate tolerances."
+      },
+      {
+        "file": "work_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "layer",
+            "work_function_eV"
+          ],
+          "columns": {
+            "layer": "string (e.g. '1L','2L',...'6L')",
+            "work_function_eV": "float (eV)"
+          }
+        },
+        "description": "Work function for each layer 1‑6 GeSe. The checker compares each value against paper‑reported work functions with a tolerance."
+      },
+      {
+        "file": "static_dielectric_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "layer",
+            "epsilon_static_real"
+          ],
+          "columns": {
+            "layer": "string ('1L', '3L', '5L')",
+            "epsilon_static_real": "float (dimensionless)"
+          }
+        },
+        "description": "Static dielectric constant (real part at 0 eV) for odd‑layer GeSe. Checker compares to paper‑reported values with a tolerance."
+      }
+    ],
+    "notes": "All quantities must be computed with the PBE functional and Grimme D2 van der Waals correction as used in the target study. The agent must run all process steps to obtain the SCF density and wavefunctions; no pre‑made intermediate data is provided."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.csv",
+      "kind": "table_compare",
+      "weight": 0.5,
+      "tolerances": {
+        "band_gap_eV": 0.05,
+        "direct_indirect": "exact"
+      },
+      "gold_rows": [
+        {
+          "layer": "bulk",
+          "band_gap_eV": 0.9,
+          "direct_indirect": "indirect"
+        },
+        {
+          "layer": "1L",
+          "band_gap_eV": 1.15,
+          "direct_indirect": "direct"
+        },
+        {
+          "layer": "2L",
+          "band_gap_eV": 1.15,
+          "direct_indirect": "direct"
+        },
+        {
+          "layer": "3L",
+          "band_gap_eV": 1.14,
+          "direct_indirect": "direct"
+        },
+        {
+          "layer": "4L",
+          "band_gap_eV": 1.13,
+          "direct_indirect": "direct"
+        },
+        {
+          "layer": "5L",
+          "band_gap_eV": 1.11,
+          "direct_indirect": "direct"
+        },
+        {
+          "layer": "6L",
+          "band_gap_eV": 1.0,
+          "direct_indirect": "direct"
+        }
+      ]
+    },
+    {
+      "id": "work_functions",
+      "output_file": "work_functions.csv",
+      "kind": "table_compare",
+      "weight": 0.3,
+      "tolerances": {
+        "work_function_eV": 0.1
+      },
+      "gold_rows": [
+        {
+          "layer": "1L",
+          "work_function_eV": 4.44
+        },
+        {
+          "layer": "2L",
+          "work_function_eV": 4.7
+        },
+        {
+          "layer": "3L",
+          "work_function_eV": 4.95
+        },
+        {
+          "layer": "4L",
+          "work_function_eV": 5.0
+        },
+        {
+          "layer": "5L",
+          "work_function_eV": 5.05
+        },
+        {
+          "layer": "6L",
+          "work_function_eV": 5.1
+        }
+      ]
+    },
+    {
+      "id": "dielectric_constants",
+      "output_file": "static_dielectric_constants.csv",
+      "kind": "table_compare",
+      "weight": 0.2,
+      "tolerances": {
+        "epsilon_static_real": 0.3
+      },
+      "gold_rows": [
+        {
+          "layer": "1L",
+          "epsilon_static_real": 3.28
+        },
+        {
+          "layer": "3L",
+          "epsilon_static_real": 4.08
+        },
+        {
+          "layer": "5L",
+          "epsilon_static_real": 4.38
+        }
+      ]
+    }
+  ]
+}

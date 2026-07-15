@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes step positions and plateau binding energies from the raw CSV artifacts and compares them to hidden paper‐derived gold values; no trust in agent‐reported metrics.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cu_adsorption_isotherm.csv": "threshold_or_better",
+    "ag_adsorption_isotherm.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold step positions and plateau binding energies for Cu/Au and Ag/Au isotherms.",
+      "source_provenance": "Derived from explicit numbers and snapshot µ values in the paper: bulk Cu cohesive -3.61 eV, cavity-filled binding -3.57 eV; first-layer above ~-3.58 eV; Ag monolayer binding -2.9211 eV, cavity-bottom layer -3.058 eV; snapshot µ values for Ag from Fig.8 caption (-3.155, -3.12, -3.03, -3.00, -2.87).",
+      "generation_method": "Collected directly from text and figure descriptions; tolerances chosen to accommodate implementation differences.",
+      "why_not_fabricated": "Every value is explicitly stated in the paper or directly derivable from its figures and text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cu_adsorption_isotherm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "chemical_potential",
+            "num_atoms",
+            "avg_binding_energy"
+          ],
+          "units": {
+            "chemical_potential": "eV",
+            "avg_binding_energy": "eV/atom"
+          }
+        },
+        "description": "Cu/Au adsorption isotherm: number of deposited Cu atoms and average binding energy per atom as functions of chemical potential."
+      },
+      {
+        "file": "ag_adsorption_isotherm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "chemical_potential",
+            "num_atoms",
+            "avg_binding_energy"
+          ],
+          "units": {
+            "chemical_potential": "eV",
+            "avg_binding_energy": "eV/atom"
+          }
+        },
+        "description": "Ag/Au adsorption isotherm: number of deposited Ag atoms and average binding energy per atom as functions of chemical potential."
+      }
+    ],
+    "notes": "The checker compares the step positions (chemical potentials where num_atoms increases abruptly) and the plateau values of avg_binding_energy against hidden gold values extracted from the paper's figures. Only the CSV files are required; energy histograms and excess energy analysis are not scored outputs."
+  },
+  "steps": [
+    {
+      "id": "cu_isotherm",
+      "output_file": "cu_adsorption_isotherm.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "gold_step_mu_list": [
+        -3.6,
+        -3.595
+      ],
+      "gold_plateau_binding_energy_list": [
+        -3.57,
+        -3.58
+      ],
+      "mu_tolerance": 0.05,
+      "binding_tolerance": 0.02
+    },
+    {
+      "id": "ag_isotherm",
+      "output_file": "ag_adsorption_isotherm.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "gold_step_mu_list": [
+        -3.12,
+        -3.03,
+        -3.0,
+        -2.87
+      ],
+      "gold_plateau_binding_energy_list": [
+        -3.058,
+        -3.058,
+        -2.9211,
+        -2.85
+      ],
+      "mu_tolerance": 0.05,
+      "binding_tolerance": 0.02
+    }
+  ]
+}

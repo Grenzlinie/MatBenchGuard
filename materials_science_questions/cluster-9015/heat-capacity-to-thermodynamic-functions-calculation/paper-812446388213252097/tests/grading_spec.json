@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing the thermodynamic functions would require the raw UN Cp data and material constants not bundled in the checker; comparing against the paper's reported values is the appropriate fallback.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported ThN thermodynamic values and UN magnetic bound intervals",
+      "source_provenance": "Directly from the paper's results section",
+      "generation_method": "Transcribed from the paper",
+      "why_not_fabricated": "These are the actual values published by the authors"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thn_thermo.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "S",
+            "H_minus_H0",
+            "neg_G_minus_H0"
+          ],
+          "units": {
+            "S": "J/mol/K",
+            "H_minus_H0": "J/mol",
+            "neg_G_minus_H0": "J/mol"
+          }
+        },
+        "description": "Thermodynamic functions of ThN at 298.15 K: entropy, enthalpy increment, and negative Gibbs free energy function. Compared to paper-reported values with a relative tolerance."
+      },
+      {
+        "file": "un_magnetic_bounds.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_H_M_lower",
+            "delta_H_M_upper",
+            "delta_S_M_lower",
+            "delta_S_M_upper"
+          ],
+          "units": {
+            "delta_H_M_lower": "J/mol",
+            "delta_H_M_upper": "J/mol",
+            "delta_S_M_lower": "J/mol/K",
+            "delta_S_M_upper": "J/mol/K"
+          }
+        },
+        "description": "Lower and upper bounds for magnetic enthalpy and magnetic entropy of UN at 52 K. The checker verifies that each bound falls within the paper's reported range."
+      }
+    ],
+    "notes": "The Schottky anomaly comparison is qualitative and not scored. All required material constants are obtainable from public literature; the ThN experimental Cp data is provided directly in the instruction."
+  },
+  "steps": [
+    {
+      "id": "thn_thermo",
+      "output_file": "thn_thermo.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "target": {
+        "S": 56.0,
+        "H_minus_H0": 8450,
+        "neg_G_minus_H0": 8250
+      },
+      "tolerance_relative": 0.02,
+      "fields": [
+        "S",
+        "H_minus_H0",
+        "neg_G_minus_H0"
+      ]
+    },
+    {
+      "id": "un_magnetic_bounds",
+      "output_file": "un_magnetic_bounds.json",
+      "kind": "interval_check",
+      "weight": 0.5,
+      "target_policy": "structural_audit",
+      "ranges": {
+        "delta_H_M_lower": [
+          25,
+          57
+        ],
+        "delta_H_M_upper": [
+          25,
+          57
+        ],
+        "delta_S_M_lower": [
+          0.7,
+          1.3
+        ],
+        "delta_S_M_upper": [
+          0.7,
+          1.3
+        ]
+      }
+    }
+  ]
+}

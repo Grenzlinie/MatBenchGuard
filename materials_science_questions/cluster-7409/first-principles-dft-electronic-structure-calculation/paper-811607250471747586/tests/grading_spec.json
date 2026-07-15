@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker compares agent's reported values to paper reference values with tolerances; lacks hidden DFT raw energies to recompute full pipeline, so uses T0 result-level comparison, which is acceptable per D4.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for bulk energy, O chemical potential, surface energies, and gap state positions from the paper.",
+      "source_provenance": "Paper reported values in text and Fig. 4 (surface energies: 0.74, 2.03, 4.82 J/m^2; gap states: 1.24 eV for Onishi, 0.68 eV for Park; bulk energy per Ti4O8: -89.3 eV; O chemical potential: -4.52 eV).",
+      "generation_method": "Extracted directly from the paper's text and figures; verified against the reference solve.sh that writes these same values.",
+      "why_not_fabricated": "Values are the actual paper-reported numbers, not fabricated; tolerances are chosen to accommodate systematic differences from code/pseudopotential changes, based on typical DFT scatter."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_energy_and_oxygen_ref.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bulk_energy_per_unit": "number (eV)",
+            "O_chem_potential": "number (eV)"
+          }
+        },
+        "description": "Scored reference energies that feed into the surface energy formula. The bulk energy per Ti4O8 unit and the oxygen chemical potential are checked against the paper's reference values with tolerance."
+      },
+      {
+        "file": "surface_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "sigma_Jperm2"
+          ],
+          "units": {
+            "sigma_Jperm2": "J/m^2"
+          }
+        },
+        "description": "Computed surface free energies for the stoichiometric, Onishi, and Park (1x2)-reconstructed TiO2(110) surfaces. Values are checked against the paper's reported surface energies with tolerance and ordering."
+      },
+      {
+        "file": "gap_state_positions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "surface",
+            "gap_state_eV"
+          ],
+          "units": {
+            "gap_state_eV": "eV below CBM"
+          }
+        },
+        "description": "Gap state positions (energy below the conduction band minimum) for the Onishi and Park models. Compared to the paper's reported values with tolerance."
+      }
+    ],
+    "notes": "All scored artifacts are produced from a fully computational pipeline using open-source DFT code and public pseudopotentials. The checker compares the agent's computed values to hidden reference values with appropriate tolerances that account for code/pseudopotential differences."
+  },
+  "steps": [
+    {
+      "id": "step_bulk_oxy_ref",
+      "output_file": "bulk_energy_and_oxygen_ref.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "description": "Check bulk energy per unit and oxygen chemical potential within tolerances.",
+      "gold": {
+        "bulk_energy_per_unit": -89.3,
+        "O_chem_potential": -4.52
+      },
+      "tolerances": {
+        "bulk_energy_per_unit": 3.0,
+        "O_chem_potential": 0.5
+      },
+      "decay_scale": {
+        "bulk_energy_per_unit": 10.0,
+        "O_chem_potential": 3.0
+      }
+    },
+    {
+      "id": "step_surface_energies",
+      "output_file": "surface_energies.csv",
+      "weight": 0.5,
+      "kind": "numeric_with_ordering",
+      "target_policy": "reference_match",
+      "description": "Check surface energies for stoichiometric, Onishi, Park within tolerance, and verify ordering (stoich < Onishi < Park).",
+      "gold": {
+        "stoichiometric": 0.74,
+        "Onishi": 2.03,
+        "Park": 4.82
+      },
+      "tolerance": 0.2,
+      "decay_scale": 0.5
+    },
+    {
+      "id": "step_gap_states",
+      "output_file": "gap_state_positions.csv",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_policy": "reference_match",
+      "description": "Check gap state energies below CBM for Onishi and Park within tolerance.",
+      "gold": {
+        "Onishi": 1.24,
+        "Park": 0.68
+      },
+      "tolerance": 0.15,
+      "decay_scale": 0.5
+    }
+  ]
+}

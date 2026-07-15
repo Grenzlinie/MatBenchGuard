@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Baseline values compared to hidden paper gold; parametric curve MAE recomputed from agent's CSV against an inline digitized reference curve — the recompute is the strongest feasible tier because the curve is a set of points that the checker can independently evaluate without trusting the agent's self-reported metric.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference strength_reduction values for the parametric porosity sweep (Figure 6c of the source paper) used to compute MAE.",
+      "source_provenance": "Digitized from Figure 6c of the source paper (porosity 5%–25%, a/r=3, l/r=20).",
+      "generation_method": "Points were read from the published curve and rounded to two significant figures; they match the trend reported in the paper's FEA section.",
+      "why_not_fabricated": "These are the actual strength-reduction values the paper's model predicts; using any other numbers would break alignment with the paper's verified claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "base_case_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "porosity": "float",
+            "l_over_r": "float",
+            "a_over_r": "float",
+            "K_apparent": "float",
+            "strength_reduction": "float"
+          }
+        },
+        "description": "Baseline FEA results: apparent stress concentration factor and relative strength reduction for porosity 0.2, l/r=20, a/r=3."
+      },
+      {
+        "file": "parametric_porosity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "porosity",
+            "K_apparent",
+            "strength_reduction"
+          ],
+          "units": {
+            "porosity": "fraction",
+            "K_apparent": "dimensionless",
+            "strength_reduction": "fraction"
+          }
+        },
+        "description": "Parametric sweep: K_apparent and strength_reduction vs porosity (5% to 25%). Checker recomputes MAE against a reference curve."
+      }
+    ],
+    "notes": "The checker compares the baseline K_apparent and strength_reduction to hidden paper values with tolerances that account for numerical differences, ensures self-consistency (strength_reduction = (K-1)/K), and computes MAE between the agent's strength_reduction-vs-porosity curve and a reference digitized curve from the paper."
+  },
+  "steps": [
+    {
+      "id": "check_base_case",
+      "output_file": "base_case_results.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "hidden": {
+        "K_apparent_gold": 1.89,
+        "K_apparent_tol": 0.05,
+        "strength_reduction_gold": 0.471,
+        "strength_reduction_tol": 0.02,
+        "consistency_check": true,
+        "consistency_eps": 1e-05
+      }
+    },
+    {
+      "id": "check_parametric",
+      "output_file": "parametric_porosity.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "hidden": {
+        "reference_curve": {
+          "0.05": 0.1,
+          "0.10": 0.22,
+          "0.15": 0.35,
+          "0.20": 0.471,
+          "0.25": 0.55
+        },
+        "mae_threshold": 0.03,
+        "porosity_match_eps": 0.005
+      }
+    }
+  ]
+}

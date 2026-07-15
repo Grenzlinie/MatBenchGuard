@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute band gaps from raw eigenvalues because the task only produces final scalars; consistency check against paper-reported gold with tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference direct band gap and effective gap values",
+      "source_provenance": "paper reported values: direct band gap 4.732 eV (text, Fig.6); effective gap approx 2.4 eV; mid-gap peak present",
+      "generation_method": "extracted from paper text",
+      "why_not_fabricated": "these are the paper's own reported computed quantities, used as reference targets for reproduction"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pure_bandgap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "direct_band_gap_eV": "number (float)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "direct_band_gap_eV": "eV"
+          }
+        },
+        "description": "The agent's computed direct band gap of the pure ZnAl2O4 host. Checker compares the value to the paper-reported hidden gold within a tolerance."
+      },
+      {
+        "file": "doped_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "effective_gap_eV": "number (float)",
+            "mid_gap_peak_present": "boolean"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "effective_gap_eV": "eV"
+          }
+        },
+        "description": "The agent's computed effective band gap and mid-gap peak presence for the Ti-doped ZnAl2O4 supercell. Checker compares the effective_gap_eV to the hidden reference within tolerance and verifies mid_gap_peak_present is true."
+      }
+    ],
+    "notes": "The task omits lattice dynamics (phonon) calculations and comparison with Raman/infrared spectra because the primary code (CRYSTAL09) is not fully open-source and validation requires experimental data. Only GPAW-based electronic structure computations (band gap, density of states) are reproduced."
+  },
+  "steps": [
+    {
+      "id": "pure_direct_gap",
+      "output_file": "pure_bandgap.json",
+      "weight": 0.4,
+      "target": 4.732,
+      "tolerance": 0.2
+    },
+    {
+      "id": "doped_analysis",
+      "output_file": "doped_analysis.json",
+      "weight": 0.6,
+      "fields": [
+        {
+          "field": "effective_gap_eV",
+          "target": 2.4,
+          "tolerance": 0.2,
+          "weight": 0.7
+        },
+        {
+          "field": "mid_gap_peak_present",
+          "target": true,
+          "weight": 0.3
+        }
+      ]
+    }
+  ]
+}

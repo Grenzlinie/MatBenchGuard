@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The scorer recomputes tolerance pass, linear regression R^2 and slope, and sign conditions from the agent's raw CSV artifact, comparing to paper-reported gold values. No self-reported metric is trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "segregation_enthalpies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold dH values for Fe/Yb/Eu/La at site types 1,2,3; ionic radii for (Δr)^2; tolerance thresholds",
+      "source_provenance": "Extracted from Fig. 9 of the paper (Cho et al., J. Am. Ceram. Soc. 2000). Values: Fe: -0.08,0.10,0.10; Yb: -0.70,-0.10,0.50; Eu: -1.07,-0.40,0.70; La: -1.56,-0.70,0.90 (eV). Ionic radii from Shannon: Al 0.535, Fe 0.645, Yb 0.868, Eu 0.947, La 1.032 Å.",
+      "generation_method": "Manually read from Fig. 9(a) and listed in paper's text. Ionic radii from standard Shannon table.",
+      "why_not_fabricated": "These are the paper's own reported simulation results; no random generation. Radii are published reference data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "segregation_enthalpies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "dopant",
+            "site_type",
+            "dH"
+          ],
+          "units": {
+            "dH": "eV"
+          }
+        },
+        "description": "Relaxed substitutional segregation enthalpy ΔH for each dopant (Fe,Yb,Eu,La) at three site types (1‑largest, 2‑intermediate, 3‑smallest) in the Σ13 boundary. The checked scoring includes value‑level comparison to reference, a linear trend of ΔH vs (Δr)² for site_type=1, and the sign condition ΔH > ‑0.1 eV for oversized dopants at site_type=3."
+      }
+    ],
+    "notes": "The checker will compare each ΔH value to known reference data (within tolerance), perform a linear regression of ΔH on (Δr)² for site_type=1 points and verify a negative slope with R²>0.95, and check that for site_type=3 the enthalpy for Yb, Eu, La is > −0.1 eV. The ionic radii for (Δr)² calculation are taken from the provided Shannon table."
+  },
+  "checks": [
+    {
+      "id": "enthalpy_value_match",
+      "output_file": "segregation_enthalpies.csv",
+      "kind": "value_match",
+      "weight": 0.4,
+      "params": {
+        "tolerance": 0.2,
+        "gold": {
+          "Fe": {
+            "1": -0.08,
+            "2": 0.1,
+            "3": 0.1
+          },
+          "Yb": {
+            "1": -0.7,
+            "2": -0.1,
+            "3": 0.5
+          },
+          "Eu": {
+            "1": -1.07,
+            "2": -0.4,
+            "3": 0.7
+          },
+          "La": {
+            "1": -1.56,
+            "2": -0.7,
+            "3": 0.9
+          }
+        }
+      }
+    },
+    {
+      "id": "linear_trend",
+      "output_file": "segregation_enthalpies.csv",
+      "kind": "linear_trend",
+      "weight": 0.3,
+      "params": {
+        "radii": {
+          "Al": 0.535,
+          "Fe": 0.645,
+          "Yb": 0.868,
+          "Eu": 0.947,
+          "La": 1.032
+        },
+        "min_r2": 0.95,
+        "dopants_order": [
+          "Fe",
+          "Yb",
+          "Eu",
+          "La"
+        ]
+      }
+    },
+    {
+      "id": "sign_condition",
+      "output_file": "segregation_enthalpies.csv",
+      "kind": "sign_check",
+      "weight": 0.3,
+      "params": {
+        "threshold": -0.1,
+        "dopants": [
+          "Yb",
+          "Eu",
+          "La"
+        ],
+        "site_type": 3
+      }
+    }
+  ]
+}

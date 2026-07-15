@@ -1,0 +1,80 @@
+[
+  {
+    "id": "dft_total_energy",
+    "title": "DFT total energy calculations (unit cell + isolated atoms)",
+    "role": "process",
+    "action": "Perform DFT calculations using Quantum ESPRESSO for HoAs and HoP in the NaCl (B1) structure at several volumes around equilibrium, and for isolated Ho, As, P atoms using the same pseudopotentials. Save the energy-vs-volume data and atomic reference energies.",
+    "output_file": "",
+    "evidence": "energy_volumes.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required to provide the total-energy foundations for structural, elastic, and thermodynamic properties. The evidence file holds the computed energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "dft_elastic_strain",
+    "title": "DFT strain calculations for elastic constants",
+    "role": "process",
+    "action": "Apply volume-conserving strain distortions to the optimized unit cells of HoAs and HoP and run DFT to obtain the stress tensors, needed for extracting second-order elastic constants C11, C12, C44.",
+    "output_file": "",
+    "evidence": "elastic_stress.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the stress-strain data for subsequent extraction of elastic constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "structural_elastic",
+    "title": "Structural parameters, cohesive energy, and elastic properties",
+    "role": "scored",
+    "action": "From the energy-volume data, fit Murnaghan's equation of state to determine equilibrium lattice constant a, bulk modulus B, and pressure derivative B'. Compute cohesive energy using the atomic reference energies. From the stress-strain data, extract C11, C12, C44. Then calculate derived polycrystalline moduli: Zener anisotropy, Poisson's ratio, Young's modulus, and isotropic shear modulus using standard formulas. Output all values for HoAs and HoP.",
+    "output_file": "step_01_structural_elastic.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This scored artifact bundles the main structural and elastic results. The checker will compare the reported lattice constant, bulk modulus, pressure derivative, cohesive energy, and elastic constants to paper-reported values, and will recompute Zener anisotropy, Poisson's ratio, Young's modulus, and shear modulus from the agent's Cij to verify consistency.",
+    "output_schema": "JSON object with keys 'HoAs' and 'HoP'. Each value is an object with keys: lattice_constant_A (float), bulk_modulus_GPa (float), pressure_derivative (float), cohesive_energy_eV_per_atom (float), C11_GPa (float), C12_GPa (float), C44_GPa (float), Zener_anisotropy_A (float), Poisson_ratio_nu (float), Young_modulus_E_GPa (float), shear_modulus_G_GPa (float)."
+  },
+  {
+    "id": "supercell_forces",
+    "title": "Supercell DFT force calculation",
+    "role": "process",
+    "action": "Build a 2x2x2 supercell of the conventional unit cell for HoAs and HoP and run a single-point DFT calculation to obtain the Hellmann-Feynman forces on all atoms.",
+    "output_file": "",
+    "evidence": "supercell_forces.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the forces needed by the PHON code to compute phonon frequencies.",
+    "output_schema": ""
+  },
+  {
+    "id": "phonon_stability",
+    "title": "Phonon dispersion and dynamical stability",
+    "role": "scored",
+    "action": "Use the PHON code with the forces from the supercell DFT run to compute the phonon dispersion and one-phonon density of states for HoAs and HoP. Record the lowest phonon frequency and state whether any imaginary modes are present (has_imaginary_modes = true if any frequency < -1 cm^-1).",
+    "output_file": "step_02_phonon_stability.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This artifact reports the dynamical stability verdict. The checker will verify that lowest_phonon_frequency_cm-1 >= -1 cm^-1 and that has_imaginary_modes is false, consistent with a stable rocksalt structure.",
+    "output_schema": "JSON object with keys 'HoAs' and 'HoP'. Each value is an object with keys: lowest_phonon_frequency_cm-1 (float), has_imaginary_modes (bool)."
+  },
+  {
+    "id": "thermodynamics",
+    "title": "Quasi-harmonic thermodynamic properties",
+    "role": "scored",
+    "action": "Run the GIBBS program using the energy-volume data from the total-energy step and the previously determined bulk modulus/Poisson's ratio. Compute pressure- and temperature-dependent volume, bulk modulus, thermal expansion coefficient, heat capacities Cv and Cp, entropy, Debye temperature, and Grüneisen parameter over the range 0-2000 K and 0-32 GPa. Output a CSV with the required columns for a set of temperature/pressure points that covers the conditions studied in the paper.",
+    "output_file": "step_03_thermodynamics.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Thermodynamic trends are scored: Cv approaching the Dulong-Petit limit at high temperature, Debye temperature decreasing with temperature, and thermal expansion coefficient increasing with temperature at low pressure. The checker will verify these structural trends and compare selected values to paper-reported values with appropriate tolerances.",
+    "output_schema": "CSV with columns: compound (string, 'HoAs' or 'HoP'), temperature_K (float), pressure_GPa (float), volume_A3 (float), bulk_modulus_GPa (float), Cv_J_molK (float), Cp_J_molK (float), entropy_J_molK (float), thermal_expansion_coefficient_K-1 (float), Debye_temperature_K (float), Gruneisen_parameter (float). Required rows: at least 0, 400, 800, 1200, 1600, 2000 K at 0 GPa, and 0 K at 0, 8, 16, 24, 32 GPa (following Table 4 conditions)."
+  }
+]

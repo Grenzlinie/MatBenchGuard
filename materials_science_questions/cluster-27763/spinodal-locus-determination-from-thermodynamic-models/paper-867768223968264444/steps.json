@@ -1,0 +1,80 @@
+[
+  {
+    "id": "01_wl_sampling",
+    "title": "Wang-Landau sampling",
+    "role": "process",
+    "action": "Implement parallel Wang-Landau sampling for the 2D q=8 Potts model on square lattices with periodic boundaries for system sizes L=32,64,128,256,512. Compute the density of states g(E) for each L. Save the g(E) arrays to disk for later analysis.",
+    "output_file": "",
+    "evidence": "wl_run.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step generates the density of states data required for all equilibrium analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "02_spinodal_scaling",
+    "title": "Spinodal scaling analysis",
+    "role": "scored",
+    "action": "From the density of states g(E) for each L, compute microcanonical inverse temperature β(E)=∂ln g(E)/∂E. Identify the spinodal points (extremal points of β(E)) for the ferromagnetic and paramagnetic branches. Fit |β_spi−β_c| versus L to obtain exponent ν, where β_c=ln(1+√8). Write the spinodal data and fitted ν to step01_spinodal_scaling.json.",
+    "output_file": "step01_spinodal_scaling.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Spinodal scaling analysis and power-law fit.",
+    "output_schema": "{\"L\": \"list of integers\", \"beta_spi_f\": \"list of floats\", \"beta_spi_p\": \"list of floats\", \"beta_c\": 1.3424, \"fitted_nu\": \"float\", \"fitted_nu_err\": \"float\"}"
+  },
+  {
+    "id": "03_landscape_scaling",
+    "title": "Free-energy landscape finite-size scaling",
+    "role": "scored",
+    "action": "For each L, compute the free energy F(β_c;E)=E−β_c^{-1} ln g(E). Perform data collapse of β(E) and F(β_c;E) by trying values of d_E and d_F until the curves for L≥256 collapse onto single master curves when plotted against scaled variables. Report the estimated best-fit exponents and their errors in step02_landscape_exponents.json.",
+    "output_file": "step02_landscape_exponents.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Finite-size scaling collapse of free-energy landscape and microcanonical temperature to extract scaling exponents.",
+    "output_schema": "{\"d_E\": \"float\", \"d_E_err\": \"float\", \"d_F\": \"float\", \"d_F_err\": \"float\"}"
+  },
+  {
+    "id": "04_metropolis_dynamics",
+    "title": "Metropolis dynamics simulation",
+    "role": "process",
+    "action": "Initialize the 2D 8-state Potts model in a fully ordered ferromagnetic state and equilibrate at β_c for 1000 MC steps. Then quench the system to a range of lower inverse temperatures β (e.g., 1.30–1.34) and simulate Metropolis dynamics for L=256 (and optionally L=512). Record the time series of the order parameter m(t) after quench. Average over many independent runs (e.g., 64 samples for L=256).",
+    "output_file": "",
+    "evidence": "dynamics_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the magnetization time series required for relaxation analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "05_relaxation_tau",
+    "title": "Extract relaxation times",
+    "role": "scored",
+    "action": "From the time series of m(t) for each β and L, determine the time τ_0.4 at which the average order parameter crosses 0.4 (after the initial plateau). Write a CSV file with columns L, beta, tau_0.4 for at least L=256.",
+    "output_file": "step03_dynamics_tau.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Characteristic relaxation time analysis from magnetization decay.",
+    "output_schema": "CSV with columns: L (int), beta (float), tau_0.4 (float). At least one row for L=256 and several β values."
+  },
+  {
+    "id": "06_dynamics_agreement",
+    "title": "Dynamics-spinodal agreement",
+    "role": "scored",
+    "action": "Using the tau_0.4 data from step03 and the equilibrium spinodal β_spi_f for L=256 from step01, identify the temperature at which the relaxation time τ_0.4 starts to deviate from the large-system behavior (e.g., where it becomes faster than the extrapolated large-L trend). Report this crossover temperature as beta_deviation and compute the absolute difference from the equilibrium spinodal temperature. Write step04_dynamics_agreement.json.",
+    "output_file": "step04_dynamics_agreement.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Verification that the finite-size effect in dynamics matches the equilibrium spinodal temperature.",
+    "output_schema": "{\"L_dynamics\": 256, \"beta_deviation\": \"float\", \"beta_spi_f\": \"float\", \"difference\": \"float\"}"
+  }
+]

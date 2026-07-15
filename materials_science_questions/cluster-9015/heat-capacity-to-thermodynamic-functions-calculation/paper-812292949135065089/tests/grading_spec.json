@@ -1,0 +1,138 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Primary numeric quantities (entropy, smooth H_diff, S_diff) are compared to the paper's reported values within tolerances; transition is confirmed by a structural derivative peak check.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "entropy.txt": "exact_match",
+    "heat_content_table.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for entropy and heat-content table from the original paper.",
+      "source_provenance": "Paper Table III and reported standard entropy S°298.16 = 18.73 ± 0.15 cal/(deg·mole).",
+      "generation_method": "Values were transcribed exactly from the paper's published numerical results.",
+      "why_not_fabricated": "These are the actual published results that a genuine reproduction must match; they are not invented by the verifier."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "entropy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating-point number representing S°298.16 in cal/(deg·mole)."
+        },
+        "description": "Standard entropy at 298.16 K derived from low-temperature heat capacity data."
+      },
+      {
+        "file": "heat_content_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "H_diff",
+            "S_diff"
+          ],
+          "units": {
+            "T": "K",
+            "H_diff": "cal/mole",
+            "S_diff": "cal/(deg·mole)"
+          },
+          "description": "Rows for T = 350, 400, 420, 500, 600, 700, 800, 900, 1000. 420 K row carries the phase-transition values."
+        },
+        "description": "Smoothed heat content and entropy increments above 298.16 K, obtained from fitted high-temperature equations."
+      }
+    ],
+    "notes": "The low-temperature extrapolation may use any reasonable method; exact Debye–Einstein function is not required. Only the smooth table values are scored, not the fitted polynomial coefficients."
+  },
+  "steps": [
+    {
+      "id": "step_01_entropy",
+      "output_file": "entropy.txt",
+      "kind": "numeric",
+      "weight": 0.3,
+      "reference": 18.73,
+      "tolerance_abs": 0.15,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "step_02_table_values",
+      "output_file": "heat_content_table.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "reference": [
+        {
+          "T": 350,
+          "H_diff": 860,
+          "S_diff": 2.65
+        },
+        {
+          "T": 400,
+          "H_diff": 1800,
+          "S_diff": 5.16
+        },
+        {
+          "T": 420,
+          "H_diff": 2180,
+          "S_diff": 6.09
+        },
+        {
+          "T": 500,
+          "H_diff": 3540,
+          "S_diff": 9.05
+        },
+        {
+          "T": 600,
+          "H_diff": 5350,
+          "S_diff": 12.35
+        },
+        {
+          "T": 700,
+          "H_diff": 7210,
+          "S_diff": 15.22
+        },
+        {
+          "T": 800,
+          "H_diff": 9090,
+          "S_diff": 17.73
+        },
+        {
+          "T": 900,
+          "H_diff": 11000,
+          "S_diff": 19.98
+        },
+        {
+          "T": 1000,
+          "H_diff": 12970,
+          "S_diff": 22.05
+        }
+      ],
+      "tolerances": {
+        "H_diff_abs": 20,
+        "H_diff_rel": 0.02,
+        "S_diff_abs": 0.3
+      },
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "step_02_transition",
+      "output_file": "heat_content_table.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "reference": {
+        "transition_range": [
+          400,
+          440
+        ]
+      },
+      "target_policy": "structural_audit"
+    }
+  ]
+}

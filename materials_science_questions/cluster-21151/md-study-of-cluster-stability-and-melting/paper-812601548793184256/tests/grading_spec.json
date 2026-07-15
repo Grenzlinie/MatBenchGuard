@@ -1,0 +1,137 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact n_k and η(k) numbers are only given as figures; we score derived structural properties (total density, monotonicity, temperature trends) and the transition temperature threshold.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference total number densities (Table I) and transition temperature (≈2500 K) from the paper.",
+      "source_provenance": "Paper J. Chem. Phys. 152, 224705 (2020), Table I and Section IV.A",
+      "generation_method": "Extracted directly from the paper's tabulated and stated values.",
+      "why_not_fabricated": "These are the paper's own numerical data for the exact same quantities and units."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "size_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "cluster_size",
+            "number_density"
+          ],
+          "units": {
+            "temperature": "K",
+            "cluster_size": "atom count",
+            "number_density": "nm^{-3}"
+          }
+        },
+        "description": "Cluster size distributions n_k for three temperatures (4006, 5005, 6004 K)."
+      },
+      {
+        "file": "structure_parameter.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "4006": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "k": {
+                    "type": "integer"
+                  },
+                  "eta": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "5005": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "k": {
+                    "type": "integer"
+                  },
+                  "eta": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "6004": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "k": {
+                    "type": "integer"
+                  },
+                  "eta": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Ensemble-averaged structure parameter η(k) from MD for cluster sizes 2..26 at each temperature."
+      },
+      {
+        "file": "transition_temperature.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "content": "A single line containing a floating-point number representing T0 in Kelvin."
+        },
+        "description": "Solid-to-chain structural transition temperature T0 estimated from MD reduced structure parameter fit."
+      }
+    ],
+    "notes": "All outputs are compared to hidden reference values from the paper. The size distributions and structure parameters are evaluated using appropriate error metrics; the transition temperature is checked within a tolerance window."
+  },
+  "steps": [
+    {
+      "id": "step_size_dist",
+      "output_file": "size_distribution.csv",
+      "weight": 0.3,
+      "kind": "structural",
+      "hidden": {
+        "reference_total_density": {
+          "4006": 0.00897,
+          "5005": 0.0649,
+          "6004": 0.25
+        },
+        "total_density_tolerance_relative": 0.05
+      },
+      "description": "Cluster size distributions: total density match and monotonicity"
+    },
+    {
+      "id": "step_structure_param",
+      "output_file": "structure_parameter.json",
+      "weight": 0.35,
+      "kind": "structural",
+      "description": "Structure parameters η(k): physical range and monotonic temperature ordering"
+    },
+    {
+      "id": "step_transition_T",
+      "output_file": "transition_temperature.txt",
+      "weight": 0.35,
+      "kind": "numeric",
+      "target": 2500.0,
+      "tolerance_abs": 300.0,
+      "description": "Transition temperature T0 must be close to 2500 K"
+    }
+  ]
+}

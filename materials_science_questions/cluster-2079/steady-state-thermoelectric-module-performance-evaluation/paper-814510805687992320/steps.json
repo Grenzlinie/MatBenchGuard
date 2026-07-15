@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Latin hypercube sampling of factor ranges",
+    "role": "process",
+    "action": "Generate exactly 500 Latin hypercube samples for the 13 independent factors (alpha, rho, lambda, Gf, n, L, Tmax, epsilon_r, alpha_r, Ta, Gmax, hh, hc, M) using the uniform ranges specified in the paper (Table I). The sampling must cover the multidimensional space uniformly.",
+    "output_file": "",
+    "evidence": "samples.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Design-of-experiments dataset for the subsequent simulation.",
+    "output_schema": "CSV with 500 rows, one per sample; columns correspond to the 13 factors with header names: alpha, rho, lambda, Gf, n, L, Tmax, epsilon_r, alpha_r, Ta, Gmax, hh, hc, M."
+  },
+  {
+    "id": "step_02",
+    "title": "Thermodynamic model simulation and Pi-group computation",
+    "role": "process",
+    "action": "For each sample, compute the ten dimensionless Pi groups (pi2 to pi11) as defined using the repeating variables and factor values. Solve the steady-state thermodynamic model (energy balance equations (2)–(16) with constraints Th = Tmax, G = Gmax) to obtain the critical concentration ratio CCR. Save the computed Pi groups and CCR for all samples.",
+    "output_file": "",
+    "evidence": "dataset.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compiled dataset: each row contains the 13 factor values, the ten Pi groups (pi2..pi11), and the response CCR.",
+    "output_schema": "CSV with columns: pi2, pi3, pi4, pi5, pi6, pi7, pi8, pi9, pi10, pi11, CCR. (Pi groups are dimensionless floats, CCR is a float.)"
+  },
+  {
+    "id": "step_03",
+    "title": "Correlation fitting and standardized sensitivity analysis",
+    "role": "scored",
+    "action": "Fit the power-law correlation model (pi1 = a * pi2^b * ... * pi11^k) to the dataset using nonlinear regression. Compute coefficient of determination R² and median relative error. Standardize the dataset (zero mean, unit variance per column) and refit to obtain standardized exponents for sensitivity analysis. Write the fitted coefficient a, exponents b–k, R², median relative error, and standardized exponents (all as floats) to correlation_coefficients.json.",
+    "output_file": "correlation_coefficients.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final correlation parameters and goodness-of-fit statistics, plus standardized exponents.",
+    "output_schema": "Object with keys: coefficient (object with keys a, b, c, d, e, f, g, h, i, j, k, all float), R2 (float), median_relative_error (float), standardized_exponents (object with keys b, c, d, e, f, g, h, i, j, k, all float)."
+  },
+  {
+    "id": "step_04",
+    "title": "Predict CCR for hidden test inputs",
+    "role": "scored",
+    "action": "Read the fitted coefficients from correlation_coefficients.json. Read 10 hidden test input conditions from /app/inputs/hidden_inputs.csv (each row contains the 13 factor values in the same order as Table I). For each, compute the Pi groups, apply the power-law correlation to predict the CCR, and write the results to hidden_predictions.csv with columns input_index (integer 1..10) and CCR_predicted (float).",
+    "output_file": "hidden_predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CCR predictions for 10 unseen input conditions using the fitted correlation.",
+    "output_schema": "Two columns: input_index (int, 1..10), CCR_predicted (float)."
+  }
+]

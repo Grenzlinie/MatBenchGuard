@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Bounds and ratio are deterministic algebraic functions of public material constants; energy‑nonincreasing for h within the proved bound is theoretically guaranteed, so it can be enforced without re‑simulating.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bounds",
+            "simulations",
+            "ratio_check"
+          ],
+          "properties": {
+            "bounds": {
+              "type": "object",
+              "required": [
+                "h_m_prime",
+                "h_m_double_prime"
+              ],
+              "properties": {
+                "h_m_prime": {
+                  "type": "number"
+                },
+                "h_m_double_prime": {
+                  "type": "number"
+                }
+              }
+            },
+            "simulations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "approximation",
+                  "h",
+                  "energy_nonincreasing"
+                ],
+                "properties": {
+                  "approximation": {
+                    "type": "string",
+                    "enum": [
+                      "first",
+                      "second"
+                    ]
+                  },
+                  "h": {
+                    "type": "number"
+                  },
+                  "energy_nonincreasing": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "ratio_check": {
+              "type": "object",
+              "required": [
+                "h_m_double_prime/ h_m_prime",
+                "inequality_holds"
+              ],
+              "properties": {
+                "h_m_double_prime/ h_m_prime": {
+                  "type": "number"
+                },
+                "inequality_holds": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "description": "The agent's computed energetic time‑step bounds, energy‑monotonicity flags from simulations, and the inequality check. The checker recomputes all values (bounds, flags, ratio) from the same material constants and initial conditions, comparing each field with appropriate tolerance."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "bounds_check",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance": 1e-06,
+      "target_policy": "exact_match",
+      "fields": {
+        "h_m_prime": "bounds.h_m_prime",
+        "h_m_double_prime": "bounds.h_m_double_prime"
+      },
+      "hidden_target": {
+        "h_m_prime": 1.3636363636363638,
+        "h_m_double_prime": 1.276595744680851
+      }
+    },
+    {
+      "id": "ratio_check",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "tolerance": 1e-06,
+      "target_policy": "exact_match",
+      "fields": {
+        "ratio": "ratio_check['h_m_double_prime/ h_m_prime']",
+        "inequality_holds": "ratio_check.inequality_holds"
+      },
+      "hidden_target": {
+        "ratio": 0.9361702127659575,
+        "inequality_holds": true
+      }
+    },
+    {
+      "id": "simulations_check",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "description": "Verify that for h=0.5*h'_m runs, the energy_nonincreasing flag is true (guaranteed by Theorem 1 and Theorem 2 for any admissible k). The other two runs are not forced and are not scored."
+    }
+  ]
+}

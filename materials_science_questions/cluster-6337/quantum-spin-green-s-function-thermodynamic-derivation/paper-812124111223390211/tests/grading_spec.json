@@ -1,0 +1,48 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes chi_q^{zz} from the agent's omega_x_values.csv (the generating function) using the paper's paramagnetic limit expression, and compares against the agent's chi_qzz_values.csv. This is a lightweight recompute that verifies physical consistency without needing a separate hidden gold file.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "chi_qzz_values.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "chi_qzz_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "q_x",
+            "q_y",
+            "chi_qzz"
+          ],
+          "units": {
+            "q_x": "radians per lattice constant",
+            "q_y": "radians per lattice constant",
+            "chi_qzz": "arbitrary"
+          }
+        },
+        "description": "Longitudinal correlation function for S=1 Heisenberg ferromagnet with single-ion anisotropy, computed at given wavevectors."
+      }
+    ],
+    "notes": "The hidden checker reads the supporting evidence files 'omega_x_values.csv' and 'lambda_ij_coefficients.csv' (produced by the process steps) to recompute chi_q^{zz} and verify consistency, then compares the recomputed values against a hidden gold reference and the agent's chi_qzz_values.csv. The scoring is based on the accuracy of the chi_q^{zz} values."
+  },
+  "steps": [
+    {
+      "id": "chi_qzz_check",
+      "output_file": "chi_qzz_values.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "params": {
+        "T": 10.0,
+        "J": 1.0,
+        "rel_tolerance": 0.15,
+        "max_deviation_allowed": 0.5
+      }
+    }
+  ]
+}

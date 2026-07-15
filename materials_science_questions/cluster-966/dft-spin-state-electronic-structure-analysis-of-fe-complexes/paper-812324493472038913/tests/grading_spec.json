@@ -1,0 +1,162 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Values can be recomputed from the agent's artifacts but the checker has no way to run the full EH solver; result‑level comparison with structural consistency checks is used.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "q_nonlocal_Cl": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "q_nonlocal_N": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "q_nonlocal_total": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "q_local": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "q_total": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "delta_E_Fe_mm_per_sec": {
+              "type": "number",
+              "units": "mm/sec"
+            },
+            "delta_E_Cl_mc_per_sec": {
+              "type": "number",
+              "units": "Mc/sec"
+            },
+            "q_Cl_local": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "delta_E_Cl_mc_per_sec_TownesDailey": {
+              "type": "number",
+              "units": "Mc/sec"
+            },
+            "chi_d_contraction": {
+              "type": "number",
+              "description": "scale factor χ for in-plane d-orbital contraction, dimensionless"
+            },
+            "contracted_1_over_r3_dx2_y2": {
+              "type": "number",
+              "units": "a.u."
+            },
+            "contracted_1_over_r3_dxy": {
+              "type": "number",
+              "units": "a.u."
+            }
+          },
+          "required": [
+            "q_nonlocal_Cl",
+            "q_nonlocal_N",
+            "q_nonlocal_total",
+            "q_local",
+            "q_total",
+            "delta_E_Fe_mm_per_sec",
+            "delta_E_Cl_mc_per_sec",
+            "q_Cl_local",
+            "delta_E_Cl_mc_per_sec_TownesDailey",
+            "chi_d_contraction",
+            "contracted_1_over_r3_dx2_y2",
+            "contracted_1_over_r3_dxy"
+          ]
+        },
+        "description": "The final combined field gradient, contraction, and quadrupole splitting results, compared against hidden reference values (paper‑reported quantities) with absolute tolerances and structural consistency checks."
+      }
+    ],
+    "notes": "The checker will compare each value to the paper’s reported numbers using absolute tolerances and will verify that q_nonlocal_total = q_nonlocal_Cl + q_nonlocal_N, that the Fe Mössbauer splitting is correctly derived from the given antishielding factors, and that the contraction parameters are internally consistent with q_local and the MO populations."
+  },
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold numerical values for all fields in results.json",
+      "source_provenance": "paper Eqs.12,14,15,16,17,20,25‑30,33 and derived from ΔE_local=‑0.73 mm/sec with (1‑R)=0.68, e^2Q/2=1.608696 mm/sec per a.u.",
+      "generation_method": "extracted directly from the paper text and cross‑checked with the reported auxiliary quantities",
+      "why_not_fabricated": "each value appears in the paper or is a straightforward arithmetic consequence of the paper’s stated equations and constants"
+    }
+  ],
+  "steps": [
+    {
+      "id": "results_json",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "json_field",
+      "description": "Verify all required fields against hidden gold with tolerances and check structural consistency",
+      "fields": {
+        "q_nonlocal_Cl": {
+          "gold": -0.10149,
+          "tolerance_abs": 0.005
+        },
+        "q_nonlocal_N": {
+          "gold": 0.01095,
+          "tolerance_abs": 0.005
+        },
+        "q_nonlocal_total": {
+          "gold": -0.0905,
+          "tolerance_abs": 0.01
+        },
+        "q_local": {
+          "gold": -0.6673,
+          "tolerance_abs": 0.05
+        },
+        "delta_E_Fe_mm_per_sec": {
+          "gold": -1.47,
+          "tolerance_abs": 0.1
+        },
+        "q_Cl_local": {
+          "gold": 1.298,
+          "tolerance_abs": 0.1
+        },
+        "delta_E_Cl_mc_per_sec": {
+          "gold": -12.04,
+          "tolerance_abs": 0.5
+        },
+        "delta_E_Cl_mc_per_sec_TownesDailey": {
+          "gold": -13.18,
+          "tolerance_abs": 1.0
+        }
+      },
+      "consistency_checks": {
+        "nonlocal_sum": {
+          "weight": 0.1,
+          "tolerance": 1e-05
+        },
+        "delta_e_self_consistency": {
+          "weight": 0.15,
+          "tolerance": 0.02,
+          "antishield_local": 0.68,
+          "antishield_nonlocal": 5.07,
+          "eqq_factor": 1.608696
+        }
+      },
+      "sub_weights": {
+        "q_nonlocal_Cl": 0.1,
+        "q_nonlocal_N": 0.1,
+        "q_nonlocal_total": 0.1,
+        "q_local": 0.1,
+        "delta_E_Fe_mm_per_sec": 0.2,
+        "q_Cl_local": 0.05,
+        "delta_E_Cl_mc_per_sec": 0.05,
+        "delta_E_Cl_mc_per_sec_TownesDailey": 0.05
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_build_cells",
+    "title": "Build simulation cells for DW, LS, SW",
+    "role": "process",
+    "action": "Construct three initial LAMMPS data files: calcite {10-14} slab (56.67 x 54.89 x 19.77 Å, 1078 CaCO3 units), 24 benzoate molecules, 6183 water molecules, and appropriate Na+ and Cl- counts to achieve salinities 0 ppm (DW), 5000 ppm (LS), and 45000 ppm (SW) plus neutralizing Na+ ions. Use the TIP3P/Fw and OPLS-AA force fields.",
+    "output_file": "",
+    "evidence": "initial_cells.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the initial atomic configurations for the three salinity conditions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_run_md",
+    "title": "Run MD equilibration and production",
+    "role": "process",
+    "action": "For each salinity, equilibrate the system at 80 °C and 30 MPa using LAMMPS with the NPT/NVT protocol described in the paper, then run 50 ns production dynamics saving atomic coordinates every 0.5 ps.",
+    "output_file": "",
+    "evidence": "md_evidence.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate trajectories for analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_density",
+    "title": "Compute number density profiles",
+    "role": "scored",
+    "action": "From the last 20 ns of each trajectory, compute the z-dependent number density of water oxygen (Ow), water hydrogen (Hw), benzoate (Bz), Na+, and Cl- averaged over both calcite slabs. Output one file with all salinities.",
+    "output_file": "density_profiles.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "1D density profiles of all species along the surface normal.",
+    "output_schema": "salinity (string: DW/LS/SW), z (float, Å), Ow_density (float, atoms/Å³), Hw_density (float), Bz_density (float), Na_density (float), Cl_density (float)"
+  },
+  {
+    "id": "step_04_rdf_nabz",
+    "title": "Compute Na+ - benzoate RDF at interface",
+    "role": "scored",
+    "action": "Calculate the radial distribution function g(r) between Na+ ions and the benzoate center of mass (or carboxylate carbon) for molecules located within the interfacial region (defined as the oscillatory portion of the density profile within ~1 nm of the surface). Output for each salinity.",
+    "output_file": "rdf_Na_Bz_interface.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "RDF showing ion-organic pairing at the interface.",
+    "output_schema": "salinity (string), r (float, Å), g_r (float)"
+  },
+  {
+    "id": "step_05_rdf_naow",
+    "title": "Compute Na+ - water Ow RDF at interface",
+    "role": "scored",
+    "action": "Calculate g(r) between Na+ ions and water oxygen atoms inside the interfacial region. Output for each salinity.",
+    "output_file": "rdf_Na_Ow_interface.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "RDF confirming partial solvation of interfacial Na+.",
+    "output_schema": "salinity (string), r (float, Å), g_r (float)"
+  },
+  {
+    "id": "step_06_survival",
+    "title": "Compute benzoate survival probability",
+    "role": "scored",
+    "action": "For the interfacial region, compute the survival probability P(t) of benzoate molecules using the standard definition from the paper. Average over all timesteps in the last 20 ns. Output P(t) as a function of time for each salinity.",
+    "output_file": "survival_probability.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Survival probability curves showing how long benzoates remain at the interface.",
+    "output_schema": "salinity (string), time (ps, float), p_t (float)"
+  },
+  {
+    "id": "step_07_residence",
+    "title": "Compute benzoate residence times",
+    "role": "scored",
+    "action": "Integrate the survival probability curves to obtain the residence time for each salinity. Output the single scalar value per salinity.",
+    "output_file": "residence_times.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "One residence time per salinity.",
+    "output_schema": "salinity (string), residence_time (ps, float)"
+  }
+]

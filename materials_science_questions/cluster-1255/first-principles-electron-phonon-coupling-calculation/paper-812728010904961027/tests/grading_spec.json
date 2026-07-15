@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Paper reports resistivity curve as a graph and distribution function shape; we compare agent's computed values at specific points to digital approximations from the figures and verify structural shape of the distribution.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold temperature-dependent resistivity values at selected temperatures for ρ0=0.218×10⁻⁷ Ω cm",
+      "source_provenance": "Fig. 5 of the paper, digitized approximation",
+      "generation_method": "Manual reading of the graph; the model yields approximately δρ=1.5×10⁻¹⁴ T² Ω cm.",
+      "why_not_fabricated": "Based on the paper's published curve; digitization tolerance included."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural criteria for distribution function shape",
+      "source_provenance": "Fig. 1 and description in paper",
+      "generation_method": "Derived from paper's qualitative description: dip at y=G/(2kF)≈0.72, increasing monotonic otherwise.",
+      "why_not_fabricated": "Matches the paper's reported behavior."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "resistivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "rho"
+          ],
+          "units": {
+            "T": "K",
+            "rho": "Ω cm"
+          }
+        },
+        "description": "Temperature-dependent resistivity computed from the model."
+      },
+      {
+        "file": "distribution_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "y",
+            "phi_norm"
+          ],
+          "units": {
+            "y": "none",
+            "phi_norm": "none"
+          }
+        },
+        "description": "Normalized nonequilibrium electron distribution function."
+      }
+    ],
+    "notes": "The two artifacts are scored independently. The checker will compare the agent's reported values to paper-reference values at selected points and against the required shape (e.g., a dip around y ≈ 0.72). Relative deviation within tolerance earns full credit."
+  },
+  "steps": [
+    {
+      "id": "resistivity",
+      "output_file": "resistivity.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target_policy": "threshold_or_better",
+      "params": {
+        "rho0": 2.18e-08,
+        "targets": [
+          {
+            "T": 20,
+            "delta_rho": 6e-12
+          },
+          {
+            "T": 50,
+            "delta_rho": 3.75e-11
+          },
+          {
+            "T": 100,
+            "delta_rho": 1.5e-10
+          },
+          {
+            "T": 200,
+            "delta_rho": 6e-10
+          },
+          {
+            "T": 300,
+            "delta_rho": 1.35e-09
+          }
+        ],
+        "tolerance_relative": 0.15,
+        "score_per_point": 0.2
+      }
+    },
+    {
+      "id": "distribution",
+      "output_file": "distribution_function.csv",
+      "kind": "structural",
+      "weight": 0.4,
+      "target_policy": "structural_audit",
+      "params": {
+        "dip_center_expected": 0.72,
+        "dip_center_tolerance": 0.02,
+        "dip_min_expected_range": [
+          0.68,
+          0.76
+        ],
+        "dip_depth_min": 0.1,
+        "monotonic_increase_expected": [
+          [
+            -1.0,
+            0.68
+          ],
+          [
+            0.78,
+            1.0
+          ]
+        ],
+        "score_weights": {
+          "dip_exists": 0.4,
+          "dip_center": 0.3,
+          "monotonic": 0.3
+        }
+      }
+    }
+  ]
+}

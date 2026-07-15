@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_structure_generation",
+    "title": "Generate initial crystal structures",
+    "role": "process",
+    "action": "Based on the reported experimental crystallographic data for ZrNi (Cmcm, a=3.287 Å, b/a=3.07, c/a=1.23, y_Ni=0.362, y_Zr=0.083) and for ZrNiH₃ (a=3.498 Å, b/a=2.97, c/a=1.23, y_Ni=0.426, y_Zr=0.139, H₁ at 4c (0,0.931,0.25), H₂ at 8f (0,0.312,0.687)), create input structure files for all four compositions: ZrNi, ZrNiH (H₁ at 4c (0,0.916,0.25)), ZrNiH₂ (H₂ at 8f (0,0.313,0.687)), ZrNiH₃. Maintain the base-centered orthorhombic Cmcm symmetry with 4 formula units per conventional cell.",
+    "output_file": "",
+    "evidence": "structures_generated.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare starting crystal structures as input for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_geometry_optimization",
+    "title": "DFT geometry optimization",
+    "role": "scored",
+    "action": "Using a plane-wave PAW-GGA (PBE) DFT code, perform full relaxation of lattice parameters and internal coordinates for ZrNi, ZrNiH, ZrNiH₂, and ZrNiH₃. Record the relaxed lattice constants (a, b/a, c/a), volume per 4 formula units, and total energy per 4 formula units.",
+    "output_file": "geometry_optimization_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Output of the full geometry relaxation, containing optimized structural parameters and total electronic energy for each system.",
+    "output_schema": "Columns: system (str), a_lattice (Å), b_over_a (dimensionless), c_over_a (dimensionless), volume_per_4fu (Å³), total_energy_per_4fu (eV). One row per composition."
+  },
+  {
+    "id": "step_03_h2_reference",
+    "title": "H₂ molecule reference energy",
+    "role": "process",
+    "action": "Using the same DFT setup, calculate the total electronic energy of an isolated H₂ molecule placed in a cubic box with side length 4.5 Å.",
+    "output_file": "",
+    "evidence": "H2_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Provides the reference energy for hydrogen stabilization energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_eos_fit_and_stabilization",
+    "title": "Birch EOS fitting and hydrogen stabilization energies",
+    "role": "scored",
+    "action": "For each relaxed system from step 2, perform DFT single-point energy calculations at several volumes spanning the equilibrium volume. Fit energy-volume data for each composition using a second-order Birch equation of state (EOS). Extract equilibrium energy per 4 fu, equilibrium volume per 4 fu, and bulk modulus. Using the fitted equilibrium energies and the H₂ reference energy from step 3, compute the hydrogen stabilization energy per H₂ molecule as (E(ZrNiHₓ) – E(ZrNi) – x·E(H₂)) / x for x = 1, 2, 3. For ZrNi set stabilization energy to NaN.",
+    "output_file": "eos_fit_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium properties from equation-of-state fitting and the derived hydrogen stabilization energies.",
+    "output_schema": "Columns: system (str), equilibrium_energy_per_4fu (eV), equilibrium_volume_per_4fu (Å³), bulk_modulus (GPa), stabilization_energy_per_H2 (eV). One row per composition."
+  }
+]

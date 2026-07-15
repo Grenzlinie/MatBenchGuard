@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1_build_model",
+    "title": "Build initial pyrochlore structure",
+    "role": "process",
+    "action": "Construct the primitive cell of (Bi₁.₅Li₀.₅)(Nb₁.₅Mg₀.₅)O₇ (space group Fd‑3m, No. 227) using the ideal pyrochlore structure as starting geometry. For the initial cubic cell set the lattice constant a = 10.55 Å. Atom coordinates (Wyckoff positions for the conventional cell, origin choice 2 with origin at -3m) are: A‑site (Bi, Li): 16c (0.625, 0.625, 0.625) with mixed occupancy Bi:0.75, Li:0.25; B‑site (Nb, Mg): 16d (0.0, 0.0, 0.0) with mixed occupancy Nb:0.75, Mg:0.25; O on 48f: (x, 0, 0) with x = 0.375; O’ on 8b: (0.375, 0.375, 0.375). All oxygen sites are fully occupied. Generate the primitive cell containing 22 atoms (2 formula units) from this conventional cell. Write the resulting cell to /app/outputs/initial_structure.cif.",
+    "output_file": "",
+    "evidence": "initial_structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the input structure for DFT calculations. The agent should set up the unit cell with the given fractional coordinates and appropriate pseudo‑potential assignments.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_pbe_relax",
+    "title": "DFT‑PBE structural relaxation",
+    "role": "process",
+    "action": "Run a GGA‑PBE calculation with Quantum ESPRESSO to fully relax both the lattice parameters and atomic positions until all residual forces are below 0.5 meV/Å. Use a sufficient k‑point mesh and a plane‑wave cutoff appropriate for the chosen pseudopotentials to achieve energy convergence to within a few meV/atom. The final optimized structure and the log serve as evidence that the relaxation ran to completion.",
+    "output_file": "",
+    "evidence": "pbe_relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step produces the relaxed geometry and the equilibrium lattice constant. The relaxation must be converged in forces and energy; failure to properly relax will be reflected in the final scored lattice parameter.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_hybrid_calc",
+    "title": "Hybrid functional band‑gap calculation",
+    "role": "process",
+    "action": "Using the relaxed structure from step 2, perform a band‑structure and density‑of‑states calculation with a screened hybrid functional (HSE06 or PBE0) in Quantum ESPRESSO. Compute the total and projected DOS and identify the direct band gap at the L point of the Brillouin zone. A k‑mesh of at least 6×6×6 (or a band‑structure path including L) is required. Record the calculated band gap and verify it is direct at L.",
+    "output_file": "",
+    "evidence": "hybrid_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The hybrid functional corrects the band‑gap underestimation of GGA. The band gap at L is the primary property to reproduce; the calculation must be converged with respect to k‑points and cutoff to be meaningful.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_write_results",
+    "title": "Extract and write final quantities",
+    "role": "scored",
+    "action": "From the outputs of the relaxation and hybrid calculations, extract the relaxed lattice parameter a (in Å) and the direct band gap E_g (in eV). Write them as a JSON object to /app/outputs/dft_results.json with keys 'lattice_parameter_a' and 'band_gap_eV'.",
+    "output_file": "dft_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The single scored artifact contains the two headline DFT predictions for the (Bi₁.₅Li₀.₅)(Nb₁.₅Mg₀.₅)O₇ model.",
+    "output_schema": "{\"lattice_parameter_a\": \"<number>\", \"band_gap_eV\": \"<number>\"}"
+  }
+]

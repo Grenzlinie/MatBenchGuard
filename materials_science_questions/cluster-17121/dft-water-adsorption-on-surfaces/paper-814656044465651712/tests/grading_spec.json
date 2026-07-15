@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Headline quantities are trends/ordering; exact numerical match impossible due to DFT toolchain variations; scoring checks internal consistency and directional trends, with stable state identification as a reference match.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "target_policies": {},
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "low_Na": "array of objects with n (int), E_n_hartree (float), d_layer_A (float)",
+            "high_Na": "array of objects with n (int), E_n_hartree (float), d_layer_A (float)",
+            "E_H2O_hartree": "float"
+          },
+          "items": {
+            "n": "int",
+            "E_n_hartree": "float",
+            "d_layer_A": "float"
+          }
+        },
+        "description": "Total energies and layer thicknesses for all water coverages in both low-Na and high-Na systems, plus the gas-phase water reference energy."
+      },
+      {
+        "file": "dielectric_permittivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "low_Na": "array of objects with n (int) and epsilon_layer (float)",
+            "high_Na": "array of objects with n (int) and epsilon_layer (float)"
+          },
+          "items": {
+            "n": "int",
+            "epsilon_layer": "float"
+          }
+        },
+        "description": "Relative dielectric permittivity of the water interlayer computed from the plate capacitor model."
+      },
+      {
+        "file": "phase_diagram.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "low_Na": "object with stable_state (string) and Omega_minimizer (object)",
+            "high_Na": "object with stable_state (string) and Omega_minimizer (object)",
+            "conditions": "object with T_K (float) and RH_percent (float)"
+          }
+        },
+        "description": "Thermodynamic phase diagram data: the stable hydration state (1W/2W) at ambient conditions and the grandcanonical potential minimizer for both systems."
+      }
+    ],
+    "notes": "Scoring is based on relative trends and ordering (T3 structural) for total_energies and dielectric_permittivity, and on correct identification of the stable state (reference match) for phase_diagram. No exact numerical match with the paper's VASP results is required due to DFT toolchain variations."
+  },
+  "steps": [
+    {
+      "id": "total_energies_trends",
+      "output_file": "total_energies.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "description": "Check that d_layer_A is non-decreasing with n and that the per-water adsorption energy (E_n - E_0 - n*E_H2O)/n is non-decreasing (becomes less negative) with n for both low‑Na and high‑Na systems."
+    },
+    {
+      "id": "dielectric_ordering",
+      "output_file": "dielectric_permittivity.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "description": "Recompute ε_layer from total_energies d_layer_A using the public plate‑capacitor constants (σ_low=0.086 C/m², σ_high=0.172 C/m², ε₀=8.8541878128e-12 F/m). Verify that for every common water coverage n (3,4,8,11,14) the low‑Na ε_layer is strictly less than the high‑Na ε_layer.",
+      "sigma_low": 0.086,
+      "sigma_high": 0.172,
+      "epsilon0": 8.8541878128e-12
+    },
+    {
+      "id": "phase_stability",
+      "output_file": "phase_diagram.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "expected_low_state": "1W",
+      "expected_high_state": "2W",
+      "description": "Check that stable_state is 1W for low‑Na and 2W for high‑Na. Additionally, verify internal consistency: extract the reported Ω minimiser’s (n, Ω), compute μ = (E_n - Ω)/n from the agent’s own total_energies, and confirm that n is indeed the coverage that minimises Ω = E - n·μ among all coverages for that system."
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Critical radius scaling exponent and the specific point are recomputed from the submitted CSV via power-law fit; zero-sound velocities are compared to the paper's reported values with tolerances.",
+  "pass_threshold": 0.4,
+  "target_policies": {
+    "zero_sound_velocity.json": "reference_match",
+    "critical_radius_scaling.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zero_sound_velocity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "c0_spinodal_mps": "float",
+            "c1_spinodal_mps": "float",
+            "Fermi_velocity_mps": "float"
+          }
+        },
+        "description": "Physics quantities at the spinodal: zero sound velocity, first sound velocity, and Fermi velocity, all in m/s. Checked against reference values with tolerances."
+      },
+      {
+        "file": "critical_radius_scaling.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_offset_mbar",
+            "critical_radius_nm"
+          ]
+        },
+        "description": "Tabulated critical radius Rc (nm) as a function of the pressure offset from the spinodal ΔP (mbar). Checked against hidden reference values and a power-law exponent fit."
+      }
+    ],
+    "notes": "The solver must implement numerical methods for the zero-sound equation and the critical bubble profile. All required formulas and parameters (Maris EOS, Greywall fit) are provided inline; no external data download is needed."
+  },
+  "steps": [
+    {
+      "id": "zero_sound_spinodal",
+      "output_file": "zero_sound_velocity.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "description": "Check zero sound and first sound velocities at the spinodal",
+      "checks": {
+        "c0_spinodal_mps": {
+          "target": 80.0,
+          "tol": 5.0
+        },
+        "c1_spinodal_mps": {
+          "target": 0.0,
+          "tol": 0.001
+        },
+        "Fermi_velocity_mps": {
+          "target": 80.0,
+          "tol": 5.0
+        }
+      }
+    },
+    {
+      "id": "critical_radius_scaling",
+      "output_file": "critical_radius_scaling.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "description": "Fit power-law to critical radius data and verify point at ΔP=0.02 mbar",
+      "config": {
+        "pressure_column": "pressure_offset_mbar",
+        "radius_column": "critical_radius_nm",
+        "target_dp": 0.02,
+        "target_rc": 10.0,
+        "rc_tol": 2.0,
+        "exponent_target": -0.25,
+        "exponent_tol": 0.05,
+        "max_rc_deviation": 5.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot re-run DFT in the checker sandbox; agent's reported numbers are compared to hidden paper reference values with tolerances and required structural trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold density and lattice energy values for comparison",
+      "source_provenance": "Inorg. Chem. 49 (2010) 5, 2267-2272, Table 1 and text; solvers.sh hardcodes them.",
+      "generation_method": "extracted from the paper's reported values",
+      "why_not_fabricated": "These are the actual values reported in the paper and serve as the authoritative benchmark for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "densities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "alpha_SrNCN": {
+              "type": "object",
+              "properties": {
+                "density_g_per_cm3": {
+                  "type": "number"
+                },
+                "unit_cell_volume_A3": {
+                  "type": "number"
+                },
+                "formula_units_per_cell": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "density_g_per_cm3",
+                "unit_cell_volume_A3",
+                "formula_units_per_cell"
+              ]
+            },
+            "beta_SrNCN": {
+              "type": "object",
+              "properties": {
+                "density_g_per_cm3": {
+                  "type": "number"
+                },
+                "unit_cell_volume_A3": {
+                  "type": "number"
+                },
+                "formula_units_per_cell": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "density_g_per_cm3",
+                "unit_cell_volume_A3",
+                "formula_units_per_cell"
+              ]
+            }
+          },
+          "required": [
+            "alpha_SrNCN",
+            "beta_SrNCN"
+          ]
+        },
+        "description": "Computed densities (g/cm³), unit cell volumes (Å³), and formula units per cell from the relaxed DFT structures."
+      },
+      {
+        "file": "lattice_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "alpha_SrNCN": {
+              "type": "object",
+              "properties": {
+                "total_energy_per_fu_eV": {
+                  "type": "number"
+                },
+                "total_energy_per_fu_Ry": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "total_energy_per_fu_eV",
+                "total_energy_per_fu_Ry"
+              ]
+            },
+            "beta_SrNCN": {
+              "type": "object",
+              "properties": {
+                "total_energy_per_fu_eV": {
+                  "type": "number"
+                },
+                "total_energy_per_fu_Ry": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "total_energy_per_fu_eV",
+                "total_energy_per_fu_Ry"
+              ]
+            },
+            "energy_difference_beta_minus_alpha_eV_per_fu": {
+              "type": "number"
+            },
+            "more_stable_polymorph": {
+              "type": "string",
+              "enum": [
+                "alpha",
+                "beta"
+              ]
+            }
+          },
+          "required": [
+            "alpha_SrNCN",
+            "beta_SrNCN",
+            "energy_difference_beta_minus_alpha_eV_per_fu",
+            "more_stable_polymorph"
+          ]
+        },
+        "description": "Total energy per formula unit (eV and Ry) for each polymorph, the energy difference (beta minus alpha), and which polymorph is more stable."
+      }
+    ],
+    "notes": "The densities and lattice energies will be compared to hidden paper-reported values within appropriate tolerances. The primary check for lattice energies is that the correct polymorph is identified as more stable (lower energy)."
+  },
+  "steps": [
+    {
+      "id": "step_densities",
+      "output_file": "densities.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "hidden": {
+        "gold": {
+          "alpha_SrNCN": {
+            "density_g_per_cm3": 4.09,
+            "unit_cell_volume_A3": 207.3,
+            "formula_units_per_cell": 4
+          },
+          "beta_SrNCN": {
+            "density_g_per_cm3": 3.98,
+            "unit_cell_volume_A3": 159.8,
+            "formula_units_per_cell": 3
+          }
+        },
+        "tolerances": {
+          "density_relative_tol": 0.005
+        }
+      }
+    },
+    {
+      "id": "step_lattice_energies",
+      "output_file": "lattice_energies.json",
+      "kind": "rubric",
+      "weight": 0.7,
+      "target_policy": "reference_match",
+      "hidden": {
+        "gold": {
+          "alpha_SrNCN": {
+            "total_energy_per_fu_eV": -135.51,
+            "total_energy_per_fu_Ry": -9.96
+          },
+          "beta_SrNCN": {
+            "total_energy_per_fu_eV": -135.55,
+            "total_energy_per_fu_Ry": -9.963
+          },
+          "energy_difference_ref_eV": -0.04
+        },
+        "tolerances": {
+          "energy_eV_abs_tol": 0.5,
+          "energy_Ry_abs_tol": 0.04,
+          "energy_difference_consistency_tol_eV": 0.01
+        }
+      }
+    }
+  ]
+}

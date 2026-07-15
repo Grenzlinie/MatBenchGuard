@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Metric recompute: the checker independently performs the linear regression on (Cv-9R)/T vs T⁻³ from the submitted Cv data and compares the resulting A and θE to the paper's reported values. This is fully recomputable without trusting the agent's self-reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_cv_ch.csv": "metric_recompute",
+    "step_02_fitted_params.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold anharmonic coefficient A and Einstein temperature θE",
+      "source_provenance": "Paper Fig.3 caption and text (Section 4.3), which report A = -1.24×10⁻³ J·mol⁻¹·K⁻² and θE = 607 K",
+      "generation_method": "Transcribed directly from the paper's reported values; tolerances derived from the paper's own uncertainty estimates (A standard error 5%, θ∞ standard deviation 1.1%).",
+      "why_not_fabricated": "These are the exact paper-reported numbers to be reproduced; they are not synthetic."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_cv_ch.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Cp",
+            "Cv",
+            "Ch",
+            "anharmonic"
+          ],
+          "units": {
+            "T": "K",
+            "Cp": "J/mol/K",
+            "Cv": "J/mol/K",
+            "Ch": "J/mol/K",
+            "anharmonic": "J/mol/K"
+          }
+        },
+        "description": "Heat capacity table. The hidden checker extracts the Cv column for T≥650 K, recomputes the linear fit of (Cv-9R)/T vs T⁻³ to obtain A and θ∞, derives θE, and compares them against the paper‑reported gold values within tolerance."
+      },
+      {
+        "file": "step_02_fitted_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "anharmonic_coefficient_A": "number",
+            "einstein_temperature_thetaE": "number",
+            "high_temp_debye_theta_inf": "number"
+          },
+          "units": {
+            "anharmonic_coefficient_A": "J/mol/K^2",
+            "einstein_temperature_thetaE": "K",
+            "high_temp_debye_theta_inf": "K"
+          }
+        },
+        "description": "Fitted parameters log. The checker verifies that the reported A and θE are consistent with the values recomputed from the CSV (step_01_cv_ch.csv)."
+      }
+    ],
+    "notes": "The hidden gold consists of the paper‑reported anharmonic coefficient A = −1.24×10⁻³ J·mol⁻¹·K⁻² and Einstein temperature θE = 607 K. The primary scoring is metric_recompute on the CSV; the JSON entry provides a low‑weight structural consistency check."
+  },
+  "steps": [
+    {
+      "id": "step_fit_and_table",
+      "output_file": "step_01_cv_ch.csv",
+      "kind": "recompute_metric",
+      "weight": 0.9,
+      "description": "Recompute A and thetaE from the submitted Cv data and score against paper gold."
+    },
+    {
+      "id": "step_fitted_params",
+      "output_file": "step_02_fitted_params.json",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Cross-check the JSON-reported parameters against the values recomputed from the CSV."
+    }
+  ]
+}

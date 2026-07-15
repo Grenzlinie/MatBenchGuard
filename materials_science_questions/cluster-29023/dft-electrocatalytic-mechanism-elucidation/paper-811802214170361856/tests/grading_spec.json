@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw DFT artifacts is infeasible because only final JSON values are provided; the checker cannot re-run DFT. Scoring relies on structural ordering of free energies and total charge occupancy to verify the paper's mechanistic insight.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_adsorption_free_energies.json": "structural_audit",
+    "step_02_charge_occupancy.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected ordering of site adsorption free energies (ascending) and total charge occupancy (descending) as reported in the paper.",
+      "source_provenance": "Paper free energies: site1=2.03, site2=1.43, site3=1.09 eV; sites 4-6 described as electron-deficient with site5 most favorable. Charge occupancy total values from supporting information (Table S3) confirm ordering. The exact numeric reference used by solve.sh is consistent with the paper.",
+      "generation_method": "Expected order was derived from the paper's text, Figure 5a, and the reference solve.sh which directly reproduces the DFT results reported in the supporting information.",
+      "why_not_fabricated": "The ordering is the paper's key quantitative mechanistic claim; any correct DFT reproduction must exhibit this relative trend. It is verified against both the published numeric values and the reference solver's output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_adsorption_free_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "site1": "float (eV)",
+            "site2": "float (eV)",
+            "site3": "float (eV)",
+            "site4": "float (eV)",
+            "site5": "float (eV)",
+            "site6": "float (eV)"
+          }
+        },
+        "description": "Map from site label to the computed hydrogen adsorption free energy ΔG_H* in eV."
+      },
+      {
+        "file": "step_02_charge_occupancy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "site1": "object",
+            "site2": "object",
+            "site3": "object",
+            "site4": "object",
+            "site5": "object",
+            "site6": "object"
+          },
+          "item_schema": {
+            "sigma": "float",
+            "pi": "float"
+          }
+        },
+        "description": "Per-site σ and π charge occupancy (in electrons). The electron‑deficient vs electron‑rich character is judged by comparing total charge (σ+π)."
+      }
+    ],
+    "notes": "The agent must compute both artifacts from first‑principles DFT runs. No gold values are disclosed; the hidden verifier compares against paper‑reported numbers and structural trends (site ordering)."
+  },
+  "steps": [
+    {
+      "id": "free_energy",
+      "output_file": "step_01_adsorption_free_energies.json",
+      "weight": 0.7,
+      "kind": "structural_ordering",
+      "target_policy": "structural_audit",
+      "expected_order_ascending": [
+        "site5",
+        "site6",
+        "site4",
+        "site3",
+        "site2",
+        "site1"
+      ]
+    },
+    {
+      "id": "charge_occupancy",
+      "output_file": "step_02_charge_occupancy.json",
+      "weight": 0.3,
+      "kind": "structural_ordering",
+      "target_policy": "structural_audit",
+      "total_charge_order_descending": [
+        "site1",
+        "site2",
+        "site3",
+        "site4",
+        "site5",
+        "site6"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing from finite-element simulation outputs is infeasible in the checker sandbox; agent-reported scalar values are compared against paper-reported gold with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mrv_size.json": "exact_match",
+    "effective_moduli.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for MRV ratio and effective moduli, sourced from paper Table 2 and Fig. 2 conclusion.",
+      "source_provenance": "Paper DOI 10.1088/1742-6596/1214/1/012006: Table 2 E_eff values (2.0, 1.736, 1.439, 0.971) and Fig.2 conclusion L_f/d=24.",
+      "generation_method": "Direct transcription from the published paper.",
+      "why_not_fabricated": "These are the paper's own published results; we assert no fabrication beyond paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mrv_size.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "L_f_d": "number"
+          }
+        },
+        "description": "The smallest normalized side length L_f/d at which the two-point correlation function of local elastic moduli approaches unity, i.e., the locally representative mesoscopic volume size."
+      },
+      {
+        "file": "effective_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "type",
+            "C_D_percent",
+            "C_d_percent",
+            "E_eff_GPa"
+          ],
+          "units": {
+            "E_eff_GPa": "GPa"
+          }
+        },
+        "description": "Effective Young's modulus for the four pore compositions at the determined MRV size. Four rows, one per model type (1-4)."
+      }
+    ],
+    "notes": "The hidden checker compares the MRV size ratio to the paper-reported value within a tolerance, and the effective moduli to known reference values with a relative tolerance. The solving agent must execute all process steps (model generation and FEM) to obtain the results; the final scores are based solely on these two output artifacts."
+  },
+  "steps": [
+    {
+      "id": "mrv_size",
+      "output_file": "mrv_size.json",
+      "weight": 0.4,
+      "kind": "numeric_comparison",
+      "metric": "L_f_d",
+      "target": 24,
+      "tolerance_abs": 2.0,
+      "description": "MRV size ratio L_f/d from mrv_size.json"
+    },
+    {
+      "id": "effective_moduli",
+      "output_file": "effective_moduli.csv",
+      "weight": 0.6,
+      "kind": "tabular_comparison",
+      "metric": "E_eff_GPa",
+      "gold_by_type": {
+        "1": 2.0,
+        "2": 1.736,
+        "3": 1.439,
+        "4": 0.971
+      },
+      "relative_tolerance": 0.2,
+      "description": "Effective Young's modulus for each pore composition type"
+    }
+  ]
+}

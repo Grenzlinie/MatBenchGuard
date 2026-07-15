@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the full HSA+PTMD pipeline from raw artifacts is infeasible; we compare agent-reported probabilities and melting point to paper gold with tolerances (T0 fallback).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_distribution_Cu90.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature",
+            "Motif",
+            "Probability"
+          ],
+          "columns": {
+            "Temperature": "float (K)",
+            "Motif": "string (one of Ih, Dh, fcc, twin, mix, amorphous)",
+            "Probability": "float between 0 and 1"
+          },
+          "shape": "30 rows (5 temperatures × 6 motifs)"
+        },
+        "description": "CSV file containing the equilibrium motif probabilities at 300, 400, 500, 600, and 609 K."
+      },
+      {
+        "file": "melting_point.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "content": "A single floating-point number representing the melting temperature in Kelvin."
+        },
+        "description": "Text file containing the computed melting point (peak of heat capacity curve)."
+      }
+    ],
+    "notes": "The hidden checker compares the CSV probabilities against digitized reference values from the paper's Fig. 1a and Fig. 3 with an absolute tolerance of 0.1. The melting point is compared to the paper-reported value (609 K) with a tolerance of 20 K. Full credit for all points within tolerance; reward scales with fraction of points within tolerance."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold motif probabilities and melting point for Cu90",
+      "source_provenance": "Digitized from Fig. 1a, Fig. 3, and Table I of the paper Settem et al. (arXiv:2308.07792)",
+      "generation_method": "Values extracted from the published article",
+      "why_not_fabricated": "These are the paper's own reported numbers, exactly matching the reference solver's hardcoded answer."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_3",
+      "output_file": "structural_distribution_Cu90.csv",
+      "kind": "reference_match",
+      "weight": 0.8,
+      "tolerance": 0.1,
+      "gold": {
+        "300": {
+          "Ih": 0.92,
+          "Dh": 0.02,
+          "fcc": 0.0,
+          "twin": 0.02,
+          "mix": 0.04,
+          "amorphous": 0.0
+        },
+        "400": {
+          "Ih": 0.72,
+          "Dh": 0.04,
+          "fcc": 0.0,
+          "twin": 0.04,
+          "mix": 0.2,
+          "amorphous": 0.0
+        },
+        "500": {
+          "Ih": 0.45,
+          "Dh": 0.07,
+          "fcc": 0.0,
+          "twin": 0.08,
+          "mix": 0.4,
+          "amorphous": 0.0
+        },
+        "600": {
+          "Ih": 0.15,
+          "Dh": 0.05,
+          "fcc": 0.0,
+          "twin": 0.05,
+          "mix": 0.712,
+          "amorphous": 0.038
+        },
+        "609": {
+          "Ih": 0.1,
+          "Dh": 0.02,
+          "fcc": 0.0,
+          "twin": 0.03,
+          "mix": 0.6,
+          "amorphous": 0.25
+        }
+      }
+    },
+    {
+      "id": "step_4",
+      "output_file": "melting_point.txt",
+      "kind": "exact_match_with_tolerance",
+      "weight": 0.2,
+      "gold": 609.0,
+      "tolerance": 20.0
+    }
+  ]
+}

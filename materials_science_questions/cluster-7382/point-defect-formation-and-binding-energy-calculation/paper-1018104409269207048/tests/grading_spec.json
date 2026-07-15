@@ -1,0 +1,145 @@
+{
+  "scoring_tier": "T0 (result-level compare)",
+  "scoring_justification": "Cannot recompute diffusion coefficients from raw MD trajectories in the verifier; instead compare reported D and activation energies to the paper's reference values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_diffusion_coefficients.tsv": "reference_match",
+    "step_02_activation_energies.tsv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_diffusion_coefficients.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "temperature_K",
+            "D_cm2_per_s",
+            "D_uncertainty_cm2_per_s"
+          ],
+          "units": {
+            "D_cm2_per_s": "cm^2/s",
+            "D_uncertainty_cm2_per_s": "cm^2/s"
+          }
+        },
+        "description": "Oxygen self‑diffusion coefficient D at each composition and temperature."
+      },
+      {
+        "file": "step_02_activation_energies.tsv",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "region",
+            "E_D_eV",
+            "E_D_uncertainty_eV",
+            "temperature_range_K"
+          ],
+          "units": {
+            "E_D_eV": "eV",
+            "E_D_uncertainty_eV": "eV"
+          }
+        },
+        "description": "Effective activation energy E_D fitted for each diffusion regime and composition."
+      }
+    ],
+    "notes": "The reported diffusion coefficients and activation energies will be compared against the hidden reference values from the source study using appropriate tolerances. Structural trends (e.g., monotonic ordering with composition) are also verified. The MD workflow is stochastic; results are accepted within a tolerance range that accounts for run‑to‑run variability."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference diffusion model parameters and activation energy gold values",
+      "source_provenance": "Paper Table 1 and Figures 2-4; piecewise Arrhenius model consistent with the paper's reported activation energies, D0 constants, and transition temperatures.",
+      "generation_method": "Extracted activation energies, D0, and boundary temperatures from the publication; verified against the analytic model in solution/solve.sh that produces a consistent set of D values.",
+      "why_not_fabricated": "All values are taken from the paper's quantitative results; they are not invented."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01_diffusion",
+      "output_file": "step_01_diffusion_coefficients.tsv",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "model_params": {
+        "PuO2": {
+          "E_II": 1.87,
+          "D0_II": 0.0174,
+          "E_I": 3.47,
+          "D0_I": 973.0,
+          "E_sup": 1.0,
+          "D0_sup": 0.0156,
+          "T_II_I": 1700,
+          "T_I_sup": 2600
+        },
+        "ThO2": {
+          "E_II": 3.15,
+          "D0_II": 0.827,
+          "E_I": 5.24,
+          "D0_I": 50800.0,
+          "E_sup": 1.0,
+          "D0_sup": 0.0106,
+          "T_II_I": 2200,
+          "T_I_sup": 3200
+        },
+        "(Pu0.5Th0.5)O2": {
+          "E_II": 2.11,
+          "D0_II": 0.0899,
+          "E_I": 3.05,
+          "D0_I": 55.1,
+          "E_sup": 1.0,
+          "D0_sup": 0.00583,
+          "T_II_I": 1700,
+          "T_I_sup": 2600
+        }
+      },
+      "tolerance": {
+        "D_gt_1e-7": {
+          "relative": 0.5
+        },
+        "D_le_1e-7": {
+          "log10_abs": 0.5
+        }
+      },
+      "monotonicity_check": true,
+      "mixed_oxide_equivalence_check": true,
+      "mixed_oxide_tolerance_log10": 0.5
+    },
+    {
+      "id": "step_02_activation",
+      "output_file": "step_02_activation_energies.tsv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "activation_gold": {
+        "PuO2": {
+          "superionic": 1.0,
+          "Region_I": 3.47,
+          "Region_II": 1.87
+        },
+        "ThO2": {
+          "superionic": 1.0,
+          "Region_I": 5.24,
+          "Region_II": 3.15
+        },
+        "(Pu0.5Th0.5)O2": {
+          "superionic": 1.0,
+          "Region_I": 3.05,
+          "Region_II": 2.11
+        }
+      },
+      "tolerance_eV": 0.5,
+      "ratio_range": [
+        1.2,
+        1.8
+      ],
+      "puo2_transition_T_gold": 1700,
+      "puo2_transition_T_tolerance_K": 200
+    }
+  ]
+}

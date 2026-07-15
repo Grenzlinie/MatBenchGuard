@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Agent submits final λ and Tc; full recompute from α²F(ω) is not possible without the raw spectral function. Reference match with 20% λ / 30% Tc tolerance is used, supplemented by structural N(EF) monotonicity check.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "N_EF_vs_doping.csv": "structural_audit",
+    "lambda_Tc_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold λ and Tc values for Li0.95Be0.05H, Na0.8Mg0.2H, K0.55Ca0.45H",
+      "source_provenance": "Paper Phys. Rev. B 99, 214504 (2019); λ values: 0.473 (LiBeH), 1.26 (NaMgH), 1.69 (KCaH); Tc values: 2.1 K, 28 K, 49 K. Exact LiBeH λ=0.473 from text.",
+      "generation_method": "extracted from paper's abstract and body",
+      "why_not_fabricated": "these are the paper's reported numbers, matching solve.sh reference"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "N_EF_vs_doping.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "doping_x",
+            "N_EF"
+          ],
+          "units": {
+            "N_EF": "states/eV/atom/spin"
+          }
+        },
+        "description": "Electronic density of states at the Fermi level as a function of alkaline-earth doping for LiBeH, NaMgH, and KCaH alloys. The rows for each system must be in order of increasing doping."
+      },
+      {
+        "file": "lambda_Tc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LiBeH": "object with lambda and Tc",
+            "NaMgH": "object with lambda and Tc",
+            "KCaH": "object with lambda and Tc"
+          },
+          "items": {
+            "lambda": "float",
+            "Tc": "float (K)"
+          }
+        },
+        "description": "Electron-phonon coupling constant λ and superconducting critical temperature Tc (μ* = 0.1) for the three alloys at maximum stable doping."
+      }
+    ],
+    "notes": "The agent must perform all calculations from first principles using an open-source DFT/DFPT code (e.g., Quantum ESPRESSO + EPW). The Eliashberg equations must be solved with Coulomb pseudopotential μ* = 0.1. No external/pre-computed data beyond pseudopotentials is allowed."
+  },
+  "steps": [
+    {
+      "id": "check_N_EF_monotonic",
+      "output_file": "N_EF_vs_doping.csv",
+      "kind": "structural",
+      "description": "Verify that for each alloy system N_EF is 0 at undoped case and increases monotonically with doping",
+      "weight": 0.3,
+      "parameters": {}
+    },
+    {
+      "id": "check_lambda_Tc",
+      "output_file": "lambda_Tc_results.json",
+      "kind": "reference_match",
+      "description": "Compare agent-reported λ and Tc to hidden paper gold with generous relative tolerances (20% for λ, 30% for Tc)",
+      "weight": 0.7,
+      "gold": {
+        "LiBeH": {
+          "lambda": 0.473,
+          "Tc": 2.1
+        },
+        "NaMgH": {
+          "lambda": 1.26,
+          "Tc": 28.0
+        },
+        "KCaH": {
+          "lambda": 1.69,
+          "Tc": 49.0
+        }
+      },
+      "tolerances": {
+        "lambda_rel": 0.2,
+        "Tc_rel": 0.3
+      }
+    }
+  ]
+}

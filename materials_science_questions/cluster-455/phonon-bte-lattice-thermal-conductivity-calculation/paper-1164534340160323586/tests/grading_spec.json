@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The Monte Carlo simulation cannot be recomputed in the verifier; we verify reported ITC values against paper-reported trends and structural consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_thermal_conductivity.json": "reference_match",
+    "itc_vs_defect_concentration.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_thermal_conductivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "GaN",
+            "SiC"
+          ],
+          "properties": {
+            "GaN": {
+              "type": "number",
+              "unit": "W/mK"
+            },
+            "SiC": {
+              "type": "number",
+              "unit": "W/mK"
+            }
+          }
+        },
+        "description": "Computed lattice thermal conductivity of GaN and SiC at 300 K for phonon property validation."
+      },
+      {
+        "file": "itc_vs_defect_concentration.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_concentration",
+            "defect_location",
+            "heat_flux",
+            "temperature_drop",
+            "itc"
+          ],
+          "columns": {
+            "defect_concentration": "float, dimensionless relative concentration",
+            "defect_location": "string: 'GaN', 'SiC', or 'none'",
+            "heat_flux": "float, W/m²",
+            "temperature_drop": "float, K",
+            "itc": "float, W/m²K"
+          }
+        },
+        "description": "CSV file containing simulated interfacial thermal conductance (ITC) values for different defect configurations. Columns: defect_concentration (float), defect_location (string: 'GaN', 'SiC', 'none'), heat_flux (float, W/m²), temperature_drop (float, K), itc (float, W/m²K)."
+      }
+    ],
+    "notes": "The hidden checker will compare the reported bulk thermal conductivity against reference values with tolerance, and for the ITC CSV it will verify the itc = heat_flux / temperature_drop consistency, the monotonic trend (decreasing for GaN defects, increasing for SiC defects), and the percent change at concentration 0.05 compared to the defect-free case."
+  },
+  "steps": [
+    {
+      "id": "bulk_conductivity",
+      "output_file": "bulk_thermal_conductivity.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "description": "Check bulk thermal conductivity of GaN and SiC within tolerance of paper reference values.",
+      "fields": {
+        "GaN": {
+          "gold": 130.0,
+          "tolerance": 0.2
+        },
+        "SiC": {
+          "gold": 370.0,
+          "tolerance": 0.2
+        }
+      }
+    },
+    {
+      "id": "itc_trend",
+      "output_file": "itc_vs_defect_concentration.csv",
+      "weight": 0.8,
+      "kind": "custom",
+      "description": "Check ITC trend with defects: self-consistency, monotonic correlation, and percent change at highest concentration.",
+      "checks": [
+        {
+          "id": "consistency",
+          "weight": 0.1,
+          "tolerance_rel": 0.01
+        },
+        {
+          "id": "monotonicity",
+          "weight": 0.3,
+          "correlation_threshold": 0.8
+        },
+        {
+          "id": "pct_change",
+          "weight": 0.6,
+          "gold_pct_GaN": -54.1,
+          "gold_pct_SiC": 57.2,
+          "tolerance_pct_rel": 0.2
+        }
+      ]
+    }
+  ]
+}

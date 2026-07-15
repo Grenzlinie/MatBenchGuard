@@ -1,0 +1,124 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "Hidden gold consists of paper-reported values; a full recompute from cp data would require embedding the full dataset and implementing an ambiguous baseline selection, so direct comparison with tolerance is used.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold heats of fusion and crystallinity table",
+      "source_provenance": "Paper Table I and Table III; raw values reported in the study.",
+      "generation_method": "Extracted directly from the paper's reported results.",
+      "why_not_fabricated": "Values are the paper's own measured/computed numbers, verifying faithful reproduction accuracy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heats_of_fusion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sample",
+            "delta_h_cal_per_g"
+          ],
+          "units": {
+            "delta_h_cal_per_g": "cal/g"
+          }
+        },
+        "description": "Experimental heat of fusion for the air‑quenched and slow‑cooled polymer samples."
+      },
+      {
+        "file": "crystallinity_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_C",
+            "air_quenched_crystallinity",
+            "slow_cooled_crystallinity"
+          ],
+          "units": {
+            "temperature_C": "°C"
+          }
+        },
+        "description": "Degree of crystallinity (fraction) at selected temperatures between 0°C and 212°C for the two samples."
+      }
+    ],
+    "notes": "All values are computed from the provided specific heat data and the literature pure‑crystal heat of fusion; tolerances accommodate small numerical integration differences."
+  },
+  "steps": [
+    {
+      "id": "heats_check",
+      "output_file": "heats_of_fusion.csv",
+      "kind": "result_compare",
+      "weight": 0.3,
+      "gold": {
+        "samples": {
+          "air-quenched": {
+            "delta_h_cal_per_g": 3.6
+          },
+          "slow-cooled": {
+            "delta_h_cal_per_g": 8.4
+          }
+        }
+      },
+      "tolerance": 0.2,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "crystallinity_check",
+      "output_file": "crystallinity_vs_temperature.csv",
+      "kind": "result_compare",
+      "weight": 0.7,
+      "gold": [
+        {
+          "temperature_C": 0,
+          "air_quenched_crystallinity": 0.35,
+          "slow_cooled_crystallinity": 0.816
+        },
+        {
+          "temperature_C": 50,
+          "air_quenched_crystallinity": 0.345,
+          "slow_cooled_crystallinity": 0.815
+        },
+        {
+          "temperature_C": 100,
+          "air_quenched_crystallinity": 0.342,
+          "slow_cooled_crystallinity": 0.778
+        },
+        {
+          "temperature_C": 150,
+          "air_quenched_crystallinity": 0.38,
+          "slow_cooled_crystallinity": 0.66
+        },
+        {
+          "temperature_C": 190,
+          "air_quenched_crystallinity": 0.37,
+          "slow_cooled_crystallinity": 0.507
+        },
+        {
+          "temperature_C": 200,
+          "air_quenched_crystallinity": 0.295,
+          "slow_cooled_crystallinity": 0.41
+        },
+        {
+          "temperature_C": 210,
+          "air_quenched_crystallinity": 0.03,
+          "slow_cooled_crystallinity": 0.124
+        },
+        {
+          "temperature_C": 212,
+          "air_quenched_crystallinity": 0.0,
+          "slow_cooled_crystallinity": 0.0
+        }
+      ],
+      "tolerance": 0.02,
+      "target_policy": "exact_match"
+    }
+  ]
+}

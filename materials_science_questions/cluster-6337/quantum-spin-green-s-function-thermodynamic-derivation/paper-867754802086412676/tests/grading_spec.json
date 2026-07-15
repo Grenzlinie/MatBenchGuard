@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The relation ε(iκ)=0 is recomputed from the agent's reported Fourier coefficients and ξ, with the complex wavevector κ = qπ + i/ξ. Comparison of ξ to paper reference values is a secondary check. No separate ground truth labels are needed.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference correlation lengths ξ and incommensurate wavevectors q for the five models, extracted from the paper's reported values.",
+      "source_provenance": "Paper Section IV: BLBQ β=0 ξ=6.03; β=1/3 ξ=0.910; β=0.6 ξ=3.87, q=0.678; zigzag α=0.48 ξ=5.68; α=0.6 ξ=4.26, q=0.367.",
+      "generation_method": "Direct extraction from the paper text.",
+      "why_not_fabricated": "These are the actual paper-reported results that a correct reproduction should match."
+    }
+  ],
+  "target_policies": {
+    "results.json": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "models": "array"
+          },
+          "items": {
+            "model": "string (model identifier, e.g., 'BLBQ_beta_0', 'BLBQ_beta_1_3', 'BLBQ_beta_0.6', 'zigzag_alpha_0.48', 'zigzag_alpha_0.6')",
+            "xi": "float (correlation length)",
+            "q_in_units_of_pi": "float (incommensurate wavevector in units of π; 1.0 if commensurate)",
+            "fourier_coefficients_A_n": "array of floats (A_0, A_1, ..., A_N)"
+          }
+        },
+        "description": "For each model the ground-state correlation length xi, incommensurate wavevector q (in units of π), and the Fourier cosine coefficients A_n of d(k)=ε(k)^2. The checker reconstructs d(k) from the reported coefficients, evaluates |ε(iκ)| where κ = (q*π) + i/xi, and checks it against a tolerance; it also compares xi to a hidden reference value."
+      }
+    ],
+    "notes": "The checker recomputes the relation ε(iκ)=0 from the reported A_n and xi, checks that |ε(iκ)| is below a tolerance, and compares the reported xi to a paper-derived reference with a relative tolerance. The final reward is a weighted average of per-model scores, with the largest weight on the relation residual and a secondary weight on xi accuracy."
+  },
+  "steps": [
+    {
+      "id": "model_BLBQ_beta_0",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "custom_recompute_relation",
+      "model_name": "BLBQ_beta_0",
+      "reference_xi": 6.03,
+      "reference_q": 1.0,
+      "tolerance_relation": 0.02,
+      "tolerance_xi_rel": 0.01,
+      "decay_relation_scale": 0.1,
+      "decay_xi_rel_scale": 0.2,
+      "weight_relation": 0.7,
+      "weight_xi": 0.3
+    },
+    {
+      "id": "model_BLBQ_beta_1_3",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "custom_recompute_relation",
+      "model_name": "BLBQ_beta_1_3",
+      "reference_xi": 0.91,
+      "reference_q": 1.0,
+      "tolerance_relation": 0.02,
+      "tolerance_xi_rel": 0.01,
+      "decay_relation_scale": 0.1,
+      "decay_xi_rel_scale": 0.2,
+      "weight_relation": 0.7,
+      "weight_xi": 0.3
+    },
+    {
+      "id": "model_BLBQ_beta_0.6",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "custom_recompute_relation",
+      "model_name": "BLBQ_beta_0.6",
+      "reference_xi": 3.87,
+      "reference_q": 0.678,
+      "tolerance_relation": 0.02,
+      "tolerance_xi_rel": 0.01,
+      "decay_relation_scale": 0.1,
+      "decay_xi_rel_scale": 0.2,
+      "weight_relation": 0.7,
+      "weight_xi": 0.3
+    },
+    {
+      "id": "model_zigzag_alpha_0.48",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "custom_recompute_relation",
+      "model_name": "zigzag_alpha_0.48",
+      "reference_xi": 5.68,
+      "reference_q": 1.0,
+      "tolerance_relation": 0.02,
+      "tolerance_xi_rel": 0.01,
+      "decay_relation_scale": 0.1,
+      "decay_xi_rel_scale": 0.2,
+      "weight_relation": 0.7,
+      "weight_xi": 0.3
+    },
+    {
+      "id": "model_zigzag_alpha_0.6",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "custom_recompute_relation",
+      "model_name": "zigzag_alpha_0.6",
+      "reference_xi": 4.26,
+      "reference_q": 0.367,
+      "tolerance_relation": 0.02,
+      "tolerance_xi_rel": 0.01,
+      "decay_relation_scale": 0.1,
+      "decay_xi_rel_scale": 0.2,
+      "weight_relation": 0.7,
+      "weight_xi": 0.3
+    }
+  ]
+}

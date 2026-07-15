@@ -1,0 +1,168 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The main results (peak PF, ZT, ring energies) are produced by expensive DFT+transport calculations that cannot be repeated in the verifier sandbox. The agent self-reports the computed quantities; the checker compares against the paper's published values with tolerances. This is the strongest feasible tier for this compute-driven paper.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "te_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference peak power factor, ZT, and ring/moat energies from the paper, used as hidden gold for result comparison.",
+      "source_provenance": "Paper main figures (Figs. 3,5,7,9) and text descriptions of ring/moat energies.",
+      "generation_method": "Values extracted from the paper and verified against the reference solve.sh oracle. The specific values are inline in grading_spec_json.",
+      "why_not_fabricated": "Values are the paper's reported numeric results for the exact same quantities; they are not invented."
+    }
+  ],
+  "gold_pf": {
+    "1QL Bi2Te3|cmfp": 14.5,
+    "1QL Bi2Te3|crt": 12.0,
+    "1QL Bi2Te3|dos": 32.0,
+    "1QL Bi2Se3|cmfp": 18.0,
+    "1QL Bi2Se3|crt": 15.0,
+    "1QL Bi2Se3|dos": 38.0,
+    "1QL Sb2Te3|cmfp": 16.0,
+    "1QL Sb2Te3|crt": 14.0,
+    "1QL Sb2Te3|dos": 7.0,
+    "2QL Bi2Te3|cmfp": 8.0,
+    "2QL Bi2Te3|crt": 7.0,
+    "2QL Bi2Te3|dos": 5.0,
+    "2QL Bi2Se3|cmfp": 3.0,
+    "2QL Bi2Se3|crt": 2.5,
+    "2QL Bi2Se3|dos": 1.2,
+    "2QL Sb2Te3|cmfp": 2.0,
+    "2QL Sb2Te3|crt": 1.8,
+    "2QL Sb2Te3|dos": 0.8
+  },
+  "gold_zt": {
+    "1QL Bi2Te3|cmfp": 1.8,
+    "1QL Bi2Te3|crt": 1.5,
+    "1QL Bi2Te3|dos": 3.5,
+    "1QL Bi2Se3|cmfp": 2.0,
+    "1QL Bi2Se3|crt": 1.7,
+    "1QL Bi2Se3|dos": 3.8,
+    "1QL Sb2Te3|cmfp": 2.2,
+    "1QL Sb2Te3|crt": 1.9,
+    "1QL Sb2Te3|dos": 0.8,
+    "2QL Bi2Te3|cmfp": 0.6,
+    "2QL Bi2Te3|crt": 0.5,
+    "2QL Bi2Te3|dos": 0.3,
+    "2QL Bi2Se3|cmfp": 0.2,
+    "2QL Bi2Se3|crt": 0.15,
+    "2QL Bi2Se3|dos": 0.08,
+    "2QL Sb2Te3|cmfp": 0.15,
+    "2QL Sb2Te3|crt": 0.12,
+    "2QL Sb2Te3|dos": 0.05
+  },
+  "ring_gold": {
+    "1QL Bi2Te3": {
+      "inner_ring_energy": 0.0,
+      "outer_ring_energy": 0.0,
+      "moat_energy": -0.05
+    },
+    "1QL Bi2Se3": {
+      "inner_ring_energy": -0.03,
+      "outer_ring_energy": 0.0,
+      "moat_energy": -0.12
+    },
+    "1QL Sb2Te3": {
+      "inner_ring_energy": 0.0,
+      "outer_ring_energy": -0.03,
+      "moat_energy": -0.05
+    }
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "te_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "material",
+              "scattering",
+              "peak_pf",
+              "peak_zt",
+              "fermi_level"
+            ],
+            "properties": {
+              "material": {
+                "type": "string"
+              },
+              "scattering": {
+                "type": "string",
+                "enum": [
+                  "cmfp",
+                  "crt",
+                  "dos"
+                ]
+              },
+              "peak_pf": {
+                "type": "number",
+                "unit": "W/m-K²"
+              },
+              "peak_zt": {
+                "type": "number",
+                "unit": "dimensionless"
+              },
+              "fermi_level": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "inner_ring_energy": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "outer_ring_energy": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "moat_energy": {
+                "type": "number",
+                "unit": "eV"
+              }
+            }
+          }
+        },
+        "description": "Array of objects, one per (material, scattering) pair. Each object reports the peak power factor (peak_pf), peak ZT (peak_zt), and the Fermi level at which they occur. For single quintuple-layer materials, the energies of the inner ring, outer ring, and moat relative to the valence-band edge are additionally provided (may be null for double quintuple-layer materials)."
+      }
+    ],
+    "notes": "The agent must compute scattering parameters so that the average mean free path for backscattering equals 20 nm at the respective band edge. The checker will compare peak_pf against a hidden lower bound (paper value −15%), peak_zt against a hidden lower bound (paper value −10%), and ring/moat energies within ±0.01 eV of hidden references. Relative ordering of PF across scattering models will also be verified."
+  },
+  "steps": [
+    {
+      "id": "pf_compare",
+      "output_file": "te_results.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "tolerance": 0.15,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "zt_compare",
+      "output_file": "te_results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "tolerance": 0.1,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "ring_energies",
+      "output_file": "te_results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "tolerance": 0.01,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "pf_ordering",
+      "output_file": "te_results.json",
+      "weight": 0.2,
+      "kind": "structural"
+    }
+  ]
+}

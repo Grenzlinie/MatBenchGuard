@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The theoretical curve for a*(T) can be recomputed from the same discrete-level model with known parameters (Δ=3.5 meV, 10 equal-spacing levels, Nₑ=10) and compared pointwise against the agent’s CSV. No external hidden labels are needed.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "corrected_cell_parameter.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "a_star_Angstrom",
+            "1_over_a_star_Angstrom-1"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "a_star_Angstrom": "Å",
+            "1_over_a_star_Angstrom-1": "Å⁻¹"
+          }
+        },
+        "description": "CSV file with three columns: temperature_K (float), a_star_Angstrom (float), 1_over_a_star_Angstrom-1 (float). The hidden checker will recompute the expected theoretical curve using the same model and compare relative errors and structural features (minimum location, trend signs)."
+      }
+    ],
+    "notes": "The electronic correction step requires determining the proportionality between δa and dU_v/dR. The agent should use a physically motivated estimate (e.g., derived from the bulk modulus of Au) to obtain a reasonable a*(T) curve."
+  },
+  "steps": [
+    {
+      "id": "csv_recompute",
+      "output_file": "corrected_cell_parameter.csv",
+      "weight": 1.0,
+      "kind": "recompute_curve",
+      "target_policy": "metric_recompute",
+      "rel_error_tol": 0.1,
+      "min_temp_nominal": 125,
+      "min_temp_tolerance_low": 110,
+      "min_temp_tolerance_high": 140,
+      "low_temp_range": [
+        0,
+        100
+      ],
+      "high_temp_range": [
+        150,
+        390
+      ],
+      "trend_sign_low": "positive_expansion"
+    }
+  ]
+}

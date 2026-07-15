@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts min ΔE_ads per fragment from agent CSV and compares to paper-reported best values with tolerance; also checks S/D values directly. All gold is inline.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "adsorption_energies.csv": "threshold_or_better",
+    "hole_electron_metrics.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference best adsorption energies and hole-electron metrics from the paper",
+      "source_provenance": "Paper main text Fig. 6a and Supplementary Fig. 17-19; solve.sh derived constants",
+      "generation_method": "Extracted from paper: best ΔE_ads: PY-DHBD -8.96, PY-BPY -6.72, PY-BP -5.83 kcal/mol; S: 0.53/0.53/0.27; D: 1.27/0.00/0.55 Å",
+      "why_not_fabricated": "Values taken directly from the paper's reported numbers and the reference oracle's hardcoded artifacts that match the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Fragment",
+            "Site",
+            "DeltaE_ads_kcal_mol"
+          ],
+          "units": {
+            "DeltaE_ads_kcal_mol": "kcal/mol"
+          }
+        },
+        "description": "Adsorption energies of PtCl6^2- on PY-DHBD-COF, PY-BPY-COF, and PY-BP-COF fragment models at three binding sites each. The row with the most negative DeltaE_ads per Fragment is the best site."
+      },
+      {
+        "file": "hole_electron_metrics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Fragment",
+            "State",
+            "S",
+            "D"
+          ],
+          "units": {
+            "S": "dimensionless",
+            "D": "Angstrom"
+          }
+        },
+        "description": "Hole-electron overlap integral S and centroid distance D for the S1 excited state of each COF fragment."
+      }
+    ],
+    "notes": "Scoring compares the most negative adsorption energy per fragment and the S/D values against hidden reference values. Meeting or exceeding the reference accuracy (i.e., more negative adsorption or stronger hole-electron separation) earns full credit."
+  },
+  "steps": [
+    {
+      "id": "adsorption_energies_check",
+      "output_file": "adsorption_energies.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "gold_best": {
+        "PY_DHBD_COF": -8.96,
+        "PY_BPY_COF": -6.72,
+        "PY_BP_COF": -5.83
+      },
+      "tolerance_abs": 0.5,
+      "decay_range": 3.0
+    },
+    {
+      "id": "hole_electron_check",
+      "output_file": "hole_electron_metrics.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "gold_S": {
+        "PY_DHBD_COF": 0.53,
+        "PY_BPY_COF": 0.27,
+        "PY_BP_COF": 0.53
+      },
+      "gold_D": {
+        "PY_DHBD_COF": 1.27,
+        "PY_BPY_COF": 0.0,
+        "PY_BP_COF": 0.55
+      },
+      "tolerance_S": 0.05,
+      "tolerance_D": 0.2,
+      "decay_S_range": 0.3,
+      "decay_D_range": 0.5
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare input data and compute auxiliary quantities",
+    "role": "process",
+    "action": "Compile the experimental heat capacity C_p(T) (180‑700 K), the three linear thermal expansion coefficients α_a(T), α_b(T), α_c(T) (300‑1100 K), the molar volume V_m, and the elastic stiffness constants c_ij from the published references. Compute the isothermal compressibility κ from the elastic compliance constants s_ij. Estimate the low‑temperature Debye temperature Θ₀ using Anderson’s approximation with the elastic constants.",
+    "output_file": "",
+    "evidence": "data_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gather all required literature values and compute derived constants (κ, Θ₀).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Convert heat capacity to constant volume and compute effective Debye temperature",
+    "role": "process",
+    "action": "Convert C_p(T) to C_V(T) using C_V = C_p − (α_V² V_m T)/κ, where α_V = α_a + α_b + α_c. For each temperature, invert the Debye function C_V = 12R F(Θ_D/T) to obtain the effective Debye temperature Θ_D(T).",
+    "output_file": "",
+    "evidence": "debye_temperature.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Derive the experimental effective Debye temperature Θ_D(T) from published data.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Fit high‑temperature expansion to obtain spectral moments and Θ∞",
+    "role": "scored",
+    "action": "Restrict the Θ_D data to temperatures below 250 K where anharmonicity is negligible. Fit Θ_D² vs 1/T² to the expansion Θ_D² = Θ∞² [1 − A (Θ∞/T)² + B (Θ∞/T)⁴] to extract Θ∞, A, B. Compute μ₂ from Θ∞ using the relation μ₂ = (3/5)(k Θ∞ / h)². Derive μ₄ and μ₆ from A and B using the algebraic relations A = (3/100)(μ₄/μ₂² − 25/21) and B = (1/1400)(μ₆/μ₂³ − 125/81 − 100A). Save μ₂, μ₄, μ₆, and Θ∞ in a JSON file.",
+    "output_file": "step_04_moments_theta_inf.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "First three even spectral moments of the phonon density of states and the high‑temperature Debye temperature.",
+    "output_schema": "JSON object with keys: \"mu2\" (s⁻²), \"mu4\" (s⁻⁴), \"mu6\" (s⁻⁶), \"theta_inf\" (K)."
+  },
+  {
+    "id": "step_04",
+    "title": "Extrapolate harmonic heat capacity C_Vh(T)",
+    "role": "process",
+    "action": "Using Θ∞, A, B, compute Θ_D(T) for all temperatures via the expansion, then evaluate the harmonic heat capacity C_Vh(T) = 12R F(Θ_D/T).",
+    "output_file": "",
+    "evidence": "harmonic_cv.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute the harmonic background needed to isolate the anharmonic contribution.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Determine anharmonic heat‑capacity coefficients",
+    "role": "scored",
+    "action": "Compute ΔC_V(T) = C_V(T) − C_Vh(T) and the relative anharmonic contribution ΔC_V/C_Vh. Fit the relative contribution to a model ΔC_V/C_Vh = b₁ T + b₂ T² using least squares. Save b₁ and b₂ in a JSON file.",
+    "output_file": "step_06_anharmonic_coefficients.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Anharmonic coefficients b₁ (K⁻¹) and b₂ (K⁻²) from the relative anharmonic contribution.",
+    "output_schema": "JSON object with keys: \"b1\" (K⁻¹), \"b2\" (K⁻²)."
+  },
+  {
+    "id": "step_06",
+    "title": "Calculate macroscopic Grüneisen functions",
+    "role": "scored",
+    "action": "Using the elastic stiffness constants c_ij, the thermal expansion coefficients α_a,α_b,α_c, the molar volume V_m, and the experimental C_V(T), compute the principal Grüneisen functions γ_i = (c_{i1}α_a + c_{i2}α_b + c_{i3}α_c) V_m / C_V for i=a,b,c, and the volume Grüneisen function γ as the weighted average of γ_i with the linear compressibilities. Output a CSV file for temperatures T = 300, 350, 400, 450, 500, 550, 600, 650, 700 K, with columns T, gamma_a, gamma_b, gamma_c, gamma_volume.",
+    "output_file": "step_07_gruneisen_functions.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Principal and volume Grüneisen functions at selected temperatures.",
+    "output_schema": "CSV file with header: T,gamma_a,gamma_b,gamma_c,gamma_volume. Each row contains a temperature (K) and four float values."
+  }
+]

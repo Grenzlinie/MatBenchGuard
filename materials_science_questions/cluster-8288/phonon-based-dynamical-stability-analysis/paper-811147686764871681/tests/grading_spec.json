@@ -1,0 +1,190 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The paper reports qualitative claims (Dirac cone, stability, gap under shear) without exact numeric tables; we recompute structural descriptors from the raw artifacts and compare against generous thresholds derived from those claims.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_band_structure.json": "structural_audit",
+    "step_02_phonon_dispersion.json": "structural_audit",
+    "step_03_strain_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Threshold values for Dirac gap, phonon minima, and band gap under strain/shear.",
+      "source_provenance": "Paper conclusions: Dirac cone with no gap, dynamical stability, gap closes under uniform strain and opens under shear.",
+      "generation_method": "Set generous tolerances (0.2 eV Dirac gap, non‑negative phonon frequencies, uniform gap <0.2 eV, shear gap >0.01 eV) to absorb toolchain variation while demanding the correct physical trend.",
+      "why_not_fabricated": "These thresholds directly reflect the paper's own reported behaviour, not arbitrary numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "kpoints",
+            "fermi_energy",
+            "path"
+          ],
+          "properties": {
+            "kpoints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kpoint": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "labels": {
+                    "type": "string"
+                  },
+                  "eigenvalues": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "fermi_energy": {
+              "type": "number"
+            },
+            "path": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Computed Kohn-Sham band energies and Fermi energy; used to verify Dirac cone existence and linear dispersion."
+      },
+      {
+        "file": "step_02_phonon_dispersion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "qpoints",
+            "path"
+          ],
+          "properties": {
+            "qpoints": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "qpoint": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "labels": {
+                    "type": "string"
+                  },
+                  "frequencies_THz": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "path": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Phonon frequencies along high-symmetry path; used to verify dynamical stability (absence of imaginary modes)."
+      },
+      {
+        "file": "step_03_strain_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "uniform_strain",
+            "shear_strain"
+          ],
+          "properties": {
+            "uniform_strain": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "strain_percent": {
+                    "type": "number"
+                  },
+                  "biaxial": {
+                    "type": "boolean"
+                  },
+                  "band_gap_eV": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "shear_strain": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "theta_deg": {
+                    "type": "number"
+                  },
+                  "band_gap_eV": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Band gap at Dirac point under uniform strain (-3% to +5%) and shear (θ=80°-100°); used to verify gap closure under strain and gap opening under shear."
+      }
+    ],
+    "notes": "All scored artifacts are recomputed from first-principles DFT simulations. The checker verifies Dirac cone features, dynamical stability (no imaginary phonon modes), and band gap trends under strain and shear."
+  },
+  "steps": [
+    {
+      "id": "band_structure",
+      "output_file": "step_01_band_structure.json",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "params": {
+        "dirac_gap_threshold_eV": 0.2
+      }
+    },
+    {
+      "id": "phonon_dispersion",
+      "output_file": "step_02_phonon_dispersion.json",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "params": {
+        "min_frequency_threshold": -1e-06
+      }
+    },
+    {
+      "id": "strain_results",
+      "output_file": "step_03_strain_results.json",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "params": {
+        "uniform_gap_max_eV": 0.2,
+        "shear_gap_min_eV": 0.01,
+        "shear_angle_tolerance_deg": 1.0
+      }
+    }
+  ]
+}

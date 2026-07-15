@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The energy curves allow a recompute of derived properties (zero‑field splitting and anticrossing positions) directly from the raw CSV table; the N0α value is compared to the paper’s reported exchange parameter.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_energies_vs_B.csv": "reference_match",
+    "step_02_fitted_N0alpha.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Zero‑field spin‑flip energy (0.19 meV) and anticrossing magnetic field positions (1.5 T, 8.0 T) for Cd1‑xCrxS with x=0.00235, N0α=0.22 eV, taken from the paper’s Fig. 10.",
+      "source_provenance": "Paper Fig. 10 and surrounding discussion (zero‑field energy described in Sec. II C, anticrossings visible in the figure and quantified in the text).",
+      "generation_method": "Digitized from the published figure and verified against the paper’s written description; the N0α gold is the paper’s explicitly reported +0.22 eV.",
+      "why_not_fabricated": "These are the exact values reported in the source paper for the specific material and conditions; they are the target of the reproduction. The tolerances (±0.02 meV, ±0.3 T, ±0.02 eV) accommodate legitimate differences in computational implementation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energies_vs_B.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_T",
+            "E_L1_meV",
+            "E_L2_meV"
+          ],
+          "units": {
+            "B_T": "T",
+            "E_L1_meV": "meV",
+            "E_L2_meV": "meV"
+          }
+        },
+        "description": "L1 and L2 BMP energy levels vs B. The checker compares these curves to hidden theoretical reference curves derived from the paper's Fig. 10, using tolerances on zero-field splitting, anticrossing field positions, and overall RMS deviation."
+      },
+      {
+        "file": "step_02_fitted_N0alpha.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single line containing a floating-point number in eV."
+        },
+        "description": "Best-fit s-d exchange parameter N0α. Checker verifies that the reported value is within ±0.02 eV of the paper's reported value (+0.22 eV)."
+      }
+    ],
+    "notes": "The agent is expected to fetch the crystal-field parameters from the referenced public papers and extract the experimental SFRS data from the Twardowski et al. publication. No hidden assets are required beyond those public resources."
+  },
+  "steps": [
+    {
+      "id": "energy_vs_B",
+      "output_file": "step_01_energies_vs_B.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "metrics": [
+        {
+          "name": "zero_field_splitting",
+          "type": "abs_diff",
+          "columns": [
+            "E_L1_meV"
+          ],
+          "row_condition": {
+            "B_T": 0.0
+          },
+          "gold": 0.19,
+          "tolerance": 0.02,
+          "sub_weight": 0.5
+        },
+        {
+          "name": "anticrossing_positions",
+          "type": "anticrossing_field",
+          "gold_positions": [
+            1.5,
+            8.0
+          ],
+          "tolerance_T": 0.3,
+          "sub_weight": 0.5
+        }
+      ]
+    },
+    {
+      "id": "fitted_N0alpha",
+      "output_file": "step_02_fitted_N0alpha.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold": 0.22,
+      "tolerance": 0.02
+    }
+  ]
+}

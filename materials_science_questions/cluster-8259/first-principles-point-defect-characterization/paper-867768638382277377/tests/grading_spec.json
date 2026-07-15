@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Transition levels and optical energies cannot be recomputed from the agent's total_energies alone without the bulk VBM; hence we compare agent-reported values to paper's Table II/III with tolerance.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold transition levels and optical energies and valence strings",
+      "source_provenance": "Paper Table II and Table III and text",
+      "generation_method": "Extracted from the paper's published values",
+      "why_not_fabricated": "Derived from the paper's reported numbers; they are the target of the reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduction_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energies": "object mapping Ln symbol to charge state keys, values objects with keys total_energy_eV (eV) and geometry (string)",
+            "transition_levels": "object mapping Ln to keys epsilon_plus_over_0 (eV or null) and epsilon_0_over_minus (eV or null)",
+            "optical_transitions": "object mapping Ln (Ce, Eu) to keys absorption_eV, emission_eV, relaxation_energy_excited_eV, relaxation_energy_ground_eV (all eV)",
+            "valence_summary": "object mapping Ln to a string describing stable valence states (e.g., '3+', '3+/4+', '3+/2+')"
+          }
+        },
+        "description": "Full reproduction data: total energies, derived transition levels, optical energies, and valence assignments."
+      }
+    ],
+    "notes": "Transition levels and optical energies are derived from the provided total energies; checker will recompute and compare to hidden references with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "transition_levels_check",
+      "output_file": "reproduction_results.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target_policy": "threshold_or_better",
+      "parameters": {
+        "gold": {
+          "La": {
+            "epsilon_plus_over_0": 0.47,
+            "epsilon_0_over_minus": null
+          },
+          "Ce": {
+            "epsilon_plus_over_0": 2.37,
+            "epsilon_0_over_minus": null
+          },
+          "Eu": {
+            "epsilon_plus_over_0": 0.21,
+            "epsilon_0_over_minus": 3.1
+          },
+          "Yb": {
+            "epsilon_plus_over_0": null,
+            "epsilon_0_over_minus": 3.48
+          },
+          "Lu": {
+            "epsilon_plus_over_0": null,
+            "epsilon_0_over_minus": null
+          }
+        },
+        "tolerance_abs_eV": 0.2
+      }
+    },
+    {
+      "id": "optical_transitions_check",
+      "output_file": "reproduction_results.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "threshold_or_better",
+      "parameters": {
+        "gold": {
+          "Ce": {
+            "absorption_eV": 1.7,
+            "emission_eV": 0.69
+          },
+          "Eu": {
+            "absorption_eV": 3.93,
+            "emission_eV": 2.67
+          }
+        },
+        "tolerance_abs_eV": 0.3
+      }
+    },
+    {
+      "id": "valence_summary_check",
+      "output_file": "reproduction_results.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "parameters": {
+        "gold": {
+          "La": "3+",
+          "Ce": "3+/4+",
+          "Eu": "3+/2+",
+          "Yb": "3+/2+",
+          "Lu": "3+"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Recomputing DFT energies from raw log files is infeasible in the verifier sandbox; the checker compares the agent's reported computed properties to the paper's hidden reference values within established tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "antioxidant_properties.json": "exact_match",
+    "fedor_analysis.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported BDE, IE, EA, HOMO, LUMO for six compounds (Tables 2, 3 and Figure 7), plus derived RIE/REA and best antioxidant compound, used as hidden gold for comparison.",
+      "source_provenance": "RSC Advances paper DOI:10.1039/d0ra00903b, Tables 2 and 3, Figure 7",
+      "generation_method": "Values extracted from published tables and figures. RIE and REA computed from those values using public reference values (IE_Na=118.5, EA_F=78.4).",
+      "why_not_fabricated": "All numbers are the paper's own reported computational results for the specified level of theory; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "antioxidant_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "PANI-L",
+            "PANI-E",
+            "C60-L1",
+            "C60-L2",
+            "C60-E1",
+            "C60-E2"
+          ],
+          "description": "Each key is a compound name. Value is an object with: 'bde' (list of floats; kcal/mol), 'adiabatic_IE' (float; kcal/mol), 'adiabatic_EA' (float; kcal/mol), 'HOMO_energy' (float; eV), 'LUMO_energy' (float; eV)."
+        },
+        "description": "Antioxidant thermochemical properties and frontier orbital energies computed at B3LYP/6-311++G(d,p)//B3LYP/6-31G(d) level for six polyaniline and polyaniline-fullerene compounds."
+      },
+      {
+        "file": "fedor_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "compounds",
+            "best_antioxidant"
+          ],
+          "description": "'compounds' is an object with compound name keys, each containing 'RIE' (float) and 'REA' (float). 'best_antioxidant' is a string naming the compound in the best antioxidant sector."
+        },
+        "description": "Full‑electron donor–acceptor map indices derived from IE/EA, plus identification of the best antioxidant compound."
+      }
+    ],
+    "notes": "The hidden checker compares the reported BDE, IE, EA, HOMO, LUMO, RIE, REA, and best_antioxidant against the paper's reported values with appropriate tolerances. Only typical chemical accuracy is expected; differences arising from the choice of open‑source DFT implementation are absorbed by the tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_04",
+      "output_file": "antioxidant_properties.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target_policy": "exact_match",
+      "comparison": "field_by_field",
+      "tolerances": {
+        "bde": 1.0,
+        "adiabatic_IE": 1.0,
+        "adiabatic_EA": 1.0,
+        "HOMO_energy": 0.05,
+        "LUMO_energy": 0.05
+      },
+      "gold": {
+        "PANI-L": {
+          "bde": [
+            85.09,
+            78.04,
+            78.1,
+            79.92
+          ],
+          "adiabatic_IE": 130.36,
+          "adiabatic_EA": 0.58,
+          "HOMO_energy": -4.64,
+          "LUMO_energy": -1.21
+        },
+        "PANI-E": {
+          "bde": [
+            86.83,
+            78.66
+          ],
+          "adiabatic_IE": 140.74,
+          "adiabatic_EA": 45.62,
+          "HOMO_energy": -5.13,
+          "LUMO_energy": -2.87
+        },
+        "C60-L1": {
+          "bde": [
+            81.85,
+            78.14,
+            78.31,
+            80.21
+          ],
+          "adiabatic_IE": 130.98,
+          "adiabatic_EA": 65.1,
+          "HOMO_energy": -4.71,
+          "LUMO_energy": -3.78
+        },
+        "C60-L2": {
+          "bde": [
+            89.78,
+            79.75,
+            81.14
+          ],
+          "adiabatic_IE": 133.97,
+          "adiabatic_EA": 61.74,
+          "HOMO_energy": -4.84,
+          "LUMO_energy": -3.68
+        },
+        "C60-E1": {
+          "bde": [
+            83.86,
+            78.93
+          ],
+          "adiabatic_IE": 140.56,
+          "adiabatic_EA": 66.46,
+          "HOMO_energy": -5.26,
+          "LUMO_energy": -4.01
+        },
+        "C60-E2": {
+          "bde": [
+            90.88
+          ],
+          "adiabatic_IE": 143.84,
+          "adiabatic_EA": 65.18,
+          "HOMO_energy": -5.39,
+          "LUMO_energy": -3.9
+        }
+      }
+    },
+    {
+      "id": "step_05",
+      "output_file": "fedor_analysis.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "comparison": "computed_rie_rea_and_best",
+      "tolerance": 0.01,
+      "reference_ie_na": 118.5,
+      "reference_ea_f": 78.4,
+      "gold": {
+        "compounds": {
+          "PANI-L": {
+            "RIE": 1.1,
+            "REA": 0.0074
+          },
+          "PANI-E": {
+            "RIE": 1.1878,
+            "REA": 0.5819
+          },
+          "C60-L1": {
+            "RIE": 1.1053,
+            "REA": 0.8304
+          },
+          "C60-L2": {
+            "RIE": 1.1305,
+            "REA": 0.7875
+          },
+          "C60-E1": {
+            "RIE": 1.1862,
+            "REA": 0.8477
+          },
+          "C60-E2": {
+            "RIE": 1.214,
+            "REA": 0.8314
+          }
+        },
+        "best_antioxidant": "C60-L1"
+      }
+    }
+  ]
+}

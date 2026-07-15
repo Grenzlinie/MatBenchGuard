@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Generate initial slab models",
+    "role": "process",
+    "action": "Construct 96-atom ZnO wurtzite supercells for the polar (0001) surface (3a×2b×4c) and non-polar (10-10) surface (4a×2b×3c). Substitute two Ni atoms at Zn sites to create three defect configurations per surface: bulk (both Ni in interior sites), surface (both Ni on nearest-neighbor surface sites), and mixed (one Ni interior, one surface). Output the initial atomic coordinates for all six models.",
+    "output_file": "",
+    "evidence": "slab_models.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates input structures for the DFT calculations. The evidence file is an archive of the initial coordinates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Validate pseudopotentials on bulk Ni",
+    "role": "process",
+    "action": "Perform a DFT calculation on bulk fcc Ni to compute the magnetic moment per Ni atom, confirming that the pseudopotential yields a value close to the known experimental value (approx. 0.4–0.5 μB/Ni). Record the magnetic moment.",
+    "output_file": "",
+    "evidence": "bulk_ni_magnetic_moment.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Reference check of the method against a known experimental value; not scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Run DFT relaxations for all defect configurations",
+    "role": "process",
+    "action": "For each of the six slab models, perform spin-polarized DFT calculations (GGA-PBE) using an open-source plane-wave pseudopotential code. For each configuration, run two calculations: one with ferromagnetic (FM) spin coupling and one with antiferromagnetic (AFM) alignment of the Ni atoms. Fully relax atomic positions. Use parameters consistent with the method (plane-wave cutoff, k-point grids). Record total energies, total magnetic moments, magnetic moments on each Ni atom, and the density of states (DOS). Save the relaxed structures and the numerical data needed for subsequent steps.",
+    "output_file": "",
+    "evidence": "dft_output.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core DFT calculations producing all raw quantities required for the scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute summary results for all configurations",
+    "role": "scored",
+    "action": "From the DFT total energies, compute for each defect configuration: (1) the relative energy Er (eV) referenced to the polar surface defect ground state (that configuration has Er = 0), (2) the energy difference ΔE = E_AFM − E_FM (meV), (3) the total magnetic moment (μB) in the ground state, (4) the magnetic moments of the two Ni ions, and (5) the magnetic ground state (FM or AFM). Also indicate whether the configuration exhibits half-metallic character based on the DOS. Save all results in a single JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated reproduction of the main tabulated results. The included total energies allow independent recomputation of Er and ΔE.",
+    "output_schema": "JSON object with top-level keys: 'polar_bulk', 'polar_surface', 'polar_mixed', 'nonpolar_bulk', 'nonpolar_surface', 'nonpolar_mixed'. Each value is an object with fields: total_energy_FM (number, eV), total_energy_AFM (number, eV), Er_eV (number, eV), ΔE_meV (number, meV), total_magnetic_moment_muB (number, μB), magnetic_moment_Ni1_muB (number, μB), magnetic_moment_Ni2_muB (number, μB), ground_state (string, one of 'FM' or 'AFM'), half_metallic (boolean)."
+  },
+  {
+    "id": "step_05",
+    "title": "Extract DOS for non-polar bulk defect",
+    "role": "scored",
+    "action": "For the non-polar (10-10) bulk defect configuration, extract the total density of states around the Fermi level from the DFT output and save as a three-column TSV file (Energy, DOS_up, DOS_down). The energy range should cover at least -5 to 5 eV relative to the Fermi level.",
+    "output_file": "dos_nonpolar_bulk.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "DOS data for verifying half-metallic behavior in the non-polar bulk defect configuration.",
+    "output_schema": "TSV file with header: Energy(eV), DOS_up, DOS_down. Energy grid spacing no larger than 0.1 eV."
+  },
+  {
+    "id": "step_06",
+    "title": "Extract DOS for non-polar surface defect",
+    "role": "scored",
+    "action": "Extract the total DOS for the non-polar (10-10) surface defect configuration.",
+    "output_file": "dos_nonpolar_surface.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "DOS data for verifying half-metallic behavior in the non-polar surface defect configuration.",
+    "output_schema": "Same format as dos_nonpolar_bulk.dat."
+  },
+  {
+    "id": "step_07",
+    "title": "Extract DOS for non-polar mixed defect",
+    "role": "scored",
+    "action": "Extract the total DOS for the non-polar (10-10) mixed defect configuration.",
+    "output_file": "dos_nonpolar_mixed.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "DOS data for verifying half-metallic behavior in the non-polar mixed defect configuration.",
+    "output_schema": "Same format as dos_nonpolar_bulk.dat."
+  }
+]

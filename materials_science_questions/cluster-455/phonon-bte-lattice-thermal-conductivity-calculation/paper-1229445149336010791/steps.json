@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step1",
+    "title": "Model construction",
+    "role": "process",
+    "action": "Build atomistic models of a pure Al(111) slab (with stacking fault), single-layer (SL) and double-layer (DL, AB-stacked) Al-graphene composites. Set initial interfacial distances d_Al-G for SL (3.48, 3.42, 3.36, 3.31, 3.28, 3.21, 3.16, 3.09 Å) and DL (3.48, 3.42, 3.36, 3.30, 3.24, 3.18, 3.12, 3.06, 3.00, 2.96 Å) as in the supplementary material. Write structure files for all models.",
+    "output_file": "",
+    "evidence": "model_files",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare initial input structures for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT geometry relaxation",
+    "role": "process",
+    "action": "For each model, relax atomic positions at fixed cell dimensions using plane-wave DFT (PBE functional) with a suitable kinetic-energy cutoff and k-point sampling. Record the final interfacial distance and external pressure. Output relaxed structure files.",
+    "output_file": "",
+    "evidence": "relaxation_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Energy minimization under compression; reproduces the strain-free registry structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Static DFT electronic structure and charge density",
+    "role": "process",
+    "action": "For each relaxed structure, run single-point DFT calculations to obtain wavefunctions, eigenvalues, projected density of states (PDOS), charge density, and electrostatic potential (for work function). Save relevant output files for post-processing.",
+    "output_file": "",
+    "evidence": "static_dft_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "SCF calculations to generate electronic structure data required for subsequent property extraction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Electronic properties and static conductivity",
+    "role": "scored",
+    "action": "Post-process DFT outputs to compute: Fermi level (from eigenvalues), density of states at Fermi level N(Ef) (from PDOS), squared density N²(Ef), electronic conductivity at 300 K via the Kubo-Greenwood formula (using wavefunctions and eigenvalues), work function (from planar-averaged electrostatic potential), and Bader charges on interfacial Al and C atoms. Assemble results in a CSV with columns: model_type, initial_d_Al_G, final_d_Al_G, Fermi_level, N2_Ef, conductivity_300K, work_function, avg_bader_charge_C, avg_bader_charge_Al. One row per model.",
+    "output_file": "electronic_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing static electronic properties and static conductivity at 300 K for pure Al, SL, and DL models across various Al-G distances.",
+    "output_schema": "model_type,initial_d_Al_G,final_d_Al_G,Fermi_level,N2_Ef,conductivity_300K,work_function,avg_bader_charge_C,avg_bader_charge_Al"
+  },
+  {
+    "id": "step5",
+    "title": "Ab initio molecular dynamics",
+    "role": "process",
+    "action": "For selected models (DL_2.97, DL_3.41, SL_3.01, SL_3.40, pure_Al), run AIMD simulations in the NVT ensemble at temperatures from 100 to 600 K in steps of 50 K. Each simulation runs for 3 ps with a 1.5 fs timestep. Retain the final 10 snapshots per temperature for conductivity calculations.",
+    "output_file": "",
+    "evidence": "aimd_trajectories",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate thermally disordered snapshots to evaluate temperature-dependent conductivity.",
+    "output_schema": ""
+  },
+  {
+    "id": "step6",
+    "title": "Temperature-dependent conductivity",
+    "role": "scored",
+    "action": "For each snapshot from step5, compute conductivity via the Kubo-Greenwood formula (using single-point DFT calculations on each snapshot). Average over the 10 snapshots per temperature per model and compute standard deviation. Write results to a CSV with columns: model_id, temperature, average_conductivity, std_conductivity.",
+    "output_file": "temperature_conductivity.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing temperature-dependent average conductivity and standard deviation from AIMD snapshots.",
+    "output_schema": "model_id,temperature,average_conductivity,std_conductivity"
+  }
+]

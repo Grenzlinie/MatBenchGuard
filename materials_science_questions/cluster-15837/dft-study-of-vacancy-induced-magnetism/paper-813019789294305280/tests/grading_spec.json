@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes total magnetic moment per formula unit from atomic_moments.csv and band gap from dos_data.csv, comparing to paper-reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "atomic_moments.csv": "metric_recompute",
+    "moment_per_fu.txt": "reference_match",
+    "dos_data.csv": "metric_recompute",
+    "bandgap.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold target values for total magnetic moment per formula unit (0.03125 μB/f.u.) and band gap (0.047 eV)",
+      "source_provenance": "Paper: 0.03125 μB/f.u. from integrated DOS, 0.047 eV from computed band structures",
+      "generation_method": "Extracted directly from paper text",
+      "why_not_fabricated": "These are the paper's actual computed results that the reproduction should match within tolerance"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "atomic_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom_index",
+            "species",
+            "magnetic_moment"
+          ],
+          "units": {
+            "magnetic_moment": "μ_B"
+          }
+        },
+        "description": "Per-atom magnetic moments from the spin-polarized DFT calculation. The checker will recompute the total magnetic moment and check delocalization."
+      },
+      {
+        "file": "moment_per_fu.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Agent-reported total magnetic moment per formula unit (μ_B/f.u.). The checker compares it to the value recomputed from atomic_moments.csv."
+      },
+      {
+        "file": "dos_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "spin_up_dos",
+            "spin_down_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "spin_up_dos": "states/eV",
+            "spin_down_dos": "states/eV"
+          }
+        },
+        "description": "Spin-resolved total density of states over [-5,5] eV around the Fermi level. The checker recomputes the band gap from this data."
+      },
+      {
+        "file": "bandgap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Agent-reported band gap in eV. The checker compares it to the value recomputed from dos_data.csv."
+      }
+    ],
+    "notes": "The checker recomputes the total magnetic moment from atomic_moments.csv by summing all atomic moments and dividing by 32, then compares against the paper's reported value. It also verifies that all atomic moments are below 0.01 μ_B (delocalization). The band gap is recomputed from dos_data.csv as the difference between the highest occupied and lowest unoccupied states across both spin channels and compared against the paper's reported gap. Both comparisons use appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step4",
+      "output_file": "atomic_moments.csv",
+      "kind": "recompute",
+      "weight": 0.45,
+      "target_moment_per_fu": 0.03125,
+      "tolerance_moment": 0.002,
+      "max_moment_per_atom": 0.01
+    },
+    {
+      "id": "step5",
+      "output_file": "moment_per_fu.txt",
+      "kind": "consistency",
+      "weight": 0.05,
+      "tolerance": 1e-06
+    },
+    {
+      "id": "step6",
+      "output_file": "dos_data.csv",
+      "kind": "recompute",
+      "weight": 0.45,
+      "target_band_gap": 0.047,
+      "tolerance_band_gap": 0.02
+    },
+    {
+      "id": "step7",
+      "output_file": "bandgap.txt",
+      "kind": "consistency",
+      "weight": 0.05,
+      "tolerance": 1e-05
+    }
+  ]
+}

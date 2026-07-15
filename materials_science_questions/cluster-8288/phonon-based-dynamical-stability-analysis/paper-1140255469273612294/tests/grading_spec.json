@@ -1,0 +1,133 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes switching threshold from raw time-series data (step_04), and structurally audits double-well potential and transient helicity signatures; other scalar artifacts compared to paper target with monotonic decay tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for Eu phonon frequency, coupling constant α, and switching threshold fluence from paper DFT and simulation results.",
+      "source_provenance": "Paper supplementary Table S2: Eu(4)=24.42 THz; main text: α=0.026 q_e/uÅ (computed); simulation threshold ≈14 mJ/cm² (from Fig.3b and main text).",
+      "generation_method": "Read from paper tables/figures; no synthetic data.",
+      "why_not_fabricated": "Directly from paper's reported computational outputs."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "required_columns": [
+            "mode",
+            "frequency_THz"
+          ]
+        },
+        "description": "Phonon mode labels and frequencies at Gamma point. Checker compares the Eu mode frequency to the paper's reference within tolerance."
+      },
+      {
+        "file": "step_02_double_well_potential.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "required_columns": [
+            "displacement_Angstrom",
+            "energy_eV"
+          ]
+        },
+        "description": "Energy vs. displacement along the A2g soft mode. Checker verifies a double-well shape with two symmetric minima."
+      },
+      {
+        "file": "step_03_coupling_constant.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "units": "q_e/uÅ"
+        },
+        "description": "Single value for the trilinear coupling constant α. Checker compares to the paper's value within tolerance."
+      },
+      {
+        "file": "step_04_switching_below_Tc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "required_columns": [
+            "fluence_mJcm2",
+            "time_ps",
+            "Q_A"
+          ]
+        },
+        "description": "Time series of Q_A for each fluence below Tc. Checker verifies sign reversal above a threshold fluence."
+      },
+      {
+        "file": "step_05_threshold_fluence.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "units": "mJ/cm²"
+        },
+        "description": "Switching threshold fluence extracted from the simulation. Checker compares to the paper's threshold within tolerance."
+      },
+      {
+        "file": "step_06_transient_above_Tc.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "required_columns": [
+            "helicity",
+            "time_ps",
+            "Q_A"
+          ]
+        },
+        "description": "Time traces of Q_A for left and right circular polarization above Tc. Checker verifies opposite signs for opposite helicities."
+      }
+    ],
+    "notes": "The hidden checker compares the reported Eu phonon frequency and coupling constant to the paper's computed reference values with tolerances. The double-well potential and time traces are checked for correct structural features (two minima of symmetric depth, sign reversal above threshold, opposite signs for opposite helicities). All gold values are derived from the paper's reported computational results and are not disclosed here."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_phonon_frequencies.csv",
+      "weight": 0.15,
+      "kind": "reference_match"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_double_well_potential.csv",
+      "weight": 0.05,
+      "kind": "structural_audit"
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_coupling_constant.txt",
+      "weight": 0.1,
+      "kind": "reference_match"
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_switching_below_Tc.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric"
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_threshold_fluence.txt",
+      "weight": 0.15,
+      "kind": "reference_match"
+    },
+    {
+      "id": "step_06",
+      "output_file": "step_06_transient_above_Tc.csv",
+      "weight": 0.15,
+      "kind": "structural_audit"
+    }
+  ]
+}

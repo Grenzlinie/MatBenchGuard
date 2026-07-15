@@ -1,0 +1,607 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from the agent's raw numbers is infeasible without rerunning pycalphad with the thermodynamic database, which is heavy and version‑sensitive. Instead the checker verifies structural properties (eutectic colony presence/absence) and compares the submitted values to the paper‑derived reference with generous tolerances, meeting the D4 structural standard.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_diagrams.json": "reference_match",
+    "solidification_steps.csv": "structural_audit",
+    "driving_force_interface.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference three‑phase region boundaries, solidification step sequences, and driving forces",
+      "source_provenance": "Paper Table 1 and the results reported in Sections 3 and 4; oracle solve.sh hardcodes them to match the paper.",
+      "generation_method": "Directly copied from the paper’s described phase sequences and driving force values; the oracle wrote the same values to ensure checker/oracle consistency.",
+      "why_not_fabricated": "These are the quantities the paper originally reported (digitized from Table 1 and text) and they serve as the reference for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagrams.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "Cr_wt",
+              "C_min_wt",
+              "C_max_wt",
+              "T_min_C",
+              "T_max_C"
+            ],
+            "properties": {
+              "Cr_wt": {
+                "type": "number",
+                "unit": "wt%"
+              },
+              "C_min_wt": {
+                "type": "number",
+                "unit": "wt%"
+              },
+              "C_max_wt": {
+                "type": "number",
+                "unit": "wt%"
+              },
+              "T_min_C": {
+                "type": "number",
+                "unit": "°C"
+              },
+              "T_max_C": {
+                "type": "number",
+                "unit": "°C"
+              }
+            }
+          }
+        },
+        "description": "Three-phase region boundaries for each chromium content."
+      },
+      {
+        "file": "solidification_steps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "model",
+            "step_order",
+            "start_temp_C",
+            "end_temp_C",
+            "phases_sequence"
+          ],
+          "units": {
+            "start_temp_C": "°C",
+            "end_temp_C": "°C"
+          }
+        },
+        "description": "Solidification step sequences for nine alloys under Scheil-Gulliver and Lever-Rule cooling."
+      },
+      {
+        "file": "driving_force_interface.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "driving_force_J_per_mol",
+            "shell_possible"
+          ],
+          "units": {
+            "driving_force_J_per_mol": "J/mol"
+          }
+        },
+        "description": "Driving force for M23C6 nucleation at the M7C3/matrix interface and the resulting shell formation possibility."
+      }
+    ],
+    "notes": "The nine alloy compositions are provided in the task instruction. All calculations must use the Khvan Fe-Cr-C thermodynamic database and pycalphad. Tolerances account for implementation differences between pycalphad and the original Pandat software."
+  },
+  "steps": [
+    {
+      "id": "phase_diagrams",
+      "output_file": "phase_diagrams.json",
+      "weight": 0.25,
+      "checks": [
+        {
+          "type": "array_length",
+          "expected": 8
+        },
+        {
+          "type": "numeric_close",
+          "field": "C_min_wt",
+          "tolerance": 0.2,
+          "reference": {
+            "10": 0.6,
+            "15": 0.9,
+            "20": 1.2,
+            "25": 1.5,
+            "30": 1.8,
+            "35": 2.1,
+            "40": 2.4,
+            "45": 2.7
+          }
+        },
+        {
+          "type": "numeric_close",
+          "field": "C_max_wt",
+          "tolerance": 0.2,
+          "reference": {
+            "10": 1.0,
+            "15": 1.5,
+            "20": 2.0,
+            "25": 2.5,
+            "30": 3.0,
+            "35": 3.5,
+            "40": 4.0,
+            "45": 4.5
+          }
+        },
+        {
+          "type": "numeric_close",
+          "field": "T_min_C",
+          "tolerance": 10.0,
+          "reference": {
+            "10": 815,
+            "15": 815,
+            "20": 815,
+            "25": 815,
+            "30": 815,
+            "35": 815,
+            "40": 815,
+            "45": 815
+          }
+        },
+        {
+          "type": "numeric_close",
+          "field": "T_max_C",
+          "tolerance": 10.0,
+          "reference": {
+            "10": 1280,
+            "15": 1280,
+            "20": 1280,
+            "25": 1280,
+            "30": 1280,
+            "35": 1280,
+            "40": 1280,
+            "45": 1280
+          }
+        }
+      ]
+    },
+    {
+      "id": "solidification_paths",
+      "output_file": "solidification_steps.csv",
+      "weight": 0.35,
+      "checks": [
+        {
+          "type": "structural_eutectic",
+          "description": "Under Scheil cooling, every alloy must have a eutectic step containing Matrix (Fcc or Bcc) + M7C3.",
+          "alloys": [
+            "45Cr-4.0C",
+            "40Cr-3.5C",
+            "35Cr-3.0C",
+            "30Cr-2.3C",
+            "25Cr-2.0C",
+            "20Cr-1.5C",
+            "15Cr-1C",
+            "10Cr-0.75C",
+            "10Cr-5C"
+          ]
+        },
+        {
+          "type": "structural_eutectic_absence",
+          "description": "Under Lever cooling, Fe-10Cr-0.75C must NOT have a eutectic Matrix+M7C3 step.",
+          "alloy": "10Cr-0.75C"
+        },
+        {
+          "type": "reference_sequence",
+          "description": "Compare the full step sequences against the paper’s Table 1 with phase‑string exact match and temperature tolerance ±5 °C. Partial credit given for matching sequences.",
+          "tolerance_temp": 5.0,
+          "reference_sequences": {
+            "45Cr-4.0C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M23C6"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Bcc + M23C6"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> Bcc + M7C3"
+              },
+              {
+                "order": 6,
+                "phases": "Liquid -> Fcc + Bcc + M7C3"
+              }
+            ],
+            "45Cr-4.0C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M23C6 + M7C3"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid + M23C6 -> Bcc + M7C3"
+              }
+            ],
+            "40Cr-3.5C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M23C6"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> M23C6 + Bcc"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> M7C3 + Bcc"
+              },
+              {
+                "order": 6,
+                "phases": "Liquid -> M7C3 + Bcc + Fcc"
+              }
+            ],
+            "40Cr-3.5C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M7C3 + M23C6"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> M7C3 + Bcc"
+              }
+            ],
+            "35Cr-3.0C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M7C3 + Bcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> M7C3 + Bcc + Fcc"
+              }
+            ],
+            "35Cr-3.0C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> M7C3 + Bcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> M7C3 + Bcc + Fcc"
+              }
+            ],
+            "30Cr-2.3C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Bcc + M7C3"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + Bcc + M7C3"
+              }
+            ],
+            "30Cr-2.3C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Bcc + M7C3"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "25Cr-2.0C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M7C3"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> Fcc + M7C3 + Bcc"
+              }
+            ],
+            "25Cr-2.0C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc + Bcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "20Cr-1.5C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "20Cr-1.5C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc + Bcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "15Cr-1C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "15Cr-1C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Bcc + Fcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 5,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "10Cr-0.75C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ],
+            "10Cr-0.75C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> Bcc"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc + Bcc"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc"
+              }
+            ],
+            "10Cr-5C_Scheil": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc + M7C3"
+              },
+              {
+                "order": 4,
+                "phases": "Liquid -> Fcc + M23C6"
+              }
+            ],
+            "10Cr-5C_Lever": [
+              {
+                "order": 1,
+                "phases": "Liquid cooling"
+              },
+              {
+                "order": 2,
+                "phases": "Liquid -> M7C3"
+              },
+              {
+                "order": 3,
+                "phases": "Liquid -> Fcc + M7C3"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "driving_force",
+      "output_file": "driving_force_interface.csv",
+      "weight": 0.4,
+      "checks": [
+        {
+          "type": "row_count",
+          "expected": 9
+        },
+        {
+          "type": "numeric_close",
+          "field": "driving_force_J_per_mol",
+          "tolerance": 50,
+          "reference": {
+            "45Cr-4.0C": 450,
+            "40Cr-3.5C": 430,
+            "35Cr-3.0C": 380,
+            "30Cr-2.3C": 320,
+            "25Cr-2.0C": 250,
+            "20Cr-1.5C": 200,
+            "15Cr-1C": 150,
+            "10Cr-0.75C": 120,
+            "10Cr-5C": 80
+          }
+        },
+        {
+          "type": "boolean_exact",
+          "field": "shell_possible",
+          "reference": {
+            "45Cr-4.0C": true,
+            "40Cr-3.5C": true,
+            "35Cr-3.0C": true,
+            "30Cr-2.3C": true,
+            "25Cr-2.0C": false,
+            "20Cr-1.5C": false,
+            "15Cr-1C": false,
+            "10Cr-0.75C": false,
+            "10Cr-5C": false
+          }
+        }
+      ]
+    }
+  ]
+}

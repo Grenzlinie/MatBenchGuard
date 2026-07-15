@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The paper's main claim is a positive correlation for LiSi and negative for Li2Si. The checker recomputes Spearman correlation coefficients directly from the CSV columns, comparing to thresholds derived from the paper (≥0.7 for LiSi, ≤-0.7 for Li2Si). No hidden labels or external ground truth are needed.",
+  "pass_threshold": 0.7,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lisi_correlation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_id",
+            "D_Li",
+            "channel_area_fraction"
+          ],
+          "units": {
+            "D_Li": "cm^2/s",
+            "channel_area_fraction": "dimensionless"
+          }
+        },
+        "description": "Each row corresponds to one LiSi amorphous configuration. The checker will compute Spearman rank correlation between D_Li and channel_area_fraction and require rho >= 0.7."
+      },
+      {
+        "file": "li2si_correlation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_id",
+            "D_Li",
+            "total_microstructures"
+          ],
+          "units": {
+            "D_Li": "cm^2/s",
+            "total_microstructures": "count"
+          }
+        },
+        "description": "Each row corresponds to one Li2Si amorphous configuration. The checker will compute Spearman rank correlation between D_Li and total_microstructures and require rho <= -0.7."
+      }
+    ],
+    "notes": "The task omits manual structural modifications, ring-size breakdown for LiSi, and Li15Si4 phase per the agreed scope. The agent must generate its own amorphous configurations; no specific structures from the paper are required."
+  },
+  "steps": [
+    {
+      "id": "lisi_correlation_check",
+      "output_file": "lisi_correlation.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "description": "Compute Spearman rank correlation between D_Li and channel_area_fraction; must be >= 0.7.",
+      "recompute": true
+    },
+    {
+      "id": "li2si_correlation_check",
+      "output_file": "li2si_correlation.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "description": "Compute Spearman rank correlation between D_Li and total_microstructures; must be <= -0.7.",
+      "recompute": true
+    }
+  ],
+  "hidden_assets": []
+}

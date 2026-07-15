@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Pressure coefficient dEg/dP at Γ recomputed from submitted band gaps (T1); optical properties scored for structural trend (T3).",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure",
+            "Eg_gamma_gamma",
+            "Eg_L_L",
+            "Eg_X_X",
+            "Eg_L_Gamma"
+          ],
+          "units": {
+            "pressure": "GPa",
+            "Eg_gamma_gamma": "eV",
+            "Eg_L_L": "eV",
+            "Eg_X_X": "eV",
+            "Eg_L_Gamma": "eV"
+          }
+        },
+        "description": "Direct and indirect band gaps of rocksalt InN at pressures 0, 20, and 40 GPa. The checker recomputes the pressure coefficient dEg/dP at Γ from a linear fit and compares individual gaps to paper-reported values."
+      },
+      {
+        "file": "optical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "0": {
+              "energy": "list of float (eV)",
+              "epsilon2": "list of float",
+              "absorption": "list of float (cm^-1)"
+            },
+            "20": {
+              "energy": "list of float (eV)",
+              "epsilon2": "list of float",
+              "absorption": "list of float (cm^-1)"
+            },
+            "40": {
+              "energy": "list of float (eV)",
+              "epsilon2": "list of float",
+              "absorption": "list of float (cm^-1)"
+            }
+          }
+        },
+        "description": "Imaginary part of dielectric function ε2(ω) and absorption coefficient α(ω) at 0, 20, 40 GPa. The checker verifies that the first major peak in ε2 and the absorption edge shift monotonically to higher energy with increasing pressure."
+      }
+    ],
+    "notes": "All DFT calculations should use the PBE functional with plane-wave basis and pseudopotentials. The optical spectra may show overall intensity differences due to broadening conventions; only the peak shift trends are scored."
+  },
+  "steps": [
+    {
+      "id": "step_band_gaps",
+      "output_file": "band_gaps.csv",
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "weight": 0.7,
+      "config": {
+        "pressure_col": "pressure",
+        "gap_col": "Eg_gamma_gamma",
+        "slope_reference_meV_per_GPa": 44.0,
+        "tolerance_meV_per_GPa": 5.0,
+        "gap_reference_0GPa": {
+          "Eg_gamma_gamma": 0.48,
+          "Eg_L_L": 0.2,
+          "Eg_X_X": 0.5,
+          "Eg_L_Gamma": -0.12
+        },
+        "gap_tolerance_eV": 0.05
+      }
+    },
+    {
+      "id": "step_optical",
+      "output_file": "optical_properties.json",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.3,
+      "config": {
+        "pressures": [
+          "0",
+          "20",
+          "40"
+        ],
+        "peak_finding_range_eV": [
+          0,
+          10
+        ],
+        "absorption_edge_threshold": 10000,
+        "monotonic_increase_required": true
+      }
+    }
+  ],
+  "hidden_assets": []
+}

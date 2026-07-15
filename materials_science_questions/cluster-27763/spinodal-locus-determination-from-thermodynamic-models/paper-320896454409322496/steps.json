@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s1",
+    "title": "MD simulations for argon on fixed isochore",
+    "role": "process",
+    "action": "Set up equilibrium MD simulations of Lennard-Jones argon on the isochore ρ=1.37 g/cm³ at temperatures T = 30, 60, 80, 100, 120, 130, 140 K. For each temperature, equilibrate via NPT to correct the density, then run a long NVE production trajectory (≥10 ps). Additionally, for each temperature perform a perturbation run: briefly expose the equilibrated system to a slightly perturbed twin configuration and continue the NVE run to detect the binodal. Save atomic velocities and positions.",
+    "output_file": "",
+    "evidence": "trajectory_counts.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces MD trajectories for subsequent analysis and records the number of trajectories generated per temperature.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Compute VACF, MSD, and self-diffusion coefficient D_s",
+    "role": "process",
+    "action": "For each temperature, post-process the unperturbed trajectories to compute the velocity autocorrelation function (VACF) and the mean-square displacement (MSD). From these derive D_s via integration of the VACF (Green–Kubo) and from the long-time slope of the MSD (Einstein). Store the per-temperature results.",
+    "output_file": "",
+    "evidence": "ds_intermediate.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate D_s values used by later scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Characteristic function and D_c/D_s ratio",
+    "role": "scored",
+    "action": "From the unperturbed MSD and D_s, construct the dimensionless characteristic function F_MD(x) = (3√π/10) x^{1/2} (1 − Γ̃(x)/x) (using any τ_M that ensures x^{1/2}≫1) and average its plateau over x₁<x<x_u to obtain the ratio D_c/D_s. Report the ratios at temperatures 85 K and 100 K, together with the corresponding D_s values obtained from VACF and MSD, in a CSV file.",
+    "output_file": "step_01_Ds_values.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing D_s and D_c/D_s at 85 K and 100 K.",
+    "output_schema": "temperature (K), D_s_VACF (10^-5 cm^2/s), D_s_MSD (10^-5 cm^2/s), D_c_Ds_char_func (dimensionless)"
+  },
+  {
+    "id": "s4",
+    "title": "Spinodal and binodal temperatures",
+    "role": "scored",
+    "action": "Plot the self‑diffusion coefficient D_s(T) obtained from the unperturbed runs (prefer the VACF‑based D_s) as a function of temperature for the isochore ρ=1.37 g/cm³. Identify the temperature where the slope changes abruptly (spinodal). Using the perturbation runs, determine the highest temperature at which the unperturbed and perturbed VACFs diverge significantly (binodal). Write the two temperatures to a text file.",
+    "output_file": "step_02_spinodal_binodal.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact containing the spinodal and binodal temperatures.",
+    "output_schema": "Two lines: first line T_s (K), second line T_b (K)"
+  }
+]

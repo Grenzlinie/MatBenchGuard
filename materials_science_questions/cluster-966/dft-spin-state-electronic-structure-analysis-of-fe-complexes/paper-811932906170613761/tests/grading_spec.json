@@ -1,0 +1,256 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Bond lengths are recomputed from the agent’s raw geometry; spin populations and orbital counts are verified by consistency relations without re‑running DFT.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "fe_complex_results.json": "metric_recompute",
+    "ni_complex_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental bond lengths for tolerance checks.",
+      "source_provenance": "Paper text and Figure 7 (Fe): C‑O 1.285‑1.286 Å, C‑C 1.445 Å; Figure 5 (Ni): C‑O 1.293 Å, C‑C 1.432 Å.",
+      "generation_method": "Exact values extracted from the published paper.",
+      "why_not_fabricated": "These are the experimental crystallographic values reported in the paper; they are the public targets the agent's DFT bond lengths must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fe_complex_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "geometry",
+            "bond_lengths",
+            "mulliken_spin_fe",
+            "mulliken_spin_ligands",
+            "num_alpha_singly_occupied",
+            "num_beta_singly_occupied"
+          ],
+          "properties": {
+            "geometry": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "symbol",
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "symbol": {
+                    "type": "string"
+                  },
+                  "x": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  },
+                  "y": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  },
+                  "z": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  }
+                }
+              }
+            },
+            "bond_lengths": {
+              "type": "object",
+              "required": [
+                "C-O_avg",
+                "C-C"
+              ],
+              "properties": {
+                "C-O_avg": {
+                  "type": "number",
+                  "unit": "Angstrom"
+                },
+                "C-C": {
+                  "type": "number",
+                  "unit": "Angstrom"
+                }
+              }
+            },
+            "mulliken_spin_fe": {
+              "type": "number",
+              "description": "Mulliken atomic spin population on Fe"
+            },
+            "mulliken_spin_ligands": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Mulliken atomic spin populations on the three diketonate ligands"
+            },
+            "num_alpha_singly_occupied": {
+              "type": "integer",
+              "description": "Number of singly occupied alpha-spin molecular orbitals"
+            },
+            "num_beta_singly_occupied": {
+              "type": "integer",
+              "description": "Number of singly occupied beta-spin molecular orbitals"
+            }
+          }
+        },
+        "description": "Optimized geometry, average C-O and C-C bond lengths, Mulliken spin density on Fe and the three ligands, and number of singly occupied alpha and beta molecular orbitals from a broken-symmetry BS(5,3) B3LYP DFT calculation on a truncated model of [Fe^III L^•_3]."
+      },
+      {
+        "file": "ni_complex_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "geometry",
+            "bond_lengths",
+            "mulliken_spin_ni",
+            "mulliken_spin_ligand",
+            "num_alpha_singly_occupied",
+            "num_beta_singly_occupied"
+          ],
+          "properties": {
+            "geometry": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "symbol",
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "properties": {
+                  "symbol": {
+                    "type": "string"
+                  },
+                  "x": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  },
+                  "y": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  },
+                  "z": {
+                    "type": "number",
+                    "unit": "Angstrom"
+                  }
+                }
+              }
+            },
+            "bond_lengths": {
+              "type": "object",
+              "required": [
+                "C-O_avg",
+                "C-C"
+              ],
+              "properties": {
+                "C-O_avg": {
+                  "type": "number",
+                  "unit": "Angstrom"
+                },
+                "C-C": {
+                  "type": "number",
+                  "unit": "Angstrom"
+                }
+              }
+            },
+            "mulliken_spin_ni": {
+              "type": "number",
+              "description": "Mulliken atomic spin population on Ni"
+            },
+            "mulliken_spin_ligand": {
+              "type": "number",
+              "description": "Mulliken atomic spin population on the diketonate radical ligand"
+            },
+            "num_alpha_singly_occupied": {
+              "type": "integer",
+              "description": "Number of singly occupied alpha-spin molecular orbitals"
+            },
+            "num_beta_singly_occupied": {
+              "type": "integer",
+              "description": "Number of singly occupied beta-spin molecular orbitals"
+            }
+          }
+        },
+        "description": "Optimized geometry, average C-O and C-C bond lengths, Mulliken spin density on Ni and the diketonate ligand, and number of singly occupied alpha and beta molecular orbitals from a broken-symmetry BS(1,1) B3LYP DFT calculation on [Ni^I L^•(cod)]."
+      }
+    ],
+    "notes": "The checker will recompute C-O and C-C bond lengths from the submitted coordinates and compare them to experimental crystallographic values within a tolerance typical of DFT; it will verify Mulliken spin populations against reference spin density distributions and check that the reported singly occupied orbital counts match the expected broken-symmetry configurations (Fe: 5 alpha, 3 beta; Ni: 1 alpha, 1 beta)."
+  },
+  "steps": [
+    {
+      "id": "fe_bond_lengths",
+      "output_file": "fe_complex_results.json",
+      "kind": "recompute_bond_lengths",
+      "weight": 0.3,
+      "target": {
+        "C-O_avg": 1.2855,
+        "C-C": 1.445
+      },
+      "tolerance_abs": 0.03,
+      "metric": "max_abs_deviation",
+      "better_direction": "lower"
+    },
+    {
+      "id": "ni_bond_lengths",
+      "output_file": "ni_complex_results.json",
+      "kind": "recompute_bond_lengths",
+      "weight": 0.2,
+      "target": {
+        "C-O_avg": 1.293,
+        "C-C": 1.432
+      },
+      "tolerance_abs": 0.03,
+      "metric": "max_abs_deviation",
+      "better_direction": "lower"
+    },
+    {
+      "id": "fe_spin_consistency",
+      "output_file": "fe_complex_results.json",
+      "kind": "spin_consistency",
+      "weight": 0.15,
+      "expected_sum": 2.0,
+      "sum_tolerance": 0.5,
+      "fe_positive_min": 3.5,
+      "ligand_negative_max": -0.2
+    },
+    {
+      "id": "ni_spin_consistency",
+      "output_file": "ni_complex_results.json",
+      "kind": "spin_consistency",
+      "weight": 0.1,
+      "expected_sum": 0.0,
+      "sum_tolerance": 0.6,
+      "metal_positive_min": 0.5,
+      "ligand_negative_max": -0.5
+    },
+    {
+      "id": "fe_orbital_counts",
+      "output_file": "fe_complex_results.json",
+      "kind": "exact_counts",
+      "weight": 0.15,
+      "alpha": 5,
+      "beta": 3
+    },
+    {
+      "id": "ni_orbital_counts",
+      "output_file": "ni_complex_results.json",
+      "kind": "exact_counts",
+      "weight": 0.1,
+      "alpha": 1,
+      "beta": 1
+    }
+  ]
+}

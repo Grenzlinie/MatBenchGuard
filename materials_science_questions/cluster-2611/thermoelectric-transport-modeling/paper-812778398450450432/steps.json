@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "Optimize the unit-cell lattice constants and atomic positions of Be2C, Mg2C, and BeMgC using DFT with the PBE functional.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT band structure on dense k-mesh",
+    "role": "process",
+    "action": "Perform a non-self-consistent DFT calculation on a dense Monkhorst-Pack k-point grid (sufficiently dense, ~10^4 points in the irreducible wedge) using the optimized structures to obtain eigen-energies.",
+    "output_file": "",
+    "evidence": "nscf_bands.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Convert DFT energies to BoltzTraP input",
+    "role": "process",
+    "action": "Extract the eigen-energies and generate the case.energy, case.struct, and case.intrans files required by BoltzTraP, using a constant relaxation time τ = 4×10⁻¹⁴ s and the lattice parameters from optimization.",
+    "output_file": "",
+    "evidence": "boltztrap_input_files",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Run BoltzTraP transport simulations",
+    "role": "process",
+    "action": "Run BoltzTraP to compute the Seebeck coefficient S, electrical conductivity σ, and power factor PF = S²σ as functions of chemical potential at temperatures 300, 500, 800 K for each compound.",
+    "output_file": "",
+    "evidence": "boltztrap_output.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Extract optimum transport quantities",
+    "role": "scored",
+    "action": "Parse the BoltzTraP output to find the maximum PF and the corresponding S, σ, and carrier concentration at 300, 500, and 800 K for each compound. Write the results to optimum_transport.csv.",
+    "output_file": "optimum_transport.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with optimum transport properties: compound, temperature, PF_max, S_max, sigma_at_max, carrier_concentration for Be2C, BeMgC, Mg2C at 300, 500, 800 K (τ = 4×10⁻¹⁴ s).",
+    "output_schema": "compound: string, temperature: int K, PF_max: float W/mK^2, S_max: float V/K, sigma_at_max: float S/m, carrier_concentration: float cm^-3"
+  },
+  {
+    "id": "step_06",
+    "title": "DFPT phonon calculation for Mg2C",
+    "role": "process",
+    "action": "Perform a density-functional perturbation theory (DFPT) calculation on the optimized Mg2C structure to obtain the Hessian and compute phonon frequencies at the Γ point.",
+    "output_file": "",
+    "evidence": "mg2c_phonon.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Write Mg2C phonon frequencies",
+    "role": "scored",
+    "action": "Extract the TO, Raman, LO frequencies and the LO-TO splitting from the DFPT output and write them to mg2c_phonon.json.",
+    "output_file": "mg2c_phonon.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the optical phonon frequencies (TO, Raman, LO) and the LO-TO splitting for Mg2C at the Γ point.",
+    "output_schema": "{\"TO\": [float] cm^-1, \"Raman\": float cm^-1, \"LO\": float cm^-1, \"LO-TO_split\": float cm^-1}"
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1_rve_equilibration",
+    "title": "Atomistic RVE preparation via coarse-grained modeling and MD equilibration",
+    "role": "process",
+    "action": "Construct coarse-grained linked-vector model of BPDA/APB polyimide chains; perform Monte Carlo equilibration with a hard-sphere nanoparticle (diameter ∼15 Å) in a cubic simulation box (∼42 Å side); reverse-map to atomistic detail; apply energy minimization; run constant-pressure NPT MD at 300 K and 1 atm for 200 ps using LAMMPS with the CVFF force field to obtain equilibrated atomistic configurations for pure silica, pure polyimide, and the four composite variants (untreated, hydroxylated, phenoxybenzene, functionalized).",
+    "output_file": "",
+    "evidence": "md_equilibration.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the atomistic representative volume elements required for elastic constant calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_elastic_constants_md",
+    "title": "Compute elastic constants from MD",
+    "role": "scored",
+    "action": "For each of the six equilibrated systems, apply small static deformations and energy minimizations according to the static-deformation energy-difference approach. Use the resulting energy differences to calculate the isotropic elastic stiffness components C11 and C12, then derive Young's modulus (E) and shear modulus (G). Write the results to a CSV file.",
+    "output_file": "elastic_constants_systems.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "MD-derived Young's and shear moduli for the six material systems (pure silica, pure polyimide, and four composite variants). Corresponds to Tables 1–2 of the paper.",
+    "output_schema": "columns: system (string: 'silica','polyimide','silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E (float, GPa), G (float, GPa). One row per system."
+  },
+  {
+    "id": "step3_mori_tanaka_rve",
+    "title": "Mori–Tanaka predictions at RVE volume fraction",
+    "role": "scored",
+    "action": "Using the pure silica and polyimide elastic constants from Step 2, apply the Mori–Tanaka two-phase model with an effective particle volume fraction of 1.7% and the Eshelby tensor for spherical inclusions to predict composite Young's and shear moduli for the four composite systems. Save the results to a CSV.",
+    "output_file": "mori_tanaka_rve.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Mori–Tanaka predicted composite elastic moduli at the RVE volume fraction, directly comparable to the Mori–Tanaka rows in Tables 1–2.",
+    "output_schema": "columns: composite (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E_MT (float, GPa), G_MT (float, GPa). Four rows."
+  },
+  {
+    "id": "step4_effective_interface_properties",
+    "title": "Determine effective interface elastic properties",
+    "role": "scored",
+    "action": "For each composite, take the MD composite elastic constants (Step 2) together with the pure silica and polyimide constants. Using the effective interface geometry (inner radius 6 Å, outer radius 18 Å, thickness 12 Å, corresponding volume fractions: particle 1.7%, interface 45.2%, matrix 53.1%) and an assumed interface Poisson's ratio of 0.4, solve the effective-interface micromechanics equations to extract the isotropic interface Young's modulus (E_i) and shear modulus (G_i). Write the interface properties to a CSV.",
+    "output_file": "effective_interface_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Effective interface Young's and shear moduli that, together with the micromechanics model, reproduce the MD composite results. Corresponds to Table 3 of the paper.",
+    "output_schema": "columns: composite_type (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), E_interface (float, GPa), G_interface (float, GPa). Four rows."
+  },
+  {
+    "id": "step5_radius_dependent_moduli",
+    "title": "Radius-dependent composite moduli (effective-interface and Mori–Tanaka)",
+    "role": "scored",
+    "action": "For each composite type, compute the composite Young's modulus (E) and shear modulus (G) at a particle volume fraction of 5% for a set of effective particle radii (logarithmically spaced from 10 Å to 10,000 Å, at least 10 points). Use the effective-interface model with interface thickness 12 Å and the interface properties from Step 4; also compute the constant Mori–Tanaka predictions at each radius using the pure phase constants from Step 2. Combine both sets into one file, distinguishing them with a model_type column. Save as CSV.",
+    "output_file": "moduli_vs_radius.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Composite elastic moduli as a function of nanoparticle radius, reproducing the curves shown in Figures 10–11. The effective-interface model values will be checked via recomputation from the submitted interface properties and by comparison to reference values.",
+    "output_schema": "columns: composite_type (string: 'silica_composite','hydroxylated_composite','phenoxybenzene_composite','functionalized_composite'), radius_A (float, angstrom), model_type (string: 'Mori-Tanaka' or 'Effective-Interface'), E (float, GPa), G (float, GPa). At least 10 radius values per composite."
+  }
+]

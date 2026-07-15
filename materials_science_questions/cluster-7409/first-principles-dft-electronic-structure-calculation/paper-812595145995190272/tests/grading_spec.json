@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Crossing temperatures are recomputed from delta_G_data.csv and compared to paper gold; the main result is verified via tolerance against paper-reported values with a cross-check for curve sign changes.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_G_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "temperature_K",
+            "delta_G_eV"
+          ],
+          "column_types": {
+            "composition": "str",
+            "temperature_K": "float",
+            "delta_G_eV": "float"
+          },
+          "units": {
+            "temperature_K": "Kelvin",
+            "delta_G_eV": "electronvolts"
+          }
+        },
+        "description": "ΔG(T) data for pure and Sc-substituted Ti₃O₅; must show sign change near the crossover temperatures."
+      },
+      {
+        "file": "crossover_temperatures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Tp_pure_K": "float",
+            "Tp_Sc_substituted_K": "float",
+            "relative_decrease_percent": "float"
+          },
+          "units": {
+            "Tp_pure_K": "Kelvin",
+            "Tp_Sc_substituted_K": "Kelvin",
+            "relative_decrease_percent": "percent"
+          }
+        },
+        "description": "Computed crossover temperatures for pure and Sc-substituted Ti₃O₅, and the relative decrease."
+      }
+    ],
+    "notes": "The main reward is carried by crossover_temperatures.json; delta_G_data.csv provides supporting structural evidence."
+  },
+  "steps": [
+    {
+      "id": "delta_G_data",
+      "output_file": "delta_G_data.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "description": "Check that ΔG curves cross zero for both pure and Sc compositions.",
+      "params": {}
+    },
+    {
+      "id": "crossover_temperatures",
+      "output_file": "crossover_temperatures.json",
+      "weight": 0.7,
+      "kind": "numeric",
+      "fields": [
+        {
+          "key": "Tp_pure_K",
+          "target": 848.0,
+          "tolerance_abs": 84.8,
+          "weight_in_step": 0.333
+        },
+        {
+          "key": "Tp_Sc_substituted_K",
+          "target": 614.0,
+          "tolerance_abs": 61.4,
+          "weight_in_step": 0.333
+        },
+        {
+          "key": "relative_decrease_percent",
+          "target": 27.6,
+          "tolerance_abs": 5.0,
+          "weight_in_step": 0.333
+        }
+      ],
+      "description": "Verify crossover temperatures and relative decrease against paper gold with tolerance."
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold crossover temperatures and relative decrease from paper Fig.4 and text.",
+      "source_provenance": "Paper: Sci. Adv. 2020, eaaz5264, Fig.4 caption and Materials and Methods (phonon DFT section).",
+      "generation_method": "Extracted directly from paper: Tp_pure = 848 K, Tp_Sc = 614 K, decrease = 27.6%.",
+      "why_not_fabricated": "Values are the paper's own reported first-principles results; no invention needed."
+    }
+  ]
+}

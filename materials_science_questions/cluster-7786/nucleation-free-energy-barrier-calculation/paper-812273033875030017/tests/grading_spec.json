@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker evaluates each barrier formula numerically with test values φ=1, Δμ_a=1, computes fraction relative to the agent's own flat {111} entry, and compares both the computed fraction and the self-reported percentage to the paper's integer percentages from Table 1 with tolerance ±0.5.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "nucleation_barriers.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold integer percentages for each nucleus type from Table 1",
+      "source_provenance": "Paper Table 1 (Acta Cryst. (2005). A61, 405-410)",
+      "generation_method": "Copied directly from paper Table 1: 100, 29, 39, 50, 50",
+      "why_not_fabricated": "These are the paper's own headline values; they match the analytic formulas exactly after rounding."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "nucleation_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "nucleus_type",
+              "barrier_formula",
+              "percentage"
+            ],
+            "properties": {
+              "nucleus_type": {
+                "type": "string",
+                "enum": [
+                  "circular_{111}",
+                  "circular_{100}",
+                  "elliptical_trough",
+                  "semicircular_trough",
+                  "layer_advance_ridge"
+                ]
+              },
+              "barrier_formula": {
+                "type": "string",
+                "description": "Formula for ΔG* expressed in terms of φ and Δμ_a, using standard mathematical notation."
+              },
+              "percentage": {
+                "type": "number",
+                "description": "The nucleation barrier expressed as a percentage of the flat {111} barrier."
+              }
+            }
+          }
+        },
+        "description": "A JSON array of five objects, each giving the nucleus type, the analytic barrier formula, and the corresponding percentage relative to the flat {111} case. The checker will parse each barrier formula, evaluate it numerically with φ=1, Δμ_a=1, compute the fraction against the reference flat {111} barrier, and compare the resulting fraction to the reported percentage (and to the hidden gold percentages) with a tolerance of ±0.5."
+      }
+    ],
+    "notes": "The derivation of intermediate quantities (step energies, driving forces, groove energy, contact angle) is considered part of the implementation and is not required as separate output files. The agent may use any symbolic or numeric implementation."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "nucleation_barriers.json",
+      "weight": 1.0,
+      "kind": "custom",
+      "parameters": {
+        "gold_percentages": {
+          "circular_{111}": 100,
+          "circular_{100}": 29,
+          "elliptical_trough": 39,
+          "semicircular_trough": 50,
+          "layer_advance_ridge": 50
+        },
+        "tolerance": 0.5
+      }
+    }
+  ]
+}

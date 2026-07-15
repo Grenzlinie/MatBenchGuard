@@ -1,0 +1,80 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker extracts local maxima from submitted curves and compares peak radii to paper-reported gold within tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold peak radii for alpha and electron energy product curves",
+      "source_provenance": "Paper text: 'Two notable peaks ... at radius 3.8 µm and 38 µm' (alpha); 'The radius ... greatest electron energy product was determined to be 1.1 nm' (electron).",
+      "generation_method": "Directly taken from the paper's results section.",
+      "why_not_fabricated": "These are the paper's own reported optimal radii, authoritative for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "alpha_energy_product.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radius_um",
+            "alpha_energy_product_percent"
+          ],
+          "units": {
+            "radius_um": "µm",
+            "alpha_energy_product_percent": "%"
+          }
+        },
+        "description": "Normalized alpha energy product vs. particle radius. The hidden checker will locate the two main peaks and compare the peak radii to reference values."
+      },
+      {
+        "file": "electron_energy_product.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radius_nm",
+            "electron_energy_product_percent"
+          ],
+          "units": {
+            "radius_nm": "nm",
+            "electron_energy_product_percent": "%"
+          }
+        },
+        "description": "Normalized electron energy product vs. particle radius. The hidden checker will locate the maximum peak and compare its radius to a reference value."
+      }
+    ],
+    "notes": "The checker recomputes the peak radii from these curves and compares them to hidden gold values with tolerances appropriate for numerical implementation differences."
+  },
+  "steps": [
+    {
+      "id": "alpha_peak_check",
+      "output_file": "alpha_energy_product.csv",
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "weight": 0.6,
+      "gold_peaks_um": [
+        3.8,
+        38.0
+      ],
+      "tolerance": 0.1,
+      "description": "Recompute the two dominant peak radii from the alpha energy product curve and compare to paper gold within ±10% tolerance."
+    },
+    {
+      "id": "electron_peak_check",
+      "output_file": "electron_energy_product.csv",
+      "kind": "recompute_metric",
+      "target_policy": "metric_recompute",
+      "weight": 0.4,
+      "gold_peak_nm": 1.1,
+      "tolerance": 0.2,
+      "description": "Recompute the global maximum radius from the electron energy product curve and compare to paper gold within ±20% tolerance."
+    }
+  ]
+}

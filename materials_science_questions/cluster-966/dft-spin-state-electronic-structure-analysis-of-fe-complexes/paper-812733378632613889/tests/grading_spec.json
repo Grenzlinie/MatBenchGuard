@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline energies are produced by a full Buckingham potential calculation; recomputing them in the verifier sandbox is infeasible. Therefore we compare the agent's submitted results.json against the paper-reported values with an absolute tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference energies for IAM components and IEM",
+      "source_provenance": "Paper Table 1",
+      "generation_method": "Extracted from the paper; for Ir6(CO)16 black per-molecule C–C rep assigned as half of the total C–C (2.63) to each of the two independent molecules; C–C attr set to 0 because the paper did not partition C–C.",
+      "why_not_fabricated": "Taken directly from the paper's published table, with a reasonable split of the total C–C between independent molecules."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Mn2(CO)10_rt": "object with keys IAM_O_O, IAM_O_C, IAM_C_C_rep, IAM_C_C_attr, IAM_M_O, IEM (all numbers in kcal/mol)",
+            "Ir6(CO)16_black": "object with key 'molecules' (array of objects, each with keys IAM_O_O, IAM_O_C, IAM_C_C_rep, IAM_C_C_attr, IEM)",
+            "Ir6(CO)16_red": "object with keys IAM_O_O, IAM_O_C, IAM_C_C, IEM"
+          },
+          "units": "all energies in kcal/mol"
+        },
+        "description": "Reproduced intramolecular energy components (partitioned) and total intermolecular energy for the three target clusters. Compared to paper-reported reference values with absolute tolerance, and structural trend checks (IEM black < IEM red; total IAM red < total IAM black)."
+      }
+    ],
+    "notes": "The output file must be valid JSON. For Ir6(CO)16_black the molecules array must contain exactly two elements corresponding to the two independent molecules in the crystal. For Ir6(CO)16_red the key IAM_C_C is the total C-C intramolecular energy (not split into repulsive/attractive). All values are floating-point numbers in kcal/mol."
+  },
+  "steps": [
+    {
+      "id": "numeric_accuracy",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare every numeric field in results.json against the paper-derived gold values with absolute tolerance 0.5 kcal/mol.",
+      "gold": {
+        "Mn2(CO)10_rt": {
+          "IAM_O_O": -1.64,
+          "IAM_O_C": -5.08,
+          "IAM_C_C_rep": 4.37,
+          "IAM_C_C_attr": -0.66,
+          "IAM_M_O": -1.49,
+          "IEM": -29.2
+        },
+        "Ir6(CO)16_black": {
+          "molecules": [
+            {
+              "IAM_O_O": -2.5,
+              "IAM_O_C": -7.44,
+              "IAM_C_C_rep": 1.315,
+              "IAM_C_C_attr": 0.0,
+              "IEM": -21.15
+            },
+            {
+              "IAM_O_O": -2.48,
+              "IAM_O_C": -7.49,
+              "IAM_C_C_rep": 1.315,
+              "IAM_C_C_attr": 0.0,
+              "IEM": -21.15
+            }
+          ]
+        },
+        "Ir6(CO)16_red": {
+          "IAM_O_O": -2.69,
+          "IAM_O_C": -8.46,
+          "IAM_C_C": -0.11,
+          "IEM": -39.1
+        }
+      },
+      "tolerance": 0.5
+    },
+    {
+      "id": "trend_IEM",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.15,
+      "description": "Check that intermolecular packing favours the black isomer: total IEM(black) < IEM(red).",
+      "check": "IEM_black_total < IEM_red"
+    },
+    {
+      "id": "trend_IAM",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.15,
+      "description": "Check that intramolecular energy favours the red isomer: total IAM(red) < average IAM(black) (per molecule).",
+      "check": "total_IAM_red < avg_IAM_black"
+    }
+  ]
+}

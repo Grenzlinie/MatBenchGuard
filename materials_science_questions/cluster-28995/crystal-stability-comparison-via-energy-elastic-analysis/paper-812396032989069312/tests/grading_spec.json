@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent reports gap metrics from its computation; full recompute from raw band structure is infeasible without requiring extensive computational evidence.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "gap_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold thresholds for gap presence, gap-midgap ratio, and ordering derived from paper Figure 1 and text.",
+      "source_provenance": "Paper: 'Elastic and acoustic wave band structure' by Sigalas & Economou, J. Sound Vib. (1992). Figures 1(a)-(c) and accompanying text.",
+      "generation_method": "Approximate gap-midgap ratio ranges extracted from Fig. 1 and paper statements: for y=1 a 'rather large gap' appears (ratio ~0.1-0.2); for y=1/15 'huge gaps' appear (ratio >0.5). Tolerances set generously to absorb implementation variance, yet broad enough to distinguish correct trends.",
+      "why_not_fabricated": "Derived directly from the paper's reported experimental observations (DOS curves and qualitative descriptions); not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gap_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "results": "array of 3 objects"
+          },
+          "items": {
+            "density_ratio": "float",
+            "gap_present": "bool",
+            "gap_lower_frequency": "float or null",
+            "gap_upper_frequency": "float or null",
+            "gap_midgap_ratio": "float or null"
+          },
+          "units": {
+            "frequencies": "normalized frequency in reduced units (e.g., ω a/(2π c) or similar)"
+          }
+        },
+        "description": "Gap presence and gap metrics for three acoustic conditions: high-density spheres (y=5), equal density (y=1), and low-density spheres (y=1/15). For conditions with no gap, the frequency/ratio fields must be null."
+      }
+    ],
+    "notes": "The task covers only the scalar acoustic wave case (μ=0). Elastic wave results and other lattice structures are excluded per the paper's scope and feasibility. The hidden checker compares the reported gap_present and gap_midgap_ratio values against the paper's trends with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step1_gap_analysis",
+      "output_file": "gap_results.json",
+      "weight": 1.0,
+      "kind": "gap_analysis",
+      "expected": [
+        {
+          "density_ratio": 5,
+          "gap_present": false,
+          "ratio_min": null,
+          "ratio_max": null
+        },
+        {
+          "density_ratio": 1,
+          "gap_present": true,
+          "ratio_min": 0.05,
+          "ratio_max": 0.3
+        },
+        {
+          "density_ratio": 0.06666666666666667,
+          "gap_present": true,
+          "ratio_min": 0.5,
+          "ratio_max": null
+        }
+      ]
+    }
+  ]
+}

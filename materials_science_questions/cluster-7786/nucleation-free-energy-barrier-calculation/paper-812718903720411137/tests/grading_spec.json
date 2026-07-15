@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Melting temperature can be recomputed from the agent's raw TE-Hp curve by averaging over the coexistence plateau; compared to paper-reported value with tolerance. Curve shape and Q6 profile are structural audits.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference melting temperature of Cu from modified void method",
+      "source_provenance": "Paper text: 'the calculated melting temperature ... is ~1327 ± 14 K at ambient pressure' (Section 3.5, Fig. 9).",
+      "generation_method": "Direct extraction from paper.",
+      "why_not_fabricated": "Paper-reported central result, used as gold for threshold comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "te_hp_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "initial_enthalpy_per_atom",
+            "equilibrium_temperature",
+            "structure_label"
+          ],
+          "units": {
+            "initial_enthalpy_per_atom": "eV",
+            "equilibrium_temperature": "K"
+          }
+        },
+        "description": "CSV output of the TE-Hp scan for Cu from NPH simulations; checker verifies three-regime shape."
+      },
+      {
+        "file": "melting_temperature.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {
+            "value": "float_with_unit_K"
+          }
+        },
+        "description": "Melting temperature (in Kelvin) for Cu averaged over the coexistence plateau; compared to paper-reported gold with tolerance."
+      },
+      {
+        "file": "q6_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z_slice_midpoint",
+            "avg_Q6"
+          ],
+          "units": {
+            "z_slice_midpoint": "Å",
+            "avg_Q6": "dimensionless"
+          }
+        },
+        "description": "Q6 order parameter profile along Z for Cu; checker confirms coexistence through distinct solid/liquid Q6 values."
+      }
+    ],
+    "notes": "All outputs must be placed under /app/outputs. The melting temperature is the headline result; the TE-Hp curve and Q6 profile provide supporting structural evidence."
+  },
+  "steps": [
+    {
+      "id": "te_hp_curve",
+      "output_file": "te_hp_curve.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify TE-Hp curve shape: three regimes (solid, coexistence, liquid), monotonicity, plateau flatness.",
+      "target": {}
+    },
+    {
+      "id": "melting_temperature",
+      "output_file": "melting_temperature.txt",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "metric": "melting_temperature",
+      "target_policy": "exact_match",
+      "target": 1327.0,
+      "target_unit": "K",
+      "tolerance_abs": 15.0,
+      "recompute_config": {
+        "source_artifact": "te_hp_curve.csv",
+        "method": "plateau_average",
+        "plateau_label": "coexistence"
+      }
+    },
+    {
+      "id": "q6_profile",
+      "output_file": "q6_profile.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify Q6 profile shows coexistence: solid-like (Q6 > 0.45) and liquid-like (Q6 < 0.40) regions.",
+      "target": {}
+    }
+  ]
+}

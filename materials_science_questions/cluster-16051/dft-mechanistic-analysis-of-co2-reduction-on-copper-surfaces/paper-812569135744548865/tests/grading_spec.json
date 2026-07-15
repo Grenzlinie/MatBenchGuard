@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT barriers are re-computed by agent; cannot recompute in checker, so compare reported barriers to paper values within tolerance plus structural ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "barriers.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold barrier values from paper for MvK, ER, LH mechanisms.",
+      "source_provenance": "Paper text and Fig. 3: MvK 0.999 eV, ER 0.557 eV, LH 0.965 eV.",
+      "generation_method": "Extracted directly from paper's reported 0 K electronic energy barriers.",
+      "why_not_fabricated": "These are the paper's own computed values, used as reference for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "MvK_barrier_0K": "number (eV)",
+            "ER_barrier_0K": "number (eV)",
+            "LH_barrier_0K": "number (eV)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "MvK_barrier_0K": "eV",
+            "ER_barrier_0K": "eV",
+            "LH_barrier_0K": "eV"
+          }
+        },
+        "description": "Computed 0 K electronic energy barriers for the three CO oxidation mechanisms on the perfect CuO(111) surface. The hidden checker compares each barrier to the paper-reported reference within a tolerance and verifies that ER_barrier < LH_barrier and ER_barrier < MvK_barrier."
+      }
+    ],
+    "notes": "The paper used DMol3 with a DNP basis set; the task allows any open-source plane-wave DFT code (e.g., Quantum ESPRESSO) with PBE functional and Grimme D3 dispersion correction. Differences in basis set and pseudopotentials may cause small variations; scoring uses an appropriate tolerance."
+  },
+  "steps": [
+    {
+      "id": "step3_barriers",
+      "output_file": "barriers.json",
+      "weight": 1.0,
+      "kind": "numeric_reference_match",
+      "targets": {
+        "MvK_barrier_0K": {
+          "value": 0.999,
+          "tolerance": 0.1
+        },
+        "ER_barrier_0K": {
+          "value": 0.557,
+          "tolerance": 0.1
+        },
+        "LH_barrier_0K": {
+          "value": 0.965,
+          "tolerance": 0.1
+        }
+      },
+      "ordering": {
+        "ER_barrier_0K": {
+          "less_than": [
+            "LH_barrier_0K",
+            "MvK_barrier_0K"
+          ]
+        }
+      }
+    }
+  ]
+}

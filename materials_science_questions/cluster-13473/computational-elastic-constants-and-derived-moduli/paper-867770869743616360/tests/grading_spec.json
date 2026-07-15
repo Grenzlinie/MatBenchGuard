@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Reuss-model fit and ratio from raw elastic_data.csv; validate CSV shape/plausibility and self-consistency of reported fit params.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "target ratio E_GB/E_core = 40/146 ≈ 0.274 from the paper's Reuss CNA ∞‑norm fit",
+      "source_provenance": "Paper Table 1 and discussion; E_core=146 GPa, E_GB=40 GPa is the preferred ∞‑norm CNA fit.",
+      "generation_method": "Hardcoded from the paper's own reported values for the exact quantity the task reproduces.",
+      "why_not_fabricated": "Directly taken from the source paper's main quantitative result under the same conditions the agent is instructed to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "d_nm",
+            "phi_core",
+            "E_overall_GPa"
+          ],
+          "units": {
+            "d_nm": "nm",
+            "phi_core": "dimensionless",
+            "E_overall_GPa": "GPa"
+          },
+          "description": "Three rows, one per grain size (≈5, 10, 15 nm)."
+        },
+        "description": "Raw data from MD tensile tests: overall Young's modulus and core volume fraction. The checker recomputes the Reuss fit and ratio from this file."
+      },
+      {
+        "file": "reuss_fit_params.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required": {
+            "lines": 2,
+            "pattern": "E_core_GPa = <float>, E_GB_GPa = <float>"
+          }
+        },
+        "description": "Fitted Young's moduli from the Reuss model. Checker verifies self-consistency with elastic_data.csv."
+      },
+      {
+        "file": "ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required": {
+            "single_float": true
+          }
+        },
+        "description": "Ratio E_GB/E_core. Checker verifies self-consistency with fit parameters and elastic data."
+      }
+    ],
+    "notes": "The primary scoring metric is the recomputed ratio from elastic_data.csv; reuss_fit_params.txt and ratio.txt serve as consistency checks."
+  },
+  "steps": [
+    {
+      "id": "elastic_data_structure",
+      "output_file": "elastic_data.csv",
+      "weight": 0.1,
+      "kind": "custom"
+    },
+    {
+      "id": "elastic_data_recompute",
+      "output_file": "elastic_data.csv",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "target_ratio": 0.2739726,
+      "tolerance_window": 0.1,
+      "max_deviation": 0.3
+    },
+    {
+      "id": "reuss_fit_params",
+      "output_file": "reuss_fit_params.txt",
+      "weight": 0.15,
+      "kind": "custom",
+      "max_diff_gpa": 10.0
+    },
+    {
+      "id": "ratio",
+      "output_file": "ratio.txt",
+      "weight": 0.15,
+      "kind": "custom",
+      "max_diff_ratio": 0.05,
+      "decay_range": 0.15
+    }
+  ]
+}

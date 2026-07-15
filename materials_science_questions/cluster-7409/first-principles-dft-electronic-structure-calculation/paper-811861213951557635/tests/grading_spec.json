@@ -1,0 +1,222 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "DFT outputs are not submitted as raw artifacts; only derived CSV files. Recomputing formation energies from total energies is infeasible without DFT logs, so we compare reported values to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energies, band gaps, Bader charges from paper Tables I, II, and text.",
+      "source_provenance": "Paper Table I, Table II, and statements on band gap reductions (2.0 eV pure, 0.2 eV W, 0.5 eV NW)",
+      "generation_method": "Direct transcription of paper-reported values.",
+      "why_not_fabricated": "These are the paper's exact reported numbers, used as ground truth for T0 result-level comparison."
+    }
+  ],
+  "target_policies": {
+    "formation_energies.csv": "reference_match",
+    "band_gaps.csv": "reference_match",
+    "bader_charges.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "doping_type",
+            "condition",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Formation energies of N, W, and N/W doping in anatase under Ti-rich and O-rich conditions, plus the adjacent pair preference energy."
+      },
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "band_gap_eV",
+            "band_gap_reduction_eV"
+          ],
+          "units": {
+            "band_gap_eV": "eV",
+            "band_gap_reduction_eV": "eV"
+          }
+        },
+        "description": "Band gaps and band-gap reductions for pure, N-doped, W-doped, and NW-doped anatase."
+      },
+      {
+        "file": "bader_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "atom",
+            "bader_charge_e"
+          ],
+          "units": {
+            "bader_charge_e": "e"
+          }
+        },
+        "description": "Bader charges on dopant and neighboring atoms for N-doped, W-doped, and NW-doped anatase."
+      }
+    ],
+    "notes": "All output values are numerical and compared to reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "check_formation_energies",
+      "kind": "reference_match",
+      "output_file": "formation_energies.csv",
+      "weight": 0.4,
+      "tolerance": 0.3,
+      "gold": [
+        {
+          "doping_type": "N",
+          "condition": "Ti-rich",
+          "formation_energy_eV": 0.9
+        },
+        {
+          "doping_type": "N",
+          "condition": "O-rich",
+          "formation_energy_eV": 5.9
+        },
+        {
+          "doping_type": "W",
+          "condition": "Ti-rich",
+          "formation_energy_eV": 3.4
+        },
+        {
+          "doping_type": "W",
+          "condition": "O-rich",
+          "formation_energy_eV": -6.6
+        },
+        {
+          "doping_type": "NW",
+          "condition": "Ti-rich",
+          "formation_energy_eV": 1.61
+        },
+        {
+          "doping_type": "NW",
+          "condition": "O-rich",
+          "formation_energy_eV": -3.39
+        },
+        {
+          "doping_type": "NW_adjacent_preference",
+          "condition": "general",
+          "formation_energy_eV": 0.57
+        }
+      ]
+    },
+    {
+      "id": "check_band_gaps",
+      "kind": "reference_match",
+      "output_file": "band_gaps.csv",
+      "weight": 0.35,
+      "tolerance_band_gap": 0.1,
+      "tolerance_reduction": 0.1,
+      "gold": [
+        {
+          "system": "pure",
+          "band_gap_eV": 2.0,
+          "band_gap_reduction_eV": 0.0
+        },
+        {
+          "system": "N-doped",
+          "band_gap_eV": 2.0,
+          "band_gap_reduction_eV": 0.0
+        },
+        {
+          "system": "W-doped",
+          "band_gap_eV": 1.8,
+          "band_gap_reduction_eV": 0.2
+        },
+        {
+          "system": "NW-doped",
+          "band_gap_eV": 1.5,
+          "band_gap_reduction_eV": 0.5
+        }
+      ]
+    },
+    {
+      "id": "check_bader_charges",
+      "kind": "reference_match",
+      "output_file": "bader_charges.csv",
+      "weight": 0.25,
+      "tolerance": 0.1,
+      "gold": {
+        "N-doped": [
+          {
+            "atom": "N",
+            "bader_charge_e": -1.37
+          },
+          {
+            "atom": "Ti1",
+            "bader_charge_e": 2.639
+          }
+        ],
+        "W-doped": [
+          {
+            "atom": "W",
+            "bader_charge_e": 4.59
+          },
+          {
+            "atom": "O1",
+            "bader_charge_e": -1.479
+          },
+          {
+            "atom": "O2",
+            "bader_charge_e": -1.49
+          },
+          {
+            "atom": "O3",
+            "bader_charge_e": -1.58
+          }
+        ],
+        "NW-doped": [
+          {
+            "atom": "N",
+            "bader_charge_e": -2.01
+          },
+          {
+            "atom": "W",
+            "bader_charge_e": 4.63
+          },
+          {
+            "atom": "O4",
+            "bader_charge_e": -1.36
+          },
+          {
+            "atom": "O5",
+            "bader_charge_e": -1.36
+          },
+          {
+            "atom": "O6",
+            "bader_charge_e": -1.49
+          },
+          {
+            "atom": "O7",
+            "bader_charge_e": -1.55
+          },
+          {
+            "atom": "O8",
+            "bader_charge_e": -1.55
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_relaxations",
+    "title": "DFT structural relaxations for E(V) data",
+    "role": "process",
+    "action": "For β-Ge₃N₄ (space group P6₃/m) and γ-Ge₃N₄ (space group Fd-3m), perform plane-wave DFT structural relaxations using the LDA exchange-correlation functional over a series of fixed unit-cell volumes spanning approximately ±5% compression/expansion around the experimental equilibrium volume. At each volume, relax the lattice parameters (consistent with the volume and space-group symmetry) and all internal atomic coordinates. Record total energy, relaxed lattice constants, and final fractional coordinates to an intermediate file (ev_data.json) for subsequent EOS fitting and equilibrium structure selection.",
+    "output_file": "",
+    "evidence": "ev_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Generates the E(V) data needed for EOS fitting and identifies the zero-pressure equilibrium structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_optimized_structures",
+    "title": "Report optimized lattice parameters and internal coordinates",
+    "role": "scored",
+    "action": "From the relaxation data, identify the volume corresponding to the minimum total energy (the equilibrium volume). Extract the lattice constants and fractional atomic coordinates of β and γ at that volume, ensuring the reported values are consistent with the paper’s space group conventions. Write the results to optimized_structures.json.",
+    "output_file": "optimized_structures.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Equilibrium lattice constants and Wyckoff-site internal coordinates for β-P6₃/m and γ-Fd-3m.",
+    "output_schema": "{\"beta\": {\"space_group\": \"P6_3/m\", \"a\": float, \"c\": float, \"Ge_6h\": [x, y, z], \"N_6h\": [x, y, z], \"N_2c\": [x, y, z]}, \"gamma\": {\"space_group\": \"Fd-3m\", \"a\": float, \"GeIV_8a\": [0,0,0], \"GeVI_16d\": [5/8,5/8,5/8], \"N_32e\": [x, x, x]}}"
+  },
+  {
+    "id": "step_03_eos_parameters",
+    "title": "Report Birch-Murnaghan EOS parameters",
+    "role": "scored",
+    "action": "Fit the set of (V,E) data for β and γ to the Birch-Murnaghan equation of state to obtain the equilibrium volume per atom V₀ (Å³/atom), bulk modulus K (GPa), and its pressure derivative K′. Write the results to eos_parameters.json.",
+    "output_file": "eos_parameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Equation-of-state parameters derived from the LDA energy-volume curve.",
+    "output_schema": "{\"beta\": {\"V0\": float, \"K\": float, \"Kprime\": float}, \"gamma\": {\"V0\": float, \"K\": float, \"Kprime\": float}}"
+  },
+  {
+    "id": "step_04_bandstructure",
+    "title": "Electronic structure calculation at Γ point",
+    "role": "process",
+    "action": "Using the optimized equilibrium structures, perform a self-consistent DFT calculation and compute Kohn-Sham eigenvalues at the Γ point. Determine the direct band gap as the difference between the conduction-band minimum and the valence-band maximum at Γ.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the LDA band gap values needed for the next scored step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_band_gaps",
+    "title": "Report LDA band gaps",
+    "role": "scored",
+    "action": "Extract the direct band gap at Γ for β and γ and write them to band_gaps.json.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "LDA direct band gaps at Γ for β- and γ-Ge₃N₄.",
+    "output_schema": "{\"beta\": {\"LDA_band_gap_eV\": float}, \"gamma\": {\"LDA_band_gap_eV\": float}}"
+  },
+  {
+    "id": "step_06_phonon",
+    "title": "Γ-point phonon calculation",
+    "role": "process",
+    "action": "For the equilibrium β and γ structures, compute the force-constant matrix using finite atomic displacements (e.g., ±0.01 Å) in DFT. Diagonalize the dynamical matrix at Γ to obtain phonon frequencies, and use point-group symmetry to assign irreducible representations (e.g., A_g, E_2g, B_u, etc.).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the complete Γ-point phonon frequencies and symmetry assignments.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_phonon_frequencies",
+    "title": "Report phonon frequencies",
+    "role": "scored",
+    "action": "Collect all Γ-point phonon frequencies with their symmetry labels for β and γ, and save to phonon_frequencies.json.",
+    "output_file": "phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Full list of Γ-point phonon frequencies and irreducible representations.",
+    "output_schema": "{\"beta\": [{\"frequency_cm-1\": float, \"symmetry\": string}, ...], \"gamma\": [{\"frequency_cm-1\": float, \"symmetry\": string}, ...]}"
+  }
+]

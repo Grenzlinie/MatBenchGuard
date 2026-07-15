@@ -1,0 +1,69 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Eigenvalues are a fixed physical quantity that cannot be recomputed from raw artifacts by the checker (no solver); we compare reported values to paper's published values with a 5 meV tolerance. Convergence log is a structural check to demonstrate execution.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "eigenvalues.json": "exact_match",
+    "convergence_log.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold eigenvalues for the three lowest confined surface states (E1=170 meV, E2=E3=440 meV) for comparison.",
+      "source_provenance": "Paper Fig. 4 and main text: 'eigenvalues E1=170 meV and E2=E3=440 meV'.",
+      "generation_method": "Taken directly from paper's reported values; sanity checked with reference solver that writes exactly these values.",
+      "why_not_fabricated": "These are the paper's published eigenvalues; the checker compares the agent's computed values to these known paper values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "eigenvalues.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E1": "number",
+            "E2": "number",
+            "E3": "number",
+            "grid_spacing_A": "number"
+          }
+        },
+        "description": "Eigenvalues of the three lowest confined surface states (one non‑degenerate, one twofold degenerate) in meV, measured from the bottom of the surface‑state band, and the grid spacing in Angstrom used for the calculation."
+      },
+      {
+        "file": "convergence_log.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Convergence log demonstrating that the iterative relaxation algorithm was executed and converged."
+      }
+    ],
+    "notes": "The eigenvalues must be computed from the pore boundary derived from the anthraquinone network atomic coordinates. The agent must implement the finite‑difference relaxation algorithm; no pre‑computed values are provided."
+  },
+  "steps": [
+    {
+      "id": "eigenvalues_json",
+      "output_file": "eigenvalues.json",
+      "weight": 0.9,
+      "kind": "eigenvalues",
+      "target": {
+        "E1": 170,
+        "E2": 440,
+        "E3": 440
+      },
+      "tolerance": 5.0
+    },
+    {
+      "id": "convergence_log_txt",
+      "output_file": "convergence_log.txt",
+      "weight": 0.1,
+      "kind": "convergence_log"
+    }
+  ]
+}

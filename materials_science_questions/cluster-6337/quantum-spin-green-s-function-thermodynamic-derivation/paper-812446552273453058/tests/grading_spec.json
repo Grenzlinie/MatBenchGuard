@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities (exact correlations, asymptotic logarithms, anisotropic correction coefficients) can be recomputed directly from the paper's closed-form expressions using mpmath and compared pointwise to the agent's values with tolerances.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "exact_symmetric.csv": "metric_recompute",
+    "diagonal_asymptotic.csv": "metric_recompute",
+    "nextdiagonal_asymptotic.csv": "metric_recompute",
+    "anisotropic_coefficients.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "All gold numbers are recomputed at verify time from the paper's formulas embedded in checker.py; no external file is needed.",
+      "source_provenance": "Paper equations (1), (2), (4), (5), (7), (18), (19), (20) and definitions of Bernoulli/Euler numbers, constant A, etc.",
+      "generation_method": "Checker runs mpmath with dps=50 to compute reference values.",
+      "why_not_fabricated": "The formulas are taken verbatim from the published paper and are the exact same mathematics that produced the reference oracle outputs."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "exact_symmetric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "M",
+            "N",
+            "C"
+          ],
+          "columns": {
+            "M": "int",
+            "N": "int",
+            "C": "float"
+          },
+          "description": "Rows for 0 <= M <= N <= 5, symmetric case (sinh(2Hc)=1)."
+        },
+        "description": "Exact spin correlation values C(M,N) for small distances."
+      },
+      {
+        "file": "diagonal_asymptotic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "M",
+            "lnC_exact",
+            "lnC_asymp"
+          ],
+          "columns": {
+            "M": "int",
+            "lnC_exact": "float",
+            "lnC_asymp": "float"
+          },
+          "description": "M from 1 to 20."
+        },
+        "description": "Exact and asymptotic lnC(M,M) for diagonal correlation."
+      },
+      {
+        "file": "nextdiagonal_asymptotic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "M",
+            "lnC_exact",
+            "lnC_asymp"
+          ],
+          "columns": {
+            "M": "int",
+            "lnC_exact": "float",
+            "lnC_asymp": "float"
+          },
+          "description": "M from 1 to 20."
+        },
+        "description": "Exact and asymptotic lnC(M,M+1) for next-to-diagonal correlation."
+      },
+      {
+        "file": "anisotropic_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "alpha",
+              "theta",
+              "A1",
+              "A2",
+              "A3"
+            ],
+            "properties": {
+              "alpha": "float",
+              "theta": "float",
+              "A1": "float",
+              "A2": "float",
+              "A3": "float"
+            }
+          },
+          "description": "Grid of alpha and theta values from 0 to pi/2, step at least pi/16."
+        },
+        "description": "Anisotropic correction coefficients."
+      }
+    ],
+    "notes": "All formulas are deterministic and the checker recomputes the same expressions. Tolerances are set to accommodate floating-point differences across implementations."
+  },
+  "steps": [
+    {
+      "id": "step_01_exact_symmetric",
+      "output_file": "exact_symmetric.csv",
+      "weight": 0.15,
+      "kind": "recompute_numeric_table",
+      "description": "Exact correlation values C(M,N) for 0≤M≤N≤5; checker recomputes from paper eqs (1)-(4) and the difference equation.",
+      "tolerance_abs": 1e-12
+    },
+    {
+      "id": "step_02_diagonal_asymptotic",
+      "output_file": "diagonal_asymptotic.csv",
+      "weight": 0.25,
+      "kind": "recompute_numeric_table",
+      "description": "Diagonal lnC(M,M) for M=1..20; checker recomputes exact (from product) and asymptotic (Bernoulli series) and compares both columns.",
+      "tolerance_abs": 1e-08
+    },
+    {
+      "id": "step_03_nextdiagonal_asymptotic",
+      "output_file": "nextdiagonal_asymptotic.csv",
+      "weight": 0.25,
+      "kind": "recompute_numeric_table",
+      "description": "Next-to-diagonal lnC(M,M+1) for M=1..20; checker recomputes exact (hypergeometric) and asymptotic (Bernoulli/Euler series) and compares both columns.",
+      "tolerance_abs": 1e-08
+    },
+    {
+      "id": "step_04_anisotropic_coefficients",
+      "output_file": "anisotropic_coefficients.json",
+      "weight": 0.35,
+      "kind": "recompute_numeric_table",
+      "description": "Anisotropic correction coefficients A1(θ), A2(θ), A3(θ) on a grid of (α,θ); checker recomputes from eqs (18)-(20) using u=cos(2α).",
+      "tolerance_abs": 1e-12
+    }
+  ]
+}

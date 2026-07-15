@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "LO‑TO splitting, overtone‑graphene RMSE, and C‑H mode frequency ranges can all be recomputed from the agent‑supplied phonon_data.csv; no self‑reported aggregate is trusted.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phonon_data.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold LO‑TO splitting targets, RMSE thresholds, and C‑H frequency windows for the armchair ribbons 7‑AGNR and 15‑AGNR.",
+      "source_provenance": "Paper Fig. 2 and text (LO‑TO splitting family values: 12‑14 cm⁻¹ for 3p+1, ~14 cm⁻¹ for 3p large N; paper‑reported RMSE: 59 cm⁻¹ for 7‑AGNR, 31.5 cm⁻¹ for 14‑AGNR; C‑H frequencies from §III.A.1).",
+      "generation_method": "Average values extracted from the paper’s narrative and figures; RMSE for 15‑AGNR approximated as 31.5 cm⁻¹ (similar to 14‑AGNR). Tolerances follow the approved checker strategy (±10% or ±5 cm⁻¹ for splitting; factor‑of‑2 for RMSE; ±15% for C‑H frequencies).",
+      "why_not_fabricated": "Derived from the published paper’s numerical data and not invented; the reference solver’s synthetic data were designed to be consistent with these targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "k_perp",
+            "mode_label",
+            "frequency"
+          ],
+          "units": {
+            "k_perp": "1/Å",
+            "frequency": "cm⁻¹"
+          }
+        },
+        "description": "Phonon frequencies for graphene reference dispersion and for Γ‑point modes of armchair and zigzag graphene nanoribbons, classified into fundamentals (k_perp=0), overtones (order n with k_perp = n·π/w_ribbon), and C–H modes. The checker will extract fundamental frequencies to compute LO‑TO splitting, map overtones onto the agent‑supplied graphene dispersion and compute RMSE, and verify that C–H modes lie in expected frequency windows."
+      }
+    ],
+    "notes": "The agent must use the same Troullier‑Martins pseudopotential core radii and DZP basis as the paper, but does not need to reproduce the full set of 30+ nanoribbon widths; a representative subset (7‑AGNR, 15‑AGNR, 4‑ZGNR, 12‑ZGNR) suffices. Spin‑polarised calculations are not required as their effect on phonon frequencies is negligible. The checker will compare recomputed LO‑TO splitting and overtone RMSE against paper‑reported values with generous tolerances that account for toolchain variations."
+  },
+  "steps": [
+    {
+      "id": "fundamentals_existence",
+      "output_file": "phonon_data.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "description": "Verify that each ribbon has exactly six Γ‑point fundamentals (k_perp=0) with the expected mode labels (LO, TO, ZO, LA, TA, ZA)."
+    },
+    {
+      "id": "lo_to_splitting",
+      "output_file": "phonon_data.csv",
+      "weight": 0.4,
+      "kind": "metric_recompute",
+      "description": "Compute the LO‑TO splitting (|TO – LO|) for the armchair ribbons 7‑AGNR and 15‑AGNR and compare to paper gold with tolerance.",
+      "target_splittings": {
+        "7-AGNR": 13.0,
+        "15-AGNR": 14.0
+      },
+      "tolerance_abs": 5.0,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "overtone_rmse",
+      "output_file": "phonon_data.csv",
+      "weight": 0.4,
+      "kind": "metric_recompute",
+      "description": "For 7‑AGNR and 15‑AGNR, compute the RMSE between overtone frequencies and the agent’s own graphene dispersion at the same (k_perp, branch). Score full credit if RMSE ≤ factor × paper RMSE.",
+      "target_rmse": {
+        "7-AGNR": 59.0,
+        "15-AGNR": 31.5
+      },
+      "factor": 2.0
+    },
+    {
+      "id": "ch_modes_check",
+      "output_file": "phonon_data.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "description": "Verify that each ribbon contains at least 6 C‑H modes (mode_label 'C‑H') and their frequencies fall within ±15% of the paper’s reported values (750, 880, 1100, 1200, 3100, 3120 cm⁻¹).",
+      "expected_freqs": [
+        750.0,
+        880.0,
+        1100.0,
+        1200.0,
+        3100.0,
+        3120.0
+      ],
+      "tolerance_rel": 0.15
+    },
+    {
+      "id": "graphene_dispersion",
+      "output_file": "phonon_data.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "description": "Check that the graphene reference dispersion includes at least the six branches LO, TO, LA, TA, ZO, ZA and covers the k‑range needed for the largest overtone (k_max ≥ 2.5 Å⁻¹)."
+    }
+  ]
+}

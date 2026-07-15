@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The H2 dimer properties, solution energies, and migration barrier require energy minimization and NEB calculations on the full ADP potential, which is too computationally heavy to re-run inside the lightweight verifier. Therefore the agent's reported results are compared to the paper's reference values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "h2_dimer_results.json": "exact_match",
+    "solution_energies.json": "exact_match",
+    "migration_barrier.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for the three scored artifacts (H2 dimer bond length/cohesive energy, solution energies at Td/Oh, migration barrier).",
+      "source_provenance": "Directly extracted from the published paper: H2 dimer values from Table III, solution energies and migration barrier from Table V of Phys. Rev. B 82, 144115 (2010).",
+      "generation_method": "Read from the paper's tables and hardcoded inline in grading_spec.json.",
+      "why_not_fabricated": "These are the actual numerical results reported by the paper's computational experiments, traceable to the paper's tables."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "h2_dimer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bond_length_angstroms": "float, unit Å",
+            "cohesive_energy_eV_per_atom": "float, unit eV"
+          }
+        },
+        "description": "H2 dimer equilibrium bond length and cohesive energy per atom, computed by energy minimization."
+      },
+      {
+        "file": "solution_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_Es_Td_eV": "float, unit eV",
+            "delta_Es_Oh_eV": "float, unit eV"
+          }
+        },
+        "description": "Dilute solution energies of a single H atom at tetrahedral and octahedral interstitial sites in fcc Al, computed via supercell relaxation."
+      },
+      {
+        "file": "migration_barrier.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "migration_barrier_eV": "float, unit eV"
+          }
+        },
+        "description": "Minimum energy barrier for a H atom migrating from tetrahedral to octahedral site in Al, obtained by nudged elastic band."
+      }
+    ],
+    "notes": "The hidden checker reads the three JSON files and compares each scalar to the gold values within predetermined absolute tolerances. All outputs are compared to the paper’s reported numbers. No gold values or tolerances are revealed here."
+  },
+  "steps": [
+    {
+      "id": "h2_dimer",
+      "output_file": "h2_dimer_results.json",
+      "weight": 0.2,
+      "gold": {
+        "bond_length_angstroms": 0.742,
+        "cohesive_energy_eV_per_atom": -2.373
+      },
+      "tolerance": {
+        "bond_length_angstroms": 0.01,
+        "cohesive_energy_eV_per_atom": 0.01
+      }
+    },
+    {
+      "id": "solution_energies",
+      "output_file": "solution_energies.json",
+      "weight": 0.4,
+      "gold": {
+        "delta_Es_Td_eV": 0.693,
+        "delta_Es_Oh_eV": 0.824
+      },
+      "tolerance": {
+        "delta_Es_Td_eV": 0.01,
+        "delta_Es_Oh_eV": 0.01
+      }
+    },
+    {
+      "id": "migration_barrier",
+      "output_file": "migration_barrier.json",
+      "weight": 0.4,
+      "gold": {
+        "migration_barrier_eV": 0.189
+      },
+      "tolerance": {
+        "migration_barrier_eV": 0.01
+      }
+    }
+  ]
+}

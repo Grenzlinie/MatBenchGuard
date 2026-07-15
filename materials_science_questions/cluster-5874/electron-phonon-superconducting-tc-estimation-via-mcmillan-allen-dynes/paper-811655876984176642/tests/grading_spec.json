@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline Tc is a reported scalar; recomputing from raw DFT logs is infeasible in a lightweight verifier. Scoring compares agent-reported Tc, λ, ω_log to paper values with tolerances.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "output_tc.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Tc, λ, ω_log values from the paper",
+      "source_provenance": "Paper text: Tc=12 K at 90 GPa (abstract and main text). Fig. 3 inset gives λ ~ 0.7 and ω_log ~ 600 K at 90 GPa.",
+      "generation_method": "Read directly from the paper; rounded to one decimal for Tc and λ, to nearest integer for ω_log.",
+      "why_not_fabricated": "Directly from the paper’s reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "output_tc.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Tc": "number",
+            "lambda": "number",
+            "omega_log": "number"
+          },
+          "units": {
+            "Tc": "K",
+            "omega_log": "K"
+          }
+        },
+        "description": "Superconducting critical temperature Tc (K), electron-phonon coupling constant λ (dimensionless), logarithmic average phonon frequency ω_log (K) computed for hcp PtH-II at 90 GPa using the Allen-Dynes modified McMillan equation with μ*=0.13."
+      }
+    ],
+    "notes": "Tc is the primary scored quantity; λ and ω_log serve as consistency checks. The hidden checker compares these values to paper-reported references with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_tc",
+      "output_file": "output_tc.json",
+      "kind": "numeric",
+      "field": "Tc",
+      "target": 12.0,
+      "tolerance_abs": 2.0,
+      "max_extra": 10.0,
+      "weight": 0.6,
+      "note": "Primary headline quantity – superconducting critical temperature"
+    },
+    {
+      "id": "step_lambda",
+      "output_file": "output_tc.json",
+      "kind": "numeric",
+      "field": "lambda",
+      "target": 0.7,
+      "tolerance_abs": 0.2,
+      "max_extra": 1.0,
+      "weight": 0.2,
+      "note": "Electron‑phonon coupling constant consistency"
+    },
+    {
+      "id": "step_omega_log",
+      "output_file": "output_tc.json",
+      "kind": "numeric",
+      "field": "omega_log",
+      "target": 600.0,
+      "tolerance_abs": 200.0,
+      "max_extra": 1000.0,
+      "weight": 0.2,
+      "note": "Logarithmic average phonon frequency consistency"
+    }
+  ]
+}

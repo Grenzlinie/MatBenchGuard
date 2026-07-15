@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes critical radii from delta_g_vs_r.csv raw data and verifies monotonicity for S=1; this is the strongest applicable tier. A small supplementary result‑level compare on critical_radii.json is included.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "delta_g_vs_r.csv": "metric_recompute",
+    "critical_radii.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold critical radii for S=2,3,4 and absolute tolerance",
+      "source_provenance": "Paper text: r* = 2.645, 2.006, 1.769 fm for S=2,3,4 at T=10 MeV, as stated before Eq. (7) and in description of Figure 1.",
+      "generation_method": "Extracted from the paper. Values are the paper’s own reported numbers; no synthetic or guessed data.",
+      "why_not_fabricated": "The gold values are the paper’s actual published results; they are used only as reference for the recomputed peaks."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_g_vs_r.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "S",
+            "delta_G"
+          ],
+          "units": {
+            "r": "fm",
+            "delta_G": "MeV"
+          }
+        },
+        "description": "Free energy change ΔG as a function of radius r for each saturation ratio S. The checker recomputes the critical radii from this data and compares to the hidden paper gold."
+      },
+      {
+        "file": "critical_radii.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "S2",
+            "S3",
+            "S4"
+          ],
+          "items": {
+            "type": "number",
+            "units": "fm"
+          }
+        },
+        "description": "The agent's extracted critical radii for S=2,3,4. The checker compares these directly to the paper-reported gold values with a tolerance."
+      }
+    ],
+    "notes": "All input parameters are explicitly given; the agent must implement Fisher's formula and choose an appropriate numerical method for peak finding. No external datasets are required."
+  },
+  "steps": [
+    {
+      "id": "delta_g_vs_r_peaks",
+      "output_file": "delta_g_vs_r.csv",
+      "kind": "recompute_peaks_and_monotonic",
+      "weight": 0.8,
+      "gold": {
+        "S2": 2.645,
+        "S3": 2.006,
+        "S4": 1.769
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "critical_radii_json",
+      "output_file": "critical_radii.json",
+      "kind": "reference_match",
+      "weight": 0.2,
+      "gold": {
+        "S2": 2.645,
+        "S3": 2.006,
+        "S4": 1.769
+      },
+      "tolerance": 0.05
+    }
+  ]
+}

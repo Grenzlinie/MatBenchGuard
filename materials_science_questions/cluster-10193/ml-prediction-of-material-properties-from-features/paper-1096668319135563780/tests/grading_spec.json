@@ -1,0 +1,183 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MAE is recomputed from per-sample predictions CSV (true vs predicted) and compared to paper-reported MAE using threshold_or_better monotonic scoring; no need for hidden labels beyond the paper target numbers.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported MAE values for CAST (ours) from Table 1",
+      "source_provenance": "Paper Table 1, CAST (ours) row",
+      "generation_method": "manually extracted from paper",
+      "why_not_fabricated": "values are directly from the published paper and used as the reference target for threshold_or_better scoring"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predictions_total_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "required_columns": [
+            "sample_id",
+            "true_value",
+            "predicted_value"
+          ],
+          "units": {
+            "true_value": "eV",
+            "predicted_value": "eV"
+          }
+        },
+        "description": "Per‑sample predictions on the total energy test set. MAE will be recomputed by the checker from this file."
+      },
+      {
+        "file": "predictions_bandgap.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "required_columns": [
+            "sample_id",
+            "true_value",
+            "predicted_value"
+          ],
+          "units": {
+            "true_value": "eV",
+            "predicted_value": "eV"
+          }
+        },
+        "description": "Per‑sample predictions on the bandgap test set. MAE will be recomputed by the checker from this file."
+      },
+      {
+        "file": "predictions_shear_modulus.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "required_columns": [
+            "sample_id",
+            "true_value",
+            "predicted_value"
+          ],
+          "units": {
+            "true_value": "log(GPa)",
+            "predicted_value": "log(GPa)"
+          }
+        },
+        "description": "Per‑sample predictions on the log(shear modulus) test set. MAE will be recomputed by the checker from this file."
+      },
+      {
+        "file": "predictions_bulk_modulus.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "required_columns": [
+            "sample_id",
+            "true_value",
+            "predicted_value"
+          ],
+          "units": {
+            "true_value": "log(GPa)",
+            "predicted_value": "log(GPa)"
+          }
+        },
+        "description": "Per‑sample predictions on the log(bulk modulus) test set. MAE will be recomputed by the checker from this file."
+      },
+      {
+        "file": "results_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energy_mae": "float",
+            "bandgap_mae": "float",
+            "shear_modulus_mae": "float",
+            "bulk_modulus_mae": "float"
+          }
+        },
+        "description": "Self‑reported MAE values for the four properties. The checker compares them against the hidden paper gold and cross‑checks consistency with recomputed MAE from the prediction CSVs."
+      }
+    ],
+    "notes": "The primary scoring uses the raw prediction CSVs to recompute MAE and compare against the paper's reported values with a threshold‑or‑better policy. The summary JSON serves as a fallback T0 check and for consistency."
+  },
+  "steps": [
+    {
+      "id": "step_04",
+      "output_file": "predictions_total_energy.csv",
+      "kind": "recompute_metric",
+      "weight": 0.35,
+      "metric": "mae",
+      "true_column": "true_value",
+      "pred_column": "predicted_value",
+      "paper_reported_mae": 0.256,
+      "fp_floor": 0.001,
+      "decay_factor": 0.2
+    },
+    {
+      "id": "step_05",
+      "output_file": "predictions_bandgap.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "metric": "mae",
+      "true_column": "true_value",
+      "pred_column": "predicted_value",
+      "paper_reported_mae": 0.354,
+      "fp_floor": 0.001,
+      "decay_factor": 0.2
+    },
+    {
+      "id": "step_06",
+      "output_file": "predictions_shear_modulus.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "metric": "mae",
+      "true_column": "true_value",
+      "pred_column": "predicted_value",
+      "paper_reported_mae": 0.069,
+      "fp_floor": 0.001,
+      "decay_factor": 0.2
+    },
+    {
+      "id": "step_07",
+      "output_file": "predictions_bulk_modulus.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "metric": "mae",
+      "true_column": "true_value",
+      "pred_column": "predicted_value",
+      "paper_reported_mae": 0.039,
+      "fp_floor": 0.001,
+      "decay_factor": 0.2
+    },
+    {
+      "id": "step_08",
+      "output_file": "results_summary.json",
+      "kind": "consistency_check",
+      "weight": 0.05,
+      "properties": {
+        "total_energy": {
+          "mae_key": "total_energy_mae",
+          "gold_mae": 0.256
+        },
+        "bandgap": {
+          "mae_key": "bandgap_mae",
+          "gold_mae": 0.354
+        },
+        "shear_modulus": {
+          "mae_key": "shear_modulus_mae",
+          "gold_mae": 0.069
+        },
+        "bulk_modulus": {
+          "mae_key": "bulk_modulus_mae",
+          "gold_mae": 0.039
+        }
+      },
+      "tolerance_abs": 0.01,
+      "fallback_tolerance_abs": 0.1
+    }
+  ]
+}

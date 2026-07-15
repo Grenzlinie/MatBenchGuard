@@ -1,0 +1,209 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energies are recomputed from monomer and dimer total energies; dipole moments and bond lengths are compared to paper values with tolerances adequate for different implementations.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported dipole moments, bond lengths, and formation energies (Tables 1 and 2)",
+      "source_provenance": "Paper doi:10.1007/s10947-006-0426-1, Tables 1 and 2",
+      "generation_method": "Extracted from paper text",
+      "why_not_fabricated": "These are the exact published values for the same system and level of theory, serving as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "monomer_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu": "number (Debye)",
+            "energy": "number (Hartree)",
+            "O_Si_bond_length": "number (Angstrom)"
+          }
+        },
+        "description": "Computed properties of the sp,sp monomer at B3LYP/6-311G**"
+      },
+      {
+        "file": "dimer_Ia_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu": "number (Debye)",
+            "energy": "number (Hartree)",
+            "O_Si_bond_1": "number (Angstrom)",
+            "O_Si_bond_2": "number (Angstrom)",
+            "Si_Si_distance": "number (Angstrom)"
+          }
+        },
+        "description": "Computed properties of dimer isomer Ia at B3LYP/6-311G**"
+      },
+      {
+        "file": "dimer_Ib_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu": "number (Debye)",
+            "energy": "number (Hartree)",
+            "O_Si_bond_1": "number (Angstrom)",
+            "O_Si_bond_2": "number (Angstrom)",
+            "Si_Si_distance": "number (Angstrom)"
+          }
+        },
+        "description": "Computed properties of dimer isomer Ib at B3LYP/6-311G**"
+      },
+      {
+        "file": "formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Ia_delta_E": "number (kcal/mol)",
+            "Ia_delta_E0": "number (kcal/mol) or null",
+            "Ib_delta_E": "number (kcal/mol)",
+            "Ib_delta_E0": "number (kcal/mol) or null",
+            "Ia_delta_E_solvent": "number (kcal/mol) or null",
+            "Ib_delta_E_solvent": "number (kcal/mol) or null"
+          }
+        },
+        "description": "Formation energies of dimers Ia and Ib (uncorrected ΔE, optionally ZPE-corrected ΔE⁰, and solvent ΔE at ε=36 if computed)"
+      }
+    ],
+    "notes": "All computed properties are compared to paper reference values within small tolerances. Agent must use B3LYP/6-311G**. O_Si_bond ordering is irrelevant; the two bond lengths are treated as an unordered pair. Solvent ΔE may be null if SCRF calculation is infeasible, but is expected for full credit."
+  },
+  "steps": [
+    {
+      "id": "step_01_monomer",
+      "output_file": "monomer_properties.json",
+      "kind": "numeric_checks",
+      "target_policy": "reference_match",
+      "weight": 0.2,
+      "checks": [
+        {
+          "field": "mu",
+          "target": 5.72,
+          "tolerance": 0.05,
+          "weight": 0.5
+        },
+        {
+          "field": "O_Si_bond_length",
+          "target": 2.201,
+          "tolerance": 0.005,
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "id": "step_03_dimer_Ia",
+      "output_file": "dimer_Ia_properties.json",
+      "kind": "numeric_checks",
+      "target_policy": "reference_match",
+      "weight": 0.25,
+      "checks": [
+        {
+          "field": "mu",
+          "target": 4.71,
+          "tolerance": 0.05,
+          "weight": 0.3
+        },
+        {
+          "field": "O_Si_bond_1",
+          "target": 2.124,
+          "tolerance": 0.005,
+          "weight": 0.25
+        },
+        {
+          "field": "O_Si_bond_2",
+          "target": 2.124,
+          "tolerance": 0.005,
+          "weight": 0.25
+        },
+        {
+          "field": "Si_Si_distance",
+          "target": 4.605,
+          "tolerance": 0.01,
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "id": "step_04_dimer_Ib",
+      "output_file": "dimer_Ib_properties.json",
+      "kind": "numeric_checks",
+      "target_policy": "reference_match",
+      "weight": 0.25,
+      "checks": [
+        {
+          "field": "mu",
+          "target": 1.2,
+          "tolerance": 0.05,
+          "weight": 0.3
+        },
+        {
+          "field": "O_Si_bond_1",
+          "target": 2.094,
+          "tolerance": 0.005,
+          "weight": 0.25
+        },
+        {
+          "field": "O_Si_bond_2",
+          "target": 2.041,
+          "tolerance": 0.005,
+          "weight": 0.25
+        },
+        {
+          "field": "Si_Si_distance",
+          "target": 4.414,
+          "tolerance": 0.01,
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "id": "step_05_formation",
+      "output_file": "formation_energies.json",
+      "kind": "formation_recompute",
+      "target_policy": "metric_recompute",
+      "weight": 0.3,
+      "checks": [
+        {
+          "field": "Ia_recomputed_delta_E",
+          "target": -9.8,
+          "tolerance": 1.0,
+          "weight": 0.4,
+          "unit": "kcal/mol"
+        },
+        {
+          "field": "Ia_delta_E0",
+          "target": -8.7,
+          "tolerance": 0.5,
+          "weight": 0.15
+        },
+        {
+          "field": "Ib_recomputed_delta_E",
+          "target": -11.2,
+          "tolerance": 1.0,
+          "weight": 0.3
+        },
+        {
+          "field": "Ib_delta_E0",
+          "target": -10.0,
+          "tolerance": 0.5,
+          "weight": 0.15
+        }
+      ]
+    }
+  ]
+}

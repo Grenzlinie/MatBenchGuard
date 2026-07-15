@@ -1,0 +1,143 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Design: exact-match; transients: recompute steady-state temperatures from last row and check monotonic trend against paper's Fig.8 experimental data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optimal_design.json": "exact_match",
+    "cooling_transient.csv": "metric_recompute",
+    "heating_transient.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference steady-state temperatures for cooling and heating validation (from paper Fig.8).",
+      "source_provenance": "Paper Fig.8 – experimental and simulated temperature profiles; digitised approximate: cooling left ≈17°C, middle ≈18.4°C, right ≈18.8°C; heating left ≈38°C, middle ≈34°C, right ≈32°C. Converted to Kelvin.",
+      "generation_method": "Visually estimated from the published figure and converted to Kelvin.",
+      "why_not_fabricated": "These are the paper's main experimental validation results used to verify the simulation; consistent with the paper's text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimal_design.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "thickness_mm": "number",
+            "TEM_per_sqm": "integer"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Optimal panel thickness (mm) and number of TEMs per square meter."
+      },
+      {
+        "file": "cooling_transient.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_s",
+            "T_left_K",
+            "T_middle_K",
+            "T_right_K"
+          ],
+          "units": {
+            "time_s": "second",
+            "T_left_K": "Kelvin",
+            "T_middle_K": "Kelvin",
+            "T_right_K": "Kelvin"
+          }
+        },
+        "description": "Transient temperatures in cooling mode at left, middle and right points."
+      },
+      {
+        "file": "heating_transient.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_s",
+            "T_left_K",
+            "T_middle_K",
+            "T_right_K"
+          ],
+          "units": {
+            "time_s": "second",
+            "T_left_K": "Kelvin",
+            "T_middle_K": "Kelvin",
+            "T_right_K": "Kelvin"
+          }
+        },
+        "description": "Transient temperatures in heating mode at left, middle and right points."
+      }
+    ],
+    "notes": "The checker recomputes the final steady-state temperatures from the CSVs and compares them to hidden gold values (paper-reported experimental results) with appropriate tolerances, and verifies monotonic convergence to steady state."
+  },
+  "steps": [
+    {
+      "id": "design",
+      "output_file": "optimal_design.json",
+      "weight": 0.3,
+      "kind": "exact_match",
+      "target": {
+        "thickness_mm": 4,
+        "TEM_per_sqm": 16
+      }
+    },
+    {
+      "id": "cooling_transient",
+      "output_file": "cooling_transient.csv",
+      "weight": 0.35,
+      "kind": "composite",
+      "checks": [
+        {
+          "name": "steady_state_temps",
+          "weight": 0.8,
+          "target_temps": {
+            "T_left_K": 290.15,
+            "T_middle_K": 291.55,
+            "T_right_K": 291.95
+          },
+          "tolerance": 0.5
+        },
+        {
+          "name": "monotonic",
+          "weight": 0.2,
+          "check_monotonic": true
+        }
+      ]
+    },
+    {
+      "id": "heating_transient",
+      "output_file": "heating_transient.csv",
+      "weight": 0.35,
+      "kind": "composite",
+      "checks": [
+        {
+          "name": "steady_state_temps",
+          "weight": 0.8,
+          "target_temps": {
+            "T_left_K": 311.15,
+            "T_middle_K": 307.15,
+            "T_right_K": 305.15
+          },
+          "tolerance": 0.5
+        },
+        {
+          "name": "monotonic",
+          "weight": 0.2,
+          "check_monotonic": true
+        }
+      ]
+    }
+  ]
+}

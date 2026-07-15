@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T1 (recompute) is infeasible because the verifier cannot re-run the full DFT calculations; T0 with tolerance-based comparison and a structural trend is the strongest applicable tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold adsorption energies, barriers, and desorption temperatures for PBE+U+D level, plus tolerances and trend.",
+      "source_provenance": "Paper Table 1 (adsorption energies A3=-1.71 eV, A4=-1.77 eV) and Table 5 (intrinsic barriers TS2=1.03 eV, TS4=0.69 eV, desorption temperatures 495 K and 370 K).",
+      "generation_method": "Extracted directly from the published paper text.",
+      "why_not_fabricated": "Values are the paper's reported numbers for the PBE+U+D functional, matching the task's scoped theoretical level."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A3_deltaE0": "float (eV)",
+            "A4_deltaE0": "float (eV)"
+          },
+          "units": {
+            "A3_deltaE0": "eV",
+            "A4_deltaE0": "eV"
+          }
+        },
+        "description": "PBE+U+D ZPVE-corrected adsorption energies ΔE₀ for methanol on VO₂·CeO₂(111) in structures A3 (vanadium‑bonded methoxide) and A4 (methoxide in pseudovacancy)."
+      },
+      {
+        "file": "barriers_and_temperatures.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "TS2_DeltaEdd": "float (eV)",
+            "TS4_DeltaEdd": "float (eV)",
+            "T_des_TS2": "float (K)",
+            "T_des_TS4": "float (K)"
+          },
+          "units": {
+            "TS2_DeltaEdd": "eV",
+            "TS4_DeltaEdd": "eV",
+            "T_des_TS2": "K",
+            "T_des_TS4": "K"
+          }
+        },
+        "description": "ZPVE-corrected intrinsic barriers ΔE‡ (eV) and simulated formaldehyde desorption temperatures T_des (K) for the two low‑energy hydrogen‑transfer pathways (TS2 and TS4) on VO₂·CeO₂(111) at the PBE+U+D level."
+      }
+    ],
+    "notes": "All energies are evaluated at the PBE+U+D level (U_eff=4.5 eV on Ce 4f, D2 with s₆=0.75) and include ZPVE corrections from harmonic vibrational frequencies. The desorption temperatures are obtained by solving the first‑order Polanyi–Wigner equation with a heating rate of 3 K/s. The checker will compare the reported values against the hidden paper‑reported PBE+U+D values with absolute tolerances and verify the relative trend T_des(TS4) < T_des(TS2)."
+  },
+  "steps": [
+    {
+      "id": "adsorption_energies",
+      "output_file": "adsorption_energies.json",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "gold": {
+        "A3_deltaE0": {
+          "expected": -1.71,
+          "tolerance": 0.15
+        },
+        "A4_deltaE0": {
+          "expected": -1.77,
+          "tolerance": 0.15
+        }
+      }
+    },
+    {
+      "id": "barriers_and_temperatures",
+      "output_file": "barriers_and_temperatures.json",
+      "weight": 0.7,
+      "kind": "reference_match",
+      "gold": {
+        "TS2_DeltaEdd": {
+          "expected": 1.03,
+          "tolerance": 0.15
+        },
+        "TS4_DeltaEdd": {
+          "expected": 0.69,
+          "tolerance": 0.15
+        },
+        "T_des_TS2": {
+          "expected": 495,
+          "tolerance": 30
+        },
+        "T_des_TS4": {
+          "expected": 370,
+          "tolerance": 30
+        },
+        "trend": "T_des_TS4 < T_des_TS2"
+      }
+    }
+  ]
+}

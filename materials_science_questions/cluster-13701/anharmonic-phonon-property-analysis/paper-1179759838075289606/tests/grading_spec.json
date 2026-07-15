@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute power-law exponent b from raw data.csv (log-log linear regression) and compare to paper-reported value 2.02 within tolerance ±0.1.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "data.csv": "metric_recompute",
+    "fit_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference exponent b=2.02 and ideal glass transition temperature T0=0.27 for the Kob-Andersen model.",
+      "source_provenance": "Paper Fig. 3(a) and text: 'b = 2.02 ± 0.03', T0 determined from VFT fit (FIG. S3).",
+      "generation_method": "Extracted directly from paper's reported values.",
+      "why_not_fabricated": "These are the exact numbers from the paper's analysis; the task goal is to reproduce them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "temperature",
+            "ISD_min",
+            "delta"
+          ],
+          "columns": {
+            "condition": {
+              "type": "string",
+              "unit": ""
+            },
+            "temperature": {
+              "type": "float",
+              "unit": "Lennard-Jones units"
+            },
+            "ISD_min": {
+              "type": "float",
+              "unit": "Lennard-Jones units"
+            },
+            "delta": {
+              "type": "float",
+              "unit": "radians"
+            }
+          },
+          "notes": "At least 10 rows; at least 2 distinct condition values."
+        },
+        "description": "Raw dissipation data: loss phase angle δ versus configurational distance ISD_min for multiple conditions and temperatures."
+      },
+      {
+        "file": "fit_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required_fields": [
+            "exponent_b",
+            "R_squared"
+          ],
+          "fields": {
+            "exponent_b": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "R_squared": {
+              "type": "number",
+              "unit": "dimensionless"
+            }
+          }
+        },
+        "description": "Fitted power-law exponent and quality of the δ ∝ ISD_min^b relation for temperatures above T0."
+      }
+    ],
+    "notes": "The checker will recompute the power-law exponent from data.csv using a log‑log linear regression on the subset of points with temperature > T0 (hidden threshold). It will then compare the recomputed exponent to the paper‑reported reference value. The fit_results.json exponent_b must be consistent with the recomputed value (within a narrow tolerance) to earn a consistency bonus."
+  },
+  "steps": [
+    {
+      "id": "step_03_data_collection",
+      "output_file": "data.csv",
+      "weight": 0.8,
+      "kind": "recompute_exponent",
+      "target_policy": "metric_recompute",
+      "description": "Recompute power-law exponent b from data.csv filtered T>T0; compare to paper reference 2.02 within tolerance ±0.1. Also enforce shape: at least 10 rows and 2 distinct conditions."
+    },
+    {
+      "id": "step_04_fit_powerlaw",
+      "output_file": "fit_results.json",
+      "weight": 0.2,
+      "kind": "consistency_check",
+      "target_policy": "structural_audit",
+      "description": "Verify fit_results.json exponent_b matches recomputed exponent within 0.02 and R_squared >= 0.9."
+    }
+  ]
+}

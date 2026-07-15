@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Evolutionary structure search and relaxation",
+    "role": "process",
+    "action": "Run USPEX evolutionary structure search for CaLi₂ in the pressure range 10–250 GPa using Quantum ESPRESSO as the DFT engine (PBE functional, PAW pseudopotentials). Use simulation cells containing 1, 2, 3, 4, 6, and 8 formula units. For each generated structure, perform variable-cell DFT relaxation to obtain total energy and enthalpy. Also relax elemental Ca and Li cells. Save a search log for provenance.",
+    "output_file": "",
+    "evidence": "search_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core computational discovery step that produces total energies and candidate structures required by all downstream stages. This step is computationally intensive and may be executed on external high-performance resources.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Enthalpy stability analysis",
+    "role": "scored",
+    "action": "From the relaxed total energies of CaLi₂ candidate structures and the elemental reference states, compute enthalpy differences relative to decomposition into elements for each pressure. Identify the stable phases and their pressure intervals, and write a CSV table with columns: pressure (float, GPa), phase (str), enthalpy_per_fu (float, eV).",
+    "output_file": "enthalpy_curves.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact: enthalpy-pressure data that defines the stability regions of the C2/c and P2₁/c phases and the decomposition/recombination intervals. The data is compared to the paper's phase stability sequence with tolerances for pressure windows and enthalpy differences.",
+    "output_schema": "CSV with columns: pressure (float, GPa), phase (str identifying the structure), enthalpy_per_fu (float, eV per formula unit)."
+  },
+  {
+    "id": "step_03",
+    "title": "Extract relaxed C2/c structure",
+    "role": "scored",
+    "action": "From the search results, select the lowest-enthalpy monoclinic C2/c structure at a pressure near 36 GPa. Output its relaxed atomic coordinates, space group, and lattice parameters as a standard CIF file.",
+    "output_file": "C2_c_relaxed.cif",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: the relaxed crystal structure of the C2/c phase of CaLi₂, used to verify the predicted structural motifs (e.g., Ca topology, Li₂ pairs) and lattice parameters.",
+    "output_schema": "Standard Crystallographic Information File (CIF) containing _symmetry_space_group_name_H-M, _cell_length_a/b/c, _cell_angle_alpha/beta/gamma, and _atom_site_* loops."
+  },
+  {
+    "id": "step_04",
+    "title": "Extract relaxed P2₁/c structure",
+    "role": "scored",
+    "action": "From the search results, select the lowest-enthalpy monoclinic P2₁/c structure at a pressure near 55 GPa. Output its relaxed atomic coordinates, space group, and lattice parameters as a standard CIF file.",
+    "output_file": "P2_1_c_relaxed.cif",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: the relaxed crystal structure of the P2₁/c phase of CaLi₂, used to verify the 2D graphene-like motifs, Li1 chains, and lattice parameters.",
+    "output_schema": "Standard CIF containing _symmetry_space_group_name_H-M, _cell_length_a/b/c, _cell_angle_alpha/beta/gamma, and _atom_site_* loops."
+  },
+  {
+    "id": "step_05",
+    "title": "Phonon and electron-phonon coupling calculation",
+    "role": "process",
+    "action": "Using density-functional perturbation theory (DFPT) as implemented in Quantum ESPRESSO, compute phonon dispersions, the Eliashberg spectral function α²F(ω), the electron-phonon coupling constant λ, and the logarithmic average phonon frequency ω_log for the C2/c structure at 45 GPa. Save a summary (λ and ω_log) to an evidence file for the next step.",
+    "output_file": "",
+    "evidence": "epc_summary.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Intermediate computation producing the parameters λ and ω_log that are required for the superconducting Tc estimation. This step must be executed by the agent; it cannot be bypassed.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Superconducting Tc estimation",
+    "role": "scored",
+    "action": "Using the λ and ω_log obtained in the previous step, compute the superconducting critical temperature Tc for the C2/c phase at 45 GPa via the Allen-Dynes modified McMillan formula with a Coulomb pseudopotential μ* = 0.13. Write the Tc value (in Kelvin) to a text file.",
+    "output_file": "tc_at_45GPa.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Scored artifact: the estimated superconducting critical temperature of CaLi₂ at 45 GPa. This quantity is compared to the paper's result (~15 K) with an appropriate tolerance.",
+    "output_schema": "Plain text containing a single floating-point number representing Tc in Kelvin."
+  }
+]

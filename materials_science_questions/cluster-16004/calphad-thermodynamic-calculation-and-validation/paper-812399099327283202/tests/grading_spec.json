@@ -1,0 +1,66 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the fcc/liquid phase boundaries from the agent's raw CSV using the known Redlich-Kister coefficients and lattice stabilities via pycalphad; it does not trust a self-reported metric. This is a T1 recompute from the raw artifact.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "phase_boundaries.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference phase boundary coordinates for the Fe-Cu-Ni system at 1373–1673 K",
+      "source_provenance": "Recomputed by the checker at runtime from the paper's own Redlich-Kister coefficients (Table 1) and lattice stabilities (Table 2) using pycalphad, guaranteeing consistency with the paper's model.",
+      "generation_method": "The checker defines a pycalphad Database with the exact coefficients, runs equilibrium calculations on a fine composition grid, and extracts tie-line endpoints as reference points.",
+      "why_not_fabricated": "The reference is the direct computational output of the paper's published thermodynamic parameters; no arbitrary or external data is used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_boundaries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "phase",
+            "x_Cu",
+            "x_Fe",
+            "x_Ni"
+          ],
+          "units": {
+            "temperature": "K",
+            "x_Cu": "mole fraction (0–1)",
+            "x_Fe": "mole fraction (0–1)",
+            "x_Ni": "mole fraction (0–1)"
+          }
+        },
+        "description": "Computed fcc/liquid phase boundary coordinates for the Fe-Cu-Ni system at temperatures from 1373 K to 1673 K. Each row gives the mole fractions of Cu, Fe, Ni and the phase (fcc or liq) for a point along the boundary."
+      }
+    ],
+    "notes": "The solver may produce multiple tie-line endpoints; all are valid as long as they satisfy the equilibrium conditions. The checker compares against hidden reference coordinates using a spatial tolerance in composition space."
+  },
+  "steps": [
+    {
+      "id": "step_compute_phase_equilibria",
+      "output_file": "phase_boundaries.csv",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Validate phase boundary coordinates against recomputed reference boundaries using spatial tolerance.",
+      "params": {
+        "tolerance": 0.015,
+        "temperatures": [
+          1373,
+          1423,
+          1473,
+          1523,
+          1573,
+          1623,
+          1673
+        ]
+      }
+    }
+  ]
+}

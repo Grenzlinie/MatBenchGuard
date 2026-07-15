@@ -1,0 +1,138 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible (raw stress-strain data not submitted); T2 consistency infeasible (no per-step predictions); T3 structural: verify monotonic trend of critical stress/strain with separation distance, check threshold distance matches paper, and validate property values against paper-derived references using generous tolerances that accommodate independent MD re-run variability.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference values for mechanical properties derived from paper's fitted equations and reported numbers",
+      "source_provenance": "Paper (Solid State Communications 2011), Table 2, text, Eqs.1-2, and text for triple vacancy verification",
+      "generation_method": "Combination of paper-reported values (perfect SLGS: Y=0.7985 TPa, sigma_cr=115.72 GPa, epsilon_cr=20.2%; SV: sigma_cr=108.8 GPa, epsilon_cr=18.41%) and fitted formulas (Eqs.1-2 with K=0.553, n=1.13 for strain; K'=0.308, n'=1.4 for stress) to generate expected values for double vacancy samples; Young's moduli for defective sheets approximated from reported range. Threshold distance 46.86 Angstrom from paper.",
+      "why_not_fabricated": "These values are directly traceable to the paper's reported data and fitted equations, extracted to define the expected reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "samples",
+            "threshold_distance_Angstrom"
+          ],
+          "properties": {
+            "samples": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sample_id",
+                  "type",
+                  "Young_modulus_TPa",
+                  "critical_stress_GPa",
+                  "critical_strain_percent"
+                ],
+                "properties": {
+                  "sample_id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "perfect",
+                      "SV",
+                      "DV",
+                      "TV"
+                    ]
+                  },
+                  "separation_distance_Angstrom": {
+                    "type": "number"
+                  },
+                  "Young_modulus_TPa": {
+                    "type": "number"
+                  },
+                  "critical_stress_GPa": {
+                    "type": "number"
+                  },
+                  "critical_strain_percent": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "threshold_distance_Angstrom": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Mechanical properties computed for each graphene configuration and the threshold separation distance where double vacancies behave like a single vacancy."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "simulation_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Validate all sample properties and threshold distance",
+      "hidden_gold_params": {
+        "perfect": {
+          "Young_modulus_TPa": 0.7985,
+          "critical_stress_GPa": 115.72,
+          "critical_strain_percent": 20.2
+        },
+        "SV": {
+          "Young_modulus_TPa": 0.796,
+          "critical_stress_GPa": 108.8,
+          "critical_strain_percent": 18.41
+        },
+        "TV": {
+          "Young_modulus_TPa": 0.797,
+          "critical_stress_GPa": 108.4,
+          "critical_strain_percent": 18.39
+        },
+        "DV_formula_params": {
+          "SV_stress": 108.8,
+          "SV_strain": 18.41,
+          "K_sig": 0.308,
+          "n_sig": 1.4,
+          "K_eps": 0.553,
+          "n_eps": 1.13
+        },
+        "DV_Young_params": {
+          "Y_min": 0.7914,
+          "Y_max": 0.7985,
+          "D_min": 4.26,
+          "D_max": 68.16
+        },
+        "DV_distances": [
+          4.26,
+          8.52,
+          17.04,
+          25.56,
+          34.08,
+          42.6,
+          51.12,
+          59.64,
+          68.16
+        ],
+        "threshold_gold": 46.86,
+        "tolerances": {
+          "Young_modulus_TPa": 0.05,
+          "critical_stress_GPa": 5.0,
+          "critical_strain_percent": 1.0,
+          "threshold_Angstrom": 1.0
+        }
+      }
+    }
+  ]
+}

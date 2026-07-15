@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_01_md_and_fit",
+    "title": "MD simulation and oscillator parameter extraction",
+    "role": "process",
+    "action": "Set up the initial icosahedral Ar13 geometry using LJ parameters (σ=3.4 Å, ε=1.67×10⁻¹⁴ erg). For a series of target total energies spanning the solid-like regime (roughly -5.8 to -5.2 ×10⁻¹⁴ erg/atom), equilibrate the cluster, apply a sudden radially uniform expansion (δE=0.05×10⁻¹⁴ erg/atom), and run 500 independent isoergic MD trajectories (Verlet algorithm, time step 2 fs, total duration ~100 ps). Compute the ensemble-averaged monopole amplitude (average radius) as y(t) and fit it to y(t)=y₀+A·e^(-λt)·cos(ω't+δ) to obtain damping coefficient λ and reduced frequency ω'. From a selected trajectory, fit the cluster potential energy vs radius to a parabola to extract the spring constant k. Compute natural frequency ω = √(ω'²+λ²) and effective mass m = k/ω². Compute oscillation period T = 2π/ω' and reduced-mass ratio M/m (where M is the atomic mass of Ar). Produce an intermediate JSON file containing for each energy: λ, ω', k, m, T, and M/m, along with the raw ensemble-averaged y(t) data points for at least one temperature as evidence.",
+    "output_file": "",
+    "evidence": "fitted_parameters_per_energy.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Run the full MD simulation and analysis pipeline. The evidence artifact (fitted_parameters_per_energy.json) is a record that the computation was performed; it is not scored but may be used for auditing.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_parameter_table",
+    "title": "Compile oscillator parameters vs total energy",
+    "role": "scored",
+    "action": "From the extracted parameters, create a CSV file with columns: total_energy, damping_coefficient, period, spring_constant, reduced_mass_ratio. Total energy in units of 1e-14 erg/atom; damping coefficient in 1e10 Hz; period in ps; spring constant in consistent relative units (e.g., erg/atom/Å²); reduced_mass_ratio dimensionless. The table must cover the solid-like regime with at least 10 rows, including points below and above the transition.",
+    "output_file": "oscillator_parameters_vs_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulate the four key oscillator parameters as functions of total energy. The file will be scored by verifying the abrupt change at the transition energy (∼−5.444 ×10⁻¹⁴ erg/atom) and the qualitative trends: damping coefficient near zero below transition, monotonic increase above; period slope change; spring constant increase; reduced-mass ratio dropping from ~12 to ~1.",
+    "output_schema": "Columns: total_energy (float, unit 1e-14 erg/atom), damping_coefficient (float, unit 1e10 Hz), period (float, unit ps), spring_constant (float), reduced_mass_ratio (float). At least 10 rows."
+  }
+]

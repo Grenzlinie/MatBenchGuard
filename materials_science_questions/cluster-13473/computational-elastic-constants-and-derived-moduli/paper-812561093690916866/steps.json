@@ -1,0 +1,54 @@
+[
+  {
+    "id": "build_equilibrate",
+    "title": "Model construction and equilibration",
+    "role": "process",
+    "action": "Construct atomistic models of four composites: pristine GNS in NBR, and GNS functionalized with -COOCH3, -OH, -COOH groups in NBR. For each, build a periodic unit cell with a single-layer graphene sheet (~3.92×2.41 nm², edge-hydrogenated, 32 functional groups per sheet for functionalized GNS) and pack NBR chains (20 repeat units, acrylonitrile:butadiene 1:1) to target density 0.97 g/cm³. Perform geometry optimization (conjugate gradient, 10⁻⁵ kcal/mol), then NVT (298 K, 1 ns) and NPT (298 K, 101 kPa, 1 ns) equilibration using the chosen force field.",
+    "output_file": "",
+    "evidence": "equilibration.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "mechanical_simulation",
+    "title": "Mechanical property calculation via constant-strain MD",
+    "role": "process",
+    "action": "For each equilibrated composite, run an additional NVT simulation at 298 K for 200 ps, sampling the last 40 snapshots. Apply the constant-strain method: impose small strains (max amplitude 0.003) in X, Y, Z directions (four levels each), relax internal coordinates, compute virial stress, build stiffness matrix C_ij and compliance matrix S_ij. Compute directional Young's moduli E_i, average E_Avg, and Voigt-Reuss-Hill averaged shear modulus G_H and bulk modulus B_H from the tensors.",
+    "output_file": "",
+    "evidence": "mechanical_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "tribological_simulation",
+    "title": "Tribological simulation and COF/AR calculation",
+    "role": "process",
+    "action": "Build three-layer friction models: top Fe layer (e.g., 0.28×0.28×1.71 nm³), bottom Fe layer (4.58×2.86×1.71 nm³), and each composite as the middle layer. Perform energy minimization, five-cycle annealing (150–350 K, NVT, 200 ps), then apply shear loading: translate top Fe layer at 0.1 Å/ps for 600 ps under 0.03 nm indentation. Compute coefficient of friction COF = F_f / F_n from average lateral and normal forces, and abrasion rate AR = (number of atoms leaving NBR matrix) / (total original NBR atoms).",
+    "output_file": "",
+    "evidence": "tribo_sim.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "write_results",
+    "title": "Collect and write results",
+    "role": "scored",
+    "action": "Collect the computed mechanical and tribological properties for the four composites and write a CSV file containing all required values.",
+    "output_file": "results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with mechanical moduli, coefficient of friction, and abrasion rate for each composite.",
+    "output_schema": "Columns: composite (string), E_X (float, GPa), E_Y (float, GPa), E_Z (float, GPa), E_Avg (float, GPa), G_R (float, GPa), G_V (float, GPa), G_H (float, GPa), B_R (float, GPa), B_V (float, GPa), B_H (float, GPa), COF (float), AR (float). One row per composite with composite names: pristine, COOCH3, OH, COOH."
+  }
+]

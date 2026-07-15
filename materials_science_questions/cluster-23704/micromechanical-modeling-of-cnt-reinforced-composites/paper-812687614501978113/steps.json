@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build and equilibrate atomic models",
+    "role": "process",
+    "action": "Construct LAMMPS data files for all molecular systems: pristine CNT (10,10), CNT wrapped by 1–5 layers of cellulose (Vf = 0.55, 0.75, 0.84, 0.89, 0.91), pure CNC (Vf=1.0), cellulose wrap without CNT (Vf=1.0), and fiber-pair configurations for shear and normal tests. Use the CNT chirality, cellulose Iβ chain parameters, and the appropriate number of chains per layer. Minimize and equilibrate in NVT at 300 K with ReaxFF-Mattsson.",
+    "output_file": "",
+    "evidence": "equilibration.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Atomic models construction and equilibration; generates the input structures for all subsequent MD simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Force-field validation for CNT",
+    "role": "process",
+    "action": "Run tensile MD tests on a pristine (10,10) CNT using six force fields: Rebo, Airebo, ReaxFF-CHO, ReaxFF-Glycine, ReaxFF-RDX, and ReaxFF-Mattsson. Generate stress–strain curves and confirm that ReaxFF-Mattsson yields Young's modulus ~900–1100 GPa and failure strain ~0.2, consistent with literature, and select it for all later simulations.",
+    "output_file": "",
+    "evidence": "cn_ff_validation.png",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Validation of the force field for CNT; ensures ReaxFF-Mattsson is suitable before use in composite simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Tensile MD simulations for all Vf",
+    "role": "process",
+    "action": "For each equilibrated single-fiber model (all Vf), run tensile MD tests with fixed boundary atoms and a constant pulling velocity along the fiber axis. Use ReaxFF-Mattsson, NVT at 300 K. Output raw engineering stress vs. engineering strain curves as separate files in tensile_raw/ directory.",
+    "output_file": "",
+    "evidence": "tensile_raw/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Tensile MD simulations producing raw stress–strain data for post-processing.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compression MD simulations for all Vf",
+    "role": "process",
+    "action": "Run compression tests on the same single-fiber models as in tensile, applying a constant compression rate. Save raw stress–strain curves under compression_raw/.",
+    "output_file": "",
+    "evidence": "compression_raw/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compressive MD simulations producing raw stress–strain data for post-processing.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Interfacial shear MD simulations",
+    "role": "process",
+    "action": "For each Vf, use the fiber-pair shear-test configuration and apply a steering force to shear the top fiber while fixing the bottom fiber. Record shear stress vs. shear strain; save under shear_raw/.",
+    "output_file": "",
+    "evidence": "shear_raw/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Interfacial shear simulations generating raw shear stress–strain data.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Normal separation (adhesion) MD simulations",
+    "role": "process",
+    "action": "Perform normal pull-off simulations on the fiber-pair normal-test configuration for each Vf. Separate the two fibers and record total potential energy vs. separation distance; save data under normal_raw/.",
+    "output_file": "",
+    "evidence": "normal_raw/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Normal separation simulations generating energy–separation curves for adhesion energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Compute mechanical, adhesion, and nanopaper properties",
+    "role": "scored",
+    "action": "From the raw stress–strain and energy data, compute for each Vf: tensile/compressive strength, Young's modulus, toughness, failure strain; surface energy; interfacial shear strength/modulus. Then use the fiber modulus and interfacial shear modulus in the shear-lag model with 50% overlap to predict nanopaper strength and modulus. Collect all values into results.csv.",
+    "output_file": "results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Aggregated table of all MD-derived mechanical/adhesion properties and shear-lag nanopaper predictions as functions of cellulose volume fraction.",
+    "output_schema": "CSV with columns: Vf, tensile_strength_GPa, tensile_modulus_GPa, tensile_toughness_GJm3, tensile_failure_strain, compressive_strength_GPa, compressive_modulus_GPa, compressive_toughness_GJm3, compressive_failure_strain, surface_energy_Jm2, shear_strength_GPa, shear_modulus_GPa, nanopaper_strength_GPa, nanopaper_modulus_GPa. One row per Vf (including Vf=0.0, 0.55, 0.75, 0.84, 0.89, 0.91, 1.0 CNC, and 1.0 cellulose-wrapped-no-CNT)."
+  }
+]

@@ -1,0 +1,67 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute structural conditions (local minima, positivity, constancy) from the raw CSVs; no hidden gold values needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "Ni_ground_state_energy.csv": "structural_audit",
+    "Ni_delta2_temperature.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "Ni_ground_state_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "Ep"
+          ],
+          "units": {
+            "Ep": "eV/atom"
+          }
+        },
+        "description": "Ground-state potential energy per atom for Ni clusters with N in the ranges 50-60 and 142-152. Used to verify local energy minima at N=55 and 147."
+      },
+      {
+        "file": "Ni_delta2_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "T",
+            "Delta2"
+          ],
+          "units": {
+            "T": "K",
+            "Delta2": "eV"
+          }
+        },
+        "description": "Second energy difference as a function of temperature for Ni55 and Ni147. Verifies that Δ_N^{(2)} remains positive and essentially constant up to the melting temperature."
+      }
+    ],
+    "notes": "Scoring is entirely structural: the checker verifies local minima in Ep(N) and positivity/constancy of Δ_N^{(2)} without comparing to external gold values. The target_policy is structural_audit for both artifacts."
+  },
+  "steps": [
+    {
+      "id": "local_minima",
+      "output_file": "Ni_ground_state_energy.csv",
+      "weight": 0.5,
+      "kind": "recompute_condition",
+      "description": "Verify that Ep(N) has local minima at N=55 and N=147."
+    },
+    {
+      "id": "delta2_stability",
+      "output_file": "Ni_delta2_temperature.csv",
+      "weight": 0.5,
+      "kind": "recompute_condition",
+      "description": "Verify that Δ_N^(2) is positive and nearly constant (std < 0.05 eV) for N=55 and N=147."
+    }
+  ]
+}

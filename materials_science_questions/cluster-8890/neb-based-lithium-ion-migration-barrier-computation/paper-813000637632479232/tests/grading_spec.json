@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute migration barriers from IS/TS adsorption energies in results.json and compare to paper‑reported reference barriers and the required trend that I‑doped barriers are lower than pristine ones.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported barrier values for pristine Path I and Path II",
+      "source_provenance": "Paper’s Table 4 and conclusion text: Path I barrier ≈ 0.59 eV, Path II barrier ≈ 0.61 eV.",
+      "generation_method": "Extracted from paper; tolerances of ±0.1 eV are chosen to absorb code/functional differences.",
+      "why_not_fabricated": "Values are directly from the published paper; tolerances are generous enough to accept a correct re‑run while excluding gross errors."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pristine_pathI_IS_ads": "float",
+            "pristine_pathI_TS_ads": "float",
+            "pristine_pathII_IS_ads": "float",
+            "pristine_pathII_TS_ads": "float",
+            "I_H1_H7_IS_ads": "float",
+            "I_H1_H7_TS_ads": "float",
+            "I_H1_H2_IS_ads": "float",
+            "I_H1_H2_TS_ads": "float",
+            "units": "string"
+          },
+          "units": {
+            "pristine_pathI_IS_ads": "eV",
+            "pristine_pathI_TS_ads": "eV",
+            "pristine_pathII_IS_ads": "eV",
+            "pristine_pathII_TS_ads": "eV",
+            "I_H1_H7_IS_ads": "eV",
+            "I_H1_H7_TS_ads": "eV",
+            "I_H1_H2_IS_ads": "eV",
+            "I_H1_H2_TS_ads": "eV"
+          }
+        },
+        "description": "Initial-state and transition-state adsorption energies for four Li-ion migration paths. The checker recomputes migration barriers (barrier = TS - IS) and evaluates whether the iodine-doped barriers are lower than the pristine barriers and whether the barriers are within physically reasonable bounds."
+      }
+    ],
+    "notes": "Only the I-doped case and pristine reference are reproduced; F, Cl, Br cases and benchmark recalculations omitted."
+  },
+  "steps": [
+    {
+      "id": "pristine_barrier_I",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "recompute_barrier",
+      "is_field": "pristine_pathI_IS_ads",
+      "ts_field": "pristine_pathI_TS_ads",
+      "target_barrier": 0.59,
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "pristine_barrier_II",
+      "output_file": "results.json",
+      "weight": 0.15,
+      "kind": "recompute_barrier",
+      "is_field": "pristine_pathII_IS_ads",
+      "ts_field": "pristine_pathII_TS_ads",
+      "target_barrier": 0.61,
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "i_barrier_H1H7",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "threshold_barrier",
+      "is_field": "I_H1_H7_IS_ads",
+      "ts_field": "I_H1_H7_TS_ads",
+      "max_barrier_eV": 0.25
+    },
+    {
+      "id": "i_barrier_H1H2",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "threshold_barrier",
+      "is_field": "I_H1_H2_IS_ads",
+      "ts_field": "I_H1_H2_TS_ads",
+      "max_barrier_eV": 0.25
+    },
+    {
+      "id": "trend_barrier_lowered",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "barrier_trend",
+      "pristine_paths": [
+        "pristine_pathI_IS_ads",
+        "pristine_pathI_TS_ads",
+        "pristine_pathII_IS_ads",
+        "pristine_pathII_TS_ads"
+      ],
+      "i_paths": [
+        [
+          "I_H1_H7_IS_ads",
+          "I_H1_H7_TS_ads"
+        ],
+        [
+          "I_H1_H2_IS_ads",
+          "I_H1_H2_TS_ads"
+        ]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1/T2 infeasible; combine T0 numeric compare against paper gold with T3 trend checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for max_shear_stress_GPa and critical_twist_angle_deg",
+      "source_provenance": "extracted from paper text and Figures; solve.sh values are derived from paper statements and curve readings",
+      "generation_method": "paper reported max shear stresses (72,74,78 GPa for (11,11),(13,13),(15,15)), critical twist angles (835,670,590 deg); temperature series angles approximated from curves; pure CNT angle 1040 deg",
+      "why_not_fabricated": "directly sourced from paper reported quantities"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "simulations": "array"
+          },
+          "items": {
+            "chirality": "string",
+            "temperature": "int",
+            "max_shear_stress_GPa": "float",
+            "critical_twist_angle_deg": "float",
+            "interaction_force_at_500deg_eV_Ang": "float"
+          },
+          "required_columns": [],
+          "units": {
+            "max_shear_stress_GPa": "GPa",
+            "critical_twist_angle_deg": "degrees",
+            "interaction_force_at_500deg_eV_Ang": "eV/Å per atom"
+          }
+        },
+        "description": "Consolidated table of extracted torsional properties for each simulation. The checker will compare reported values to hidden reference values and verify structural trends (e.g., monotonicity with temperature)."
+      }
+    ],
+    "notes": "The agent must run all simulations and compute the required scalar quantities; the file must contain all specified simulations. Tolerances and gold values are hidden; the agent should use standard force-field parameters (Tersoff for C–C, Lennard-Jones with ε=0.00284 eV, σ=3.4 Å for GNR–SWCNT)."
+  },
+  "steps": [
+    {
+      "id": "shape_completeness",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.05,
+      "description": "Validate file shape, required fields, and required entries present; pure CNT force=0"
+    },
+    {
+      "id": "trend1_chirality_stress_up",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.1,
+      "description": "For chirality series (11,11),(13,13),(15,15) at 300K, max_shear_stress_GPa strictly increasing"
+    },
+    {
+      "id": "trend2_chirality_angle_down",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.1,
+      "description": "For chirality series at 300K, critical_twist_angle_deg strictly decreasing"
+    },
+    {
+      "id": "trend3_temp_stress_down",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.05,
+      "description": "For (11,11) non-pure at 300,500,700K, max_shear_stress_GPa strictly decreasing"
+    },
+    {
+      "id": "trend4_temp_angle_down",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.1,
+      "description": "For (11,11) non-pure at 300,500,700K, critical_twist_angle_deg strictly decreasing"
+    },
+    {
+      "id": "trend5_temp_interaction_up",
+      "output_file": "results.json",
+      "kind": "trend",
+      "weight": 0.1,
+      "description": "For (11,11) non-pure at 300,500,700K, interaction_force_at_500deg_eV_Ang strictly increasing"
+    },
+    {
+      "id": "pure_angle_gt_1000",
+      "output_file": "results.json",
+      "kind": "threshold",
+      "weight": 0.1,
+      "description": "Pure (11,11) SWCNT critical_twist_angle_deg > 1000",
+      "target": 1000,
+      "direction": "greater"
+    },
+    {
+      "id": "ref_max_stress",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.2,
+      "variable": "max_shear_stress_GPa",
+      "tolerance": 0.1,
+      "targets": {
+        "(11,11)|300": 72.0,
+        "(11,11)|500": 68.0,
+        "(11,11)|700": 64.0,
+        "(13,13)|300": 74.0,
+        "(15,15)|300": 78.0
+      }
+    },
+    {
+      "id": "ref_critical_angle",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.2,
+      "variable": "critical_twist_angle_deg",
+      "tolerance": 0.05,
+      "targets": {
+        "(11,11)|300": 835.0,
+        "(11,11)|500": 810.0,
+        "(11,11)|700": 780.0,
+        "(13,13)|300": 670.0,
+        "(15,15)|300": 590.0,
+        "(11,11)-pure|300": 1040.0
+      }
+    }
+  ]
+}

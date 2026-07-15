@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Stable phase is recomputed from agent's grand potential table; envelope shape is evaluated against paper-derived structural criteria (two lobes, eutectic location, dominant phases) without needing a digitized reference curve.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_stable_phases.csv": "structural_audit",
+    "step_02_grand_potentials.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected double-lobed envelope shape constraints, eutectic phi range, lobe peak position ranges, and dominant phase assignments.",
+      "source_provenance": "Paper Figure 2a and textual description (eutectic at phi~0.5, low lobe apex near phi~0.33 dominated by Hex_II, high lobe apex near phi~0.67 dominated by Lam/Hex, specific phases at chiN=18 from Figure 3a).",
+      "generation_method": "Extracted from the paper's reported phase diagram topology and species volume fraction data.",
+      "why_not_fabricated": "Constraints reflect the paper's main qualitative and quantitative findings; no synthetic data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_stable_phases.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi_A_tot",
+            "chiN",
+            "phase"
+          ],
+          "columns": {
+            "phi_A_tot": "float",
+            "chiN": "float",
+            "phase": "string"
+          }
+        },
+        "description": "Equilibrium phase at each grid point; checked for internal consistency with the recomputed phases from the grand potential data."
+      },
+      {
+        "file": "step_02_grand_potentials.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "keys": "stringified (phi_A_tot, chiN)",
+          "values": {
+            "type": "object",
+            "required_keys": [
+              "Dis",
+              "Lam",
+              "Hex",
+              "Hex_II"
+            ],
+            "value_type": "float"
+          }
+        },
+        "description": "Grand potential per chain for each phase at each grid point. The checker recomputes the stable phase and compares the resulting order-disorder envelope shape with a hidden digitized reference from the paper."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01_stable_phases",
+      "output_file": "step_01_stable_phases.csv",
+      "kind": "consistency_check",
+      "weight": 0.2,
+      "description": "Check CSV phase assignments match recomputed stable phases from grand potentials."
+    },
+    {
+      "id": "step_02_grand_potentials",
+      "output_file": "step_02_grand_potentials.json",
+      "kind": "structural_envelope",
+      "weight": 0.8,
+      "description": "Recompute stable phase and analyze envelope shape: double-lobed, eutectic location, peak positions, dominant phases.",
+      "params": {
+        "eutectic_phi_range": [
+          0.45,
+          0.55
+        ],
+        "low_lobe_peak_phi_range": [
+          0.25,
+          0.4
+        ],
+        "high_lobe_peak_phi_range": [
+          0.6,
+          0.75
+        ],
+        "peak_count_min": 2,
+        "dominant_low_phase": "Hex_II",
+        "dominant_high_phases": [
+          "Lam",
+          "Hex"
+        ],
+        "specific_phase_checks": [
+          {
+            "phi": 0.5,
+            "chiN": 18,
+            "phase": "Lam",
+            "tolerance_phi": 0.05,
+            "tolerance_chiN": 0.5
+          },
+          {
+            "phi": 0.33,
+            "chiN": 18,
+            "phase": "Hex_II",
+            "tolerance_phi": 0.05,
+            "tolerance_chiN": 0.5
+          }
+        ]
+      }
+    }
+  ]
+}

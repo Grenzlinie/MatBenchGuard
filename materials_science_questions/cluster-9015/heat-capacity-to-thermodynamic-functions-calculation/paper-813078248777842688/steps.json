@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Fit EMF and derive Gibbs energies for cell I",
+    "role": "scored",
+    "action": "Load emf_cellI.csv, perform linear least-squares regression of EMF (mV) vs Temperature (K) to obtain intercept and slope. Convert EMF expression to standard reaction Gibbs energy change ΔrG°(4) using ΔrG° = -6·F·(EMF/1000). Combine with auxiliary ΔfG° of NiO and Eu2O3 to obtain linear expression for ΔfG° of EuB6. Write all coefficients to a JSON file.",
+    "output_file": "step_01_cellI_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted EMF coefficients and derived Gibbs energy coefficients for cell I.",
+    "output_schema": "JSON object with numeric fields: emf_intercept (mV), emf_slope (mV/K), drG_intercept (kJ/mol), drG_slope (kJ/K·mol), dfG_intercept (kJ/mol), dfG_slope (kJ/K·mol)."
+  },
+  {
+    "id": "step2",
+    "title": "Fit EMF and derive Gibbs energies for cell II",
+    "role": "scored",
+    "action": "Load emf_cellII.csv, perform linear least-squares regression of EMF vs T. Convert to ΔrG°(9) via Nernst equation with n=6, then combine with auxiliary ΔfG° of FeO and Eu2O3 to obtain ΔfG° of EuB6. Write the coefficients to JSON.",
+    "output_file": "step_02_cellII_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted EMF coefficients and derived Gibbs energy coefficients for cell II.",
+    "output_schema": "JSON object with numeric fields: emf_intercept (mV), emf_slope (mV/K), drG_intercept (kJ/mol), drG_slope (kJ/K·mol), dfG_intercept (kJ/mol), dfG_slope (kJ/K·mol)."
+  },
+  {
+    "id": "step3",
+    "title": "Fit enthalpy increment polynomial",
+    "role": "scored",
+    "action": "Load enthalpy_increments.csv, perform least-squares fit to the functional form (H_T–H_298) = a·T + b·T^2 + c·T^{-1} + d, constrained such that H_T–H_298 = 0 at 298 K and dH/dT = Cp_298. Report the four coefficients.",
+    "output_file": "step_03_enthalpy_fit.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted polynomial coefficients for the enthalpy increment function of EuB6.",
+    "output_schema": "JSON object with numeric fields: constant (J/mol), T_coefficient (J/K·mol), T2_coefficient (J/K^2·mol), T_inv_coefficient (J·K/mol)."
+  },
+  {
+    "id": "step4",
+    "title": "Compute thermodynamic functions",
+    "role": "scored",
+    "action": "Using the fitted enthalpy polynomial, differentiate to obtain Cp(T). Compute entropy S(T) by integration S_T = S_298 + ∫_{298}^T Cp/T dT and Gibbs energy functions (GEF) as -(G_T – H_298)/T = S_T – (H_T–H_298)/T. Output a CSV table at temperatures 300–1600 K in 100 K steps.",
+    "output_file": "step_04_thermo_functions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature‐dependent thermodynamic functions derived from the enthalpy fit.",
+    "output_schema": "CSV table with columns: T(K), H_T_H298 (kJ/mol), Cp (J/K·mol), S (J/K·mol), GEF (J/K·mol). Rows for T = 300, 400, ..., 1600 K."
+  },
+  {
+    "id": "step5",
+    "title": "Third-law analysis for ΔfH°298",
+    "role": "scored",
+    "action": "For each experimental EMF point of cells I and II, compute pointwise ΔfG°(EuB6) via Nernst relation combined with auxiliary ΔfG° of reference oxides. Interpolate fefs of EuB6 from Step 4 and fefs of Eu(s) and B(s) from auxiliary constants. Compute ΔfH298 for each datum using ΔfH298 = ΔfG° – T·Δfef, and calculate the mean and standard deviation for each cell. Write the results to JSON.",
+    "output_file": "step_05_third_law_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Third-law derived standard enthalpy of formation at 298 K from each cell.",
+    "output_schema": "JSON object with fields: cell_I_mean_delta_f_H298 (kJ/mol), cell_II_mean_delta_f_H298 (kJ/mol), and optionally arrays cell_I_values, cell_II_values."
+  }
+]

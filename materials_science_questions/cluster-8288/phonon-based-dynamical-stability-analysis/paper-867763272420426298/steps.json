@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_prepare_structures",
+    "title": "Generate initial atomic structures",
+    "role": "process",
+    "action": "Generate unit cells for (5,5), (8,3), and (7,7) SWCNTs and construct initial Te atomic positions for linear chain (LC), zigzag chain (ZZ), and 3-fold helical coil (3H) motifs. Build both bare extreme nanowire (vacuum) and encapsulated systems, saving them in a suitable format for DFT input.",
+    "output_file": "",
+    "evidence": "initial_structures/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare all input structures needed for subsequent DFT calculations. The agent must generate SWCNT coordinates from chiral indices and place Te atoms according to the described motifs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relax",
+    "title": "Relax all structures",
+    "role": "process",
+    "action": "For each system (LC in vacuum, LC encapsulated, ZZ in vacuum, ZZ encapsulated, 3H encapsulated), perform DFT geometry optimization using Quantum ESPRESSO pw.x. Relax atomic positions while keeping unit cell dimensions fixed for the encapsulated systems. Save output logs and relaxed structures.",
+    "output_file": "",
+    "evidence": "relax_outputs/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Fully relax atomic positions to obtain converged ground-state structures for subsequent phonon and electronic calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_phonon",
+    "title": "Compute phonon frequencies",
+    "role": "process",
+    "action": "For each relaxed structure, compute phonon frequencies at the Gamma point (or along a high-symmetry path) using the finite-displacement method with Quantum ESPRESSO ph.x. Record all phonon frequencies for each system.",
+    "output_file": "",
+    "evidence": "phonon_freqs_raw.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Calculate phonon frequencies to assess mechanical stability. The agent must produce a list of frequencies (in cm⁻¹ or THz) for each system, noting the presence of any imaginary modes.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_peierls",
+    "title": "Compute Peierls distortion curve for LC",
+    "role": "process",
+    "action": "For the linear chain in vacuum and inside a (5,5) SWCNT, construct a series of unit cells with varying bond-length alternation (BLA). For each BLA, fix the unit cell length and compute the DFT total energy with pw.x. Record the energy vs BLA data.",
+    "output_file": "",
+    "evidence": "peierls_energy_vs_bla.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Scan the BLA parameter to determine the equilibrium distortion and the associated energy gain per Te atom.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_bandgap",
+    "title": "Compute electronic band gaps",
+    "role": "process",
+    "action": "For the encapsulated LC, ZZ, and 3H structures, perform a DFT calculation (scf or nscf) to obtain the electronic density of states or band structure, and extract the fundamental band gap (in eV) for each system.",
+    "output_file": "",
+    "evidence": "band_gaps.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Determine whether each encapsulated extreme nanowire is metallic (gap ~0) or semiconducting (gap > 0.1 eV) as evidence for the metal-semiconductor transition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_report",
+    "title": "Compile final report",
+    "role": "scored",
+    "action": "Collect all computed results: the phonon frequency lists for each system, the Peierls distortion curve data, and the extracted band gaps. Write a single JSON file containing all numerical results in the required format.",
+    "output_file": "stability_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Assemble the phonon frequency lists, Peierls distortion data, and band gaps into a single JSON artifact that the checker will evaluate.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"LC_vac_phonon_freqs\",\"LC_enc_phonon_freqs\",\"ZZ_vac_phonon_freqs\",\"ZZ_enc_phonon_freqs\",\"3H_enc_phonon_freqs\",\"LC_PD_curve\",\"LC_PD_equilibrium_BLA_nm\",\"LC_PD_energy_gain_meV\",\"band_gap_LC_eV\",\"band_gap_ZZ_eV\",\"band_gap_3H_eV\"],\"properties\":{\"LC_vac_phonon_freqs\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"LC_enc_phonon_freqs\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"ZZ_vac_phonon_freqs\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"ZZ_enc_phonon_freqs\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"3H_enc_phonon_freqs\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"LC_PD_curve\":{\"type\":\"object\",\"required\":[\"BLA_nm\",\"energy_meV_per_Te\"],\"properties\":{\"BLA_nm\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"energy_meV_per_Te\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}}},\"LC_PD_equilibrium_BLA_nm\":{\"type\":\"number\"},\"LC_PD_energy_gain_meV\":{\"type\":\"number\"},\"band_gap_LC_eV\":{\"type\":\"number\"},\"band_gap_ZZ_eV\":{\"type\":\"number\"},\"band_gap_3H_eV\":{\"type\":\"number\"}}}"
+  }
+]

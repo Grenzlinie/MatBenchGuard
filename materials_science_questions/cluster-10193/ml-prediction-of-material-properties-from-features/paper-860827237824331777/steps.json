@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Data preparation and featurization",
+    "role": "process",
+    "action": "Download the SuperCon dataset, COD, Hosono database, and the September 2021 IMA mineral list. For every compound, extract from each distinct element 22 properties using Mendeleev plus the stoichiometric integer, forming the input sets for regression and classification.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Train regression DeepSet models",
+    "role": "process",
+    "action": "Train 50 independent DeepSet regression models on random 80/20 splits of the SuperCon dataset. Use latent dimension d=300 and the paper’s architecture (7‑layer φ, 13‑layer ρ, ReLU activations).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Evaluate regression on Hosono database",
+    "role": "scored",
+    "action": "Apply the 50 trained regression models to every material in the Hosono database. Compute the mean and standard deviation of predicted critical temperature Tc across models and output the results.",
+    "output_file": "regression_predictions.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing predicted and measured Tc for Hosono database materials.",
+    "output_schema": "Columns: material_name (string), measured_Tc (float, K), predicted_Tc_mean (float, K), predicted_Tc_std (float, K). One row per Hosono material."
+  },
+  {
+    "id": "step_04",
+    "title": "Train classification DeepSet models",
+    "role": "process",
+    "action": "Train 60 independent DeepSet classifiers using the SuperCon dataset (superconductors) augmented with 50,000 random entries from COD (non‑superconductors). Use d=300 latent dimension and the paper’s architecture (4‑layer φ, 3‑layer ρ + sigmoid output).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Evaluate classification on Hosono database (majority rule)",
+    "role": "scored",
+    "action": "For each material in the Hosono database, collect raw scores from all 60 trained classifiers. Compute the mean score and, using a threshold of 0.85 and majority voting across runs, assign a final binary prediction (1 = superconductor, 0 = non‑superconductor). Output the true label and predictions.",
+    "output_file": "classification_results.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with classification results for Hosono database materials.",
+    "output_schema": "Columns: material_name (string), true_label (int, 1 for superconductor, 0 otherwise), predicted_score (float, mean raw score across models), predicted_class (int, 1 if majority vote passes threshold 0.85 else 0). One row per Hosono material."
+  },
+  {
+    "id": "step_06",
+    "title": "Apply classifier to IMA mineral list",
+    "role": "scored",
+    "action": "Featurize the IMA mineral list (September 2021) and apply the trained classifiers with the same majority rule (threshold 0.85). Output all minerals classified as superconducting, including the predicted score and classification label.",
+    "output_file": "ima_classified_candidates.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "List of IMA minerals predicted to be superconducting.",
+    "output_schema": "Columns: mineral_name (string), formula (string), predicted_score (float, mean score across models), classification (string, 'SC' if predicted_class is 1 else 'non-SC'). One row per mineral that is classified as superconducting."
+  }
+]

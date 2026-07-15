@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute numerical comparison infeasible due to different solver implementations; structural trends (monotonicity, peak location, enhancement ratio) confirm the paper's claims.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phase_vs_polar.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polar_angle",
+            "phase_shift"
+          ],
+          "units": {
+            "polar_angle": "degrees",
+            "phase_shift": "degrees"
+          }
+        },
+        "description": "Phase shift Δα0 between n=1.330 and n=1.332 at three polar angles (37, 50, 60 degrees) at their respective resonant azimuths. Checker verifies monotonic increase and ratio limits."
+      },
+      {
+        "file": "step_02_phase_vs_azimuth.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "azimuth_offset",
+            "phase_shift"
+          ],
+          "units": {
+            "azimuth_offset": "degrees",
+            "phase_shift": "degrees"
+          }
+        },
+        "description": "Phase shift Δα0 at 60° polar angle for azimuth offsets from -4 to +4 degrees around resonance. Checker verifies that the maximum phase shift occurs at a non-zero offset and the enhancement ratio is above a threshold."
+      }
+    ],
+    "notes": "Both artifacts are scored by structural audit: monotonicity, ratio, and peak location rules absorb solver-specific numerical spread while confirming the paper's main trends. No tolerance windows are exposed."
+  },
+  "hidden_assets": [],
+  "steps": [
+    {
+      "id": "simulate_polar_phase_shift",
+      "output_file": "step_01_phase_vs_polar.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "config": {
+        "checks": [
+          {
+            "type": "monotonic_increase",
+            "key": "polar_angle",
+            "value_key": "phase_shift"
+          },
+          {
+            "type": "ratio_in_range",
+            "key": "polar_angle",
+            "value_key": "phase_shift",
+            "num_val": 60.0,
+            "den_val": 37.0,
+            "min_ratio": 1.15,
+            "max_ratio": 1.45
+          }
+        ]
+      }
+    },
+    {
+      "id": "simulate_azimuth_phase_shift",
+      "output_file": "step_02_phase_vs_azimuth.csv",
+      "kind": "structural_audit",
+      "weight": 0.7,
+      "config": {
+        "checks": [
+          {
+            "type": "peak_offset_nonzero",
+            "key": "azimuth_offset",
+            "value_key": "phase_shift",
+            "min_abs_offset": 0.5,
+            "max_abs_offset": 4.0
+          },
+          {
+            "type": "ratio_in_range",
+            "key": "azimuth_offset",
+            "value_key": "phase_shift",
+            "num_val": "max",
+            "den_val": 0.0,
+            "min_ratio": 1.15,
+            "max_ratio": 1.45
+          }
+        ]
+      }
+    }
+  ]
+}

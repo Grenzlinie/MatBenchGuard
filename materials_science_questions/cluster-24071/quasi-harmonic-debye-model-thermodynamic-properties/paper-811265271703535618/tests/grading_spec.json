@@ -1,0 +1,271 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw DFT E‑V data is infeasible because agent submits only final derived properties; however, derived elastic moduli and sound velocities can be verified for consistency with raw elastic constants and lattice‑parameter‑derived density, catching fabrication.",
+  "target_policies": {
+    "structural_properties.csv": "exact_match",
+    "elastic_properties.csv": "exact_match",
+    "thermal_properties.csv": "exact_match"
+  },
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "structural_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "a(Å)",
+            "b(Å)",
+            "c(Å)",
+            "Ef(kJ/mol)"
+          ],
+          "units": {
+            "a(Å)": "angstrom",
+            "b(Å)": "angstrom",
+            "c(Å)": "angstrom",
+            "Ef(kJ/mol)": "kJ/mol"
+          }
+        },
+        "description": "Equilibrium lattice parameters and formation enthalpy per atom. The b column may be empty for cubic/tetragonal systems."
+      },
+      {
+        "file": "elastic_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "C11",
+            "C12",
+            "C13",
+            "C22",
+            "C23",
+            "C33",
+            "C44",
+            "C55",
+            "C66",
+            "B(GPa)",
+            "G(GPa)",
+            "E(GPa)",
+            "sigma",
+            "Vp(m/s)",
+            "Vs(m/s)",
+            "Vm(m/s)"
+          ],
+          "units": {
+            "C11": "GPa",
+            "C12": "GPa",
+            "C13": "GPa",
+            "C22": "GPa",
+            "C23": "GPa",
+            "C33": "GPa",
+            "C44": "GPa",
+            "C55": "GPa",
+            "C66": "GPa",
+            "B(GPa)": "GPa",
+            "G(GPa)": "GPa",
+            "E(GPa)": "GPa",
+            "sigma": "dimensionless",
+            "Vp(m/s)": "m/s",
+            "Vs(m/s)": "m/s",
+            "Vm(m/s)": "m/s"
+          }
+        },
+        "description": "Single-crystal elastic constants and polycrystalline elastic moduli and sound velocities. Missing symmetry-related elastic constants are left empty."
+      },
+      {
+        "file": "thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "U(kJ/mol)",
+            "Cv(J/mol*K)",
+            "Cp(J/mol*K)",
+            "A(kJ/mol)",
+            "S(J/mol*K)",
+            "Theta(K)",
+            "gamma",
+            "alpha(10^-5/K)"
+          ],
+          "units": {
+            "U(kJ/mol)": "kJ/mol",
+            "Cv(J/mol*K)": "J/(mol K)",
+            "Cp(J/mol*K)": "J/(mol K)",
+            "A(kJ/mol)": "kJ/mol",
+            "S(J/mol*K)": "J/(mol K)",
+            "Theta(K)": "K",
+            "gamma": "dimensionless",
+            "alpha(10^-5/K)": "10^-5 K^-1"
+          }
+        },
+        "description": "Thermodynamic properties computed at T=300 K and P=0 GPa from the quasi-harmonic Debye model."
+      }
+    ],
+    "notes": "All output files must be placed in /app/outputs. Tolerances and gold values are defined in the hidden checker; the agent only sees the schema and format requirements."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "structural_properties.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Compare lattice parameters and formation enthalpy to paper gold.",
+      "tolerances": {
+        "a(Å)": 0.05,
+        "b(Å)": 0.05,
+        "c(Å)": 0.05,
+        "Ef(kJ/mol)": 5.0
+      },
+      "gold": {
+        "V3Si": {
+          "a(Å)": 4.7021,
+          "b(Å)": null,
+          "c(Å)": null,
+          "Ef(kJ/mol)": -44.78
+        },
+        "VSi2": {
+          "a(Å)": 4.5597,
+          "b(Å)": 4.5597,
+          "c(Å)": 6.3602,
+          "Ef(kJ/mol)": -54.26
+        },
+        "V5Si3": {
+          "a(Å)": 9.3997,
+          "b(Å)": null,
+          "c(Å)": 4.7252,
+          "Ef(kJ/mol)": -59.55
+        },
+        "V6Si5": {
+          "a(Å)": 15.9126,
+          "b(Å)": 7.4859,
+          "c(Å)": 4.8296,
+          "Ef(kJ/mol)": -54.27
+        }
+      }
+    },
+    {
+      "id": "step2a",
+      "output_file": "elastic_properties.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Compare single-crystal elastic constants to paper gold with 10% relative tolerance.",
+      "tolerances_relative": true,
+      "base_tolerance": 0.1,
+      "gold_Cij": {
+        "V3Si": {
+          "C11": 241.78,
+          "C12": 169.56,
+          "C44": 78.6
+        },
+        "VSi2": {
+          "C11": 375.46,
+          "C12": 62.7,
+          "C13": 76.39,
+          "C33": 426.99,
+          "C44": 144.94
+        },
+        "V5Si3": {
+          "C11": 397.23,
+          "C12": 104.46,
+          "C13": 99.91,
+          "C33": 341.07,
+          "C44": 104.09,
+          "C66": 129.06
+        },
+        "V6Si5": {
+          "C11": 392.7,
+          "C12": 123.69,
+          "C13": 80.59,
+          "C22": 331.6,
+          "C23": 91.74,
+          "C33": 343.01,
+          "C44": 136.12,
+          "C55": 98.89,
+          "C66": 114.54
+        }
+      }
+    },
+    {
+      "id": "step2b",
+      "output_file": "elastic_properties.csv",
+      "kind": "custom",
+      "weight": 0.25,
+      "description": "Recompute polycrystalline moduli and sound velocities from the raw elastic constants and lattice-parameter-derived density, then compare to agent's reported values for consistency.",
+      "tolerances": {
+        "sigma_abs": 0.01,
+        "E_relative": 0.05,
+        "velocity_relative": 0.05
+      }
+    },
+    {
+      "id": "step3",
+      "output_file": "thermal_properties.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Compare thermodynamic properties at 300K and 0GPa to paper gold with 10% relative tolerance.",
+      "tolerances_relative": true,
+      "base_tolerance": 0.1,
+      "gold": {
+        "V3Si": {
+          "U(kJ/mol)": 33.96,
+          "Cv(J/mol*K)": 87.19,
+          "Cp(J/mol*K)": 87.79,
+          "A(kJ/mol)": 7.35,
+          "S(J/mol*K)": 88.69,
+          "Theta(K)": 499.87,
+          "gamma": 1.768,
+          "alpha(10^-5/K)": 1.31
+        },
+        "VSi2": {
+          "U(kJ/mol)": 32.07,
+          "Cv(J/mol*K)": 48.6,
+          "Cp(J/mol*K)": 49.01,
+          "A(kJ/mol)": 22.82,
+          "S(J/mol*K)": 30.83,
+          "Theta(K)": 923.96,
+          "gamma": 2.593,
+          "alpha(10^-5/K)": 1.08
+        },
+        "V5Si3": {
+          "U(kJ/mol)": 76.91,
+          "Cv(J/mol*K)": 149.88,
+          "Cp(J/mol*K)": 150.97,
+          "A(kJ/mol)": 42.94,
+          "S(J/mol*K)": 113.23,
+          "Theta(K)": 740.44,
+          "gamma": 1.973,
+          "alpha(10^-5/K)": 1.24
+        },
+        "V6Si5": {
+          "U(kJ/mol)": 106.01,
+          "Cv(J/mol*K)": 205.42,
+          "Cp(J/mol*K)": 206.93,
+          "A(kJ/mol)": 59.67,
+          "S(J/mol*K)": 154.47,
+          "Theta(K)": 744.86,
+          "gamma": 1.952,
+          "alpha(10^-5/K)": 1.25
+        }
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values from paper Tables 1–4 for lattice parameters, formation enthalpy, elastic constants, and thermal properties",
+      "source_provenance": "Paper 'Elastic and Thermal Properties of Silicon Compounds from First-Principles Calculations', Tables 1–4.",
+      "generation_method": "Extracted directly from the tables in the paper.",
+      "why_not_fabricated": "Values are the paper's published results; derived properties are checked for consistency rather than compared to external source."
+    }
+  ]
+}

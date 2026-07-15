@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate initial crystal structures",
+    "role": "process",
+    "action": "Construct hexagonal P6₂22 (No. 180) primitive or conventional cell for C₃, Si₃, Ge₃. Place three atoms at the 3c Wyckoff position (0.5, 0, 0). Estimate initial lattice parameters from covalent radii and the super‑dense packing (e.g., a≈2.6 Å, c≈2.8 Å for C; scale for Si/Ge).",
+    "output_file": "",
+    "evidence": "initial_structures.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepares input files for DFT relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "For each material, run PBE geometry optimization (PWscf) to relax atomic positions and lattice parameters. Use energy cutoffs of 400 eV (C), 340 eV (Si), 240 eV (Ge), a Monkhorst‑Pack k‑point grid spacing ≤ 0.025 Å⁻¹, and SSSP ultrasoft pseudopotentials. Converge forces to < 1×10⁻⁵ Ry/Å.",
+    "output_file": "",
+    "evidence": "relax_output.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces the equilibrium lattice parameters and total energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "DFT elastic constants calculation",
+    "role": "process",
+    "action": "Compute the full elastic tensor via the stress‑strain method for each relaxed structure using the same functional and pseudopotentials. Extract the independent constants (C₁₁, C₃₃, C₄₄, C₆₆, C₁₂, C₁₃) and derive the Voigt‑Reuss‑Hill bulk modulus B and shear modulus G. Store the density, the elastic constants, B, and G in elastic_constants.json.",
+    "output_file": "",
+    "evidence": "elastic_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides the elastic and density inputs for thermodynamic post‑processing.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Compute isotropic sound velocities and Debye temperature",
+    "role": "scored",
+    "action": "From the density, B, and G in elastic_constants.json, compute longitudinal (vl), transverse (vt), and mean (vm) sound velocities using Navier's equations. Then compute the Debye temperature ΘD using the standard formula (n=1; atomic masses: C 12.0107, Si 28.0855, Ge 72.63 u). Write the results to step_01_isotropic_thermo.json.",
+    "output_file": "step_01_isotropic_thermo.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Isotropic sound velocities and Debye temperature for C3, Si3, Ge3.",
+    "output_schema": "JSON object with top-level keys 'C3', 'Si3', 'Ge3'. Each value is an object with numeric fields: 'v_l' (m/s), 'v_t' (m/s), 'v_m' (m/s), 'Theta_D' (K)."
+  },
+  {
+    "id": "step5",
+    "title": "Compute anisotropic sound velocities",
+    "role": "scored",
+    "action": "Using the single‑crystal elastic constants and density from elastic_constants.json, compute directional sound velocities along the [001] and [100] propagation directions. For [001]: vl = √(C₃₃/ρ), vt1 = vt2 = √(C₄₄/ρ). For [100]: vl = √((C₁₁−C₁₂)/(2ρ)), vt1 = √(C₁₁/ρ), vt2 = √(C₄₄/ρ). Write the results to step_02_anisotropic_velocities.json.",
+    "output_file": "step_02_anisotropic_velocities.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Anisotropic sound velocities for [001] and [100] directions.",
+    "output_schema": "JSON object with keys 'C3', 'Si3', 'Ge3'. Each value is an object with keys '[001]' and '[100]', each containing numeric fields 'v_l' (m/s), 'v_t1' (m/s), 'v_t2' (m/s)."
+  },
+  {
+    "id": "step6",
+    "title": "Compute minimum thermal conductivity",
+    "role": "scored",
+    "action": "At 300 K, compute the isotropic minimum thermal conductivity κ_min using Cahill's model with the three isotropic sound velocities from step 4. Also compute directional κ_min for [001] and [100] using the corresponding anisotropic sound velocities from step 5. Write the results to step_03_min_thermal_conductivity.json.",
+    "output_file": "step_03_min_thermal_conductivity.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Minimum thermal conductivity at 300 K (isotropic and directional).",
+    "output_schema": "JSON object with keys 'C3', 'Si3', 'Ge3'. Each value is an object with numeric fields: 'isotropic' (W/cm·K), '[001]' (W/cm·K), '[100]' (W/cm·K)."
+  }
+]

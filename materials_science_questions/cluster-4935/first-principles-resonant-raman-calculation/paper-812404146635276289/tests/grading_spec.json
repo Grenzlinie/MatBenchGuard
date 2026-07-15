@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker re‑implements the analytical two‑electron model from the paper and recomputes the persistent current, absorption spectrum, and Raman cross‑section, comparing pointwise and verifying peak positions. T1 recompute is feasible because all quantities can be computed from publicly stated parameters and formulas.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "persistent_current.csv": "metric_recompute",
+    "absorption_spectrum.csv": "metric_recompute",
+    "raman_cross_section.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "persistent_current.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "flux",
+            "current_nA"
+          ],
+          "units": {
+            "flux": "dimensionless (/0)",
+            "current_nA": "nanoamperes"
+          }
+        },
+        "description": "Persistent current as a function of the Aharonov-Bohm flux ratio. Checker recomputes the expected curve using the same model and compares pointwise."
+      },
+      {
+        "file": "absorption_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_meV",
+            "absorption_power"
+          ],
+          "units": {
+            "frequency_meV": "meV",
+            "absorption_power": "dimensionless (normalized to max 1)"
+          }
+        },
+        "description": "Optical absorption power spectrum. Checker recomputes the spectrum using the same model and selection rules, compares pointwise and verifies peak positions."
+      },
+      {
+        "file": "raman_cross_section.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_meV",
+            "cross_section",
+            "polarization"
+          ],
+          "units": {
+            "frequency_meV": "meV",
+            "cross_section": "dimensionless (normalized to 1)",
+            "polarization": "string ('polarized' or 'depolarized')"
+          }
+        },
+        "description": "Resonant Raman differential cross-section for both polarizations. Checker recomputes the spectra for each configuration and compares pointwise."
+      }
+    ],
+    "notes": "The checker implements the same analytical model (energy bands, dipole and Raman operators) with the identical parameters (R=100 nm, W=10 nm, m_e=0.067 m_0, s=12.9) and recomputes the expected persistent current, absorption spectrum, and Raman cross-section. Comparisons use pre-defined tolerances to verify correct reproduction. The outputs must be generated from the agent's own implementation of the model; direct copying of the paper's figures is insufficient."
+  },
+  "steps": [
+    {
+      "id": "persistent_current_check",
+      "output_file": "persistent_current.csv",
+      "weight": 0.5,
+      "kind": "recompute_pointwise",
+      "description": "Recompute persistent current curve and compare pointwise with relative tolerance 1e-3 (minimum absolute floor 1e-6 nA)."
+    },
+    {
+      "id": "absorption_spectrum_check",
+      "output_file": "absorption_spectrum.csv",
+      "weight": 0.25,
+      "kind": "recompute_spectrum",
+      "description": "Recompute absorption spectrum using dipole selection rules and compare: RMSE between normalized spectra < 0.05 gives full credit; peak positions within 0.2 meV."
+    },
+    {
+      "id": "raman_cross_section_check",
+      "output_file": "raman_cross_section.csv",
+      "weight": 0.25,
+      "kind": "recompute_spectrum",
+      "description": "Recompute Raman cross-section for both polarizations and compare: RMSE < 0.05, peak positions within 0.2 meV."
+    }
+  ]
+}

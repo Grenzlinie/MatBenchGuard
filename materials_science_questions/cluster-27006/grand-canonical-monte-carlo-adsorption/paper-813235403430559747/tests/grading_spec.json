@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "GCMC and geometric results are not recomputable within the checker sandbox; result-level comparison against paper‑reported gold values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "geometric_descriptors.csv": "reference_match",
+    "methane_uptake_35bar.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for top methane uptakes and geometric ranges from paper Tables 2 and 3.",
+      "source_provenance": "Extracted from the paper (Table 2, Table 3).",
+      "generation_method": "Direct transcription of published numbers.",
+      "why_not_fabricated": "These are the actual paper-reported values, verified against the reference solve.sh."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometric_descriptors.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_id",
+            "Di_angstrom",
+            "Df_angstrom",
+            "volumetric_ASA_m2_per_cm3",
+            "gravimetric_ASA_m2_per_g"
+          ],
+          "units": {
+            "Di_angstrom": "angstrom",
+            "Df_angstrom": "angstrom",
+            "volumetric_ASA_m2_per_cm3": "m2 / cm3",
+            "gravimetric_ASA_m2_per_g": "m2 / g"
+          }
+        },
+        "description": "Geometric pore descriptors for all 111 methane-accessible MOF-5 analogues. The checker verifies Di >= Df, checks that value ranges fall within paper-reported bounds, and confirms that top structures match expected IDs."
+      },
+      {
+        "file": "methane_uptake_35bar.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure_id",
+            "volumetric_uptake_V_STP_per_V",
+            "gravimetric_uptake_mol_per_kg"
+          ],
+          "units": {
+            "volumetric_uptake_V_STP_per_V": "V_STP / V",
+            "gravimetric_uptake_mol_per_kg": "mol / kg"
+          }
+        },
+        "description": "Methane adsorption uptakes at 298 K and 35 bar for the same set of MOF-5 analogues. The checker compares the top three volumetric and top three gravimetric uptakes (and their structure IDs) to hidden gold values, awarding full credit when the uptakes meet or exceed the reference."
+      }
+    ],
+    "notes": "The checker reads both CSV files. For geometric descriptors, it checks that all structures fall within the paper’s Table 2 ranges (±20% tolerance) and that Di ≥ Df. For methane uptake, it compares the top three volumetric and gravimetric uptakes and structure IDs to hidden paper values using a tolerance; higher uptake is better. All comparisons use hidden gold values, never revealed to the agent. The load‑bearing methane uptake step ensures the core GCMC simulation is genuinely executed."
+  },
+  "steps": [
+    {
+      "id": "geometric_check",
+      "output_file": "geometric_descriptors.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Verify geometric descriptors: Di >= Df for all structures; all values within extended paper‑reported ranges (±20%); presence of known key structures.",
+      "target": {}
+    },
+    {
+      "id": "methane_check",
+      "output_file": "methane_uptake_35bar.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "description": "Verify methane uptakes: top‑3 volumetric and top‑3 gravimetric structure IDs match paper gold and their values meet or exceed paper thresholds (with tolerance).",
+      "target": {}
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute adsorption energies and roughness against paper-reported gold; verify structural trends (ordering, plausible ranges) in stress-strain curves.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_adsorption_energies.json": "reference_match",
+    "graphene_tensile_stress_strain.csv": "structural_audit",
+    "composite_longitudinal_shear.csv": "structural_audit",
+    "surface_roughness.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pristine_graphene": "float (eV)",
+            "stw_graphene": "float (eV)"
+          }
+        },
+        "description": "Adsorption energy of propylene monomer on pristine graphene (Hole site) and on STW‑defective graphene (Bridge 3 site) computed with DFT‑vdW. Compare to paper‑reported values."
+      },
+      {
+        "file": "graphene_tensile_stress_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress_0defects",
+            "stress_5defects",
+            "stress_10defects"
+          ],
+          "units": {
+            "strain": "dimensionless (true strain)",
+            "stress_0defects": "GPa",
+            "stress_5defects": "GPa",
+            "stress_10defects": "GPa"
+          }
+        },
+        "description": "Stress‑strain curves of single‑layer graphene under uniaxial tension in the armchair direction. Verify that stress decreases with defect density and that modulus and strength magnitudes are within an acceptable range."
+      },
+      {
+        "file": "composite_longitudinal_shear.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "shear_strain",
+            "stress_0defects",
+            "stress_5defects",
+            "stress_10defects"
+          ],
+          "units": {
+            "shear_strain": "dimensionless (true shear strain)",
+            "stress_0defects": "MPa",
+            "stress_5defects": "MPa",
+            "stress_10defects": "MPa"
+          }
+        },
+        "description": "Stress‑strain curves of nanocomposites under longitudinal shear. Verify increasing shear stress with defect density and approximate magnitudes."
+      },
+      {
+        "file": "surface_roughness.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect_count",
+            "roughness_angstrom",
+            "max_displacement_angstrom"
+          ],
+          "units": {
+            "defect_count": "integer",
+            "roughness_angstrom": "ångström",
+            "max_displacement_angstrom": "ångström"
+          }
+        },
+        "description": "Mean arithmetic surface roughness and maximum out‑of‑plane displacement of graphene sheets. Compare with paper‑reported values."
+      }
+    ],
+    "notes": "The verification uses absolute tolerances for adsorption energies and roughness, and structural trend/magnitude checks for stress-strain curves. The load-bearing steps require actual execution of the MD equilibration and deformation simulations."
+  },
+  "steps": [
+    {
+      "id": "dft_adsorption",
+      "output_file": "dft_adsorption_energies.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "gold_adsorption": {
+        "pristine_graphene": -0.4087,
+        "stw_graphene": -1.036
+      },
+      "tolerance_abs_eV": 0.1
+    },
+    {
+      "id": "graphene_tensile",
+      "output_file": "graphene_tensile_stress_strain.csv",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "check_strain": 0.05,
+      "trend_expected": "stress_0defects > stress_5defects > stress_10defects",
+      "stress_range_GPa": [
+        0,
+        200
+      ]
+    },
+    {
+      "id": "composite_shear",
+      "output_file": "composite_longitudinal_shear.csv",
+      "weight": 0.35,
+      "kind": "structural_audit",
+      "check_strain": 0.05,
+      "trend_expected": "stress_0defects near zero and stress_0defects < stress_5defects < stress_10defects",
+      "stress_range_MPa": [
+        0,
+        100
+      ]
+    },
+    {
+      "id": "surface_roughness",
+      "output_file": "surface_roughness.csv",
+      "weight": 0.1,
+      "kind": "reference_match",
+      "gold_rows": [
+        {
+          "defect_count": 0,
+          "roughness_angstrom": 0.264,
+          "max_displacement_angstrom": 0.7914
+        },
+        {
+          "defect_count": 5,
+          "roughness_angstrom": 0.3539,
+          "max_displacement_angstrom": 1.3752
+        },
+        {
+          "defect_count": 10,
+          "roughness_angstrom": 0.5242,
+          "max_displacement_angstrom": 1.5415
+        }
+      ],
+      "tolerance_abs": 0.1
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference adsorption energies from paper Table 2 (LDA-vdW: Hole site pristine, Bridge 3 STW).",
+      "source_provenance": "Paper Table 2, LDA-vdW column, Hole and Bridge 3 rows.",
+      "generation_method": "Extracted directly from the published paper values.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's reported adsorption energies."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference surface roughness values from paper Table 3.",
+      "source_provenance": "Paper Table 3, roughness and max displacement for 0,5,10 defects.",
+      "generation_method": "Extracted directly from the published paper table.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's reported roughness data."
+    }
+  ]
+}

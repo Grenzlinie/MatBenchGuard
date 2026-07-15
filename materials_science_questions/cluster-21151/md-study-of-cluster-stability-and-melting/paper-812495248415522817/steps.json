@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Generate initial random supercell",
+    "role": "process",
+    "action": "Create a cubic supercell containing 62 Ni atoms and 38 Nb atoms with random positions. Use periodic boundary conditions.",
+    "output_file": "",
+    "evidence": "initial_cell.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the initial configuration for AIMD from the given composition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Run AIMD simulation of liquid Ni62Nb38",
+    "role": "process",
+    "action": "Perform ab initio molecular dynamics in the NVT ensemble using the PBE functional and appropriate pseudopotentials. Heat the supercell to 2500 K and equilibrate, then cool to the target temperatures 1873 K, 1473 K, 1403 K, and 1233 K, collecting production trajectories at each temperature.",
+    "output_file": "",
+    "evidence": "md_trajectories.tar",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate equilibrium trajectories at four temperatures; these trajectories are the basis for all subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute electronic density of states (DOS)",
+    "role": "process",
+    "action": "Using a snapshot from the production runs at 1873 K and 1233 K, run a static DFT calculation with higher plane-wave cutoff to obtain the total and projected (Ni s,p,d; Nb s,p,d) density of states.",
+    "output_file": "",
+    "evidence": "dos_data.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Electronic structure calculation required to explain Ni–Nb bonding.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Analyze structure, dynamics and electronic properties",
+    "role": "scored",
+    "action": "From the trajectories and DOS data, compute for each temperature: total pair distribution function g(r) up to 10 Å, total structure factor S(q) up to 10 Å⁻¹, bond-angle distributions for all triple types, partial coordination numbers and Warren-Cowley CSRO parameters, mean square displacements and self-diffusion coefficients via Einstein relation, and the full density of states (energy, total and projected). Package all results into a single JSON file.",
+    "output_file": "simulation_results.json",
+    "evidence": "simulation_results.json",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Central scored artifact containing all structural, dynamic, and electronic properties that the checker will verify against hidden paper-reported trends.",
+    "output_schema": "JSON object with keys: 'temperatures' (list of 4 floats in K), 'total_g_r' (list of dicts per temperature with 'r' (Å) and 'g' arrays), 'total_S_q' (list of dicts per temperature with 'q' (Å⁻¹) and 'S' arrays), 'bond_angle_distributions' (dict mapping bond type string to list of dicts per temperature with 'angle' (deg) and 'probability' arrays), 'csro_parameters' (list of dicts per temperature with keys 'Ni-Ni','Ni-Nb','Nb-Ni','Nb-Nb'), 'diffusion_coefficients' (list of dicts per temperature with keys 'D_Ni','D_Nb','D_total' in units of 1e-4 cm²/s), 'dos' (list of dicts for 1873 K and 1233 K with 'energy' (eV, Fermi level=0), 'total_dos','Ni_d','Nb_d','Ni_s','Ni_p','Nb_s','Nb_p' arrays)."
+  }
+]

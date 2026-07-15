@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 is infeasible because the quantities are DFT-computed physical properties requiring a full DFT pipeline; result-level comparison (T0) is the strongest feasible tier.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "dft_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for lattice parameter and band gap from the paper's DFT-HSE03 calculation",
+      "source_provenance": "Paper Table 3 and text: for (Bi₁.₅Li₀.₅)(Nb₁.₅Mg₀.₅)O₇, a = 10.463 Å, direct band gap (L‑L) = 3.18 eV",
+      "generation_method": "Extracted verbatim from the paper",
+      "why_not_fabricated": "These are the actual reported DFT values; the reference solve.sh reproduces them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lattice_parameter_a",
+            "band_gap_eV"
+          ],
+          "properties": {
+            "lattice_parameter_a": {
+              "type": "number",
+              "unit": "Å"
+            },
+            "band_gap_eV": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "The DFT‑predicted relaxed lattice parameter (in Å) and direct band gap (in eV) for the (Bi₁.₅Li₀.₅)(Nb₁.₅Mg₀.₅)O₇ pyrochlore model. The verifier compares both values to reference values with predefined tolerances."
+      }
+    ],
+    "notes": "Verifier applies tolerances for lattice parameter and band gap. Exact values are not required; results within tolerance earn full credit."
+  },
+  "steps": [
+    {
+      "id": "check_lattice_parameter",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "field": "lattice_parameter_a",
+      "target": 10.463,
+      "tolerance_abs": 0.02,
+      "weight": 0.5,
+      "description": "Lattice parameter a compared to gold 10.463 Å with ±0.02 Å tolerance."
+    },
+    {
+      "id": "check_band_gap",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "field": "band_gap_eV",
+      "target": 3.18,
+      "tolerance_abs": 0.05,
+      "weight": 0.5,
+      "description": "Direct band gap compared to gold 3.18 eV with ±0.05 eV tolerance."
+    }
+  ]
+}

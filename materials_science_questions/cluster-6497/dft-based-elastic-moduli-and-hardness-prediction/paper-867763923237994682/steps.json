@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_ref",
+    "title": "DFT reference calculations for bulk diamond and graphene",
+    "role": "process",
+    "action": "Perform DFT (Quantum ESPRESSO) calculations for bulk diamond (face-centered cubic) and graphene (hexagonal 2D) to relax geometries, obtain equilibrium lattice constants, bulk modulus B0 (diamond) and layer modulus γ0 (graphene), bond stiffness <k>0, and generate reference bond stiffness vs bond length curves k(l) for sp3 and sp2 carbon over a range of bond lengths (e.g., 1.3–1.8 Å) by fitting total energy vs strain data.",
+    "output_file": "",
+    "evidence": "references.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces reference data needed for the geometry-based estimation of <k>0. Writes a JSON with fitted EOS parameters and k(l) coefficients.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_gen_structures",
+    "title": "Generate initial atomic structures for nanostructures",
+    "role": "process",
+    "action": "Using ASE, generate initial coordinates for: (1) a small bare nanodiamond cluster (e.g., C54 cuboctahedral or cubic) carved from bulk diamond lattice; (2) a medium bare nanodiamond cluster (~500–700 atoms, e.g., C660); (3) a hydrogenated version of the medium nanodiamond by saturating surface dangling bonds; (4) a C60 fullerene molecule (icosahedral). Write each as a separate XYZ file.",
+    "output_file": "",
+    "evidence": "structures/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the initial atomic models required for DFT relaxation and subsequent mechanical calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_relax",
+    "title": "DFT relaxation of all nanostructures",
+    "role": "process",
+    "action": "For each nanostructure (small ND, medium ND, hydro ND, C60), perform DFT geometry relaxation using Quantum ESPRESSO with an appropriate supercell and vacuum to avoid periodic interactions (Γ-point sampling). Save relaxed atomic coordinates and total energies.",
+    "output_file": "",
+    "evidence": "relaxed/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the equilibrium geometries needed for strain application and for the geometry-based estimation of <k>0.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_strain",
+    "title": "Apply isotropic strain and collect energy/bond-length data",
+    "role": "process",
+    "action": "For each of the six systems (diamond, graphene, small ND, medium ND, hydro ND, C60), starting from the relaxed geometry, apply uniform isotropic linear strains ε = ±0.015, ±0.03. For each strained state, perform constrained geometry optimization (freezing surface atoms for non-periodic clusters) and record the total energy, total number of bonds Nb, and average bond length ⟨l⟩. Save these data in a structured format.",
+    "output_file": "",
+    "evidence": "strain_data/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the raw energy–bond-length curves required to directly compute <k>0 (and B0 for periodic systems) via finite differences.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_k0",
+    "title": "Compute average bond stiffness, estimate from geometry, and compile results",
+    "role": "scored",
+    "action": "For each system, compute direct ⟨k⟩0 from the energy vs average bond length data using finite-difference second derivative. Compute B0 for periodic systems (bulk diamond and graphene) by fitting a Birch–Murnaghan equation of state. Using the relaxed geometry of each system, assign sp²/sp³ hybridization based on coordination and angles, then use the reference bond stiffness vs bond length curves to estimate individual bond stiffnesses and obtain ⟨k⟩0_est. Compute ratio = k_est / k_direct. Write results.json with entries for bulk_diamond, graphene, nd_small, nd_medium, nd_hydro, c60.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main scored artifact: provides the directly computed and estimated average bond stiffnesses, the bulk moduli for the reference systems, and validates the geometry‑based estimation method.",
+    "output_schema": "A JSON object with keys: bulk_diamond, graphene, nd_small, nd_medium, nd_hydro, c60. Each value is an object with fields: num_atoms (int), a0 (float, Å, only for periodic systems), B0 (float, GPa, only if computed), k_direct (float, N/m), k_est (float, N/m), ratio_k (float, k_est/k_direct)."
+  }
+]

@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes extinction rules from superspace group notation and compares cell parameters against paper-reported values; monotonic scoring not needed as answers are fixed discrete values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_superspace_group.txt": "exact_match",
+    "step_02_extinction_rules.csv": "reference_match",
+    "step_03_modulation_cell.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "exact superspace group symbol, extinction rules table, and cell parameter reference values for NbS3-II",
+      "source_provenance": "paper section 3.2 and abstract; figure 8 caption; equations (10)",
+      "generation_method": "Extracted from published paper text",
+      "why_not_fabricated": "These are the paper's own reported results for the superspace group, extinction rules, and modulation cell parameters."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_superspace_group.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Superspace group notation for NbS3-II in dualistic notation. The checker normalises whitespace and special characters before exact comparison."
+      },
+      {
+        "file": "step_02_extinction_rules.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "reflection",
+            "condition",
+            "description"
+          ],
+          "units": {}
+        },
+        "description": "Extinction conditions for main reflections and first-order satellites. The checker compares each row's condition string to the reference derived from the paper."
+      },
+      {
+        "file": "step_03_modulation_cell.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "a": "Å",
+            "b": "Å",
+            "c": "Å",
+            "gamma": "°"
+          }
+        },
+        "description": "Basic and incommensurate modulation cell parameters. The checker parses the two lines, extracts numerical values for a, b, c, and gamma, and compares against the paper's values with tolerances (±0.2 Å, ±1°)."
+      }
+    ],
+    "notes": "The task uses the paper-reported experimental constraints for NbS3-II as input. The superspace group is a fixed symbolic expression; extinction rules are a discrete set of conditions; cell parameters are numeric with small tolerances. All outputs are deterministic and verifiable against hidden reference values derived from the paper."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_superspace_group.txt",
+      "weight": 0.5,
+      "kind": "superspace_group",
+      "expected_normalized": "ap21/m1bar1"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_extinction_rules.csv",
+      "weight": 0.3,
+      "kind": "extinction_rules",
+      "expected_rows": [
+        {
+          "reflection": "main",
+          "condition": "h even"
+        },
+        {
+          "reflection": "satellite",
+          "condition": "h odd"
+        }
+      ]
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_modulation_cell.txt",
+      "weight": 0.2,
+      "kind": "modulation_cell",
+      "gold": {
+        "basic": {
+          "a": 9.1,
+          "b": 19.9,
+          "c": 3.4,
+          "gamma": 97
+        },
+        "incommensurate": {
+          "a": 18.2,
+          "b": 19.9,
+          "c": 9.66,
+          "gamma": 97
+        }
+      },
+      "tolerances": {
+        "a": 0.2,
+        "b": 0.2,
+        "c": 0.2,
+        "gamma": 1.0
+      }
+    }
+  ]
+}

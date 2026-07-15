@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the frustrated translational energy from raw force data is not feasible in the verification sandbox because the reference solution does not provide the force evidence file; the strongest tier supported by the overall package is result-level comparison against the paper's reported values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relative_energies.json": "reference_match",
+    "activation_barriers.json": "reference_match",
+    "frustrated_energy_hydrogen.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for relative silylene stability, activation barriers, and frustrated hydrogen energy.",
+      "source_provenance": "Paper-reported values: Table II (ΔE for 0H, 1H, 2H) and paper text (activation barriers 1.12 eV, 1.34 eV; frustrated energy ~0.5 eV).",
+      "generation_method": "Extracted from the paper's published results for the same computational conditions (GGA-PBE, 20 Ry cut-off, 6-layer slab).",
+      "why_not_fabricated": "Values are the actual numbers the paper reports as its main results; the reference solve.sh hardcodes these same values, ensuring it achieves full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relative_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_E_0H_eV": "float (eV)",
+            "delta_E_1H_eV": "float (eV)",
+            "delta_E_2H_eV": "float (eV)"
+          }
+        },
+        "description": "Energy difference ΔE = E(on-dimer) - E(intrarow) for 0, 1, and 2 coadsorbed H atoms."
+      },
+      {
+        "file": "activation_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "intrarow_barrier_eV": "float (eV)",
+            "on_dimer_barrier_eV": "float (eV)"
+          }
+        },
+        "description": "DFT activation barriers for intrarow and on-dimer decomposition pathways."
+      },
+      {
+        "file": "frustrated_energy_hydrogen.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "H_work_integral_eV": "float (eV)",
+            "estimated_frustrated_translational_energy_eV": "float (eV)"
+          }
+        },
+        "description": "Work integral and frustrated translational energy of the H atom; the checker compares your reported values to a hidden reference."
+      }
+    ],
+    "notes": "Both values in frustrated_energy_hydrogen.json should be identical under the classical, minimum-energy-path, decoupling approximation."
+  },
+  "steps": [
+    {
+      "id": "check_relative_energies",
+      "output_file": "relative_energies.json",
+      "weight": 0.3,
+      "kind": "json_field",
+      "fields": [
+        "delta_E_0H_eV",
+        "delta_E_1H_eV",
+        "delta_E_2H_eV"
+      ],
+      "gold": {
+        "delta_E_0H_eV": -0.18,
+        "delta_E_1H_eV": 0.15,
+        "delta_E_2H_eV": 0.15
+      },
+      "tolerance": 0.02
+    },
+    {
+      "id": "check_activation_barriers",
+      "output_file": "activation_barriers.json",
+      "weight": 0.4,
+      "kind": "json_field",
+      "fields": [
+        "intrarow_barrier_eV",
+        "on_dimer_barrier_eV"
+      ],
+      "gold": {
+        "intrarow_barrier_eV": 1.12,
+        "on_dimer_barrier_eV": 1.34
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "check_frustrated_energy",
+      "output_file": "frustrated_energy_hydrogen.json",
+      "weight": 0.3,
+      "kind": "json_field",
+      "fields": [
+        "H_work_integral_eV",
+        "estimated_frustrated_translational_energy_eV"
+      ],
+      "gold": {
+        "H_work_integral_eV": 0.5,
+        "estimated_frustrated_translational_energy_eV": 0.5
+      },
+      "tolerance": 0.1
+    }
+  ]
+}

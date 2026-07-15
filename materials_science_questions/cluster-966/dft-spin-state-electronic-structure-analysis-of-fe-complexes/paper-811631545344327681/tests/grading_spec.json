@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes per-system averages of Fe–O bond enthalpy and sulfur spin density from the agent's raw CSV, then compares to paper-reported values with tolerances and checks the required relative trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "per_snapshot_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold average ΔE₂ and sulfur spin density for P450cam_apo and P450cam_prop, derived from paper Table 2 (spin densities) and Table 3 (ΔE₂).",
+      "source_provenance": "Paper Tables 2 and 3 (P450cam rows). Table 3: apo ΔE₂ = 54.9 kcal mol⁻¹, prop ΔE₂ = 52.1 kcal mol⁻¹. Table 2: apo ρ(S) = 0.34, prop ρ(S) = 0.27.",
+      "generation_method": "Extracted from the published paper; verified against the reference solution's synthetic CSV that reproduces these averages exactly.",
+      "why_not_fabricated": "These are the paper's own reported values for this isoform, not arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "per_snapshot_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "snapshot_id",
+            "Fe_S_bond_length_A",
+            "Fe_O_bond_length_A",
+            "spin_density_S",
+            "spin_density_O",
+            "spin_density_Fe",
+            "spin_density_porph",
+            "DeltaE2_kcal_per_mol"
+          ],
+          "units": {
+            "Fe_S_bond_length_A": "Å",
+            "Fe_O_bond_length_A": "Å",
+            "spin_density_S": "Mulliken spin density (e)",
+            "spin_density_O": "Mulliken spin density (e)",
+            "spin_density_Fe": "Mulliken spin density (e)",
+            "spin_density_porph": "Mulliken spin density (e)",
+            "DeltaE2_kcal_per_mol": "kcal mol⁻¹"
+          }
+        },
+        "description": "Per-snapshot properties and Fe–O bond enthalpy for both P450cam_apo and P450cam_prop systems, enabling the checker to compute ensemble averages and verify the substrate effect."
+      }
+    ],
+    "notes": "The agent must run the full MD → MM minimization → QM/MM optimization pipeline; the scored CSV is only produced after all prior stages. At least 5 snapshots per system are required. The checker will compute per-system averages from this CSV and compare them to hidden reference values."
+  },
+  "steps": [
+    {
+      "id": "step_06_per_snapshot_properties",
+      "output_file": "per_snapshot_properties.csv",
+      "kind": "custom",
+      "weight": 1.0,
+      "targets": [
+        {
+          "system": "P450cam_apo",
+          "gold_deltaE2": 54.9,
+          "gold_spin_dens_S": 0.34,
+          "tol_deltaE2": 5.0,
+          "tol_spin_dens_S": 0.1
+        },
+        {
+          "system": "P450cam_prop",
+          "gold_deltaE2": 52.1,
+          "gold_spin_dens_S": 0.27,
+          "tol_deltaE2": 5.0,
+          "tol_spin_dens_S": 0.1
+        }
+      ]
+    }
+  ]
+}

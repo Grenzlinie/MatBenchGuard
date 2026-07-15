@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot rerun DFT calculations in verifier; scoring uses result-level numeric comparison against paper Table 1 gold + structural ordering check, the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target relative energies from paper Table 1 (kJ/mol)",
+      "source_provenance": "Paper Table 1: relative energies of stationary points from DFT.",
+      "generation_method": "Extracted directly from the paper's published values.",
+      "why_not_fabricated": "These are the paper's reported results, the authoritative reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_relative_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "R=OH",
+            "R=OCH3",
+            "R=OSiH3"
+          ],
+          "items": {
+            "reactant_complex": "number",
+            "transition_state": "number",
+            "product_complex": "number",
+            "separate_products": "number"
+          },
+          "units": {
+            "reactant_complex": "kJ/mol",
+            "transition_state": "kJ/mol",
+            "product_complex": "kJ/mol",
+            "separate_products": "kJ/mol"
+          }
+        },
+        "description": "Relative energies of stationary points for the three model reactions, compared against hidden reference values with absolute tolerances and ordering check."
+      }
+    ],
+    "notes": "The hidden checker compares each of the 12 numeric values to reference values with an absolute tolerance and also verifies the ordering of transition state energies."
+  },
+  "steps": [
+    {
+      "id": "numeric_energies",
+      "output_file": "step_01_relative_energies.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target": {
+        "R=OH": {
+          "reactant_complex": -55,
+          "transition_state": -14,
+          "product_complex": -63,
+          "separate_products": -29
+        },
+        "R=OCH3": {
+          "reactant_complex": -42,
+          "transition_state": 203,
+          "product_complex": -65,
+          "separate_products": -25
+        },
+        "R=OSiH3": {
+          "reactant_complex": -22,
+          "transition_state": 2,
+          "product_complex": -34,
+          "separate_products": -4
+        }
+      },
+      "tolerance_abs": 15.0,
+      "fields": [
+        "reactant_complex",
+        "transition_state",
+        "product_complex",
+        "separate_products"
+      ]
+    },
+    {
+      "id": "ordering_ts",
+      "output_file": "step_01_relative_energies.json",
+      "kind": "structural",
+      "weight": 0.4,
+      "check": "ordering",
+      "description": "TS(R=OH) < TS(R=OSiH3) < TS(R=OCH3)",
+      "target_ordering": [
+        [
+          "R=OH",
+          "R=OSiH3"
+        ],
+        [
+          "R=OSiH3",
+          "R=OCH3"
+        ]
+      ]
+    }
+  ]
+}

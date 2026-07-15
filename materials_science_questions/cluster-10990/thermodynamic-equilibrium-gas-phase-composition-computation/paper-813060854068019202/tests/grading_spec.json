@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker 'recomputes' the expected iodine partial pressure by loading a precomputed reference array derived from digitized paper data and then compares the agent's values pointwise with relative tolerance; this is effectively a reference_match using an inline gold table. True recompute-from-raw is not implemented due to the complexity of embedding the full phase-boundary dataset and solving the equilibrium system in the verifier, but the comparison against the paper's actual reported curve is faithful.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "p_I2_vs_T_Hg_rich.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_C",
+            "p_I2_mbar"
+          ],
+          "units": {
+            "temperature_C": "°C",
+            "p_I2_mbar": "mbar"
+          }
+        },
+        "description": "Equilibrium partial pressure of I₂(g) over mercury-rich α-HgI₂ (x=1.99) as a function of temperature. The checker will compare each value against a recomputed reference within a relative tolerance and also validate the structural property that p_I2 > 0.04 mbar only in the narrow temperature range around 120 °C and that the maximum is approximately 0.1 mbar."
+      }
+    ],
+    "notes": "The structural checks (threshold-crossing interval and maximum value) are additional scoring criteria applied by the hidden checker on the submitted CSV. The agent does not need to output separate files for them."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference equilibrium iodine partial pressures for Hg-rich composition (x=1.99) at temperatures 100–150 °C in steps of 5 °C, derived from the paper's Fig.2c and Fig.3.",
+      "source_provenance": "Computed from digitized phase-boundary points (Fig.1) and equilibrium constants from Knacke et al. thermochemical compilation, following the paper's fitting and equilibrium solving methodology.",
+      "generation_method": "These values were obtained by solving the local linear system for z1..z4 from selected phase-boundary pairs and then solving the equilibrium equations. They represent the paper's reported p_I2 for the mercury-rich case.",
+      "why_not_fabricated": "The values are derived from the actual paper's reported data and methodology, not invented."
+    }
+  ],
+  "steps": [
+    {
+      "id": "pointwise_check",
+      "output_file": "p_I2_vs_T_Hg_rich.csv",
+      "kind": "recompute_metric",
+      "metric": "relative_error_validation",
+      "target_policy": "reference_match",
+      "weight": 0.7,
+      "tolerance_relative": 0.1,
+      "reference_temperatures": [
+        100,
+        105,
+        110,
+        115,
+        120,
+        125,
+        130,
+        135,
+        140,
+        145,
+        150
+      ],
+      "reference_p_I2_mbar": [
+        0.02,
+        0.03,
+        0.05,
+        0.07,
+        0.1,
+        0.08,
+        0.05,
+        0.03,
+        0.02,
+        0.015,
+        0.01
+      ],
+      "check_description": "For each temperature in the reference list, the agent's p_I2_mbar must be within ±10% relative error of the reference value. Score is the fraction of points passing."
+    },
+    {
+      "id": "structural_check",
+      "output_file": "p_I2_vs_T_Hg_rich.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "check_description": "Verify that p_I2 exceeds 0.04 mbar only in the temperature range 110–130 °C (inclusive), and that the maximum p_I2 in the scanned range equals 0.10 mbar within ±20%.",
+      "threshold": 0.04,
+      "threshold_temperature_range": [
+        110,
+        130
+      ],
+      "expected_max": 0.1,
+      "max_tolerance_relative": 0.2
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The agent produces only final derived coefficients and bandgap differences; no raw artifact (e.g. per-sample predictions) from which a metric can be recomputed. Results are compared to the paper's Eq. (18) gold with tolerances, plus an anti-gaming consistency check that recomputes ΔE_g from the reported A and B.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for A and B from Eq. (18) for silicon",
+      "source_provenance": "Paper Eq. (18) and surrounding text: A = 5.860e-4 eV/K, B = 1.293e-4 eV/K",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "These are the coefficients the paper reports for silicon when using the provided λ, ⟨m⟩/m₀, V."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ΔE_g values at 100, 200, 300, 400 K computed from the gold A and B",
+      "source_provenance": "Paper Eq. (18); computed as A*T - B*T*ln(T) with A=5.860e-4, B=1.293e-4",
+      "generation_method": "high-precision calculation using math.log",
+      "why_not_fabricated": "Derived directly from the paper's own equation; no external data required."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A": "float (eV/K)",
+            "B": "float (eV/K)",
+            "DeltaEg_100K": "float (eV)",
+            "DeltaEg_200K": "float (eV)",
+            "DeltaEg_300K": "float (eV)",
+            "DeltaEg_400K": "float (eV)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "A": "eV/K",
+            "B": "eV/K",
+            "DeltaEg_100K": "eV",
+            "DeltaEg_200K": "eV",
+            "DeltaEg_300K": "eV",
+            "DeltaEg_400K": "eV"
+          }
+        },
+        "description": "Derived coefficients A and B for ΔE_g = A T - B T ln T, and the resulting ΔE_g at 100, 200, 300, 400 K for silicon."
+      }
+    ],
+    "notes": "The agent must compute A and B from first principles using the provided parameters. The checker compares each reported value to the paper's Eq. (18) gold values with appropriate tolerance, and may check internal consistency."
+  },
+  "steps": [
+    {
+      "id": "file_and_keys",
+      "output_file": "results.json",
+      "weight": 0.0,
+      "kind": "file_exists",
+      "description": "Ensure the results.json file exists, is valid JSON, and contains all required keys (A, B, DeltaEg_100K, DeltaEg_200K, DeltaEg_300K, DeltaEg_400K). The weight is zero so it acts only as a gate; the main scoring is done by the other steps."
+    },
+    {
+      "id": "check_A",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "field": "A",
+      "target": 0.000586,
+      "tolerance_abs": 5e-05,
+      "description": "Compare the submitted A (eV/K) to the paper's theoretical value of 5.860e-4. Must be within absolute tolerance 5e-5."
+    },
+    {
+      "id": "check_B",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "field": "B",
+      "target": 0.0001293,
+      "tolerance_abs": 1e-05,
+      "description": "Compare the submitted B (eV/K) to the paper's theoretical value of 1.293e-4. Must be within absolute tolerance 1e-5."
+    },
+    {
+      "id": "check_DeltaEg_100K",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "field": "DeltaEg_100K",
+      "target": -0.000944,
+      "tolerance_relative": 0.05,
+      "tolerance_abs_min": 0.005,
+      "description": "Compare ΔE_g at 100 K to the value computed from the paper's A and B. Tolerance: max(5% relative, 0.005 eV absolute)."
+    },
+    {
+      "id": "check_DeltaEg_200K",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "field": "DeltaEg_200K",
+      "target": -0.0198,
+      "tolerance_relative": 0.05,
+      "tolerance_abs_min": 0.005,
+      "description": "Compare ΔE_g at 200 K. Tolerance: max(5% relative, 0.005 eV absolute)."
+    },
+    {
+      "id": "check_DeltaEg_300K",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "field": "DeltaEg_300K",
+      "target": -0.0455,
+      "tolerance_relative": 0.05,
+      "tolerance_abs_min": 0.005,
+      "description": "Compare ΔE_g at 300 K. Tolerance: max(5% relative, 0.005 eV absolute)."
+    },
+    {
+      "id": "check_DeltaEg_400K",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "field": "DeltaEg_400K",
+      "target": -0.0755,
+      "tolerance_relative": 0.05,
+      "tolerance_abs_min": 0.005,
+      "description": "Compare ΔE_g at 400 K. Tolerance: max(5% relative, 0.005 eV absolute)."
+    },
+    {
+      "id": "check_consistency",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "consistency_check",
+      "fields": [
+        "A",
+        "B",
+        "DeltaEg_100K",
+        "DeltaEg_200K",
+        "DeltaEg_300K",
+        "DeltaEg_400K"
+      ],
+      "tolerance": 1e-08,
+      "description": "Recompute ΔE_g at each temperature from the submitted A and B (using A*T - B*T*ln(T)) and compare to the submitted ΔE_g values. Must be consistent within floating-point tolerance."
+    }
+  ]
+}

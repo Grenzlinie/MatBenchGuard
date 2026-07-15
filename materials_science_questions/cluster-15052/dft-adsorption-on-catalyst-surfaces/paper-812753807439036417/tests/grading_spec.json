@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headlined quantities are DFT-computed adsorption energies, barriers, reaction energies, and saturation coverages; the verifier cannot rerun the full DFT pipeline, so it compares the agent's reported numeric values against paper-reported reference values with tolerances, plus a structural check that all reaction energies are negative (full decomposition).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for adsorption energies, barriers, reaction energies, and saturation coverages as reported in the paper.",
+      "source_provenance": "Paper Table 1, text descriptions of adsorption energies, and Fig 6 saturation coverages.",
+      "generation_method": "Values extracted from the accepted manuscript.",
+      "why_not_fabricated": "Values are directly quoted from the paper; they are the paper's headline results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "site",
+            "E_ads(eV)"
+          ],
+          "units": {
+            "E_ads(eV)": "eV"
+          }
+        },
+        "description": "Adsorption energies of single NH3, NH2, NH, N on Mo2C(001) at their most stable sites."
+      },
+      {
+        "file": "step_02_decomposition_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "step",
+            "E_a(eV)",
+            "ΔE_r(eV)",
+            "ZPE_included(bool)"
+          ],
+          "units": {
+            "E_a(eV)": "eV",
+            "ΔE_r(eV)": "eV"
+          }
+        },
+        "description": "Barriers and reaction energies (ZPE-corrected) for three NH3 decomposition steps."
+      },
+      {
+        "file": "step_03_saturation_coverages.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "species",
+            "saturation_coverage_ML"
+          ],
+          "units": {
+            "saturation_coverage_ML": "ML"
+          }
+        },
+        "description": "Saturation coverages (in monolayers) of NH3, NH2, NH, N using NH3 as nitridation agent."
+      }
+    ],
+    "notes": "Scoring compares the reported values against paper-reported reference within absolute tolerances (±0.05 eV for energies, ±0.05 ML for coverages). A T3 structural check verifies that all three ΔE_r in step_02 are negative (full decomposition)."
+  },
+  "steps": [
+    {
+      "id": "step_01_adsorption",
+      "output_file": "step_01_adsorption_energies.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "reference": [
+        {
+          "species": "NH3",
+          "site": "t1",
+          "E_ads(eV)": -1.3
+        },
+        {
+          "species": "NH2",
+          "site": "b2",
+          "E_ads(eV)": -5.06
+        },
+        {
+          "species": "NH",
+          "site": "h1",
+          "E_ads(eV)": -8.08
+        },
+        {
+          "species": "N",
+          "site": "h1",
+          "E_ads(eV)": -2.67
+        }
+      ],
+      "tolerance_E_ads": 0.05,
+      "site_exact": true
+    },
+    {
+      "id": "step_02_barriers",
+      "output_file": "step_02_decomposition_barriers.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "reference": [
+        {
+          "step": "NH3→NH2+H",
+          "E_a(eV)": 0.63,
+          "ΔE_r(eV)": -1.13,
+          "ZPE_included(bool)": true
+        },
+        {
+          "step": "NH2+H→NH+2H",
+          "E_a(eV)": 0.33,
+          "ΔE_r(eV)": -1.17,
+          "ZPE_included(bool)": true
+        },
+        {
+          "step": "NH+2H→N+3H",
+          "E_a(eV)": 0.77,
+          "ΔE_r(eV)": -1.01,
+          "ZPE_included(bool)": true
+        }
+      ],
+      "tolerance_E_a": 0.05,
+      "tolerance_ΔE_r": 0.05
+    },
+    {
+      "id": "step_03_saturation",
+      "output_file": "step_03_saturation_coverages.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "reference": [
+        {
+          "species": "NH3",
+          "saturation_coverage_ML": 0.75
+        },
+        {
+          "species": "NH2",
+          "saturation_coverage_ML": 1.0
+        },
+        {
+          "species": "NH",
+          "saturation_coverage_ML": 1.0
+        },
+        {
+          "species": "N",
+          "saturation_coverage_ML": 0.5
+        }
+      ],
+      "tolerance_coverage": 0.05
+    }
+  ]
+}

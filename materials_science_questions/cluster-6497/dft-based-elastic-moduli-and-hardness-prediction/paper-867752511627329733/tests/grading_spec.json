@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities (elastic constants, anisotropy) are produced by DFT computations; recomputing from raw energy‑strain data in the verifier is infeasible, so we compare agent‑reported values against paper‑reported values and necessary structural trends (softening, hardening, cross‑consistency).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported elastic constants at zero pressure (C11=246.99, C12=131.19, C44=19.77 GPa) and anisotropy indices in Table III.",
+      "source_provenance": "Paper Tables II and III",
+      "generation_method": "Extracted from the paper",
+      "why_not_fabricated": "Values are the exact numbers published in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants_pressure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure (GPa)",
+            "C11 (GPa)",
+            "C12 (GPa)",
+            "C44 (GPa)",
+            "Cprime (GPa)"
+          ],
+          "units": {
+            "pressure (GPa)": "GPa",
+            "C11 (GPa)": "GPa",
+            "C12 (GPa)": "GPa",
+            "C44 (GPa)": "GPa",
+            "Cprime (GPa)": "GPa"
+          }
+        },
+        "description": "Pressure-dependent elastic constants at 0 K. Checked against paper-reported values within tolerance and softness trends."
+      },
+      {
+        "file": "anisotropy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Pressure (GPa)",
+            "A",
+            "AG",
+            "AU"
+          ],
+          "units": {
+            "Pressure (GPa)": "GPa",
+            "A": "",
+            "AG": "",
+            "AU": ""
+          }
+        },
+        "description": "Anisotropy indices at selected pressures. Checked against paper-reported values within tolerance."
+      },
+      {
+        "file": "c44_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Pressure (GPa)",
+            "C44_0K (GPa)",
+            "C44_1000K (GPa)",
+            "C44_2000K (GPa)"
+          ],
+          "units": {
+            "Pressure (GPa)": "GPa",
+            "C44_0K (GPa)": "GPa",
+            "C44_1000K (GPa)": "GPa",
+            "C44_2000K (GPa)": "GPa"
+          }
+        },
+        "description": "Temperature dependence of C44. Checked for the structural property that C44 at 1000 K and 2000 K must be greater than or equal to C44 at 0 K at each pressure."
+      },
+      {
+        "file": "rh_elastic_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Pressure (GPa)",
+            "C_RH1 (GPa)",
+            "C_RH2 (GPa)"
+          ],
+          "units": {
+            "Pressure (GPa)": "GPa",
+            "C_RH1 (GPa)": "GPa",
+            "C_RH2 (GPa)": "GPa"
+          }
+        },
+        "description": "Elastic moduli along rhombohedral paths. Checked for cross-consistency: the arithmetic mean of C_RH1 and C_RH2 must agree with the independently computed C44 (from elastic_constants_pressure.csv) within a hidden relative tolerance."
+      }
+    ],
+    "notes": "All scored artifacts must be produced from genuine DFT calculations using the public BCC Nb structure, PBE functional, and a PAW pseudopotential. The hidden verifier will compare the required quantities against paper-reported values or structural relations, without revealing tolerances or gold values."
+  },
+  "steps": [
+    {
+      "id": "s2",
+      "output_file": "elastic_constants_pressure.csv",
+      "weight": 0.5
+    },
+    {
+      "id": "s3",
+      "output_file": "anisotropy.csv",
+      "weight": 0.2
+    },
+    {
+      "id": "s4",
+      "output_file": "c44_temperature.csv",
+      "weight": 0.15
+    },
+    {
+      "id": "s6",
+      "output_file": "rh_elastic_moduli.csv",
+      "weight": 0.15
+    }
+  ]
+}

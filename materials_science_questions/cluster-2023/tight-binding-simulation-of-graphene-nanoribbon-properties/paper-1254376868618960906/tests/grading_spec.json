@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap comparison recomputes absolute difference and scores within tolerance; Raman scoring recomputes fraction of major peaks matched from the raw peak array.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "electronic_properties.json": "exact_match",
+    "raman_spectrum.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Kohn‑Sham band gap value",
+      "source_provenance": "Paper main text (Fig. 3c, DFT band gap 1.1 eV)",
+      "generation_method": "Read directly from the paper's stated DFT result",
+      "why_not_fabricated": "Exact value published in the paper"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Raman major peaks (intensity >0.05) from simulated spectrum",
+      "source_provenance": "Paper Supporting Information, Table S2 (simulated modes)",
+      "generation_method": "Filtered Table S2 rows with normalized intensity >0.05; wavenumbers and intensities taken exactly as listed",
+      "why_not_fabricated": "Directly extracted from the published supporting data"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "number"
+          }
+        },
+        "description": "Kohn-Sham band gap of the (4,2,7)-chGNR. Compared to the reference DFT value within a tolerance."
+      },
+      {
+        "file": "raman_spectrum.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "peaks": "array of objects with wavenumber_cm-1 (number) and normalized_intensity (number in [0,1])"
+          }
+        },
+        "description": "Simulated Raman peak list (1100-1700 cm⁻¹). Matched against reference DFT peaks using a wavenumber tolerance."
+      }
+    ],
+    "notes": "The hidden checker compares the band gap to the paper's DFT value and the Raman peaks to the paper's simulated peak list, applying wavenumber tolerance for peak matching. Reward depends on correctness of gap and fraction of matched major peaks."
+  },
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "electronic_properties.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": 1.1,
+      "tolerance": 0.1,
+      "description": "Kohn‑Sham band gap; pass if within ±0.1 eV of the paper's DFT value (1.1 eV)"
+    },
+    {
+      "id": "step_raman",
+      "output_file": "raman_spectrum.json",
+      "kind": "set_match",
+      "weight": 0.5,
+      "reference_peaks": [
+        {
+          "wavenumber": 1292.0,
+          "intensity": 0.0591
+        },
+        {
+          "wavenumber": 1303.0,
+          "intensity": 0.169
+        },
+        {
+          "wavenumber": 1328.0,
+          "intensity": 1.0
+        },
+        {
+          "wavenumber": 1339.0,
+          "intensity": 0.144
+        },
+        {
+          "wavenumber": 1351.0,
+          "intensity": 0.332
+        },
+        {
+          "wavenumber": 1368.0,
+          "intensity": 0.0973
+        },
+        {
+          "wavenumber": 1410.0,
+          "intensity": 0.0541
+        },
+        {
+          "wavenumber": 1470.0,
+          "intensity": 0.0574
+        },
+        {
+          "wavenumber": 1506.0,
+          "intensity": 0.0758
+        },
+        {
+          "wavenumber": 1568.0,
+          "intensity": 0.208
+        },
+        {
+          "wavenumber": 1587.0,
+          "intensity": 0.164
+        }
+      ],
+      "wavenumber_tolerance": 10.0,
+      "intensity_threshold": 0.05,
+      "description": "Fraction of reference major Raman peaks matched within ±10 cm⁻¹"
+    }
+  ]
+}

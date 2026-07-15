@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Relax MoSSe monolayer structure",
+    "role": "process",
+    "action": "Perform geometry optimization of a 3x3x1 supercell of Janus MoSSe monolayer using DFT (PBE functional with Grimme D2 dispersion correction, vacuum >30 Angstrom, adequate k-mesh). Converge forces to <0.02 eV/Angstrom and total energy to 10^-5 eV. Save the relaxed structure for all subsequent calculations.",
+    "output_file": "",
+    "evidence": "mosse_relaxed.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required relaxed structure of the pristine monolayer.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute mechanical properties under strain",
+    "role": "scored",
+    "action": "Apply uniaxial tensile strains along x and y directions and biaxial tension along xy to the relaxed MoSSe monolayer. Calculate strain energy as a function of strain, and from it derive stress-strain curves. Extract Young's modulus, ultimate strain, and breaking strength for each direction. Write the results to mechanical_properties.json.",
+    "output_file": "mechanical_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computed anisotropic mechanical properties of MoSSe.",
+    "output_schema": "JSON object with keys 'x', 'y', 'xy'. Each value is an object with fields: Young_modulus_GPa (float), ultimate_strain (float), breaking_strength_GPa (float)."
+  },
+  {
+    "id": "step3",
+    "title": "Single Na adsorption site determination",
+    "role": "process",
+    "action": "Compute adsorption energies of a single Na atom on Tm (top of Mo) and H (top of hexagon) sites on both the Se side and S side of the MoSSe monolayer. Identify the most stable site on each side (lowest adsorption energy) to be used as the preferred site for subsequent multilayer adsorption.",
+    "output_file": "",
+    "evidence": "single_na_sites.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Needed to choose the correct starting sites for multilayer Na adsorption.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Na diffusion barriers via NEB",
+    "role": "scored",
+    "action": "Using the climbing-image nudged elastic band (CI-NEB) method, calculate the minimum energy path for Na migration between neighboring Tm sites on the Se surface (Path I) and on the S surface (Path I). Determine the diffusion barriers. Write the results to diffusion_barriers.json.",
+    "output_file": "diffusion_barriers.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computed diffusion barriers for Na on Se and S surfaces.",
+    "output_schema": "JSON object with keys: Se_side_pathI_barrier_eV (float), S_side_pathI_barrier_eV (float)."
+  },
+  {
+    "id": "step5",
+    "title": "Layer-by-layer Na adsorption and electrode properties",
+    "role": "scored",
+    "action": "Sequentially add up to 8 Na layers on MoSSe according to the preferred adsorption sites identified in step3. For each composition Na_xMoSSe (x=1..8), perform full ionic relaxation, compute total energy, lattice parameters, and thickness. From these, calculate the average adsorption energy E_avg, layer adsorption energy E_layer, anode voltage for each intermediate composition, theoretical specific capacity at x=8, and volume expansion. Write all results to adsorption_energies.json.",
+    "output_file": "adsorption_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Contains the main electrochemical properties: adsorption energies, voltage profile, capacity, and volume expansion.",
+    "output_schema": "JSON object with keys '1' through '8' (strings). Each value is an object with fields: capacity_mAh_g (float), E_avg_eV (float), E_layer_eV (float), voltage_V (float), volume_expansion_percent (float)."
+  }
+]

@@ -1,0 +1,52 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute 5f DOS peaks without running the full DFT pipeline; assess structural ordering and plausible range extracted from paper conclusions.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_peak_positions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "bulk": {
+              "type": "number",
+              "description": "Energy (eV) of first 5f peak below EF for bulk fcc Am"
+            },
+            "film_1layer": {
+              "type": "number",
+              "description": "Energy (eV) of first 5f peak below EF for 1-layer (111) slab"
+            },
+            "film_5layer": {
+              "type": "number",
+              "description": "Energy (eV) of first 5f peak below EF for 5-layer (111) slab"
+            }
+          },
+          "required": [
+            "bulk",
+            "film_1layer",
+            "film_5layer"
+          ]
+        },
+        "description": "Binding energies (negative eV) of the first 5f DOS peak below Fermi level for bulk fcc Am, 1-layer (111) slab, and 5-layer (111) slab computed at GGA-AFM-SO level. The checker will verify that bulk < film_5layer < film_1layer (more negative = more localized) and that film_5layer lies between -2.0 and -1.0 eV."
+      }
+    ],
+    "notes": "The relative trend and range check serve as structural scoring (T3). Exact peak energies depend on the specific DFT implementation (Elk vs. WIEN2k) and computational settings, so a tolerance-based match to the paper's numbers is not required. The scored ordering is robust against code/functional variations."
+  },
+  "target_policies": {
+    "dos_peak_positions.json": "structural_audit"
+  },
+  "steps": [
+    {
+      "id": "stage_3_dos_peaks",
+      "output_file": "dos_peak_positions.json",
+      "kind": "structural_dos_peaks",
+      "weight": 1.0,
+      "description": "Verify ordering bulk < film_5layer < film_1layer and film_5layer in [-2.0, -1.0] eV"
+    }
+  ]
+}

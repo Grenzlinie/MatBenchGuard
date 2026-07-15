@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute λ from raw α²F(ω) (not in output contract); Tc trend is scored structurally. λ is scored via reference_match with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reproduced_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for λ_ac=0.71 and λ_op=0.21",
+      "source_provenance": "Paper: JETP Lett. 80, 623 (2004); values reported from integration of α²F(ω)",
+      "generation_method": "extracted from paper text",
+      "why_not_fabricated": "these are the paper's published electron-phonon coupling constants obtained from the Eliashberg function integration"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduced_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lambda_ac",
+            "lambda_op",
+            "Tc_values"
+          ],
+          "properties": {
+            "lambda_ac": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "lambda_op": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "Tc_values": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "volume": {
+                    "type": "string",
+                    "enum": [
+                      "V0",
+                      "0.85V0",
+                      "0.70V0"
+                    ]
+                  },
+                  "Tc": {
+                    "type": "number",
+                    "unit": "K"
+                  }
+                },
+                "required": [
+                  "volume",
+                  "Tc"
+                ]
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "description": "Contains the computed electron-phonon coupling constants for acoustic and optical modes at ambient pressure, and the critical temperature Tc as a function of volume (V0, 0.85V0, 0.70V0). The Tc values will be checked for physically correct ordering."
+      }
+    ],
+    "notes": "The agent may use any reasonable Coulomb pseudopotential μ* (e.g., 0.13–0.17). The scoring checks the closeness of λ values to paper-reported references and the physical ordering of Tc with compression."
+  },
+  "steps": [
+    {
+      "id": "lambda_ac_op",
+      "output_file": "reproduced_results.json",
+      "kind": "reference_match",
+      "weight": 0.5,
+      "description": "Check λ_ac and λ_op against paper-reported values 0.71 and 0.21 with tolerance ±0.1",
+      "parameters": {
+        "lambda_ac_gold": 0.71,
+        "lambda_op_gold": 0.21,
+        "tolerance": 0.1
+      }
+    },
+    {
+      "id": "tc_trend",
+      "output_file": "reproduced_results.json",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "description": "Check Tc values: all positive and strictly decreasing with compression: Tc(V0) > Tc(0.85V0) > Tc(0.70V0)"
+    }
+  ]
+}

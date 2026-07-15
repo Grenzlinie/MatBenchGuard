@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute drift velocity and conductivity from raw phase_counts.npz; compare drift velocity to paper gold, verify sign pattern, and check self-consistency between CSV and raw data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "conductivity_values.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference drift velocity and sign pattern for scoring",
+      "source_provenance": "Paper text: 'calculations give a drift velocity V_dr = 1.6 × 10^7 cm/s' and Fig. 2 showing Re[σ] < 0 at 0.2 and 1.0 THz, > 0 at 0.5 THz.",
+      "generation_method": "Extracted from the paper's published results",
+      "why_not_fabricated": "These are the paper's own reported values; they are used only as hidden scoring targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "conductivity_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "freq_THz",
+            "Re_sigma_per_e",
+            "Im_sigma_per_e"
+          ],
+          "units": {
+            "freq_THz": "THz",
+            "Re_sigma_per_e": "cm^2/(V·s)",
+            "Im_sigma_per_e": "cm^2/(V·s)"
+          }
+        },
+        "description": "Specific high-frequency complex conductivity per electron for the three target frequencies (0.2, 0.5, 1.0 THz) at wavevector q=1e5 cm^{-1}."
+      }
+    ],
+    "notes": "The soler must produce the intermediate phase_counts.npz evidence to document that the Monte Carlo simulation was run. The scored CSV is derived from that data and compared to hidden gold values. The simulation is computationally intensive; the solver may use high-performance computing resources."
+  },
+  "steps": [
+    {
+      "id": "conductivity_eval",
+      "output_file": "conductivity_values.csv",
+      "kind": "mc_conductivity",
+      "weight": 1.0,
+      "gold_drift_velocity_cm_s": 16000000.0,
+      "tolerance_relative_drift": 0.1,
+      "sign_pattern": {
+        "0.2": {
+          "Re_sign": -1
+        },
+        "0.5": {
+          "Re_sign": 1
+        },
+        "1.0": {
+          "Re_sign": -1
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "TB parameters and DOS features are derived from a full DFT calculation and band-fitting procedure that cannot be recomputed in the verifier sandbox, so a result-level compare against paper gold values with tolerances accounting for DFT code differences is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for TB parameters and DOS feature bounds",
+      "source_provenance": "from the paper's reported TB fitted parameters (ppσ 0.40, ppπ -0.13, pdσ -1.73, pdπ 0.78, bare energy 0.4) and DOS feature energy ranges as described in text (A: -0.5 to 2.5, B: -1.5 to -0.5, C: -3.5 to -1.5, D: -7.0 to -3.8).",
+      "generation_method": "extracted directly from paper's text and table; no fabrication.",
+      "why_not_fabricated": "values match the paper's published quantities for LaNiO3."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_features.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "feature_A": {
+              "min_energy": "float (eV)",
+              "max_energy": "float (eV)"
+            },
+            "feature_B": {
+              "min_energy": "float (eV)",
+              "max_energy": "float (eV)"
+            },
+            "feature_C": {
+              "min_energy": "float (eV)",
+              "max_energy": "float (eV)"
+            },
+            "feature_D": {
+              "min_energy": "float (eV)",
+              "max_energy": "float (eV)"
+            }
+          }
+        },
+        "description": "Energy bounds of the four characteristic DOS features for LaNiO3."
+      },
+      {
+        "file": "tb_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pp_sigma": "float (eV)",
+            "pp_pi": "float (eV)",
+            "pd_sigma": "float (eV)",
+            "pd_pi": "float (eV)",
+            "bare_energy_d_minus_p": "float (eV)"
+          }
+        },
+        "description": "Fitted Slater-Koster hopping parameters and the bare energy difference Δ = ε_d − ε_p."
+      }
+    ],
+    "notes": "Scoring compares reported energy windows and TB parameters to hidden reference values with tolerances that account for DFT-code differences. Structural checks (sign and energy ordering) are also applied."
+  },
+  "steps": [
+    {
+      "id": "step_dos_features",
+      "output_file": "dos_features.json",
+      "weight": 0.4,
+      "kind": "result_compare",
+      "params_gold": {
+        "feature_A": {
+          "min": -0.5,
+          "max": 2.5
+        },
+        "feature_B": {
+          "min": -1.5,
+          "max": -0.5
+        },
+        "feature_C": {
+          "min": -3.5,
+          "max": -1.5
+        },
+        "feature_D": {
+          "min": -7.0,
+          "max": -3.8
+        }
+      },
+      "tolerances": {
+        "min_abs": 0.5,
+        "max_abs": 0.5
+      },
+      "structural_checks": {
+        "energy_order_descending": true
+      }
+    },
+    {
+      "id": "step_tb_params",
+      "output_file": "tb_parameters.json",
+      "weight": 0.6,
+      "kind": "result_compare",
+      "params_gold": {
+        "pp_sigma": 0.4,
+        "pp_pi": -0.13,
+        "pd_sigma": -1.73,
+        "pd_pi": 0.78,
+        "bare_energy_d_minus_p": 0.4
+      },
+      "tolerances": {
+        "abs": 0.2
+      },
+      "structural_checks": {
+        "signs": {
+          "pp_sigma": "positive",
+          "pp_pi": "negative",
+          "pd_sigma": "negative",
+          "pd_pi": "positive"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute EAM energies in verifier; compare reported binding energies and configurations to paper gold and cross-check between output files.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ground_state_configs.csv": "exact_match",
+    "binding_energy_vs_r_Cu_55.csv": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ground_state_configs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "composition",
+            "structure",
+            "size",
+            "atomic_config",
+            "binding_energy_per_atom",
+            "average_Cu_radial_distance"
+          ],
+          "units": {
+            "binding_energy_per_atom": "eV",
+            "average_Cu_radial_distance": "inner crust radius"
+          }
+        },
+        "description": "Ground-state atomic configuration, binding energy, and average Cu radial distance for each system. The checker compares the configuration tuple exactly and the binding energy within tolerance against the paper-reported reference."
+      },
+      {
+        "file": "binding_energy_vs_r_Cu_55.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "structure",
+            "composition",
+            "sample_id",
+            "average_Cu_radial_distance",
+            "binding_energy_per_atom"
+          ],
+          "units": {
+            "binding_energy_per_atom": "eV",
+            "average_Cu_radial_distance": "inner crust radius"
+          }
+        },
+        "description": "Binding energy per atom vs. average Cu radial distance for all sampled configurations of Cu-Ni 55-atom clusters. The checker verifies that the ground-state configuration (from ground_state_configs.csv) corresponds to the maximum binding energy in this set and that icosahedral binding energies are higher than cuboctahedral for the same composition."
+      }
+    ],
+    "notes": "Only the 55-atom clusters (sizes 55) are required. The ground-state configurations are deterministic given the public EAM parameters; binding energy tolerance accounts for minor implementation differences. The ordering and elastic-energy analyses are not scored."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold configurations and binding energies per atom for 55-atom clusters from paper",
+      "source_provenance": "paper Fig.1 and text (see problem background section of instruction)",
+      "generation_method": "extracted from paper-reported ground-state configurations and binding energies read from Fig.1",
+      "why_not_fabricated": "these are the exact configurations and binding energies reported in the paper; they match the paper's claims and are used as hidden reference"
+    }
+  ],
+  "steps": [
+    {
+      "id": "gs_config_exact",
+      "output_file": "ground_state_configs.csv",
+      "weight": 0.35,
+      "kind": "rubric",
+      "gold_configs": {
+        "Cu13Ni42_ico": "(0,0,1,12)",
+        "Cu27Ni28_ico": "(0,0,15,12)",
+        "Cu13Ni42_cubo": "(0,0,0,1,12)",
+        "Cu27Ni28_cubo": "(0,0,0,15,12)",
+        "Cu13Pd42_ico": "(0,12,0,1)",
+        "Cu27Pd28_ico": "(1,12,2,12)",
+        "Cu13Pd42_cubo": "(0,12,0,0,1)",
+        "Cu27Pd28_cubo": "(1,12,2,0,12)"
+      }
+    },
+    {
+      "id": "gs_binding_energy",
+      "output_file": "ground_state_configs.csv",
+      "weight": 0.3,
+      "kind": "rubric",
+      "gold_binding_energies": {
+        "Cu13Ni42_ico": 3.57,
+        "Cu27Ni28_ico": 3.65,
+        "Cu13Ni42_cubo": 3.54,
+        "Cu27Ni28_cubo": 3.62,
+        "Cu13Pd42_ico": 3.74,
+        "Cu27Pd28_ico": 3.8,
+        "Cu13Pd42_cubo": 3.72,
+        "Cu27Pd28_cubo": 3.78
+      },
+      "binding_tol": 0.1
+    },
+    {
+      "id": "gs_relative_stability",
+      "output_file": "ground_state_configs.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "compositions": [
+        "Cu13Ni42",
+        "Cu27Ni28",
+        "Cu13Pd42",
+        "Cu27Pd28"
+      ]
+    },
+    {
+      "id": "br_consistency",
+      "output_file": "binding_energy_vs_r_Cu_55.csv",
+      "weight": 0.15,
+      "kind": "consistency",
+      "tolerance_binding": 0.1,
+      "tolerance_radial": 0.1
+    },
+    {
+      "id": "br_relative_stability",
+      "output_file": "binding_energy_vs_r_Cu_55.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "compositions": [
+        "Cu13Ni42",
+        "Cu27Ni28",
+        "Cu13Pd42",
+        "Cu27Pd28"
+      ]
+    }
+  ]
+}

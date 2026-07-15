@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "result_level",
+  "scoring_justification": "Direct comparison of agent's output scalars against paper-reported reference values with tolerances; recomputation from raw wavefunctions is too heavy for the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap_absi.txt": "exact_match",
+    "shg_powder_absi.txt": "exact_match",
+    "shg_d22_absi.txt": "exact_match",
+    "shg_powder_abi.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for band gap and SHG coefficients",
+      "source_provenance": "Paper main text and figures: Kohn-Sham band gap 2.58 eV from text and Fig. S12; powder SHG ABSI 1.81 pm/V from text and Fig. 3; d22=2.87 pm/V from text; SHG ABI 1.27 pm/V from text.",
+      "generation_method": "Extracted from paper's explicitly stated computed values.",
+      "why_not_fabricated": "These are the exact numbers reported in the source paper's DFT section."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_absi.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "single_float",
+          "unit": "eV"
+        },
+        "description": "Kohn-Sham band gap of ABSI computed from DFT band structure."
+      },
+      {
+        "file": "shg_powder_absi.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "single_float",
+          "unit": "pm/V"
+        },
+        "description": "Powder-averaged second harmonic generation coefficient for ABSI."
+      },
+      {
+        "file": "shg_d22_absi.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "single_float",
+          "unit": "pm/V"
+        },
+        "description": "The d22 component of the SHG tensor for ABSI."
+      },
+      {
+        "file": "shg_powder_abi.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "single_float",
+          "unit": "pm/V"
+        },
+        "description": "Powder-averaged second harmonic generation coefficient for the parent compound ABI."
+      }
+    ],
+    "notes": "All four outputs are single floating-point numbers in plain text. The hidden checker compares each to the paper-reported value within a tolerance, and additionally verifies that the ABSI powder SHG is greater than the ABI powder SHG. The verifier does not need to recompute the values; it reads the submitted text files directly."
+  },
+  "steps": [
+    {
+      "id": "band_gap_absi",
+      "output_file": "band_gap_absi.txt",
+      "kind": "numeric",
+      "target": 2.58,
+      "tolerance": 0.15,
+      "weight": 0.3,
+      "description": "Check that Kohn-Sham band gap is within tolerance of paper's computed 2.58 eV."
+    },
+    {
+      "id": "shg_powder_absi",
+      "output_file": "shg_powder_absi.txt",
+      "kind": "numeric",
+      "target": 1.81,
+      "tolerance": 0.25,
+      "weight": 0.2
+    },
+    {
+      "id": "shg_d22_absi",
+      "output_file": "shg_d22_absi.txt",
+      "kind": "numeric",
+      "target": 2.87,
+      "tolerance": 0.25,
+      "weight": 0.2
+    },
+    {
+      "id": "shg_powder_abi",
+      "output_file": "shg_powder_abi.txt",
+      "kind": "numeric",
+      "target": 1.27,
+      "tolerance": 0.25,
+      "weight": 0.2
+    },
+    {
+      "id": "trend_absi_gt_abi",
+      "output_file": "shg_powder_abi.txt",
+      "kind": "structural",
+      "weight": 0.1,
+      "description": "Verify that powder SHG for ABSI is greater than ABI."
+    }
+  ]
+}

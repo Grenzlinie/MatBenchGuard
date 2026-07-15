@@ -1,0 +1,59 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing energies from raw integration traces is infeasible because the agent submits only final numbers; the paper's simplified analytic formulas provide exact gold references.",
+  "pass_threshold": 0.9,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for W_n and W_p computed from the paper's analytic formulas (eq. 24 and eq. 30) with the given parameters",
+      "source_provenance": "paper equations (24) and (30) with a=1, e=0.5, r_c=0.01, f=1, R=2, K1=1",
+      "generation_method": "evaluated using scipy.special.ellipk and math operations; rounded to three decimals for readability",
+      "why_not_fabricated": "These are the exact values the paper's own approximations produce; they match the reference solve.sh output and form the scoring target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "focal_domain_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "W_n",
+            "W_p",
+            "parabolic_favored"
+          ],
+          "fields": {
+            "W_n": {
+              "type": "number",
+              "units": "K1·length (K1=1)"
+            },
+            "W_p": {
+              "type": "number",
+              "units": "K1·length (K1=1)"
+            },
+            "parabolic_favored": {
+              "type": "boolean"
+            }
+          }
+        },
+        "description": "Computed curvature energies for normal and parabolic focal domains of the first species, with energy scaled by K1=1. The boolean indicates if the parabolic domain is energetically favoured (W_p < W_n). Tolerance: relative 0.01 for energies, exact for boolean."
+      }
+    ],
+    "notes": "Energy values are in units of K1·length. The elastic constant K1 is set to 1 as scaling factor. The hidden checker compares the submitted values to reference values derived from the paper’s analytic approximations with a relative tolerance of 0.01 for energies and exact match for the boolean."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "focal_domain_energies.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "gold_W_n": 73.152,
+      "gold_W_p": 28.935,
+      "gold_parabolic_favored": true,
+      "relative_tolerance": 0.01
+    }
+  ]
+}

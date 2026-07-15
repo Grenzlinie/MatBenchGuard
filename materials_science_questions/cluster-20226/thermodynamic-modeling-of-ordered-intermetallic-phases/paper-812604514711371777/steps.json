@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s1",
+    "title": "Generate DFT training structures",
+    "role": "process",
+    "action": "Generate ordered supercells spanning the full composition range of the Pd–Ru pseudobinary sublattice for hcp, fcc, PdTe, and Pd20Te7 crystal systems using a structure-enumeration tool (e.g., ATAT or equivalent). For hcp, fcc, and PdTe, include structures from 0 to 100% Ru on the Pd/Ru sublattice (~50 each). For Pd20Te7, include structures with 0 to ~10% Ru. Write the list of generated structures to a log file.",
+    "output_file": "",
+    "evidence": "training_structures.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Perform DFT formation-energy calculations",
+    "role": "scored",
+    "action": "Compute total energies for all generated training structures using an open-source plane-wave DFT code (e.g., Quantum ESPRESSO) with the PBE functional and appropriate pseudopotentials for Pd, Ru, and Te. Use convergence parameters sufficient to achieve energy convergence better than 1 meV/atom. Relax ionic positions and cell parameters until forces are below 5 meV/Å. For each structure, obtain the formation energy per atom relative to the pure reference states (hcp Ru, fcc Pd, Te in its standard state). Output all computed formation energies to a CSV file.",
+    "output_file": "formation_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "DFT formation energies for all training structures.",
+    "output_schema": "Columns: phase (string: 'hcp','fcc','PdTe','Pd20Te7'), composition (float, mole fraction of Ru on the Pd–Ru sublattice), formation_energy (float, eV/atom). One row per relaxed structure."
+  },
+  {
+    "id": "s3",
+    "title": "Fit cluster expansion effective cluster interactions",
+    "role": "scored",
+    "action": "Using the computed DFT formation energies, fit effective cluster interaction (ECI) parameters for each crystal phase (hcp, fcc, PdTe, Pd20Te7) by linear regression against cluster correlation functions defined by the lattice topology (cluster expansion). For Pd20Te7, restrict fitting to x_Ru ≤ 0.1 and use only the null and point clusters. Output the fitted coefficients in a JSON file.",
+    "output_file": "cluster_expansion_coefficients.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted effective cluster interaction coefficients.",
+    "output_schema": "JSON object with keys 'hcp','fcc','PdTe','Pd20Te7'. Each value is an object containing the fitted coefficients: J0, J1, J2, J3 (J2, J3 only for hcp, fcc, PdTe) in eV/atom."
+  },
+  {
+    "id": "s4",
+    "title": "Compute free-energy minima and solubility limits",
+    "role": "scored",
+    "action": "From the fitted ECI, construct the disordered formation energy as a function of Ru composition for each phase using the cluster expansion model. Add the ideal configurational entropy term and minimize the free energy at T=1000 K to find the equilibrium Ru mole fraction on the transition-metal sublattice for (Pd,Ru)Te and (Pd,Ru)20Te7, and the equilibrium Pd mole fraction in hcp metal. Output the three equilibrium fractions.",
+    "output_file": "solubility_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Equilibrium composition at the free-energy minimum (1000 K).",
+    "output_schema": "JSON object with keys: 'Ru_in_PdTe_1000K' (float, atomic fraction of Ru in (Pd,Ru)Te), 'Ru_in_Pd20Te7_1000K' (float), 'Pd_in_hcp_1000K' (float)."
+  }
+]

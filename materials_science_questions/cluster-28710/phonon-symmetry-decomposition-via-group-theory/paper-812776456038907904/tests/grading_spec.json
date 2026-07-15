@@ -1,0 +1,217 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Free energy and mean-field are checked by exact_match against the paper's reported symbolic forms (T0 result compare); RG analysis is scored structurally because explicit fixed-point coordinates are not directly reported, only flow diagrams.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energy_polynomials.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "TaX2": {
+              "type": "object",
+              "required": [
+                "order_parameter_dim",
+                "transformation_rules",
+                "polynomial_terms",
+                "invariant_constraints"
+              ]
+            },
+            "TiSe2": {
+              "type": "object",
+              "required": [
+                "order_parameter_dim",
+                "transformation_rules",
+                "polynomial_terms",
+                "invariant_constraints"
+              ]
+            }
+          }
+        },
+        "description": "Landau free energy polynomials for 1T-TaX2 (complex order parameter) and 1T-TiSe2 (real order parameter), with transformation rules and stability constraints."
+      },
+      {
+        "file": "mean_field_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "TaX2": {
+              "type": "object",
+              "required": [
+                "single_Q_condition",
+                "triple_Q_condition",
+                "order_parameter_components"
+              ]
+            },
+            "TiSe2": {
+              "type": "object",
+              "required": [
+                "single_Q_condition",
+                "triple_Q_condition",
+                "order_parameter_components"
+              ]
+            }
+          }
+        },
+        "description": "Mean-field phase solutions: single-Q and triple-Q conditions (inequalities in u1, u3) and order-parameter amplitudes for both materials."
+      },
+      {
+        "file": "rg_fixed_points.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "TaX2": {
+              "type": "object",
+              "required": [
+                "beta_functions",
+                "fixed_points",
+                "heisenberg_is_stable"
+              ]
+            },
+            "TiSe2": {
+              "type": "object",
+              "required": [
+                "beta_functions",
+                "fixed_points",
+                "heisenberg_is_stable"
+              ]
+            }
+          }
+        },
+        "description": "RG analysis results: beta functions, fixed points (name, coordinates, eigenvalues, stability) for both materials, with a boolean flag indicating whether the stable fixed point is the Heisenberg fixed point."
+      }
+    ],
+    "notes": "The solving agent must implement symbolic group-theory and algebra using sympy. The checker compares the agent's derived polynomials and inequalities to the paper-reported results (hidden gold) and audits the RG fixed point structure."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Exact expected symbolic forms for free energy and mean-field artifacts extracted from paper Eqs. (2.1),(3.1) and Secs II,III.",
+      "source_provenance": "Paper: D. Sahu and M. B. Walker, Phys. Rev. B 31, 479",
+      "generation_method": "Direct transcription of the reported polynomial terms and phase inequalities.",
+      "why_not_fabricated": "These are the paper's own published equations and conditions, not invented."
+    }
+  ],
+  "target_policies": {
+    "free_energy_polynomials.json": "exact_match",
+    "mean_field_states.json": "exact_match",
+    "rg_fixed_points.json": "structural_audit"
+  },
+  "steps": [
+    {
+      "id": "step_02_free_energy",
+      "output_file": "free_energy_polynomials.json",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target": {
+        "TaX2": {
+          "order_parameter_dim": 6,
+          "transformation_rules": {
+            "S6_plus": "psi_j -> psi_{j+1}^* (j mod 3)",
+            "sigma_d": "psi_1 -> psi_1, psi_2 -> psi_3, psi_3 -> psi_2"
+          },
+          "polynomial_terms": [
+            "a/2 * (|psi_1|^2 + |psi_2|^2 + |psi_3|^2)",
+            "u1 * (|psi_1|^4 + |psi_2|^4 + |psi_3|^4)",
+            "u3 * (|psi_1|^2|psi_2|^2 + |psi_1|^2|psi_3|^2 + |psi_2|^2|psi_3|^2)"
+          ],
+          "invariant_constraints": [
+            "u1 > 0",
+            "u1 + u3 > 0"
+          ]
+        },
+        "TiSe2": {
+          "order_parameter_dim": 3,
+          "transformation_rules": {
+            "S6_plus": "psi_j -> -psi_{j+1} (j mod 3)",
+            "sigma_d": "psi_1 -> -psi_1, psi_2 -> -psi_3, psi_3 -> -psi_2"
+          },
+          "polynomial_terms": [
+            "a/2 * (psi_1^2 + psi_2^2 + psi_3^2)",
+            "u1 * (psi_1^4 + psi_2^4 + psi_3^4)",
+            "u3 * (psi_1^2 psi_2^2 + psi_1^2 psi_3^2 + psi_2^2 psi_3^2)"
+          ],
+          "invariant_constraints": [
+            "u1 > 0",
+            "u1 + u3 > 0"
+          ]
+        }
+      },
+      "tolerance": "normalized_string_set_exact"
+    },
+    {
+      "id": "step_03_mean_field",
+      "output_file": "mean_field_states.json",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "target": {
+        "TaX2": {
+          "single_Q_condition": "u1 < u3/2",
+          "triple_Q_condition": "u1 > u3/2",
+          "order_parameter_components": [
+            {
+              "state": "(3Q)",
+              "amplitude": "|psi_i|^2 = |a| / (4(u1 + u3)) for i=1,2,3"
+            },
+            {
+              "state": "(1Q)",
+              "amplitude_example": "|psi_1|^2 = |a| / (4 u1), |psi_2|^2 = |psi_3|^2 = 0"
+            }
+          ]
+        },
+        "TiSe2": {
+          "single_Q_condition": "u1 < u3/2",
+          "triple_Q_condition": "u1 > u3/2",
+          "order_parameter_components": [
+            {
+              "state": "(3Q)",
+              "amplitude": "psi_i^2 = |a| / (4(u1 + u3)) for i=1,2,3"
+            },
+            {
+              "state": "(1Q)",
+              "amplitude_example": "psi_1^2 = |a| / (4 u1), psi_2 = psi_3 = 0"
+            }
+          ]
+        }
+      },
+      "tolerance": "normalized_string_set_exact"
+    },
+    {
+      "id": "step_04_rg",
+      "output_file": "rg_fixed_points.json",
+      "kind": "structural_audit",
+      "weight": 0.6,
+      "constraints": {
+        "TiSe2": {
+          "required_keys": [
+            "beta_functions",
+            "fixed_points",
+            "heisenberg_is_stable"
+          ],
+          "fixed_points_min_count": 4,
+          "heisenberg_present_stable": true,
+          "heisenberg_is_stable_true": true
+        },
+        "TaX2": {
+          "required_keys": [
+            "beta_functions",
+            "fixed_points",
+            "heisenberg_is_stable"
+          ],
+          "fixed_points_min_count": 1
+        }
+      },
+      "tolerance_description": "structural check: verify structure, presence of required keys, minimum number of fixed points, and Heisenberg stability flag."
+    }
+  ]
+}

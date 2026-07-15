@@ -1,0 +1,166 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Spin/charge disproportionation and stiffness softening are recomputed from raw CSV data; polynomial coefficients are independently refit from the CSV and cross-validated against reported values; band-splitting deformation potential is compared to paper-reported reference with threshold_or_better.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "spin_disproportionation_threshold",
+      "source_provenance": "Paper Section VI, Fig. 4: 'spin disproportionation of the AFM ions of the order of ±0.05 μ_B'",
+      "generation_method": "Extracted from paper text; threshold set at 0.03 μB (60% of reported ~0.05 μB) to confirm instability presence with tolerance for toolchain spread.",
+      "why_not_fabricated": "Directly from the paper's reported magnitude; threshold is a generous floor below the reported value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "charge_disproportionation_threshold",
+      "source_provenance": "Paper Section VI: 'Ni1-to-Ni2 charge disproportionation up to ~±0.05 e (from atomic sphere charges)'",
+      "generation_method": "Extracted from paper text; threshold set at 0.03 e (60% of reported ~0.05 e) for same reasons as spin.",
+      "why_not_fabricated": "Directly from the paper's reported magnitude."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "deformation_potential_reference",
+      "source_provenance": "Paper Section VII, Fig. 5: 'deformation potential D = 150 meV/0.03 Å = 5 eV/Å' with stated range 3.1–7.3 eV/Å for displacements 0.01–0.047 Å.",
+      "generation_method": "Extracted from paper; threshold set at 3.5 eV/Å (within the paper's stated range) to confirm strong electron-phonon coupling.",
+      "why_not_fabricated": "Directly from the paper's reported value and range."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "anharmonic_coefficients_reference",
+      "source_provenance": "Paper Section VII: 'A2=47.5 eV/Å², A3=61.2 eV/Å³ (breathing); A2=29.4 eV/Å², A3=136.7 eV/Å³ (half-breathing)'",
+      "generation_method": "Extracted from paper text. Used only as sanity bounds (A2 > 0, |A3/A2| > 0.3) and for cross-reference in consistency check tolerances.",
+      "why_not_fabricated": "Directly from the paper's reported fitted coefficients."
+    }
+  ],
+  "target_policies": {
+    "energy_moment_charge_data.csv": "metric_recompute",
+    "fitted_coefficients.json": "metric_recompute",
+    "band_splitting.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_moment_charge_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "displacement",
+            "energy",
+            "M_Ni1",
+            "M_Ni2",
+            "Q_Ni1",
+            "Q_Ni2"
+          ],
+          "units": {
+            "displacement": "Å",
+            "energy": "eV/f.u.",
+            "M_Ni1": "μB",
+            "M_Ni2": "μB",
+            "Q_Ni1": "e",
+            "Q_Ni2": "e"
+          }
+        },
+        "description": "Raw frozen-phonon energy, magnetic moment, and charge data for each mode and displacement. The checker will compute spin disproportionation, charge disproportionation, and stiffness from this file and compare them to hidden gold values within tolerance."
+      },
+      {
+        "file": "fitted_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "breathing",
+            "half_breathing"
+          ],
+          "items": {
+            "breathing": {
+              "A2": "float (eV/Å^2)",
+              "A3": "float (eV/Å^3)",
+              "A3_to_A2_ratio": "float"
+            },
+            "half_breathing": {
+              "A2": "float (eV/Å^2)",
+              "A3": "float (eV/Å^3)",
+              "A3_to_A2_ratio": "float"
+            }
+          }
+        },
+        "description": "Fitted harmonic and anharmonic energy coefficients for breathing and half-breathing modes. The checker will refit the energy data from the CSV and compare its own fit to the reported coefficients within tolerance."
+      },
+      {
+        "file": "band_splitting.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "displacement",
+            "band_splitting",
+            "deformation_potential"
+          ],
+          "units": {
+            "displacement": "Å",
+            "band_splitting": "eV",
+            "deformation_potential": "eV/Å"
+          }
+        },
+        "description": "Band splitting and deformation potential at u=0.03 Å for the full-breathing mode. The checker will compare the reported deformation potential to a hidden reference value within tolerance."
+      }
+    ],
+    "notes": "The hidden checker will re-derive spin/charge disproportionation and stiffness from the CSV, refit energy coefficients, and compare the reported band splitting to a hidden reference."
+  },
+  "steps": [
+    {
+      "id": "spin_disp",
+      "output_file": "energy_moment_charge_data.csv",
+      "kind": "recompute_metric",
+      "weight": 0.22,
+      "description": "Recompute spin disproportionation ΔM = |M_Ni1 - M_Ni2| at smallest displacement per mode; must exceed threshold to confirm meta-Stoner instability.",
+      "threshold": 0.03,
+      "min_acceptable": 0.01
+    },
+    {
+      "id": "charge_disp",
+      "output_file": "energy_moment_charge_data.csv",
+      "kind": "recompute_metric",
+      "weight": 0.13,
+      "description": "Recompute charge disproportionation ΔQ = |Q_Ni1 - Q_Ni2| at smallest displacement per mode; must exceed threshold to confirm accompanying charge instability.",
+      "threshold": 0.03,
+      "min_acceptable": 0.01
+    },
+    {
+      "id": "stiffness_trend",
+      "output_file": "energy_moment_charge_data.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "Verify anomalous softening: effective stiffness K(u) = ΔE/u² at smallest displacement (0.001 Å) is substantially smaller than at a reference displacement (0.02 Å) for both modes.",
+      "softening_ratio_max": 0.92
+    },
+    {
+      "id": "coeff_consistency",
+      "output_file": "fitted_coefficients.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "description": "Independently refit ΔE = A2·u² + A3·u³ from the CSV energy data; verify reported A2, A3 are consistent with the refit within generous tolerances, and verify anharmonicity signature (A2 > 0, |A3/A2| > 0.3).",
+      "a2_rel_tol": 0.3,
+      "a3_rel_tol": 0.4,
+      "min_a3_a2_ratio": 0.3
+    },
+    {
+      "id": "band_split",
+      "output_file": "band_splitting.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "description": "Verify deformation potential at u=0.03 Å for full-breathing mode meets minimum threshold for strong electron-phonon coupling.",
+      "threshold": 3.5,
+      "min_acceptable": 1.0
+    }
+  ]
+}

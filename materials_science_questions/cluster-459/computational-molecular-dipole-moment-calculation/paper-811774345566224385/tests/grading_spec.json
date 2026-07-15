@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "T0 result-level compare because the checker cannot recompute the SCF run; it compares the agent's submitted values to the paper's published numbers with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Total SCF energy gold",
+      "source_provenance": "Paper text and Table I: total electronic energy for pyrrole is -208.7764415 a.u.",
+      "generation_method": "Extracted from paper's reported value.",
+      "why_not_fabricated": "This is the paper's published result for the specified basis set and geometry."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Dipole moment magnitude gold",
+      "source_provenance": "Table V: dipole moment magnitude for pyrrole is 1.977 D.",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "Paper's computed dipole moment value."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Orbital eigenvalue golds",
+      "source_provenance": "Table I: eigenvalues 1a2 = -0.2989, 2b1 = -0.3490, 1b1 = -0.5705 a.u.",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "Paper's reported orbital energies."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "units": "atomic units (a.u.)"
+        },
+        "description": "SCF total electronic energy of pyrrole, a single float in a.u."
+      },
+      {
+        "file": "dipole_moment.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": [
+            "magnitude",
+            "mu_a",
+            "mu_b",
+            "mu_c"
+          ],
+          "units": "Debye (D)"
+        },
+        "description": "Dipole moment magnitude and components of pyrrole in Debye."
+      },
+      {
+        "file": "homo_eigenvalues.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "1a2": "float (a.u.)",
+            "2b1": "float (a.u.)",
+            "1b1": "float (a.u.)"
+          },
+          "items": {},
+          "units": "atomic units (a.u.)"
+        },
+        "description": "Orbital eigenvalues of the three highest occupied π molecular orbitals of pyrrole."
+      }
+    ],
+    "notes": "All values are derived from a single SCF calculation. The dipole moment components are in the principal axis system."
+  },
+  "steps": [
+    {
+      "id": "total_energy",
+      "output_file": "total_energy.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": -208.7764415,
+      "tolerance_abs": 1e-06,
+      "description": "Total SCF energy comparison"
+    },
+    {
+      "id": "dipole_moment",
+      "output_file": "dipole_moment.txt",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target_magnitude": 1.977,
+      "tolerance_abs": 0.05,
+      "components_tolerance_zero": 0.1,
+      "description": "Dipole moment magnitude and component sanity"
+    },
+    {
+      "id": "homo_eigenvalues",
+      "output_file": "homo_eigenvalues.json",
+      "kind": "json_field",
+      "weight": 0.25,
+      "fields": {
+        "1a2": {
+          "target": -0.2989,
+          "tolerance_abs": 0.01
+        },
+        "2b1": {
+          "target": -0.349,
+          "tolerance_abs": 0.01
+        },
+        "1b1": {
+          "target": -0.5705,
+          "tolerance_abs": 0.01
+        }
+      },
+      "description": "Three highest occupied orbital eigenvalues"
+    }
+  ]
+}

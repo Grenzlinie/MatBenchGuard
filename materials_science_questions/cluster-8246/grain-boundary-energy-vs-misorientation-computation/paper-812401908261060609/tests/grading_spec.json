@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The rho_vs_T curve is recomputed against a digitized reference from the paper's Figure 4; structural checks on time evolution supplement where exact recomputation is infeasible.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "rho_vs_T.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_div_Tm",
+            "rho_6"
+          ],
+          "units": {
+            "T_div_Tm": "dimensionless",
+            "rho_6": "dimensionless"
+          }
+        },
+        "description": "Order parameter vs reduced temperature for grain boundary core region from short MD runs."
+      },
+      {
+        "file": "rho_time_evolution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_div_Tm",
+            "time_step",
+            "region",
+            "rho"
+          ],
+          "units": {
+            "time_step": "arbitrary",
+            "rho": "dimensionless"
+          }
+        },
+        "description": "Time evolution of order parameter for all 12 regions at three reduced temperatures from long MD runs."
+      }
+    ],
+    "notes": "Scoring uses hidden digitized reference for the temperature curve and structural trend checks for the time evolution. The agent must execute all MD stages to produce genuine load-bearing artifacts."
+  },
+  "steps": [
+    {
+      "id": "step_3_order_vs_t",
+      "output_file": "rho_vs_T.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "params": {
+        "tolerance_rho6": 0.05,
+        "curve_center": 0.52,
+        "curve_width": 0.12,
+        "curve_amplitude": 0.95
+      }
+    },
+    {
+      "id": "step_4_long_time_evolution",
+      "output_file": "rho_time_evolution.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "params": {}
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference logistic curve for rho_vs_T: rho_6(T) = A / (1 + exp((T - center)/width)) fitted to Figure 4.",
+      "source_provenance": "Digitized from paper Figure 4.",
+      "generation_method": "Logistic function parameters chosen to match the reported continuous decrease beginning near 0.5 Tm and passing through inflection at ~0.5 Tm.",
+      "why_not_fabricated": "The curve shape and parameters are traceable to the paper's published Figure 4."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Structural thresholds for order parameter time evolution: region 6 stable at T/Tm=0.43, regions 7/8 disorder at 0.54, widespread loss at 0.65.",
+      "source_provenance": "Derived from paper description of Figure 5 and text.",
+      "generation_method": "Qualitative trends extracted from the paper's narrative; specific numeric thresholds are set to be satisfied by a correct physical simulation.",
+      "why_not_fabricated": "The thresholds reflect the paper's central observations and would be naturally satisfied by a genuine MD simulation of this system."
+    }
+  ]
+}

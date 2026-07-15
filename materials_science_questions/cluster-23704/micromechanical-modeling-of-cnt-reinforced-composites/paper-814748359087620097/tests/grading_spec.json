@@ -1,0 +1,68 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MAPE between agent predictions and hidden atomistic reference values is recomputed from the raw artifact; model ordering is verified from the recomputed MAPE values.",
+  "pass_threshold": 0.6,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold nanoparticle axial moduli at 0 K from Table 3",
+      "source_provenance": "Table 3 of the source paper (Sys1–Sys8 axial modulus values from molecular mechanics simulations)",
+      "generation_method": "Copied directly from the paper’s published table",
+      "why_not_fabricated": "Values are exactly as reported in the paper; they define the ground truth reference for this reproduction task."
+    }
+  ],
+  "gold_moduli": {
+    "Sys1": 135.0,
+    "Sys2": 101.0,
+    "Sys3": 94.5,
+    "Sys4": 96.3,
+    "Sys5": 65.7,
+    "Sys6": 60.3,
+    "Sys7": 37.5,
+    "Sys8": 40.3
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "axial_moduli_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "cnt_weight_fraction",
+            "mori_tanaka_E",
+            "self_consistent_E",
+            "halpin_tsai_E"
+          ],
+          "units": {
+            "mori_tanaka_E": "GPa",
+            "self_consistent_E": "GPa",
+            "halpin_tsai_E": "GPa"
+          }
+        },
+        "description": "Predicted axial moduli (GPa) for eight nanocomposite systems from Mori-Tanaka, self-consistent field, and Halpin-Tsai models."
+      }
+    ],
+    "notes": "The checker will compute the mean absolute percentage error (MAPE) for each model relative to hidden atomistic reference values and verify that the self-consistent field model yields the lowest MAPE."
+  },
+  "steps": [
+    {
+      "id": "sc_best",
+      "output_file": "axial_moduli_predictions.csv",
+      "kind": "recompute_metric_ordering",
+      "weight": 0.8,
+      "description": "Verify that the self-consistent field model yields the lowest MAPE among the three models. Full credit if SC MAPE is strictly less than both MT and HT MAPE; partial credit if less than one; zero otherwise."
+    },
+    {
+      "id": "ht_better_than_mt",
+      "output_file": "axial_moduli_predictions.csv",
+      "kind": "recompute_metric_ordering",
+      "weight": 0.2,
+      "description": "Verify that Halpin‑Tsai model has lower MAPE than Mori‑Tanaka (sanity check). Full credit if HT MAPE < MT MAPE; zero otherwise."
+    }
+  ]
+}

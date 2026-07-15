@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recomputing from dft_energies.json is infeasible because the reference oracle does not produce that file, so scoring is based on comparing the agent's heat_of_mixing.json values directly to the paper's Table 3 values with a tolerance of 0.2 eV. This is effectively a T0 result-level compare, embedded as a numeric tolerance check.",
+  "pass_threshold": 0.9,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heat_of_mixing.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "Zr53Sn1_Em",
+            "Zr53Nb1_Em",
+            "Zr52Sn1Nb1_a_Em",
+            "Zr52Sn1Nb1_c_Em"
+          ],
+          "value_type": "float",
+          "unit": "eV"
+        },
+        "description": "The four heat of mixing values computed from DFT total energies; they are compared directly to hidden reference values."
+      }
+    ],
+    "notes": "The hidden checker directly compares the agent's reported heat_of_mixing.json values against hidden reference values. There is no recomputation from raw DFT energies."
+  },
+  "steps": [
+    {
+      "id": "heat_of_mixing",
+      "output_file": "heat_of_mixing.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Compare each heat-of-mixing value in heat_of_mixing.json to the paper's reported value from Table 3 within an absolute tolerance.",
+      "targets": {
+        "Zr53Sn1_Em": -1.248,
+        "Zr53Nb1_Em": 0.639,
+        "Zr52Sn1Nb1_a_Em": -0.599,
+        "Zr52Sn1Nb1_c_Em": -0.589
+      },
+      "tolerance": 0.2
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold heat-of-mixing values for the four models (Zr53Sn1, Zr53Nb1, Zr52Sn1Nb1 a-direction, Zr52Sn1Nb1 c-direction) as reported in Table 3 of the paper.",
+      "source_provenance": "Paper Table 3: Em(Sn→Zr) = -1.248 eV, Em(Nb→Zr) = 0.639 eV, Em(Sn,Nb→Zr) a = -0.599 eV, Em(Sn,Nb→Zr) c = -0.589 eV.",
+      "generation_method": "Extracted from the accepted manuscript's Table 3; identical to the values written by reference solve.sh.",
+      "why_not_fabricated": "These are the paper's own reported results, used as the authoritative reference for the reproduction target."
+    }
+  ]
+}

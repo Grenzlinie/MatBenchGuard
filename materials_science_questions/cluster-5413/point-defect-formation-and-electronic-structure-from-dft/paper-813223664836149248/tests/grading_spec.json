@@ -1,0 +1,145 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Headline quantities are reported scalar values from a full DFT calculation that cannot be recomputed from lightweight artifacts; T0 result-level comparison to paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A": "float",
+            "B": "float",
+            "C": "float",
+            "V": "float"
+          },
+          "units": {
+            "A": "Å",
+            "B": "Å",
+            "C": "Å",
+            "V": "Å³"
+          }
+        },
+        "description": "Relaxed lattice parameters of orthorhombic SrZrO3 from DFT-PBE-GGA."
+      },
+      {
+        "file": "step_02_transition_levels.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "transition_2_1": "float",
+            "transition_1_0": "float"
+          },
+          "units": {
+            "transition_2_1": "eV",
+            "transition_1_0": "eV"
+          }
+        },
+        "description": "Charge-state transition levels for the V_O-row model."
+      },
+      {
+        "file": "step_03_metallic_check.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "has_metallic_states": "boolean",
+            "band_gap_eV": "float or null"
+          },
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Metallic character assessment: whether the V_O-row model exhibits a metallic state and its band gap."
+      },
+      {
+        "file": "step_04_energy_differences.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "q0": "float",
+            "q1": "float",
+            "q2": "float"
+          },
+          "units": {
+            "q0": "eV",
+            "q1": "eV",
+            "q2": "eV"
+          }
+        },
+        "description": "Energy differences ΔE = E(disrupted-row) - E(V_O-row) for charge states q = 0, 1+, 2+."
+      }
+    ],
+    "notes": "All scored outputs are compared to paper-reported gold values with reasonable tolerances to account for differences in DFT implementation and convergence settings. The metallic check uses threshold_or_better: band_gap_eV must be below a small threshold and has_metallic_states must be true. For energy differences, the checker also verifies expected signs and relative ordering among charge states."
+  },
+  "steps": [
+    {
+      "id": "step1_lattice",
+      "output_file": "step_01_lattice_constants.json",
+      "weight": 0.1,
+      "gold": {
+        "A": 5.84,
+        "B": 5.902,
+        "C": 8.289,
+        "V": 285.72
+      },
+      "tolerance": 0.05,
+      "target_policy": "reference_match",
+      "description": "Check lattice constants and volume against paper Table 1 gold within ±0.05 Å."
+    },
+    {
+      "id": "step2_transition",
+      "output_file": "step_02_transition_levels.json",
+      "weight": 0.3,
+      "gold": {
+        "transition_2_1": 4.6,
+        "transition_1_0": 4.92
+      },
+      "tolerance": 0.2,
+      "target_policy": "reference_match",
+      "description": "Check transition levels against paper gold within ±0.2 eV."
+    },
+    {
+      "id": "step3_metallic",
+      "output_file": "step_03_metallic_check.json",
+      "weight": 0.3,
+      "threshold_gap": 0.1,
+      "target_policy": "threshold_or_better",
+      "description": "Metallic states must be true and band gap ≤ 0.1 eV."
+    },
+    {
+      "id": "step4_energy_diff",
+      "output_file": "step_04_energy_differences.json",
+      "weight": 0.3,
+      "gold": {
+        "q0": -1.0,
+        "q1": 0.8,
+        "q2": 0.3
+      },
+      "tolerance": 1.0,
+      "target_policy": "reference_match",
+      "description": "Check signs (q0<0, q1>0, q2>0, q1>q2) and values within ±1 eV of paper gold."
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for lattice constants, transition levels, metallic check threshold, energy differences.",
+      "source_provenance": "Paper Table 1 (lattice), Figure 2j (transition levels), paper description (metallic), Figure 4c (energy differences).",
+      "generation_method": "Extracted from the paper's reported computed values: A=5.840 Å, B=5.902 Å, C=8.289 Å, V=285.720 Å³; transition levels 4.60 eV, 4.92 eV; metallic character with zero band gap; energy differences approximated -1 eV for q0, +0.8 eV for q1, +0.3 for q2 from figure.",
+      "why_not_fabricated": "Values are taken directly from the paper's reported results for the same computational setup; solve.sh writes these exact values, and tolerances are set to absorb toolchain variation."
+    }
+  ]
+}

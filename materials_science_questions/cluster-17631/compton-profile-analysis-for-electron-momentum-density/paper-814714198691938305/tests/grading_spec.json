@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes deviation of lattice constants from paper gold and exact matches for metallicity booleans; it reads the agent's reported values from the scored JSON files and compares them to hidden paper values. A true recompute from raw optimization logs is infeasible as those logs are not declared scored outputs; the strongest feasible tier is a result-level comparison against the hidden paper gold, which is acceptable per D4 T0.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Lattice constant gold values",
+      "source_provenance": "Paper text: optimized cell parameter is 9.98 Å for pure TCNE, 9.96 Å for K(TCNE)₃, 9.93 Å for Na(TCNE)₃.",
+      "generation_method": "copied from paper's Hartree–Fock results (Section 2).",
+      "why_not_fabricated": "Directly traced to the paper's reported optimized cell parameters."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Metallicity gold values",
+      "source_provenance": "Paper conclusion: pure TCNE is an insulator; insertion compounds show metallic conduction (non-zero DOS at Fermi level).",
+      "generation_method": "extracted from paper's band structure and DOS analysis (Sections 3, 5).",
+      "why_not_fabricated": "Matches the paper's explicit statements on metallic character."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pure_TCNE": "float",
+            "K_TCNE3": "float",
+            "Na_TCNE3": "float"
+          },
+          "units": {
+            "pure_TCNE": "angstrom",
+            "K_TCNE3": "angstrom",
+            "Na_TCNE3": "angstrom"
+          }
+        },
+        "description": "Optimized cell parameters from Hartree-Fock calculations for pure TCNE, K(TCNE)3, and Na(TCNE)3."
+      },
+      {
+        "file": "metallicity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pure_TCNE": "boolean",
+            "K_TCNE3": "boolean",
+            "Na_TCNE3": "boolean"
+          }
+        },
+        "description": "Boolean indicators of whether the density of states at the Fermi level is non-zero for each compound."
+      }
+    ],
+    "notes": "The checker validates the output files against hidden reference values. Lattice constants are compared within a tolerance; metallicity booleans are compared exactly."
+  },
+  "steps": [
+    {
+      "id": "scored_01",
+      "output_file": "optimized_lattice_constants.json",
+      "kind": "tolerance_check",
+      "weight": 0.8,
+      "gold": {
+        "pure_TCNE": 9.98,
+        "K_TCNE3": 9.96,
+        "Na_TCNE3": 9.93
+      },
+      "tolerance": 0.05,
+      "description": "Validates each lattice constant is within ±0.05 Å of the paper's HF-optimized values."
+    },
+    {
+      "id": "scored_02",
+      "output_file": "metallicity.json",
+      "kind": "exact_match",
+      "weight": 0.2,
+      "gold": {
+        "pure_TCNE": false,
+        "K_TCNE3": true,
+        "Na_TCNE3": true
+      },
+      "description": "Checks that the metallicity verdict (boolean) matches the paper's conclusions exactly."
+    }
+  ]
+}

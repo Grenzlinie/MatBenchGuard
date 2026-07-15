@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "result-level-compare",
+  "scoring_justification": "Checker cannot re-run the DFT simulation; it compares the agent's reported formation energy and band gap to the paper's GGA values using tolerances typical for code-to-code DFT spread.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported GGA formation energy and direct band gap of o-IrPTe",
+      "source_provenance": "Paper: DOI 10.1002/zaac.201500149, Results and Discussion, DFT Calculations section: formation energy from elements -217 kJ/mol, band gap 0.5 eV direct",
+      "generation_method": "Extracted from paper text; no transformation.",
+      "why_not_fabricated": "Values are explicitly stated in the paper as the DFT-GGA results for o-IrPTe."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "main_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "formation_energy_kJ_per_mol": "number (kJ/mol)",
+            "band_gap_direct_eV": "number (eV)",
+            "band_gap_type": "string (direct/indirect)",
+            "delta_E_kJ_per_mol": "number (kJ/mol)"
+          },
+          "optional": {
+            "o_lattice_parameters": "[a,b,c] in Angstrom",
+            "transition_pressure_kbar": "number (kbar)"
+          },
+          "units": {
+            "formation_energy_kJ_per_mol": "kJ/mol",
+            "band_gap_direct_eV": "eV",
+            "delta_E_kJ_per_mol": "kJ/mol",
+            "o_lattice_parameters": "Angstrom",
+            "transition_pressure_kbar": "kbar"
+          }
+        },
+        "description": "Scored artifact containing the DFT-calculated formation energy of o‑IrPTe from elements, its direct band gap, and the energy difference between orthorhombic and cubic IrPTe polymorphs."
+      }
+    ],
+    "notes": "Checker compares formation energy, band gap, and polymorph energy difference to paper's reported GGA values within expected tolerances and verifies band_gap_type is 'direct'."
+  },
+  "target_policies": {
+    "main_results.json": "reference_match"
+  },
+  "steps": [
+    {
+      "id": "formation_energy_check",
+      "output_file": "main_results.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": -217,
+      "tolerance": 30,
+      "comment": "Formation energy must be negative and within ±30 kJ/mol of -217 kJ/mol"
+    },
+    {
+      "id": "band_gap_check",
+      "output_file": "main_results.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": 0.5,
+      "tolerance": 0.2,
+      "expected_type": "direct",
+      "comment": "Direct band gap must be within ±0.2 eV of 0.5 eV and band_gap_type must be 'direct'"
+    }
+  ]
+}

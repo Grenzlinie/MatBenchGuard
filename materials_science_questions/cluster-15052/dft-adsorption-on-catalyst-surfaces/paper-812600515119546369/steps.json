@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_1",
+    "title": "Build and optimize bare NiO/ZnO slab with oxygen vacancy",
+    "role": "process",
+    "action": "Construct a slab model by placing a 1×1×2 supercell of NiO(200) on a 3×5×2 supercell of ZnO(101). Remove one surface oxygen atom from the ZnO layer to create an oxygen vacancy. Perform DFT geometry optimization of the entire bare slab using GGA-PBE with spin polarization, a Hubbard U correction on Ni 3d, and a plane-wave cutoff of at least 400 eV. Relax all atomic positions until forces converge. Save the optimized geometry.",
+    "output_file": "",
+    "evidence": "slab_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required intermediate that produces the realistic catalyst model. The optimized slab is the foundation for charge analysis and PMS adsorption.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Charge density difference and Bader analysis for bare slab",
+    "role": "scored",
+    "action": "Using the optimized bare slab, compute the charge density difference Δρ = ρ(NiO/ZnO) - ρ(NiO) - ρ(ZnO) by performing separate single-point calculations for the isolated NiO layer, isolated ZnO slab (with vacancy), and the full heterojunction. Run Bader charge analysis on the full slab to obtain net charges. Summarize the qualitative picture of electron accumulation/depletion and report the net electron gain/loss of the NiO layer.",
+    "output_file": "step_02_charge_density_analysis.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored structural audit of the charge redistribution at the NiO/ZnO interface. The description and bader summary are checked for non‑emptiness and internal consistency with the expected electron flow.",
+    "output_schema": "{\"type\":\"object\",\"properties\":{\"charge_density_difference_description\":{\"type\":\"string\"},\"bader_charges_summary\":{\"type\":\"string\"}},\"required\":[\"charge_density_difference_description\",\"bader_charges_summary\"]}"
+  },
+  {
+    "id": "step_3",
+    "title": "PMS adsorption on NiO/ZnO slab",
+    "role": "scored",
+    "action": "Construct a PMS molecule and optimize it in a vacuum cell. Place it on the optimized slab in a plausible adsorption geometry (e.g., O atoms of the peroxide group near Ni). Perform DFT geometry optimization of the adsorption complex using the same DFT settings. Calculate the adsorption energy Eads = E(total) - E(slab) - E(PMS). Extract the O–O bond length before and after adsorption. Perform Bader analysis on the adsorbed complex to obtain the net charge transferred to the PMS molecule.",
+    "output_file": "step_01_geometry_optimization_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Headline result: adsorption energy, O–O bond elongation, and charge transfer quantify PMS activation. The adsorption energy and bond lengths are compared against the paper's reported values.",
+    "output_schema": "{\"type\":\"object\",\"properties\":{\"adsorption_energy_PMS\":{\"type\":\"number\",\"unit\":\"eV\"},\"O_O_bond_length_before_adsorption\":{\"type\":\"number\",\"unit\":\"Å\"},\"O_O_bond_length_after_adsorption\":{\"type\":\"number\",\"unit\":\"Å\"},\"bader_charge_transfer_to_PMS\":{\"type\":\"number\"}},\"required\":[\"adsorption_energy_PMS\",\"O_O_bond_length_before_adsorption\",\"O_O_bond_length_after_adsorption\"]}"
+  }
+]

@@ -1,0 +1,140 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute L2-norm relative deviation from agent's raw equilibrium concentration profiles using the analytical solution; compare against paper-reported reference deviations with monotonic threshold.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "concentration_profile_varkappa_0.01.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "c"
+          ],
+          "units": {
+            "r": "nm",
+            "c": "at.%"
+          }
+        },
+        "description": "Agent-compared radial concentration profile at equilibrium for κ=0.01 at.%⁻¹. Checker recomputes L² deviation from this raw artifact."
+      },
+      {
+        "file": "concentration_profile_varkappa_0.04.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "c"
+          ],
+          "units": {
+            "r": "nm",
+            "c": "at.%"
+          }
+        },
+        "description": "Agent-compared radial concentration profile at equilibrium for κ=0.04 at.%⁻¹. Checker recomputes L² deviation from this raw artifact."
+      },
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "solver": "string ('OpenPhase' or 'DAMASK')",
+            "L2_0.01": "float",
+            "L2_0.04": "float",
+            "unit": "string ('dimensionless')"
+          }
+        },
+        "description": "Agent-reported solver identity and its computed L² deviations. Checker verifies solver consistency and may cross-check with its own recomputed values."
+      }
+    ],
+    "notes": "The checker recomputes L²-norm deviations from the submitted CSV profiles using the analytical solution with material parameters as defined in the paper. The summary.json provides the solver name needed to select the appropriate paper-reported tolerance. Agent L² values in summary.json are not trusted directly; reward comes from recomputed deviations from the raw CSVs."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold L² deviations for OpenPhase and DAMASK from paper Table 4",
+      "source_provenance": "Paper Table 4: OpenPhase κ=0.01 deviation 1%, κ=0.04 deviation 4%; DAMASK κ=0.01 deviation 2%, κ=0.04 deviation 9%",
+      "generation_method": "Transcribed from paper table.",
+      "why_not_fabricated": "Directly copied from the source paper's reported benchmark values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Analytical solution parameters needed to reconstruct c_ref(r)",
+      "source_provenance": "Derived from the paper: Tables 1, 2 and text; all are public material parameters.",
+      "generation_method": "Extracted from paper and consistent with the reference solve.sh's computations.",
+      "why_not_fabricated": "These are standard material constants from the literature; the checker reimplements the analytical formula."
+    }
+  ],
+  "steps": [
+    {
+      "id": "scored_1_profile_varkappa_0_01",
+      "output_file": "concentration_profile_varkappa_0.01.csv",
+      "kind": "recompute_metric",
+      "weight": 0.45,
+      "config": {
+        "kappa_atpct": 0.01,
+        "c0_atpct": 7.021,
+        "R_nm": 57.09,
+        "G_m": 28470000000.0,
+        "V_m": 1e-05,
+        "T": 473.0,
+        "R_gas": 8.314,
+        "C11_p": 139800000000.0,
+        "C12_p": 33700000000.0,
+        "eps_p": -0.00975,
+        "solver_gold": {
+          "OpenPhase": 0.01,
+          "DAMASK": 0.02
+        },
+        "tolerance_abs": 0.02,
+        "max_deviation_penalty": 0.1
+      }
+    },
+    {
+      "id": "scored_2_profile_varkappa_0_04",
+      "output_file": "concentration_profile_varkappa_0.04.csv",
+      "kind": "recompute_metric",
+      "weight": 0.45,
+      "config": {
+        "kappa_atpct": 0.04,
+        "c0_atpct": 7.44,
+        "R_nm": 53.13,
+        "G_m": 28470000000.0,
+        "V_m": 1e-05,
+        "T": 473.0,
+        "R_gas": 8.314,
+        "C11_p": 139800000000.0,
+        "C12_p": 33700000000.0,
+        "eps_p": -0.00975,
+        "solver_gold": {
+          "OpenPhase": 0.04,
+          "DAMASK": 0.09
+        },
+        "tolerance_abs": 0.02,
+        "max_deviation_penalty": 0.2
+      }
+    },
+    {
+      "id": "scored_3_summary_solver_check",
+      "output_file": "summary.json",
+      "kind": "rubric",
+      "weight": 0.1,
+      "config": {
+        "allowed_solvers": [
+          "OpenPhase",
+          "DAMASK"
+        ]
+      }
+    }
+  ]
+}

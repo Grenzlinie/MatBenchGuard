@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Full recompute from raw MD trajectories is infeasible in the verifier; result-level comparison with paper gold and structural monotonicity/saturation checks provide verifiable scoring.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "thermal_conductivity_data.csv": "exact_match",
+    "modal_accumulation_data.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold anisotropic thermal conductivity values at 200,300,400,500 K from paper text and Fig. 3b",
+      "source_provenance": "Paper text explicitly states κ[100]=10.68, κ[010]=20.78, κ[001]=12.61 at 300 K. Values at 200, 400, 500 K were read from Fig. 3b (NNP‑EMD solid symbols) and rounded to one decimal place, ensuring consistency with the trends. They match the reference solve.sh.",
+      "generation_method": "Direct extraction from paper for 300 K; for other temperatures, values were interpolated from the plotted curves and rounded.",
+      "why_not_fabricated": "These are the paper's own numerical results for the same anisotropic lattice thermal conductivity computed by the NNP‑EMD method; the tolerance (±1.0 W m⁻¹ K⁻¹) is wide enough to accommodate honest re‑run with a different NNP instance or MD settings but narrow enough to reject random numbers."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Saturation values for modal accumulation curves (total κ[100], κ[010], κ[001] at 300 K)",
+      "source_provenance": "Paper Fig. 4 shows accumulated κ curves that saturate at the total thermal conductivity values (10.68, 20.78, 12.61). By definition, modal accumulation sums to the total κ at infinite frequency.",
+      "generation_method": "Same values as the total κ at 300 K from the paper text.",
+      "why_not_fabricated": "The saturation values are physically required to be the total thermal conductivity; they are the same numbers reported by the paper for total κ."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "kappa_100_W_mK",
+            "kappa_010_W_mK",
+            "kappa_001_W_mK"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "kappa_100_W_mK": "W m⁻¹ K⁻¹",
+            "kappa_010_W_mK": "W m⁻¹ K⁻¹",
+            "kappa_001_W_mK": "W m⁻¹ K⁻¹"
+          }
+        },
+        "description": "Anisotropic lattice thermal conductivity values of β‑Ga₂O₃ along three crystallographic directions at 200, 300, 400, and 500 K."
+      },
+      {
+        "file": "modal_accumulation_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_THz",
+            "kappa_100_accumulated_W_mK",
+            "kappa_010_accumulated_W_mK",
+            "kappa_001_accumulated_W_mK"
+          ],
+          "units": {
+            "frequency_THz": "THz",
+            "kappa_100_accumulated_W_mK": "W m⁻¹ K⁻¹",
+            "kappa_010_accumulated_W_mK": "W m⁻¹ K⁻¹",
+            "kappa_001_accumulated_W_mK": "W m⁻¹ K⁻¹"
+          }
+        },
+        "description": "Accumulated lattice thermal conductivity as a function of phonon mode frequency at 300 K for the three crystallographic directions."
+      }
+    ],
+    "notes": "The checker will compare the agent-reported thermal conductivity values and accumulated curves to the paper’s published results within appropriate tolerances. Exact gold values and tolerances are hidden."
+  },
+  "steps": [
+    {
+      "id": "tc_check",
+      "output_file": "thermal_conductivity_data.csv",
+      "weight": 0.6,
+      "kind": "numeric",
+      "target_policy": "exact_match",
+      "gold": {
+        "200": {
+          "kappa_100": 13.0,
+          "kappa_010": 27.0,
+          "kappa_001": 15.5
+        },
+        "300": {
+          "kappa_100": 10.68,
+          "kappa_010": 20.78,
+          "kappa_001": 12.61
+        },
+        "400": {
+          "kappa_100": 7.0,
+          "kappa_010": 14.0,
+          "kappa_001": 9.0
+        },
+        "500": {
+          "kappa_100": 5.0,
+          "kappa_010": 10.0,
+          "kappa_001": 6.5
+        }
+      },
+      "tolerance_abs": 1.0,
+      "scoring": "max_abs_error across all 12 values; if max_abs_error <= tolerance, score=1.0; else score = max(0.0, 1.0 - (max_abs_error - tolerance) / 2.0)."
+    },
+    {
+      "id": "modal_check",
+      "output_file": "modal_accumulation_data.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "target_policy": "reference_match",
+      "gold_saturation": {
+        "kappa_100": 10.68,
+        "kappa_010": 20.78,
+        "kappa_001": 12.61
+      },
+      "tolerance_relative": 0.15,
+      "scoring": "Combined: monotonicity (0.4 weight) and saturation (0.6 weight). Monotonicity score = 1.0 if all three directions never decrease; else 0.0. Saturation score = fraction of directions whose final accumulated κ is within ±15% of gold_saturation."
+    }
+  ]
+}

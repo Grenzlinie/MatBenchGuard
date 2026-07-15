@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "The core computational workflow (DFT HSE06 and phonon dispersion) cannot be re-run in the verifier; the checker verifies that the agent's reported electronic band energies, phonon frequencies, and orbital/DOS qualitative statements are consistent with the paper's HSE06 results within generous tolerances to absorb toolchain differences.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference band energies and orbital characters",
+      "source_provenance": "Paper Fig. 4a: HSE06 electronic structure; band energies a = -1.3 eV, b = -0.3 eV, c = 1.6 eV, d = -2.6 eV. Orbital characters from Fig. 4b: band c dominated by d_xy, d_xz, d_z2; band d dominated by d_z2.",
+      "generation_method": "Extracted from the paper's reported values in text and figures.",
+      "why_not_fabricated": "These are the authoritative paper-reported HSE06 results used to verify reproduction."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference phonon frequencies and DOS comparison",
+      "source_provenance": "Paper Fig. 4c and text: A1g mode ~200 cm⁻¹, Eg ~128 cm⁻¹, and A1g DOS higher than Eg.",
+      "generation_method": "Extracted from paper.",
+      "why_not_fabricated": "These are the paper's computed phonon results; used as verification standard."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bands": "object with keys a,b,c,d each a number (energy in eV)",
+            "orbital_characters": "object with keys c and d each a list of strings"
+          }
+        },
+        "description": "Orbital-resolved electronic band energies and dominant Ti d-orbital contributions for Ti3C2O2."
+      },
+      {
+        "file": "phonon_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "phonon_modes": "object with keys A1g and Eg each a number (frequency in cm⁻¹)",
+            "phonon_DOS_comparison": "string"
+          }
+        },
+        "description": "Phonon frequencies of A1g and Eg modes and the qualitative phonon DOS comparison."
+      }
+    ],
+    "notes": "The hidden checker compares the agent's reported band energies (relative to Fermi level) and dominant orbital characters against the paper's HSE06-computed values with reasonable tolerances. Phonon frequencies and the DOS comparison are similarly checked against the paper's reported results. Tolerances accommodate differences due to pseudopotential/functional choices."
+  },
+  "steps": [
+    {
+      "id": "electronic_structure",
+      "output_file": "electronic_structure.json",
+      "weight": 0.6,
+      "bands_ref": {
+        "a": -1.3,
+        "b": -0.3,
+        "c": 1.6,
+        "d": -2.6
+      },
+      "energy_tol": 0.15,
+      "orbital_characters_ref": {
+        "c": [
+          "d_xy",
+          "d_xz",
+          "d_z2"
+        ],
+        "d": [
+          "d_z2"
+        ]
+      }
+    },
+    {
+      "id": "phonon_analysis",
+      "output_file": "phonon_analysis.json",
+      "weight": 0.4,
+      "phonon_modes_ref": {
+        "A1g": 200.0,
+        "Eg": 128.0
+      },
+      "frequency_tol": 10.0,
+      "dos_comparison_ref": "A1g higher than Eg"
+    }
+  ]
+}

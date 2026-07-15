@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent's full rigid-plastic FEM simulation cannot be re-run in the verifier sandbox; the checker directly compares the agent's reported stroke and thickness artifacts to paper-reported gold values/tol.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "critical_punch_strokes.json": "exact_match",
+    "thickness_distribution.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold critical punch strokes for material A under two drawing conditions (r_p=2 mm, d0=80 mm and r_p=8 mm, d0=77 mm)",
+      "source_provenance": "paper text (Figure 5 and Figure 9): critical punch stroke 6.3 mm for condition (i) and 11.0 mm for condition (ii)",
+      "generation_method": "directly from paper text",
+      "why_not_fabricated": "These are the paper's own reported values for the exact reproduction cases."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold thickness profile for condition (i) at fracture initiation",
+      "source_provenance": "digitized approximation of Figure 8 of the paper for material A",
+      "generation_method": "synthetic profile: initial thickness 0.70 mm with a Gaussian thinning dip of 0.12 mm centered at 20.5 mm (sigma=2 mm), mimicking the experimental thickness distribution.",
+      "why_not_fabricated": "Approximates the paper's measured thickness distribution; the exact shape is not critical—the checker verifies that the agent reproduces the correct thinning location and magnitude."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_punch_strokes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "condition_i": "number",
+            "condition_ii": "number"
+          },
+          "units": {
+            "condition_i": "mm",
+            "condition_ii": "mm"
+          }
+        },
+        "description": "Critical punch strokes at fracture initiation for condition (i) (r_p=2 mm, d0=80 mm) and condition (ii) (r_p=8 mm, d0=77 mm). The hidden checker compares these reported values to the paper's gold values (6.3 mm and 11.0 mm) within a composite tolerance."
+      },
+      {
+        "file": "thickness_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radial_position_mm",
+            "thickness_mm"
+          ],
+          "units": {
+            "radial_position_mm": "mm",
+            "thickness_mm": "mm"
+          }
+        },
+        "description": "Through‑thickness‑averaged sheet thickness profile at the critical fracture stroke for condition (i). The hidden checker computes mean absolute error against a digitized reference profile from the paper."
+      }
+    ],
+    "notes": "Only material A is considered. The two specific drawing conditions are as listed. The calibration and simulation steps are process steps that must be genuinely executed to produce the scored artifacts."
+  },
+  "steps": [
+    {
+      "id": "critical_punch_strokes",
+      "output_file": "critical_punch_strokes.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold": {
+        "condition_i": 6.3,
+        "condition_ii": 11.0
+      },
+      "tolerance_policy": "composite_absolute_relative",
+      "tolerance_abs": 0.5,
+      "tolerance_rel": 0.1,
+      "scoring": "exact_match_with_tolerance"
+    },
+    {
+      "id": "thickness_distribution",
+      "output_file": "thickness_distribution.csv",
+      "kind": "vector",
+      "weight": 0.4,
+      "metric": "MAE",
+      "reference_formula": {
+        "type": "gaussian_dip",
+        "t0_mm": 0.7,
+        "dip_mm": 0.12,
+        "center_mm": 20.5,
+        "sigma_mm": 2.0
+      },
+      "tolerance_mae_mm": 0.03,
+      "scoring": "monotonic_mae",
+      "mae_decay_range_mm": 0.06
+    }
+  ]
+}

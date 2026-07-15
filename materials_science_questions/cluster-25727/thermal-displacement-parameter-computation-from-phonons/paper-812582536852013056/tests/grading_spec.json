@@ -1,0 +1,248 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Primary scored artifact A_orbit_lattice is recomputed from the agent's phonon_integrals.csv evidence; the other two artifacts are compared directly to paper gold because no raw evidence files are declared in the output contract.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "A_orbit_lattice.csv": "metric_recompute",
+    "A_covalency.csv": "metric_recompute",
+    "b2_vibronic.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for A(T) (orbit-lattice) from Table II of the paper, including the dimensionless coefficient D at each temperature needed for recomputation from phonon integrals.",
+      "source_provenance": "Paper Table II; values are the theoretical |A_R - A|.",
+      "generation_method": "Extracted directly from the paper's Table II (column 'Theor.', A_R = 92.57 G). D values are from the same table column '10^10 D'. Verified against the reference solve.sh which produces identical numbers.",
+      "why_not_fabricated": "These are the paper's published theoretical results, not invented."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for b2^0 vibronic contribution from Table III of the paper.",
+      "source_provenance": "Paper Table III; the value is b2R^0 - (col1 + col4) with b2R^0 = -26.0 G.",
+      "generation_method": "Derived from Table III columns 1 and 4 as used in the paper's final result. Verified against the reference solve.sh.",
+      "why_not_fabricated": "This corresponds to the published vibronic contribution (the breathing mode and W4 term)."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for ΔA_cov (covalency reduction) from Table IV of the paper.",
+      "source_provenance": "Paper Table IV, column 'ΔA_cov (G)'.",
+      "generation_method": "Extracted directly from the paper's Table IV. Verified against the reference solve.sh.",
+      "why_not_fabricated": "These are the paper's published covalent contribution values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "A_orbit_lattice.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "A_theory"
+          ],
+          "units": {
+            "T": "K",
+            "A_theory": "G"
+          }
+        },
+        "description": "Computed temperature-dependent isotropic hyperfine constant from the orbit-lattice model. The checker recomputes A_OL(T) from the phonon_integrals.csv evidence and the given A_R and D, then compares to a hidden reference with tolerances."
+      },
+      {
+        "file": "A_covalency.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Delta_A_cov"
+          ],
+          "units": {
+            "T": "K",
+            "Delta_A_cov": "G"
+          }
+        },
+        "description": "Temperature-dependent reduction of the hyperfine constant from covalent spin polarization. The checker recomputes from the covalent channel evidence and compares to a hidden reference with tolerances."
+      },
+      {
+        "file": "b2_vibronic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "b2_vibronic_theory"
+          ],
+          "units": {
+            "T": "K",
+            "b2_vibronic_theory": "G"
+          }
+        },
+        "description": "Vibronic contribution to the axial zero-field splitting parameter. The checker recomputes b2^0_vibronic(T) from the phonon_integrals evidence and the given b2R^0 and D', then compares to a hidden reference with tolerances."
+      }
+    ],
+    "notes": "The hidden checker will read the agent's phonon_integrals.csv evidence to recompute the orbit-lattice A(T) and b2^0(T) using the same algebraic expressions, then compare against stored reference values with a relative tolerance of 10% for values >= 1 G and an absolute tolerance of 0.5 G for smaller values. Monotonicity trends (A decreasing, b2^0 crossing zero near 450 K) are also audited as low-weight structural checks."
+  },
+  "steps": [
+    {
+      "id": "check_A_orbit_lattice",
+      "output_file": "A_orbit_lattice.csv",
+      "kind": "numeric_tolerance_with_recompute",
+      "weight": 0.4,
+      "gold": {
+        "A_R": 92.57,
+        "points": [
+          {
+            "T": 0,
+            "D": 3.691e-10,
+            "A_gold": 92.5143
+          },
+          {
+            "T": 100,
+            "D": 3.691e-10,
+            "A_gold": 92.49276
+          },
+          {
+            "T": 200,
+            "D": 3.77e-10,
+            "A_gold": 92.4218
+          },
+          {
+            "T": 300,
+            "D": 3.918e-10,
+            "A_gold": 92.3303
+          },
+          {
+            "T": 400,
+            "D": 3.87e-10,
+            "A_gold": 92.2399
+          },
+          {
+            "T": 500,
+            "D": 3.822e-10,
+            "A_gold": 92.1431
+          },
+          {
+            "T": 600,
+            "D": 3.766e-10,
+            "A_gold": 92.0404
+          },
+          {
+            "T": 700,
+            "D": 3.729e-10,
+            "A_gold": 91.9322
+          },
+          {
+            "T": 800,
+            "D": 3.683e-10,
+            "A_gold": 91.8189
+          }
+        ],
+        "tolerance_abs": 0.5,
+        "tolerance_rel": 0.1
+      }
+    },
+    {
+      "id": "check_A_covalency",
+      "output_file": "A_covalency.csv",
+      "kind": "numeric_tolerance",
+      "weight": 0.25,
+      "gold": {
+        "points": [
+          {
+            "T": 0,
+            "Delta_A_cov_gold": 0.139
+          },
+          {
+            "T": 100,
+            "Delta_A_cov_gold": 0.21
+          },
+          {
+            "T": 200,
+            "Delta_A_cov_gold": 0.395
+          },
+          {
+            "T": 300,
+            "Delta_A_cov_gold": 0.629
+          },
+          {
+            "T": 400,
+            "Delta_A_cov_gold": 0.853
+          },
+          {
+            "T": 500,
+            "Delta_A_cov_gold": 1.089
+          },
+          {
+            "T": 600,
+            "Delta_A_cov_gold": 1.336
+          },
+          {
+            "T": 700,
+            "Delta_A_cov_gold": 1.593
+          },
+          {
+            "T": 800,
+            "Delta_A_cov_gold": 1.86
+          }
+        ],
+        "tolerance_abs": 0.5,
+        "tolerance_rel": 0.1
+      }
+    },
+    {
+      "id": "check_b2_vibronic",
+      "output_file": "b2_vibronic.csv",
+      "kind": "numeric_tolerance",
+      "weight": 0.35,
+      "gold": {
+        "points": [
+          {
+            "T": 0,
+            "b2_gold": -23.741
+          },
+          {
+            "T": 100,
+            "b2_gold": -21.574
+          },
+          {
+            "T": 200,
+            "b2_gold": -17.404
+          },
+          {
+            "T": 300,
+            "b2_gold": -12.372
+          },
+          {
+            "T": 400,
+            "b2_gold": -7.676
+          },
+          {
+            "T": 500,
+            "b2_gold": -2.826
+          },
+          {
+            "T": 600,
+            "b2_gold": 2.162
+          },
+          {
+            "T": 700,
+            "b2_gold": 7.303
+          },
+          {
+            "T": 800,
+            "b2_gold": 12.592
+          }
+        ],
+        "tolerance_abs": 0.5,
+        "tolerance_rel": 0.1
+      }
+    }
+  ]
+}

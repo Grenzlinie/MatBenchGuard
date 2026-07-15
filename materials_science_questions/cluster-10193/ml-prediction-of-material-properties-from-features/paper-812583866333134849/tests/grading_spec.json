@@ -1,0 +1,247 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute accuracy, F1, R², MAE from agent's prediction CSVs using provided true columns, and compare to paper-reported performance thresholds (threshold_or_better).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "predictions_coordination.csv": "metric_recompute",
+    "predictions_distance.csv": "metric_recompute",
+    "predictions_charge.csv": "metric_recompute",
+    "metrics.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported performance thresholds for polynomial featurization models per metal and property.",
+      "source_provenance": "Paper figures 4 and supplementary tables III, IV, V and main text.",
+      "generation_method": "Thresholds are the paper's reported values minus (for higher-better) or plus (for lower-better) the tolerances declared in the task plan, giving a monotonic floor/ceiling that a correct reproduction must meet.",
+      "why_not_fabricated": "Thresholds are derived from the paper's own published measurements for the same featurization and evaluation procedure."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predictions_coordination.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "spectrum_index",
+            "true_coordination",
+            "predicted_coordination"
+          ],
+          "units": {}
+        },
+        "description": "File must contain the test‑set true and predicted coordination numbers for every metal. The checker recomputes accuracy and F1 scores from these predictions and compares to paper‑reported gold values."
+      },
+      {
+        "file": "predictions_distance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "spectrum_index",
+            "true_distance",
+            "predicted_distance"
+          ],
+          "units": {
+            "true_distance": "Å",
+            "predicted_distance": "Å"
+          }
+        },
+        "description": "File must contain the test‑set true and predicted mean nearest‑neighbor distances for every metal. The checker recomputes R² and MAE (in Å) and compares to paper‑reported values."
+      },
+      {
+        "file": "predictions_charge.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "spectrum_index",
+            "true_charge",
+            "predicted_charge"
+          ],
+          "units": {
+            "true_charge": "e",
+            "predicted_charge": "e"
+          }
+        },
+        "description": "File must contain the test‑set true and predicted Bader charges for every metal. The checker recomputes R² and MAE (in elementary charge) and compares to paper‑reported values."
+      },
+      {
+        "file": "metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "coordination",
+            "distance",
+            "charge"
+          ],
+          "items": {
+            "coordination": {
+              "type": "object",
+              "description": "per‑metal classification metrics; each metal object must contain accuracy, f1_4, f1_5, f1_6 (all floats)"
+            },
+            "distance": {
+              "type": "object",
+              "description": "per‑metal regression metrics; each metal object must contain R2, MAE (floats)"
+            },
+            "charge": {
+              "type": "object",
+              "description": "per‑metal regression metrics; each metal object must contain R2, MAE (floats)"
+            }
+          }
+        },
+        "description": "Agent‑reported metrics computed from the test‑set predictions. The checker verifies consistency with the metrics recomputed from the prediction CSV files (difference < 0.01)."
+      }
+    ],
+    "notes": "The task reproduces only the multiscale polynomial featurization branch of the paper. The raw prediction CSV files are scored by recomputing the headline metrics against hidden true labels; the metrics.json serves as a consistency check."
+  },
+  "steps": [
+    {
+      "id": "scored_predictions_coordination",
+      "output_file": "predictions_coordination.csv",
+      "weight": 0.35,
+      "kind": "recompute_metric",
+      "metric": "accuracy_f1",
+      "description": "Recompute accuracy and per-class F1 per metal from predictions and compare to paper thresholds.",
+      "thresholds": {
+        "accuracy": {
+          "Ti": 0.83,
+          "V": 0.88,
+          "Cr": 0.8,
+          "Mn": 0.7,
+          "Fe": 0.86,
+          "Co": 0.8,
+          "Ni": 0.8,
+          "Cu": 0.78
+        },
+        "f1_4": {
+          "Ti": 0.57,
+          "V": 0.77,
+          "Cr": 0.57,
+          "Mn": 0.27,
+          "Fe": 0.57,
+          "Co": 0.57,
+          "Ni": 0.57,
+          "Cu": 0.57
+        },
+        "f1_5": {
+          "Ti": 0.82,
+          "V": 0.82,
+          "Cr": 0.47,
+          "Mn": 0.67,
+          "Fe": 0.77,
+          "Co": 0.57,
+          "Ni": 0.57,
+          "Cu": 0.57
+        },
+        "f1_6": {
+          "Ti": 0.77,
+          "V": 0.85,
+          "Cr": 0.77,
+          "Mn": 0.67,
+          "Fe": 0.77,
+          "Co": 0.77,
+          "Ni": 0.77,
+          "Cu": 0.57
+        }
+      },
+      "target_policy": "threshold_or_better",
+      "direction": {
+        "accuracy": "maximize",
+        "f1_4": "maximize",
+        "f1_5": "maximize",
+        "f1_6": "maximize"
+      }
+    },
+    {
+      "id": "scored_predictions_distance",
+      "output_file": "predictions_distance.csv",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "metric": "r2_mae",
+      "thresholds": {
+        "R2": {
+          "Ti": 0.8,
+          "V": 0.88,
+          "Cr": 0.85,
+          "Mn": 0.87,
+          "Fe": 0.85,
+          "Co": 0.84,
+          "Ni": 0.85,
+          "Cu": 0.64
+        },
+        "MAE": {
+          "Ti": 0.03,
+          "V": 0.03,
+          "Cr": 0.03,
+          "Mn": 0.03,
+          "Fe": 0.03,
+          "Co": 0.03,
+          "Ni": 0.03,
+          "Cu": 0.06
+        }
+      },
+      "target_policy": "threshold_or_better",
+      "direction": {
+        "R2": "maximize",
+        "MAE": "minimize"
+      }
+    },
+    {
+      "id": "scored_predictions_charge",
+      "output_file": "predictions_charge.csv",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "metric": "r2_mae",
+      "thresholds": {
+        "R2": {
+          "Ti": 0.6,
+          "V": 0.78,
+          "Cr": 0.8,
+          "Mn": 0.75,
+          "Fe": 0.75,
+          "Co": 0.75,
+          "Ni": 0.55,
+          "Cu": 0.44
+        },
+        "MAE": {
+          "Ti": 0.12,
+          "V": 0.12,
+          "Cr": 0.12,
+          "Mn": 0.12,
+          "Fe": 0.12,
+          "Co": 0.12,
+          "Ni": 0.12,
+          "Cu": 0.12
+        }
+      },
+      "target_policy": "threshold_or_better",
+      "direction": {
+        "R2": "maximize",
+        "MAE": "minimize"
+      }
+    },
+    {
+      "id": "scored_metrics_json",
+      "output_file": "metrics.json",
+      "weight": 0.05,
+      "kind": "consistency",
+      "description": "Verify that metrics.json values match recomputed metrics from all prediction CSVs within tolerance (0.01).",
+      "tolerance": 0.01,
+      "target_policy": "reference_match"
+    }
+  ]
+}

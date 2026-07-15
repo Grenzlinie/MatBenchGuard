@@ -1,0 +1,252 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Retention analysis is recomputed from agent's Re4-V trapping energies and hidden gold trapping energies for pure_V/Re1_V; trapping energies compared to paper gold. Full recompute from raw DFT energies is infeasible because only final CSV artifacts are submitted.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold trapping energies and MC/EC for m=0..8 from paper Fig 3(i) and Fig 4(a); gold sequential trapping energies for Re4-V from Fig 6; gold max retained H counts from paper text.",
+      "source_provenance": "Ma et al. 2018 Nucl. Fusion 58 096026 – Figures 3,4,6 and text.",
+      "generation_method": "Extracted directly from paper's reported numbers.",
+      "why_not_fabricated": "Values are the paper's own published results; they serve as the hidden reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "trapping_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "trapping_energy_eV",
+            "MC_eV",
+            "EC_eV"
+          ],
+          "units": {
+            "trapping_energy_eV": "eV",
+            "MC_eV": "eV",
+            "EC_eV": "eV"
+          }
+        },
+        "description": "Trapping energy, mechanical and electronic contributions for a single H in pure vacancy (m=0) and Re_m-V complexes (m=1..8)."
+      },
+      {
+        "file": "multiH_Re4V_trapping_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "trapping_energy_eV"
+          ],
+          "units": {
+            "trapping_energy_eV": "eV"
+          }
+        },
+        "description": "Sequential trapping energy for H atoms added to Re4-V complex."
+      },
+      {
+        "file": "retention_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "n",
+            "T_max_K",
+            "retained_at_RT"
+          ],
+          "units": {
+            "T_max_K": "K",
+            "retained_at_RT": "bool"
+          }
+        },
+        "description": "Retention analysis: maximum release temperature and whether retained at 300 K for pure vacancy, Re1-V, and Re4-V."
+      }
+    ],
+    "notes": "All energies in eV, temperatures in K. The checker will recompute T_max from submitted trapping energies for retention analysis and compare the maximum number of retained H at 300 K to a hidden reference."
+  },
+  "steps": [
+    {
+      "id": "check_trapping_energies",
+      "output_file": "trapping_energies.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "target_policy": "reference_match",
+      "tolerance_eV": 0.2,
+      "gold_values": [
+        {
+          "m": 0,
+          "trapping": -1.18,
+          "MC": 0.02,
+          "EC": -0.411
+        },
+        {
+          "m": 1,
+          "trapping": -1.18,
+          "MC": 0.018,
+          "EC": -0.308
+        },
+        {
+          "m": 2,
+          "trapping": -1.18,
+          "MC": 0.022,
+          "EC": -0.25
+        },
+        {
+          "m": 3,
+          "trapping": -1.11,
+          "MC": 0.027,
+          "EC": -0.19
+        },
+        {
+          "m": 4,
+          "trapping": -1.03,
+          "MC": 0.032,
+          "EC": -0.13
+        },
+        {
+          "m": 5,
+          "trapping": -0.96,
+          "MC": 0.038,
+          "EC": -0.07
+        },
+        {
+          "m": 6,
+          "trapping": -0.9,
+          "MC": 0.044,
+          "EC": -0.01
+        },
+        {
+          "m": 7,
+          "trapping": -0.84,
+          "MC": 0.05,
+          "EC": 0.02
+        },
+        {
+          "m": 8,
+          "trapping": -0.79,
+          "MC": 0.058,
+          "EC": 0.032
+        }
+      ]
+    },
+    {
+      "id": "check_multiH_Re4V",
+      "output_file": "multiH_Re4V_trapping_energies.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "target_policy": "reference_match",
+      "tolerance_eV": 0.2,
+      "gold_values": [
+        {
+          "n": 1,
+          "trapping": -1.03
+        },
+        {
+          "n": 2,
+          "trapping": -0.8
+        },
+        {
+          "n": 3,
+          "trapping": -0.6
+        },
+        {
+          "n": 4,
+          "trapping": -0.45
+        },
+        {
+          "n": 5,
+          "trapping": -0.3
+        },
+        {
+          "n": 6,
+          "trapping": -0.15
+        },
+        {
+          "n": 7,
+          "trapping": -0.05
+        },
+        {
+          "n": 8,
+          "trapping": 0.1
+        }
+      ]
+    },
+    {
+      "id": "check_retention",
+      "output_file": "retention_analysis.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "target_policy": "metric_recompute",
+      "max_number_retained_gold": {
+        "pure_V": 6,
+        "Re1_V": 5,
+        "Re4_V": 4
+      },
+      "pure_V_trapping_sequence": [
+        [
+          1,
+          -1.18
+        ],
+        [
+          2,
+          -0.9
+        ],
+        [
+          3,
+          -0.65
+        ],
+        [
+          4,
+          -0.5
+        ],
+        [
+          5,
+          -0.4
+        ],
+        [
+          6,
+          -0.3
+        ],
+        [
+          7,
+          -0.2
+        ],
+        [
+          8,
+          -0.15
+        ],
+        [
+          9,
+          -0.13
+        ],
+        [
+          10,
+          -0.1
+        ],
+        [
+          11,
+          -0.08
+        ],
+        [
+          12,
+          -0.05
+        ],
+        [
+          13,
+          1.2
+        ]
+      ],
+      "Re1_V_trapping_sequence": "same_as_pure_V"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_structure",
+    "title": "Obtain α‑RDX crystal structure",
+    "role": "process",
+    "action": "Fetch the α‑RDX crystal structure (space group Pbca) from a public crystallographic database (CSD entry CHXZIR or COD ID 1011103) and prepare the atomic coordinates and unit cell parameters.",
+    "output_file": "",
+    "evidence": "crystal_structure.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Download the crystal structure that serves as input for all subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relaxation",
+    "title": "DFT structural relaxation under hydrostatic pressure",
+    "role": "process",
+    "action": "Using an open‑source DFT code (e.g., Quantum ESPRESSO) with the PBE functional, dispersion correction (Grimme D3), and standard pseudopotentials, relax the α‑RDX crystal at hydrostatic pressures of 0, 0.5, and 1.0 GPa. Output relaxed structures and charge density files.",
+    "output_file": "",
+    "evidence": "relaxation_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "DFT structural relaxation generates the geometries and charge densities needed for bond‑order and phonon analyses.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_bond_orders",
+    "title": "Compute pressure-dependent effective bond orders",
+    "role": "scored",
+    "action": "Use DDEC6 (Chargemol) on the charge density outputs from the relaxed structures at 0, 0.5, and 1.0 GPa to compute effective bond orders. Tabulate the bond orders for representative C–H, C–N, N–N, and N–O bonds. Write the table to effective_bond_orders.csv.",
+    "output_file": "effective_bond_orders.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Pressure‑dependent effective bond orders identify electron donor (C–H, N–O) and acceptor (N–N) bonds. The checker will verify monotonic trends.",
+    "output_schema": "Columns: pressure_GPa (float), bond_label (str), effective_bond_order (float). Must contain rows for pressures 0, 0.5, and 1.0 for each representative bond."
+  },
+  {
+    "id": "step_04_phonon",
+    "title": "Compute zone‑centre phonon frequencies",
+    "role": "scored",
+    "action": "Perform finite‑displacement calculations on the relaxed structures at 0, 0.5, and 1.0 GPa (e.g., with PHONOPY) to obtain zone‑centre phonon frequencies. Write all frequencies to phonon_frequencies.csv.",
+    "output_file": "phonon_frequencies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Phonon frequency shifts under pressure support the IER interpretation; the checker will verify that all modes blue‑shift.",
+    "output_schema": "Columns: pressure_GPa (float), mode_index (int), frequency_cm1 (float). Must include all zone‑centre modes for pressures 0, 0.5, and 1.0."
+  }
+]

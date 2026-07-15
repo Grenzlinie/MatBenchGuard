@@ -1,0 +1,139 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes downstream coefficients from the agent's own intermediate artifacts (B, C → ΔT0 coefficient → φ^2 coefficient) and compares the ΔG coefficients to paper-reported reference values with tolerances, enforcing internal consistency without relying on the agent's self-reported final number alone.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "delta_g_coefficients.json": "reference_match",
+    "delta_T0_eta_coefficient.json": "reference_match",
+    "final_coefficient.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported coefficients for ΔG expression (Eq. 14) used as reference for scoring step 1.",
+      "source_provenance": "From the paper: ΔG = -530 + 1530 η^2 + 0.702 T J/mol (Eq. 14).",
+      "generation_method": "Extracted directly from the paper's published expression.",
+      "why_not_fabricated": "These are the exact values reported in the paper for the BWG model at c_eff=0.4, not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_g_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "A",
+            "B",
+            "C"
+          ],
+          "properties": {
+            "A": {
+              "type": "number",
+              "units": "J/mol"
+            },
+            "B": {
+              "type": "number",
+              "units": "J/mol"
+            },
+            "C": {
+              "type": "number",
+              "units": "J/(mol·K)"
+            }
+          }
+        },
+        "description": "Coefficients A, B, C in ΔG = A + B·η² + C·T [J/mol] for c_eff=0.4. Scored by reference_match against paper-derived values with tolerances."
+      },
+      {
+        "file": "delta_T0_eta_coefficient.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "coefficient_eta2"
+          ],
+          "properties": {
+            "coefficient_eta2": {
+              "type": "number",
+              "units": "K"
+            }
+          }
+        },
+        "description": "Coefficient D in ΔT₀ = D·η² [K], derived by solving ΔG=0. Scored by recomputation: verifier independently computes D from the provided ΔG coefficients and checks consistency."
+      },
+      {
+        "file": "final_coefficient.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "coefficient_phi2"
+          ],
+          "properties": {
+            "coefficient_phi2": {
+              "type": "number",
+              "units": "K"
+            }
+          }
+        },
+        "description": "Final coefficient C in ΔT₀ = C·φ² [K] after conversion. Scored by recomputation from ΔG coefficients and conversion formula."
+      }
+    ],
+    "notes": "Step 1 uses reference_match with tolerances; steps 2 and 3 are consistency checks where the verifier recomputes the coefficient from previous outputs, equivalent to metric_recompute."
+  },
+  "steps": [
+    {
+      "id": "step_01_assemble_delta_g_coefficients",
+      "output_file": "delta_g_coefficients.json",
+      "weight": 0.25,
+      "kind": "numeric_compare",
+      "reference": {
+        "A": -530,
+        "B": 1530,
+        "C": 0.702
+      },
+      "tolerances": {
+        "A": {
+          "abs_tol": 10,
+          "rel_tol": 0.02
+        },
+        "B": {
+          "abs_tol": 10,
+          "rel_tol": 0.02
+        },
+        "C": {
+          "abs_tol": 0.01,
+          "rel_tol": 0.02
+        }
+      }
+    },
+    {
+      "id": "step_02_delta_t0_eta_coefficient",
+      "output_file": "delta_T0_eta_coefficient.json",
+      "weight": 0.25,
+      "kind": "consistency_recompute",
+      "tolerances": {
+        "abs_tol": 10,
+        "rel_tol": 0.02
+      }
+    },
+    {
+      "id": "step_03_final_coefficient_phi",
+      "output_file": "final_coefficient.json",
+      "weight": 0.5,
+      "kind": "consistency_recompute",
+      "tolerances": {
+        "abs_tol": 10,
+        "rel_tol": 0.02
+      },
+      "c": 0.312
+    }
+  ]
+}

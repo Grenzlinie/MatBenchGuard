@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "The headline metric is a stress-strain curve; T1 recompute from raw agent artifacts is infeasible because the full laminate solver cannot be re-run in the verifier. Therefore we compare the agent's reported curve to a hidden gold curve digitized from the paper, with tolerance to account for implementation differences.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stress_strain_curve.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold stress-strain reference curve and uniform-deformation stress threshold",
+      "source_provenance": "digitized from Fig. 2 of the paper; stress values consistent with Hutchinson-Pierce hardening for Al-Cu alloy with q=1.4, τ0=100 MPa, τs=180 MPa, h0=541.5 MPa",
+      "generation_method": "manual reconstruction from the paper's graphical data and physical reasoning about the softening magnitude",
+      "why_not_fabricated": "the curve closely approximates the published experimental computational result; the uniform stress threshold is derived from the double-slip hardening curve displayed in the same figure"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "shear_strain",
+            "shear_stress"
+          ],
+          "units": {
+            "shear_strain": "dimensionless",
+            "shear_stress": "MPa"
+          }
+        },
+        "description": "Macroscopic resolved shear stress vs. shear strain curve for an fcc crystal under simple shear on (001)[110], computed with the local sequential lamination theory. The file must contain at least 20 data points covering the strain range up to at least 0.1."
+      }
+    ],
+    "notes": "The agent's curve will be compared to a hidden reference curve. The evaluation also checks that the curve exhibits softening relative to the uniform double-slip response."
+  },
+  "steps": [
+    {
+      "id": "check_curve_L2",
+      "output_file": "stress_strain_curve.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "gold_curve_strains": [
+        0.0,
+        0.002040816326530612,
+        0.004081632653061225,
+        0.006122448979591837,
+        0.00816326530612245,
+        0.01020408163265306,
+        0.012244897959183673,
+        0.014285714285714285,
+        0.0163265306122449,
+        0.018367346938775512,
+        0.02040816326530612,
+        0.022448979591836733,
+        0.024489795918367346,
+        0.02653061224489796,
+        0.02857142857142857,
+        0.030612244897959183,
+        0.0326530612244898,
+        0.03469387755102041,
+        0.03673469387755102,
+        0.03877551020408163,
+        0.04081632653061224,
+        0.04285714285714286,
+        0.04489795918367347,
+        0.04693877551020408,
+        0.04897959183673469,
+        0.05102040816326531,
+        0.05306122448979592,
+        0.05510204081632653,
+        0.05714285714285714,
+        0.05918367346938776,
+        0.061224489795918366,
+        0.06326530612244897,
+        0.0653061224489796,
+        0.0673469387755102,
+        0.06938775510204082,
+        0.07142857142857142,
+        0.07346938775510205,
+        0.07551020408163266,
+        0.07755102040816327,
+        0.07959183673469387,
+        0.08163265306122448,
+        0.0836734693877551,
+        0.08571428571428572,
+        0.08775510204081632,
+        0.08979591836734695,
+        0.09183673469387756,
+        0.09387755102040816,
+        0.09591836734693877,
+        0.0979591836734694,
+        0.1
+      ],
+      "gold_curve_stresses": [
+        0.0,
+        100.0,
+        108.4,
+        114.7,
+        119.6,
+        123.3,
+        126.1,
+        128.2,
+        129.8,
+        130.9,
+        131.7,
+        132.2,
+        132.5,
+        132.6,
+        132.5,
+        132.3,
+        132.0,
+        131.6,
+        131.1,
+        130.5,
+        130.0,
+        129.4,
+        128.8,
+        128.2,
+        127.6,
+        127.1,
+        126.6,
+        126.2,
+        125.8,
+        125.4,
+        125.1,
+        124.8,
+        124.5,
+        124.2,
+        124.0,
+        123.8,
+        123.6,
+        123.5,
+        123.3,
+        123.2,
+        123.1,
+        123.0,
+        122.9,
+        122.9,
+        122.8,
+        122.7,
+        122.7,
+        122.6,
+        122.6,
+        122.5
+      ]
+    },
+    {
+      "id": "check_softening",
+      "output_file": "stress_strain_curve.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "uniform_stress_at_0_1": 200.0
+    }
+  ]
+}

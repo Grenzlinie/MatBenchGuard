@@ -1,0 +1,139 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Agent produces aggregated metrics only, no per-sample predictions. Recompute from raw is infeasible; score by comparing reported metrics to paper Table 2 with monotonic threshold_or_better.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "metrics.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference MAE, MSE, R2 for each (property, model) combination from the paper's Table 2.",
+      "source_provenance": "Paper Table 2, Crystals 2021, 11, 818",
+      "generation_method": "Direct transcription of the 16 rows from the paper's results table.",
+      "why_not_fabricated": "Values are exactly the published numbers; they serve as the gold standard for a reproduction attempt. No fabrication needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "metrics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "model",
+            "MAE",
+            "MSE",
+            "R2"
+          ],
+          "description": "Each row is a (property, model) combination. property: one of formation_energy, stability, volume_per_atom, vacancy_energy. model: one of SVM-RBF, RF, RR, BPNN. MAE, MSE, R2 are floating-point numbers."
+        },
+        "description": "Aggregated evaluation metrics for all 16 model-property combinations."
+      }
+    ],
+    "notes": "The scoring compares each row's MAE, MSE, and R² against hidden reference values using a directional threshold: lower MAE/MSE or higher R² than the threshold (with tolerance) earns full credit."
+  },
+  "gold_metrics": {
+    "formation_energy": {
+      "SVM-RBF": {
+        "MAE": 0.5104,
+        "MSE": 0.4016,
+        "R2": 0.5607
+      },
+      "RF": {
+        "MAE": 0.3731,
+        "MSE": 0.2449,
+        "R2": 0.7231
+      },
+      "RR": {
+        "MAE": 0.5822,
+        "MSE": 0.5109,
+        "R2": 0.4574
+      },
+      "BPNN": {
+        "MAE": 0.4744,
+        "MSE": 0.3514,
+        "R2": 0.6091
+      }
+    },
+    "stability": {
+      "SVM-RBF": {
+        "MAE": 0.2074,
+        "MSE": 0.0898,
+        "R2": 0.8081
+      },
+      "RF": {
+        "MAE": 0.2023,
+        "MSE": 0.0895,
+        "R2": 0.7792
+      },
+      "RR": {
+        "MAE": 0.2465,
+        "MSE": 0.1078,
+        "R2": 0.7263
+      },
+      "BPNN": {
+        "MAE": 0.2239,
+        "MSE": 0.0993,
+        "R2": 0.7808
+      }
+    },
+    "volume_per_atom": {
+      "SVM-RBF": {
+        "MAE": 0.4626,
+        "MSE": 0.7085,
+        "R2": 0.9042
+      },
+      "RF": {
+        "MAE": 0.4442,
+        "MSE": 0.6271,
+        "R2": 0.9195
+      },
+      "RR": {
+        "MAE": 1.8019,
+        "MSE": 5.072,
+        "R2": 0.3205
+      },
+      "BPNN": {
+        "MAE": 0.4134,
+        "MSE": 0.4679,
+        "R2": 0.9372
+      }
+    },
+    "vacancy_energy": {
+      "SVM-RBF": {
+        "MAE": 1.8631,
+        "MSE": 6.7088,
+        "R2": 0.6631
+      },
+      "RF": {
+        "MAE": 1.8742,
+        "MSE": 7.0501,
+        "R2": 0.6562
+      },
+      "RR": {
+        "MAE": 2.3823,
+        "MSE": 9.998,
+        "R2": 0.5265
+      },
+      "BPNN": {
+        "MAE": 2.0144,
+        "MSE": 6.7663,
+        "R2": 0.6651
+      }
+    }
+  },
+  "steps": [
+    {
+      "id": "check_metrics",
+      "output_file": "metrics.csv",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Score the reported evaluation metrics against paper Table 2 with monotonic threshold_or_better."
+    }
+  ]
+}

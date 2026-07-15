@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Pure BTO band gap recomputed from TDOS CSV; substituted band-gap reduction and midgap-state formation verified structurally against the recomputed pure gap.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference for pure BTO band gap (2.6 eV, tolerance 0.5 eV).",
+      "source_provenance": "Paper text: 'a clear separation of valence band and conduction band with a gap of 2.6 eV' and Figure 3.",
+      "generation_method": "Extracted from the paper's reported direct band gap.",
+      "why_not_fabricated": "Direct match to the paper's own result; no synthesis or guess."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pure_BTO_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_dos": "states/eV"
+          }
+        },
+        "description": "Total density of states of pure BTO, from which the electronic band gap is recomputed."
+      },
+      {
+        "file": "substituted_BTO_bandgaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "band_gap",
+            "midgap_state_flag"
+          ],
+          "units": {
+            "band_gap": "eV"
+          }
+        },
+        "description": "Band gaps and midgap state flags for each 3d-substituted BTO system; used to verify gap reduction and midgap state formation."
+      }
+    ],
+    "notes": "Optical absorption spectra and PDOS are omitted as they are not required to verify the midgap-state and gap-reduction claims. The checker recomputes the pure BTO band gap from the TDOS and compares it to an expected value; for substituted systems, it checks that all gaps are smaller than the recomputed pure gap, that Fe has the smallest gap, and that all midgap flags are true."
+  },
+  "steps": [
+    {
+      "id": "pure_BTO_dos_check",
+      "output_file": "pure_BTO_dos.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target": 2.6,
+      "tolerance": 0.5,
+      "target_policy": "exact_match",
+      "description": "Recompute band gap from TDOS and compare to paper-reported 2.6 eV ±0.5 eV."
+    },
+    {
+      "id": "substituted_bandgaps_check",
+      "output_file": "substituted_BTO_bandgaps.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "expected_systems": [
+        "Bi2Ti1.5V0.5O7",
+        "Bi2Ti1.5Cr0.5O7",
+        "Bi2Ti1.5Mn0.5O7",
+        "Bi2Ti1.5Fe0.5O7",
+        "Bi2Ti1.5Ni0.5O7"
+      ],
+      "description": "Verify gap reduction (< recomputed pure gap), Fe smallest, and all midgap_state_flag=True."
+    }
+  ]
+}

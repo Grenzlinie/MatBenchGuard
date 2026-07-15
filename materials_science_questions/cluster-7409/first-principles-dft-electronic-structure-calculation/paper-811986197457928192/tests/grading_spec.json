@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker re-reads reported magnetic moment/energy difference from the agent's CSV file and compares them against paper reference values within tolerances. This is a result-level compare treated as a recomputation from the raw artifact.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "o_vacancy_magnetic_moments.csv": "reference_match",
+    "ti_vacancy_magnetic_moment.csv": "reference_match",
+    "sr_vacancy_magnetic_moment.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported total magnetic moments for SrTiO2.875 (1.30 muB), SrTi0.875O3 (3.54 muB), Sr0.875TiO3 (0.05 muB) and energy difference (-0.10 eV) from paper Table 2 and text.",
+      "source_provenance": "Table 2 of Physics Letters A 371 (2007) 155-159: Calculated magnetic moments (MM, in muB) and vacancy formation energies for cubic SrTiO3 with Sr, Ti and oxygen vacancies. Energy difference of about 0.1 eV/cell with sign negative because spin-polarized state is lower energy.",
+      "generation_method": "Extracted directly from the paper: MM(per cell) for SrTiO2.875 = 1.30, SrTi0.875O3 = 3.54, Sr0.875TiO3 = 0.05. Energy difference taken as -0.10 eV based on text 'magnetic state ... more preferable (at about 0.1 eV/cell) versus non-magnetic' and consistent with the reference solve.sh.",
+      "why_not_fabricated": "Values are directly quoted from the paper's sole table of results; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "o_vacancy_magnetic_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "total_magnetic_moment_muB",
+            "energy_difference_sp_vs_nonsp_eV"
+          ],
+          "units": {
+            "total_magnetic_moment_muB": "μB",
+            "energy_difference_sp_vs_nonsp_eV": "eV"
+          }
+        },
+        "description": "Total magnetic moment and stability energy difference for the oxygen-vacancy supercell."
+      },
+      {
+        "file": "ti_vacancy_magnetic_moment.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "total_magnetic_moment_muB"
+          ],
+          "units": {
+            "total_magnetic_moment_muB": "μB"
+          }
+        },
+        "description": "Total magnetic moment for the titanium-vacancy supercell."
+      },
+      {
+        "file": "sr_vacancy_magnetic_moment.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "total_magnetic_moment_muB"
+          ],
+          "units": {
+            "total_magnetic_moment_muB": "μB"
+          }
+        },
+        "description": "Total magnetic moment for the strontium-vacancy supercell."
+      }
+    ],
+    "notes": "Scoring is by comparison of the reported scalar values to hidden paper gold within prescribed tolerances. The Sr-vacancy case is additionally checked for a negligibly small magnetic moment to confirm the non-magnetic state."
+  },
+  "steps": [
+    {
+      "id": "o_vacancy_magnetic_moment",
+      "output_file": "o_vacancy_magnetic_moments.csv",
+      "kind": "numeric",
+      "field": "total_magnetic_moment_muB",
+      "target": 1.3,
+      "tolerance_abs": 0.2,
+      "weight": 0.25,
+      "description": "Total magnetic moment for O-vacancy supercell"
+    },
+    {
+      "id": "o_vacancy_energy_diff",
+      "output_file": "o_vacancy_magnetic_moments.csv",
+      "kind": "numeric",
+      "field": "energy_difference_sp_vs_nonsp_eV",
+      "target": -0.1,
+      "tolerance_abs": 0.05,
+      "weight": 0.25,
+      "description": "Energy difference between spin-polarized and non-spin-polarized states for O-vacancy"
+    },
+    {
+      "id": "ti_vacancy_magnetic_moment",
+      "output_file": "ti_vacancy_magnetic_moment.csv",
+      "kind": "numeric",
+      "field": "total_magnetic_moment_muB",
+      "target": 3.54,
+      "tolerance_abs": 0.2,
+      "weight": 0.3,
+      "description": "Total magnetic moment for Ti-vacancy supercell"
+    },
+    {
+      "id": "sr_vacancy_magnetic_moment",
+      "output_file": "sr_vacancy_magnetic_moment.csv",
+      "kind": "numeric",
+      "field": "total_magnetic_moment_muB",
+      "target": 0.05,
+      "tolerance_abs": 0.2,
+      "weight": 0.2,
+      "description": "Total magnetic moment for Sr-vacancy supercell (should be near zero)"
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "All target quantities are scalar physical properties from DFT; the verifier cannot re-run the heavy workflow, so it compares agent-reported values to paper gold with tolerances and checks internal consistency (n = sqrt(ε)).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binary_lattice_constants_bulk_moduli.csv": "reference_match",
+    "binary_band_gaps.csv": "reference_match",
+    "quaternary_lattice_constant.txt": "reference_match",
+    "quaternary_bandgap.txt": "reference_match",
+    "quaternary_optical_constants.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for each scored artifact from the paper",
+      "source_provenance": "Paper Tables 1, 2, and main text (quaternary properties)",
+      "generation_method": "Manual extraction from the accepted manuscript",
+      "why_not_fabricated": "These are the exact numbers reported in the paper, used as the ground truth for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binary_lattice_constants_bulk_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "binary",
+            "a0_angstrom",
+            "B0_GPa"
+          ],
+          "description": "Binary structural properties."
+        },
+        "description": "Equilibrium lattice constants and bulk moduli of GaN, BN, and TlN compared to paper Table 1."
+      },
+      {
+        "file": "binary_band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "binary",
+            "gap_type",
+            "energy_eV"
+          ],
+          "description": "Binary band gaps."
+        },
+        "description": "Direct and indirect band gaps of GaN, TlN, and BN computed with TB-mBJ, compared to paper Table 2."
+      },
+      {
+        "file": "quaternary_lattice_constant.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating‑point value for the quaternary lattice constant in Å."
+        },
+        "description": "Equilibrium lattice constant of B0.125Tl0.187Ga0.688N."
+      },
+      {
+        "file": "quaternary_bandgap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single floating‑point value for the quaternary direct band gap in eV."
+        },
+        "description": "Direct band gap at Γ of B0.125Tl0.187Ga0.688N."
+      },
+      {
+        "file": "quaternary_optical_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ],
+          "description": "Static optical constants."
+        },
+        "description": "Static dielectric constant ε1(0) and static refractive index n(0) of B0.125Tl0.187Ga0.688N."
+      }
+    ],
+    "notes": "All scored quantities are compared to hidden reference values extracted from the paper. The agent must perform the full DFT workflow; the last three scored steps are load-bearing to ensure genuine execution."
+  },
+  "steps": [
+    {
+      "id": "step02_binary_lattice",
+      "output_file": "binary_lattice_constants_bulk_moduli.csv",
+      "weight": 0.15,
+      "kind": "custom",
+      "tolerance_abs_a0": 0.1,
+      "tolerance_rel_B0": 0.15,
+      "targets": {
+        "GaN": {
+          "a0": 4.521,
+          "B0": 185.15
+        },
+        "TlN": {
+          "a0": 5.224,
+          "B0": 170.14
+        },
+        "BN": {
+          "a0": 3.617,
+          "B0": 388.73
+        }
+      }
+    },
+    {
+      "id": "step04_binary_gaps",
+      "output_file": "binary_band_gaps.csv",
+      "weight": 0.15,
+      "kind": "custom",
+      "tolerance_rel_gap": 0.1,
+      "targets": {
+        "GaN": {
+          "gap_type": "E_Γ-Γ",
+          "energy_eV": 3.123
+        },
+        "TlN": {
+          "gap_type": "E_Γ-Γ",
+          "energy_eV": 0.0
+        },
+        "BN": {
+          "gap_type": "E_Γ-X",
+          "energy_eV": 5.838
+        }
+      }
+    },
+    {
+      "id": "step06_quaternary_lattice",
+      "output_file": "quaternary_lattice_constant.txt",
+      "weight": 0.25,
+      "kind": "custom",
+      "target": 4.53,
+      "tolerance_abs": 0.05
+    },
+    {
+      "id": "step08_quaternary_bandgap",
+      "output_file": "quaternary_bandgap.txt",
+      "weight": 0.25,
+      "kind": "custom",
+      "target": 1.639,
+      "tolerance_rel": 0.1
+    },
+    {
+      "id": "step10_quaternary_optical",
+      "output_file": "quaternary_optical_constants.csv",
+      "weight": 0.2,
+      "kind": "custom",
+      "targets": {
+        "static_dielectric_constant": 5.47,
+        "static_refractive_index": 2.35
+      },
+      "tolerance_rel_eps": 0.05,
+      "tolerance_rel_n": 0.05,
+      "consistency_tolerance": 0.01
+    }
+  ]
+}

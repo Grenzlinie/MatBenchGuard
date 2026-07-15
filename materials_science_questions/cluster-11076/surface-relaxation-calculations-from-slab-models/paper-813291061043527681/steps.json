@@ -1,0 +1,54 @@
+[
+  {
+    "id": "bulk_reference",
+    "title": "Bulk reference DFT calculations",
+    "role": "scored",
+    "action": "Perform DFT total-energy calculations for bulk fcc Cu, fcc Au, and L12 Cu3Au to obtain total energies per atom (or per formula unit) and the equilibrium lattice constant of Cu3Au. Write results to /app/outputs/bulk_reference.json.",
+    "output_file": "bulk_reference.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bulk energies and lattice constant needed to define chemical potential bounds and formation energy.",
+    "output_schema": "{\"E_bulk_Cu\": number (eV/atom), \"E_bulk_Au\": number (eV/atom), \"E_bulk_Cu3Au\": number (eV/f.u.), \"lattice_constant_Cu3Au\": number (angstrom)}"
+  },
+  {
+    "id": "construct_slabs",
+    "title": "Construct slab models",
+    "role": "process",
+    "action": "Generate 19 initial slab geometries for the (111) surface: a 9-layer symmetric slab with 4 atoms per layer, 2 nm vacuum, and Au concentrations of 0, 25, 50, 75, 100% in the top two layers while inner layers are at bulk stoichiometry. Store the input files for the subsequent DFT relaxation step.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step generating input geometries for slab relaxations.",
+    "output_schema": ""
+  },
+  {
+    "id": "slab_relaxation",
+    "title": "DFT relaxation of slab models and energy collection",
+    "role": "scored",
+    "action": "For each of the 19 slab configurations, relax the atomic positions of the three outermost layers on each side until forces are below a convergence threshold (using the DFT parameters described in the paper). Extract the total energy, number of Cu and Au atoms, and surface area. Write the compiled results to /app/outputs/slab_energies.csv.",
+    "output_file": "slab_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Relaxed slab total energies and composition information for all 19 stoichiometries.",
+    "output_schema": "CSV with columns: composition_label (string, e.g. '50/25'), total_energy (float, eV), N_Cu (int), N_Au (int), surface_area (float, angstrom^2)"
+  },
+  {
+    "id": "surface_energy_analysis",
+    "title": "Surface energy analysis and stability determination",
+    "role": "scored",
+    "action": "Using the bulk reference energies from step bulk_reference and the slab energies from step slab_relaxation, compute the surface free energy γ_surf for each slab as a function of Cu chemical potential within the allowed thermodynamic bounds. Identify which composition has the lowest surface energy at the upper bound (Cu-rich) and at the lower bound (Au-rich). Write the results to /app/outputs/surface_energy_analysis.json.",
+    "output_file": "surface_energy_analysis.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Stable surface stoichiometries at the two chemical-potential endpoints.",
+    "output_schema": "{\"mu_Cu_upper\": number (eV, relative to bulk Cu), \"mu_Cu_lower\": number (eV), \"stable_at_upper\": string (composition_label), \"stable_at_lower\": string (composition_label)}"
+  }
+]

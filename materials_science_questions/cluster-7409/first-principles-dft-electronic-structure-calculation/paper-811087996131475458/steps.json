@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step0",
+    "title": "Build initial supercell structure",
+    "role": "process",
+    "action": "Construct a 2×2×4 rutile TiO2 supercell (lattice a=b=9.188 Å, c=11.836 Å) from the primitive rutile cell. Insert two Ti interstitials at fractional coordinates (7.258, 7.258, 4.248) and (7.258, 7.258, 10.166). Save the atomic positions as initial_structure.xyz.",
+    "output_file": "",
+    "evidence": "initial_structure.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate the starting geometry for the CPMD simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1",
+    "title": "Run Car-Parrinello molecular dynamics simulation",
+    "role": "process",
+    "action": "Run Car-Parrinello molecular dynamics on the initial structure using an open-source plane-wave DFT code capable of CPMD (e.g., CP2K or Quantum ESPRESSO). Settings: PBE-GGA exchange-correlation, plane-wave cutoff 70 Ry, fictitious electron mass 500 a.u., time step 0.1 fs. Pre-heat ions to 300 K, then apply Nosé-Hoover thermostat for 30000 steps (3 ps). Extract snapshot geometries at 0, 0.5, 1, 2, and 3 ps.",
+    "output_file": "",
+    "evidence": "snapshots.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Perform the molecular dynamics simulation that generates the time-resolved atomic structures analysed in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute per-atom Mulliken charges and atomic positions",
+    "role": "scored",
+    "action": "For each snapshot at 0, 0.5, 1, 2, and 3 ps, perform a single-point DFT calculation with PBE, spin polarization, and a 3×3×2 k-point grid. Output a CSV file containing for every atom: time_ps, atom_index, element, x (Å), y (Å), z (Å), mulliken_charge (e).",
+    "output_file": "mulliken_and_positions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw electronic-structure data from which the verifier recomputes O-ion pair counts and Ti-Ti bond distances.",
+    "output_schema": "CSV with columns: time_ps (float), atom_index (int), element (str), x (float, Å), y (float, Å), z (float, Å), mulliken_charge (float, e). One row per atom per snapshot."
+  },
+  {
+    "id": "step3",
+    "title": "Compute Kohn-Sham band gaps",
+    "role": "scored",
+    "action": "For each snapshot, compute the Kohn-Sham band gap (eV) from the electronic structure calculation. Write a plain-text file with two columns: time_ps and band_gap_eV.",
+    "output_file": "band_gaps.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The band gap data used to verify the metallic character (near-zero gap) of the equilibrated structures.",
+    "output_schema": "Space-separated columns: time_ps (float) band_gap_eV (float). One row per snapshot."
+  }
+]

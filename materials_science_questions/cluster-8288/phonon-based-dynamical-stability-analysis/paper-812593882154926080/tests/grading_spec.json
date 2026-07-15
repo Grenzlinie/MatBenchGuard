@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The verifier sandbox cannot rerun DFT, so we compare the agent's reported property values against the paper's reported values with appropriate tolerances. Derived moduli are checked for internal consistency with the elastic constants to penalize obvious fabrication.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "properties.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for all scored fields derived from the paper's reported numbers",
+      "source_provenance": "Paper Table II and main text",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "these are the exact reported values from the paper"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "c11": "number (GPa)",
+            "c12": "number (GPa)",
+            "c44": "number (GPa)",
+            "bulk_modulus": "number (GPa)",
+            "young_modulus": "number (GPa)",
+            "shear_modulus": "number (GPa)",
+            "poisson_ratio": "number",
+            "band_gap": "number (eV)",
+            "band_gap_type": "string",
+            "electron_eff_mass_1": "number (m_e)",
+            "electron_eff_mass_2": "number (m_e)",
+            "hole_eff_mass_1": "number (m_e)",
+            "hole_eff_mass_2": "number (m_e)",
+            "phonon_stable": "boolean",
+            "max_imaginary_frequency": "number (cm⁻¹)"
+          },
+          "units": {
+            "c11": "GPa",
+            "c12": "GPa",
+            "c44": "GPa",
+            "bulk_modulus": "GPa",
+            "young_modulus": "GPa",
+            "shear_modulus": "GPa",
+            "band_gap": "eV",
+            "electron_eff_mass_1": "m_e",
+            "electron_eff_mass_2": "m_e",
+            "hole_eff_mass_1": "m_e",
+            "hole_eff_mass_2": "m_e",
+            "max_imaginary_frequency": "cm⁻¹"
+          }
+        },
+        "description": "Aggregate JSON file containing all reproduced properties (elastic constants, derived moduli, Poisson's ratio, band gap, effective masses, phonon stability). The checker compares each scalar field to hidden reference values from the paper."
+      }
+    ],
+    "notes": "The verifier performs a result-level comparison (T0) of each field against toleranced paper-reported values. The solving agent must genuinely run DFT to produce these numbers; the dependency on all prior process steps makes the task load-bearing."
+  },
+  "steps": [
+    {
+      "id": "elastic_constants",
+      "output_file": "properties.json",
+      "kind": "elastic_constants",
+      "weight": 0.3,
+      "gold": {
+        "c11": 1715.3,
+        "c12": -283.5,
+        "c44": 1187.5
+      },
+      "tolerance": 20.0
+    },
+    {
+      "id": "derived_mechanical",
+      "output_file": "properties.json",
+      "kind": "derived_mechanical",
+      "weight": 0.3,
+      "gold": {
+        "bulk_modulus": 381.0,
+        "young_modulus": 1691.0,
+        "shear_modulus": 1113.0,
+        "poisson_ratio": -0.241
+      },
+      "tolerances": {
+        "bulk_modulus": 20.0,
+        "young_modulus": 200.0,
+        "shear_modulus": 200.0,
+        "poisson_ratio": 0.03
+      }
+    },
+    {
+      "id": "electronic_properties",
+      "output_file": "properties.json",
+      "kind": "electronic_properties",
+      "weight": 0.25,
+      "gold": {
+        "band_gap": 2.52,
+        "band_gap_type": "indirect",
+        "electron_eff_mass_1": 0.98,
+        "electron_eff_mass_2": 0.67,
+        "hole_eff_mass_1": 1.59,
+        "hole_eff_mass_2": 0.76
+      },
+      "tolerances": {
+        "band_gap": 0.1,
+        "electron_eff_mass_1": 0.2,
+        "electron_eff_mass_2": 0.2,
+        "hole_eff_mass_1": 0.2,
+        "hole_eff_mass_2": 0.2
+      }
+    },
+    {
+      "id": "phonon_stability",
+      "output_file": "properties.json",
+      "kind": "phonon_stability",
+      "weight": 0.1,
+      "max_imag_tolerance": 10.0
+    },
+    {
+      "id": "bulk_consistency",
+      "output_file": "properties.json",
+      "kind": "bulk_consistency",
+      "weight": 0.05,
+      "consistency_tolerance": 1.0
+    }
+  ]
+}

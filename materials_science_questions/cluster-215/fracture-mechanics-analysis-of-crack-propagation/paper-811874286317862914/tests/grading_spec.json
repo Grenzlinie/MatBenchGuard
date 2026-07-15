@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Score by recomputing RMSE between predicted kink angles and hidden experimental gold (from φ_m) and between rotation rates and gold; both are recomputable without trusting the agent's self-reported error. The monotonic thresholds reward accurate reproduction while allowing measurement spread.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "kink_predictions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "gamma",
+            "x3",
+            "phi_MTS",
+            "phi_MVK"
+          ],
+          "units": {
+            "gamma": "degrees",
+            "x3": "mm",
+            "phi_MTS": "degrees",
+            "phi_MVK": "degrees"
+          }
+        },
+        "description": "Kink angle distributions for each inclination angle and criterion; the checker recomputes relative error against hidden experimental data."
+      },
+      {
+        "file": "rotation_rate.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "gamma",
+            "dgamma_ddelta"
+          ],
+          "units": {
+            "gamma": "degrees",
+            "dgamma_ddelta": "rad/mm"
+          }
+        },
+        "description": "Rotation rate for each inclination angle; compared to hidden experimental gold with a tolerance threshold."
+      }
+    ],
+    "notes": "The experimental kink angles and rotation rates are embedded in the hidden checker; the agent only needs to produce the computed predictions."
+  },
+  "target_policies": {
+    "kink_predictions.csv": "metric_recompute",
+    "rotation_rate.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold φ_m values per inclination angle, derived from the experimentally measured surface kink angle via Eq. (3) and front-wise kink distribution Eq. (2), shown as solid lines in Figs. 7.",
+      "source_provenance": "Paper's experimental data (Fig. 7); estimated from the plotted solid curves which represent the experimentally deduced smooth kink distribution.",
+      "generation_method": "Manually digitized/estimated from the published figures; φ_m estimated as the kink angle at the specimen edge (x₃ = d). The values are: γ=75° → φ_m≈12.0°, γ=60° → φ_m≈13.0°, γ=45° → φ_m≈16.0°.",
+      "why_not_fabricated": "These are approximations of the actual experimental values reported in the paper, used as the gold reference for the checker. They are not fabricated but approximately read from the paper's figures."
+    }
+  ],
+  "steps": [
+    {
+      "id": "kink_score",
+      "output_file": "kink_predictions.csv",
+      "kind": "recompute_metric",
+      "metric": "root_mean_squared_error",
+      "weight": 0.7,
+      "params": {
+        "threshold_mvk": 2.5,
+        "threshold_mts": 4.0,
+        "sub_weights": {
+          "mvk": 0.6,
+          "mts": 0.4
+        },
+        "phi_m_deg": {
+          "45": 16.0,
+          "60": 13.0,
+          "75": 12.0
+        },
+        "d_mm": {
+          "45": 7.0710678,
+          "60": 10.0,
+          "75": 19.318516
+        }
+      }
+    },
+    {
+      "id": "rotation_score",
+      "output_file": "rotation_rate.csv",
+      "kind": "numeric",
+      "metric": "relative_error",
+      "weight": 0.3,
+      "params": {
+        "tolerance": 0.1,
+        "gold": {
+          "45": 0.04055,
+          "60": 0.02309,
+          "75": 0.011
+        }
+      }
+    }
+  ]
+}

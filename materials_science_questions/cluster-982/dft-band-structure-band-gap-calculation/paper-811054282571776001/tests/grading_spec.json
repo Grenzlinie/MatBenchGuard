@@ -1,0 +1,211 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities are final numeric scalars. Recomputing from raw DFT/transport output is not feasible because the agent only submits the summary JSON artifacts; the verifier sandbox cannot re-run the full DFT pipeline. Comparing against paper-reported reference values with tolerances is the natural verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.json": "exact_match",
+    "seebeck_max.json": "exact_match",
+    "kappa_min.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold band gap values and types",
+      "source_provenance": "paper Fig. 6 and text: Ca5Sn2As6 indirect 0.72 eV, Ca5Ga2As6 direct 0.65 eV",
+      "generation_method": "extracted from published paper text",
+      "why_not_fabricated": "these are the paper's own reported band gaps; checking against the paper confirms them"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold maximum p-type Seebeck coefficients and temperatures",
+      "source_provenance": "paper Fig. 7(b) and text: Ca5Sn2As6 266 µV/K at 390 K, Ca5Ga2As6 234 µV/K at 1050 K",
+      "generation_method": "extracted from published paper text",
+      "why_not_fabricated": "these are the paper's own reported maxima; checking against the paper confirms them"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold minimum lattice thermal conductivities",
+      "source_provenance": "paper text: Ca5Sn2As6 0.56 W/m·K, Ca5Ga2As6 0.70 W/m·K",
+      "generation_method": "extracted from published paper text",
+      "why_not_fabricated": "these are the paper's own reported κ_min values; checking against the paper confirms them"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ca5Sn2As6",
+            "Ca5Ga2As6"
+          ],
+          "properties": {
+            "Ca5Sn2As6": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "type"
+              ],
+              "properties": {
+                "band_gap_eV": {
+                  "type": "number"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "indirect"
+                  ]
+                }
+              }
+            },
+            "Ca5Ga2As6": {
+              "type": "object",
+              "required": [
+                "band_gap_eV",
+                "type"
+              ],
+              "properties": {
+                "band_gap_eV": {
+                  "type": "number"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "indirect"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Band gap values (eV) and direct/indirect character for Ca5Sn2As6 and Ca5Ga2As6."
+      },
+      {
+        "file": "seebeck_max.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ca5Sn2As6",
+            "Ca5Ga2As6"
+          ],
+          "properties": {
+            "Ca5Sn2As6": {
+              "type": "object",
+              "required": [
+                "S_max_microV_per_K",
+                "T_K"
+              ],
+              "properties": {
+                "S_max_microV_per_K": {
+                  "type": "number"
+                },
+                "T_K": {
+                  "type": "number"
+                }
+              }
+            },
+            "Ca5Ga2As6": {
+              "type": "object",
+              "required": [
+                "S_max_microV_per_K",
+                "T_K"
+              ],
+              "properties": {
+                "S_max_microV_per_K": {
+                  "type": "number"
+                },
+                "T_K": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Maximum p-type Seebeck coefficient (µV/K) and the corresponding temperature (K) for each compound."
+      },
+      {
+        "file": "kappa_min.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ca5Sn2As6",
+            "Ca5Ga2As6"
+          ],
+          "properties": {
+            "Ca5Sn2As6": {
+              "type": "number"
+            },
+            "Ca5Ga2As6": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Minimum lattice thermal conductivity (W/m·K) for Ca5Sn2As6 and Ca5Ga2As6."
+      }
+    ],
+    "notes": "All values are computed from first-principles DFT and semiclassical Boltzmann transport; no gold values are given."
+  },
+  "steps": [
+    {
+      "id": "check_band_gaps",
+      "output_file": "band_gaps.json",
+      "kind": "numeric",
+      "weight": 0.35,
+      "gold": {
+        "Ca5Sn2As6": {
+          "band_gap_eV": 0.72,
+          "type": "indirect",
+          "tolerance_band_gap_eV": 0.05
+        },
+        "Ca5Ga2As6": {
+          "band_gap_eV": 0.65,
+          "type": "direct",
+          "tolerance_band_gap_eV": 0.05
+        }
+      }
+    },
+    {
+      "id": "check_seebeck_max",
+      "output_file": "seebeck_max.json",
+      "kind": "numeric",
+      "weight": 0.35,
+      "gold": {
+        "Ca5Sn2As6": {
+          "S_max_microV_per_K": 266,
+          "T_K": 390,
+          "tolerance_S": 15,
+          "tolerance_T": 50
+        },
+        "Ca5Ga2As6": {
+          "S_max_microV_per_K": 234,
+          "T_K": 1050,
+          "tolerance_S": 15,
+          "tolerance_T": 50
+        }
+      }
+    },
+    {
+      "id": "check_kappa_min",
+      "output_file": "kappa_min.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "gold": {
+        "Ca5Sn2As6": 0.56,
+        "Ca5Ga2As6": 0.7,
+        "tolerance": 0.1
+      }
+    }
+  ]
+}

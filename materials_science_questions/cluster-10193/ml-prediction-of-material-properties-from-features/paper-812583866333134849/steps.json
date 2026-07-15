@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Acquire the XANES dataset",
+    "role": "process",
+    "action": "Download the post‑edge‑normalized XANES spectra (100 uniformly spaced energy grid) and the associated labels (coordination number, mean nearest‑neighbor distance, Bader charge) for eight 3d transition metals (Ti, V, Cr, Mn, Fe, Co, Ni, Cu) from the public TRI data-sharing site (https://data.matr.io). Parse the files into structured arrays suitable for featurization.",
+    "output_file": "",
+    "evidence": "data_prep.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file confirming successful data download and loading.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Generate multiscale polynomial features",
+    "role": "process",
+    "action": "For each spectrum, implement the multiscale polynomial featurization: partition the 100‑point energy range into N=4,5,10,20 equally sized contiguous partitions; within each partition, fit a cubic polynomial a0 + a1*x + a2*x² + a3*x³ with x centered at the partition midpoint; collect all 156 coefficients and append the white‑line energy (Argmax of the spectrum) to form a 157‑dimensional feature vector.",
+    "output_file": "",
+    "evidence": "features.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file confirming completion of feature generation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Train random forest models",
+    "role": "process",
+    "action": "For each metal separately, using the polynomial features and corresponding labels, train a random forest classifier for coordination number and random forest regressors for mean nearest‑neighbor distance and Bader charge. Use an 80/10/10 random train/validation/test split, with random oversampling of minority classes for coordination. Repeat the entire train/test cycle 10 times with different random seeds. Save the trained models (optional).",
+    "output_file": "",
+    "evidence": "training_summary.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log file recording training completion and model performance on the validation set.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Output coordination predictions",
+    "role": "scored",
+    "action": "For each metal, using the trained ensemble models (10 repeats), generate test‑set predictions for coordination number via majority vote. Write a CSV file with columns metal, spectrum_index, true_coordination, predicted_coordination, covering all test spectra across all metals.",
+    "output_file": "predictions_coordination.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Test‑set coordination predictions (ensemble) with true labels for all metals.",
+    "output_schema": "metal,spectrum_index,true_coordination,predicted_coordination"
+  },
+  {
+    "id": "step_05",
+    "title": "Output distance predictions",
+    "role": "scored",
+    "action": "For each metal, using the trained ensemble regressors, generate test‑set predictions for mean nearest‑neighbor distance via arithmetic mean. Write a CSV file with columns metal, spectrum_index, true_distance, predicted_distance.",
+    "output_file": "predictions_distance.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Test‑set distance predictions (ensemble) with true labels for all metals.",
+    "output_schema": "metal,spectrum_index,true_distance,predicted_distance"
+  },
+  {
+    "id": "step_06",
+    "title": "Output Bader charge predictions",
+    "role": "scored",
+    "action": "For each metal, using the trained ensemble regressors, generate test‑set predictions for Bader charge via arithmetic mean. Write a CSV file with columns metal, spectrum_index, true_charge, predicted_charge.",
+    "output_file": "predictions_charge.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Test‑set charge predictions (ensemble) with true labels for all metals.",
+    "output_schema": "metal,spectrum_index,true_charge,predicted_charge"
+  },
+  {
+    "id": "step_07",
+    "title": "Compute and record performance metrics",
+    "role": "scored",
+    "action": "From the test‑set predictions, compute accuracy and per‑class F1 for coordination, and R² and MAE for distance and charge, for each metal. Output the results in a structured JSON file.",
+    "output_file": "metrics.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Per‑metal test‑set performance metrics (accuracy, F1 for coordination; R², MAE for distance and charge) averaged over 10 random‑seed runs.",
+    "output_schema": "{\n  \"coordination\": {\n    \"Ti\": {\"accuracy\": float, \"f1_4\": float, \"f1_5\": float, \"f1_6\": float},\n    ... (all 8 metals)\n  },\n  \"distance\": {\n    \"Ti\": {\"R2\": float, \"MAE\": float},\n    ... (all 8 metals)\n  },\n  \"charge\": {\n    \"Ti\": {\"R2\": float, \"MAE\": float},\n    ... (all 8 metals)\n  }\n}"
+  }
+]

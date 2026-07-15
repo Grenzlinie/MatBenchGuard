@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_gen_init",
+    "title": "Generate initial Ni cluster structures",
+    "role": "process",
+    "action": "Generate atomic coordinates for Ni clusters with N from 50 to 60 and 142 to 152 by populating fcc coordination shells. Save initial configurations to be used in MD runs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Create starting structures for all required cluster sizes. The initial atoms are placed on an fcc lattice.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_md_simulation",
+    "title": "Run MD heating/cooling cycles with LAMMPS",
+    "role": "process",
+    "action": "For each Ni cluster size, perform an MD simulation using the Voter-Chen EAM potential. Heat the cluster above the melting temperature, then cool in steps of 20 K with an exposure time of approximately 2×10^5 MD steps (200 ps) per temperature. Record potential energy per atom at every temperature step.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The core simulation generating trajectory and thermodynamic data. The recorded energies are needed for the scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_ground_energy",
+    "title": "Extract ground-state energy per atom Ep(N)",
+    "role": "scored",
+    "action": "From the cooling runs, take the potential energy per atom at the lowest temperature reached for each N. Write a CSV with two columns: N (integer) and Ep (eV/atom).",
+    "output_file": "Ni_ground_state_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact: the ground-state energies after cooling, used to identify local minima at N=55 and 147.",
+    "output_schema": "Columns: N (integer), Ep (float, eV/atom). One row per cluster size."
+  },
+  {
+    "id": "step_delta2_temp",
+    "title": "Compute second energy difference Δ_N^{(2)} vs temperature",
+    "role": "scored",
+    "action": "For N=55 and N=147, compute Δ_N^{(2)} = E_{N-1} - 2E_N + E_{N+1} at each cooling temperature step using the energies of clusters N-1, N, N+1 (i.e., for N=55 use sizes 54,55,56; for N=147 use 146,147,148). Write a CSV with columns: N (integer, either 55 or 147), T (float, K), Delta2 (float, eV).",
+    "output_file": "Ni_delta2_temperature.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact: temperature dependence of the second energy difference, showing the stability up to melting.",
+    "output_schema": "Columns: N (integer), T (float, K), Delta2 (float, eV). One row per (N, T) combination."
+  }
+]

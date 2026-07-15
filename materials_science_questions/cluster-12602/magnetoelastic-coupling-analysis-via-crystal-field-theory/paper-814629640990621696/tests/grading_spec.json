@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Delta is compared to paper gold; the CSV recomputed delta provides a T1 recompute check. Full physics recompute is infeasible in the checker sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "equilibrium_delta.json": "exact_match",
+    "mode_energy_comparison.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold value for low-temperature TIR relative oxygen shift delta",
+      "source_provenance": "Paper Fig. 10 and accompanying text: 'The model behavior, shown in Fig. 10, gives a low-temperature oxygen displacement of 3.9×10−3a.'",
+      "generation_method": "Directly extracted from the paper (the value reported for the soft parameter set column 5 of Table II with Q/λ=0.033 and λ=7.04 K).",
+      "why_not_fabricated": "The gold is the paper's own reported number for the exact conditions the task asks to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equilibrium_delta.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta": "float (unitless)",
+            "oxygen_displacement_A": "float (Å)",
+            "parameter_set": "string",
+            "mode": "string"
+          }
+        },
+        "description": "Equilibrium TIR distortion; scored by comparing the reported dimensionless delta to the paper-reported value within a tolerance and checking the oxygen displacement conversion."
+      },
+      {
+        "file": "mode_energy_comparison.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "delta",
+            "energy_TIR",
+            "energy_Allen"
+          ],
+          "column_types": {
+            "delta": "float",
+            "energy_TIR": "float",
+            "energy_Allen": "float"
+          }
+        },
+        "description": "Ground-state energy comparison between TIR and Allen modes; scored by recomputing the equilibrium delta from the CSV data, comparing it to a reference value, and verifying that the energy ordering is correct across the scanned range."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "equilibrium_delta_value",
+      "output_file": "equilibrium_delta.json",
+      "weight": 0.5,
+      "kind": "numeric",
+      "field_path": "delta",
+      "target": 0.0039,
+      "tolerance_rel": 0.05,
+      "description": "Compare the reported dimensionless delta to the paper gold (3.9e-3). Score 1 if relative error ≤ 5%; 0.5 if ≤ 10%; else 0."
+    },
+    {
+      "id": "oxygen_displacement_consistency",
+      "output_file": "equilibrium_delta.json",
+      "weight": 0.1,
+      "kind": "custom",
+      "description": "Check that oxygen_displacement_A = delta × 5.468 within 0.1% relative tolerance."
+    },
+    {
+      "id": "csv_recompute_delta_match",
+      "output_file": "mode_energy_comparison.csv",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "metric": "custom",
+      "target": 0.0039,
+      "tolerance_rel": 0.03,
+      "description": "From the CSV, find the delta that minimizes energy_TIR and compare to paper gold 3.9e-3 with 3% relative tolerance."
+    },
+    {
+      "id": "csv_energy_ordering",
+      "output_file": "mode_energy_comparison.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "description": "Verify that at the equilibrium delta (from energy_TIR minimum) energy_TIR < energy_Allen and that energy_TIR is a local minimum in the curve."
+    }
+  ]
+}

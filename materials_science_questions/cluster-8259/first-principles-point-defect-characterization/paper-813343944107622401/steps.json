@@ -1,0 +1,80 @@
+[
+  {
+    "id": "optimize_quartz",
+    "title": "Optimize α-quartz unit cell",
+    "role": "process",
+    "action": "Build the α-quartz unit cell with experimental lattice vectors and relax atomic positions using DFTB+ (Γ‑point calculation) until forces are converged.",
+    "output_file": "",
+    "evidence": "quartz_optimized.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "construct_models",
+    "title": "Construct initial 66‑sph‑1 and 66‑sup models",
+    "role": "process",
+    "action": "From the optimized quartz cell, carve a quartz rhomboid, embed the 66‑atom spherical SiC nanocrystal, remove overlapping quartz atoms (maintaining SiO₂ stoichiometry and distance constraints), define the QM zone with link atoms and BCTC neutralization, and fix outer shells to create the 66‑sph‑1 embedded cluster model. In parallel, build a 5×5×4 periodic supercell with the same nanocrystal, without constraints. Save the initial coordinates of both models.",
+    "output_file": "",
+    "evidence": "initial_66sph1.xyz and initial_66sup.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "md_annealing",
+    "title": "SCC‑DFTB MD annealing and geometry optimization",
+    "role": "process",
+    "action": "For each model (66‑sph‑1 and 66‑sup), run Born–Oppenheimer molecular dynamics with DFTB+ and pbc‑1‑0 parameters. Use a 1 fs time step, an Andersen thermostat (heat from 300 K to 1500 K at 1.5 K/fs, equilibrate at 1500 K for 3–5 ps, exponentially quench to 0 K in 0.8 ps). Follow by conjugate‑gradient geometry optimization until the maximum atomic force falls below 10⁻⁴ H/Bohr. For the embedded model, keep the outer SiO₂ shells fixed; for the periodic model, fix the supercell vectors.",
+    "output_file": "",
+    "evidence": "md_output.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "write_final_66sph1",
+    "title": "Write 66‑sph‑1 final geometry",
+    "role": "scored",
+    "action": "Write the final relaxed atomic coordinates of the 66‑sph‑1 model to an XYZ file.",
+    "output_file": "66-sph-1_final.xyz",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed geometry of the embedded cluster model in XYZ format (atom count, comment line including '66-sph-1', then element x y z in Å). The checker will recompute coordination defect counts from this file.",
+    "output_schema": "Standard XYZ format: integer atom count, comment string (must contain '66-sph-1'), per-atom lines 'element x y z' with Cartesian coordinates in Å."
+  },
+  {
+    "id": "write_final_66sup",
+    "title": "Write 66‑sup final geometry",
+    "role": "scored",
+    "action": "Write the final relaxed atomic coordinates of the 66‑sup model to an XYZ file.",
+    "output_file": "66-sup_final.xyz",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed geometry of the periodic supercell model in XYZ format (atom count, comment line including '66-sup', then element x y z). The checker will recompute coordination defect counts from this file.",
+    "output_schema": "Standard XYZ format: integer atom count, comment string (must contain '66-sup'), per-atom lines 'element x y z' with Cartesian coordinates in Å."
+  },
+  {
+    "id": "coordination_errors",
+    "title": "Compute coordination defect counts",
+    "role": "scored",
+    "action": "Using the bond criterion (distance ≤ 1.2 × sum of covalent radii from Pyykkö & Atsumi), compute the coordination deviation for every O, C, and Si atom in the initial (unrelaxed) and final (relaxed) structures of both models. Aggregate counts per element and per deviation value (−2, −1, 0, +1, +2). Write a JSON file with keys '66-sph-1' and '66-sup', each containing 'initial' and 'final' dictionaries.",
+    "output_file": "coordination_errors.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Coordination deviation counts for each model before and after annealing. The checker will recompute the final counts from the submitted XYZ files, recompute initial counts from the constructed starting models, and verify the two key trends.",
+    "output_schema": "JSON object with keys '66-sph-1' and '66-sup'. Each value is an object with keys 'initial' and 'final'. Each 'initial'/'final' is an object mapping element ('O','C','Si') to an object mapping integer deviation (−2,−1,0,1,2) to an integer count."
+  }
+]

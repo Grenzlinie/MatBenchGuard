@@ -1,0 +1,235 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT calculations are too heavy to recompute in the checker sandbox; the checker compares the agent's reported values to paper-listed gold numbers with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relaxed_params.json": "reference_match",
+    "partial_charges.json": "reference_match",
+    "efg_params.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for structural parameters, partial charges, and EFG parameters for pure Hf2Co",
+      "source_provenance": "Paper Tables 2, 3, and 5 (Hf2Co pure DFT results, WIEN97)",
+      "generation_method": "Copied directly from the published tables",
+      "why_not_fabricated": "These are the exact paper-reported numbers for the same quantities the agent is asked to compute"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relaxed_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "u",
+            "v",
+            "units"
+          ],
+          "properties": {
+            "u": {
+              "type": "number"
+            },
+            "v": {
+              "type": "number"
+            },
+            "units": {
+              "type": "string",
+              "const": "dimensionless"
+            }
+          }
+        },
+        "description": "Relaxed internal parameters u and v after DFT structural relaxation, compared against paper-reported values with absolute tolerance."
+      },
+      {
+        "file": "partial_charges.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Hf1",
+            "Hf2",
+            "Co",
+            "units"
+          ],
+          "properties": {
+            "Hf1": {
+              "type": "object",
+              "required": [
+                "s",
+                "p",
+                "d",
+                "f"
+              ],
+              "properties": {
+                "s": {
+                  "type": "number"
+                },
+                "p": {
+                  "type": "number"
+                },
+                "d": {
+                  "type": "number"
+                },
+                "f": {
+                  "type": "number"
+                }
+              }
+            },
+            "Hf2": {
+              "type": "object",
+              "required": [
+                "s",
+                "p",
+                "d",
+                "f"
+              ]
+            },
+            "Co": {
+              "type": "object",
+              "required": [
+                "s",
+                "p",
+                "d",
+                "f"
+              ]
+            },
+            "units": {
+              "type": "string",
+              "const": "electrons"
+            }
+          }
+        },
+        "description": "l-decomposed site-projected charges inside muffin-tin spheres for Hf1, Hf2, and Co, compared against paper Table 3 with relative tolerance."
+      },
+      {
+        "file": "efg_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "16c",
+            "48f",
+            "units"
+          ],
+          "properties": {
+            "16c": {
+              "type": "object",
+              "required": [
+                "V_ZZ",
+                "eta",
+                "site"
+              ],
+              "properties": {
+                "V_ZZ": {
+                  "type": "number"
+                },
+                "eta": {
+                  "type": "number"
+                },
+                "site": {
+                  "type": "string",
+                  "const": "Hf1"
+                }
+              }
+            },
+            "48f": {
+              "type": "object",
+              "required": [
+                "V_ZZ",
+                "eta",
+                "site"
+              ],
+              "properties": {
+                "V_ZZ": {
+                  "type": "number"
+                },
+                "eta": {
+                  "type": "number"
+                },
+                "site": {
+                  "type": "string",
+                  "const": "Hf2"
+                }
+              }
+            },
+            "units": {
+              "type": "string",
+              "const": "V_ZZ in 10^17 V/cm^2"
+            }
+          }
+        },
+        "description": "EFG principal component V_ZZ and asymmetry parameter eta at the two Hf sites, compared against paper Table 5 values with relative/absolute tolerances and sign match."
+      }
+    ],
+    "notes": "The task reproduces the FP-LAPW electronic-structure calculations of pure Hf2Co. Tantalum-impurity supercell calculations and TDPAC experimental data are excluded. The agent must install and run the open-source Elk code. The hidden checker compares the submitted values to paper-reported gold values with predefined tolerances (absolute 0.005 for u,v; relative 20% for partial charges; relative 50% for V_ZZ with sign match; absolute 0.15 for eta)."
+  },
+  "checks": [
+    {
+      "id": "check_relax",
+      "output_file": "relaxed_params.json",
+      "weight": 0.2,
+      "kind": "numeric_compare",
+      "gold_u": 0.221,
+      "gold_v": 0.813,
+      "tolerance": 0.005,
+      "description": "Compare u and v with absolute tolerance 0.005"
+    },
+    {
+      "id": "check_charges",
+      "output_file": "partial_charges.json",
+      "weight": 0.3,
+      "kind": "numeric_compare",
+      "gold_dict": {
+        "Hf1": {
+          "s": 2.316,
+          "p": 6.071,
+          "d": 1.397,
+          "f": 13.984
+        },
+        "Hf2": {
+          "s": 2.303,
+          "p": 6.084,
+          "d": 1.314,
+          "f": 13.977
+        },
+        "Co": {
+          "s": 0.595,
+          "p": 6.519,
+          "d": 7.492,
+          "f": 0.019
+        }
+      },
+      "relative_tolerance": 0.2,
+      "min_absolute_tolerance": 0.01,
+      "description": "Compare partial charges with relative 20% tolerance, floor absolute 0.01"
+    },
+    {
+      "id": "check_efg",
+      "output_file": "efg_params.json",
+      "weight": 0.5,
+      "kind": "numeric_compare",
+      "gold_efg": {
+        "16c": {
+          "V_ZZ": -0.4,
+          "eta": 0.0
+        },
+        "48f": {
+          "V_ZZ": -18.4,
+          "eta": 0.43
+        }
+      },
+      "relative_tolerance_V": 0.5,
+      "absolute_tolerance_eta": 0.15,
+      "description": "Compare V_ZZ (relative 50%, sign must match) and eta (absolute 0.15) for both sites; plus structural check V_ZZ_48f >= 10*|V_ZZ_16c|"
+    }
+  ]
+}

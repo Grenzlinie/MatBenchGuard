@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Effective formation energies cannot be recomputed from raw artifacts within the verifier sandbox; the full DFT+grand-canonical pipeline is the experiment. Therefore compare agent's reported values to paper gold with tolerance and verify the required ordering.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference effective formation energies from Table 1 (relaxed N=16, x=75) and the required vacancy energy ordering.",
+      "source_provenance": "Paper Table 1, relaxed N=16, x=75 row: Fe_vac_alpha=1.25, Fe_vac_gamma=2.27, Al_vac=1.39, Fe_anti_Al≈0, Al_anti_gamma≈0, Al_anti_alpha=1.82 (eV).",
+      "generation_method": "Extracted directly from the paper's published numerical data. Tolerances set from the plan (0.15 eV for vacancies, 0.05 eV for ≈0 values).",
+      "why_not_fabricated": "These are the explicit paper-reported effective formation energies, not invented. The ordering is the paper's central conclusion about vacancy sublattice preference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "defect",
+            "E_eff"
+          ],
+          "units": {
+            "E_eff": "eV"
+          }
+        },
+        "description": "Effective formation energies for six defect types in D03-Fe3Al at stoichiometric composition x=75, computed from the relaxed N=16 supercell via the grand-canonical formalism. Contains rows for Fe_vac_alpha, Fe_vac_gamma, Al_vac, Fe_anti_Al, Al_anti_gamma, Al_anti_alpha."
+      }
+    ],
+    "notes": "The scored artifact is the CSV of effective formation energies. The checker will compare each defect's E_eff value to the paper-reported gold within a tolerance and verify the ordering Fe_vac_alpha < Al_vac < Fe_vac_gamma."
+  },
+  "steps": [
+    {
+      "id": "step_02_effective_formation_energies",
+      "output_file": "effective_formation_energies.csv",
+      "kind": "numeric",
+      "weight": 1.0,
+      "gold": {
+        "defect_values": {
+          "Fe_vac_alpha": 1.25,
+          "Fe_vac_gamma": 2.27,
+          "Al_vac": 1.39,
+          "Fe_anti_Al": 0.0,
+          "Al_anti_gamma": 0.0,
+          "Al_anti_alpha": 1.82
+        },
+        "tolerances": {
+          "Fe_vac_alpha": 0.15,
+          "Fe_vac_gamma": 0.15,
+          "Al_vac": 0.15,
+          "Fe_anti_Al": 0.05,
+          "Al_anti_gamma": 0.05,
+          "Al_anti_alpha": 0.15
+        },
+        "ordering": [
+          "Fe_vac_alpha",
+          "Al_vac",
+          "Fe_vac_gamma"
+        ]
+      },
+      "scoring": {
+        "energy_match_weight": 0.8,
+        "ordering_weight": 0.2
+      }
+    }
+  ]
+}

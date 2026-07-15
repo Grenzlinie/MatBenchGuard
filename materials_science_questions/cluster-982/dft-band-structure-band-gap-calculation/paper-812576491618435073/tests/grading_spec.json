@@ -1,0 +1,111 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes key physical features (first optical peak location, electronic band gap at K, and integrated conductivity threshold) from the agent's raw CSV and JSON files, comparing them to paper-derived reference values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for optical conductivity peak and unfolded band gap from the paper.",
+      "source_provenance": "Paper Table I (band gap 0.211 eV for SiG-4×4) and Fig. 3 (first peak at gap, broad peak around 4 eV).",
+      "generation_method": "Extracted directly from the reported computational results for SiG-4×4.",
+      "why_not_fabricated": "These are the paper's own reported quantities for the exact system being reproduced."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optical_conductivity_sig_4x4.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_eV",
+            "sigma_xx_real",
+            "sigma_xx_imag",
+            "sigma_yy_real",
+            "sigma_yy_imag"
+          ],
+          "units": {
+            "frequency_eV": "eV",
+            "sigma_xx_real": "atomic units",
+            "sigma_xx_imag": "atomic units",
+            "sigma_yy_real": "atomic units",
+            "sigma_yy_imag": "atomic units"
+          }
+        },
+        "description": "Computed optical conductivity spectrum of the SiG-4x4 supercell; checker verifies peak locations against reference."
+      },
+      {
+        "file": "unfolded_weights_siG_4x4.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "k_index",
+              "kx",
+              "ky",
+              "band_index",
+              "energy_eV",
+              "unfolded_weight",
+              "integrated_conductivity"
+            ],
+            "properties": {
+              "k_index": {
+                "type": "integer"
+              },
+              "kx": {
+                "type": "number",
+                "unit": "1/Å"
+              },
+              "ky": {
+                "type": "number",
+                "unit": "1/Å"
+              },
+              "band_index": {
+                "type": "integer"
+              },
+              "energy_eV": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "unfolded_weight": {
+                "type": "number"
+              },
+              "integrated_conductivity": {
+                "type": "number",
+                "unit": "atomic units"
+              }
+            }
+          }
+        },
+        "description": "Unfolded and integrated partial optical conductivity on the reference graphene band structure; checker verifies band gap at K point and minimum conductivity threshold."
+      }
+    ],
+    "notes": "The optical conductivity should exhibit a first peak near the band gap (about 0.2 eV) and a broad peak around 4 eV. The unfolded weights should show an unfolded band gap at K point consistent with that value and a non-negligible integrated conductivity there."
+  },
+  "steps": [
+    {
+      "id": "step_03_optical_conductivity",
+      "output_file": "optical_conductivity_sig_4x4.csv",
+      "weight": 0.3,
+      "first_peak_eV": 0.211,
+      "first_peak_tol_eV": 0.15,
+      "broad_peak_eV": 4.0
+    },
+    {
+      "id": "step_04_unfold_weights",
+      "output_file": "unfolded_weights_siG_4x4.json",
+      "weight": 0.7,
+      "gap_eV": 0.211,
+      "gap_tol_eV": 0.15,
+      "k_tol_frac": 0.05,
+      "min_cond": 0.001
+    }
+  ]
+}

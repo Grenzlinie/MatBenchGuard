@@ -1,0 +1,80 @@
+[
+  {
+    "id": "01_system_prep",
+    "title": "Prepare Ni supercooled liquid",
+    "role": "process",
+    "action": "Using LAMMPS and the Ni EAM potential, create a Ni liquid of 32,000 atoms at 1800 K, equilibrate for 2 ns in NPT, then cool to target temperatures (e.g., 1400 K and 1300 K) at a rate of 10 K/ps, and equilibrate for 1 ns at each temperature.",
+    "output_file": "",
+    "evidence": "system_prep.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate equilibrated supercooled liquid configurations at two temperatures for subsequent seeded growth simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "02_seed_growth",
+    "title": "Seeded growth MD simulations",
+    "role": "process",
+    "action": "For each target temperature, insert a spherical crystalline Ni seed of radius ~2 nm into the equilibrated liquid. Run a short 5 ps equilibration to heal the interface, then anneal for 1 ns in NPT. Save atomic trajectories every 1 ps for analysis.",
+    "output_file": "",
+    "evidence": "seed_growth.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce MD trajectories of crystal growth from seeded interfaces at two temperatures.",
+    "output_schema": ""
+  },
+  {
+    "id": "03_compute_ic",
+    "title": "Compute index of crystallinity (IC)",
+    "role": "process",
+    "action": "From the MD trajectories, compute the local bond-orientational order parameter q6, normalize components, and calculate dot products between neighboring atoms to assign an IC value per atom per timestep. Distinguish crystalline and liquid-like atoms.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Post-process trajectories to obtain time-resolved crystallinity indices for all atoms.",
+    "output_schema": ""
+  },
+  {
+    "id": "04_ic_traces",
+    "title": "Extract cooperative attachment IC traces",
+    "role": "scored",
+    "action": "Identify an attachment event where a liquid atom near the interface transitions to crystalline (IC rises from <40 to >100). For that target atom, find its persistent nearest neighbors (atoms that stay within 3.5 Å for ≥80% of the observation window). Export the IC time series for the target atom and up to 6 nearest neighbors as ic_traces.csv, covering at least 200 ps around the rise.",
+    "output_file": "ic_traces.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "IC vs time for the target atom and its persistent nearest neighbors during one cooperative attachment event.",
+    "output_schema": "Columns: time (ps), target_IC, neighbor_1_IC, ..., neighbor_N_IC (floats). N >= 5. Time values in ascending order."
+  },
+  {
+    "id": "05_compute_coherence",
+    "title": "Compute coherence length across events",
+    "role": "process",
+    "action": "For each simulation temperature, identify all attachment and detachment events, compute per-event coherence length as the number of persistent nearest neighbors whose IC traces are highly correlated (Pearson r > 0.8) with the target atom during the attachment window. Average over events to obtain the mean coherence length per temperature.",
+    "output_file": "",
+    "evidence": "coherence_analysis.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Derive the average number of cooperatively attaching atoms at each temperature.",
+    "output_schema": ""
+  },
+  {
+    "id": "06_coherence_lengths",
+    "title": "Coherence length vs temperature",
+    "role": "scored",
+    "action": "Export a CSV file coherence_lengths.csv with columns temperature (in Kelvin) and coherence_length (average number of cooperative atoms). Include at least two rows (e.g., T=1400 K and 1300 K). The coherence length must be larger at the lower temperature.",
+    "output_file": "coherence_lengths.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature dependence of the cooperative attachment group size.",
+    "output_schema": "Columns: temperature (float, K), coherence_length (float). At least two rows with strictly decreasing temperature and strictly increasing coherence_length."
+  }
+]

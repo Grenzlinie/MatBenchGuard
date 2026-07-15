@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact numeric values depend on implementation choices (discretization, solver parameters) and the paper only reports qualitative trends; therefore structural (trend-based) scoring is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "kmc_occupancy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "y",
+            "occupancy"
+          ],
+          "units": {
+            "x": "nm",
+            "y": "nm",
+            "occupancy": "dimensionless"
+          }
+        },
+        "description": "Normalized Li-ion occupancy after KMC simulation. The checker will verify that the average occupancy inside the secondary-phase strip (central y region of width 7 nm) is substantially lower than in the surrounding bulk."
+      },
+      {
+        "file": "fem_stress_potential.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "y",
+            "hydrostatic_stress",
+            "electric_potential"
+          ],
+          "units": {
+            "x": "μm",
+            "y": "μm",
+            "hydrostatic_stress": "MPa",
+            "electric_potential": "V"
+          }
+        },
+        "description": "Hydrostatic stress and electric potential from the coupled FEM simulation. The checker will verify that notable gradients (localized variations around the secondary-phase inclusions) are present relative to the far‑field values."
+      }
+    ],
+    "notes": "The checker performs structural trend verification (T3): it does not enforce exact numeric agreement, as simulation results depend on implementation-specific choices (e.g., discretization, exchange current density in Butler‑Volmer kinetics). Instead, it confirms that the occupancy inside the secondary-phase region is lower than in the bulk and that stress/potential gradients are spatially concentrated around the inclusion boundaries."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for structural checks of Li occupancy depletion and stress/potential gradients",
+      "source_provenance": "Paper Fig.3b,c,d; solute deplection and gradient behavior described in paper text (occupancy depletion, gradients).",
+      "generation_method": "Thresholds set based on expected minimal contrast in a correct simulation; verified against reference synthetic solution to ensure full reward with plausible values.",
+      "why_not_fabricated": "Thresholds are not exact target values but minimal contrast requirements; they align with the physical phenomenon reported in the paper."
+    }
+  ],
+  "steps": [
+    {
+      "id": "kmc_depletion",
+      "output_file": "kmc_occupancy.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "description": "Check that average Li occupancy inside the secondary-phase strip is substantially lower than in the bulk.",
+      "params": {
+        "secondary_y_range": [
+          26.5,
+          33.5
+        ],
+        "min_occupancy_diff": 0.01
+      }
+    },
+    {
+      "id": "fem_stress_gradient",
+      "output_file": "fem_stress_potential.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Check that hydrostatic stress near secondary-phase inclusions deviates from the far-field background, indicating localized gradients.",
+      "params": {
+        "inclusion_centers": [
+          [
+            480,
+            420
+          ],
+          [
+            330,
+            150
+          ],
+          [
+            120,
+            330
+          ]
+        ],
+        "near_radius": 30.0,
+        "far_min_distance": 150.0,
+        "min_diff_MPa": 0.05
+      }
+    },
+    {
+      "id": "fem_potential_gradient",
+      "output_file": "fem_stress_potential.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Check that electric potential near secondary-phase inclusions deviates from the background, indicating localized gradients.",
+      "params": {
+        "inclusion_centers": [
+          [
+            480,
+            420
+          ],
+          [
+            330,
+            150
+          ],
+          [
+            120,
+            330
+          ]
+        ],
+        "near_radius": 30.0,
+        "far_min_distance": 150.0,
+        "min_diff_V": 0.0005
+      }
+    }
+  ]
+}

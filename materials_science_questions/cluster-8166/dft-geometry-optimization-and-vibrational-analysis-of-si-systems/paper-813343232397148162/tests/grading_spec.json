@@ -1,0 +1,230 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The checker compares the agent's reported DFT results to the paper's reference values with tolerances; recompute from raw artifacts is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_geometries.json": "reference_match",
+    "step_02_frequencies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values from the paper for structure, energies, and frequencies.",
+      "source_provenance": "Paper Table I and text (vibrational frequencies and ratio).",
+      "generation_method": "Directly transcribed from the paper's reported values.",
+      "why_not_fabricated": "Values are directly quoted from the paper's main results and can be verified against the published PRB article."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_geometries.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "substitutional_Td",
+            "broken_bond_C3v",
+            "most_stable_among_large_relaxation",
+            "energy_difference_compared_to_next_metastable_eV"
+          ],
+          "properties": {
+            "substitutional_Td": {
+              "type": "object",
+              "required": [
+                "Si_As_bond_length_A",
+                "total_energy_eV"
+              ]
+            },
+            "broken_bond_C3v": {
+              "type": "object",
+              "required": [
+                "Si_As_bond_length_A",
+                "Si_displacement_A",
+                "bond_angle_deg",
+                "total_energy_eV"
+              ]
+            },
+            "most_stable_among_large_relaxation": {
+              "type": "string"
+            },
+            "energy_difference_compared_to_next_metastable_eV": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Optimized geometries and energies for Si impurity configurations in GaAs."
+      },
+      {
+        "file": "step_02_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "v_Td_t2_mode_cm-1",
+            "v_C3v_e_mode_cm-1",
+            "v_C3v_a1_mode_cm-1",
+            "ratio_vTd_vC3v"
+          ],
+          "properties": {
+            "v_Td_t2_mode_cm-1": {
+              "type": "number"
+            },
+            "v_C3v_e_mode_cm-1": {
+              "type": "number"
+            },
+            "v_C3v_a1_mode_cm-1": {
+              "type": "number"
+            },
+            "ratio_vTd_vC3v": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Local vibrational mode frequencies for Si in GaAs and frequency ratio."
+      }
+    ],
+    "notes": "Task covers only Si impurity. Ge and Sn donors, VFF model, and experimental comparison are not required. The agent must use open-source Quantum ESPRESSO and public LDA pseudopotentials."
+  },
+  "steps": [
+    {
+      "id": "s01_file_exists",
+      "output_file": "step_01_geometries.json",
+      "kind": "file_exists",
+      "weight": 0.02
+    },
+    {
+      "id": "s01_shape",
+      "output_file": "step_01_geometries.json",
+      "kind": "shape",
+      "weight": 0.02,
+      "required_keys": [
+        "substitutional_Td",
+        "broken_bond_C3v",
+        "most_stable_among_large_relaxation",
+        "energy_difference_compared_to_next_metastable_eV"
+      ]
+    },
+    {
+      "id": "s01_bond_length_td",
+      "output_file": "step_01_geometries.json",
+      "kind": "numeric",
+      "field_path": "substitutional_Td.Si_As_bond_length_A",
+      "gold": 2.43,
+      "tolerance_abs": 0.01,
+      "weight": 0.12
+    },
+    {
+      "id": "s01_bond_length_c3v",
+      "output_file": "step_01_geometries.json",
+      "kind": "numeric",
+      "field_path": "broken_bond_C3v.Si_As_bond_length_A",
+      "gold": 2.42,
+      "tolerance_abs": 0.01,
+      "weight": 0.12
+    },
+    {
+      "id": "s01_displacement",
+      "output_file": "step_01_geometries.json",
+      "kind": "numeric",
+      "field_path": "broken_bond_C3v.Si_displacement_A",
+      "gold": 1.38,
+      "tolerance_abs": 0.02,
+      "weight": 0.09
+    },
+    {
+      "id": "s01_angle",
+      "output_file": "step_01_geometries.json",
+      "kind": "numeric",
+      "field_path": "broken_bond_C3v.bond_angle_deg",
+      "gold": 115.0,
+      "tolerance_abs": 2.0,
+      "weight": 0.08
+    },
+    {
+      "id": "s01_stability",
+      "output_file": "step_01_geometries.json",
+      "kind": "exact_string",
+      "field_path": "most_stable_among_large_relaxation",
+      "gold": "broken_bond",
+      "weight": 0.1
+    },
+    {
+      "id": "s01_energy_diff",
+      "output_file": "step_01_geometries.json",
+      "kind": "numeric",
+      "field_path": "energy_difference_compared_to_next_metastable_eV",
+      "gold": 0.6,
+      "tolerance_abs": 0.1,
+      "weight": 0.07
+    },
+    {
+      "id": "s01_total_energies_present",
+      "output_file": "step_01_geometries.json",
+      "kind": "fields_present",
+      "required_paths": [
+        "substitutional_Td.total_energy_eV",
+        "broken_bond_C3v.total_energy_eV"
+      ],
+      "weight": 0.02
+    },
+    {
+      "id": "s02_file_exists",
+      "output_file": "step_02_frequencies.json",
+      "kind": "file_exists",
+      "weight": 0.02
+    },
+    {
+      "id": "s02_shape",
+      "output_file": "step_02_frequencies.json",
+      "kind": "shape",
+      "weight": 0.02,
+      "required_keys": [
+        "v_Td_t2_mode_cm-1",
+        "v_C3v_e_mode_cm-1",
+        "v_C3v_a1_mode_cm-1",
+        "ratio_vTd_vC3v"
+      ]
+    },
+    {
+      "id": "s02_freq_t2",
+      "output_file": "step_02_frequencies.json",
+      "kind": "numeric",
+      "field_path": "v_Td_t2_mode_cm-1",
+      "gold": 370.0,
+      "tolerance_abs": 5.0,
+      "weight": 0.1
+    },
+    {
+      "id": "s02_freq_e",
+      "output_file": "step_02_frequencies.json",
+      "kind": "numeric",
+      "field_path": "v_C3v_e_mode_cm-1",
+      "gold": 392.0,
+      "tolerance_abs": 5.0,
+      "weight": 0.1
+    },
+    {
+      "id": "s02_freq_a1",
+      "output_file": "step_02_frequencies.json",
+      "kind": "numeric",
+      "field_path": "v_C3v_a1_mode_cm-1",
+      "gold": 274.0,
+      "tolerance_abs": 5.0,
+      "weight": 0.07
+    },
+    {
+      "id": "s02_ratio",
+      "output_file": "step_02_frequencies.json",
+      "kind": "numeric",
+      "field_path": "ratio_vTd_vC3v",
+      "gold": 0.94,
+      "tolerance_abs": 0.03,
+      "weight": 0.05
+    }
+  ]
+}

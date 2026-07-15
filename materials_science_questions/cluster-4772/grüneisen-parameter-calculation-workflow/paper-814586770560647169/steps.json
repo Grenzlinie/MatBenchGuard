@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1_relax",
+    "title": "DFT structure relaxation",
+    "role": "process",
+    "action": "Set up the trigonal H3[Co(CN)6] structure (space group P-31m) from the public CIF and perform DFT relaxation of lattice parameters and atomic positions using Quantum ESPRESSO with the PBE functional.",
+    "output_file": "",
+    "evidence": "relax.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain the relaxed equilibrium lattice constants and atomic coordinates required for subsequent elastic and phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_phonon",
+    "title": "Phonon and Grüneisen parameter calculations",
+    "role": "process",
+    "action": "Using Phonopy and Quantum ESPRESSO DFPT: compute (1) elastic constants at the relaxed volume; (2) zone-center phonon frequencies and eigenvectors; (3) DFPT forces at volumes varied by ±10% around equilibrium; (4) fit volume-energy data to the Birch-Murnaghan equation of state to obtain bulk modulus B0; (5) compute mode Grüneisen parameters for all optical modes via finite-volume differences.",
+    "output_file": "",
+    "evidence": "gruneisen_calc.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core computational step producing the raw data for the scored mode and thermal expansion artifacts.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_modes",
+    "title": "Output mode Grüneisen parameters table",
+    "role": "scored",
+    "action": "Assemble the computed zone-center optical phonon frequencies and their mode Grüneisen parameters into a CSV file.",
+    "output_file": "mode_gruneisen.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table listing all optical zone-center modes with their frequencies, symmetry labels (if identifiable), Grüneisen parameters, and degeneracies. Must include at least two modes with negative Grüneisen parameters.",
+    "output_schema": "Columns: mode_index (int), frequency_cm1 (float), symmetry (str), gamma (float), degeneracy (int). One row per optical branch."
+  },
+  {
+    "id": "step4_therm_exp",
+    "title": "Output thermal expansion coefficient",
+    "role": "scored",
+    "action": "Compute the volumetric thermal expansion coefficient at 300 K using the mode Grüneisen parameters, bulk modulus, and molar volume under the Einstein model within the quasiharmonic approximation. Write the results to a JSON file.",
+    "output_file": "thermal_expansion.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing relaxed lattice parameters, bulk modulus, and thermal expansion coefficient at 300 K. The checker will recompute the thermal expansion coefficient from the mode_gruneisen.csv and compare to the paper-reported value.",
+    "output_schema": "{'relaxed_lattice_parameters': {'a': float (Å), 'c': float (Å)}, 'bulk_modulus_B0': float (GPa), 'thermal_expansion_coefficient_300K': float (K⁻¹)}"
+  }
+]

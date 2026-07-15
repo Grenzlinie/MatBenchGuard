@@ -1,0 +1,241 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Gibbs-Thomson slope and LSW rate constants are recomputed from the agent's raw data arrays, and PSD peak location is extracted from binned distributions; all comparisons use hidden reference values derived from the paper.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Gibbs-Thomson slope, K values, PSD peak positions",
+      "source_provenance": "paper Equations (14), Table 3, Fig. 5 (slope), and Fig. 7/Fig. 8 (K and PSD peaks); slope computed from γ=0.41 J/m², ξ_p=3.42×10¹¹ J/m³, Δc_eq≈1.0; K values taken from paper text; PSD peaks estimated from mean radii at t=175 s scaled by LSW peak-to-mean ratio.",
+      "generation_method": "analytical from paper parameters; PSD peaks approximated as 0.95×mean radius at end.",
+      "why_not_fabricated": "all quantities are traceable to the paper and are the same conditions the agent must reproduce"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "gibbs_thomson",
+            "coarsening_5at",
+            "coarsening_10at",
+            "K_5at",
+            "K_10at",
+            "PSD_5at_start",
+            "PSD_5at_end",
+            "PSD_10at_start",
+            "PSD_10at_end"
+          ],
+          "properties": {
+            "gibbs_thomson": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "curvature_1_nm",
+                  "delta_cp"
+                ],
+                "properties": {
+                  "curvature_1_nm": {
+                    "type": "number",
+                    "unit": "1/nm"
+                  },
+                  "delta_cp": {
+                    "type": "number",
+                    "unit": "dimensionless"
+                  }
+                }
+              }
+            },
+            "coarsening_5at": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "time_s",
+                  "mean_radius_nm",
+                  "num_particles"
+                ],
+                "properties": {
+                  "time_s": {
+                    "type": "number",
+                    "unit": "s"
+                  },
+                  "mean_radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "num_particles": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "coarsening_10at": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "time_s",
+                  "mean_radius_nm",
+                  "num_particles"
+                ],
+                "properties": {
+                  "time_s": {
+                    "type": "number",
+                    "unit": "s"
+                  },
+                  "mean_radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "num_particles": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "K_5at": {
+              "type": "number",
+              "unit": "nm^3/s"
+            },
+            "K_10at": {
+              "type": "number",
+              "unit": "nm^3/s"
+            },
+            "PSD_5at_start": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "radius_nm",
+                  "count"
+                ],
+                "properties": {
+                  "radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "PSD_5at_end": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "radius_nm",
+                  "count"
+                ],
+                "properties": {
+                  "radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "PSD_10at_start": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "radius_nm",
+                  "count"
+                ],
+                "properties": {
+                  "radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "PSD_10at_end": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "radius_nm",
+                  "count"
+                ],
+                "properties": {
+                  "radius_nm": {
+                    "type": "number",
+                    "unit": "nm"
+                  },
+                  "count": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Contains the Gibbs-Thomson validation data, coarsening kinetics time series, fitted LSW rate constants, and particle size distributions for 5 and 10 at.% Cu. The hidden checker will recompute the Gibbs-Thomson linear slope and the cubic LSW fits to extract K, and compare against reference values derived from the paper."
+      }
+    ],
+    "notes": "The checker will recompute the Gibbs-Thomson slope via linear regression on the (curvature_1_nm, delta_cp) pairs, and the LSW rate constants K by fitting a cubic polynomial to mean_radius_nm^3 vs time_s for each composition. No tolerances or gold values are given here."
+  },
+  "steps": [
+    {
+      "id": "gibbs_thomson_slope",
+      "output_file": "simulation_results.json",
+      "weight": 0.2,
+      "kind": "recompute_metric",
+      "target": 0.0024,
+      "tolerance": 0.00024,
+      "description": "Recalc linear regression slope of delta_cp vs curvature_1_nm"
+    },
+    {
+      "id": "coarsening_K_5at",
+      "output_file": "simulation_results.json",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "target": 0.1024,
+      "tolerance": 0.03,
+      "description": "Fit K from mean_radius_nm^3 vs time_s for 5at% Cu"
+    },
+    {
+      "id": "coarsening_K_10at",
+      "output_file": "simulation_results.json",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "target": 0.2389,
+      "tolerance": 0.03,
+      "description": "Fit K from mean_radius_nm^3 vs time_s for 10at% Cu"
+    },
+    {
+      "id": "psd_peak_5at",
+      "output_file": "simulation_results.json",
+      "weight": 0.1,
+      "kind": "recompute_metric",
+      "target": 2.7,
+      "tolerance": 0.54,
+      "description": "Peak radius in PSD_5at_end"
+    },
+    {
+      "id": "psd_peak_10at",
+      "output_file": "simulation_results.json",
+      "weight": 0.1,
+      "kind": "recompute_metric",
+      "target": 3.5,
+      "tolerance": 0.7,
+      "description": "Peak radius in PSD_10at_end"
+    }
+  ]
+}

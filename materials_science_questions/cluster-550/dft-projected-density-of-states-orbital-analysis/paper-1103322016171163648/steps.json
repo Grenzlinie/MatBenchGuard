@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "Model construction of HATP-COF-1 and HATP-COF-2 periodic structures",
+    "role": "process",
+    "action": "Construct AA-stacking periodic structures of HATP-COF-1 and HATP-COF-2 using the refined lattice parameters (P3 space group: HATP-COF-1 a=b=33.22473 Å, c=4.70489 Å; HATP-COF-2 a=b=34.71496 Å, c=4.71199 Å) and atomic fragments from the hexaazatriphenylene vertex and the respective linkers. Output initial atomic coordinates in a format suitable for Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "initial_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Prepare the starting geometries for DFT. The evidence file contains lattice vectors and fractional coordinates of the AA-stacked layers.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for both COFs using Quantum ESPRESSO with a generalized gradient approximation (PBE) functional and a dispersion correction (e.g., D3). Relax atomic positions keeping the lattice parameters fixed. Save the optimized structures for subsequent electronic-structure calculations.",
+    "output_file": "",
+    "evidence": "optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relax the initial structures to a local energy minimum. The log documents convergence of forces/energy. The optimized coordinates are reused in later steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Band structure and band gap extraction",
+    "role": "scored",
+    "action": "From the optimized geometries, perform a self-consistent field (SCF) calculation followed by a non-SCF band structure calculation along a standard high-symmetry path (Γ-M-K-Γ) of the hexagonal Brillouin zone. Extract the fundamental band gap (eV) for both HATP-COF-1 and HATP-COF-2. Write the results to band_gaps.json.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final band gap (direct or indirect) for each COF, evaluated at the band edges. The ordering (HATP-COF-2 < HATP-COF-1) is part of the expected trend and is checked by the verifier.",
+    "output_schema": "A JSON object with exactly two keys: 'HATP-COF-1' (float) and 'HATP-COF-2' (float)."
+  },
+  {
+    "id": "step_4",
+    "title": "Total and projected density of states",
+    "role": "scored",
+    "action": "Using the optimized structures, compute the total density of states (DOS) and the projected density of states (PDOS) onto atomic orbitals (C 2p, N 2p) with a dense k-mesh. Output the data as dos.json containing arrays of equal length for energy (eV, relative to Fermi level), total DOS, and PDOS contributions from carbon and nitrogen.",
+    "output_file": "dos.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The computed DOS profiles serve as a structural check. The verifier validates that energy ranges cover a reasonable window around the Fermi level and that projected DOS shows finite contributions from C and N near the Fermi energy.",
+    "output_schema": "A JSON object with keys: 'energy' (1D float array), 'total_dos' (1D float array), 'c_dos' (1D float array), 'n_dos' (1D float array), all arrays of equal length."
+  }
+]

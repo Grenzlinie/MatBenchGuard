@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "Geometry optimization",
+    "role": "process",
+    "action": "Using the experimental crystal structure of compound 1, perform DFT geometry optimization of atomic positions while keeping lattice parameters fixed. Use the PBE functional, norm-conserving pseudopotentials, a plane-wave cutoff of 600 eV, and a k-point grid of 3×3×2. Include Grimme dispersion corrections.",
+    "output_file": "",
+    "evidence": "geom_opt.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed atomic positions are produced; they serve as input for the subsequent band structure and PDOS calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Raw band structure and PDOS calculation",
+    "role": "process",
+    "action": "On the optimized structure, perform a ground-state DFT calculation with the same settings as step 1. Then carry out a non-self-consistent band structure calculation along the k-path G(0,0,0) → F(0,0.5,0) → Q(0,0.5,0.5) → Z(0,0,0.5). Compute the partial density of states (PDOS) projected onto s, p, and d atomic orbitals for Cd, adc linker, 4-phpy, and water, using a 3×3×2 k-point grid.",
+    "output_file": "",
+    "evidence": "bands.dat, pdos.dat",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces raw eigenvalue vs. k-point data and PDOS contributions, which are analysed in the scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Band gap analysis",
+    "role": "scored",
+    "action": "From the raw band structure data, locate the valence band maximum (VBM) and conduction band minimum (CBM), compute the raw band gap (CBM – VBM), apply a scissor shift of +0.45 eV to obtain the adjusted band gap, determine whether the gap is direct or indirect, and identify the k-point labels of VBM and CBM. Output the results as band_structure_results.json.",
+    "output_file": "band_structure_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored band structure summary; the checker recomputes the band gap from the submitted band energies and verifies the VBM/CBM k-point labels and scissor shift.",
+    "output_schema": "JSON object with required keys: 'kpath' (array of objects with 'label' and 'coordinates'), 'band_energies' (2D array of float, shape [n_kpoints, n_bands]), 'fermi_energy' (float, eV), 'vbm_energy' (float, eV), 'cbm_energy' (float, eV), 'raw_band_gap' (float, eV), 'scissor_shift_applied' (float, set to 0.45), 'adjusted_band_gap' (float, eV), 'vbm_kpoint' (object with 'label' and 'coordinates'), 'cbm_kpoint' (object with 'label' and 'coordinates'), 'gap_type' (string, 'direct' or 'indirect')."
+  },
+  {
+    "id": "step_4",
+    "title": "Partial density of states analysis",
+    "role": "scored",
+    "action": "Using the PDOS data, compute the fractional orbital contributions (s, p, d) of each atomic species (Cd, adc, 4-phpy, water) for the three highest valence bands and the three lowest conduction bands. Output the summary as pdos_summary.json.",
+    "output_file": "pdos_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Quantifies which atoms and orbitals dominate the band edges; scored by structural consistency checks on the dominant contributions.",
+    "output_schema": "JSON object with required keys: 'valence_band_top_contributions' (array of objects, each with 'band_index', 'energy' (eV), and 'contributions' {Cd:{s,p,d}, adc:{s,p,d}, '4-phpy':{s,p,d}, water:{s,p,d}}), 'conduction_band_bottom_contributions' (similar structure). The fractional contributions for each atom type should sum to 1 for that band."
+  }
+]

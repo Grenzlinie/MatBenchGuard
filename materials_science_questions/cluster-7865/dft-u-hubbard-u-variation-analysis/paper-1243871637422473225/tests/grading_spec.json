@@ -1,0 +1,50 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Band gap values cannot be recomputed from raw DFT output files because those are not submitted. Result-level comparison against paper-reported trends with generous threshold_or_better tolerances is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_band_gaps.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for insulating (band_gap > 0.05 eV) and metallic (band_gap < 0.01 eV) conditions derived from the paper’s surface insulating window and the reference solution’s computed values (surface gap ~0.05–0.1 eV). The 0.05 eV threshold is well above numerical noise and well below any expected gap for a genuine insulator, while 0.01 eV safely separates a metallic state from a small DFT gap.",
+      "source_provenance": "Paper Fig. 4 and text: surface insulating at U=2.625 eV with finite gap; bulk metallic. The reference solution’s band gaps (surface 0.05, 0.08, 0.10 eV, bulk 0.0 eV) were produced by DFT+U with LDA+SOC+AFM_b and are consistent with the paper’s statement that a gap opens.",
+      "generation_method": "Analytic thresholds set based on reference solution output and paper description.",
+      "why_not_fabricated": "Thresholds are directly informed by the paper’s reported physical behaviour and the reference DFT+U results, ensuring they align with genuine reproduction while accommodating different DFT implementations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "calculations": "array of objects"
+          },
+          "items": {
+            "geometry": "string (one of 'bulk-like' or 'surface-relaxed')",
+            "U_eV": "number",
+            "band_gap_eV": "number",
+            "is_insulator": "boolean"
+          }
+        },
+        "description": "Band gap results for each bilayer geometry and Hubbard U value. The checker verifies that the surface bilayer is insulating (gap > 0.05 eV) at U=2.625 eV while the bulk-like bilayer remains metallic, and that the critical U for the surface is lower than for the bulk."
+      }
+    ],
+    "notes": "All values are computed from first-principles DFT+U. No experimental data is used except the bulk crystal structure and the surface displacement parameters which are provided in the task instructions. The hidden checker uses threshold-or-better scoring: meeting or exceeding the required gap / metallic condition earns full credit."
+  },
+  "steps": [
+    {
+      "id": "step_01_band_gaps_eval",
+      "output_file": "step_01_band_gaps.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "description": "Evaluate band gap trends against paper-reported metal–insulator transition conditions."
+    }
+  ]
+}

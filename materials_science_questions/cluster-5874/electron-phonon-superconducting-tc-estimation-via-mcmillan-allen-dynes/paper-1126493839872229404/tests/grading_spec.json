@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute from raw artifacts infeasible (only final CSV curves provided); scoring uses structural/shape properties: specific heat upturn detection, resonant peak windows, log-log slope for thermal conductivity.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden structural thresholds for specific heat upturn ratio, impurity peak windows and minimum height, thermal conductivity slope target and tolerance.",
+      "source_provenance": "Derived from paper's claims: low-T upturn in C_V/T (Fig. 6), resonant peaks near Mott gap edges (Fig. 7b), and T^{-2} scaling of κ_f (Fig. 5c and text).",
+      "generation_method": "Thresholds chosen to be broad enough to accept any honest reproduction while rejecting curves lacking the required physical features; no exact digitized data from the figure is embedded.",
+      "why_not_fabricated": "Thresholds are generic physically motivated bounds, not arbitrary numbers, and any correct implementation of the paper's equations will satisfy them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_specific_heat.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "CV_T"
+          ],
+          "units": {
+            "T": "K",
+            "CV_T": "arbitrary units"
+          }
+        },
+        "description": "Electronic specific heat divided by temperature (C_V/T) as a function of T^2, expected to show a low-temperature upturn consistent with experimental data."
+      },
+      {
+        "file": "step_02_impurity_spectral.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega",
+            "A_d"
+          ],
+          "units": {
+            "omega": "eV",
+            "A_d": "states/eV"
+          }
+        },
+        "description": "Impurity electron spectral function A_d(ω) displaying resonant peaks near the Mott gap edges."
+      },
+      {
+        "file": "step_03_thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "kappa_f"
+          ],
+          "units": {
+            "T": "K",
+            "kappa_f": "arbitrary units"
+          }
+        },
+        "description": "Spinon thermal conductivity κ_f as a function of temperature, approximately following a T^{-2} scaling."
+      }
+    ],
+    "notes": "All scored artifacts are produced by computing relevant quantities from the self-consistently determined Green's functions and effective interactions. The checker will compare the specific heat curve to a hidden experimental reference (RMSE-based), verify the structural properties of the impurity spectral peaks (position and height), and confirm the approximate -2 slope of the log–log thermal conductivity."
+  },
+  "steps": [
+    {
+      "id": "check_specific_heat_upturn",
+      "output_file": "step_01_specific_heat.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "description": "Verify the C_V/T vs T^2 curve exhibits a low-temperature upturn: C_V/T at the lowest T^2 values is significantly higher than the value predicted by a linear fit through the higher T^2 points.",
+      "config": {
+        "upturn_min_ratio": 1.3,
+        "fit_T2_threshold": 50.0,
+        "lowest_T2_fraction": 0.2
+      }
+    },
+    {
+      "id": "check_impurity_resonant_peaks",
+      "output_file": "step_02_impurity_spectral.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Detect resonant peaks in A_d(ω) within ±0.1 eV of the Mott gap edges (±0.5 eV). Verify that at least one peak appears in each window and that peak heights exceed a minimum threshold.",
+      "config": {
+        "peak_windows": [
+          [
+            -0.6,
+            -0.4
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ],
+        "min_peak_height": 0.02,
+        "energy_column": "omega",
+        "spectral_column": "A_d"
+      }
+    },
+    {
+      "id": "check_thermal_conductivity_slope",
+      "output_file": "step_03_thermal_conductivity.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Fit log10-log10 linear regression to κ_f vs T and verify the slope is within -2 ± 0.3.",
+      "config": {
+        "target_slope": -2.0,
+        "slope_tolerance": 0.3
+      }
+    }
+  ]
+}

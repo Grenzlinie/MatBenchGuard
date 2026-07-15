@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Step 3 compares agent-reported effective properties to the paper's gold with relative tolerance; Step 4 audits monotonic trends. Recomputing from raw FEM artifacts is infeasible in the checker sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for step_03_computed_properties.json",
+      "source_provenance": "Paper Table 2, row for m1=0.93 (ρi=0.1, mi=0.40, ρp=100, mp=0.40)",
+      "generation_method": "direct extraction from the published table",
+      "why_not_fabricated": "These are the exact model predictions reported by the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_03_computed_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d33": "number (pC/N)",
+            "d31": "number (pC/N)",
+            "epsilon33_over_eps0": "number (dimensionless)",
+            "g33": "number (mV·m/N)"
+          }
+        },
+        "description": "Headline effective properties of the layered composite for the parameter set m_1=0.93. Compared to the paper-reported reference with appropriate tolerances."
+      },
+      {
+        "file": "step_04_trend.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m1",
+            "d33",
+            "d31",
+            "epsilon33_over_eps0",
+            "g33"
+          ],
+          "columns": {
+            "m1": {
+              "type": "float"
+            },
+            "d33": {
+              "type": "float",
+              "unit": "pC/N"
+            },
+            "d31": {
+              "type": "float",
+              "unit": "pC/N"
+            },
+            "epsilon33_over_eps0": {
+              "type": "float",
+              "unit": "dimensionless"
+            },
+            "g33": {
+              "type": "float",
+              "unit": "mV·m/N"
+            }
+          }
+        },
+        "description": "Trend of effective properties for m1=0.93, 0.95, 0.97. Checked for monotonic trends: d33 must increase with m1, and the magnitude of d31 must also increase (d31 becomes more negative)."
+      }
+    ],
+    "notes": "The material constants for FC and clay are provided inline in the instruction.md. The checker compares the agent's computed values to the paper-reported reference for step_03 and validates the structural trend (monotonicity) for step_04."
+  },
+  "steps": [
+    {
+      "id": "step_03_computed_properties",
+      "output_file": "step_03_computed_properties.json",
+      "weight": 0.7,
+      "kind": "reference_match",
+      "gold": {
+        "d33": 11.0,
+        "d31": -3.66,
+        "epsilon33_over_eps0": 30.4,
+        "g33": 41.0
+      },
+      "tolerance_relative": 0.15
+    },
+    {
+      "id": "step_04_trend",
+      "output_file": "step_04_trend.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "required_m1_values": [
+        0.93,
+        0.95,
+        0.97
+      ]
+    }
+  ]
+}

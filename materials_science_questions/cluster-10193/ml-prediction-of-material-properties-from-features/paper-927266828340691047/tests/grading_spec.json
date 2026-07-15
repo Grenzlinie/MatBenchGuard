@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Internal consistency recompute: the checker recalculates percent_reduction from the agent's submitted MAE columns, ensuring the reported percentages are not fabricated. Then it compares the recomputed value to paper gold. Full recompute from raw predictions is infeasible because the verifier lacks the dataset and cross-validation splits; thus T0 result-level compare against gold supplementing internal recompute.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "comparison_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold percentage reduction values for five properties: k* 34.7%, D* 29.1%, k_chem -6.6%, D_chem -1.5%, ASR 27.0%",
+      "source_provenance": "Extracted from the paper's Figure 1 discussion and main text.",
+      "generation_method": "Direct copy of the paper's reported percentages.",
+      "why_not_fabricated": "These are the values the original paper publishes for the exact comparison the task aims to reproduce; the reference oracle writes them directly to ensure full score."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "comparison_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "MAE_ML",
+            "MAE_O_pband",
+            "percent_reduction"
+          ],
+          "units": {}
+        },
+        "description": "CSV containing the average MAE values from 25×5-fold cross-validation and the computed percentage reduction when using elemental-feature random forest relative to O p-band center linear regression, for each of five catalytic properties at 500°C."
+      }
+    ],
+    "notes": "The checker will recompute percent_reduction from the provided MAE values as a consistency check and then compare each percent_reduction against hidden gold values with a tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_kstar",
+      "output_file": "comparison_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_property": "k*",
+      "gold_value": 34.7,
+      "tolerance_abs": 5.0,
+      "notes": "Percentage reduction for k*"
+    },
+    {
+      "id": "step_Dstar",
+      "output_file": "comparison_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_property": "D*",
+      "gold_value": 29.1,
+      "tolerance_abs": 5.0
+    },
+    {
+      "id": "step_kchem",
+      "output_file": "comparison_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_property": "k_chem",
+      "gold_value": -6.6,
+      "tolerance_abs": 5.0
+    },
+    {
+      "id": "step_Dchem",
+      "output_file": "comparison_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_property": "D_chem",
+      "gold_value": -1.5,
+      "tolerance_abs": 5.0
+    },
+    {
+      "id": "step_ASR",
+      "output_file": "comparison_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_property": "ASR",
+      "gold_value": 27.0,
+      "tolerance_abs": 5.0
+    }
+  ]
+}

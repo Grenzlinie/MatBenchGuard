@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the cubic-averaged elastic constants (C̄₁₁, C̄₁₂, C̄₄₄) and the dimensionless Euclidean distance metric from the agent's raw 6×6 stiffness tensor and compares them to the paper's Table VII values with tolerances; it also verifies the monotonic pressure trend.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "elastic_tensors.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for cubic-averaged elastic constants (C̄₁₁, C̄₁₂, C̄₄₄) and dimensionless Euclidean distance metric for three simulation cases.",
+      "source_provenance": "Paper Table VII: Ebrahimi et al., J. Chem. Phys. 140, 154309 (2014).",
+      "generation_method": "Values transcribed directly from the published Table VII.",
+      "why_not_fabricated": "They are the exact paper-reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_tensors.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "D500_P1": "object",
+            "D1000_P1": "object",
+            "D1000_P10": "object"
+          },
+          "properties": {
+            "D500_P1": {
+              "type": "object",
+              "required": [
+                "mean"
+              ],
+              "properties": {
+                "mean": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 6,
+                    "maxItems": 6,
+                    "items": {
+                      "type": "number",
+                      "unit": "GPa"
+                    }
+                  },
+                  "minItems": 6,
+                  "maxItems": 6
+                }
+              }
+            }
+          }
+        },
+        "description": "Mean full 6×6 elastic stiffness tensor (Voigt notation) in GPa for each of the three simulation conditions. The checker recomputes cubic-averaged constants and Euclidean distance from the submitted raw matrices and compares them against the paper's reference values."
+      }
+    ],
+    "notes": "The elastic tensors are the core scored artifact. The checker does not rely on any other agent-written file. All derived quantities (C11_avg, C12_avg, C44_avg, Euclidean distance) are recomputed deterministically from the submitted tensors."
+  },
+  "steps": [
+    {
+      "id": "derived_elastic_quantities",
+      "output_file": "elastic_tensors.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold_cases": {
+        "D500_P1": {
+          "C11_avg": 0.51,
+          "C12_avg": 0.13,
+          "C44_avg": 0.1,
+          "dist": 0.18
+        },
+        "D1000_P1": {
+          "C11_avg": 0.98,
+          "C12_avg": 0.14,
+          "C44_avg": 0.08,
+          "dist": 0.22
+        },
+        "D1000_P10": {
+          "C11_avg": 4.07,
+          "C12_avg": 0.53,
+          "C44_avg": 0.44,
+          "dist": 0.43
+        }
+      },
+      "tolerances": {
+        "C11_avg": 0.1,
+        "C12_avg": 0.05,
+        "C44_avg": 0.05,
+        "dist": 0.1
+      }
+    }
+  ]
+}

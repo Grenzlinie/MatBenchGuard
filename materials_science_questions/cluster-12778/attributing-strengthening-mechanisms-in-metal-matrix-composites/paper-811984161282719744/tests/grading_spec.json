@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Percentages are recomputed from the raw strength increments provided by the agent and compared to the paper's explicitly reported approximate contributions (~80%, ~14%, ~6%) using an absolute tolerance of ±5 percentage points, providing a genuine recompute-based verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "strengthening_contributions.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target percentage contributions for load sharing, Hall-Petch, and Orowan strengthening in PA Ti-64-1.6B.",
+      "source_provenance": "Paper (JOM 2004, doi:10.1007/s11837-004-0131-5), section MECHANICAL PROPERTIES: \"The majority of the strengthening (~80%) derives from the load sharing mechanism ... Hall-Petch strengthening (~14%) due to grain refinement and Orowan (~6%) strengthening\".",
+      "generation_method": "Extracted directly from the published article text as approximate percentages.",
+      "why_not_fabricated": "Values are explicitly quoted as approximate percentages in the published paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "strengthening_contributions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "load_sharing_increment_MPa": "number",
+            "hall_petch_increment_MPa": "number",
+            "orowan_increment_MPa": "number",
+            "total_increment_MPa": "number"
+          },
+          "units": {
+            "load_sharing_increment_MPa": "MPa",
+            "hall_petch_increment_MPa": "MPa",
+            "orowan_increment_MPa": "MPa",
+            "total_increment_MPa": "MPa"
+          }
+        },
+        "description": "JSON object containing the predicted strength increments from load sharing, Hall-Petch, and Orowan mechanisms, plus the sum."
+      }
+    ],
+    "notes": "The checker will compute the percentage contribution of each mechanism (increment / total * 100) and compare each to hidden reference values derived from the paper within a tolerance. The output file must contain the four numeric fields."
+  },
+  "steps": [
+    {
+      "id": "strengthening_percentages",
+      "output_file": "strengthening_contributions.json",
+      "kind": "recompute_percentages",
+      "weight": 1.0,
+      "target_percentages": {
+        "load_sharing": 80.0,
+        "hall_petch": 14.0,
+        "orowan": 6.0
+      },
+      "tolerance": 5.0,
+      "mechanisms": [
+        "load_sharing",
+        "hall_petch",
+        "orowan"
+      ]
+    }
+  ]
+}

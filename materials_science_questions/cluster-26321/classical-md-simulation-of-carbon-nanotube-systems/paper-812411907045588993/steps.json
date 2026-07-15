@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_1_hh2_potential",
+    "title": "Derive effective H-H2 interaction potential",
+    "role": "process",
+    "action": "Implement the generalized Lennard-Jones potential for the H-H2 interaction using the parameters provided in the task instruction (ε=7.2435 K and the specified coefficients in Eq. 1). The potential must be usable in subsequent GCMC simulations.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_relax_clean",
+    "title": "Relax clean SWNT structures",
+    "role": "process",
+    "action": "Using a structure relaxation method (tight-binding molecular dynamics, density-functional based tight-binding, or classical force field minimization), relax the atomic geometries of (15,0) and (6,6) single-wall carbon nanotubes at T=0 K. Output the final atomic coordinates for each nanotube.",
+    "output_file": "",
+    "evidence": "clean_geometries_15_0.xyz and clean_geometries_6_6.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_relax_hydrogenated",
+    "title": "Generate and relax hydrogenated SWNTs",
+    "role": "process",
+    "action": "For each nanotube chirality ((15,0) and (6,6)), place H atoms on the outer surface to achieve fractional coverages c_H = 0.0, 0.1, 0.2, 0.3, 0.4, 0.5. Relax each configuration at T=0 K using the same relaxation method as in Step 2. Save the relaxed coordinates for all coverages.",
+    "output_file": "",
+    "evidence": "hydrogenated_geometries/ directory containing relaxed structures for each coverage and tube",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_relax_oxidized",
+    "title": "Generate and relax oxidized SWNT",
+    "role": "process",
+    "action": "For the (6,6) nanotube, remove approximately 19 carbon atoms from the sidewall to create an ellipsoidal cavity (~40% surface oxidation) and saturate the dangling bonds with H atoms. Relax the structure at T=0 K and save the relaxed atomic geometry.",
+    "output_file": "",
+    "evidence": "oxidized_geometry_6_6.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5_matrix_calibration",
+    "title": "Build matrices and calibrate free-gas GCMC",
+    "role": "process",
+    "action": "For each relaxed nanotube structure, build a square-lattice supercell with the tube axis along z and an intertube wall-to-wall distance D=7 Å. Run GCMC simulations of pure H2 gas in a periodic box at T=77, 150, 293 K to determine the relation between chemical potential μ and density (or pressure), which will be used to set μ for the desired pressures in adsorption runs.",
+    "output_file": "",
+    "evidence": "free_gas_calibration.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6_gcmc_adsorption",
+    "title": "Run GCMC adsorption simulations and collect results",
+    "role": "scored",
+    "action": "For all prepared matrices (clean (15,0) and (6,6); hydrogenated (15,0) and (6,6) at each coverage; oxidized (6,6)), run GCMC adsorption simulations using the Lennard-Jones parameters for C, H2, and the effective H-H2 potential. Coverage scan: T=293 K, P=10 MPa, compute average H2 density ⟨ρ⟩ for each c_H. Isotherms: for clean (15,0), hydrogenated (15,0) at c_H=0.1, and oxidized (6,6), run GCMC at T=77, 150, 293 K over a pressure range from 0 to 40 MPa, computing gravimetric capacity (wt%) and volumetric capacity (kg/m³). Aggregate all results into a single JSON file.",
+    "output_file": "adsorption_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Complete set of computed H2 adsorption data: coverage scan and adsorption isotherms for chemically modified SWNT matrices.",
+    "output_schema": "JSON object with keys: coverage_scan (array of {tube, coverage, density}); isotherms_clean (array of {tube, temperature, pressure, gravimetric_capacity, volumetric_capacity}); isotherms_hydrogenated (same shape, coverage=0.1); isotherms_oxidized (tube '6,6'). Density in Å^-3, gravimetric in wt%, volumetric in kg/m^3, pressure in MPa."
+  }
+]

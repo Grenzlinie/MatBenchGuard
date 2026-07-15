@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Free-energy steps are recomputed from the CSV table and compared to paper target values; Bader charge is read directly and compared to paper target. Both are recompute-from-raw.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "oer_free_energies.csv": "reference_match",
+    "bader_charge.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for OER free energy changes and Bader charge",
+      "source_provenance": "Paper manuscript text and Figure 5g (CoP PDS 2.79 eV; complex O->OOH 2.35 eV; complex OOH->O2 2.58 eV; Bader charge +3.44 |e|).",
+      "generation_method": "Directly extracted from the paper's Results and Discussion and DFT calculation description.",
+      "why_not_fabricated": "Values are verbatim from the paper, manually cross-checked."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "oer_free_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Step",
+            "dG_CoP",
+            "dG_complex"
+          ],
+          "units": {
+            "dG_CoP": "eV",
+            "dG_complex": "eV"
+          }
+        },
+        "description": "Gibbs free energy steps for OER on CoP and on CoP/Co-PBA complex."
+      },
+      {
+        "file": "bader_charge.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "content": "a single float value, the net Bader charge on the CoP cluster in the CoP/Co-PBA complex (units: |e|, positive = electron loss from CoP)"
+        },
+        "description": "Net electron transfer from CoP to PBA substrate via Bader charge analysis."
+      }
+    ],
+    "notes": "The checker compares the Gibbs free energy changes of the potential-determining step for the complex to paper-reported values and enforces the trend that *O->*OOH ΔG on complex is lower than on pristine CoP. For Bader charge, it checks the sign is positive and the magnitude within tolerance."
+  },
+  "steps": [
+    {
+      "id": "oer_gibbs_eval",
+      "output_file": "oer_free_energies.csv",
+      "kind": "gibbs_free_energy",
+      "weight": 0.6,
+      "target_dG_CoP_O_to_OOH": 2.79,
+      "target_dG_complex_O_to_OOH": 2.35,
+      "target_dG_complex_OOH_to_O2": 2.58,
+      "tolerance_abs": 0.2
+    },
+    {
+      "id": "bader_charge_eval",
+      "output_file": "bader_charge.txt",
+      "kind": "bader_charge",
+      "weight": 0.4,
+      "target_charge": 3.44,
+      "tolerance_abs": 1.0
+    }
+  ]
+}

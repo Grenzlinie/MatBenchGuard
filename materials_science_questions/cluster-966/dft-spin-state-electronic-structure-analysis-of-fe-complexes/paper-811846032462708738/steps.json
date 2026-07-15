@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build initial molecular models",
+    "role": "process",
+    "action": "Construct 3D molecular models for the peroxo intermediate P (Fe2(HPTM)(μ‑OH)(μ‑η1:η1‑O2) with two Fe(III)) and the bis‑ferryl intermediate Q (Fe2(HPTM)(μ‑OH)(O)2 with two Fe(IV)). Generate initial Cartesian coordinates in XYZ format as starting points for DFT optimization.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The agent must deduce a reasonable connectivity and build the dinuclear cores. The initial geometries do not need to be accurate; DFT optimization will refine them.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Perform DFT geometry optimization",
+    "role": "process",
+    "action": "Perform full geometry optimization at the B3LYP level with an effective core potential basis set (e.g., LANL2DZ augmented with polarization functions) on both intermediates P and Q. Use an implicit solvation model (water) to mimic the aqueous environment. Set the charge and spin multiplicity appropriate for high‑spin Fe(III) coupling in P and high‑spin Fe(IV) in Q. Converge the optimizations to standard thresholds.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The DFT runs are the main computational workload. The agent must produce optimized geometries and total energies for the two intermediates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Extract relative energy and key distances",
+    "role": "scored",
+    "action": "From the final DFT total energies of P and Q, compute ΔE = E(P) − E(Q) in kcal/mol. Extract the Fe–Fe distance (Å) from the P geometry, the O–O distance (Å) of the peroxo group in P, and the two Fe=O bond distances (Å) from the Q geometry. Output these quantities in a JSON file.",
+    "output_file": "relative_energy_and_geometry.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This JSON file captures the headline quantities: the stability margin and key structural parameters. The checker will compare the values against the paper’s reference with tolerances (±3 kcal/mol for energy, ±0.05 Å for distances).",
+    "output_schema": "{\n  \"delta_E_kcal_per_mol\": float,   // ΔE = E(P) − E(Q)\n  \"Fe_Fe_distance_P_Angstrom\": float,\n  \"O_O_distance_P_Angstrom\": float,\n  \"Fe_O_distance_Q_Angstrom\": [float, float]   // two Fe=O bond lengths, order does not matter\n}"
+  },
+  {
+    "id": "step_04",
+    "title": "Save optimized geometry of P in XYZ format",
+    "role": "scored",
+    "action": "Write the final optimized Cartesian coordinates of the peroxo intermediate P to an XYZ file, including atomic symbols and coordinates.",
+    "output_file": "optimized_geometry_P.xyz",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The XYZ file serves as an independent record of the optimized structure. The checker will verify existence, atom count, and that the O–O distance computed from these coordinates matches the value in relative_energy_and_geometry.json within 0.01 Å.",
+    "output_schema": "Standard XYZ format: first line atom count, second line comment, then element symbol and x y z per atom."
+  },
+  {
+    "id": "step_05",
+    "title": "Save optimized geometry of Q in XYZ format",
+    "role": "scored",
+    "action": "Write the final optimized Cartesian coordinates of the bis‑ferryl intermediate Q to an XYZ file, including atomic symbols and coordinates.",
+    "output_file": "optimized_geometry_Q.xyz",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The XYZ file serves as an independent record of the optimized structure. The checker will verify existence, atom count, and that the two Fe=O distances computed from these coordinates match the values in relative_energy_and_geometry.json within 0.01 Å.",
+    "output_schema": "Standard XYZ format: first line atom count, second line comment, then element symbol and x y z per atom."
+  }
+]

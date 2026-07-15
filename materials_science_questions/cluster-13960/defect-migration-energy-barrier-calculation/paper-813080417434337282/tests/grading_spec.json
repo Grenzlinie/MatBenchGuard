@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Voltage curve metrics (average voltage and step sizes) recomputed from raw curve; migration barriers compared to paper-reported GGA+U values with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "voltage_curve_293K.txt": "metric_recompute",
+    "migration_barriers.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for scoring voltage curve and migration barriers",
+      "source_provenance": "Paper (Fig. 5 and Fig. 7); values extracted from the results section.",
+      "generation_method": "Manually extracted from paper text and matched to the reference solver's output to ensure consistency.",
+      "why_not_fabricated": "These are the actual paper-reported values; the solver produces a voltage curve whose average is 3.6 V and step sizes 0.22 V, 0.15 V; barrier values are 930, 690, 1250, 700, 980, 1200 meV as in paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "voltage_curve_293K.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x_Mg",
+            "V"
+          ],
+          "units": {
+            "x_Mg": "dimensionless",
+            "V": "V"
+          }
+        },
+        "description": "Room‑temperature voltage–composition curve V(x) for MgxCr2O4. The checker recomputes the average voltage and voltage‑step magnitudes at x≈0.33 and x≈0.50 from this curve."
+      },
+      {
+        "file": "migration_barriers.txt",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "barrier_GGA+U"
+          ],
+          "units": {
+            "barrier_GGA+U": "meV"
+          }
+        },
+        "description": "Table of Mg migration barriers for six specified configurations. The checker compares each barrier to a hidden reference value."
+      }
+    ],
+    "notes": "The voltage curve artifact enables recomputation of average voltage and voltage steps; the migration barriers are compared directly to paper‑reported values. Both artifacts must be produced."
+  },
+  "steps": [
+    {
+      "id": "voltage_curve_check",
+      "output_file": "voltage_curve_293K.txt",
+      "weight": 0.6,
+      "kind": "recompute_metric",
+      "description": "Recompute average voltage and step sizes at x=0.33 and 0.50",
+      "avg_voltage_target": 3.6,
+      "avg_voltage_tol": 0.2,
+      "step33_target": 0.22,
+      "step50_target": 0.15,
+      "step_tol": 0.05
+    },
+    {
+      "id": "migration_barriers_check",
+      "output_file": "migration_barriers.txt",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "description": "Compare each GGA+U barrier to paper reference within 100 meV",
+      "barrier_targets": {
+        "dilute_Mg": 930,
+        "dilute_Va": 690,
+        "33%_+Va": 1250,
+        "33%_+Mg": 700,
+        "50%_+Va": 980,
+        "50%_+Mg": 1200
+      },
+      "barrier_tol": 100
+    }
+  ]
+}

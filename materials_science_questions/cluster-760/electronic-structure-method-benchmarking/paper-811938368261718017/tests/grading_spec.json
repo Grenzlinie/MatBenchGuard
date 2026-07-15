@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "J_calc cannot be recomputed in the verifier sandbox; compare reported J_calc to hidden experimental references with monotonic deviation-based scoring that enforces expected functional performance patterns.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_j_coupling_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "experimental 1JCH reference values for fluorocyclohexane (axial, equatorial) and 2-chloropyran (anomeric)",
+      "source_provenance": "Paper Table 1 (fluorocyclohexane) and Table 2 (2-chloropyran)",
+      "generation_method": "extracted from the published paper; embedded inline in grading_spec.json",
+      "why_not_fabricated": "These are the actual published experimental coupling constants from the source paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_j_coupling_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "position",
+            "functional",
+            "J_calc"
+          ],
+          "units": {
+            "J_calc": "Hz"
+          }
+        },
+        "description": "Computed 1JCH coupling constants in Hz. The hidden checker will compare each reported J_calc against experimental reference values, computing the deviation ΔJ = J_calc − J_exp. The score is based on whether the deviations fall within predetermined tolerance bands and reflect the expected functional performance trends."
+      }
+    ],
+    "notes": "The hidden checker holds experimental 1JCH values for fluorocyclohexane (axial and equatorial) and 2-chloropyran (anomeric C-H). The tolerances are set to accommodate legitimate method-dependent variations arising from using ORCA instead of Gaussian 03."
+  },
+  "steps": [
+    {
+      "id": "step_01_j_coupling_results.csv",
+      "output_file": "step_01_j_coupling_results.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "hidden_experimental": {
+        "fluorocyclohexane": {
+          "axial": 150.3,
+          "equatorial": 152.8
+        },
+        "2-chloropyran": {
+          "anomeric": 163.3
+        }
+      },
+      "score_rules": {
+        "fluorocyclohexane": {
+          "B3LYP": {
+            "type": "small_deviation",
+            "full_credit_abs_max": 3.0,
+            "zero_credit_abs_min": 10.0
+          },
+          "BLYP": {
+            "type": "small_deviation",
+            "full_credit_abs_max": 3.0,
+            "zero_credit_abs_min": 10.0
+          },
+          "PBEPBE": {
+            "type": "large_negative_deviation",
+            "full_credit_delta_max": -8.0,
+            "zero_credit_delta_min": -3.0
+          }
+        },
+        "2-chloropyran": {
+          "B3LYP": {
+            "type": "large_positive_deviation",
+            "full_credit_delta_min": 12.0,
+            "zero_credit_delta_max": 6.0
+          },
+          "BLYP": {
+            "type": "large_positive_deviation",
+            "full_credit_delta_min": 12.0,
+            "zero_credit_delta_max": 6.0
+          },
+          "PBEPBE": {
+            "type": "small_deviation",
+            "full_credit_abs_max": 3.0,
+            "zero_credit_abs_min": 10.0
+          }
+        }
+      }
+    }
+  ]
+}

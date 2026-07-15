@@ -1,0 +1,270 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Pressure derivatives and Anderson–Grüneisen parameter are recomputed from the agent’s SOECs and TOECs using the paper’s closed-form expressions; the rest are compared to paper-reported values with tolerances. This provides a strong internal consistency check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Stores all hidden gold values for the six output artifacts: potential parameters, SOECs / aggregates, TOECs, pressure derivatives, mode Grüneisen anchor points, and low‑temperature γ_L and δ.",
+      "source_provenance": "Paper Tables 1–5 and the description of Figure 1.",
+      "generation_method": "Values were extracted verbatim from the published tables; mode Grüneisen anchor values were derived from the explicit numeric ranges given in the paper’s discussion (e.g. γ1 min=1.5 at 35°, max=2.4 at 90°, etc.).",
+      "why_not_fabricated": "All numbers are directly traceable to the paper’s reported results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fitted_potential_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "alpha_GPa",
+            "lambda_GPa",
+            "sigma_GPa",
+            "beta_TPa",
+            "zeta_TPa",
+            "nu_TPa"
+          ],
+          "units": {
+            "alpha_GPa": "GPa",
+            "lambda_GPa": "GPa",
+            "sigma_GPa": "GPa",
+            "beta_TPa": "TPa",
+            "zeta_TPa": "TPa",
+            "nu_TPa": "TPa"
+          }
+        },
+        "description": "Fitted second-order and third-order potential parameters."
+      },
+      {
+        "file": "soecs_and_aggregates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value_GPa_or_dimensionless"
+          ],
+          "units": {
+            "value_GPa_or_dimensionless": "GPa for moduli; dimensionless for anisotropy factor A"
+          }
+        },
+        "description": "Second-order elastic constants C11, C12, C44 and aggregate properties (C_L, C_prime, bulk modulus K, Cauchy pressure P, anisotropy factor A)."
+      },
+      {
+        "file": "toecs.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "constant",
+            "value_TPa"
+          ],
+          "units": {
+            "value_TPa": "TPa"
+          }
+        },
+        "description": "Third-order elastic constants C111, C112, C123, C144, C155, C456."
+      },
+      {
+        "file": "pressure_derivatives.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "derivative",
+            "value"
+          ],
+          "units": {}
+        },
+        "description": "Pressure derivatives of second-order elastic constants: dC11/dp, dC12/dp, dC44/dp."
+      },
+      {
+        "file": "mode_gruneisen_params.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "angle_deg",
+            "mode",
+            "gamma"
+          ],
+          "units": {
+            "gamma": "dimensionless",
+            "angle_deg": "degrees"
+          }
+        },
+        "description": "Mode Grüneisen parameters for acoustic branches at high-symmetry directions and in the (010) plane."
+      },
+      {
+        "file": "gamma_L_and_delta.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "gamma_L",
+            "delta"
+          ],
+          "units": {
+            "gamma_L": "dimensionless",
+            "delta": "dimensionless"
+          }
+        },
+        "description": "Low-temperature limit of thermal expansion and Anderson–Grüneisen parameter."
+      }
+    ],
+    "notes": "All quantities are compared to hidden paper-reported reference values with appropriate tolerances. The agent must produce every listed file; missing files score zero for that step."
+  },
+  "steps": [
+    {
+      "id": "step1_fit_params",
+      "output_file": "fitted_potential_params.json",
+      "weight": 0.1,
+      "check_type": "reference_match",
+      "gold": {
+        "alpha_GPa": 27.45,
+        "lambda_GPa": -14.52,
+        "sigma_GPa": 9.51,
+        "beta_TPa": -0.59,
+        "zeta_TPa": -0.05,
+        "nu_TPa": -0.06
+      },
+      "tolerance_abs": {
+        "alpha_GPa": 0.5,
+        "lambda_GPa": 0.5,
+        "sigma_GPa": 0.5,
+        "beta_TPa": 0.05,
+        "zeta_TPa": 0.05,
+        "nu_TPa": 0.05
+      }
+    },
+    {
+      "id": "step2_soecs",
+      "output_file": "soecs_and_aggregates.csv",
+      "weight": 0.25,
+      "check_type": "reference_match",
+      "gold": {
+        "C11": 142.32,
+        "C12": 124.32,
+        "C44": 95.28,
+        "C_L": 228.6,
+        "C_prime": 9.0,
+        "K": 130.32,
+        "P": 29.04,
+        "A": 10.59
+      },
+      "tolerance_abs": {
+        "C11": 0.5,
+        "C12": 0.5,
+        "C44": 0.5,
+        "C_L": 0.5,
+        "C_prime": 0.5,
+        "K": 1.0,
+        "P": 1.0,
+        "A": 0.5
+      }
+    },
+    {
+      "id": "step3_toecs",
+      "output_file": "toecs.csv",
+      "weight": 0.25,
+      "check_type": "reference_match",
+      "gold": {
+        "C111": -1.68,
+        "C112": -0.64,
+        "C123": -0.44,
+        "C144": -0.54,
+        "C155": -0.64,
+        "C456": -0.59
+      },
+      "tolerance_abs": {
+        "C111": 0.02,
+        "C112": 0.02,
+        "C123": 0.02,
+        "C144": 0.02,
+        "C155": 0.02,
+        "C456": 0.02
+      }
+    },
+    {
+      "id": "step4_pressure_deriv",
+      "output_file": "pressure_derivatives.csv",
+      "weight": 0.1,
+      "check_type": "recompute",
+      "gold": null
+    },
+    {
+      "id": "step5_mode_gruneisen",
+      "output_file": "mode_gruneisen_params.csv",
+      "weight": 0.2,
+      "check_type": "reference_match",
+      "anchor_points": [
+        {
+          "direction": "(010)",
+          "angle_deg": 0,
+          "mode": "qT2",
+          "gamma": 2.4
+        },
+        {
+          "direction": "(010)",
+          "angle_deg": 90,
+          "mode": "qT2",
+          "gamma": 3.9
+        },
+        {
+          "direction": "(010)",
+          "angle_deg": 35,
+          "mode": "qT1",
+          "gamma": 1.5
+        },
+        {
+          "direction": "(010)",
+          "angle_deg": 90,
+          "mode": "qT1",
+          "gamma": 2.4
+        },
+        {
+          "direction": "(010)",
+          "angle_deg": 0,
+          "mode": "qL",
+          "gamma": 2.4
+        },
+        {
+          "direction": "(010)",
+          "angle_deg": 55,
+          "mode": "qL",
+          "gamma": 7.1
+        }
+      ],
+      "tolerance_abs": 0.5
+    },
+    {
+      "id": "step6_gamma_l_delta",
+      "output_file": "gamma_L_and_delta.json",
+      "weight": 0.1,
+      "check_type": "reference_match",
+      "gold": {
+        "gamma_L": 4.6,
+        "delta": 8.4
+      },
+      "tolerance_abs": {
+        "gamma_L": 0.5,
+        "delta": 1.0
+      }
+    }
+  ]
+}

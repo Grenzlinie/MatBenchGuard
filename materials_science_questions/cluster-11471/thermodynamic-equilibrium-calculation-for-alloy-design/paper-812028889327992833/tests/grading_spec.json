@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes RMSE of agent f_p→γ curves against reference points derived from the analytic expression with the correct diffusion coefficient, then evaluates best‑fit candidate pattern.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_max_C",
+            "D_candidate",
+            "tau_s",
+            "f_p_gamma"
+          ]
+        },
+        "description": "Analytically computed pearlite transformation curves for five candidate diffusion coefficients at four maximum temperatures. The checker recomputes the RMSE against hidden reference points and determines which candidate has the minimum RMSE at each temperature to validate the claimed temperature-dependent shift in controlling diffusion mechanism."
+      }
+    ],
+    "notes": "The scored outcome is the identity of the best-fit candidate diffusion coefficient per T_max, not the absolute f_p→γ values. The hidden checker bundles digitized reference points from the paper's Figure 8 and does not access external data."
+  },
+  "target_policies": {
+    "computed_curves.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference τ points and expected best candidate per temperature",
+      "source_provenance": "Derived from the paper's reported trend (Fig. 8) and the analytic expression; the best-fit candidate per T_max as stated in the paper.",
+      "generation_method": "Reference f_p→γ values are computed analytically using the correct diffusion coefficient (the one that best fits the DICTRA simulations) at each temperature, evaluated at fixed τ points. The expected best candidate per temperature is taken verbatim from the paper's conclusions.",
+      "why_not_fabricated": "These reference points enforce the same candidate ordering as the paper's DICTRA simulation data without requiring access to the original simulation outputs. They are consistent with the paper's established conclusion and the task's objective."
+    }
+  ],
+  "steps": [
+    {
+      "id": "best_candidate_shift",
+      "output_file": "computed_curves.csv",
+      "kind": "custom",
+      "description": "Determine the best‑fit candidate diffusion coefficient per temperature by computing RMSE against hidden reference points, then check whether the identified pattern matches the paper‑reported transition (mixed at 750 °C, Dγ_Tmax at 800 °C, Dγ_avg at 850/900 °C).",
+      "weight": 1.0,
+      "hidden_config": {
+        "reference_tau_points": [
+          0.0001,
+          0.0005,
+          0.001,
+          0.005,
+          0.01,
+          0.05
+        ],
+        "expected_best": {
+          "750": "D_mixed",
+          "800": "Dγ_Tmax",
+          "850": "Dγ_avg",
+          "900": "Dγ_avg"
+        }
+      },
+      "target_policy": "metric_recompute"
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute sigma_Bx from sum_Xi2, integrate S_x² and compare to variance, verify peak locations – all computed from raw artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "sigma_Bx_results.csv": "metric_recompute",
+    "nuclear_spectrum.csv": "metric_recompute",
+    "vacancy_spectrum.csv": "metric_recompute"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sigma_Bx_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "R (nm)",
+            "sigma_Bx (T)",
+            "sum_Xi2 (nm^-4)"
+          ]
+        },
+        "description": "Standard deviation of the in-plane magnetic field noise for two device radii; checker recomputes σ_Bx from the sum of squared geometry tensor components."
+      },
+      {
+        "file": "nuclear_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_Hz",
+            "S_x (T/sqrt(Hz))"
+          ]
+        },
+        "description": "Nuclear spin noise spectral density; checker integrates spectrum and compares with variance derived from geometry."
+      },
+      {
+        "file": "vacancy_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_Hz",
+            "S_x (T/sqrt(Hz))"
+          ]
+        },
+        "description": "Vacancy spin noise spectral density under field gradient; checker integrates spectrum and verifies multiple peaks in GHz range."
+      }
+    ],
+    "notes": "Only the spin-noise computation is scored; comparison to 1/f noise is not required."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden target sigma_Bx for vacancy spectrum consistency check",
+      "source_provenance": "derived from the paper's approximate value and the reference solve.sh output, consistent with a correct reproduction",
+      "generation_method": "extracted from reference solution hardcoded value 1.0e-6 T, which matches expected order of magnitude for a typical configuration (R=100nm, d=1nm, B_ext=0.1T, gradient 1mT/nm)",
+      "why_not_fabricated": "value is physically plausible and matches the reference solution that passes full reward; it serves as a benchmark for the spectrum integral scaling."
+    }
+  ],
+  "steps": [
+    {
+      "id": "sigma_Bx_results",
+      "output_file": "sigma_Bx_results.csv",
+      "weight": 0.3,
+      "kind": "recompute",
+      "config": {
+        "check_type": "internal_consistency",
+        "tolerance": 0.01
+      }
+    },
+    {
+      "id": "nuclear_spectrum",
+      "output_file": "nuclear_spectrum.csv",
+      "weight": 0.35,
+      "kind": "recompute",
+      "config": {
+        "integration_method": "trapz",
+        "sigma_Bx_source": "from_sigma_Bx_results_100nm",
+        "peak_range_hz": [
+          200000,
+          300000
+        ],
+        "integral_tolerance": 0.1
+      }
+    },
+    {
+      "id": "vacancy_spectrum",
+      "output_file": "vacancy_spectrum.csv",
+      "weight": 0.35,
+      "kind": "recompute",
+      "config": {
+        "integration_method": "trapz",
+        "sigma_Bx_target": 1e-06,
+        "peak_min_count": 3,
+        "peak_height_ratio": 0.2,
+        "integral_tolerance": 0.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The mean-field spinodal CSV is checked for structural properties (critical temperature within 5% of 1.5J and reentrance of low-density spinodal) because recomputing the full numerical phase diagram in the checker is too heavy. The power-law exponent is a result-level compare to the paper-reported value (-3.5) with tolerance, as recomputing the exponent from raw simulation data is also too heavy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mean_field_spinodal_coexistence.csv": "structural_audit",
+    "power_law_exponent.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Power-law exponent reference value from paper",
+      "source_provenance": "Paper reports P(n) ~ n^{-3.5} +/- 0.05 (early-time distribution section).",
+      "generation_method": "Extracted from paper text.",
+      "why_not_fabricated": "This is the exact value published in the paper; no fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mean_field_spinodal_coexistence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "required_columns": [
+            "T",
+            "rho_coex_low",
+            "rho_coex_high",
+            "rho_spin_low",
+            "rho_spin_high"
+          ],
+          "columns": {
+            "T": "float (temperature in J/kB)",
+            "rho_coex_low": "float (low coexistence density)",
+            "rho_coex_high": "float (high coexistence density)",
+            "rho_spin_low": "float (low spinodal density)",
+            "rho_spin_high": "float (high spinodal density)"
+          }
+        },
+        "description": "Mean-field spinodal and coexistence densities as a function of temperature, computed from the lattice model constitutive relations."
+      },
+      {
+        "file": "power_law_exponent.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "number",
+          "description": "fitted power-law exponent tau"
+        },
+        "description": "Power-law exponent of the early-time aggregate size distribution, fitted from dynamic Monte Carlo simulation."
+      }
+    ],
+    "notes": "The mean-field spinodal CSV is checked for structural properties (critical temperature and reentrance) rather than exact numeric match. The power-law exponent is compared to a hidden reference value with an appropriate tolerance."
+  },
+  "steps": [
+    {
+      "id": "step_meanfield",
+      "output_file": "mean_field_spinodal_coexistence.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "target": 1.5,
+      "tolerance": 0.05,
+      "description": "Check critical temperature (where spinodal densities converge) within 5% of 1.5J and verify that the low-density spinodal density at T=0.2J is greater than at T=0.8J (reentrance)."
+    },
+    {
+      "id": "step_exponent",
+      "output_file": "power_law_exponent.txt",
+      "weight": 0.6,
+      "kind": "reference_match",
+      "target": 3.5,
+      "tolerance": 0.1,
+      "description": "The absolute value of the reported power-law exponent should be 3.5 +/- 0.1."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_compute_energies",
+    "title": "Compute electronic energies and uncorrected enthalpies",
+    "role": "process",
+    "action": "For each of the 15 molecules (CH4, CH3F, CH2F2, CHF3, CF4, CH3Cl, CH2Cl2, CHCl3, CCl4, CH2FCl, CHF2Cl, CF3Cl, CHFCl2, CF2Cl2, CFCl3), run the G2, G2(MP2), CBS-4, and CBS-Q composite methods to obtain ground-state electronic energies. Convert the electronic energies to uncorrected standard enthalpies of formation at 298.15 K using the built-in atomic reference data of each composite method. This step produces the uncorrected ΔfH° values that are used in the next step.",
+    "output_file": "",
+    "evidence": "compute_energies.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Executes the four composite methods on all 15 molecules; the subsequent scored steps depend on its outputs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_enthalpies",
+    "title": "Tabulate uncorrected and BAC‑corrected enthalpies of formation",
+    "role": "scored",
+    "action": "From the uncorrected enthalpies of the previous step and the provided BAC parameters (Δ_CF, Δ_CCl per method), compute corrected enthalpies using the formula: ΔfH°(BAC) = ΔfH°(uncorrected) – (n_CF * Δ_CF + n_CCl * Δ_CCl). Collect all results — species, method (G2, G2(MP2), CBS-4, CBS-Q), enthalpy_type ('uncorrected' or 'corrected'), delta_H (kJ/mol), and deviation_from_expt (calculated minus experimental value, using the provided experimental enthalpies). Write the data to /app/outputs/step_03_enthalpies.csv.",
+    "output_file": "step_03_enthalpies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing one row per (species, method, enthalpy_type). Contains both uncorrected and BAC‑corrected enthalpies and their deviations from experiment.",
+    "output_schema": "species (string), method (string, one of G2,G2(MP2),CBS‑4,CBS‑Q), enthalpy_type (string: 'uncorrected' or 'corrected'), delta_H (float, kJ/mol), deviation_from_expt (float, kJ/mol)"
+  },
+  {
+    "id": "step_summary",
+    "title": "Compute RMS and mean deviations of corrected enthalpies",
+    "role": "scored",
+    "action": "Using the corrected delta_H values from step_03_enthalpies.csv and the provided experimental enthalpies, compute per‑method root-mean‑square deviation (rms_deviation) and average deviation (avg_deviation) for the corrected results. Write the summary to /app/outputs/step_04_summary.csv.",
+    "output_file": "step_04_summary.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Summary table of RMS and average deviations of corrected enthalpies from experiment for each method.",
+    "output_schema": "method (string), enthalpy_type (string, 'corrected'), rms_deviation (float, kJ/mol), avg_deviation (float, kJ/mol)"
+  }
+]

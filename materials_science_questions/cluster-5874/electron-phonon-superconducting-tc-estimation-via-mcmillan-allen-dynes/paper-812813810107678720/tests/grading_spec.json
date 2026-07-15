@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recompute from raw DFT outputs is infeasible in the lightweight verifier; compare reported λ, ω_log, Tc against paper’s Table 1 values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "epc_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for λ, ω_log, Tc from the source paper Table 1.",
+      "source_provenance": "Paper Table 1",
+      "generation_method": "Copied from the published Table 1 in the paper.",
+      "why_not_fabricated": "These are the paper's reported quantitative results; the task objective is to reproduce them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "epc_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "0.2e_strain_0pct": {
+              "type": "object",
+              "required": [
+                "lambda",
+                "omega_log_cm1",
+                "Tc_K"
+              ]
+            },
+            "0.2e_strain_5pct": {
+              "type": "object",
+              "required": [
+                "lambda",
+                "omega_log_cm1",
+                "Tc_K"
+              ]
+            },
+            "Li_deposited": {
+              "type": "object",
+              "required": [
+                "lambda",
+                "omega_log_cm1",
+                "Tc_K"
+              ]
+            }
+          },
+          "units": {
+            "lambda": "dimensionless",
+            "omega_log_cm1": "cm^-1",
+            "Tc_K": "K"
+          }
+        },
+        "description": "Compiled electron‑phonon coupling constant λ, logarithmic average phonon frequency ω_log, and superconducting Tc for the three configurations. These quantities are compared to the paper's reported values with appropriate tolerances."
+      }
+    ],
+    "notes": "The agent must compute λ and ω_log from first‑principles DFT/DFPT before evaluating Tc. The checker performs a reference comparison (values within tolerance) and also verifies expected relative trends among the three systems."
+  },
+  "steps": [
+    {
+      "id": "epc_numeric",
+      "output_file": "epc_results.json",
+      "kind": "json_check",
+      "weight": 0.9,
+      "reference": {
+        "0.2e_strain_0pct": {
+          "lambda": 0.05,
+          "omega_log_cm1": 1956.573,
+          "Tc_K": 0.0
+        },
+        "0.2e_strain_5pct": {
+          "lambda": 0.09,
+          "omega_log_cm1": 1598.48,
+          "Tc_K": 0.0
+        },
+        "Li_deposited": {
+          "lambda": 0.86,
+          "omega_log_cm1": 258.268,
+          "Tc_K": 13.03
+        }
+      },
+      "tolerances": {
+        "lambda": 0.02,
+        "omega_log_cm1": 50.0,
+        "Tc_K_nonzero": 1.0,
+        "Tc_K_zero": 0.5
+      }
+    },
+    {
+      "id": "epc_trend",
+      "output_file": "epc_results.json",
+      "kind": "trend_check",
+      "weight": 0.1
+    }
+  ]
+}

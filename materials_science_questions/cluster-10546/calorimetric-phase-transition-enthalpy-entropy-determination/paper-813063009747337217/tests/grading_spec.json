@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ΔG at selected temperatures from the paper's formulas and compares each to the agent's CSV; summary is checked for consistency with those recomputed curves.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "gibbs_free_energies.csv": "reference_match",
+    "stability_summary.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected ΔG values at target temperatures (280,290,300,370,400 K) for fccl, dimer, polymer relative to fcc.",
+      "source_provenance": "Paper-reported transformation enthalpies (Q) and equilibrium temperatures (Teq) for dimer→fcc (10.5 kJ/mol, 280 K), fccl→fcc (4.8 kJ/mol, 290 K), polymer→fcc (25.8 kJ/mol, 370 K); heat-capacity assumption ΔCp = (3/2)R with R=8.314 J/(mol K).",
+      "generation_method": "Analytic integration: ΔH = Q - ΔCp*(Teq - T); ΔS = Q/Teq - ΔCp*ln(Teq/T); ΔG = ΔH - T·ΔS.",
+      "why_not_fabricated": "All inputs are the paper's own stated numbers and standard thermodynamics; no external labels or arbitrary constants are invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gibbs_free_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "G_fccl",
+            "G_dimer",
+            "G_polymer"
+          ],
+          "units": {
+            "T": "K",
+            "G_fccl": "kJ/mol",
+            "G_dimer": "kJ/mol",
+            "G_polymer": "kJ/mol"
+          }
+        },
+        "description": "CSV containing the temperature grid and the computed relative Gibbs free energies for the fccl, dimer, and polymer phases. The checker will recompute reference ΔG values at selected temperature points and compare within tolerance."
+      },
+      {
+        "file": "stability_summary.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {}
+        },
+        "description": "A plain text summary of the phase stability ordering. The checker will verify that the statements are logically consistent with the submitted Gibbs free energy curves and correctly capture the polymer as the most stable phase below ~370 K, the fcc above, and the dimer unstable relative to the polymer."
+      }
+    ],
+    "notes": "All necessary numerical inputs (Q, Teq, heat capacity assumption) are provided directly in the instruction. The agent must implement the thermodynamic integrals analytically or numerically. The checker will recompute ΔG at characteristic temperatures (e.g., 280, 290, 370, 400 K) using the same formulas and compare within a tolerance. The stability summary is checked for consistency with the CSV and the required qualitative ordering."
+  },
+  "steps": [
+    {
+      "id": "step01_compute_gibbs",
+      "output_file": "gibbs_free_energies.csv",
+      "kind": "gibbs_csv",
+      "weight": 0.8,
+      "tolerance_abs": 0.5,
+      "target_temps": [
+        280,
+        290,
+        300,
+        370,
+        400
+      ]
+    },
+    {
+      "id": "step02_stability_summary",
+      "output_file": "stability_summary.txt",
+      "kind": "stability_summary",
+      "weight": 0.2,
+      "required_phrases": [
+        "polymer",
+        "most stable",
+        "below 370",
+        "fcc",
+        "above 370",
+        "dimer",
+        "unstable"
+      ],
+      "csv_check_temps": {
+        "low": 250,
+        "high": 450
+      }
+    }
+  ]
+}

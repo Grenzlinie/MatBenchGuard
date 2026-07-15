@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step01_data_acquisition",
+    "title": "Acquire observed volume and Raman data",
+    "role": "process",
+    "action": "Obtain the observed unit-cell volume vs pressure data for PbTiO3 from Yong et al. (2008) and the observed Raman frequency vs pressure data for the eight modes (E(1TO), A1(1TO), E(2TO), A1(2TO), B1+E, E(3TO), A1(3TO), E(3LO)) from Sanjurjo et al. (1983). Digitize or extract the numerical data from the published tables/figures.",
+    "output_file": "",
+    "evidence": "observed_data.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Gather the required input datasets.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_fit_volume",
+    "title": "Fit unit-cell volume to quadratic polynomial",
+    "role": "process",
+    "action": "Fit the observed volume data V vs P to the quadratic V(P)=a0+a1*P+a2*P^2 using least squares. Store the coefficients a0, a1, a2 and the ambient volume V0=a0.",
+    "output_file": "",
+    "evidence": "volume_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain the volumetric equation-of-state coefficients.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_fit_frequencies",
+    "title": "Fit Raman mode frequencies to quadratic polynomials",
+    "role": "process",
+    "action": "For each Raman mode, fit the observed frequency data v vs P to v(P)=b0+b1*P+b2*P^2 using least squares. Store the coefficients b0, b1, b2 and the ambient frequency v0=b0 per mode.",
+    "output_file": "",
+    "evidence": "frequency_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain mode-specific frequency-pressure relations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04_compute_gruneisen",
+    "title": "Compute mode Grüneisen parameter",
+    "role": "scored",
+    "action": "Using the fitted volume and frequency polynomials, analytically compute the isothermal mode Grüneisen parameter γ_T(P) = d(ln v)/d(ln V) for each mode as a function of pressure. Evaluate at a set of pressures from 0 to 12 GPa.",
+    "output_file": "gruneisen_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Pressure-dependent mode Grüneisen parameter for each Raman mode.",
+    "output_schema": "mode (string), pressure_GPa (float), gamma_T (float)"
+  },
+  {
+    "id": "step05_compute_predicted",
+    "title": "Calculate raw predicted frequencies",
+    "role": "process",
+    "action": "For each mode, compute the predicted frequency v_T(P) = v0 * exp[-γ_T(P) * ln(V(P)/V0)] using the fitted volume, ambient frequency, and the computed γ_T(P) from the previous step. Produce raw predicted frequencies (v_cal) for each pressure.",
+    "output_file": "",
+    "evidence": "predicted_frequencies_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Uncalibrated computed Raman frequencies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step06_fit_calibration",
+    "title": "Fit empirical calibration between observed and calculated frequencies",
+    "role": "process",
+    "action": "For each mode, fit the observed frequencies v_obs vs the raw calculated frequencies v_cal to a quadratic calibration v_obs = a + b*v_cal + c*v_cal^2 using least squares. Obtain the per-mode calibration coefficients a, b, c.",
+    "output_file": "",
+    "evidence": "calibration_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Determine the mapping from raw predicted to observed frequencies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step07_final_frequencies",
+    "title": "Produce final calibrated Raman frequency table",
+    "role": "scored",
+    "action": "Using the fitted volume polynomial, the mode Grüneisen parameter functions, and the calibration coefficients, compute the predicted Raman frequency for each mode at pressures from 0 to 12 GPa in 0.5 GPa steps, apply the empirical calibration, and save the results.",
+    "output_file": "computed_raman_frequencies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final calibrated Raman frequencies for all eight modes at specified pressures.",
+    "output_schema": "mode (string), pressure_GPa (float), frequency_cm1 (float)"
+  }
+]

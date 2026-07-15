@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: the checker recomputes Qxx, Qyx and power factor using the paper's formulas and embedded material parameters, then compares the agent's numerical CSV values within tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magneto_thermopower.csv": "metric_recompute",
+    "power_factor.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Embedded material parameters and recompute formulas for magneto-thermopower and power factor derived from the paper.",
+      "source_provenance": "Derived from the paper's Eqs. 7, 13, 15, 22, 23 and reported numeric parameters (effective mass, band gap, spin-orbit splitting, electric field).",
+      "generation_method": "Constants and formulas are hardcoded in the checker scorer functions. No external hidden file needed; gold is recomputed on the fly.",
+      "why_not_fabricated": "The gold values are not arbitrary; they are the deterministic output of the paper's documented physics using its published material parameters. The checker recomputes them identically to a correct agent implementation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magneto_thermopower.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "B_field",
+            "spin",
+            "Qxx",
+            "Qyx"
+          ],
+          "units": {
+            "B_field": "T",
+            "spin": null,
+            "Qxx": "uV/K",
+            "Qyx": "uV/K"
+          }
+        },
+        "description": "Spin-resolved magneto-thermopower components as a function of magnetic field. The checker recomputes the expected values and compares with a relative tolerance of 1% or absolute 1 μV/K."
+      },
+      {
+        "file": "power_factor.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "carrier_density",
+            "spin",
+            "power_factor"
+          ],
+          "units": {
+            "carrier_density": "cm^-2",
+            "spin": null,
+            "power_factor": "uW/cmK^2"
+          }
+        },
+        "description": "Spin-resolved zero-field power factor as a function of carrier density. The checker recomputes the expected values and compares with a relative tolerance of 1% or absolute 0.1 μW/cm·K²."
+      }
+    ],
+    "notes": "The agent must use the formulas described in the problem. The hidden checker independently recomputes the results from the same fixed input parameters to validate the agent's output."
+  },
+  "steps": [
+    {
+      "id": "step_01_magneto_thermopower",
+      "output_file": "magneto_thermopower.csv",
+      "kind": "recompute",
+      "weight": 0.6,
+      "description": "Recompute Qxx and Qyx for each B and spin from the paper's formulas, compare with agent's values within relative 1% or absolute 1 uV/K; also check that spin-up Qxx (more negative) is smaller than spin-down Qxx."
+    },
+    {
+      "id": "step_02_power_factor",
+      "output_file": "power_factor.csv",
+      "kind": "recompute",
+      "weight": 0.4,
+      "description": "Recompute power factor for each carrier density and spin, compare with agent's values within relative 1% or absolute 0.1 uW/cmK^2; also check that spin-down PF > spin-up PF."
+    }
+  ]
+}

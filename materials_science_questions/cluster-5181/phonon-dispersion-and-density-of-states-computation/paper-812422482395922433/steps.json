@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_relax",
+    "title": "Structural relaxation",
+    "role": "process",
+    "action": "Optimize the lattice constants a and c for MgB2 and NbB2 in the P6/mmm crystal structure using a DFT plane-wave pseudopotential code (e.g., Quantum ESPRESSO). Choose appropriate pseudopotentials and convergence parameters to obtain relaxed structures.",
+    "output_file": "",
+    "evidence": "relaxation.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Obtain theoretical equilibrium lattice constants for both materials to be used as input for phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_phonon",
+    "title": "Phonon and electron-phonon coupling calculation",
+    "role": "process",
+    "action": "Using the relaxed structures, perform a self-consistent field calculation followed by a density-functional perturbation theory (linear response) calculation to obtain dynamical matrices on a grid of q-points. From these, compute the phonon density of states, the Eliashberg function α²F(ω), and the average electron–phonon coupling constant λ for both MgB2 and NbB2. Save the α²F(ω) data and λ values to a structured file.",
+    "output_file": "",
+    "evidence": "phonon_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Core DFT linear-response step that produces the Eliashberg spectral function needed to estimate Tc.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_tc_curves",
+    "title": "Compute Tc vs μ* curves",
+    "role": "scored",
+    "action": "Read the computed α²F(ω) for each material from the previous step. Solve the isotropic Eliashberg gap equation numerically for Coulomb pseudopotential values μ* in the range 0.1–0.2 (e.g., step size 0.01). For each material and each μ*, output the superconducting critical temperature Tc (in K). Write the full Tc vs μ* dataset to tc_vs_mustar.csv.",
+    "output_file": "tc_vs_mustar.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Solves the isotropic Eliashberg gap equation and produces the Tc(μ*) curves that demonstrate the relative superconducting strength of the two materials.",
+    "output_schema": "material (str), mu_star (float), Tc (float, in K)"
+  },
+  {
+    "id": "step_compile_results",
+    "title": "Compile final results",
+    "role": "scored",
+    "action": "Extract the average electron–phonon coupling constant λ for each material from the intermediate phonon results (step_phonon) and the Tc at μ*=0.1 from tc_vs_mustar.csv (step_tc_curves). Write a JSON file results.json containing the keys \"MgB2\" and \"NbB2\", each with sub‑keys \"lambda\" (float) and \"Tc_mu0_1\" (float).",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gathers the two key headline numbers (λ and Tc at μ*=0.1) into a single artifact for checking.",
+    "output_schema": "{\"MgB2\": {\"lambda\": number, \"Tc_mu0_1\": number}, \"NbB2\": {\"lambda\": number, \"Tc_mu0_1\": number}}"
+  }
+]

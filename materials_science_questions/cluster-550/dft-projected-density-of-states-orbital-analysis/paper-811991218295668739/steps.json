@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_1",
+    "title": "Structure generation for all model systems",
+    "role": "process",
+    "action": "Build initial atomic coordinates and supercells for pristine sodalite (OXY-SOD), singly doped sodalites (1CH2-SOD, 1NH-SOD), and the three reference chain polymers ((SiO)₂(OH)₄, (SiNH)(SiO)(OH)₄, (SiCH₂)(SiO)(OH)₄) using crystallographic data and standard bond lengths.",
+    "output_file": "",
+    "evidence": "structure_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate all initial structures required for DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Polymer reference optimization and angle extraction",
+    "role": "scored",
+    "action": "Perform DFT geometry optimizations on the three polymer reference systems using Quantum ESPRESSO with LDA and the specified pseudopotentials. From the relaxed structures, extract the Si-O-Si (two values), Si-N-Si, and Si-C-Si three-body angles and the polymer repeat lengths. Write these values to step_01_polymer_angles.csv.",
+    "output_file": "step_01_polymer_angles.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Polymer optimized three-body angles and repeat lengths.",
+    "output_schema": "Columns: polymer_name, angle_type, angle_value_deg, repeat_length_A. Rows correspond to (SiO)₂(OH)₄ Si-O-Si angles (two), (SiNH)(SiO)(OH)₄ Si-N-Si, (SiCH₂)(SiO)(OH)₄ Si-C-Si, and the Si-O-Si angles of the doped polymers."
+  },
+  {
+    "id": "step_3",
+    "title": "Geometry optimization of pristine and doped sodalites",
+    "role": "scored",
+    "action": "Using the same DFT protocol, run full geometry optimizations for pristine OXY-SOD (full relaxation), 1CH2-SOD (internal‑only and full relaxation), and 1NH-SOD (internal‑only and full relaxation). For each system and relaxation type, extract the lattice parameter a (in Å), the Si-X-Si angle, and the Si-C or Si-N bond lengths. Write the results to step_02_doped_geometries.csv.",
+    "output_file": "step_02_doped_geometries.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Optimized geometry parameters for pristine and singly doped sodalites.",
+    "output_schema": "Columns: system, relaxation_type (i or f), lattice_parameter_a_A, SiXSi_angle_deg, SiC_bond_length_A, SiN_bond_length_A. Rows: OXY-SOD f, 1CH2-SOD i, 1CH2-SOD f, 1NH-SOD i, 1NH-SOD f. Missing bond lengths are left empty."
+  },
+  {
+    "id": "step_4",
+    "title": "Strain energy per defect",
+    "role": "scored",
+    "action": "Using the total energies from the polymer and sodalite optimizations, compute the defect strain energy per impurity for 1CH2-SOD (f) and 1NH-SOD (f) according to the polymer-reference method: E^s = n⁻¹ [E(nX-SOD) − E(OXY-SOD)] − [E(X-POLY) − E(OXY-POLY)]. Write the results to step_03_strain_energy.csv.",
+    "output_file": "step_03_strain_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Defect strain energies per impurity for singly doped sodalites.",
+    "output_schema": "Columns: system, strain_energy_per_defect_eV. Rows: 1CH2-SOD (f), 1NH-SOD (f)."
+  },
+  {
+    "id": "step_5",
+    "title": "DFT calculations for BF3 adsorption complexes",
+    "role": "process",
+    "action": "Perform DFT geometry optimizations for the isolated BF3 molecule, the BF3@Si-O-Si complex in OXY-SOD, and the BF3@Si-NH-Si complex in NH-SOD. Record the total energies of each system.",
+    "output_file": "",
+    "evidence": "bf3_calc_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Energy calculations for BF3 adsorption complexes.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_6",
+    "title": "BF3 adsorption energies",
+    "role": "scored",
+    "action": "Compute the adsorption energy for each system as ΔE = E_complex − (E_zeolite + E_isolated_BF3) using the energies from step_5 and the appropriate bare zeolite energies. Write the results to step_04_adsorption_energy.csv.",
+    "output_file": "step_04_adsorption_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "BF3 adsorption energies at pristine and NH-doped sodalite sites.",
+    "output_schema": "Columns: reaction, adsorption_energy_eV. Rows: BF3 + Si-O-Si (OXY-SOD), BF3 + Si-NH-Si (1NH-SOD)."
+  }
+]

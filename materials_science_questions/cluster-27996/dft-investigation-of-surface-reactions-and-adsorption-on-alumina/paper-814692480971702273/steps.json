@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step0_slab_construction",
+    "title": "Construct the VO₂·CeO₂(111) periodic slab model",
+    "role": "process",
+    "action": "Build a p(4×4) CeO₂(111) slab of 9 atomic layers (Ce₄₈O₉₆) from bulk CeO₂. Deposit a monomeric VO₂ species on the surface in the configuration described in the paper. Freeze the bottom trilayer atoms. Set vacuum spacing to 10 Å and use an initial cell vector corresponding to the PBE+U lattice constant (15.518 Å).",
+    "output_file": "",
+    "evidence": "slab_geometry.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate initial atomic coordinates for the surface model. The agent must construct the slab from known CeO₂ crystal data and the deposition geometry of VO₂ as described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step1_reference_calculations",
+    "title": "Reference calculations for gas‑phase CH₃OH and clean VO₂·CeO₂(111)",
+    "role": "process",
+    "action": "Perform DFT geometry optimization (PBE+U+D, U_eff=4.5 eV, D2 with s₆=0.75) and harmonic vibrational frequency calculations for isolated CH₃OH and for the clean VO₂·CeO₂(111) slab. Obtain total energies and zero‑point vibrational energy (ZPVE) corrections.",
+    "output_file": "",
+    "evidence": "reference_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Needed as reference for computing adsorption energies. The agent must relax both systems and compute vibrational frequencies with numerical force constants (displacement ±0.015 Å).",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_adsorption_energies",
+    "title": "Optimize adsorption structures and compute PBE+U+D ZPVE‑corrected adsorption energies for A3 and A4",
+    "role": "scored",
+    "action": "Starting from the clean surface and methanol reference, build initial guesses for adsorption structures A3 (vanadium‑bonded methoxide) and A4 (methoxide in pseudo‑vacancy). Relax geometries at PBE+U+D level; confirm minima by absence of imaginary frequencies. Compute ΔE₀ = E(adsorbed) − E(clean surface) − E(CH₃OH) including ZPVE corrections from the vibrational analysis.",
+    "output_file": "adsorption_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact that reports the two ZPVE‑corrected adsorption energies in eV.",
+    "output_schema": "JSON object with keys 'A3_deltaE0' (float, eV) and 'A4_deltaE0' (float, eV)."
+  },
+  {
+    "id": "step3_transition_state_search",
+    "title": "Locate transition states TS2 and TS4 and compute vibrational frequencies",
+    "role": "process",
+    "action": "Use the adsorbed structures A3 and A4 as reactants. For TS2: perform NEB and dimer refinement along the H‑transfer path from A3 to a surface oxygen atom (leading to intermediate I6). For TS4: locate the hydrogen transfer from A4 to the closer V–O–Ce interphase oxygen atom (leading to I7). Confirm each TS by a single imaginary frequency. Compute harmonic frequencies for the TS and for the reactant (A3, A4) and product (I6, I7) minima, treating the bottom trilayer as frozen.",
+    "output_file": "",
+    "evidence": "ts_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Preparatory step that provides the raw energy and vibrational data needed to calculate barriers and TPD temperatures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_barriers_and_temperatures",
+    "title": "Compute intrinsic barriers and simulated desorption temperatures",
+    "role": "scored",
+    "action": "From the computed total energies and ZPVE of A3, TS2, I6, A4, TS4, I7, calculate ZPVE‑corrected intrinsic barriers ΔE‡ = E(TS) − E(reactant). Obtain pre‑exponential factors A from the vibrational partition functions of reactant and TS. Then solve the first‑order Polanyi–Wigner desorption equation with a heating rate of 3 K/s to determine the formaldehyde desorption temperatures T_des for the two pathways.",
+    "output_file": "barriers_and_temperatures.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the two intrinsic barriers (in eV) and the two desorption temperatures (in K).",
+    "output_schema": "JSON object with keys 'TS2_DeltaEdd' (float, eV), 'TS4_DeltaEdd' (float, eV), 'T_des_TS2' (float, K), 'T_des_TS4' (float, K)."
+  }
+]

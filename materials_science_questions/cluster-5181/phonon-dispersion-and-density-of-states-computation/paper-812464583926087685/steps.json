@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_0",
+    "title": "Set up crystal structure, mass matrix, and force-constant matrices",
+    "role": "process",
+    "action": "Define the primitive cell of A3C60 (space group Fm-3m) with one C60 molecule at the origin and three A+ cations at the tetrahedral and octahedral sites. Assign three translational degrees of freedom to each ion and three additional librational degrees of freedom to the C60 molecule, giving 15 DOF total. Build the mass matrix m^cryst as a diagonal matrix with suitable mass and moment of inertia values (conveniently set to 1 in scaled units). Using the explicit symmetry-constrained force-constant matrix forms Φ(12), Φ(13), Φ(14), Φ(34), Φ(44) from the paper, plug in the numerical parameter values (α1/mA=1, β1/mA=0.2, γ1/mA=0.15, δ1/mA=0.1, α2/mA=1.2, β2/mA=1.1, α3/√(mAM)=0.6, β3/√(mAM)=0.5, α4/√(mAM)=0.4, β4/√(mAM)=0.05, α/M=0.15, β/M=0.02, γ/M=0.11, a/I0=0.09, b/I0=0.01, c/I0=0.06, p/√(MI0)=0.03, q/√(MI0)=0.01) after appropriate scaling to the chosen masses and moment of inertia. Assemble the real-space force-constant blocks for all required ion pairs.",
+    "output_file": "",
+    "evidence": "fc_matrices.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate step that prepares the input data for the dynamical matrix construction. The evidence file contains the assembled force-constant matrices for auditability but is not scored.",
+    "output_schema": "JSON file storing the numerical force-constant matrices for the relevant ion pairs, along with the mass matrix and geometry information if desired."
+  },
+  {
+    "id": "step_1",
+    "title": "Compute phonon dispersion frequencies",
+    "role": "scored",
+    "action": "For each of the three symmetry directions Δ: (x,0,0), Σ: (x,x,0), Λ: (x,x,x) with x = 0, 0.05, 0.10, ..., 1.0 (21 points each), construct the 15×15 dynamical matrix D(q) = m^cryst^{-1/2} D0(q) m^cryst^{-1/2}, where D0(q) is the Fourier transform of the real-space force-constant matrices from the previous step. Diagonalize D(q) to obtain squared frequencies ω²; take the positive square root to yield ω in units of (α₁/m_A)^{1/2}. Sort the 15 eigenvalues in ascending order for each q. Write the results to a CSV file.",
+    "output_file": "phonon_frequencies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main scored artifact: the full phonon dispersion frequencies for all 15 branches at 21 q-points along each of the three symmetry directions, in dimensionless units.",
+    "output_schema": "CSV file with header: direction, q_red, branch, frequency. direction is one of 'Delta', 'Sigma', 'Lambda'. q_red is a float in [0.0, 1.0] in steps of 0.05. branch is an integer from 0 to 14, sorted ascending by eigenvalue at that q. frequency is a float in units of (alpha₁/m_A)^{1/2}. Exactly 3 × 21 × 15 = 945 data rows, not including header."
+  }
+]

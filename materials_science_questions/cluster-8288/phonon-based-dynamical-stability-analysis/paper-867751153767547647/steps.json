@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1_relax",
+    "title": "Structure optimization",
+    "role": "process",
+    "action": "Relax the Ga2O3 monolayer structure using density functional theory with the PBE functional, a plane-wave cutoff of 600 eV, a 13×13×1 k‑mesh, and a vacuum spacing >20 Å. Converge forces below 1e‑4 eV/Å.",
+    "output_file": "",
+    "evidence": "relax.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the equilibrium lattice constants and atomic positions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_harmonic",
+    "title": "Harmonic phonon calculation",
+    "role": "process",
+    "action": "Compute harmonic interatomic force constants on a 5×5×1 supercell using the SCAN meta-GGA functional and the Gamma point. Use Phonopy to obtain the second-order force constants file.",
+    "output_file": "",
+    "evidence": "harmonic_ifc.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the harmonic force constants required by ShengBTE.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_anharmonic",
+    "title": "Anharmonic IFC calculation",
+    "role": "process",
+    "action": "Compute third-order interatomic force constants on the same 5×5×1 supercell using DFT forces (PBE functional, Gamma point) and the thirdorder.py script. Include interactions up to the 8th nearest neighbour.",
+    "output_file": "",
+    "evidence": "anharmonic_ifc.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the anharmonic force constants file for ShengBTE.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_bte_solve",
+    "title": "Solve phonon BTE and compute summary properties",
+    "role": "scored",
+    "action": "Run ShengBTE on a 151×151×1 q‑grid at T=300 K using the iterative solution. From the output, extract the in-plane lattice thermal conductivity κ_L, compute the 2D thermal sheet conductance (effective thickness 7.57 Å), the Debye temperature from the maximum acoustic frequency, and fit the cumulative κ_L vs mean free path to obtain the representative MFP l_0. Write all results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main thermal transport properties for monolayer Ga2O3.",
+    "output_schema": "object with keys: kappa_L_300K_W_mK (number), kappa_2D_sheet_conductance_nW_K (number), Debye_temperature_K (number), representative_MFP_nm (number), optical_contribution_fraction (number), quasi_acoustic_contribution_fraction (number), ZA_contribution (number), TA_contribution (number), LA_contribution (number), Q1_contribution (number), Q2_contribution (number), other_optical_contribution (number)"
+  },
+  {
+    "id": "step5_branch_contrib",
+    "title": "Compute branch-resolved contributions",
+    "role": "scored",
+    "action": "From the mode-resolved output of ShengBTE, group phonon branches into ZA, TA, LA, Q1 (lowest quasi-acoustic), Q2 (second lowest quasi-acoustic), and remaining optical branches. Sum the modal contributions to obtain per-branch κ_L and percentage contributions at 300 K. Write branch_contributions_300K.csv.",
+    "output_file": "branch_contributions_300K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Branch‑resolved thermal conductivity contributions.",
+    "output_schema": "columns: branch (string), contribution_kappa_W_mK (float), percentage (float)"
+  }
+]

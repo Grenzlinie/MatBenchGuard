@@ -1,0 +1,360 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The headline quantities (lattice parameters, band gaps, apparent gaps, band offsets) result from a full DFT-LAPW workflow that the verifier sandbox cannot rerun. Result-level comparison against paper gold is the appropriate tier.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_lattice_params.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "a",
+            "c",
+            "u"
+          ],
+          "units": {
+            "a": "Å",
+            "c": "Å",
+            "u": "dimensionless"
+          }
+        },
+        "description": "Optimized lattice parameters a, c, and internal parameter u for CuAlO2, CuGaO2, CuInO2. Compared against reference LDA relaxed values within a tolerance."
+      },
+      {
+        "file": "step_02_band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "fundamental_direct_gap_Γ",
+            "fundamental_direct_gap_L",
+            "fundamental_direct_gap_F",
+            "indirect_gap"
+          ],
+          "units": {
+            "fundamental_direct_gap_Γ": "eV",
+            "fundamental_direct_gap_L": "eV",
+            "fundamental_direct_gap_F": "eV",
+            "indirect_gap": "eV"
+          }
+        },
+        "description": "Fundamental band gaps from DFT band structures. Checked against reference LDA values with tolerance and trend verification (e.g., direct gap at Γ must decrease from Al to In)."
+      },
+      {
+        "file": "step_03_apparent_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "apparent_direct_gap"
+          ],
+          "units": {
+            "apparent_direct_gap": "eV"
+          }
+        },
+        "description": "Apparent direct band gaps extracted from (αhν)² vs. hν Tauc plots. Compared against reference LDA apparent gap values with tolerance; trend (increase from Al to In) must be reproduced."
+      },
+      {
+        "file": "step_05_band_offsets.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Compound",
+            "VBM_offset",
+            "CBM_offset"
+          ],
+          "units": {
+            "VBM_offset": "eV",
+            "CBM_offset": "eV"
+          }
+        },
+        "description": "Valence band and conduction band offsets relative to CuAlO2. CBM_offset of CuInO2 must be at least -1.2 eV (i.e., ≤ -1.2 eV) to satisfy the requirement; better (more negative) is acceptable. Other offsets are verified within tolerance."
+      }
+    ],
+    "notes": "All scored outputs are in CSV format with a header row and one data row per compound. The hidden checker reads the columns and compares against paper-derived gold values using tolerances and/or trend checks. No gold values or tolerances are disclosed here."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for lattice parameters, fundamental band gaps, apparent direct gaps, and band offsets from the source paper.",
+      "source_provenance": "Paper Table I, text (indirect gaps, direct gaps), insets of Fig.3 (apparent gaps), Fig.4 (band offsets). All LDA values.",
+      "generation_method": "Direct transcription from the paper's reported values.",
+      "why_not_fabricated": "These are the paper's own published results; they are the ground truth for reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_01_lattice_params",
+      "output_file": "step_01_lattice_params.csv",
+      "weight": 0.15,
+      "kind": "tabular_numeric",
+      "description": "Relaxed lattice parameters a, c, u for CuAlO2, CuGaO2, CuInO2.",
+      "columns": [
+        {
+          "name": "Compound",
+          "type": "string"
+        },
+        {
+          "name": "a",
+          "type": "float",
+          "unit": "Å"
+        },
+        {
+          "name": "c",
+          "type": "float",
+          "unit": "Å"
+        },
+        {
+          "name": "u",
+          "type": "float",
+          "dimensionless": true
+        }
+      ],
+      "gold": [
+        {
+          "Compound": "CuAlO2",
+          "a": 2.816,
+          "c": 16.978,
+          "u": 0.1091
+        },
+        {
+          "Compound": "CuGaO2",
+          "a": 2.963,
+          "c": 17.172,
+          "u": 0.1073
+        },
+        {
+          "Compound": "CuInO2",
+          "a": 3.285,
+          "c": 17.27,
+          "u": 0.1056
+        }
+      ],
+      "tolerance": {
+        "a": {
+          "rel": 0.02
+        },
+        "c": {
+          "rel": 0.02
+        },
+        "u": {
+          "abs": 0.01
+        }
+      }
+    },
+    {
+      "id": "step_02_band_gaps",
+      "output_file": "step_02_band_gaps.csv",
+      "weight": 0.25,
+      "kind": "tabular_numeric",
+      "description": "Fundamental band gaps: direct at Γ, L, F and indirect gap.",
+      "columns": [
+        {
+          "name": "Compound",
+          "type": "string"
+        },
+        {
+          "name": "fundamental_direct_gap_Γ",
+          "type": "float",
+          "unit": "eV"
+        },
+        {
+          "name": "fundamental_direct_gap_L",
+          "type": "float",
+          "unit": "eV"
+        },
+        {
+          "name": "fundamental_direct_gap_F",
+          "type": "float",
+          "unit": "eV"
+        },
+        {
+          "name": "indirect_gap",
+          "type": "float",
+          "unit": "eV"
+        }
+      ],
+      "gold": [
+        {
+          "Compound": "CuAlO2",
+          "fundamental_direct_gap_Γ": 2.93,
+          "fundamental_direct_gap_L": 2.68,
+          "fundamental_direct_gap_F": 2.95,
+          "indirect_gap": 1.97
+        },
+        {
+          "Compound": "CuGaO2",
+          "fundamental_direct_gap_Γ": 1.63,
+          "fundamental_direct_gap_L": 2.54,
+          "fundamental_direct_gap_F": 3.05,
+          "indirect_gap": 0.95
+        },
+        {
+          "Compound": "CuInO2",
+          "fundamental_direct_gap_Γ": 0.73,
+          "fundamental_direct_gap_L": 3.08,
+          "fundamental_direct_gap_F": 3.34,
+          "indirect_gap": 0.41
+        }
+      ],
+      "tolerance": {
+        "fundamental_direct_gap_Γ": {
+          "abs": 0.2
+        },
+        "fundamental_direct_gap_L": {
+          "abs": 0.2
+        },
+        "fundamental_direct_gap_F": {
+          "abs": 0.2
+        },
+        "indirect_gap": {
+          "abs": 0.2
+        }
+      },
+      "trend_checks": [
+        {
+          "name": "direct_gap_Γ_decreasing_Al_to_In",
+          "type": "monotonic_decreasing",
+          "column": "fundamental_direct_gap_Γ",
+          "compounds_order": [
+            "CuAlO2",
+            "CuGaO2",
+            "CuInO2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step_03_apparent_gaps",
+      "output_file": "step_03_apparent_gaps.csv",
+      "weight": 0.35,
+      "kind": "tabular_numeric",
+      "description": "Apparent direct gaps from Tauc plots.",
+      "columns": [
+        {
+          "name": "Compound",
+          "type": "string"
+        },
+        {
+          "name": "apparent_direct_gap",
+          "type": "float",
+          "unit": "eV"
+        }
+      ],
+      "gold": [
+        {
+          "Compound": "CuAlO2",
+          "apparent_direct_gap": 2.75
+        },
+        {
+          "Compound": "CuGaO2",
+          "apparent_direct_gap": 2.7
+        },
+        {
+          "Compound": "CuInO2",
+          "apparent_direct_gap": 3.12
+        }
+      ],
+      "tolerance": {
+        "apparent_direct_gap": {
+          "abs": 0.15
+        }
+      },
+      "trend_checks": [
+        {
+          "name": "apparent_gap_In_highest",
+          "type": "greater_than_all_others",
+          "column": "apparent_direct_gap",
+          "compound": "CuInO2",
+          "other_compounds": [
+            "CuAlO2",
+            "CuGaO2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step_05_band_offsets",
+      "output_file": "step_05_band_offsets.csv",
+      "weight": 0.25,
+      "kind": "tabular_numeric",
+      "description": "VBM and CBM offsets relative to CuAlO2.",
+      "columns": [
+        {
+          "name": "Compound",
+          "type": "string"
+        },
+        {
+          "name": "VBM_offset",
+          "type": "float",
+          "unit": "eV"
+        },
+        {
+          "name": "CBM_offset",
+          "type": "float",
+          "unit": "eV"
+        }
+      ],
+      "gold": [
+        {
+          "Compound": "CuAlO2",
+          "VBM_offset": 0.0,
+          "CBM_offset": 0.0
+        },
+        {
+          "Compound": "CuGaO2",
+          "VBM_offset": 0.02,
+          "CBM_offset": -1.0
+        },
+        {
+          "Compound": "CuInO2",
+          "VBM_offset": 0.08,
+          "CBM_offset": -1.48
+        }
+      ],
+      "tolerance": {
+        "VBM_offset": {
+          "abs": 0.1
+        },
+        "CBM_offset": {
+          "abs": 0.3
+        }
+      },
+      "threshold_check": {
+        "compound": "CuInO2",
+        "column": "CBM_offset",
+        "threshold": -1.2,
+        "direction": "less_than_or_equal",
+        "score_full": 1.0,
+        "score_partial": 0.5,
+        "partial_limit": -0.8
+      },
+      "trend_checks": [
+        {
+          "name": "CBM_decreasing_Al_to_In",
+          "type": "monotonic_decreasing",
+          "column": "CBM_offset",
+          "compounds_order": [
+            "CuAlO2",
+            "CuGaO2",
+            "CuInO2"
+          ]
+        }
+      ]
+    }
+  ]
+}

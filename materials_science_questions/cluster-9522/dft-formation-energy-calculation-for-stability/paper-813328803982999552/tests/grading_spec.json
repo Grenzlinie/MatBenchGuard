@@ -1,0 +1,168 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing from raw artifacts is infeasible: the scored outputs are final numeric CSVs and the verifier cannot re-run DFT simulations. The checker compares reported values to paper gold with tolerances and verifies required ordering.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_energies.csv": "exact_match",
+    "formation_energies.csv": "exact_match",
+    "dos_n_ef.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold binding energies, formation energies, and N(E_F) values from the paper",
+      "source_provenance": "Paper Table 1 (binding and formation energies) and text description (N(E_F) values)",
+      "generation_method": "Direct transcription from the published paper; verified against reference solution",
+      "why_not_fabricated": "These are the official published results of the computational study; they are not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "carbide",
+            "binding_energy_eV_per_atom"
+          ],
+          "units": {
+            "binding_energy_eV_per_atom": "eV/atom"
+          }
+        },
+        "description": "Binding energy per atom for each carbide. The checker compares each value to the paper-reported gold within a hidden tolerance."
+      },
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "carbide",
+            "formation_energy_eV_per_atom"
+          ],
+          "units": {
+            "formation_energy_eV_per_atom": "eV/atom"
+          }
+        },
+        "description": "Formation energy per atom for each carbide. The checker compares each value to the paper-reported gold within a hidden tolerance."
+      },
+      {
+        "file": "dos_n_ef.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "carbide",
+            "N_EF_electrons_per_eV"
+          ],
+          "units": {
+            "N_EF_electrons_per_eV": "electrons/eV"
+          }
+        },
+        "description": "N(E_F) per atom for each carbide. The checker compares each value to the paper-reported gold within a hidden tolerance."
+      }
+    ],
+    "notes": "All three scored outputs are CSV files with identical row structure; each row corresponds to one carbide (Fe3C, Fe2C, Fe5C2, NbC). The checker also verifies ordering: NbC must have the most negative formation energy, and Fe2C must have a positive formation energy. Process-step evidence files are not scored."
+  },
+  "steps": [
+    {
+      "id": "check_binding",
+      "output_file": "binding_energies.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tolerance": 0.1,
+      "gold": [
+        {
+          "carbide": "Fe3C",
+          "value": -9.3835
+        },
+        {
+          "carbide": "Fe2C",
+          "value": -8.9383
+        },
+        {
+          "carbide": "Fe5C2",
+          "value": -9.3807
+        },
+        {
+          "carbide": "NbC",
+          "value": -10.7053
+        }
+      ],
+      "field": "binding_energy_eV_per_atom",
+      "key_column": "carbide"
+    },
+    {
+      "id": "check_formation_values",
+      "output_file": "formation_energies.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance": 0.05,
+      "gold": [
+        {
+          "carbide": "Fe3C",
+          "value": -2.7288
+        },
+        {
+          "carbide": "Fe2C",
+          "value": 0.0187
+        },
+        {
+          "carbide": "Fe5C2",
+          "value": -0.3585
+        },
+        {
+          "carbide": "NbC",
+          "value": -4.3182
+        }
+      ],
+      "field": "formation_energy_eV_per_atom",
+      "key_column": "carbide"
+    },
+    {
+      "id": "check_formation_ordering",
+      "output_file": "formation_energies.csv",
+      "kind": "structural",
+      "weight": 0.15,
+      "checks": [
+        "NbC_most_negative",
+        "Fe2C_positive"
+      ]
+    },
+    {
+      "id": "check_dos",
+      "output_file": "dos_n_ef.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance": 5.0,
+      "gold": [
+        {
+          "carbide": "Fe3C",
+          "value": 26.0
+        },
+        {
+          "carbide": "Fe2C",
+          "value": 4.1
+        },
+        {
+          "carbide": "Fe5C2",
+          "value": 20.4
+        },
+        {
+          "carbide": "NbC",
+          "value": 5.6
+        }
+      ],
+      "field": "N_EF_electrons_per_eV",
+      "key_column": "carbide"
+    }
+  ]
+}

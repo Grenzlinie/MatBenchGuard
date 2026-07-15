@@ -1,0 +1,123 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing the elastic constants from raw data in the verifier is infeasible because the public measurement data is not available inside the verifier sandbox. The strongest feasible tier is T0 result‑level compare against the paper's published values, supplemented by a recomputed RMSD from fitted frequencies as a consistency check.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "elastic_constants.json": "exact_match",
+    "fitted_frequencies.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for adiabatic elastic constants C11, C12, C44, elastic anisotropy A, and Grüneisen parameter γ, and the RMSD threshold for fitted frequencies.",
+      "source_provenance": "Paper Table III (final combined results) and text (anisotropy, Grüneisen parameter).",
+      "generation_method": "Copied directly from the paper: C11=2.38, C12=1.56, C44=1.12 (10¹⁰ dyn/cm²); A=2.73; γ=2.77. Tolerances set to ±0.05 for Cij and ±0.10 for A and γ based on the paper's own uncertainties and expected toolchain spread. RMSD threshold 0.1 GHz derived from the paper's fit quality.",
+      "why_not_fabricated": "These are the published headline results of the paper, verified against the reference solve.sh which produces them exactly."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "float",
+            "C12": "float",
+            "C44": "float",
+            "A": "float",
+            "gamma": "float"
+          }
+        },
+        "description": "Fitted adiabatic elastic constants and derived quantities (anisotropy, Grüneisen parameter)."
+      },
+      {
+        "file": "fitted_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "crystal",
+            "phi_deg",
+            "mode",
+            "measured_shift_GHz",
+            "predicted_shift_GHz"
+          ]
+        },
+        "description": "Table of measured and predicted Brillouin frequency shifts for each data point used in the fit. The checker computes the root-mean-square deviation (RMSD) between measured_shift_GHz and predicted_shift_GHz and compares it to a hidden threshold."
+      }
+    ],
+    "notes": "Elasto-optic constant ratios and uncertainty quantification are omitted from the reproduction; only the central elastic constants and derived quantities are scored. The fitted frequencies file serves as a consistency check that a genuine least-squares fit was carried out."
+  },
+  "steps": [
+    {
+      "id": "elastic_c11",
+      "output_file": "elastic_constants.json",
+      "kind": "numeric_compare",
+      "field": "C11",
+      "weight": 0.2,
+      "target": 2.38,
+      "tolerance_abs": 0.05,
+      "description": "Adiabatic elastic constant C11 (10¹⁰ dyn/cm²). Full credit if |C11 - 2.38| ≤ 0.05, otherwise partial credit decaying to zero at 0.10."
+    },
+    {
+      "id": "elastic_c12",
+      "output_file": "elastic_constants.json",
+      "kind": "numeric_compare",
+      "field": "C12",
+      "weight": 0.2,
+      "target": 1.56,
+      "tolerance_abs": 0.05,
+      "description": "Adiabatic elastic constant C12 (10¹⁰ dyn/cm²). Full credit if |C12 - 1.56| ≤ 0.05, otherwise partial credit decaying to zero at 0.10."
+    },
+    {
+      "id": "elastic_c44",
+      "output_file": "elastic_constants.json",
+      "kind": "numeric_compare",
+      "field": "C44",
+      "weight": 0.2,
+      "target": 1.12,
+      "tolerance_abs": 0.05,
+      "description": "Adiabatic elastic constant C44 (10¹⁰ dyn/cm²). Full credit if |C44 - 1.12| ≤ 0.05, otherwise partial credit decaying to zero at 0.10."
+    },
+    {
+      "id": "elastic_A",
+      "output_file": "elastic_constants.json",
+      "kind": "numeric_compare",
+      "field": "A",
+      "weight": 0.1,
+      "target": 2.73,
+      "tolerance_abs": 0.1,
+      "description": "Elastic anisotropy A = 2C44/(C11−C12). Full credit if |A - 2.73| ≤ 0.10, otherwise partial credit decaying to zero at 0.20."
+    },
+    {
+      "id": "elastic_gamma",
+      "output_file": "elastic_constants.json",
+      "kind": "numeric_compare",
+      "field": "gamma",
+      "weight": 0.1,
+      "target": 2.77,
+      "tolerance_abs": 0.1,
+      "description": "Grüneisen parameter γ. Full credit if |γ - 2.77| ≤ 0.10, otherwise partial credit decaying to zero at 0.20."
+    },
+    {
+      "id": "fitted_rmsd",
+      "output_file": "fitted_frequencies.csv",
+      "kind": "recompute_metric",
+      "metric": "rmsd",
+      "columns": {
+        "measured": "measured_shift_GHz",
+        "predicted": "predicted_shift_GHz"
+      },
+      "weight": 0.2,
+      "target": 0.1,
+      "direction": "lower_is_better",
+      "description": "Root-mean-square deviation between measured and predicted frequency shifts (GHz). Full credit if RMSD ≤ 0.1, otherwise partial credit decaying to zero at 0.2."
+    }
+  ]
+}

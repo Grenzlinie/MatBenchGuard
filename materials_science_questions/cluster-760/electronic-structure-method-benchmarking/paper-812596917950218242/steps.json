@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Geometry optimization and frequency check",
+    "role": "process",
+    "action": "Optimize the geometry of the cyclopropane···ClF complex at the B3LYP/6‑311++G(d,p) level, enforcing C₂ᵥ symmetry, and run a harmonic frequency calculation to confirm the structure is a minimum (no imaginary frequencies). Output the final Cartesian coordinates as /app/outputs/step_01_optimized_geometry.xyz for use in subsequent steps.",
+    "output_file": "",
+    "evidence": "step_01_optimized_geometry.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "XYZ file of the optimized complex geometry. Contains number of atoms, a comment line, and one line per atom with element symbol and Cartesian coordinates in Å.",
+    "output_schema": "Standard XYZ format: line 1 = integer number of atoms; line 2 = comment; subsequent lines = '<element> <x> <y> <z>' in Angstroms. Contains the atoms of the cyclopropane and ClF fragments (total 11 atoms)."
+  },
+  {
+    "id": "step_02",
+    "title": "Extract rotational constants",
+    "role": "scored",
+    "action": "From the optimized geometry of the complex (step_01) and the molecular mass distribution, calculate the rotational constants A, B, C (in MHz). Write the three values to /app/outputs/step_02_rotational_constants.json.",
+    "output_file": "step_02_rotational_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Rotational constants (A, B, C) in MHz derived from the optimized B3LYP geometry.",
+    "output_schema": "{\"A_MHz\": float, \"B_MHz\": float, \"C_MHz\": float}"
+  },
+  {
+    "id": "step_03",
+    "title": "Compute BSSE‑corrected dissociation energy",
+    "role": "scored",
+    "action": "Calculate the total energies of the isolated cyclopropane and ClF monomers at their B3LYP/6‑311++G(d,p) optimized geometries, and the energy of the complex. Apply the counterpoise correction to obtain the basis set superposition error (BSSE). Using the zero‑point vibrational energy from the harmonic frequency calculation (step_01), compute the ZPVE‑ and BSSE‑corrected dissociation energy D₀ in kcal/mol. Write the result to /app/outputs/step_03_interaction_energy.json.",
+    "output_file": "step_03_interaction_energy.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Dissociation energy D₀ (ZPVE and BSSE corrected) in kcal/mol.",
+    "output_schema": "{\"D0_kcal_mol\": float}"
+  },
+  {
+    "id": "step_04",
+    "title": "Rigid‑monomer intermolecular potential scan",
+    "role": "scored",
+    "action": "Using the B3LYP/6‑311++G(d,p) optimized fragment geometries, perform single‑point energy calculations at 35 values of the intermolecular distance r(*···Cl) covering approximately 2.8 Å to 4.5 Å, keeping both ClF and cyclopropane monomers rigid. Record the distance and total energy for each point in /app/outputs/step_04_potential_curve.csv.",
+    "output_file": "step_04_potential_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Discrete intermolecular potential energy (r in Å, energy in atomic units).",
+    "output_schema": "CSV with header: r_A,energy_au. Exactly 35 rows covering the intermolecular coordinate."
+  },
+  {
+    "id": "step_05",
+    "title": "Morse‑potential fitting",
+    "role": "scored",
+    "action": "Fit the 35 energy points from step_04 to the Morse function V(x) = V₀ { [1 − exp(−γ (x − x_min))]² − 1 } using a least‑squares procedure. Extract the well depth V₀ (au), shape parameter γ, equilibrium distance x_min (Å), and the root‑mean‑square deviation between the data and the fit. Write these four values to /app/outputs/step_05_morse_fit_params.json.",
+    "output_file": "step_05_morse_fit_params.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Morse potential parameters obtained from the DFT potential points.",
+    "output_schema": "{\"V0_au\": float, \"gamma\": float, \"x_min_A\": float, \"rms_deviation_au\": float}"
+  },
+  {
+    "id": "step_06",
+    "title": "WKB vibrational analysis",
+    "role": "scored",
+    "action": "Using the fitted Morse potential from step_05 and the reduced mass μ = 7.3938 u for the intermolecular stretch, solve the WKB quantization integral numerically (e.g., via Newton–Raphson) to find all bound vibrational states. Output the number of bound states, the energy of each state (au), the fundamental excitation energy (1←0, cm⁻¹), the first overtone (2←0, cm⁻¹), and the zero‑point vibrational energy (ZPVE, kcal/mol relative to the potential minimum) to /app/outputs/step_06_wkb_energies.json.",
+    "output_file": "step_06_wkb_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "WKB‑derived bound vibrational states and derived spectroscopic quantities.",
+    "output_schema": "{\"n_bound_states\": int, \"energies_au\": [float], \"fundamental_cm-1\": float, \"first_overtone_cm-1\": float, \"zpve_kcal_mol\": float}"
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_implement_model",
+    "title": "Implement SMTB-Q model and simulation framework",
+    "role": "process",
+    "action": "Implement the SMTB-Q total energy and charge equilibration (Eqs. 1–5 and Appendix equations) capable of periodic bulk and slab calculations, using the provided parameter set. The implementation must support Monte Carlo atomic relaxation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Write the simulation code that computes bulk and slab total energies, performs charge equilibration, and drives Metropolis Monte Carlo moves. This code will be used in all subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_bulk_a",
+    "title": "Bulk SrTiO3 equilibrium lattice constant",
+    "role": "scored",
+    "action": "Using the implemented model with the fitted SrTiO3 parameters, perform energy minimization (e.g., scaling/cubic optimization) to find the equilibrium lattice constant a_0 of cubic SrTiO3 at 0 K.",
+    "output_file": "bulk_lattice_constant.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimized lattice constant a of cubic SrTiO3 from the SMTB-Q model.",
+    "output_schema": "Single float, units: Å"
+  },
+  {
+    "id": "step_03_surface_relax",
+    "title": "Slab relaxation for SrO- and TiO2-terminated SrTiO3(001) surfaces",
+    "role": "process",
+    "action": "Build periodic slab models of SrTiO3(001) with SrO and TiO2 terminations (supercell ~23 Å × 23 Å × Z_L, slab thickness ≥ 23 Å, using the bulk lattice constant from step_02). Run Monte Carlo relaxation at 2 K until equilibrium (≥400 steps/atom) with the SMTB-Q model. Save the final total energy, relaxed atomic coordinates, and atomic charges for each termination to a structured file (relaxation_results.json).",
+    "output_file": "",
+    "evidence": "relaxation_results.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Perform slab construction and MC relaxation; the output relaxation_results.json contains all structural and charge data needed for subsequent scoring steps.",
+    "output_schema": "JSON containing slab total energies, relaxed positions (fractional or Cartesian) and per-atom charges for both terminations."
+  },
+  {
+    "id": "step_04_surface_energies",
+    "title": "Surface formation energies",
+    "role": "scored",
+    "action": "From the final slab total energies in relaxation_results.json and the bulk cohesive energy per SrTiO3 unit computed from the model, calculate the surface energy E_surf = (E_slab – N * E_bulk) / (2 * A_surface) for each termination.",
+    "output_file": "surface_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Surface energies of the SrO- and TiO2-terminated SrTiO3(001) surfaces.",
+    "output_schema": "JSON object with keys \"SrO_terminated\" and \"TiO2_terminated\", each a float (units: J/m²)."
+  },
+  {
+    "id": "step_05_displacements",
+    "title": "Atomic displacements at the surfaces",
+    "role": "scored",
+    "action": "Using the relaxed atomic coordinates from relaxation_results.json, compute the displacement along the [001] direction relative to the ideal bulk-terminated positions for the following labelled atoms: SrO termination – Sr(9), O(10), Ti(5), O(7), Sr(6); TiO2 termination – Ti(1), O(3), Sr(2), O(4). Positive values indicate outward displacement (toward vacuum).",
+    "output_file": "atomic_displacements.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Per-atom surface displacements along [001].",
+    "output_schema": "CSV with columns: termination (string), atom_label (string), displacement_A (float, Å)."
+  },
+  {
+    "id": "step_06_charge_transfers",
+    "title": "Charge transfers at the surfaces",
+    "role": "scored",
+    "action": "Using the relaxed charges from relaxation_results.json, compute the charge transfer (difference from bulk reference charge) for the same set of labelled atoms.",
+    "output_file": "charge_transfers.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Charge transfers for surface atoms.",
+    "output_schema": "CSV with columns: termination (string), atom_label (string), charge_transfer (float, elementary charge e)."
+  }
+]

@@ -1,0 +1,303 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: equilibrium volume from E-V data, ε₂ peak positions/values from dielectric CSV, Cv asymptotic limit from thermal CSV are all recomputed from raw artifacts. Plasma frequency (requires ε₁) and Debye temperature (no paper numeric) are checked via T0 reference match or internal consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_e_v_data.csv": "metric_recompute",
+    "step_02_dielectric_function.csv": "metric_recompute",
+    "step_03_thermal_properties.csv": "metric_recompute",
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice constants a,b,c (Å) from Table 1 PBEsol‑GGA row",
+      "source_provenance": "Paper Table 1, PBEsol‑GGA row",
+      "generation_method": "Direct copy from paper",
+      "why_not_fabricated": "Values are the paper's reported equilibrium lattice parameters."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold ε₂ peaks: xx (44.9929 at 0.29 eV), yy (29.6428 at 1.67 eV), zz (24.2499 at 1.67 eV) from paper text (p. 8)",
+      "source_provenance": "Paper main text description of ε₂ maxima",
+      "generation_method": "Copy from paper",
+      "why_not_fabricated": "These are the paper's reported principal peaks."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Plasma frequency 24.12 eV from paper text",
+      "source_provenance": "Paper conclusion (loss function peak)",
+      "generation_method": "Copy from paper",
+      "why_not_fabricated": "Paper's reported plasma frequency."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Cv Dulong‑Petit limit 74.78 J/mol·K",
+      "source_provenance": "Paper Fig 4(e) description (Cv asymptote)",
+      "generation_method": "Copy from paper",
+      "why_not_fabricated": "Paper's explicit Dulong‑Petit limit for this compound."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_e_v_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "volume",
+            "energy"
+          ],
+          "units": {
+            "volume": "bohr^3",
+            "energy": "Ry"
+          }
+        },
+        "description": "DFT energy-volume data used as input for equation-of-state fit and thermodynamic model."
+      },
+      {
+        "file": "step_02_dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "eps2_xx",
+            "eps2_yy",
+            "eps2_zz"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Imaginary dielectric function components used to derive optical constants and locate characteristic peaks."
+      },
+      {
+        "file": "step_03_thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "pressure_GPa",
+            "volume_bohr3",
+            "bulk_modulus_GPa",
+            "debye_temp_K",
+            "alpha_1e5_perK",
+            "cv_J_molK",
+            "cp_J_molK",
+            "entropy_J_molK",
+            "internal_energy_kJ_mol"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "pressure_GPa": "GPa",
+            "volume_bohr3": "bohr^3",
+            "bulk_modulus_GPa": "GPa",
+            "debye_temp_K": "K",
+            "alpha_1e5_perK": "10^5/K",
+            "cv_J_molK": "J/mol·K",
+            "cp_J_molK": "J/mol·K",
+            "entropy_J_molK": "J/mol·K",
+            "internal_energy_kJ_mol": "kJ/mol"
+          }
+        },
+        "description": "Complete thermodynamic table covering temperature range 0-5000 K at pressures 0, 20, 50 GPa."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lattice_params",
+            "epsilon2_peaks",
+            "plasma_frequency",
+            "cv_dulong_petit",
+            "debye_temperature_0GPa_300K"
+          ],
+          "properties": {
+            "lattice_params": {
+              "type": "object",
+              "units": {
+                "a": "Å",
+                "b": "Å",
+                "c": "Å"
+              }
+            },
+            "epsilon2_peaks": {
+              "type": "object",
+              "properties": {
+                "xx_peak_val": {
+                  "type": "number"
+                },
+                "xx_peak_energy": {
+                  "type": "number",
+                  "units": "eV"
+                },
+                "yy_peak_val": {
+                  "type": "number"
+                },
+                "yy_peak_energy": {
+                  "type": "number",
+                  "units": "eV"
+                },
+                "zz_peak_val": {
+                  "type": "number"
+                },
+                "zz_peak_energy": {
+                  "type": "number",
+                  "units": "eV"
+                }
+              }
+            },
+            "plasma_frequency": {
+              "type": "number",
+              "units": "eV"
+            },
+            "cv_dulong_petit": {
+              "type": "number",
+              "units": "J/mol·K"
+            },
+            "debye_temperature_0GPa_300K": {
+              "type": "number",
+              "units": "K"
+            }
+          }
+        },
+        "description": "Aggregated key reproduction targets: lattice constants, epsilon2 peaks, plasma frequency, heat capacity asymptote and Debye temperature."
+      }
+    ],
+    "notes": "The hidden checker recomputes metric from raw data (step_01, step_02, step_03) and compares the agent's reported final quantities (results.json) to hidden reference values, using appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "valid_step01",
+      "output_file": "step_01_e_v_data.csv",
+      "kind": "file_check",
+      "weight": 0.02,
+      "params": {
+        "required_columns": [
+          "volume",
+          "energy"
+        ],
+        "min_rows": 8
+      }
+    },
+    {
+      "id": "eos_fit",
+      "output_file": "step_01_e_v_data.csv",
+      "kind": "metric_recompute",
+      "weight": 0.18,
+      "params": {
+        "target_v0_ang3": 120.601,
+        "tolerance_fraction": 0.02
+      }
+    },
+    {
+      "id": "valid_step02",
+      "output_file": "step_02_dielectric_function.csv",
+      "kind": "file_check",
+      "weight": 0.02,
+      "params": {
+        "required_columns": [
+          "energy_eV",
+          "eps2_xx",
+          "eps2_yy",
+          "eps2_zz"
+        ],
+        "min_rows": 10
+      }
+    },
+    {
+      "id": "eps2_peaks",
+      "output_file": "step_02_dielectric_function.csv",
+      "kind": "metric_recompute",
+      "weight": 0.28,
+      "params": {
+        "xx_peak_val": 44.9929,
+        "xx_peak_energy": 0.29,
+        "yy_peak_val": 29.6428,
+        "yy_peak_energy": 1.67,
+        "zz_peak_val": 24.2499,
+        "zz_peak_energy": 1.67,
+        "energy_tol": 0.15,
+        "val_tol_frac": 0.05
+      }
+    },
+    {
+      "id": "valid_step03",
+      "output_file": "step_03_thermal_properties.csv",
+      "kind": "file_check",
+      "weight": 0.02,
+      "params": {
+        "required_columns": [
+          "temperature_K",
+          "pressure_GPa",
+          "cv_J_molK",
+          "debye_temp_K",
+          "volume_bohr3",
+          "bulk_modulus_GPa",
+          "alpha_1e5_perK",
+          "cp_J_molK",
+          "entropy_J_molK",
+          "internal_energy_kJ_mol"
+        ],
+        "min_rows": 10
+      }
+    },
+    {
+      "id": "cv_asymptote",
+      "output_file": "step_03_thermal_properties.csv",
+      "kind": "metric_recompute",
+      "weight": 0.18,
+      "params": {
+        "target_cv": 74.78,
+        "tolerance_fraction": 0.03
+      }
+    },
+    {
+      "id": "results_valid",
+      "output_file": "results.json",
+      "kind": "file_check",
+      "weight": 0.02,
+      "params": {
+        "required_fields": [
+          "lattice_params",
+          "epsilon2_peaks",
+          "plasma_frequency",
+          "cv_dulong_petit",
+          "debye_temperature_0GPa_300K"
+        ]
+      }
+    },
+    {
+      "id": "results_consistency",
+      "output_file": "results.json",
+      "kind": "consistency_check",
+      "weight": 0.28,
+      "params": {
+        "lattice_a_target": 3.05121,
+        "lattice_b_target": 13.37135,
+        "lattice_c_target": 2.95599,
+        "lattice_tol_frac": 0.02,
+        "eps2_energy_tol": 0.15,
+        "eps2_val_tol_frac": 0.05,
+        "plasma_frequency_target": 24.12,
+        "plasma_tol_ev": 0.5,
+        "cv_target": 74.78,
+        "cv_tol_frac": 0.03,
+        "debye_temp_tol_k": 2.0
+      }
+    }
+  ]
+}

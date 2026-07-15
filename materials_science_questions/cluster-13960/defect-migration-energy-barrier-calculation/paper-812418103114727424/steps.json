@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_static_energies",
+    "title": "Compute static activation energies",
+    "role": "scored",
+    "action": "Set up a 9x9x9 unit cell B2 NiAl block with periodic boundary conditions using the EAM potential. Perform molecular statics (energy minimization) to compute the Ni vacancy formation energy (energy difference between relaxed perfect crystal and relaxed crystal with one Ni vacancy), the NNN migration energy (highest barrier along the NNN jump path), and the energy-displacement curve for the {110} six-jump cycle, reporting the highest barrier (third jump in the cycle).",
+    "output_file": "static_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing three computed static activation energies.",
+    "output_schema": "{ \"ni_vacancy_formation_energy_eV\": float, \"ni_vacancy_nnn_migration_energy_eV\": float, \"six_jump_cycle_peak_barrier_eV\": float }"
+  },
+  {
+    "id": "step_02_md_simulation",
+    "title": "Run molecular dynamics of Ni vacancy at 1200 K",
+    "role": "process",
+    "action": "Set up a 5x5x5 unit cell B2 NiAl block (125 unit cells, 249 atoms) with one Ni vacancy and periodic boundary conditions, using the equilibrium lattice parameter at 1200 K. Run constant-temperature MD (NVT) with a 2 fs time step for at least 750,000 steps (1.5 ns). Track atomic trajectories frequently enough (every 50-100 steps during cycles) to identify diffusion events. Save the trajectory as a log or trajectory file for later analysis.",
+    "output_file": "",
+    "evidence": "md_trajectory.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "MD trajectory or log file containing atomic positions over time; used as input for the classification step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_event_statistics",
+    "title": "Classify diffusion events and compute statistics",
+    "role": "scored",
+    "action": "Analyze the MD trajectory to detect and classify all diffusion events (six-jump, ten-jump, fourteen-jump cycles, failed attempts, other), count their occurrences, and compute the percentage breakdown of event types for a Ni vacancy at 1200 K. Use the event definitions and categories as described in the paper's Table 2. Report results in JSON, ensuring the percentages sum to 100%.",
+    "output_file": "md_statistics.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the statistical breakdown of diffusion events.",
+    "output_schema": "{ \"six_jump_cycles_total_percent\": float, \"six_jump_cycles_uninterrupted_percent\": float, \"six_jump_cycles_interrupted_percent\": float, \"six_jump_110_of_six_jump_percent\": float, \"ten_jump_cycles_percent\": float, \"ten_jump_cycles_uninterrupted_percent\": float, \"fourteen_jump_cycles_percent\": float, \"failed_attempts_1atom_percent\": float, \"failed_attempts_2atom_percent\": float, \"failed_attempts_more2_percent\": float, \"other_percent\": float }"
+  }
+]

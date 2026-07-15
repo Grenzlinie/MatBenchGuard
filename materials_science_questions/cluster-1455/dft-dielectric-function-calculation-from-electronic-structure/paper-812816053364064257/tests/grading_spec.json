@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute of DFT results is infeasible in the lightweight verifier sandbox; we compare the agent's reported numbers against the paper's reference values with generous tolerances that accommodate method-dependent spread. This is effectively a T0 result-level compare.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap_results.json": "exact_match",
+    "dielectric_constants.json": "exact_match",
+    "refractive_indices.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for band gap, dielectric constants, refractive indices and birefringence from the paper.",
+      "source_provenance": "Paper Tables 2 and 3 and text; extracted directly.",
+      "generation_method": "Extracted from the paper manuscript.",
+      "why_not_fabricated": "These are the exact values reported by the authors; they serve as the target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LDA_direct_gap_eV": "number",
+            "GGA_direct_gap_eV": "number"
+          }
+        },
+        "description": "Direct Γ-Γ band gap (eV) from LDA and GGA band‑structure calculations."
+      },
+      {
+        "file": "dielectric_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LDA_eps_11_infty": "number",
+            "LDA_eps_33_infty": "number",
+            "GGA_eps_11_infty": "number",
+            "GGA_eps_33_infty": "number"
+          }
+        },
+        "description": "High-frequency (electronic) dielectric constants ε_∞ for ordinary (11/22) and extraordinary (33) directions, extracted from the real part of the dielectric function."
+      },
+      {
+        "file": "refractive_indices.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "LDA_ordinary_n_at633nm": "number",
+            "LDA_extraordinary_n_at633nm": "number",
+            "GGA_ordinary_n_at633nm": "number",
+            "GGA_extraordinary_n_at633nm": "number",
+            "LDA_birefringence_at633nm": "number",
+            "GGA_birefringence_at633nm": "number"
+          }
+        },
+        "description": "Ordinary and extraordinary refractive indices and optical birefringence at 633 nm."
+      }
+    ],
+    "notes": "All scored values are compared against hidden reference numbers from the paper with tolerances that account for legitimate toolchain spread. The agent must perform the full DFT pipeline; a lazy guess does not meet the tolerances."
+  },
+  "steps": [
+    {
+      "id": "s02_band_gap",
+      "output_file": "band_gap_results.json",
+      "kind": "reference_match",
+      "weight": 0.25,
+      "targets": {
+        "LDA_direct_gap_eV": {
+          "gold": 2.14,
+          "tol_abs": 0.3,
+          "tol_rel": 0.1
+        },
+        "GGA_direct_gap_eV": {
+          "gold": 2.34,
+          "tol_abs": 0.3,
+          "tol_rel": 0.1
+        }
+      }
+    },
+    {
+      "id": "s03_dielectric",
+      "output_file": "dielectric_constants.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "load_bearing": true,
+      "targets": {
+        "LDA_eps_11_infty": {
+          "gold": 5.44,
+          "tol_abs": 0.5,
+          "tol_rel": 0.05
+        },
+        "LDA_eps_33_infty": {
+          "gold": 6.23,
+          "tol_abs": 0.5,
+          "tol_rel": 0.05
+        },
+        "GGA_eps_11_infty": {
+          "gold": 7.2,
+          "tol_abs": 0.5,
+          "tol_rel": 0.05
+        },
+        "GGA_eps_33_infty": {
+          "gold": 8.33,
+          "tol_abs": 0.5,
+          "tol_rel": 0.05
+        }
+      }
+    },
+    {
+      "id": "s04_refractive",
+      "output_file": "refractive_indices.json",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "targets": {
+        "LDA_ordinary_n_at633nm": {
+          "gold": 2.4,
+          "tol_abs": 0.0,
+          "tol_rel": 0.05
+        },
+        "LDA_extraordinary_n_at633nm": {
+          "gold": 2.669,
+          "tol_abs": 0.0,
+          "tol_rel": 0.05
+        },
+        "GGA_ordinary_n_at633nm": {
+          "gold": 2.58,
+          "tol_abs": 0.0,
+          "tol_rel": 0.05
+        },
+        "GGA_extraordinary_n_at633nm": {
+          "gold": 2.81,
+          "tol_abs": 0.0,
+          "tol_rel": 0.05
+        },
+        "LDA_birefringence_at633nm": {
+          "gold": 0.269,
+          "tol_abs": 0.05,
+          "tol_rel": 0.0
+        },
+        "GGA_birefringence_at633nm": {
+          "gold": 0.23,
+          "tol_abs": 0.05,
+          "tol_rel": 0.0
+        }
+      }
+    }
+  ]
+}

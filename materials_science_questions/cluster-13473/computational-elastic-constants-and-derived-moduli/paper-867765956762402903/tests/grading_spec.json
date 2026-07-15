@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes key structural trends (monotonicity, zero‑value, peak‑shift) directly from the agent's CSV data, using hidden reference thresholds derived from the paper's figures and discussion; no external gold file required.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for helicity modulus low‑T ordering, zero threshold for open BC, and downturn onset shift; variation tolerance for heat capacity.",
+      "source_provenance": "Derived from the paper's Figure 4 and discussion: low‑T γ decreases with increasing m, open BC gives γ≈0, downturn onset moves to lower T with cluster size. Quantitative thresholds are conservative estimates to accommodate Monte‑Carlo noise.",
+      "generation_method": "Estimated from qualitative descriptions in the paper; no exact numbers extracted.",
+      "why_not_fabricated": "These thresholds reflect the paper's reported physical behavior, not invented numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heat_capacity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "boundary_condition",
+            "temperature_J_over_kB",
+            "heat_capacity_per_site",
+            "heat_capacity_error"
+          ],
+          "units": {
+            "temperature_J_over_kB": "J/k_B",
+            "heat_capacity_per_site": "dimensionless",
+            "heat_capacity_error": "dimensionless"
+          }
+        },
+        "description": "Heat capacity per site for each SG order and boundary condition. The checker verifies that variation across different system sizes is small (structural sanity check)."
+      },
+      {
+        "file": "helicity_modulus.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "boundary_condition",
+            "temperature_J_over_kB",
+            "gamma",
+            "gamma_error"
+          ],
+          "units": {
+            "temperature_J_over_kB": "J/k_B",
+            "gamma": "J",
+            "gamma_error": "J"
+          }
+        },
+        "description": "Helicity modulus; the paper's main claim is assessed through structural trends: for closed BC low‑T γ decreases monotonically with increasing m, and for open BC γ is approximately zero at all temperatures."
+      },
+      {
+        "file": "susceptibility.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "boundary_condition",
+            "temperature_J_over_kB",
+            "susceptibility_per_site",
+            "susceptibility_error"
+          ],
+          "units": {
+            "temperature_J_over_kB": "J/k_B",
+            "susceptibility_per_site": "dimensionless",
+            "susceptibility_error": "dimensionless"
+          }
+        },
+        "description": "Linear susceptibility per site; the checker performs a structural audit (peak position trend) as a supporting sanity check."
+      }
+    ],
+    "notes": "Square‑lattice benchmark simulations are not required for scoring. The checker evaluates key trends (monotonic decrease, zero within error bars) rather than exact numeric agreement, to accommodate Monte Carlo noise and implementation differences."
+  },
+  "steps": [
+    {
+      "id": "helicity_modulus_check",
+      "output_file": "helicity_modulus.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "config": {
+        "low_T": 0.5,
+        "zero_threshold": 0.05,
+        "downturn_gamma_threshold": 0.3
+      }
+    },
+    {
+      "id": "heat_capacity_check",
+      "output_file": "heat_capacity.csv",
+      "kind": "custom",
+      "weight": 0.2,
+      "config": {
+        "check_temperature": 1.0,
+        "max_variation_fraction": 0.15
+      }
+    },
+    {
+      "id": "susceptibility_check",
+      "output_file": "susceptibility.csv",
+      "kind": "custom",
+      "weight": 0.2,
+      "config": {}
+    }
+  ]
+}

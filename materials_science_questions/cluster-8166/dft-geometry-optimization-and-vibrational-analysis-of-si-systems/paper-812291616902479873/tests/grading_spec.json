@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Main quantities are the BCP properties and energy cost. Agent only submits final CSV and scalar; no raw wavefunction analysis files are provided to recompute. Therefore, compare agent's reported values to paper gold with appropriate tolerances and a threshold.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Si-N BCP analysis (Table II in paper)",
+      "source_provenance": "Paper Table II",
+      "generation_method": "Extracted directly from paper",
+      "why_not_fabricated": "These are the paper's reported values; used for reference_match scoring."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Threshold for constrained energy cost (≤6 kcal/mol)",
+      "source_provenance": "Paper text stating the energy is less than 6 kcal/mol",
+      "generation_method": "Interpretation of paper conclusion",
+      "why_not_fabricated": "The claim is that the energy cost is ≤6 kcal/mol, so any value within that range is accepted; the exact paper value is not critical as the task ensures it's small."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_bcp_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "method",
+            "R_SiN",
+            "rho",
+            "laplacian",
+            "d_Si"
+          ],
+          "units": {
+            "R_SiN": "Å",
+            "rho": "au",
+            "laplacian": "au",
+            "d_Si": "%"
+          }
+        },
+        "description": "Bond critical point properties of the Si–N interaction for the silatrane series, extracted from 6‑31G(d) densities. The hidden checker compares these values to the paper‑reported numbers from Table II with appropriate tolerances."
+      },
+      {
+        "file": "step_02_energy_cost.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "kcal/mol"
+          }
+        },
+        "description": "AM1 energy cost (kcal/mol) to reduce the Si–N distance in hydroxysilatrane from its optimized gas‑phase value to 2.15 Å. The checker verifies the value is positive and does not exceed 6.0 kcal/mol."
+      }
+    ],
+    "notes": "The Hessian check for n=0 and the Si–O_ax bond critical point analysis (Table III) are omitted as non‑headline supporting information not required for the main claims. The methylsilatrane compound is also excluded from the reproduction scope."
+  },
+  "steps": [
+    {
+      "id": "step_01_bcp_analysis",
+      "output_file": "step_01_bcp_analysis.csv",
+      "weight": 0.7,
+      "kind": "reference_match_table",
+      "tolerances": {
+        "rho": 0.005,
+        "laplacian": 0.02,
+        "d_si": 1.0
+      },
+      "gold_rows": [
+        {
+          "n": 0,
+          "method": "6-31G(d)//AM1",
+          "rho": 0.038,
+          "laplacian": 0.0978,
+          "d_si": 37.8
+        },
+        {
+          "n": 1,
+          "method": "6-31G(d)//AM1",
+          "rho": 0.0375,
+          "laplacian": 0.0557,
+          "d_si": 39.0
+        },
+        {
+          "n": 2,
+          "method": "6-31G(d)//AM1",
+          "rho": 0.0315,
+          "laplacian": 0.0361,
+          "d_si": 40.7
+        },
+        {
+          "n": 3,
+          "method": "6-31G(d)//AM1",
+          "rho": 0.0301,
+          "laplacian": 0.0351,
+          "d_si": 41.7
+        },
+        {
+          "n": 0,
+          "method": "6-31G(d)//6-31G(d)",
+          "rho": 0.055,
+          "laplacian": 0.2403,
+          "d_si": 37.9
+        },
+        {
+          "n": 1,
+          "method": "6-31G(d)//6-31G(d)",
+          "rho": 0.0465,
+          "laplacian": 0.1474,
+          "d_si": 38.0
+        }
+      ]
+    },
+    {
+      "id": "step_02_energy_cost",
+      "output_file": "step_02_energy_cost.txt",
+      "weight": 0.3,
+      "kind": "threshold_or_better",
+      "threshold_min": 1e-06,
+      "threshold_max": 6.0
+    }
+  ]
+}

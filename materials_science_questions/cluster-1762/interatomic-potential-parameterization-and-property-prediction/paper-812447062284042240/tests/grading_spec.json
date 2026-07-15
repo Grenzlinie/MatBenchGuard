@@ -1,0 +1,184 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All quantities can be recomputed from the agent's raw artifacts using the embedded physical parameters and formulas; paper-reported values serve as the hidden gold for p and E_F, and the room-temperature model is analytically recomputed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "multiple_ionization_threshold.csv": "metric_recompute",
+    "energy_per_f_centre.csv": "exact_match",
+    "room_temperature_model.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "p thresholds (Table 1), E_F targets (Table 4), and room-temperature gold values",
+      "source_provenance": "Paper Tables 1, 3, 4; Born-Mayer parameters from Mott & Gurney, polarizabilities from Born as described in the paper.",
+      "generation_method": "Extracted directly from the paper’s tables and formulas; p values taken from Table 1, E_F from Table 4 column 2, room-temperature values computed from Eqs. 30,32 with stated fixed parameters.",
+      "why_not_fabricated": "All gold values are the paper's own reported numbers or derivable from them; the checker recomputes the energy balance with public parameters, so the gold is consistent with a correct reproduction and does not rely on fabricated labels."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "multiple_ionization_threshold.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alkali_halide",
+            "n",
+            "p"
+          ],
+          "columns": {
+            "alkali_halide": "string",
+            "n": "float",
+            "p": "int"
+          },
+          "notes": "n dimensionless; p integer threshold."
+        },
+        "description": "Multiple ionization thresholds for seven alkali halides, computed from the energy-balance equation."
+      },
+      {
+        "file": "energy_per_f_centre.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alkali_halide",
+            "E_F"
+          ],
+          "columns": {
+            "alkali_halide": "string",
+            "E_F": "float"
+          },
+          "notes": "E_F in eV."
+        },
+        "description": "X-ray energy per F-centre formed for each alkali halide."
+      },
+      {
+        "file": "room_temperature_model.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "delta_l_over_l",
+            "N_v"
+          ],
+          "columns": {
+            "delta_l_over_l": "float",
+            "N_v": "float"
+          },
+          "notes": "delta_l_over_l dimensionless; N_v in cm⁻³. Single row."
+        },
+        "description": "Linear dilatation and vacancy concentration from the room-temperature model."
+      }
+    ],
+    "notes": "All empirical constants used are from published literature and will be provided inline in the instruction; no external datasets are required."
+  },
+  "steps": [
+    {
+      "id": "check_multiple_ionization",
+      "output_file": "multiple_ionization_threshold.csv",
+      "weight": 0.3,
+      "kind": "multiple_ionization",
+      "description": "Verify n satisfies energy balance and p matches paper Table 1",
+      "params": {
+        "M": 1.7476,
+        "rho": 0.345,
+        "e_sq": 14.399,
+        "Z": 8,
+        "A": 655.0,
+        "halides": {
+          "LiF": {
+            "d": 2.0135,
+            "r_anion": 1.36,
+            "r_cation": 0.6,
+            "alpha_minus": 1.04,
+            "alpha_plus": 0.029,
+            "p_target": 2
+          },
+          "NaF": {
+            "d": 2.317,
+            "r_anion": 1.36,
+            "r_cation": 0.95,
+            "alpha_minus": 1.04,
+            "alpha_plus": 0.41,
+            "p_target": 2
+          },
+          "KCl": {
+            "d": 3.1465,
+            "r_anion": 1.81,
+            "r_cation": 1.33,
+            "alpha_minus": 3.66,
+            "alpha_plus": 1.33,
+            "p_target": 3
+          },
+          "NaCl": {
+            "d": 2.82,
+            "r_anion": 1.81,
+            "r_cation": 0.95,
+            "alpha_minus": 3.66,
+            "alpha_plus": 0.41,
+            "p_target": 3
+          },
+          "KBr": {
+            "d": 3.3,
+            "r_anion": 1.95,
+            "r_cation": 1.33,
+            "alpha_minus": 4.77,
+            "alpha_plus": 1.33,
+            "p_target": 3
+          },
+          "NaBr": {
+            "d": 2.9865,
+            "r_anion": 1.95,
+            "r_cation": 0.95,
+            "alpha_minus": 4.77,
+            "alpha_plus": 0.41,
+            "p_target": 3
+          },
+          "KI": {
+            "d": 3.533,
+            "r_anion": 2.16,
+            "r_cation": 1.33,
+            "alpha_minus": 7.1,
+            "alpha_plus": 1.33,
+            "p_target": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "check_energy_per_f_centre",
+      "output_file": "energy_per_f_centre.csv",
+      "weight": 0.5,
+      "kind": "energy_per_f_centre",
+      "description": "Verify E_F against paper Table 4 with 10% tolerance",
+      "gold_values": {
+        "LiF": 750.0,
+        "NaF": 1100.0,
+        "KCl": 18000.0,
+        "NaCl": 14000.0,
+        "KBr": 12000.0,
+        "NaBr": 11000.0,
+        "KI": 5800.0
+      },
+      "tolerance_relative": 0.1
+    },
+    {
+      "id": "check_room_temperature",
+      "output_file": "room_temperature_model.csv",
+      "weight": 0.2,
+      "kind": "room_temperature",
+      "description": "Verify Δl/l and N_v from room-temperature model",
+      "gold_delta_l_over_l": 1.3096788e-07,
+      "gold_N_v": 7858080000000000.0,
+      "tolerance_relative": 0.02
+    }
+  ]
+}

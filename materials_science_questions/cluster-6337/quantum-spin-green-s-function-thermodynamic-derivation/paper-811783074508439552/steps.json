@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_dipole_sums",
+    "title": "Compute dipole-dipole lattice sums",
+    "role": "process",
+    "action": "Compute the dipole-dipole interaction functions p_xx(k), p_yy(k), p_zz(k) on a user-chosen k-point mesh for a 2D square lattice using the Ewald summation method involving rapidly convergent series of modified Bessel functions. Store the computed arrays.",
+    "output_file": "",
+    "evidence": "dipole_sums.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Generates the dipolar contributions required by the self-consistent equations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_solve_sc",
+    "title": "Solve self-consistent Green's-function equations",
+    "role": "process",
+    "action": "Implement the self-consistent scheme for a spin-1 Heisenberg ferromagnet on a 2D square lattice with nearest-neighbour exchange J, easy-plane anisotropy D, and dipole-dipole interaction Ω. Use RPA decoupling for inter-site terms and Callen-Anderson on-site decoupling. Solve the closed equations for the independent expectation values <S^z>, <(S^z)^2>, <(S^-)^2>, <(S^-)^2 S^z> at each temperature for a grid of temperatures T/J covering the required parameter sets (D/J, Ω/J). Store converged quantities.",
+    "output_file": "",
+    "evidence": "sc_results.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Core numerical simulation; its outputs are consumed by all scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_magnetization",
+    "title": "Output magnetization vs temperature",
+    "role": "scored",
+    "action": "From the stored self-consistent solutions, extract the spontaneous magnetization M=<S^z> as a function of reduced temperature T/J for the specified combinations of D/J and Ω/J (e.g., Ω/J=0.005, D/J=0.1,0.2,0.5). Write the curves to magnetization.csv.",
+    "output_file": "magnetization.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Magnetization <S^z> versus reduced temperature T/J for selected anisotropy and dipolar strengths.",
+    "output_schema": "T_div_J:float, D_div_J:float, Omega_div_J:float, M:float"
+  },
+  {
+    "id": "step_04_spectrum",
+    "title": "Compute spin-wave dispersion",
+    "role": "scored",
+    "action": "Using the converged expectation values at reduced temperature T/J=0.1 and the expressions for F1(k) and F2(k), compute the magnon energy E(k) = sqrt(F1^2 - F2^2) along a high-symmetry path in the Brillouin zone for Ω/J=0.005 and D/J=0.1,0.5,1.0. Write the dispersion to spinwave_spectrum.csv.",
+    "output_file": "spinwave_spectrum.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Spin-wave excitation energy E(k) along a k-path for several values of easy-plane anisotropy at low temperature.",
+    "output_schema": "k_path:string, k_x:float, k_y:float, D_div_J:float, E:float"
+  },
+  {
+    "id": "step_05_tc",
+    "title": "Determine transition temperatures",
+    "role": "scored",
+    "action": "From the magnetization curves, extract the Curie temperature Tc (where M→0) by interpolation/extrapolation. Compile Tc/J as a function of D/J for fixed Ω/J=0.006 and as a function of Ω/J for fixed D/J=0.2. Write results to transition_temperature.csv.",
+    "output_file": "transition_temperature.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Transition temperature Tc/J as a function of anisotropy constant or dipolar strength.",
+    "output_schema": "parameter:string, value:float, Tc_div_J:float"
+  }
+]

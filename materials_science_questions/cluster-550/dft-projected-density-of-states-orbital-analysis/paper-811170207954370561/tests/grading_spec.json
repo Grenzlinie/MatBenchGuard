@@ -1,0 +1,175 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities can be recomputed from raw artifacts and compared to paper‑reported values with tolerances; the transmittance curve is audited through structural features.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_structural_params.json": "exact_match",
+    "step_02_elastic_constants.json": "exact_match",
+    "step_03_optical_properties.json": "exact_match",
+    "step_04_transmittance_curve.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for structural parameters, elastic constants, and optical spectral features.",
+      "source_provenance": "Paper's Table 1 (structural), Table 2 (elastic), and text descriptions of optical peaks and reflectivity dip.",
+      "generation_method": "Direct extraction from the paper's reported computed results.",
+      "why_not_fabricated": "These are the paper's own published numerical predictions for the same quantities; they serve as the hidden reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_structural_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a0": "float (Å)",
+            "z": "float",
+            "B_B_in": "float (Å)",
+            "B_B_out": "float (Å)"
+          }
+        },
+        "description": "Optimized lattice parameter, internal coordinate, and bond lengths of KB6."
+      },
+      {
+        "file": "step_02_elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11": "float (GPa)",
+            "C12": "float (GPa)",
+            "C44": "float (GPa)"
+          }
+        },
+        "description": "Single-crystal elastic constants of KB6."
+      },
+      {
+        "file": "step_03_optical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "epsilon2_peak_energy": "float (eV)",
+            "epsilon2_peak_value": "float (dimensionless)",
+            "absorption_peak_energy": "float (eV)",
+            "absorption_peak_value": "float (cm⁻¹)",
+            "reflectivity_min_energy": "float (eV)",
+            "reflectivity_min_value": "float (dimensionless)"
+          }
+        },
+        "description": "Key peak energies and values of the dielectric function, absorption coefficient, and reflectivity."
+      },
+      {
+        "file": "step_04_transmittance_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "transmittance_fraction"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "transmittance_fraction": "dimensionless"
+          }
+        },
+        "description": "Computed transmittance spectrum of a compacted KB6 film; curve shape (hanging bell), visible peak >0.7, and NIR trough <0.3 will be audited."
+      }
+    ],
+    "notes": "All outputs must be placed in /app/outputs. The transmittance curve must be computed from the reflectivity and absorption spectra; its shape and key features are verified against expected solar shielding behaviour."
+  },
+  "steps": [
+    {
+      "id": "step_01_structural",
+      "output_file": "step_01_structural_params.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "fields": [
+        "a0",
+        "z",
+        "B_B_in",
+        "B_B_out"
+      ],
+      "gold": {
+        "a0": 4.20746,
+        "z": 0.198864,
+        "B_B_in": 1.79183,
+        "B_B_out": 1.67343
+      },
+      "tolerances": {
+        "a0": 0.02,
+        "z": 0.02,
+        "B_B_in": 0.02,
+        "B_B_out": 0.02
+      }
+    },
+    {
+      "id": "step_02_elastic",
+      "output_file": "step_02_elastic_constants.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "fields": [
+        "C11",
+        "C12",
+        "C44"
+      ],
+      "gold": {
+        "C11": 349.574,
+        "C12": 26.3802,
+        "C44": 86.7274
+      },
+      "tolerances": {
+        "C11": 0.2,
+        "C12": 0.2,
+        "C44": 0.2
+      }
+    },
+    {
+      "id": "step_03_optical",
+      "output_file": "step_03_optical_properties.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "energy_fields": [
+        "epsilon2_peak_energy",
+        "absorption_peak_energy",
+        "reflectivity_min_energy"
+      ],
+      "value_fields": [
+        "epsilon2_peak_value",
+        "absorption_peak_value",
+        "reflectivity_min_value"
+      ],
+      "gold": {
+        "epsilon2_peak_energy": 5.52,
+        "epsilon2_peak_value": 10.0,
+        "absorption_peak_energy": 1.15,
+        "absorption_peak_value": 128686.0,
+        "reflectivity_min_energy": 1.73,
+        "reflectivity_min_value": 0.02
+      },
+      "energy_tol": 0.2,
+      "value_tol": 0.2
+    },
+    {
+      "id": "step_04_transmittance",
+      "output_file": "step_04_transmittance_curve.csv",
+      "weight": 0.6,
+      "kind": "structural_audit",
+      "expected_visible_peak_wavelength": 585,
+      "visible_peak_wavelength_tol": 20,
+      "min_visible_peak": 0.7,
+      "max_nir_trough": 0.3
+    }
+  ]
+}

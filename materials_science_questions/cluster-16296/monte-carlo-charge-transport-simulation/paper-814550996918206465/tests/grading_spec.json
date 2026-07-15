@@ -1,0 +1,166 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "The scored metrics (drift velocity and subband fractions) are the direct outputs of a Monte Carlo simulation that the verifier cannot re-run. A true 'recompute' is infeasible. Instead we compare the agent's reported numbers to the paper's published values (extracted from Fig. 4 and Fig. 5) within tolerances, and verify structural trends (wire > bulk, resonance enhancement). This is T0 result-level compare, labeled 'consistency' per the available tiers.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "velocity_results.json": "reference_match",
+    "distribution_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold drift velocities and subband fractions from the paper.",
+      "source_provenance": "Paper 'Size effects in multisubband quantum wire structures', Briggs & Leburton, Phys. Rev. B 38, 8163 (1988).",
+      "generation_method": "Drift velocities: 300 K wire = 8.08e6 cm/s (mobility 16160 cm^2/Vs * 500 V/cm), bulk = 4.0e6 cm/s (mobility 8000 cm^2/Vs). 77 K values read from Fig.4(b): wire ~11.5e6 cm/s, bulk ~4.6e6 cm/s. Subband fractions: off-resonance (28 meV) 60%, 30%, 10%; resonance (36 meV) 55%, 38%, 7%; above-resonance (44 meV) 71%, 24%, 5% (Fig.5 and text).",
+      "why_not_fabricated": "These are the paper's own reported values; they serve as the reproduction reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "velocity_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "optimal_confinement": {
+              "type": "object",
+              "properties": {
+                "Ly": {
+                  "type": "number",
+                  "description": "well width in Å"
+                },
+                "Fz": {
+                  "type": "number",
+                  "description": "gate field in kV/cm"
+                },
+                "units": {
+                  "type": "string",
+                  "description": "units"
+                }
+              }
+            },
+            "velocities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number",
+                    "description": "temperature in K"
+                  },
+                  "Fx": {
+                    "type": "number",
+                    "description": "longitudinal field in V/cm"
+                  },
+                  "velocity_cm_s": {
+                    "type": "number",
+                    "description": "1D drift velocity in cm/s"
+                  },
+                  "bulk_velocity_cm_s": {
+                    "type": "number",
+                    "description": "bulk GaAs drift velocity in cm/s"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Drift velocity results for the optimal confinement condition at two temperatures. Compared to the paper's reported values within tolerance."
+      },
+      {
+        "file": "distribution_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "resonance_data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "case": {
+                    "type": "string",
+                    "description": "off_resonance, resonance, or above_resonance"
+                  },
+                  "delta_E_meV": {
+                    "type": "number",
+                    "description": "subband separation in meV"
+                  },
+                  "fraction_subband_1": {
+                    "type": "number",
+                    "description": "population fraction in subband 1"
+                  },
+                  "fraction_subband_2": {
+                    "type": "number",
+                    "description": "population fraction in subband 2"
+                  },
+                  "fraction_subband_3": {
+                    "type": "number",
+                    "description": "population fraction in subband 3"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Subband population fractions for three confinement cases near the POP resonance. Compared to the paper's reported values within tolerance."
+      }
+    ],
+    "notes": "The drift velocity and subband population fractions are the main scored outputs of the simulation reproduction. The hidden checker compares the agent's computed values to the paper's reported reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "velocity_check",
+      "output_file": "velocity_results.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "gold_velocities": [
+        {
+          "T": 300,
+          "Fx": 500,
+          "wire": 8080000.0,
+          "bulk": 4000000.0
+        },
+        {
+          "T": 77,
+          "Fx": 500,
+          "wire": 11500000.0,
+          "bulk": 4600000.0
+        }
+      ],
+      "tolerance_rel": 0.05,
+      "tolerance_abs_vel": 500000.0,
+      "wire_bulk_min_ratio_300K": 1.8,
+      "wire_bulk_max_ratio_300K": 2.5
+    },
+    {
+      "id": "distribution_check",
+      "output_file": "distribution_results.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "gold_fractions": {
+        "off_resonance": {
+          "f1": 0.6,
+          "f2": 0.3,
+          "f3": 0.1
+        },
+        "resonance": {
+          "f1": 0.55,
+          "f2": 0.38,
+          "f3": 0.07
+        },
+        "above_resonance": {
+          "f1": 0.71,
+          "f2": 0.24,
+          "f3": 0.05
+        }
+      },
+      "tolerance_abs_fraction": 0.02
+    }
+  ]
+}

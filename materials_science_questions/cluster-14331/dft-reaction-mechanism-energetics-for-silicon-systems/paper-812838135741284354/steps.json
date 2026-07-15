@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "Geometry optimization and TS verification",
+    "role": "process",
+    "action": "Build initial 3D structures for reactants, transition states (4-center cyclic guesses), and products of compounds 1–4. Optimize geometries at M06-2x/aug-cc-pVTZ level and compute harmonic vibrational frequencies. Confirm each TS has exactly one imaginary frequency.",
+    "output_file": "",
+    "evidence": "optimization_output.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Optimized geometries and frequencies obtained.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "High-level energy calculation",
+    "role": "scored",
+    "action": "Using the optimized geometries, perform single-point energy calculations with a high-level composite method equivalent to CBS-QB3 (e.g., DLPNO-CCSD(T)/CBS) to obtain electronic energies. Compute zero-point vibrational energies and thermal corrections to derive activation energies (ΔE0K‡, ΔH298‡, ΔG298‡) and reaction energies (ΔE0K, ΔH298, ΔG298) for all four pathways. Write the results to energies.json.",
+    "output_file": "energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing activation and reaction energies for each pathway.",
+    "output_schema": "Object with keys \"R1->P1\", \"R2->P2\", \"R3->P3\", \"R4->P4\". Each key maps to an object with two sub-objects: \"activation\" (fields: delta_E0_dagger, delta_H298_dagger, delta_G298_dagger in kcal/mol) and \"reaction\" (fields: delta_E0, delta_H298, delta_G298 in kcal/mol)."
+  },
+  {
+    "id": "step_3",
+    "title": "TST and RRKM kinetics calculation",
+    "role": "process",
+    "action": "Using KiSThelP, compute TST and RRKM unimolecular rate constants for all pathways over the temperature range 151–246 °C and pressures from 10⁻¹² to 10² bar. Use the activation barriers and vibrational frequencies from previous steps, include Wigner tunneling correction, and apply Lennard-Jones collision parameters (σ ≈ 4.8 Å, ε/kB appropriate for each compound, with Ar bath gas).",
+    "output_file": "",
+    "evidence": "kisthelp_full_output.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw KiSThelP output containing all computed rate constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Rate constants table",
+    "role": "scored",
+    "action": "From the KiSThelP output, extract TST and RRKM rate constants at the experimental temperatures and pressures. Write a CSV file rate_constants.csv with columns: pathway, temperature_C, pressure_bar, TST_rate, RRKM_rate. Include all temperatures from 151 to 246 °C (in °C) and a sufficient pressure grid covering the fall-off (e.g., 10⁻¹², 10⁻¹¹, …, 10² bar).",
+    "output_file": "rate_constants.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV table of TST and RRKM rate constants at varying temperatures and pressures.",
+    "output_schema": "Columns: pathway (str), temperature_C (float), pressure_bar (float, scientific notation), TST_rate (float, s^-1), RRKM_rate (float, s^-1)."
+  },
+  {
+    "id": "step_5",
+    "title": "Fall-off analysis",
+    "role": "scored",
+    "action": "Analyze the pressure dependence for pathway 1 (R1->P1). Determine the highest pressure (in bar) at which the TST rate constant deviates by more than 10% from the RRKM rate (i.e., TST/RRKM < 0.9) at any temperature in the experimental range. Write this analysis to falloff_summary.json with a boolean 'pathway1_falloff' (true if TST breaks down at P < 10⁻⁴ bar) and the numeric 'breakdown_pressure_bar'.",
+    "output_file": "falloff_summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON summary of TST validity limit for pathway 1.",
+    "output_schema": "Object with keys \"pathway1_falloff\" (bool) and \"breakdown_pressure_bar\" (float, in bar)."
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01_optimize_silylene_structures",
+    "title": "Optimize intrarow and on-dimer SiH2 configurations with varying H coverage",
+    "role": "process",
+    "action": "Build the Si(100)-(2×1) slab model (6 layers, bottom fixed, H-terminated, ~10 Å vacuum) using the known Si lattice parameter. Add SiH2 adsorbate in intrarow and on-dimer geometries for three hydrogen coverages (0, 1, and 2 coadsorbed H atoms). Perform full geometry optimization for each configuration using DFT (PBE functional, plane-wave cutoff 20 Ry, norm-conserving pseudopotentials) with appropriately chosen supercell sizes (2×2, 2×4, 4×2) to minimize lateral interactions. Record the optimized total energy for each structure in an evidence CSV file.",
+    "output_file": "",
+    "evidence": "energies_silylene_geometries.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Process step that produces the total energies of all silylene configurations, needed for the subsequent relative energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_relative_energies",
+    "title": "Compute relative stability of intrarow vs on-dimer silylene",
+    "role": "scored",
+    "action": "From the total energies recorded in step01, compute the energy difference ΔE = E(on-dimer) − E(intrarow) for each hydrogen coverage (0H, 1H, 2H), using energies from the supercell that gives the most converged lateral interaction (e.g., 2×2 for 2H, 4×2 or 2×4 for 0H and 1H). Write the three ΔE values to a JSON file.",
+    "output_file": "relative_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the relative stability of on-dimer vs intrarow silylene as a function of coadsorbed hydrogen coverage.",
+    "output_schema": "{\"delta_E_0H_eV\": float, \"delta_E_1H_eV\": float, \"delta_E_2H_eV\": float}"
+  },
+  {
+    "id": "step03_scan_decomposition_paths",
+    "title": "Constrained DFT scans for intrarow and on-dimer decomposition",
+    "role": "process",
+    "action": "Starting from the adsorbed silyl (SiH₃) geometry, perform a series of constrained relaxations. Hold the distance dSi-H between the silyl silicon and the dissociating hydrogen fixed at a set of values covering the bond-breaking range (at least 21 points for intrarow, 26 for on-dimer). At each fixed distance, fully relax all other ionic degrees of freedom. Record the total energy as a function of distance, and save the Cartesian forces acting on the dissociating H atom along the exit valley (from transition state to product) in a dedicated CSV evidence file. Identify the transition state as the energy maximum along each path.",
+    "output_file": "",
+    "evidence": "forces_H_exit_valley.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Process step that generates the energy profiles and the force data required for computing activation barriers and frustrated translational energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04_activation_barriers",
+    "title": "Compute activation barriers for both decomposition pathways",
+    "role": "scored",
+    "action": "From the energy curves obtained in step03, locate the transition state (maximum energy) and the reactant minimum for each decomposition pathway. Compute the activation barrier as the difference in total energy between transition state and reactant. Write the two barrier values to a JSON file.",
+    "output_file": "activation_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the DFT-derived activation barriers for intrarow and on-dimer decomposition; this step is load-bearing because its correct value stems from the full constrained-path DFT scan.",
+    "output_schema": "{\"intrarow_barrier_eV\": float, \"on_dimer_barrier_eV\": float}"
+  },
+  {
+    "id": "step05_integrate_work_h",
+    "title": "Compute frustrated translational energy of hydrogen via force integration",
+    "role": "scored",
+    "action": "Using the forces on the dissociated hydrogen atom along the intrarow exit valley (from the step03 evidence file forces_H_exit_valley.csv), numerically integrate the force along the displacement from the transition state to the product well: W = ∫ F·dr. Interpret the integrated work as the frustrated translational kinetic energy of the H atom. Write the work integral and the estimated excess energy above thermal (which are identical under the paper's approximation) to a JSON file.",
+    "output_file": "frustrated_energy_hydrogen.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the work integral and the H atom frustrated translational energy gain. The checker will recompute the integral from the force data, making this step load-bearing.",
+    "output_schema": "{\"H_work_integral_eV\": float, \"estimated_frustrated_translational_energy_eV\": float}"
+  }
+]

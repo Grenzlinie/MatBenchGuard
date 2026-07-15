@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The agent's output contains only the final computed constants (K and lnK); recomputing from raw intermediates would duplicate the full statistical-mechanical workflow, making T1 infeasible in the lightweight verifier. A result-level compare against published paper gold with tolerances is appropriate. An additional structural trend check reinforces reliability.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold equilibrium constants (K_atmos, lnK) for five temperatures from paper Table II",
+      "source_provenance": "paper Table II: K_atmos x10^20 values and -lnK values extracted directly.",
+      "generation_method": "extracted, converted K values by dividing by 10^20.",
+      "why_not_fabricated": "the numbers are the paper's own reported results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "p2_dissociation_equilibrium.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "units": "string",
+            "entries": "array of objects with T_K, K_atmos, lnK"
+          },
+          "items": {
+            "T_K": "integer (temperature in K)",
+            "K_atmos": "float",
+            "lnK": "float"
+          }
+        },
+        "description": "Computed equilibrium constants K_atmos = P_P^2 / P_{P2} and their natural logarithms at five temperatures, matching the spectroscopic calculation of Table II."
+      }
+    ],
+    "notes": "The task reproduces the spectroscopic calculation of P2 dissociation equilibrium constants from the paper. The checker compares the agent's submitted K_atmos and lnK against hidden gold values using a relative tolerance for K_atmos and absolute tolerance for lnK (whichever is looser). No network fetch for ground truth."
+  },
+  "steps": [
+    {
+      "id": "numeric",
+      "output_file": "p2_dissociation_equilibrium.json",
+      "weight": 0.85,
+      "kind": "numeric_compare",
+      "expected": [
+        {
+          "T_K": 1073,
+          "K_atmos": 7.4e-21,
+          "lnK": -46.35
+        },
+        {
+          "T_K": 1173,
+          "K_atmos": 9.1e-19,
+          "lnK": -41.54
+        },
+        {
+          "T_K": 1273,
+          "K_atmos": 5.4e-17,
+          "lnK": -37.47
+        },
+        {
+          "T_K": 1373,
+          "K_atmos": 1.7e-15,
+          "lnK": -33.99
+        },
+        {
+          "T_K": 1473,
+          "K_atmos": 3.6e-14,
+          "lnK": -30.96
+        }
+      ],
+      "lnK_tol": 0.1,
+      "K_rel_tol": 0.15
+    },
+    {
+      "id": "trend",
+      "output_file": "p2_dissociation_equilibrium.json",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "description": "Verify that K_atmos values are positive and strictly increasing with temperature."
+    }
+  ]
+}

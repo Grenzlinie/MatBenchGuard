@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_caspt2_pec",
+    "title": "CASPT2 potential energy and dipole moment calculation",
+    "role": "process",
+    "action": "Run a CASSCF(2,2) calculation followed by CASPT2 with the DKH3 Hamiltonian and ANO-RCC basis sets for Mg and H. Compute the electronic ground-state energy and dipole moment (density expectation value) on a grid of internuclear distances R = 1.5 au to 50.0 au (in steps of 0.1 au or similar). Write the resulting PEC E(R) and dipole function μ(R) to a CSV evidence file.",
+    "output_file": "",
+    "evidence": "pe_and_dipole_curve.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generates the raw electronic-structure data needed for all downstream analyses.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_numerov_vib",
+    "title": "Numerov solution of vibrational Schrödinger equation",
+    "role": "process",
+    "action": "Using the PEC E(R) from the previous step, solve the radial Schrödinger equation for J=0 with the Numerov method. Obtain all bound vibrational wavefunctions ψ_v(R), energies E_v, and rotational constants B_v. Use a dense integration grid (e.g., 1000 points on R=1.5–15 au) for accurate permanent dipole moments. Save the vibrational energies, rotational constants, and squared wavefunction grid values to an evidence file.",
+    "output_file": "",
+    "evidence": "vibrational_data.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Produces the vibrational wavefunctions required for dipole moment integration.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_spec_const",
+    "title": "Spectroscopic constants",
+    "role": "scored",
+    "action": "From the computed PEC E(R), extract the equilibrium bond length R_e (Å), harmonic vibrational frequency ω_e (cm⁻¹), rotational constant B_e (cm⁻¹), vibration–rotation coupling constant α_e (cm⁻¹), and electronic dissociation energy D_e (eV). Write these to spectroscopic_constants.json.",
+    "output_file": "spectroscopic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Spectroscopic constants derived from the CASPT2 potential curve.",
+    "output_schema": "{\"R_e\": float, \"omega_e\": float, \"B_e\": float, \"alpha_e\": float, \"D_e\": float}"
+  },
+  {
+    "id": "step_04_pdms",
+    "title": "Vibrational permanent dipole moments",
+    "role": "scored",
+    "action": "For every bound vibrational level v, compute the permanent dipole moment PDM_v = ∫ μ(R) |ψ_v(R)|² R² dR / ∫ |ψ_v(R)|² R² dR using Simpson quadrature over the grid. Report the vibrational energy E_v (cm⁻¹), rotational constant B_v (cm⁻¹), and PDM (Debye) for each level. Write the results as an array in pdms.json.",
+    "output_file": "pdms.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Permanent dipole moments for all bound vibrational states.",
+    "output_schema": "[{\"v\": int, \"energy\": float, \"B_v\": float, \"pdm\": float}]"
+  },
+  {
+    "id": "step_05_tdms",
+    "title": "Vibrational transition dipole moments",
+    "role": "scored",
+    "action": "Using a fine integration grid (e.g., 1500 points on R=1.5–8.0 au), evaluate transition dipole moments TDM_{v-v'} = |∫ μ(R) ψ_{v'}^*(R) ψ_v(R) R² dR| / (√∫|ψ_{v'}|² R² dR · √∫|ψ_v|² R² dR) for v, v' = 0..4 (all combinations). Report the non-zero values (or all pairs) in tdms.json, each with fields v, v_prime, and tdm in Debye.",
+    "output_file": "tdms.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Transition dipole moments between the five lowest vibrational states.",
+    "output_schema": "[{\"v\": int, \"v_prime\": int, \"tdm\": float}]"
+  },
+  {
+    "id": "step_06_sers",
+    "title": "Spontaneous emission rates",
+    "role": "scored",
+    "action": "From the transition dipole moments and vibrational energy differences ΔE = E_v - E_{v'}, compute the Einstein A coefficient for v = 1..4 (J=0 → J'=1) as A_v = (16π³/(3ε₀h⁴c³)) Σ_{v'=0}^{v-1} (ΔE)³ |TDM_{v-v'}|². Report the rates in s⁻¹ in sers.json as an array of objects with v and ser.",
+    "output_file": "sers.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Spontaneous emission rates for the four lowest vibrational excited states.",
+    "output_schema": "[{\"v\": int, \"ser\": float}]"
+  }
+]

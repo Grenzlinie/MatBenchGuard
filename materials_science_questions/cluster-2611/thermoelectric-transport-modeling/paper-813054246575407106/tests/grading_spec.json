@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Power factor peak is recomputed from the agent's CSV; band structure pudding-mold verification uses structural dispersion criteria.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_structure_Ba2PdO3.json": "structural_audit",
+    "band_structure_La4PdO7.json": "structural_audit",
+    "pf_vs_doping.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Peak n-type power factor gold values for Ba2PdO3 and La4PdO7, and reference Bi2PdO4 peak for the 1e20 check.",
+      "source_provenance": "Paper Figure 5(a) and text: Ba2PdO3 peak 1.48e12 W/(m·K^2·s) at 4.4e20 cm^-3; La4PdO7 peak 1.30e12; Bi2PdO4 peak 1.36e12.",
+      "generation_method": "Extracted from the published paper.",
+      "why_not_fabricated": "These are the paper's own reported target values; they are inline in grading_spec.json to guarantee self-containment."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure_Ba2PdO3.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kpath": "array of objects (label, k [x,y,z])",
+            "bands": "array of objects (band_index, eigenvalues array of floats in eV)"
+          }
+        },
+        "description": "Electronic band structure for Ba2PdO3. The checker verifies the presence of flat and dispersive regions consistent with a pudding-mold band."
+      },
+      {
+        "file": "band_structure_La4PdO7.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "kpath": "array of objects (label, k [x,y,z])",
+            "bands": "array of objects (band_index, eigenvalues array of floats in eV)"
+          }
+        },
+        "description": "Electronic band structure for La4PdO7. The checker verifies the pudding-mold band shape."
+      },
+      {
+        "file": "pf_vs_doping.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "doping_type",
+            "carrier_concentration_cm3",
+            "sigmaS2_tau_W_mK2s"
+          ],
+          "units": {
+            "carrier_concentration_cm3": "cm^{-3}",
+            "sigmaS2_tau_W_mK2s": "W/(m·K^2·s)"
+          }
+        },
+        "description": "Thermoelectric power factor sigma*S^2/tau at 700 K as a function of carrier concentration. The checker extracts the maximum n-type value and compares to hidden reference values."
+      }
+    ],
+    "notes": "The screener filters that identified Ba2PdO3 and La4PdO7 are assumed as given; only the band structure and transport validation of these two compounds is reproduced. All scored artifacts must be produced under /app/outputs. The band structure JSON must include k-path points and eigenvalues; the CSV must contain the specified columns."
+  },
+  "steps": [
+    {
+      "id": "band_Ba2PdO3_check",
+      "output_file": "band_structure_Ba2PdO3.json",
+      "weight": 0.25,
+      "kind": "structural_audit",
+      "parameters": {
+        "dispersive_segment": [
+          "G",
+          "Y"
+        ],
+        "flat_segment": [
+          "G",
+          "Z"
+        ],
+        "dispersive_min_diff_eV": 0.5,
+        "flat_max_diff_eV": 0.1
+      }
+    },
+    {
+      "id": "band_La4PdO7_check",
+      "output_file": "band_structure_La4PdO7.json",
+      "weight": 0.25,
+      "kind": "structural_audit",
+      "parameters": {
+        "dispersive_segment": [
+          "G",
+          "Y"
+        ],
+        "flat_segment": [
+          "G",
+          "Z"
+        ],
+        "dispersive_min_diff_eV": 0.5,
+        "flat_max_diff_eV": 0.1
+      }
+    },
+    {
+      "id": "pf_check",
+      "output_file": "pf_vs_doping.csv",
+      "weight": 0.5,
+      "kind": "metric_recompute",
+      "parameters": {
+        "compounds": [
+          "Ba2PdO3",
+          "La4PdO7"
+        ],
+        "doping_type": "n",
+        "peak_gold_W_per_mK2s": {
+          "Ba2PdO3": 1480000000000.0,
+          "La4PdO7": 1300000000000.0
+        },
+        "peak_threshold_factor": 0.7,
+        "reference_Bi2PdO4_peak_W_per_mK2s": 1360000000000.0,
+        "concentration_check_cm3": 1e+20,
+        "min_ratio_to_Bi2PdO4": 0.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent reports final scalar values; recomputing from raw DFT outputs is not required by the task contract.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap.txt": "exact_match",
+    "surface_potential.txt": "exact_match",
+    "optical_peak.txt": "exact_match",
+    "energy_alignment.txt": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for band_gap, surface_potential, optical_peak; standard water redox potentials for alignment thresholds.",
+      "source_provenance": "Paper: band_gap = 0.85 eV (Fig. 2(b)); ΔΦ = 10.0 eV (Fig. 3(c)); optical peak near 1.25 eV (Fig. 2(c)). Redox potentials: H⁺/H₂ = −4.44 eV, O₂/H₂O = −5.67 eV vs vacuum (standard from ref 16).",
+      "generation_method": "Extracted from paper reported values; thresholds are standard reference values.",
+      "why_not_fabricated": "All values are directly quoted from published sources; they are the exact numbers the paper claims."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "lines": 1,
+          "units": "eV"
+        },
+        "description": "HSE06 electronic band gap of F-BNBN-H, a single floating-point number."
+      },
+      {
+        "file": "surface_potential.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "lines": 1,
+          "units": "eV"
+        },
+        "description": "Electrostatic potential difference ΔΦ between the two surfaces, a single floating-point number."
+      },
+      {
+        "file": "optical_peak.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "lines": 1,
+          "units": "eV"
+        },
+        "description": "Energy of the main low-energy optical absorption peak, a single floating-point number."
+      },
+      {
+        "file": "energy_alignment.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "lines": 2,
+          "order": [
+            "vbm_energy",
+            "cbm_energy"
+          ],
+          "units": "eV",
+          "description": "First line = VBM energy (eV, negative relative to vacuum), second line = CBM energy (eV)."
+        },
+        "description": "Absolute band-edge energies (VBM, CBM) relative to vacuum level. Verifier checks that VBM < -5.67 eV and CBM > -4.44 eV."
+      }
+    ],
+    "notes": "Tolerances for exact_match values are set to accommodate legitimate spread from using an open-source DFT code and standard pseudopotentials instead of VASP. The energy_alignment output is checked via threshold_or_better against standard redox potentials."
+  },
+  "steps": [
+    {
+      "id": "step_1_hse06_band_structure",
+      "output_file": "band_gap.txt",
+      "kind": "numeric_exact_match",
+      "target": 0.85,
+      "tolerance": 0.2,
+      "weight": 0.3
+    },
+    {
+      "id": "step_2_electrostatic_potential",
+      "output_file": "surface_potential.txt",
+      "kind": "numeric_exact_match",
+      "target": 10.0,
+      "tolerance": 0.5,
+      "weight": 0.3
+    },
+    {
+      "id": "step_3_optical_absorption",
+      "output_file": "optical_peak.txt",
+      "kind": "numeric_exact_match",
+      "target": 1.25,
+      "tolerance": 0.15,
+      "weight": 0.2
+    },
+    {
+      "id": "step_4_energy_alignment",
+      "output_file": "energy_alignment.txt",
+      "kind": "threshold_or_better",
+      "thresholds": {
+        "vbm_threshold": -5.67,
+        "cbm_threshold": -4.44
+      },
+      "margin": 0.5,
+      "weight": 0.2
+    }
+  ]
+}

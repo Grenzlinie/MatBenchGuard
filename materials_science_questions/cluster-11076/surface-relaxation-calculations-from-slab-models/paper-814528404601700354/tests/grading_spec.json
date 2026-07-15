@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes S(N) from first principles (cluster construction and coordination sums) and derives N_crit from that curve and the material constants; no hidden split or pretrained model is required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_rhs_curve.csv": "metric_recompute",
+    "step_02_critical_sizes.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Material constants C for V,Cr,Nb,Mo,Ta,W (derived from paper Table I) are inlined; reference S(N) curve and reference N_crit are computed on-the-fly by the checker.",
+      "source_provenance": "Paper Table I ΔE_bs from Pettifor (1970) and E_coh,b from Hultgren (1973); cluster construction follows the shell-by-shell addition method described in the task.",
+      "generation_method": "Compute fcc and bcc cluster positions up to 20000 atoms, count NN and NNN coordinations, apply a_fcc=0.08, a_bcc=0.4, surface threshold Z_i<10, compute cumulative sums of ((Z_i/Z_b)^0.5-1), obtain S(N). Intersect S(N) with each metal's C to get N_crit.",
+      "why_not_fabricated": "All steps are deterministic from defined rules; C values are taken directly from the paper's own table which cites public references; the checker recomputes everything and never trusts the agent's self-reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_rhs_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "N",
+            "S"
+          ],
+          "columns": {
+            "N": "integer cluster size",
+            "S": "float, the computed right-hand side of Eq. 2.7"
+          },
+          "units": {
+            "N": "atoms",
+            "S": "dimensionless"
+          }
+        },
+        "description": "The universal geometry-dependent curve S(N) from Eq. 2.7; the checker recomputes this curve independently and compares the S values with a relative tolerance of 1e-3."
+      },
+      {
+        "file": "step_02_critical_sizes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "V",
+            "Cr",
+            "Nb",
+            "Mo",
+            "Ta",
+            "W"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "units": {
+            "value": "atoms"
+          }
+        },
+        "description": "The critical cluster sizes N_crit for each of the six bcc metals; compared to the paper's reported values with a tolerance of 5% or absolute 50 atoms, whichever is larger, and internally cross-checked against the submitted RHS curve."
+      }
+    ],
+    "notes": "The task is scoped to the structural stability (Eq. 2.7) and critical size calculation only. All required material parameters are public and retrievable from the cited references. The cluster construction uses simple lattice geometries; no large external datasets are needed. The load-bearing step on the RHS curve forces the agent to actually perform the cluster construction rather than guessing the final N_crit numbers."
+  },
+  "steps": [
+    {
+      "id": "step_rhs_curve",
+      "output_file": "step_01_rhs_curve.csv",
+      "weight": 0.8,
+      "kind": "numeric",
+      "metric": "rmse_rel",
+      "tolerance": 0.001,
+      "notes": "Recompute reference S(N) and compare submitted curve with relative RMSE <= 0.001."
+    },
+    {
+      "id": "step_critical_sizes",
+      "output_file": "step_02_critical_sizes.json",
+      "weight": 0.2,
+      "kind": "json_field",
+      "fields": [
+        "V",
+        "Cr",
+        "Nb",
+        "Mo",
+        "Ta",
+        "W"
+      ],
+      "match": "reference_match",
+      "tolerance_type": "max_percent_or_abs",
+      "percent_tol": 5.0,
+      "abs_tol": 50,
+      "notes": "Compare reported N_crit to reference values; tolerance is 5% of reference or 50 atoms, whichever larger."
+    }
+  ]
+}

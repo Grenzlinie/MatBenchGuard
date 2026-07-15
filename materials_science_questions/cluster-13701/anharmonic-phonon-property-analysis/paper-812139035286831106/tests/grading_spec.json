@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing Theta3 and the exponent from raw data would require the checker to possess the public data tables and the gas constant, which are not bundled; the paper's reported values serve as the hidden gold, and scoring against them with tolerance is straightforward and aligns with the deterministic nature of these computed quantities.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Theta3_K and exponent_b",
+      "source_provenance": "Paper: Table 1 and Equations 11, 17, 19; Theta3=260 K, exponent=0.7576",
+      "generation_method": "Extracted from the paper's text and confirmed against the reference oracle (solve.sh) which reproduces the paper's result.",
+      "why_not_fabricated": "These are the actual published numerical results for crystalline polyethylene, traceable to the paper and used consistently in the reference solution."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "low_T_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a3",
+            "Theta3_K",
+            "formula"
+          ],
+          "items": {},
+          "units": {
+            "a3": "cal/(mol·K³)",
+            "Theta3_K": "K"
+          }
+        },
+        "description": "Debye temperature derived from the low-temperature T³ coefficient a₃ = 2.64e-5 cal/(mol·K³) using the Debye formula c_V = 3R·4π⁴/(5Θ₃³)·T³. The exact Θ₃ is scored against a hidden gold value with a tolerance of ±5 K."
+      },
+      {
+        "file": "intermediate_T_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "slope",
+            "intercept",
+            "exponent_b",
+            "coefficient_a"
+          ],
+          "items": {},
+          "units": {
+            "slope": "dimensionless",
+            "intercept": "log10(cal/(mol·K))",
+            "exponent_b": "dimensionless",
+            "coefficient_a": "cal/(mol·K^(b+1))"
+          }
+        },
+        "description": "Power-law exponent (b) of the heat capacity c_V ∝ T^b in the intermediate temperature range 100–190 K, obtained from a log-log linear regression on the experimentally derived c_V values (Table 1). The exponent is scored against a hidden gold value with a tolerance of ±0.02."
+      }
+    ],
+    "notes": "The agent must compute Θ₃ from the explicitly provided a₃ and the Debye relation (which relates a₃, R, and Θ₃). The intermediate c_V data for the regression is supplied directly in the task instructions; the agent must parse it and perform the fit. The hidden gold values are 260 K for Theta3_K and 0.7576 for exponent_b, with tolerances as stated; these are not disclosed to the agent."
+  },
+  "steps": [
+    {
+      "id": "step1",
+      "output_file": "low_T_fit.json",
+      "weight": 0.5,
+      "kind": "numeric_field",
+      "field": "Theta3_K",
+      "target": 260,
+      "tolerance_abs": 5,
+      "target_policy": "exact_match",
+      "description": "Check Theta3_K within ±5 K of paper value 260 K"
+    },
+    {
+      "id": "step2",
+      "output_file": "intermediate_T_fit.json",
+      "weight": 0.5,
+      "kind": "numeric_field",
+      "field": "exponent_b",
+      "target": 0.7576,
+      "tolerance_abs": 0.02,
+      "target_policy": "exact_match",
+      "description": "Check exponent_b within ±0.02 of paper value 0.7576"
+    }
+  ]
+}

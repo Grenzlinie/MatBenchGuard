@@ -1,0 +1,169 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Formation energies recomputed from total energies; geometry compared directly to paper.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "three_layer_formation_energy.json": "metric_recompute",
+    "three_layer_geometry.json": "reference_match",
+    "four_layer_separated_formation_energy.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energy of FS+(OH-) in three-layer slab (adjacent OH and vacancy)",
+      "source_provenance": "Paper Table 1 and text: periodic 3-layer slab formation energy = 1.30 eV",
+      "generation_method": "Extracted from paper",
+      "why_not_fabricated": "Directly quoted from the paper's periodic DFT result."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold geometry: Mg-OH distance and Mg-O-H angle for three-layer defect",
+      "source_provenance": "Paper text: periodic slab geometry Mg-OH = 1.87 Å, angle = 126°",
+      "generation_method": "Extracted from paper",
+      "why_not_fabricated": "Directly quoted from the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energy of FS+(OH-) in four-layer separated slab",
+      "source_provenance": "Paper text: periodic 4-layer separated formation energy = 1.87 eV",
+      "generation_method": "Extracted from paper",
+      "why_not_fabricated": "Directly quoted from the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "three_layer_formation_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "E_clean_slab_3layer",
+            "E_defect_slab_3layer",
+            "E_H_atom",
+            "formation_energy"
+          ],
+          "properties": {
+            "E_clean_slab_3layer": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_defect_slab_3layer": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_H_atom": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "formation_energy": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Total energies of 3-layer clean slab, 3-layer defect slab, isolated H atom, and the derived formation energy."
+      },
+      {
+        "file": "three_layer_geometry.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Mg_OH_distance",
+            "Mg_O_H_angle"
+          ],
+          "properties": {
+            "Mg_OH_distance": {
+              "type": "number",
+              "unit": "Angstrom"
+            },
+            "Mg_O_H_angle": {
+              "type": "number",
+              "unit": "degrees"
+            }
+          }
+        },
+        "description": "Mg–OH bond distance and Mg–O–H angle from the relaxed 3-layer defect structure."
+      },
+      {
+        "file": "four_layer_separated_formation_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "E_clean_slab_4layer",
+            "E_defect_slab_4layer",
+            "E_H_atom",
+            "formation_energy"
+          ],
+          "properties": {
+            "E_clean_slab_4layer": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_defect_slab_4layer": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_H_atom": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "formation_energy": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Total energies of 4-layer clean slab, 4-layer defect slab with separated vacancy and OH, isolated H atom, and the derived formation energy."
+      }
+    ],
+    "notes": "The checker will recompute the formation energy from the provided total energies and compare it to the reference value. The geometry values will be compared directly to reference values. All comparisons use appropriate tolerances to account for DFT implementation differences."
+  },
+  "steps": [
+    {
+      "id": "step_04_score_3layer_formation_energy",
+      "output_file": "three_layer_formation_energy.json",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "metric": "formation_energy",
+      "target": 1.3,
+      "tolerance_abs": 0.2,
+      "description": "Recompute formation energy from E_defect_slab_3layer - E_clean_slab_3layer - E_H_atom and compare to paper value."
+    },
+    {
+      "id": "step_05_score_3layer_geometry",
+      "output_file": "three_layer_geometry.json",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "fields": {
+        "Mg_OH_distance": {
+          "target": 1.87,
+          "tolerance_abs": 0.05
+        },
+        "Mg_O_H_angle": {
+          "target": 126.0,
+          "tolerance_abs": 3.0
+        }
+      },
+      "description": "Compare Mg-OH distance and Mg-O-H angle to paper values."
+    },
+    {
+      "id": "step_07_score_4layer_formation_energy",
+      "output_file": "four_layer_separated_formation_energy.json",
+      "weight": 0.3,
+      "kind": "recompute_metric",
+      "metric": "formation_energy",
+      "target": 1.87,
+      "tolerance_abs": 0.2,
+      "description": "Recompute formation energy from E_defect_slab_4layer - E_clean_slab_4layer - E_H_atom and compare to paper value."
+    }
+  ]
+}

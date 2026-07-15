@@ -1,0 +1,54 @@
+[
+  {
+    "id": "gen_configs",
+    "title": "Generate initial supercell configurations",
+    "role": "process",
+    "action": "For each combination of channel type (D, S), layout (crossing, separate), and inclusion diameter ratio σ′/σ from 1.0 to 1.1 (step 0.025), build an f.c.c. supercell of N=864 particles with periodic boundaries. Assign matrix spheres diameter σ and inclusion spheres diameter σ′. Place nanochannels according to the described orthogonal layouts. Write the initial particle positions, types, sizes, and box vectors.",
+    "output_file": "",
+    "evidence": "config_summary.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Text file listing the generated systems and their key parameters (not scored).",
+    "output_schema": ""
+  },
+  {
+    "id": "run_mc",
+    "title": "Run Monte Carlo NpT simulations",
+    "role": "process",
+    "action": "For each generated system, perform isobaric‑isothermal Monte Carlo simulations at reduced pressure p*=250 using the Parrinello–Rahman method to sample box matrix fluctuations. Save the trajectory of the symmetric box matrix h at regular intervals using appropriate equilibration and production cycles.",
+    "output_file": "",
+    "evidence": "run_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Log documenting the simulation runs (number of cycles, completion status). Not scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_matrices",
+    "title": "Compute elastic compliance and stiffness matrices",
+    "role": "scored",
+    "action": "From each saved box matrix trajectory, compute the equilibrium reference box matrix h_p, the volume V_p, and the Lagrangian strain tensor using the standard strain–box relation. Then calculate the full elastic compliance tensor (Voigt matrix S) via strain fluctuations and obtain the stiffness matrix B by matrix inversion. For each system, output the independent S and B elements, the maximum absolute off‑diagonal element outside the cubic set, and a Boolean indicating whether the matrix satisfies cubic symmetry relations to within a tolerance.",
+    "output_file": "s_matrix_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing per‑system elastic compliance and stiffness matrix elements and cubic symmetry flag.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"results\"],\"items\":{\"required\":[\"system\",\"S11\",\"S22\",\"S33\",\"S44\",\"S55\",\"S66\",\"S12\",\"S13\",\"S23\",\"other_S_max_abs\",\"B11\",\"B12\",\"B44\",\"cubic_symmetry_satisfied\"]}}"
+  },
+  {
+    "id": "compute_pr",
+    "title": "Compute Poisson's ratios and anisotropy",
+    "role": "scored",
+    "action": "Using the elastic stiffness constants B11, B12, B44 from the previous step, compute the Poisson's ratio for loading in [100], [110] (both [1-10] and [001] measurement directions), and [111] crystallographic directions using the standard formulas for cubic symmetry. Determine the global minimum and maximum Poisson's ratio by sampling many loading and measurement directions. Compute the relative isotropy criterion B44 / (0.5*(B11-B12)).",
+    "output_file": "pr_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing per‑system Poisson's ratios in main directions, global extremes, and isotropy ratio.",
+    "output_schema": "{\"type\":\"object\",\"required\":[\"results\"],\"items\":{\"required\":[\"system\",\"PR_100\",\"PR_110_1m10\",\"PR_110_001\",\"PR_111\",\"PR_min\",\"PR_max\",\"isotropy_ratio\"]}}"
+  }
+]

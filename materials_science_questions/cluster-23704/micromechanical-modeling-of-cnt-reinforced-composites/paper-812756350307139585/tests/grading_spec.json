@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Recomputation from raw layer stiffness tensors is infeasible in the verifier sandbox (requires full homogenization solver); comparing the agent's reported output to the paper's own hierarchical model predictions (Table 11) with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for E11 and E22 from the paper's hierarchical model predictions.",
+      "source_provenance": "Paper Table 11, hierarchical model row.",
+      "generation_method": "Extracted directly from the paper's reported values.",
+      "why_not_fabricated": "These are the exact reference numbers the paper's own model produced; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Case",
+            "E11_GPa",
+            "E22_GPa"
+          ],
+          "units": {
+            "E11_GPa": "GPa",
+            "E22_GPa": "GPa"
+          }
+        },
+        "description": "Predicted effective moduli for three CG-FRP validation cases. The checker compares these values to hidden reference values (paper-reported model predictions) within prescribed relative tolerances and verifies a monotonic trend of E11 with respect to fiber volume fraction."
+      }
+    ],
+    "notes": "The agent must choose appropriate discretization (N>=10) and derive the CNT areal density for the higher-Vcnt cases from the volume fraction relation to achieve the stated CNT volume fractions. The gold reference is the paper's own hierarchical model predictions, not experimental data."
+  },
+  "steps": [
+    {
+      "id": "e11_case1",
+      "output_file": "effective_moduli.csv",
+      "kind": "numeric",
+      "metric": "E11_GPa",
+      "case": "Vf0.3_Vcnt0.08",
+      "gold_value": 1.93,
+      "tolerance": 0.05,
+      "weight": 0.3
+    },
+    {
+      "id": "e11_case2",
+      "output_file": "effective_moduli.csv",
+      "kind": "numeric",
+      "metric": "E11_GPa",
+      "case": "Vf67_Vcnt20",
+      "gold_value": 147.7,
+      "tolerance": 0.05,
+      "weight": 0.3
+    },
+    {
+      "id": "e22_case3",
+      "output_file": "effective_moduli.csv",
+      "kind": "numeric",
+      "metric": "E22_GPa",
+      "case": "Vf41_Vcnt2",
+      "gold_value": 9.7,
+      "tolerance": 0.1,
+      "weight": 0.3
+    },
+    {
+      "id": "trend_e11",
+      "output_file": "effective_moduli.csv",
+      "kind": "structural",
+      "description": "Verify that E11 increases with fiber volume fraction: E11(Vf0.3) < E11(Vf41) < E11(Vf67).",
+      "weight": 0.1
+    }
+  ]
+}

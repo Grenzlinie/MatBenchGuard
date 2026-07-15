@@ -1,0 +1,130 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT re‑run impossible in verifier sandbox; score by comparing agent‑reported ordering (exact match) and Griffith work values (within tolerance) against paper‑reported numbers, plus a required region‑1 trend.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "site_preference_ordering.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "models": "ordered array of strings",
+            "heat_per_atom": "object mapping model name to float (eV)"
+          }
+        },
+        "description": "Site preference ordering of Re at the Ni/Ni3Al interface based on heat of formation. The 'models' array must list the model names in the correct stability order, which is checked against the hidden gold. The 'heat_per_atom' object provides the computed H values for each model."
+      },
+      {
+        "file": "griffith_work_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model",
+            "region",
+            "Griffith_work_J_m2"
+          ],
+          "units": {
+            "Griffith_work_J_m2": "J/m^2"
+          }
+        },
+        "description": "Griffith rupture work for the no‑add, Ni(1), Ni(2), and Ni(3) interface models evaluated at region‑1 and region‑2. Values are compared to the paper's reported rupture work with a tolerance of ±0.3 J/m²; the region‑1 trend W(Ni(2)) > W(no‑add) > W(Ni(1)) must also hold."
+      }
+    ],
+    "notes": "The task uses an open‑source DFT code (e.g., Quantum ESPRESSO) with SSSP PBE pseudopotentials. All intermediate DFT parameters (k‑point samplings, energy cutoffs, convergence thresholds) are left to the solver. The Mulliken population analysis and charge density contour plots are excluded as non‑verifiable and sensitive to the DFT implementation. The heat‑of‑formation ordering and Griffith work values form a complete test of the paper's core energetic conclusions."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold site preference ordering",
+      "source_provenance": "Figure 2 and conclusion text of the paper (DOI:10.1016/j.commatsci.2005.10.010)",
+      "generation_method": "exact ordering stated in the paper: Ni(1) > Ni(2) > no‑add > Ni(3) > Al(4)",
+      "why_not_fabricated": "this is the paper's reported ordering, not an invented sequence"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold Griffith rupture work values",
+      "source_provenance": "Table 2 of the paper",
+      "generation_method": "rows copied verbatim from the published table (J/m² values already converted by the paper from eV/Å²)",
+      "why_not_fabricated": "these are the paper's own reported rupture work numbers"
+    }
+  ],
+  "steps": [
+    {
+      "id": "ordering",
+      "output_file": "site_preference_ordering.json",
+      "weight": 0.4,
+      "kind": "structural_ordering",
+      "target_policy": "exact_match",
+      "description": "Exact match of the model name ordering against the paper's site preference sequence.",
+      "gold_order": [
+        "Ni(1)",
+        "Ni(2)",
+        "no-add",
+        "Ni(3)",
+        "Al(4)"
+      ]
+    },
+    {
+      "id": "griffith",
+      "output_file": "griffith_work_results.csv",
+      "weight": 0.6,
+      "kind": "numeric_comparison_trend",
+      "target_policy": "reference_match",
+      "description": "Compare Griffith work values (J/m²) to paper Table 2 within ±0.3 J/m² and verify region‑1 trend.",
+      "tolerance_abs": 0.3,
+      "gold_table": [
+        {
+          "model": "no-add",
+          "region": "region-1",
+          "Griffith_work_J_m2": 4.359
+        },
+        {
+          "model": "no-add",
+          "region": "region-2",
+          "Griffith_work_J_m2": 4.588
+        },
+        {
+          "model": "Ni(1)",
+          "region": "region-1",
+          "Griffith_work_J_m2": 4.342
+        },
+        {
+          "model": "Ni(1)",
+          "region": "region-2",
+          "Griffith_work_J_m2": 4.985
+        },
+        {
+          "model": "Ni(2)",
+          "region": "region-1",
+          "Griffith_work_J_m2": 4.49
+        },
+        {
+          "model": "Ni(2)",
+          "region": "region-2",
+          "Griffith_work_J_m2": 5.126
+        },
+        {
+          "model": "Ni(3)",
+          "region": "region-1",
+          "Griffith_work_J_m2": 4.807
+        },
+        {
+          "model": "Ni(3)",
+          "region": "region-2",
+          "Griffith_work_J_m2": 4.465
+        }
+      ],
+      "trend_check": {
+        "region": "region-1",
+        "condition": "W(Ni(2)) > W(no-add) > W(Ni(1))"
+      }
+    }
+  ]
+}

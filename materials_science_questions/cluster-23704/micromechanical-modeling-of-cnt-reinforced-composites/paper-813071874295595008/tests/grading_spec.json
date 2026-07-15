@@ -1,0 +1,117 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Sweeps recomputed from formulas; B parameters compared to paper-reported gold (T0) because raw experimental data is not bundled.",
+  "pass_threshold": 0.75,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for fitted B parameters (B, B_max, B_I, B_N) for four nanocomposites",
+      "source_provenance": "Paper's reported fitted B values (chitosan:86.4, polysilsesquioxane:132.9, PVA:17.18, PET:33.34) and computed B_max from Eq.(6) with R=15 nm and matrix strengths (69.1, 75 MPa). PVA/PET B_max set to 0 (not applicable).",
+      "generation_method": "Extracted from paper text and reproduced in solve.sh reference.",
+      "why_not_fabricated": "Values are the paper's own reported numbers, directly traceable to Section 3 and Fig. 1."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "fitted_B_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "chitosan",
+            "polysilsesquioxane",
+            "PVA",
+            "PET"
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "B",
+              "B_max",
+              "B_I",
+              "B_N"
+            ],
+            "properties": {
+              "B": "number",
+              "B_max": "number",
+              "B_I": "number",
+              "B_N": "number"
+            }
+          }
+        },
+        "description": "Fitted B parameters for the four experimental systems."
+      },
+      {
+        "file": "parametric_sweep_alpha_N.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha",
+            "N",
+            "B_N",
+            "sigma_R"
+          ],
+          "columns": {
+            "alpha": "integer",
+            "N": "integer",
+            "B_N": "float",
+            "sigma_R": "float"
+          }
+        },
+        "description": "Parametric sweep of B_N and sigma_R vs aspect ratio and network density."
+      },
+      {
+        "file": "parametric_sweep_phi_sigmaN.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi_p",
+            "sigma_N",
+            "B_N",
+            "sigma_R"
+          ],
+          "columns": {
+            "phi_p": "float",
+            "sigma_N": "float",
+            "B_N": "float",
+            "sigma_R": "float"
+          }
+        },
+        "description": "Parametric sweep of B_N and sigma_R vs percolation threshold and network strength."
+      }
+    ],
+    "notes": "Hidden checker compares agent-reported values to paper-reported reference values for B parameters and for B_N and sigma_R at specific grid points, with tolerances, and checks agreement with monotonic trends."
+  },
+  "steps": [
+    {
+      "id": "fit_B",
+      "output_file": "fitted_B_parameters.json",
+      "kind": "rubric",
+      "weight": 0.6,
+      "description": "Check B, B_max, B_I, B_N for all four systems against paper gold with tolerances."
+    },
+    {
+      "id": "sweep_alpha_N",
+      "output_file": "parametric_sweep_alpha_N.csv",
+      "kind": "numeric_recompute",
+      "weight": 0.2,
+      "description": "Recompute B_N and sigma_R for all (alpha, N) pairs and compare with tolerance."
+    },
+    {
+      "id": "sweep_phi_sigmaN",
+      "output_file": "parametric_sweep_phi_sigmaN.csv",
+      "kind": "numeric_recompute",
+      "weight": 0.2,
+      "description": "Recompute B_N and sigma_R for all (phi_p, sigma_N) pairs and compare with tolerance."
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Checker compares agent-reported band gaps and Seebeck coefficients to paper values (within tolerances). Power factor verified by structural trend (max p-type PF of any PSTS lower than CoSb₃).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.json": "reference_match",
+    "seebeck_CoGe1.5S1.5_p_1e20.csv": "reference_match",
+    "seebeck_CoSn1.5Te1.5_n_1e20.csv": "reference_match",
+    "power_factors_300K.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gaps and Seebeck coefficient values for comparison",
+      "source_provenance": "Paper: Physical Review B 85, 245211 (2012). Band gaps: ranges 0.41-0.61 eV (PSTS), 0.22 eV (CoSb₃) from Sec IV and Fig.2. Seebeck: 258 µV/K for p-type CoGe₁.₅S₁.₅ at 10²⁰ cm⁻³, -307 µV/K for n-type CoSn₁.₅Te₁.₅ at 10²⁰ cm⁻³, from Sec IV.",
+      "generation_method": "Values taken from paper text and produce the exact numbers the reference solve.sh writes.",
+      "why_not_fabricated": "Every value directly traceable to the paper's reported quantities for the specified compounds and conditions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": [
+            "compound",
+            "direct_band_gap_eV"
+          ],
+          "items": {
+            "compound": "string",
+            "direct_band_gap_eV": "float"
+          }
+        },
+        "description": "Direct band gap values for the six PSTS compounds and CoSb₃, compared against paper‑reported reference values within an allowed tolerance."
+      },
+      {
+        "file": "seebeck_CoGe1.5S1.5_p_1e20.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "Seebeck_uV_per_K"
+          ],
+          "units": {
+            "Seebeck_uV_per_K": "µV/K"
+          }
+        },
+        "description": "Seebeck coefficient at 300 K for p‑type CoGe₁.₅S₁.₅ at a hole concentration of 10²⁰ cm⁻³, compared against the paper's implied reference value."
+      },
+      {
+        "file": "seebeck_CoSn1.5Te1.5_n_1e20.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "Seebeck_uV_per_K"
+          ],
+          "units": {
+            "Seebeck_uV_per_K": "µV/K"
+          }
+        },
+        "description": "Seebeck coefficient at 300 K for n‑type CoSn₁.₅Te₁.₅ at an electron concentration of 10²⁰ cm⁻³, compared against the paper's implied reference value."
+      },
+      {
+        "file": "power_factors_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "chemical_potential_eV",
+            "power_factor_W_per_m_K2"
+          ],
+          "units": {
+            "power_factor_W_per_m_K2": "W/(m·K²)"
+          }
+        },
+        "description": "Power factor as a function of chemical potential at 300 K. Verified by a structural audit: the maximum p‑type power factor of any PSTS must be lower than that of CoSb₃."
+      }
+    ],
+    "notes": "All outputs are produced from the same DFT+DFPT+Wannier+Boltzmann workflow, ensuring internal consistency. Phonon and Born effective charge calculations are included as process steps."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "gold": {
+        "CoGe1.5S1.5": 0.61,
+        "CoGe1.5Se1.5": 0.55,
+        "CoGe1.5Te1.5": 0.48,
+        "CoSn1.5S1.5": 0.58,
+        "CoSn1.5Se1.5": 0.41,
+        "CoSn1.5Te1.5": 0.45,
+        "CoSb3": 0.22
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "seebeck_CoGe1.5S1.5",
+      "output_file": "seebeck_CoGe1.5S1.5_p_1e20.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "target": 258.0,
+      "tolerance": 20.0
+    },
+    {
+      "id": "seebeck_CoSn1.5Te1.5",
+      "output_file": "seebeck_CoSn1.5Te1.5_n_1e20.csv",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "target": -307.0,
+      "tolerance": 20.0
+    },
+    {
+      "id": "power_factors",
+      "output_file": "power_factors_300K.csv",
+      "weight": 0.15,
+      "kind": "structural_audit"
+    }
+  ]
+}

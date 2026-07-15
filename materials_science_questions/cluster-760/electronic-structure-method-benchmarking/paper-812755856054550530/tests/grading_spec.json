@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute relative energies from raw CCI+Davidson and ZPE and compare to paper-reported values with tolerance 2.5 kcal/mol; verify barrier presence by energy ordering.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "raw_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "CH3OH",
+            "CH2O-H2",
+            "CH2O+H2",
+            "CH2-H2O",
+            "1CH2+H2O",
+            "HCOH-H2",
+            "HCOH+H2"
+          ],
+          "properties": {
+            "*": {
+              "type": "object",
+              "required": [
+                "cci_plus_davidson_hartree",
+                "zero_point_energy_hartree"
+              ],
+              "properties": {
+                "cci_plus_davidson_hartree": {
+                  "type": "number",
+                  "unit": "hartree"
+                },
+                "zero_point_energy_hartree": {
+                  "type": "number",
+                  "unit": "hartree"
+                }
+              }
+            }
+          }
+        },
+        "description": "Raw CCI+Davidson electronic energies and CASSCF zero-point energies for each stationary point. The hidden checker computes relative energies (E_total = cci_plus_davidson_hartree + zero_point_energy_hartree) with respect to CH3OH, converts to kcal/mol, and compares the resulting values and the CH2-H2O vs 1CH2+H2O ordering to the paper's reported results."
+      }
+    ],
+    "notes": "All energies are in hartree. The agent must compute CCI+Davidson energies and ZPE for all seven species; the checker then derives relative energies and verifies the barrier claim."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative energies (kcal/mol) for each stationary point, from paper's Table I",
+      "source_provenance": "J. Chem. Phys. 98, 3163 (1993), Table I",
+      "generation_method": "Extracted directly from the paper's reported values; tolerance set to 2.5 kcal/mol to accommodate systematic shift from using a single CH3OH reference energy (the agent's output contract provides one CH3OH value, while the paper used channel-specific CH3OH references). The reference solve.sh yields relative energies within this tolerance.",
+      "why_not_fabricated": "Values are the paper's published results, which are the target of reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "rel_energies",
+      "output_file": "raw_energies.json",
+      "kind": "recompute_metric",
+      "weight": 0.8,
+      "tolerance_abs": 2.5,
+      "gold_rels": {
+        "CH2O-H2": 91.9,
+        "CH2O+H2": 18.1,
+        "CH2-H2O": 82.3,
+        "1CH2+H2O": 88.8,
+        "HCOH-H2": 85.0,
+        "HCOH+H2": 71.1
+      },
+      "species_list": [
+        "CH2O-H2",
+        "CH2O+H2",
+        "CH2-H2O",
+        "1CH2+H2O",
+        "HCOH-H2",
+        "HCOH+H2"
+      ],
+      "description": "Recompute relative energies (E_total = cci_plus_davidson_hartree + zero_point_energy_hartree) with respect to CH3OH, compare to gold values within ±2.5 kcal/mol. Score = fraction of species within tolerance."
+    },
+    {
+      "id": "barrier_ordering",
+      "output_file": "raw_energies.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Check that the saddle point CH2-H2O has lower relative energy than the 1CH2+H2O asymptote (no intrinsic barrier)."
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_0",
+    "title": "RCWA lookup table generation",
+    "role": "process",
+    "action": "Using an open-source RCWA solver (e.g., S4), compute reflectivity and phase shift of a periodic HCG (500 nm Si thickness, 500 nm buried SiO2, refractive indices 3.47 and 1.47) for TM polarization at 1550 nm. Scan grating periods from 0.3 to 1.2 μm and bar widths from 0.2 to 0.7 μm. Save the resulting lookup table (reflectivity and phase shift as functions of period and bar width) for the next step.",
+    "output_file": "",
+    "evidence": "rcwa_lookup.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generate the phase and reflectivity map of periodic HCGs using RCWA.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_1",
+    "title": "Design of non-periodic HCG grating parameters",
+    "role": "scored",
+    "action": "From the RCWA lookup table generated in step_0, select a set of 14 grating periods and bar widths that discretely approximate a linear reflected phase profile targeting a deflection angle. The total structure width should be approximately 9.66 μm with a total phase shift of approximately 13.4 rad. Output the parameters to a CSV file with columns: bar_number (integer 1-14 or string 'total_width_um'), period_um (float), bar_width_um (float). Include a row with bar_number='total_width_um' and period_um = total width.",
+    "output_file": "designed_hcg_parameters.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Select grating parameters to realize the linear phase profile, producing a CSV of the 14-bar design.",
+    "output_schema": "Columns: bar_number (integer 1-14, or string 'total_width_um'), period_um (float), bar_width_um (float). 15 rows: 14 bars + summary row."
+  },
+  {
+    "id": "step_2",
+    "title": "FEM simulation and extraction of deflection angle and reflectivity",
+    "role": "scored",
+    "action": "Using an open-source FEM solver (e.g., Meep), simulate the designed non-periodic HCG structure from step_1. The incident light is a TM-polarized Gaussian beam at 1550 nm. Use perfectly matched layers (PML) and scattering boundary conditions. Extract the reflected E-field intensity profiles at distances 18, 20, 22, and 24 μm from the reflection plane. Compute the deflection angle from the peak shift between 18 and 24 μm, and compute the total reflectivity. Write the results to a JSON file with keys 'deflection_angle_deg' (float) and 'reflectivity_pct' (float).",
+    "output_file": "simulation_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "FEM simulation of the non-periodic HCG to obtain the reflected beam deflection angle and total reflectivity.",
+    "output_schema": "JSON object with keys: deflection_angle_deg (float, degrees), reflectivity_pct (float, percent)."
+  }
+]

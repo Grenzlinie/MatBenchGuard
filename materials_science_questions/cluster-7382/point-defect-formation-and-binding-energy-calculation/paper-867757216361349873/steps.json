@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_bulk_eq",
+    "title": "Calculate equilibrium lattice constant of bulk LaAlO3",
+    "role": "process",
+    "action": "Perform DFT structural relaxation of the 10‑atom rhombohedral unit cell of LaAlO₃ using the GGA+U settings (PBE functional, Hubbard U=10.32 eV on La 4f, Dudarev method, fully localized limit) to obtain the equilibrium pseudocubic lattice constant a0.",
+    "output_file": "",
+    "evidence": "bulk_eq_info.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The equilibrium lattice constant defines the strain reference.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_o2_energy",
+    "title": "Compute total energy of an isolated O2 molecule",
+    "role": "process",
+    "action": "Compute the total energy of an oxygen molecule (spin‑polarized, placed in a large periodic box) using the same DFT functional, pseudopotentials, and plane‑wave cutoff as for LaAlO₃, to provide the reference chemical potential μ_O = ½ E(O₂).",
+    "output_file": "",
+    "evidence": "o2_energy.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The total energy of O₂ is used to compute the oxygen chemical potential.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_pristine_strain",
+    "title": "Compute total energies of pristine LaAlO3 supercells under biaxial strain",
+    "role": "process",
+    "action": "Construct a 2×2×2 supercell (40 atoms) from the relaxed rhombohedral cell. For each biaxial strain state (ε = −2%, 0%, +2%): set the in‑plane lattice parameters to a = a0(1+ε), relax the out‑of‑plane lattice parameter and atomic positions while keeping in‑plane dimensions fixed, and record the final total energy of the defect‑free supercell.",
+    "output_file": "",
+    "evidence": "pristine_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Provides the baseline energies needed for formation energy calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_defective_strain",
+    "title": "Compute total energies of oxygen‑vacancy supercells under biaxial strain",
+    "role": "process",
+    "action": "Using the 2×2×2 supercell, introduce one neutral oxygen vacancy at the axial position (position 1, perpendicular to the strain plane). For the same strain states (ε = −2%, 0%, +2%), relax the cell and ions (keeping in‑plane dimensions fixed) and record the total energy of the neutral vacancy supercell.",
+    "output_file": "",
+    "evidence": "defective_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Energies of the defective supercells containing one oxygen vacancy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_strain_effect",
+    "title": "Compute formation energies and strain dependence",
+    "role": "scored",
+    "action": "Using the energies from previous steps, compute for each strain the oxygen vacancy formation energy: Ω(ε) = E_tot(V_O, ε) − E_tot(bulk, ε) + μ_O, with μ_O taken from step_02. Then compute ΔΩ_comp = Ω(ε=−2%) − Ω(ε=0) and ΔΩ_tens = Ω(ε=+2%) − Ω(ε=0), both in meV. Write these two values to strain_effect.json.",
+    "output_file": "strain_effect.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final scored artifact containing the strain‑induced change in oxygen vacancy formation energy.",
+    "output_schema": "{\"compressive_strain_2pct_delta_meV\": number, \"tensile_strain_2pct_delta_meV\": number}"
+  }
+]

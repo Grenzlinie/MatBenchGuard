@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_supercells",
+    "title": "Generate supercell inputs",
+    "role": "process",
+    "action": "Construct 3×3×1 supercells of pristine Sc₂CF₂ and three vacancy systems (V_C, V_F, V_Sc) by removing the corresponding atom. Prepare DFT input files for geometry relaxation.",
+    "output_file": "",
+    "evidence": "supercell_generation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Creation of the four supercell structures needed as starting points for DFT relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft_relax",
+    "title": "DFT geometry relaxation",
+    "role": "process",
+    "action": "Perform spin-polarized DFT structural relaxation for all four systems using the PBE functional with DFT-D3 van der Waals correction. Use an appropriate plane‑wave cutoff and k‑point grid, and converge forces below 0.01 eV/Å. Save relaxed structures and total energies.",
+    "output_file": "",
+    "evidence": "relaxation_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Geometry optimization of pristine and vacancy-defect monolayers.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_isolated_atoms",
+    "title": "Isolated atom energy calculations",
+    "role": "process",
+    "action": "Compute total energies of isolated Sc, C, and F atoms using the same DFT settings and pseudopotentials, placing each atom in a large simulation cell to avoid spurious interactions. These energies serve as references for formation and binding energy calculations.",
+    "output_file": "",
+    "evidence": "isolated_atom_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Reference energies for isolated atoms used in energy analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_electronic_optical",
+    "title": "Electronic structure and optical calculations",
+    "role": "process",
+    "action": "On the relaxed structures, perform spin‑polarized SCF calculations with denser k‑point grids to obtain total and partial density of states, band structure, and magnetic moments. Additionally compute the frequency‑dependent dielectric function and derive optical absorption coefficient and reflectivity spectra.",
+    "output_file": "",
+    "evidence": "dos_optical_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Electronic density of states and optical spectra calculations on relaxed structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_electronic_properties",
+    "title": "Extract electronic properties and stability",
+    "role": "scored",
+    "action": "From the DFT outputs, extract the following quantities: band gap of pristine Sc₂CF₂ (eV), magnetic moment of the Sc‑vacancy system (μ_B), vacancy formation energies E_form for V_C, V_F, V_Sc (eV), binding energies per atom for all four systems (eV/atom), and the positions of maximum absorption and maximum reflectivity (eV) for each of the four systems. Write the entire set of properties to electronic_properties.json.",
+    "output_file": "electronic_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing all electronic and stability properties as extracted from the DFT calculations. This provides the reference values for band gap, magnetism, formation/binding energies, and optical peaks.",
+    "output_schema": "Object with keys: band_gap_pristine (eV, float), magnetic_moment_VSc (μB, float), E_form_Vc (eV, float), E_form_Vf (eV, float), E_form_VSc (eV, float), E_binding_all ([pristine, V_C, V_F, V_Sc] eV/atom, array of floats), absorption_peak_positions ([pristine, V_C, V_F, V_Sc] eV, array of floats), reflectivity_max_positions ([pristine, V_C, V_F, V_Sc] eV, array of floats)."
+  },
+  {
+    "id": "step_06_quantum_capacitance",
+    "title": "Compute quantum capacitance curves",
+    "role": "scored",
+    "action": "Using the total density of states of each system, numerically compute the differential quantum capacitance C_diff, stored surface charge Q, and integrated quantum capacitance C_int at 300 K over the voltage window −0.6 V to +0.6 V (step ≤0.01 V). Store the full curves in quantum_capacitance.csv.",
+    "output_file": "quantum_capacitance.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing quantum capacitance metrics for all four systems as functions of applied voltage. Enables verification of the main claim about vacancy-enhanced quantum capacitance and anode suitability.",
+    "output_schema": "Columns: system (string; one of pristine, V_C, V_F, V_Sc), V (float, volts), C_diff (float, μF/cm²), Q (float, μC/cm²), C_int (float, μF/cm²). Rows cover the full voltage sweep for each system."
+  }
+]

@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Scored by comparing agent-reported values from results.json against paper's reported DMC/0K values (Table 2) with absolute and relative tolerances; full recompute from raw artifacts is infeasible as the verifier cannot re-run DFT/DMC/phonon pipeline.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for BN_B0, BC2N_B0, BN_V0, BC2N_V0, and ordering",
+      "source_provenance": "Paper Table 2: DMC/0K results for c-BN and c-BC2N; ordering derived from those values.",
+      "generation_method": "Values transcribed from paper: BN_B0=355.6 GPa (statistical error (5) omitted), BC2N_B0=365 GPa (error (4) omitted), BN_V0=80.68 Bohr^3, BC2N_V0=322.3 Bohr^3; ordering 'BC2N_higher' corresponds to BC2N_B0 > BN_B0.",
+      "why_not_fabricated": "These are the paper's reported DMC/0K numbers from Table 2, which is the primary result being verified; they are genuine and not fabricated."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "BN_B0",
+            "BC2N_B0",
+            "BN_V0",
+            "BC2N_V0",
+            "ordering"
+          ],
+          "properties": {
+            "BN_B0": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "BC2N_B0": {
+              "type": "number",
+              "unit": "GPa"
+            },
+            "BN_V0": {
+              "type": "number",
+              "unit": "Bohr^3"
+            },
+            "BC2N_V0": {
+              "type": "number",
+              "unit": "Bohr^3"
+            },
+            "ordering": {
+              "type": "string",
+              "enum": [
+                "BC2N_higher",
+                "BN_higher"
+              ]
+            }
+          }
+        },
+        "description": "Zero-point-corrected equilibrium volume and bulk modulus for c-BN and c-BC2N computed from DMC energy-volume data and phonon free energies by Vinet EoS fitting (B0'=4.0). The ordering field indicates which material has the higher bulk modulus."
+      }
+    ],
+    "notes": "The hidden checker compares the reported values to the paper's DMC/0K results with appropriate tolerances and verifies the ordering. Process artifacts (dft_energies.csv, dmc_energies.csv, phonon_free_energies.csv) are not directly scored but must be produced to obtain the final result."
+  },
+  "steps": [
+    {
+      "id": "check_bn_b0",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": 355.6,
+      "tolerance": 3.0,
+      "unit": "GPa",
+      "description": "Zero-point-corrected bulk modulus of c-BN must match reference within ±3 GPa."
+    },
+    {
+      "id": "check_bc2n_b0",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target": 365.0,
+      "tolerance": 10.0,
+      "unit": "GPa",
+      "description": "Zero-point-corrected bulk modulus of c-BC2N must match reference within ±10 GPa."
+    },
+    {
+      "id": "check_ordering",
+      "output_file": "results.json",
+      "kind": "json_field",
+      "weight": 0.2,
+      "expected_ordering": "BC2N_higher",
+      "description": "Ordering field must be 'BC2N_higher' and BC2N_B0 > BN_B0."
+    },
+    {
+      "id": "check_bn_v0",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 80.68,
+      "relative_tolerance": 0.01,
+      "unit": "Bohr^3",
+      "description": "Equilibrium volume of c-BN must be within 1% of reference."
+    },
+    {
+      "id": "check_bc2n_v0",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 322.3,
+      "relative_tolerance": 0.02,
+      "unit": "Bohr^3",
+      "description": "Equilibrium volume of c-BC2N must be within 2% of reference."
+    }
+  ]
+}

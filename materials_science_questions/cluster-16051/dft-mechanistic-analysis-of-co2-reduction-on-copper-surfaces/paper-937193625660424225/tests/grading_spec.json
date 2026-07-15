@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: the checker recomputes adsorption energies and barriers from the agent's free_energy_diagram.json, then compares against paper values with tolerances and checks the trend.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "free_energy_diagram.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference adsorption energies and barriers from the paper (Fig. 6c and text)",
+      "source_provenance": "paper Fig. 6c: adsorption energy of *COOH on Zn surface -0.83 eV, on Zn-Cu alloy surface -0.61 eV; barrier 0.80 eV on Zn, 0.57 eV on Zn-Cu alloy (protonation of *COOH to *CO).",
+      "generation_method": "extracted from paper's DFT free-energy diagram section (Section 3.4).",
+      "why_not_fabricated": "Exact values reported in paper, verified against text and figure."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energy_diagram.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "enum": [
+                  "Zn(100)",
+                  "CuZn(100)"
+                ]
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "enum": [
+                        "CO2(g)",
+                        "*COOH",
+                        "*CO",
+                        "CO(g)+*"
+                      ]
+                    },
+                    "energy_eV": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "energy_eV"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "system",
+              "steps"
+            ]
+          }
+        },
+        "description": "Free energy diagram for CO2 reduction to CO. The checker recomputes adsorption energies and energy barriers from this data, compares them to paper reference values within tolerances, and checks that the barrier on CuZn(100) is lower than on Zn(100)."
+      }
+    ],
+    "notes": "The DFT workflow steps (slab optimization, intermediate energy calculations) must be executed before generating this file. The solver must use an open-source DFT code (e.g., Quantum ESPRESSO, GPAW, CP2K) with GGA-PBE functional and D3 dispersion correction."
+  },
+  "steps": [
+    {
+      "id": "shape_gate",
+      "output_file": "free_energy_diagram.json",
+      "kind": "rubric",
+      "weight": 0.0,
+      "description": "output shape validation performed by FlowForge; zero weight"
+    },
+    {
+      "id": "zn_adsorption",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": -0.83,
+      "tolerance": 0.2,
+      "target_policy": "reference_match",
+      "description": "Compute *COOH adsorption energy on Zn(100): energy_eV of '*COOH' minus 0.0 (CO2(g) reference)"
+    },
+    {
+      "id": "cuzn_adsorption",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": -0.61,
+      "tolerance": 0.2,
+      "target_policy": "reference_match",
+      "description": "Compute *COOH adsorption energy on CuZn(100)"
+    },
+    {
+      "id": "zn_barrier",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 0.8,
+      "tolerance": 0.0,
+      "target_policy": "threshold_or_better",
+      "description": "Barrier *COOH -> *CO on Zn(100): energy_eV('*CO') - energy_eV('*COOH'). Lower is better; target is max acceptable barrier."
+    },
+    {
+      "id": "cuzn_barrier",
+      "output_file": "free_energy_diagram.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target": 0.57,
+      "tolerance": 0.0,
+      "target_policy": "threshold_or_better",
+      "description": "Barrier on CuZn(100)"
+    },
+    {
+      "id": "trend",
+      "output_file": "free_energy_diagram.json",
+      "kind": "rubric",
+      "weight": 0.4,
+      "description": "CuZn barrier must be at least 0.1 eV lower than Zn barrier"
+    }
+  ]
+}

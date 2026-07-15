@@ -1,0 +1,181 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute (T1) of MD simulation and correlation analysis is infeasible in the verifier environment. We enforce structural trends from the correlation curves (T3) and compare the derived window to the paper-reported gold (T0).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "correlation_functions_XB_0.100.csv": "structural_audit",
+    "correlation_functions_XB_0.148.csv": "structural_audit",
+    "correlation_functions_XB_0.172.csv": "structural_audit",
+    "correlation_functions_XB_0.250.csv": "structural_audit",
+    "compositional_window.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold compositional window bounds and structural inequality thresholds for correlation functions.",
+      "source_provenance": "Paper text: '0.148 ≤ X_B < 0.199' and correlation decay descriptions in Section 'Crystal to Glass Transition ...'.",
+      "generation_method": "Extracted from the paper's text and figures (Fig. 2 and surrounding analysis).",
+      "why_not_fabricated": "These numbers are the paper's own reported results, reproduced verbatim from the source."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "correlation_functions_XB_0.100.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "rho_G",
+            "Psi"
+          ],
+          "units": {
+            "r": "reduced distance",
+            "rho_G": "dimensionless",
+            "Psi": "dimensionless"
+          }
+        },
+        "description": "Translational and bond-orientational correlation functions for X_B=0.10. At long distances both ρ_G and Ψ should remain significantly above zero."
+      },
+      {
+        "file": "correlation_functions_XB_0.148.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "rho_G",
+            "Psi"
+          ],
+          "units": {
+            "r": "reduced distance",
+            "rho_G": "dimensionless",
+            "Psi": "dimensionless"
+          }
+        },
+        "description": "Correlation functions for X_B=0.148. ρ_G is expected to become short-ranged, while Ψ remains quasi-long-ranged."
+      },
+      {
+        "file": "correlation_functions_XB_0.172.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "rho_G",
+            "Psi"
+          ],
+          "units": {
+            "r": "reduced distance",
+            "rho_G": "dimensionless",
+            "Psi": "dimensionless"
+          }
+        },
+        "description": "Correlation functions at the representative hexatic-like composition X_B=0.172. ρ_G should decay to near zero over the sample, while Ψ persists quasi-long-ranged."
+      },
+      {
+        "file": "correlation_functions_XB_0.250.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "rho_G",
+            "Psi"
+          ],
+          "units": {
+            "r": "reduced distance",
+            "rho_G": "dimensionless",
+            "Psi": "dimensionless"
+          }
+        },
+        "description": "Correlation functions for X_B=0.25 in the amorphous regime. Both ρ_G and Ψ should decay exponentially at short distances."
+      },
+      {
+        "file": "compositional_window.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lower_bound": "number",
+            "upper_bound": "number"
+          }
+        },
+        "description": "The compositional range of the hexatic-like intermediate phase determined from the correlation function analysis."
+      }
+    ],
+    "notes": "The correlation function CSVs are scored by structural trends (T3): the checker verifies that at large r, the curves satisfy specific inequality criteria that characterise the ordered, hexatic, and amorphous regimes. The compositional window is scored by result-level comparison (T0) against the paper's reported bounds with a tolerance that accounts for finite-size and sampling variability."
+  },
+  "steps": [
+    {
+      "id": "check_corr_010",
+      "output_file": "correlation_functions_XB_0.100.csv",
+      "kind": "structural",
+      "weight": 0.075,
+      "description": "Check that for X_B=0.10, both rho_G and Psi remain high at large distances.",
+      "params": {
+        "rho_min": 0.5,
+        "psi_min": 0.5
+      }
+    },
+    {
+      "id": "check_corr_0148",
+      "output_file": "correlation_functions_XB_0.148.csv",
+      "kind": "structural",
+      "weight": 0.075,
+      "description": "Check that for X_B=0.148, rho_G is short-ranged (<0.25) while Psi remains quasi-long-ranged (>0.3).",
+      "params": {
+        "rho_max": 0.25,
+        "psi_min": 0.3
+      }
+    },
+    {
+      "id": "check_corr_0172",
+      "output_file": "correlation_functions_XB_0.172.csv",
+      "kind": "structural",
+      "weight": 0.075,
+      "description": "Check that for X_B=0.172 (load-bearing hexatic), rho_G decays rapidly (<0.25) while Psi persists (>0.3).",
+      "params": {
+        "rho_max": 0.25,
+        "psi_min": 0.3
+      }
+    },
+    {
+      "id": "check_corr_025",
+      "output_file": "correlation_functions_XB_0.250.csv",
+      "kind": "structural",
+      "weight": 0.075,
+      "description": "Check that for X_B=0.25 (amorphous), both rho_G and Psi are short-ranged (<0.25).",
+      "params": {
+        "rho_max": 0.25,
+        "psi_max": 0.25
+      }
+    },
+    {
+      "id": "check_window",
+      "output_file": "compositional_window.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "description": "Compare the derived hexatic window to the paper-reported window [0.148, 0.199].",
+      "params": {
+        "lower_target": 0.148,
+        "lower_tol": 0.01,
+        "lower_scale": 0.04,
+        "upper_target": 0.199,
+        "upper_tol": 0.025,
+        "upper_scale": 0.05
+      }
+    }
+  ]
+}

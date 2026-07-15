@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Comparison against paper-reported values with tolerances; recomputation from raw artifacts is infeasible without re-running the full DFT workflow in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reconstruction_energies.json": "exact_match",
+    "AlP_electronic_structure_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for reconstruction energies (paper Table 1) and AlP electronic structure (paper text + Fig. 1).",
+      "source_provenance": "Published paper 'The energetics of dislocation cores in semiconductors and their role on dislocation mobility', Physica B 302-303 (2001) 398-402, Table 1 and electronic structure discussion.",
+      "generation_method": "Direct extraction from the published paper.",
+      "why_not_fabricated": "Values are the paper's own reported results, serving as authoritative ground truth."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reconstruction_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "materials": "array"
+          },
+          "items": {
+            "material": "string",
+            "core_type": "string (alpha|beta)",
+            "reconstruction_energy_eV": "float"
+          }
+        },
+        "description": "Reconstruction energies per core bond for 30° partial dislocations in Si, GaAs, and AlP. The checker compares each entry to hidden reference values with tolerance ±0.1 eV and checks the required ordering (α energy < β energy for III‑V compounds)."
+      },
+      {
+        "file": "AlP_electronic_structure_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bulk_gap_eV": "float",
+            "unreconstructed_beta_half_filled_band_present": "boolean",
+            "reconstructed_beta_bonding_antibonding_gap_eV": "float",
+            "alpha_reconstructed_resonant_level_position_below_VBM_eV": "float"
+          }
+        },
+        "description": "Electronic structure features of AlP dislocation cores. The checker compares each value to hidden reference: bulk gap ~1.04 eV (±0.10 eV), half‑filled band present = true, β bonding‑antibonding gap ~0.15 eV (±0.05 eV), α resonant level ~4.0 eV below VBM (±0.5 eV)."
+      }
+    ],
+    "notes": "The correlation with experimental activation energies is intentionally excluded from scoring. Only reconstruction energies and the described electronic structure features are scored. All tolerances are chosen to absorb legitimate methodological spread (code, functional, basis set)."
+  },
+  "steps": [
+    {
+      "id": "reconstruction_energies",
+      "output_file": "reconstruction_energies.json",
+      "weight": 0.6,
+      "kind": "numeric_comparison_and_ordering",
+      "description": "Validate reconstruction energies against paper Table 1 and enforce α<β ordering for III-V compounds.",
+      "expected_energies": {
+        "Si_alpha": 0.92,
+        "GaAs_alpha": 0.43,
+        "GaAs_beta": 0.56,
+        "AlP_alpha": 0.47,
+        "AlP_beta": 0.87
+      },
+      "tolerance_energy": 0.1,
+      "ordering_required": [
+        {
+          "material": "GaAs"
+        },
+        {
+          "material": "AlP"
+        }
+      ],
+      "energy_weight": 0.8,
+      "ordering_weight": 0.2
+    },
+    {
+      "id": "AlP_electronic_structure",
+      "output_file": "AlP_electronic_structure_results.json",
+      "weight": 0.4,
+      "kind": "numeric_comparison",
+      "description": "Validate AlP electronic structure features against paper text: bulk gap, half-filled band presence, β gap, α resonant level.",
+      "expected_values": {
+        "bulk_gap_eV": 1.04,
+        "unreconstructed_beta_half_filled_band_present": true,
+        "reconstructed_beta_bonding_antibonding_gap_eV": 0.15,
+        "alpha_reconstructed_resonant_level_position_below_VBM_eV": 4.0
+      },
+      "tolerances": {
+        "bulk_gap_eV": 0.1,
+        "reconstructed_beta_bonding_antibonding_gap_eV": 0.05,
+        "alpha_reconstructed_resonant_level_position_below_VBM_eV": 0.5
+      }
+    }
+  ]
+}

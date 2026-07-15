@@ -1,0 +1,139 @@
+{
+  "scoring_tier": "T0 result-level compare",
+  "scoring_justification": "DFT formation energies and Calphad properties cannot be recomputed within the verifier sandbox; the checker compares agent's reported values against paper's reference values using method-appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_formation_energies.csv": "reference_match",
+    "step_03_calphad.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for formation energies, lattice constants, liquidus temperatures, and As activity",
+      "source_provenance": "paper Tables 2 and 3, Figs. 2 and 3, and Fig. 6",
+      "generation_method": "extracted from the paper's reported numbers for the corresponding magnetic states and conditions",
+      "why_not_fabricated": "values are exactly the paper's published results for the same quantities and units"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "magnetic_state",
+            "total_energy_Ha",
+            "formation_energy_kJ_per_mol",
+            "a_Ang",
+            "b_Ang",
+            "c_Ang",
+            "volume_Ang3"
+          ],
+          "units": {
+            "total_energy_Ha": "Ha",
+            "formation_energy_kJ_per_mol": "kJ/mol-atom",
+            "a_Ang": "Å",
+            "b_Ang": "Å",
+            "c_Ang": "Å",
+            "volume_Ang3": "Å³"
+          }
+        },
+        "description": "DFT computed formation energies (kJ/mol-atom) and relaxed lattice parameters for As₂Fe, AsFe, AsFe₂ and reference elements."
+      },
+      {
+        "file": "step_03_calphad.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value",
+            "unit"
+          ],
+          "units": {
+            "value": "varies; unit specified in unit column"
+          }
+        },
+        "description": "CALPHAD computed liquidus temperatures (K) and As activity (dimensionless) using the paper's thermodynamic parameters."
+      }
+    ],
+    "notes": "The DFT step uses ABINIT with specific pseudopotentials and parameters; the CALPHAD step uses the paper's Table 3 parameters exactly. The checker compares the agent's reported values against hidden paper reference values with tolerances appropriate for DFT and CALPHAD uncertainties."
+  },
+  "checks": [
+    {
+      "id": "dft_formation_check",
+      "output_file": "step_02_formation_energies.csv",
+      "weight": 0.5,
+      "kind": "result_match",
+      "params": {
+        "gold": {
+          "compounds": {
+            "As2Fe": {
+              "magnetic_state": "nm",
+              "formation_energy_kJ_per_mol": -12.8,
+              "a_Ang": 5.311,
+              "b_Ang": 5.985,
+              "c_Ang": 2.887
+            },
+            "AsFe": {
+              "magnetic_state": "af",
+              "formation_energy_kJ_per_mol": -19.0,
+              "a_Ang": 5.448,
+              "b_Ang": 3.287,
+              "c_Ang": 6.048
+            },
+            "AsFe2": {
+              "magnetic_state": "af",
+              "formation_energy_kJ_per_mol": -13.5,
+              "a_Ang": 3.617,
+              "c_Ang": 5.883
+            }
+          }
+        },
+        "tolerances": {
+          "formation_energy_kJ_per_mol": 2.0,
+          "lattice_relative": 0.02
+        }
+      }
+    },
+    {
+      "id": "calphad_check",
+      "output_file": "step_03_calphad.csv",
+      "weight": 0.5,
+      "kind": "result_match",
+      "params": {
+        "gold": {
+          "properties": {
+            "liquidus_T_33at_As": {
+              "value": 812,
+              "unit": "K"
+            },
+            "liquidus_T_50at_As": {
+              "value": 1030,
+              "unit": "K"
+            },
+            "liquidus_T_67at_As": {
+              "value": 1250,
+              "unit": "K"
+            },
+            "a_As_1423K_50at": {
+              "value": 0.35,
+              "unit": ""
+            }
+          }
+        },
+        "tolerances": {
+          "liquidus_T": 30.0,
+          "a_As": 0.03
+        }
+      }
+    }
+  ]
+}

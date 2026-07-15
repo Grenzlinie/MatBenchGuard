@@ -1,0 +1,147 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Phase transition pressure is recomputed from the agent's own enthalpy curves (T1). Elastic constants and thermodynamic properties are compared to paper-reported values with generous tolerances, supported by structural trend checks for thermodynamic curves (T0/T3).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "phase_transition.json": "reference_match",
+    "elastic_properties.json": "reference_match",
+    "thermodynamic_properties.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for phase transition pressure (52.8 GPa)",
+      "source_provenance": "Paper Section 3.1: 'the phase transition from NbO-type to NiAs-type occurs at ca. 52.8 GPa'.",
+      "generation_method": "Extracted directly from the paper's reported value.",
+      "why_not_fabricated": "This is the exact value reported by the authors; used as a tolerance target."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for elastic constants, moduli, and Vickers hardness (NbO and NiAs).",
+      "source_provenance": "Paper Table 3, columns C11-C44 and derived moduli and Vickers hardness.",
+      "generation_method": "Extracted directly from the paper's Table 3.",
+      "why_not_fabricated": "These are the paper's own computed results; used as reference for tolerance comparison."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for Debye temperature (525 K) and Dulong-Petit limit (49.9 J/mol/K).",
+      "source_provenance": "Paper Section 3.5: 'calculated Debye temperature ΘD for NbO-ReN is 525 K'; Dulong-Petit limit 3nR with n=2 atoms, R=8.314462618 => ~49.9 J/mol/K.",
+      "generation_method": "Extracted directly from paper text and standard physical constant.",
+      "why_not_fabricated": "Debye temperature is the paper's reported value; Dulong-Petit limit is a well-known classical limit used to sanity-check computed heat capacities."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_transition.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "transition_pressure_GPa": "float (pressure in GPa)",
+            "NbO_enthalpy": "array of {P: float (GPa), H: float (eV or arbitrary unit)}",
+            "NiAs_enthalpy": "array of {P: float (GPa), H: float (same unit as NbO)}"
+          }
+        },
+        "description": "The transition pressure from the crossing of NbO and NiAs enthalpy curves, verified against the paper-reported value within tolerance."
+      },
+      {
+        "file": "elastic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "NbO": "object with fields C11, C12, C44, bulk_modulus, shear_modulus, youngs_modulus, poissons_ratio, Vickers_hardness (all floats, elastic moduli in GPa, hardness in GPa)",
+            "NiAs": "object with fields C11, C33, C44, C12, C13, bulk_modulus, shear_modulus, youngs_modulus, poissons_ratio, Vickers_hardness (all floats, elastic moduli in GPa, hardness in GPa)"
+          }
+        },
+        "description": "Elastic constants and derived mechanical properties for both phases at zero pressure, compared to the paper's reported values with tolerances."
+      },
+      {
+        "file": "thermodynamic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Debye_temperature_NbO_K": "float (Debye temperature in K at 0 GPa)",
+            "thermal_expansion_0GPa": "array of {T: float (K), alpha: float (10^-5 K^-1 or arbitrary)}",
+            "thermal_expansion_50GPa": "array of {T: float (K), alpha: float}",
+            "heat_capacity_0GPa": "array of {T: float (K), Cv: float (J/mol/K)}",
+            "heat_capacity_50GPa": "array of {T: float (K), Cv: float}"
+          }
+        },
+        "description": "Debye temperature compared to paper reference; Cv and α curves checked for correct qualitative trends (Dulong-Petit limit, pressure dependence)."
+      }
+    ],
+    "notes": "The agent must use open-source DFT and the quasi-harmonic Debye model; the paper's VASP results are not required. All artifacts are human-readable and re-derivable from the raw data the agent computes. No paper identity or gold values are exposed."
+  },
+  "steps": [
+    {
+      "id": "step_phase_transition",
+      "output_file": "phase_transition.json",
+      "kind": "recompute_pressure",
+      "weight": 0.4,
+      "target": 52.8,
+      "tolerance_abs": 5.0,
+      "description": "Recompute crossing pressure from enthalpy curves and compare to paper's 52.8 GPa within ±5 GPa tolerance."
+    },
+    {
+      "id": "step_elastic",
+      "output_file": "elastic_properties.json",
+      "kind": "compare_multifield",
+      "weight": 0.3,
+      "target": {
+        "NbO": {
+          "C11": 688,
+          "C12": 204,
+          "C44": 148,
+          "bulk_modulus": 365,
+          "shear_modulus": 180,
+          "youngs_modulus": 465,
+          "poissons_ratio": 0.288,
+          "Vickers_hardness": 16.3
+        },
+        "NiAs": {
+          "C11": 689,
+          "C33": 758,
+          "C44": 192,
+          "C12": 205,
+          "C13": 245,
+          "bulk_modulus": 391,
+          "shear_modulus": 220,
+          "youngs_modulus": 555,
+          "poissons_ratio": 0.263,
+          "Vickers_hardness": 21.8
+        }
+      },
+      "tolerances": {
+        "elastic_moduli": 0.15,
+        "hardness": 0.2,
+        "poissons": 0.15
+      },
+      "stability_check": true,
+      "description": "Compare elastic constants and derived moduli to paper Table 3 with relative tolerances; verify NiAs mechanical stability."
+    },
+    {
+      "id": "step_thermo",
+      "output_file": "thermodynamic_properties.json",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "target": {
+        "Debye_temperature_K": 525,
+        "dulong_petit": 49.9
+      },
+      "tolerances": {
+        "Debye_relative": 0.1,
+        "Cv_relative": 0.1
+      },
+      "description": "Check Debye temperature within 10% of 525 K, Cv approaches Dulong-Petit limit and decreases with pressure, alpha shows expected temperature and pressure dependencies."
+    }
+  ]
+}

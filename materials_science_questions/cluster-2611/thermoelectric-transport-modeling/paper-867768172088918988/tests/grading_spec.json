@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Band gap is compared to paper value (0.75±0.1 eV) as a result-level check. Thermopower is scored via structural checks (monotonic increase with T, correct doping ordering, plausible magnitude) because recomputing the Seebeck coefficient from raw DFT output is beyond the verifier's scope.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bandgap.txt": "exact_match",
+    "thermopower.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "band gap gold value",
+      "source_provenance": "paper text: optical band gap approx 0.75 eV",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "paper-reported value"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "thermopower magnitude acceptance ranges",
+      "source_provenance": "derived from Figure 6 in the paper and the reference solution solve.sh",
+      "generation_method": "set wide enough to accommodate legitimate toolchain variation (different DFT code, pseudopotentials) while excluding trivial constant guesses",
+      "why_not_fabricated": "bounds reflect typical computed Seebeck values for the material, ensuring a correct reproduction falls within them"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bandgap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "number",
+          "units": "eV",
+          "description": "A single floating-point number representing the optical band gap"
+        },
+        "description": "Optical band gap of CuRhO2 as extracted from the DFT dielectric function or DOS."
+      },
+      {
+        "file": "thermopower.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "doping",
+            "T",
+            "S_xx"
+          ],
+          "units": {
+            "S_xx": "μV/K",
+            "T": "K",
+            "doping": "hole concentration per formula unit"
+          },
+          "description": "Each row contains a Seebeck coefficient value for a specific doping level and temperature. Doping values must be one of 0.1, 0.2, 0.3. Temperature range: 100–1000 K."
+        },
+        "description": "In-plane Seebeck coefficient S_xx versus temperature for three hole doping levels, computed from Boltzmann transport within the constant relaxation time approximation."
+      }
+    ],
+    "notes": "The bandgap.txt and thermopower.csv serve as the sole scored artifacts. The thermopower curves must be derived from the DFT electronic structure; pre-computed or generic curves will fail structural checks (monotonicity, doping ordering) and magnitude comparisons."
+  },
+  "steps": [
+    {
+      "id": "step_03_bandgap",
+      "output_file": "bandgap.txt",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target": 0.75,
+      "tolerance": 0.1,
+      "units": "eV",
+      "description": "Compare extracted band gap to paper-reported 0.75 eV within ±0.1 eV."
+    },
+    {
+      "id": "step_04_thermopower",
+      "output_file": "thermopower.csv",
+      "weight": 0.5,
+      "kind": "structural_audit",
+      "description": "Verify thermopower CSV structure, monotonicity with T, correct doping ordering at 300 K, and plausible magnitude ranges.",
+      "config": {
+        "required_columns": [
+          "doping",
+          "T",
+          "S_xx"
+        ],
+        "valid_doping": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "T_range": [
+          100,
+          1000
+        ],
+        "sub_weights": {
+          "monotonic": 0.3,
+          "ordering": 0.3,
+          "magnitude": 0.4
+        },
+        "magnitude_check": {
+          "T_ref": 300,
+          "ranges": {
+            "0.1": [
+              100,
+              300
+            ],
+            "0.2": [
+              60,
+              200
+            ],
+            "0.3": [
+              30,
+              150
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

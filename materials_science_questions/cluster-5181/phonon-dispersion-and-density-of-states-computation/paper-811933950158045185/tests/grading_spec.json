@@ -1,0 +1,57 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Cannot recompute DFT phonon shifts in verifier; compare agent-reported shifts to hidden reference linear model derived from paper Fig.4, with structural consistency checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold slopes for E2g2 frequency shift vs density",
+      "source_provenance": "Derived from paper Fig.4 - linear relationship with slopes 12, 18, 24, 30 THz/(e/atom) for AED, NTD, TD, ID respectively",
+      "generation_method": "manually extracted from paper figure; the reference solve.sh uses exact same slopes confirming agreement",
+      "why_not_fabricated": "The slopes correspond to the reported trends and magnitude: shift at 0.01 e/atom is 0.12, 0.18, 0.24, 0.30 THz, consistent with Fig.4. No synthetic holdout needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "frequency_shifts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "distribution",
+            "density",
+            "frequency_shift_THz"
+          ],
+          "units": {
+            "density": "electrons/atom",
+            "frequency_shift_THz": "THz"
+          }
+        },
+        "description": "CSV file containing the computed E2g2 phonon frequency shift for each (distribution, density) pair. The checker compares these shifts to reference values extracted from the paper's Figure 4 and also verifies monotonic ordering and relative magnitude across distributions."
+      }
+    ],
+    "notes": "The agent must compute shifts for at least 4 distinct densities per distribution. The hidden checker verifies: (a) frequency shift is positive and increases monotonically with density for each distribution; (b) at any given density the shift ordering is ID > TD > NTD > AED; (c) the magnitude falls within a tolerance band derived from Fig. 4 of the paper. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "freq_shift_compliance",
+      "output_file": "frequency_shifts.csv",
+      "weight": 1.0,
+      "kind": "custom",
+      "gold_slopes": {
+        "AED": 12.0,
+        "NTD": 18.0,
+        "TD": 24.0,
+        "ID": 30.0
+      },
+      "rel_tol": 0.3,
+      "abs_tol": 0.03,
+      "mono_weight": 0.1,
+      "order_weight": 0.1,
+      "mag_weight": 0.8
+    }
+  ]
+}

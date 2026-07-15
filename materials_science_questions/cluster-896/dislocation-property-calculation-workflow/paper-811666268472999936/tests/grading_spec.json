@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes Hall-Petch slopes from raw pileup data and compares the slope ratios against reference values derived from the paper's analytic formulas.",
+  "pass_threshold": 0.9,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold slope ratio for Case II locked dislocation pileup",
+      "source_provenance": "Derived from asymptotic formulas with Q=1.84 for m=1 and Q=5.1 for m=2, yielding ratio sqrt(5.1/1.84) ≈ 1.665; paper reports about 1.7.",
+      "generation_method": "Analytic evaluation of Hall-Petch slope from eq.11 and Q values.",
+      "why_not_fabricated": "Directly computed from published parameters in the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold slope ratio for Case I two-phase screw pileup",
+      "source_provenance": "Derived from eq.20 with alpha=2, beta=pi-2, giving exact factor 2.0 for K=0.5 relative to K=0.",
+      "generation_method": "Analytic evaluation.",
+      "why_not_fabricated": "Directly computed from published equations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "caseII_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "m",
+            "L_over_b",
+            "sigma_over_G",
+            "slope_fit",
+            "slope_ratio"
+          ],
+          "units": {
+            "L_over_b": "dimensionless (length in units of b)",
+            "sigma_over_G": "dimensionless (stress normalized by shear modulus G)"
+          }
+        },
+        "description": "CSV file containing for each n the computed pileup length and applied stress for m=1 and m=2, together with the fitted Hall-Petch slopes and the ratio of slopes."
+      },
+      {
+        "file": "caseI_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n",
+            "K",
+            "L_over_b",
+            "sigma_over_G",
+            "slope_fit",
+            "slope_ratio"
+          ],
+          "units": {
+            "L_over_b": "dimensionless (length in units of b)",
+            "sigma_over_G": "dimensionless (stress normalized by matrix shear modulus G1)"
+          }
+        },
+        "description": "CSV file containing for each n the computed pileup length and applied stress for K=0 and K=0.5, together with the fitted Hall-Petch slopes and the ratio of slopes."
+      }
+    ],
+    "notes": "All material parameters (e.g., Poisson's ratio ν, asymptotic factors Q, critical spacing/force criteria) are specified in the problem context; the agent derives them from the force-balance equations and the specified yield criteria. The solver implementation details (root-finding method, tolerances) are left to the agent."
+  },
+  "steps": [
+    {
+      "id": "caseII_ratio",
+      "output_file": "caseII_results.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 1.665,
+      "tolerance_relative": 0.1,
+      "description": "Ratio of Hall-Petch slopes (m=2/m=1)"
+    },
+    {
+      "id": "caseII_fit",
+      "output_file": "caseII_results.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 0.9,
+      "operator": ">=",
+      "description": "Minimum R² of linear fit for both m"
+    },
+    {
+      "id": "caseI_ratio",
+      "output_file": "caseI_results.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 2.0,
+      "tolerance_relative": 0.1,
+      "description": "Ratio of Hall-Petch slopes (K=0.5/K=0)"
+    },
+    {
+      "id": "caseI_fit",
+      "output_file": "caseI_results.csv",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 0.9,
+      "operator": ">=",
+      "description": "Minimum R² of linear fit for both K"
+    }
+  ]
+}

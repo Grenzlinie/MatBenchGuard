@@ -1,0 +1,164 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Headline distortion amplitudes and electronic properties are self-reported JSON by the agent; no raw atomic structure data is available for recomputation. Checker compares these reported values to paper-reported gold with tolerances and validates slab layer-heights pattern via structural audit.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_distortion_modes.json": "reference_match",
+    "bulk_band_gap_moment.json": "threshold_or_better",
+    "slab_layer_heights.csv": "structural_audit",
+    "slab_band_gap_moment.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold distortion amplitudes for the bulk charge-ordered state: d1=4.24 pm, d2=3.41 pm, d3=2.59 pm, θz=9.08° (from paper main text).",
+      "source_provenance": "paper_results_text",
+      "generation_method": "extracted directly from the paper's main text numerical values",
+      "why_not_fabricated": "These are the exact values reported by the authors as the computed distortion amplitudes; they serve as the reference gold for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_distortion_modes.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d1_pm": "number (pm)",
+            "d2_pm": "number (pm)",
+            "d3_pm": "number (pm)",
+            "theta_z_deg": "number (degrees)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "d1_pm": "picometers",
+            "d2_pm": "picometers",
+            "d3_pm": "picometers",
+            "theta_z_deg": "degrees"
+          }
+        },
+        "description": "Distortion mode amplitudes of the bulk charge-ordered state. The checker compares each value to the paper's reported numbers with appropriate tolerances."
+      },
+      {
+        "file": "bulk_band_gap_moment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "number (eV)",
+            "total_magnetization_muB": "number (μB)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "band_gap_eV": "electronvolts",
+            "total_magnetization_muB": "Bohr magnetons"
+          }
+        },
+        "description": "Electronic band gap (must exceed 0.1 eV) and total magnetic moment (absolute value must be less than 1 μB) to confirm insulating antiferromagnetic character."
+      },
+      {
+        "file": "slab_layer_heights.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "layer_index",
+            "Oap_Oap_distance_pm"
+          ],
+          "units": {
+            "Oap_Oap_distance_pm": "picometers"
+          }
+        },
+        "description": "Layer-resolved apical oxygen to oxygen distance (TiO6 octahedron height) for each non-fixed layer in the slab. The checker verifies that consecutive layers show an alternating expanded/contracted pattern (consecutive height difference >2 pm for at least three adjacent pairs in the top six layers)."
+      },
+      {
+        "file": "slab_band_gap_moment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "number (eV)",
+            "total_magnetization_muB": "number (μB)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "band_gap_eV": "electronvolts",
+            "total_magnetization_muB": "Bohr magnetons"
+          }
+        },
+        "description": "Electronic band gap (>0.1 eV) and total magnetic moment (|moment| < 1 μB) for the slab, confirming insulating antiferromagnetic nature."
+      }
+    ],
+    "notes": "The scoring tiers are: reference_match (tolerance-based comparison to hidden paper gold) for bulk distortion amplitudes; threshold_or_better for band gaps and magnetic moments (insulating/AFM criteria); structural_audit for slab layer-height pattern. All process steps are required to reach the scored load-bearing artifact bulk_distortion_modes.json and the other scored outputs."
+  },
+  "steps": [
+    {
+      "id": "bulk_distortion_modes_check",
+      "output_file": "bulk_distortion_modes.json",
+      "kind": "reference_match",
+      "target_policy": "reference_match",
+      "weight": 0.3,
+      "gold": {
+        "d1_pm": 4.24,
+        "d2_pm": 3.41,
+        "d3_pm": 2.59,
+        "theta_z_deg": 9.08
+      },
+      "tolerances": {
+        "d1_pm": 1.5,
+        "d2_pm": 1.5,
+        "d3_pm": 1.5,
+        "theta_z_deg": 3.0
+      }
+    },
+    {
+      "id": "bulk_band_gap_moment_check",
+      "output_file": "bulk_band_gap_moment.json",
+      "kind": "threshold_or_better",
+      "target_policy": "threshold_or_better",
+      "weight": 0.2,
+      "thresholds": {
+        "band_gap_eV_min": 0.1,
+        "total_magnetization_abs_max": 1.0
+      }
+    },
+    {
+      "id": "slab_layer_heights_check",
+      "output_file": "slab_layer_heights.csv",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.3,
+      "pattern_criteria": {
+        "layer_index_start": -1,
+        "num_layers": 6,
+        "min_consecutive_pairs_alternating": 3,
+        "min_height_difference_pm": 2.0
+      }
+    },
+    {
+      "id": "slab_band_gap_moment_check",
+      "output_file": "slab_band_gap_moment.json",
+      "kind": "threshold_or_better",
+      "target_policy": "threshold_or_better",
+      "weight": 0.2,
+      "thresholds": {
+        "band_gap_eV_min": 0.1,
+        "total_magnetization_abs_max": 1.0
+      }
+    }
+  ]
+}

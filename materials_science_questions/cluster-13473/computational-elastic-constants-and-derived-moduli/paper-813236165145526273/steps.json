@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1_model_building",
+    "title": "Generate initial amorphous cellulose structure",
+    "role": "process",
+    "action": "Build a periodic amorphous cellulose simulation cell containing 27 chains of 50-glucose-unit cellulose (using cellobiose as the building block) at an initial density of ~0.8 g/cm³. Use a chain packing protocol (e.g., Amorphous Cell method, Packmol, or a custom script) and replicate the unit cell to a 3×3×3 supercell to obtain a system of approximately 28,404 atoms (C:8100, H:13554, O:6750).",
+    "output_file": "",
+    "evidence": "init_structure.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial atomic configuration before energy minimization. The cell should be periodic in all dimensions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_energy_minimization",
+    "title": "Energy minimization",
+    "role": "process",
+    "action": "Perform energy minimization on the initial structure using the ReaxFF force field to relax high-energy contacts.",
+    "output_file": "",
+    "evidence": "minimized.lammpstrj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3_npt_equilibration",
+    "title": "NPT equilibration at 298 K and atmospheric pressure",
+    "role": "process",
+    "action": "Run an NPT (isothermal-isobaric) MD simulation with timestep 0.5 fs for 250 ps at T=298 K and P=0.0001 GPa using the ReaxFF force field, to achieve equilibrium density and remove internal stresses.",
+    "output_file": "",
+    "evidence": "equilibrated.lammpstrj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4_uniaxial_deformation",
+    "title": "Uniaxial tensile deformation",
+    "role": "process",
+    "action": "From the equilibrated structure, apply a constant strain rate (e.g., 10^10 s⁻¹) uniaxial tensile strain in the x-direction while maintaining zero pressure in y and z. Run the simulation at 298 K until sufficient strain to capture elastic and yielding regimes, recording stress in all three directions.",
+    "output_file": "",
+    "evidence": "deformation.lammpstrj",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_5_mechanical_properties",
+    "title": "Extract mechanical properties",
+    "role": "scored",
+    "action": "From the stress–strain data obtained in the deformation step, extract the equilibrium density, Young's modulus (initial linear slope of stress–strain in loading direction), Poisson's ratio (negative ratio of lateral to axial strain in elastic region), and shear modulus (computed from Young's modulus and Poisson's ratio using isotropic relation). Write the four scalar values into a JSON file.",
+    "output_file": "mechanical_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing density, Young's modulus, shear modulus, and Poisson's ratio computed from the simulation.",
+    "output_schema": "{\"density\": \"float (g/cm^3)\", \"youngs_modulus\": \"float (GPa)\", \"shear_modulus\": \"float (GPa)\", \"poissons_ratio\": \"float (dimensionless)\"}"
+  }
+]

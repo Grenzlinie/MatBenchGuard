@@ -1,0 +1,254 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Raw DFT/NAMD outputs are too large to submit; checker compares reported numeric results against hidden paper gold values with tolerances and trend checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "electronic_summary.json": "reference_match",
+    "table1_energy_nac.csv": "reference_match",
+    "table2_timescales.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for electronic summary, energy/NAC, and timescales from the paper (Table 1, Table 2, Figure 2 PDOS energies)",
+      "source_provenance": "extracted from paper tables and figures; verified against reference solve.sh",
+      "generation_method": "direct extraction from paper text and confirmed by reference oracle",
+      "why_not_fabricated": "These are the paper's reported numbers; they serve as the gold standard for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electronic_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bandgap_PBEpU",
+            "bandgap_HSEscaled",
+            "midgap_states"
+          ],
+          "properties": {
+            "bandgap_PBEpU": {
+              "type": "number",
+              "units": "eV"
+            },
+            "bandgap_HSEscaled": {
+              "type": "number",
+              "units": "eV"
+            },
+            "midgap_states": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "spin",
+                  "state_label",
+                  "energy_rel_VBM",
+                  "occupied"
+                ],
+                "properties": {
+                  "spin": {
+                    "type": "string"
+                  },
+                  "state_label": {
+                    "type": "string"
+                  },
+                  "energy_rel_VBM": {
+                    "type": "number",
+                    "units": "eV"
+                  },
+                  "occupied": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Electronic structure summary containing the band gap values and a list of midgap defect states with their energies relative to VBM and occupation status, required to verify the existence of occupied hole-trap states."
+      },
+      {
+        "file": "table1_energy_nac.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "orbitals",
+            "energy",
+            "scaled_energy",
+            "NAC",
+            "scaled_NAC"
+          ],
+          "units": {
+            "energy": "eV",
+            "scaled_energy": "eV",
+            "NAC": "meV",
+            "scaled_NAC": "meV"
+          }
+        },
+        "description": "Canonically averaged energy gaps and nonadiabatic couplings for spin-down channel state pairs, used to validate the raw and scaled electronic coupling inputs for the dynamics."
+      },
+      {
+        "file": "table2_timescales.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "spin",
+            "process",
+            "timescale_ps",
+            "uncertainty_ps"
+          ],
+          "units": {
+            "timescale_ps": "ps",
+            "uncertainty_ps": "ps"
+          }
+        },
+        "description": "Fitted time scales for charge separation (hole trapping) and recombination from NAMD simulations for both spin channels, including statistical uncertainties, to verify the claim that charge separation is significantly faster than recombination."
+      }
+    ],
+    "notes": "The verifier compares the submitted numeric values against hidden reference values derived from the paper’s reported results, applying appropriate tolerances for the chosen functional and basis set. The electronic_summary must contain at least one occupied midgap state in each spin channel. The time scales must show τ_separation << τ_recombination."
+  },
+  "steps": [
+    {
+      "id": "check_electronic_summary",
+      "output_file": "electronic_summary.json",
+      "weight": 0.2,
+      "kind": "rubric",
+      "gold": {
+        "bandgap_PBEpU": 2.08,
+        "bandgap_HSEscaled": 2.48,
+        "midgap_states_spin_up": [
+          {
+            "state_label": "d1",
+            "energy_rel_VBM": 0.1
+          },
+          {
+            "state_label": "d2",
+            "energy_rel_VBM": 0.55
+          },
+          {
+            "state_label": "d3",
+            "energy_rel_VBM": 1.0
+          }
+        ],
+        "midgap_states_spin_down": [
+          {
+            "state_label": "d1",
+            "energy_rel_VBM": 0.09
+          },
+          {
+            "state_label": "d2",
+            "energy_rel_VBM": 0.51
+          },
+          {
+            "state_label": "d3",
+            "energy_rel_VBM": 1.2
+          }
+        ]
+      },
+      "tolerance_bandgap": 0.2,
+      "tolerance_midgap_energy": 0.2,
+      "require_occupied": true
+    },
+    {
+      "id": "check_table1_energy_nac",
+      "output_file": "table1_energy_nac.csv",
+      "weight": 0.3,
+      "kind": "rubric",
+      "gold_rows": [
+        {
+          "orbitals": "VBM-d1",
+          "energy": 0.09,
+          "scaled_energy": 0.11,
+          "NAC": 42.08,
+          "scaled_NAC": 34.93
+        },
+        {
+          "orbitals": "d1-d2",
+          "energy": 0.42,
+          "scaled_energy": 0.76,
+          "NAC": 24.31,
+          "scaled_NAC": 13.37
+        },
+        {
+          "orbitals": "d2-d3",
+          "energy": 0.69,
+          "scaled_energy": 0.6,
+          "NAC": 14.44,
+          "scaled_NAC": 16.61
+        },
+        {
+          "orbitals": "d3-CBM",
+          "energy": 0.86,
+          "scaled_energy": 1.0,
+          "NAC": 8.41,
+          "scaled_NAC": 7.23
+        },
+        {
+          "orbitals": "VBM-CBM",
+          "energy": 2.08,
+          "scaled_energy": 2.48,
+          "NAC": 2.1,
+          "scaled_NAC": 1.66
+        }
+      ],
+      "tolerance_relative_energy": 0.05,
+      "tolerance_relative_nac": 0.05
+    },
+    {
+      "id": "check_table2_timescales",
+      "output_file": "table2_timescales.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "gold_rows": [
+        {
+          "spin": "up",
+          "process": "ES_decay",
+          "timescale_ps": 1.4,
+          "uncertainty_ps": 0.22
+        },
+        {
+          "spin": "up",
+          "process": "trapped_hole_rise",
+          "timescale_ps": 1.43,
+          "uncertainty_ps": 0.56
+        },
+        {
+          "spin": "up",
+          "process": "GS_rise",
+          "timescale_ps": 23.52,
+          "uncertainty_ps": 2.9
+        },
+        {
+          "spin": "down",
+          "process": "ES_decay",
+          "timescale_ps": 0.32,
+          "uncertainty_ps": 0.06
+        },
+        {
+          "spin": "down",
+          "process": "trapped_hole_rise",
+          "timescale_ps": 0.34,
+          "uncertainty_ps": 0.08
+        },
+        {
+          "spin": "down",
+          "process": "GS_rise",
+          "timescale_ps": 12.18,
+          "uncertainty_ps": 1.89
+        }
+      ],
+      "tolerance_factor": 2.0,
+      "check_trend_separation_vs_recombination": true,
+      "check_trend_spin_down_faster": true
+    }
+  ]
+}

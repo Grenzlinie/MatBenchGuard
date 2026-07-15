@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Kurtosis of per-atom strain distribution is recomputed from the submitted raw strain list; CSV trends are structural (monotonic, threshold) because full MD re-run is infeasible in lightweight checker.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "graphene_roughness_data.csv": "structural_audit",
+    "per_atom_strains_sq6.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden reference CSV values for trends, derived from paper Fig.8 and insert of Fig.9; used only for direction validation, not absolute match",
+      "source_provenance": "paper figures: Fig.8 (Sq_Gr, E_ad) and Fig.9 insert (epsilon_mean_top10); values extrapolated for Sq_Fe=2,4,6 Å",
+      "generation_method": "digitized from paper graphs and verified consistency with solve.sh reference",
+      "why_not_fabricated": "values are based on paper-reported data points"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "graphene_roughness_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Sq_Fe",
+            "Sq_Gr",
+            "E_ad",
+            "epsilon_mean_top10"
+          ],
+          "units": {
+            "Sq_Fe": "Å",
+            "Sq_Gr": "Å",
+            "E_ad": "meV/C atom",
+            "epsilon_mean_top10": "dimensionless"
+          }
+        },
+        "description": "Aggregate statistics for three substrate conditions. Structural audit checks monotonic trends (Sq_Gr increases with Sq_Fe, E_ad decreases, epsilon_mean_top10 increases) and a numeric bound (epsilon_mean_top10 < 0.02 for Sq_Fe=2 Å)."
+      },
+      {
+        "file": "per_atom_strains_sq6.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "strains": "list of float"
+          },
+          "items": {
+            "strains": "float"
+          }
+        },
+        "description": "Per-atom strain list for the Sq_Fe=6 Å condition. Structural audit computes kurtosis of the distribution and verifies it is > 3."
+      }
+    ],
+    "notes": "The verification checks structural properties (monotonic trends, threshold, distribution kurtosis) without requiring re-simulation. No hidden gold values are exposed in the public contract."
+  },
+  "steps": [
+    {
+      "id": "csv_trend_check",
+      "output_file": "graphene_roughness_data.csv",
+      "kind": "csv_trend_check",
+      "weight": 0.4
+    },
+    {
+      "id": "strain_kurtosis_check",
+      "output_file": "per_atom_strains_sq6.json",
+      "kind": "strain_kurtosis_check",
+      "weight": 0.6
+    }
+  ]
+}

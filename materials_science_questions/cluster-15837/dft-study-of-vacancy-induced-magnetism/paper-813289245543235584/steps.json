@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_prepare",
+    "title": "Prepare supercell input structures",
+    "role": "process",
+    "action": "Generate the 3x3x3 cubic BaTiO3 supercell (135 atoms, lattice constant 3.995 Å). Create input files for Quantum ESPRESSO for the configurations: Co-only (one Ti replaced by Co), N-far (Co plus one N on an O site far from Co), N-near (Co plus N on nearest-neighbour O site), and two-Co+N (with N as bridge, for both FM and AFM spin settings).",
+    "output_file": "",
+    "evidence": "supercell_files.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Use ASE, pymatgen, or similar to build the supercell and substitute atoms. No DFT run yet.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_co_only",
+    "title": "Co-only supercell relaxation and total energy",
+    "role": "process",
+    "action": "Run spin-polarized DFT (LSDA+U, Hubbard U=4 eV on Co d orbitals) for the Co-only supercell. Perform full ionic relaxation until forces are below 0.01 eV/Å. Obtain the total energy (E_co_only) and confirm that the system is non-magnetic (total magnetization ≈ 0).",
+    "output_file": "",
+    "evidence": "co_only_output.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Use pw.x with the same U parameter and sufficient k-point grid (e.g. 4x4x4 gamma-centred) and cutoff energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_n_far",
+    "title": "N far from Co supercell relaxation and total energy",
+    "role": "process",
+    "action": "Run DFT relaxation for the supercell with one Co and one N substituted on an O site far from Co (at least third nearest neighbour). Obtain the total energy (E_far) and confirm non-magnetic ground state.",
+    "output_file": "",
+    "evidence": "n_far_output.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Same DFT settings as Co‑only step. Nitrogen is placed far to avoid direct interaction with Co.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_n_near",
+    "title": "N nearest neighbour to Co: relaxation, magnetic moments, bond length",
+    "role": "scored",
+    "action": "Run DFT relaxation for the supercell with one Co and one N on the nearest-neighbour O site. After convergence, extract the total magnetic moment per Co atom (sum of moments on N and Co) and the Co–N bond length. Write these values to the output file.",
+    "output_file": "step_01_moments_bond.json",
+    "evidence": "n_near_output.tar.gz",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Perform spin‑polarised DFT with the same LSDA+U settings. Magnetic moments are obtained from the total magnetization or projected DOS. Bond length from final atomic positions. The contracted Co–N bond is expected.",
+    "output_schema": "{\"total_moment_per_Co\": <float μB>, \"Co_N_bond_length\": <float Å>}"
+  },
+  {
+    "id": "step_formation",
+    "title": "Formation energy analysis (N near vs far)",
+    "role": "scored",
+    "action": "Compute formation energies of N doping for the near and far configurations using the Zhang–Northrup formula: ΔE = [E_{doped} − E_{undoped}] − μ_N + μ_O. Use total energies from previous DFT runs (E_co_only as undoped, E_near from n‑near, E_far from n‑far). Obtain chemical potentials μ_N and μ_O from isolated N₂ and O₂ molecule calculations with the same functional. Output the near and far formation energies and their difference.",
+    "output_file": "step_02_formation_energy.json",
+    "evidence": "molecule_energies.tar.gz",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Run pw.x for isolated N₂ and O₂ in large boxes; μ_N = E(N₂)/2, μ_O = E(O₂)/2. The undoped reference is the Co-only supercell. The difference δE = E_near − E_far should be negative (N near favoured).",
+    "output_schema": "{\"E_near\": <float eV>, \"E_far\": <float eV>, \"formation_energy_near\": <float eV>, \"formation_energy_far\": <float eV>, \"delta_E_near_far\": <float eV>}"
+  },
+  {
+    "id": "step_exchange",
+    "title": "Two-Co+N ferromagnetic versus antiferromagnetic energy difference",
+    "role": "scored",
+    "action": "Build a supercell with two Co atoms and one N atom as a bridge (Co–N–Co geometry). Run DFT for ferromagnetic (parallel spins) and antiferromagnetic (antiparallel spins) configurations, each with full ionic relaxation. Extract total energies E_FM and E_AFM, and compute ΔE = E_FM − E_AFM (negative means FM favoured).",
+    "output_file": "step_03_exchange_energy.json",
+    "evidence": "co2_n_output.tar.gz",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Use same DFT+U settings. For AFM, set starting magnetizations opposite on the two Co atoms. The exchange energy difference indicates the preferred magnetic ordering.",
+    "output_schema": "{\"E_FM\": <float eV>, \"E_AFM\": <float eV>, \"delta_E_FM_AFM\": <float eV>}"
+  }
+]

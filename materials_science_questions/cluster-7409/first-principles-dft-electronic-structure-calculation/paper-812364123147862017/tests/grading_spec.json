@@ -1,0 +1,178 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Full DFT recomputation is infeasible in the verifier sandbox; result-level comparison against paper-reported values is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.csv": "exact_match",
+    "epsilon2_peaks.csv": "exact_match",
+    "optical_constants.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap values from Table 1 of the source paper.",
+      "source_provenance": "Paper Table 1: FP-LAPW indirect 1.87 eV, direct 2.24 eV; FP-LAPW+SA indirect 3.2 eV, direct 3.57 eV.",
+      "generation_method": "Transcribed from Table 1 of the original publication and embedded inline.",
+      "why_not_fabricated": "These are the exact reported values for the same computational conditions."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold epsilon2 peak energies A-I from Table 2 of the source paper.",
+      "source_provenance": "Paper Table 2, FP-LAPW-SA column.",
+      "generation_method": "Transcribed from Table 2 of the original publication and embedded inline.",
+      "why_not_fabricated": "These are the exact reported peak positions for the scissor-corrected calculation."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold static dielectric constant epsilon1(0)=5.35 and plasma peak 28 eV from the paper text and figures.",
+      "source_provenance": "Paper Section 3.2 and Fig. 3: epsilon1(0)=5.35, plasma peak=28 eV.",
+      "generation_method": "Extracted from the paper's results and discussion; embedded inline.",
+      "why_not_fabricated": "These are the exact reported values for the same FP-LAPW-SA calculation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "required_columns": [
+            "gap_type",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Direct and indirect band gaps (raw GGA and after 1.33 eV scissor correction)."
+      },
+      {
+        "file": "epsilon2_peaks.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "required_columns": [
+            "peak_label",
+            "energy_eV"
+          ],
+          "units": {
+            "energy_eV": "eV"
+          }
+        },
+        "description": "Positions of the nine major peaks (A–I) in ε₂(ω) between 0 and 30 eV."
+      },
+      {
+        "file": "optical_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "epsilon1_at_0": "float",
+            "plasma_peak_energy_eV": "float"
+          },
+          "units": {
+            "epsilon1_at_0": "dimensionless",
+            "plasma_peak_energy_eV": "eV"
+          }
+        },
+        "description": "Static dielectric constant ε₁(0) and energy of the plasma peak in L(ω)."
+      }
+    ],
+    "notes": "All quantities are fixed physical properties obtained from a first‑principles DFT workflow; the checker compares each value to the paper‑reported reference within hidden tolerances (result‑level compare, T0). No metrics are “better” than the reference, so exact_match is the appropriate target policy."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.csv",
+      "weight": 0.3,
+      "kind": "csv_row_tolerance",
+      "expected": [
+        {
+          "gap_type": "indirect_no_scissor",
+          "energy_eV": 1.87
+        },
+        {
+          "gap_type": "direct_no_scissor",
+          "energy_eV": 2.24
+        },
+        {
+          "gap_type": "indirect_with_scissor",
+          "energy_eV": 3.2
+        },
+        {
+          "gap_type": "direct_with_scissor",
+          "energy_eV": 3.57
+        }
+      ],
+      "tolerance": 0.1,
+      "value_key": "energy_eV",
+      "match_key": "gap_type"
+    },
+    {
+      "id": "epsilon2_peaks",
+      "output_file": "epsilon2_peaks.csv",
+      "weight": 0.3,
+      "kind": "csv_row_tolerance",
+      "expected": [
+        {
+          "peak_label": "A",
+          "energy_eV": 5.68
+        },
+        {
+          "peak_label": "B",
+          "energy_eV": 6.42
+        },
+        {
+          "peak_label": "C",
+          "energy_eV": 8.74
+        },
+        {
+          "peak_label": "D",
+          "energy_eV": 9.64
+        },
+        {
+          "peak_label": "E",
+          "energy_eV": 10.98
+        },
+        {
+          "peak_label": "F",
+          "energy_eV": 12.48
+        },
+        {
+          "peak_label": "G",
+          "energy_eV": 15.68
+        },
+        {
+          "peak_label": "H",
+          "energy_eV": 21.78
+        },
+        {
+          "peak_label": "I",
+          "energy_eV": 24.8
+        }
+      ],
+      "tolerance": 0.2,
+      "value_key": "energy_eV",
+      "match_key": "peak_label"
+    },
+    {
+      "id": "optical_constants",
+      "output_file": "optical_constants.json",
+      "weight": 0.4,
+      "kind": "json_field_tolerance",
+      "expected": {
+        "epsilon1_at_0": 5.35,
+        "plasma_peak_energy_eV": 28
+      },
+      "tolerances": {
+        "epsilon1_at_0": 0.2,
+        "plasma_peak_energy_eV": 0.2
+      }
+    }
+  ]
+}

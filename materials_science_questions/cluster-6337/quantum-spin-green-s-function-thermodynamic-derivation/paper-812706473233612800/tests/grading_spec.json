@@ -1,0 +1,114 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute of the full differential-operator solution from raw order parameters would require re-running the heavy numerical self-consistent equations, which is infeasible in the lightweight checker sandbox. Therefore we score exact ground-state values (paper-reported) with tolerance and verify structural features of the specific heat curves (peak presence, shape, trend), which together capture the paper's headline claims.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "tc_values.csv": "exact_match",
+    "specific_heat_curves.csv": "structural_audit",
+    "internal_energy_order_params.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported exact ground-state values and critical temperatures",
+      "source_provenance": "Paper text and figures: Eqs. (28)-(29) give Tc at D=0; text and Fig.2 state correct values r=27/8, U/JN=-63/8 at D=2.0, T=0 K; text and Fig.4 state U=r=1/8 at D=-2.0, T=0 K; text states U=0 at D=-1.5, T=0 K.",
+      "generation_method": "Extracted directly from the paper.",
+      "why_not_fabricated": "These are the exact analytic numbers the paper declares as 'correct values'; they are the benchmark the paper's own formulation must satisfy at T=0."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tc_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "formulation",
+            "D_div_J",
+            "Tc"
+          ],
+          "units": {
+            "D_div_J": "dimensionless",
+            "Tc": "J/k_B"
+          }
+        },
+        "description": "Critical temperatures from both formulations at five crystal-field values."
+      },
+      {
+        "file": "specific_heat_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "formulation",
+            "D_div_J",
+            "T_div_Tc",
+            "specific_heat"
+          ],
+          "units": {
+            "D_div_J": "dimensionless",
+            "T_div_Tc": "dimensionless",
+            "specific_heat": "k_B per spin"
+          }
+        },
+        "description": "Specific heat curves for both formulations at the D/J values where anomalous behaviour is expected."
+      },
+      {
+        "file": "internal_energy_order_params.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "formulation",
+            "D_div_J",
+            "T_div_Tc",
+            "m",
+            "q",
+            "r",
+            "U_div_J"
+          ],
+          "units": {
+            "D_div_J": "dimensionless",
+            "T_div_Tc": "dimensionless",
+            "m": "dimensionless",
+            "q": "dimensionless",
+            "r": "dimensionless",
+            "U_div_J": "dimensionless"
+          }
+        },
+        "description": "Internal energy and order parameters at near-zero temperature, confirming ground-state values."
+      }
+    ],
+    "notes": "The checker will validate that Tc at D=0 matches paper-reported values within tolerance, that specific heat shows the required structural features (broad maximum, sharp peak), and that ground-state internal energy and cubic moment at D=2.0 are correctly reproduced. Exact tolerances are hidden."
+  },
+  "steps": [
+    {
+      "id": "tc_values",
+      "output_file": "tc_values.csv",
+      "weight": 0.2,
+      "kind": "rubric",
+      "description": "Critical temperatures for both formulations at five D/J values."
+    },
+    {
+      "id": "specific_heat_curves",
+      "output_file": "specific_heat_curves.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "description": "Specific heat curves at D/J = -2.0, -1.6, -1.5, 2.0 for both formulations."
+    },
+    {
+      "id": "internal_energy_order_params",
+      "output_file": "internal_energy_order_params.csv",
+      "weight": 0.3,
+      "kind": "rubric",
+      "description": "Ground-state internal energy and order parameters."
+    }
+  ]
+}

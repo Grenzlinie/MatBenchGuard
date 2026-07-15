@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_01_dft_energies",
+    "title": "DFT energy calculations for Co-N4 models",
+    "role": "process",
+    "action": "Construct atomic models of (a) a pristine Co-N4 site embedded in a graphene layer and (b) the Co-N4-6r-c2 defect model (a Co-N4 moiety adjacent to a six-membered ring with a carbon vacancy) as described in the paper's computational methods. Perform DFT total-energy calculations for the clean slab and for adsorbed ORR intermediates (*OOH, *O, *OH) on each model. Save the computed total energies.",
+    "output_file": "",
+    "evidence": "dft_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate step: the agent must run the full DFT pipeline (model construction, geometry optimizations, total-energy calculations) and record the resulting total energies of the clean slabs and intermediate-covered configurations in a CSV file for the next step.",
+    "output_schema": "CSV with columns: model (string: 'pristine' or 'defect'), configuration (string: 'clean', 'OOH', 'O', 'OH'), total_energy_eV (float). The agent may include additional internal columns."
+  },
+  {
+    "id": "step_02_free_energy_analysis",
+    "title": "Free-energy analysis and working potential calculation",
+    "role": "scored",
+    "action": "From the DFT energies in step_01_dft_energies, apply the computational hydrogen electrode (CHE) model to compute adsorption free energies for *OOH, *O, and *OH. Determine the working potential U for each model (the highest potential at which all elementary steps are downhill in free energy). Compute the free-energy change for the O2 → *OOH step at a fixed potential of 0.83 V vs. SHE for the defect model. Write the results as a JSON object with the required fields.",
+    "output_file": "dft_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the computed working potentials and free-energy change. The load-bearing property ensures the agent must genuinely run the DFT step; a guess of these values will not satisfy the required trend and tolerance checks.",
+    "output_schema": "{\n  \"pristine_CoN4_U\": { \"type\": \"number\", \"description\": \"Working potential for pristine Co-N4 model (V vs. SHE)\" },\n  \"defect_CoN4_U\": { \"type\": \"number\", \"description\": \"Working potential for Co-N4-6r-c2 defect model (V vs. SHE)\" },\n  \"defect_O2_to_OOH_deltaG_at_0_83\": { \"type\": \"number\", \"description\": \"Free-energy change (eV) for O2 -> *OOH on the defect model at U=0.83 V vs. SHE\" }\n}"
+  }
+]

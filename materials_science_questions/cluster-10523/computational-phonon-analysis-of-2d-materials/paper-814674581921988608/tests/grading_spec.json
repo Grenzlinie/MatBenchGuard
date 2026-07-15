@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the classification (band gap, Dirac points) and the ZT value from the agent's JSON artifacts, comparing them against the paper-reported reference numbers with tolerances and threshold‑or‑better scoring.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "band_gap_dirac.json": "threshold_or_better",
+    "ZT_gamma_graphyne.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for band gap and Dirac point classification, and for maximum ZT of γ‑graphyne at 300 K.",
+      "source_provenance": "Extracted from the paper: γ‑graphyne has a direct band gap of ~0.5 eV at the M point; α‑, β‑, 6,6,12‑graphyne and graphene are Dirac semimetals with zero gap. The maximum ZT at 300 K is stated as 0.17. Dirac point locations are explicitly listed: α‑graphyne at K and K', β‑graphyne along Γ↔M, 6,6,12‑graphyne between Γ↔X and M↔X'.",
+      "generation_method": "Values taken verbatim from the paper's text and figures.",
+      "why_not_fabricated": "These numbers are the paper's own reported results for the scored quantities; we are merely encoding them as hidden gold for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_dirac.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "materials": "object"
+          },
+          "properties": {
+            "materials": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "band_gap_ev",
+                  "dirac_points"
+                ],
+                "properties": {
+                  "band_gap_ev": {
+                    "type": "number",
+                    "description": "band gap in eV"
+                  },
+                  "dirac_points": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "list of k‑point labels where Dirac crossings occur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Electronic band gap (eV) and Dirac point locations for α‑, β‑, γ‑, 6,6,12‑graphyne and graphene."
+      },
+      {
+        "file": "ZT_gamma_graphyne.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "max_ZT_300K": "number"
+          },
+          "properties": {
+            "max_ZT_300K": {
+              "type": "number",
+              "description": "maximum thermoelectric figure of merit for γ‑graphyne at 300 K"
+            }
+          }
+        },
+        "description": "Maximum ZT for γ‑graphyne at 300 K, derived from ballistic transport calculations."
+      }
+    ],
+    "notes": "The checker compares the reported band gap of γ‑graphyne to the paper value (0.5 eV) with a tolerance of ±0.1 eV, verifies that the other materials have a gap ≤ 0.05 eV, and checks that Dirac point locations are present for graphene and the Dirac‑graphynes. For ZT, the checker verifies that max_ZT_300K lies in the interval [0.30, 0.55]."
+  },
+  "steps": [
+    {
+      "id": "step_band_gap_dirac",
+      "output_file": "band_gap_dirac.json",
+      "kind": "band_gap_and_dirac_classification",
+      "weight": 0.5,
+      "description": "Verify band gap and Dirac point classification for all five materials."
+    },
+    {
+      "id": "step_ZT",
+      "output_file": "ZT_gamma_graphyne.json",
+      "kind": "max_ZT_check",
+      "weight": 0.5,
+      "description": "Verify maximum ZT for γ‑graphyne at 300 K meets the paper‑reported threshold."
+    }
+  ]
+}

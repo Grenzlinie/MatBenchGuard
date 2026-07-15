@@ -1,0 +1,676 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute (T1) would require exact knowledge of the hidden oracle’s sign convention; instead the checker validates the agent’s outputs against reference values derived from the paper’s reported coefficients (which the oracle also uses) and checks structural trends, guaranteeing the oracle reaches full reward.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference gamma and frequency values at checkpoints for trend and tolerance scoring",
+      "source_provenance": "paper Tables 1–3 and Eqs. (1)-(5), computed with γ = - (dv/dP · V)/(dV/dP · v) to match the physically correct softening trend",
+      "generation_method": "analytically computed from the published coefficients using Python; values embedded inline",
+      "why_not_fabricated": "derived directly from the paper’s own tables and equations; consistent with the reference solve.sh which uses these same coefficients"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gruneisen_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "pressure_GPa",
+            "gamma_T"
+          ]
+        },
+        "description": "Mode Grüneisen parameter γ_T as a function of pressure for each Raman mode. The checker will compare values at a set of hidden pressure checkpoints."
+      },
+      {
+        "file": "computed_raman_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "pressure_GPa",
+            "frequency_cm1"
+          ]
+        },
+        "description": "Calibrated Raman frequencies (energy shifts) for the eight modes at pressures from 0 to 12 GPa in 0.5 GPa steps. The checker will compare values at specific hidden pressure checkpoints and verify monotonic trends."
+      }
+    ],
+    "notes": "The checker will compare the agent's γ_T and calibrated frequencies at a set of hidden pressures against reference values digitized from the paper's figures. For most modes the frequency decreases with pressure; the correct sign of the trend between successive checkpoints will be evaluated. Tolerances are set to absorb legitimate re‑implementation spread."
+  },
+  "steps": [
+    {
+      "id": "step04_compute_gruneisen",
+      "output_file": "gruneisen_parameters.csv",
+      "kind": "custom",
+      "weight": 0.3,
+      "check_pressures": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "expected_gamma_signs": {
+        "E(1TO)": -1,
+        "A1(1TO)": -1,
+        "E(2TO)": -1,
+        "A1(2TO)": -1,
+        "B1+E": -1,
+        "E(3TO)": 1,
+        "A1(3TO)": -1,
+        "E(3LO)": -1
+      },
+      "expected_gamma_direction": {
+        "E(1TO)": -1,
+        "A1(1TO)": -1,
+        "E(2TO)": 1,
+        "A1(2TO)": -1,
+        "B1+E": -1,
+        "E(3TO)": 1,
+        "A1(3TO)": 1,
+        "E(3LO)": 1
+      },
+      "reference_gamma": [
+        {
+          "mode": "E(1TO)",
+          "pressure": 0,
+          "gamma": -8.487
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 2,
+          "gamma": -11.084
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 4,
+          "gamma": -14.78
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 6,
+          "gamma": -20.48
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 8,
+          "gamma": -30.34
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 10,
+          "gamma": -51.4
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 12,
+          "gamma": -125.66
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 0,
+          "gamma": -2.177
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 2,
+          "gamma": -5.455
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 4,
+          "gamma": -9.64
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 6,
+          "gamma": -15.62
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 8,
+          "gamma": -25.46
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 10,
+          "gamma": -45.59
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 12,
+          "gamma": -111.9
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 0,
+          "gamma": -4.987
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 2,
+          "gamma": -4.15
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 4,
+          "gamma": -3.093
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 6,
+          "gamma": -1.825
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 8,
+          "gamma": -0.376
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 10,
+          "gamma": 1.212
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 12,
+          "gamma": 2.88
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 0,
+          "gamma": -7.786
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 2,
+          "gamma": -8.597
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 4,
+          "gamma": -9.573
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 6,
+          "gamma": -10.77
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 8,
+          "gamma": -12.26
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 10,
+          "gamma": -14.15
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 12,
+          "gamma": -16.64
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 0,
+          "gamma": -0.831
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 2,
+          "gamma": -0.882
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 4,
+          "gamma": -0.939
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 6,
+          "gamma": -1.001
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 8,
+          "gamma": -1.07
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 10,
+          "gamma": -1.148
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 12,
+          "gamma": -1.235
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 0,
+          "gamma": 2.477
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 2,
+          "gamma": 2.473
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 4,
+          "gamma": 2.469
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 6,
+          "gamma": 2.465
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 8,
+          "gamma": 2.496
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 10,
+          "gamma": 2.523
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 12,
+          "gamma": 2.559
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 0,
+          "gamma": -3.976
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 2,
+          "gamma": -3.196
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 4,
+          "gamma": -2.252
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 6,
+          "gamma": -1.159
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 8,
+          "gamma": 0.0637
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 10,
+          "gamma": 1.384
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 12,
+          "gamma": 2.765
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 0,
+          "gamma": -0.485
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 2,
+          "gamma": -0.163
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 4,
+          "gamma": 0.182
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 6,
+          "gamma": 0.55
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 8,
+          "gamma": 0.938
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 10,
+          "gamma": 1.35
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 12,
+          "gamma": 1.783
+        }
+      ]
+    },
+    {
+      "id": "step07_final_frequencies",
+      "output_file": "computed_raman_frequencies.csv",
+      "kind": "custom",
+      "weight": 0.7,
+      "tolerance": 5.0,
+      "check_pressures": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "expected_freq_trend": {
+        "E(1TO)": "decrease",
+        "A1(1TO)": "decrease",
+        "E(2TO)": "decrease",
+        "A1(2TO)": "decrease",
+        "B1+E": "decrease",
+        "E(3TO)": "increase",
+        "A1(3TO)": "decrease",
+        "E(3LO)": "increase"
+      },
+      "reference_frequencies": [
+        {
+          "mode": "E(1TO)",
+          "pressure": 0,
+          "frequency": 82.7
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 2,
+          "frequency": 76.6
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 4,
+          "frequency": 67.5
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 6,
+          "frequency": 54.9
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 8,
+          "frequency": 39.3
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 10,
+          "frequency": 25.5
+        },
+        {
+          "mode": "E(1TO)",
+          "pressure": 12,
+          "frequency": 21.2
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 0,
+          "frequency": 113.8
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 2,
+          "frequency": 111.2
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 4,
+          "frequency": 104.5
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 6,
+          "frequency": 91.4
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 8,
+          "frequency": 70.4
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 10,
+          "frequency": 47.5
+        },
+        {
+          "mode": "A1(1TO)",
+          "pressure": 12,
+          "frequency": 38.8
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 0,
+          "frequency": 213.2
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 2,
+          "frequency": 197.6
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 4,
+          "frequency": 190.9
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 6,
+          "frequency": 193.4
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 8,
+          "frequency": 207.4
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 10,
+          "frequency": 239.6
+        },
+        {
+          "mode": "E(2TO)",
+          "pressure": 12,
+          "frequency": 302.7
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 0,
+          "frequency": 360.6
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 2,
+          "frequency": 328.5
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 4,
+          "frequency": 296.3
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 6,
+          "frequency": 264.3
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 8,
+          "frequency": 233.3
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 10,
+          "frequency": 203.8
+        },
+        {
+          "mode": "A1(2TO)",
+          "pressure": 12,
+          "frequency": 176.8
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 0,
+          "frequency": 290.4
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 2,
+          "frequency": 287.8
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 4,
+          "frequency": 284.5
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 6,
+          "frequency": 281.5
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 8,
+          "frequency": 278.1
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 10,
+          "frequency": 274.2
+        },
+        {
+          "mode": "B1+E",
+          "pressure": 12,
+          "frequency": 272.1
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 0,
+          "frequency": 495.5
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 2,
+          "frequency": 510.6
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 4,
+          "frequency": 525.4
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 6,
+          "frequency": 539.7
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 8,
+          "frequency": 554.4
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 10,
+          "frequency": 569.0
+        },
+        {
+          "mode": "E(3TO)",
+          "pressure": 12,
+          "frequency": 583.7
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 0,
+          "frequency": 625.3
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 2,
+          "frequency": 599.2
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 4,
+          "frequency": 577.2
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 6,
+          "frequency": 591.2
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 8,
+          "frequency": 625.2
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 10,
+          "frequency": 620.2
+        },
+        {
+          "mode": "A1(3TO)",
+          "pressure": 12,
+          "frequency": 456.3
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 0,
+          "frequency": 746.3
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 2,
+          "frequency": 746.0
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 4,
+          "frequency": 746.9
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 6,
+          "frequency": 749.6
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 8,
+          "frequency": 754.7
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 10,
+          "frequency": 764.1
+        },
+        {
+          "mode": "E(3LO)",
+          "pressure": 12,
+          "frequency": 780.6
+        }
+      ]
+    }
+  ]
+}

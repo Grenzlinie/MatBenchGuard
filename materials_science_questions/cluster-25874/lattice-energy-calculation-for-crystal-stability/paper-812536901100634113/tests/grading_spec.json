@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main results are monotonic trends (distance ordering and lattice-energy ordering) that can be verified by structural checks, plus tolerance comparisons for absolute values. Recomputing from raw calculation logs is infeasible without re-running DFT, so T1 is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_single_molecule_geometries.csv": "structural_audit",
+    "step_02_solid_state_energies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference distances and lattice energies from the paper for tolerance checks",
+      "source_provenance": "Paper Table 1 and text (Fig.3) for distances; e.g., o-H...O distances for monosubstituted: NO2 2.19 Å, CN 2.28 Å, Cl 2.38 Å; lattice energies: pCF3DPU -76.72, pCyNDPU -74.60, pCyDPU -72.83 kcal/mol.",
+      "generation_method": "Extracted from paper reported values; used as reference gold for tolerance comparison.",
+      "why_not_fabricated": "Values are the paper's own reported computational results; they are the target of reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_single_molecule_geometries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound_id",
+            "substituent",
+            "o_H_O_distance_A",
+            "o_H_H_distance_A",
+            "ring_tilt_angle_deg"
+          ],
+          "units": {
+            "o_H_O_distance_A": "Ångström",
+            "o_H_H_distance_A": "Ångström",
+            "ring_tilt_angle_deg": "degree"
+          }
+        },
+        "description": "Optimized single‑molecule geometries: interatomic distances and ring tilt angles. The primary scored feature is the monotonic trend of o‑H···Ourea distances on the monosubstituted rings."
+      },
+      {
+        "file": "step_02_solid_state_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound_id",
+            "E_lattice_kcal_mol",
+            "E_cohesive_kcal_mol",
+            "E_strain_kcal_mol",
+            "E_dimer_kcal_mol"
+          ],
+          "units": {
+            "E_lattice_kcal_mol": "kcal/mol",
+            "E_cohesive_kcal_mol": "kcal/mol",
+            "E_strain_kcal_mol": "kcal/mol",
+            "E_dimer_kcal_mol": "kcal/mol"
+          }
+        },
+        "description": "Computed solid‑state energetic contributions. The primary scored feature is the ordering of lattice energies among the three disubstituted DPUs."
+      }
+    ],
+    "notes": "The checker verifies structural trends (monotonic ordering of distances and lattice energies) as the main signal. Absolute values are compared to paper‑reported references with appropriate tolerances as a secondary consistency check. The dimer interaction energies are reported for completeness but are not required for the primary scoring trends."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_single_molecule_geometries.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "description": "Verify the monotonic trend of o-H...O distances for monosubstituted DPUs (NO2, CN, Cl) and check absolute distances within tolerance",
+      "reference": {
+        "distances": {
+          "pNHDPU": 2.19,
+          "pCyHDPU": 2.28,
+          "pClHDPU": 2.38
+        },
+        "tolerance": 0.05
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_solid_state_energies.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "description": "Verify the ordering of lattice energies for disubstituted DPUs (pCF3DPU, pCyNDPU, pCyDPU) and check absolute energies within tolerance",
+      "reference": {
+        "energies": {
+          "pCF3DPU": -76.72,
+          "pCyNDPU": -74.6,
+          "pCyDPU": -72.83
+        },
+        "tolerance": 5.0
+      }
+    }
+  ]
+}

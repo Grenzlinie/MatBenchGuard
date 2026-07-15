@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Scored artifacts are final derived values (relative energies and chemical-potential crossings). The checker compares agent-reported numbers against paper-reported golds with tolerance. Recomputing from raw DFT total energies would require storing large intermediate files not in contract; T0 is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "oxygen_relative_energies.csv": "exact_match",
+    "hydrogen_relative_energies.csv": "exact_match",
+    "water_relative_energies.csv": "exact_match",
+    "chemical_potential_crossings.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for each termination relative energy and chemical-potential crossing.",
+      "source_provenance": "Derived from paper's Table 3, 4, 5, 6 and crossings text.",
+      "generation_method": "Extracted exactly as reported in the paper (units meV/Å² and eV).",
+      "why_not_fabricated": "These are the paper's actual published numbers; no fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "oxygen_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "termination",
+            "de"
+          ],
+          "units": {
+            "de": "meV/Å²"
+          }
+        },
+        "description": "0 K relative surface energies for the oxygen series terminations. Values are compared to hidden gold with tolerance; lower absolute deviations earn full credit."
+      },
+      {
+        "file": "hydrogen_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "termination",
+            "de"
+          ],
+          "units": {
+            "de": "meV/Å²"
+          }
+        },
+        "description": "0 K relative surface energies for the hydrogen series terminations. Scored similarly to oxygen series."
+      },
+      {
+        "file": "water_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "termination",
+            "de"
+          ],
+          "units": {
+            "de": "meV/Å²"
+          }
+        },
+        "description": "0 K relative surface energies for the water series terminations. Scored similarly to oxygen series."
+      },
+      {
+        "file": "chemical_potential_crossings.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "I_II_crossing",
+            "II_IV_crossing"
+          ],
+          "units": {
+            "I_II_crossing": "eV",
+            "II_IV_crossing": "eV"
+          }
+        },
+        "description": "Chemical-potential crossing points between terminations I↔II and II↔IV. Compared to hidden gold with tolerance."
+      }
+    ],
+    "notes": "All relative energies are with respect to the bare Cr-terminated surface (I) and use the slab double-cell construction. The chemical-potential crossings are derived from the oxygen relative energies at 0 K. The agent must perform the full DFT calculations; no pre-computed energies are provided."
+  },
+  "steps": [
+    {
+      "id": "oxygen_relative_energies",
+      "output_file": "oxygen_relative_energies.csv",
+      "weight": 0.25,
+      "kind": "csv_value_check",
+      "gold_map": {
+        "I": 0.0,
+        "II": -50.0,
+        "III": -27.0,
+        "IV": -32.0,
+        "VI": 80.0,
+        "X": -20.0
+      },
+      "tolerance": 20.0
+    },
+    {
+      "id": "hydrogen_relative_energies",
+      "output_file": "hydrogen_relative_energies.csv",
+      "weight": 0.2,
+      "kind": "csv_value_check",
+      "gold_map": {
+        "bare_H1": 10.57,
+        "bare_H2": 46.83,
+        "bare_H3": 40.92,
+        "chromyl_OH": -124.0,
+        "chromyl_H2O": -142.0
+      },
+      "tolerance": 20.0
+    },
+    {
+      "id": "water_relative_energies",
+      "output_file": "water_relative_energies.csv",
+      "weight": 0.2,
+      "kind": "csv_value_check",
+      "gold_map": {
+        "Cr-O3-H-Cr-OH": -39.2,
+        "Cr-O3-H-Cr-OH(H2O)": -91.1,
+        "Cr-O3-H-Cr-OH(H2O)2": -132.0,
+        "Cr-Cr-O2-H": 9.77,
+        "Cr-Cr-O3-H3": -99.4
+      },
+      "tolerance": 30.0
+    },
+    {
+      "id": "chemical_potential_crossings",
+      "output_file": "chemical_potential_crossings.json",
+      "weight": 0.35,
+      "kind": "json_field_check",
+      "gold_I_II": -1.0,
+      "gold_II_IV": 0.2,
+      "tolerance_ev": 0.3
+    }
+  ]
+}

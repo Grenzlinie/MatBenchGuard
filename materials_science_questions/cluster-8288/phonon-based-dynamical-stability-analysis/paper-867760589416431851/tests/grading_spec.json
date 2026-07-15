@@ -1,0 +1,137 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Hardness is recomputed from agent's reported G and G/B via Chen's model; modulus values compared to paper with tolerances; band structure audited structurally.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference mechanical properties for five Hf-O phases from the paper Table II and carrier density from paper text",
+      "source_provenance": "Paper Table II and text (Section D)",
+      "generation_method": "Extracted numerical values directly from the paper's reported data",
+      "why_not_fabricated": "These are the exact numbers the paper claims as its DFT results; the solve.sh hardcodes them as the reference submission."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mechanical_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "phase",
+              "bulk_modulus_GPa",
+              "shear_modulus_GPa",
+              "young_modulus_GPa",
+              "hardness_GPa",
+              "phonon_stable"
+            ],
+            "properties": {
+              "phase": {
+                "type": "string"
+              },
+              "bulk_modulus_GPa": {
+                "type": "number"
+              },
+              "shear_modulus_GPa": {
+                "type": "number"
+              },
+              "young_modulus_GPa": {
+                "type": "number"
+              },
+              "hardness_GPa": {
+                "type": "number"
+              },
+              "phonon_stable": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          },
+          "minItems": 5
+        },
+        "description": "Mechanical properties, phonon stability, and carrier densities for the five target Hf-O phases. The hidden checker compares these values against the paper's reported numbers with appropriate tolerances and cross-checks the hardness via Chen's model."
+      },
+      {
+        "file": "band_structure_P62m_HfO.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required_columns": [
+            "kpoint_index",
+            "band_index",
+            "energy"
+          ]
+        },
+        "description": "Band energies for P-62m-HfO. The checker audits structural properties: existence of electron and hole pockets (bands crossing the Fermi level) indicating semimetallic character."
+      }
+    ],
+    "notes": "The solver must use open-source codes (Quantum ESPRESSO, Phonopy) and provided crystal structures. The checker does not require an external test set; gold values are derived from the paper's reported results."
+  },
+  "steps": [
+    {
+      "id": "step_mechanical",
+      "output_file": "mechanical_properties.json",
+      "kind": "numeric",
+      "weight": 0.8,
+      "reference_data": {
+        "phases": [
+          {
+            "phase": "P-62m-HfO",
+            "B": 210.7,
+            "G": 128.1,
+            "E": 319.5,
+            "Hv": 16.1,
+            "phonon_stable": true,
+            "carrier_density_electrons": 1.1e+20,
+            "carrier_density_holes": 1.1e+20
+          },
+          {
+            "phase": "Pnnm-Hf2O",
+            "B": 173.0,
+            "G": 110.3,
+            "E": 272.9,
+            "Hv": 15.5,
+            "phonon_stable": true
+          },
+          {
+            "phase": "Imm2-Hf5O2",
+            "B": 150.0,
+            "G": 95.3,
+            "E": 235.9,
+            "Hv": 13.9,
+            "phonon_stable": true
+          },
+          {
+            "phase": "P-31m-Hf2O",
+            "B": 175.2,
+            "G": 103.1,
+            "E": 258.6,
+            "Hv": 13.2,
+            "phonon_stable": true
+          },
+          {
+            "phase": "P-42m-Hf2O3",
+            "B": 243.9,
+            "G": 127.1,
+            "E": 324.8,
+            "Hv": 12.9,
+            "phonon_stable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_band",
+      "output_file": "band_structure_P62m_HfO.dat",
+      "kind": "structural",
+      "weight": 0.2
+    }
+  ]
+}

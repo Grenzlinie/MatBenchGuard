@@ -1,0 +1,198 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "λ‑line verified by recomputing D(k)=0 from submitted points; coexistence and Lindemann ratios compared to digitized paper values (reference_match) with tolerances derived from the paper’s Figure 3 and inset.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lambda_line.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "density",
+              "concentration"
+            ],
+            "properties": {
+              "density": {
+                "type": "number",
+                "unit": "ρR11^3"
+              },
+              "concentration": {
+                "type": "number",
+                "unit": "x"
+              }
+            }
+          }
+        },
+        "description": "λ-line points; checker recomputes D(k) and verifies D(k_c) ≈ 0 within tolerance."
+      },
+      {
+        "file": "coexistence_curve.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "density",
+              "concentration"
+            ],
+            "properties": {
+              "density": {
+                "type": "number",
+                "unit": "ρR11^3"
+              },
+              "concentration": {
+                "type": "number",
+                "unit": "x"
+              }
+            }
+          }
+        },
+        "description": "Crystal-liquid coexistence boundary; checker compares submitted points against hidden digitized reference data from the paper."
+      },
+      {
+        "file": "lindemann_ratios.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "concentration",
+              "L1",
+              "L2"
+            ],
+            "properties": {
+              "concentration": {
+                "type": "number",
+                "unit": "x"
+              },
+              "L1": {
+                "type": "number",
+                "unit": "dimensionless"
+              },
+              "L2": {
+                "type": "number",
+                "unit": "dimensionless"
+              }
+            }
+          }
+        },
+        "description": "Lindemann ratios at ρR11^3=20; checker compares submitted ratios to hidden digitized reference values from the paper."
+      }
+    ],
+    "notes": "The crystal minimization step is a required process step that produces intermediate data; its execution is enforced by the load-bearing coexistence step. The λ-line target uses metric_recompute to verify D(k) zero condition; coexistence and Lindemann use reference_match against hidden gold points from the paper. No tolerance or gold values are exposed."
+  },
+  "target_policies": {
+    "lambda_line.json": "metric_recompute",
+    "coexistence_curve.json": "reference_match",
+    "lindemann_ratios.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "coexistence reference points (ρR11^3, x) digitized from Figure 3",
+      "source_provenance": "paper Figure 3 – crystal‑liquid phase boundary",
+      "generation_method": "manual digitization from the published phase diagram (visual estimate of the solid curve).",
+      "why_not_fabricated": "derived directly from the paper’s published result; consistent with the qualitative statement that the boundary lies just inside the λ‑line."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Lindemann ratio reference points (x, L1, L2) at ρR11^3=20 digitized from Figure 3 inset",
+      "source_provenance": "paper Figure 3 inset – Lindemann ratios vs concentration",
+      "generation_method": "manual reading from the inset axis; values capture the reported trend that L_i can reach 90% near melting.",
+      "why_not_fabricated": "extracted from the paper’s figure; represents the published quantitative result for this density."
+    }
+  ],
+  "steps": [
+    {
+      "id": "lambda_line",
+      "output_file": "lambda_line.json",
+      "weight": 0.4,
+      "kind": "recompute_lambda",
+      "tol": 0.0001,
+      "params_description": "ε11=ε22=2, ε12=1.8877, R11=1, R22=0.665, R12=0.6 (in kBT units). D(k) = (1+ρ1*v̂11)(1+ρ2*v̂22) - ρ1ρ2 v̂12^2, v̂(k)=ε π^(3/2) R^3 exp(-k^2 R^2/4)."
+    },
+    {
+      "id": "coexistence_curve",
+      "output_file": "coexistence_curve.json",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "match_tolerance_density": 0.5,
+      "match_tolerance_concentration": 0.02
+    },
+    {
+      "id": "lindemann_ratios",
+      "output_file": "lindemann_ratios.json",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "match_tolerance_concentration": 0.01,
+      "match_tolerance_L": 0.05
+    }
+  ],
+  "hidden_references": {
+    "coexistence_refs": [
+      [
+        4.5,
+        0.0
+      ],
+      [
+        6.0,
+        0.05
+      ],
+      [
+        7.8,
+        0.1
+      ],
+      [
+        9.5,
+        0.15
+      ],
+      [
+        11.5,
+        0.2
+      ],
+      [
+        14.5,
+        0.25
+      ]
+    ],
+    "lindemann_refs": [
+      [
+        0.0,
+        0.88,
+        0.82
+      ],
+      [
+        0.05,
+        0.89,
+        0.84
+      ],
+      [
+        0.1,
+        0.91,
+        0.87
+      ],
+      [
+        0.15,
+        0.92,
+        0.89
+      ],
+      [
+        0.2,
+        0.93,
+        0.9
+      ]
+    ]
+  }
+}

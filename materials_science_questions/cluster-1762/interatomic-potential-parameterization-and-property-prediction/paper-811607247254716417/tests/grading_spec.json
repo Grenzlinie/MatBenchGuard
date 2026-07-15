@@ -1,0 +1,147 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Binary gaps use result-level compare against paper gold; ternary and optical properties are recomputed from agent's raw artifacts (VCA linear relation and formula recomputation).",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Binary band gap gold values from paper Table 2",
+      "source_provenance": "Paper Table 2, columns Cal.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Exact values as reported in paper, used for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binary_band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "MgS",
+            "ZnS"
+          ],
+          "properties": {
+            "MgS": {
+              "type": "object",
+              "required": [
+                "Eg_Gamma",
+                "Eg_X",
+                "Eg_L"
+              ],
+              "units": {
+                "Eg_Gamma": "eV",
+                "Eg_X": "eV",
+                "Eg_L": "eV"
+              }
+            },
+            "ZnS": {
+              "type": "object",
+              "required": [
+                "Eg_Gamma",
+                "Eg_X",
+                "Eg_L"
+              ],
+              "units": {
+                "Eg_Gamma": "eV",
+                "Eg_X": "eV",
+                "Eg_L": "eV"
+              }
+            }
+          }
+        },
+        "description": "Computed band-gap energies of MgS and ZnS at Γ, X, L high-symmetry points, to be compared with hidden gold values (paper Table 2) within tolerance."
+      },
+      {
+        "file": "ternary_band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "Eg_Gamma",
+            "Eg_X",
+            "Eg_L",
+            "antisymmetric_gap"
+          ],
+          "units": {
+            "Eg_Gamma": "eV",
+            "Eg_X": "eV",
+            "Eg_L": "eV",
+            "antisymmetric_gap": "eV"
+          }
+        },
+        "description": "Band gaps of Mg_xZn_{1-x}S alloys. The checker will recompute for each x the expected gap as x*Eg(MgS) + (1-x)*Eg(ZnS) using the agent's own binary gaps and compare to the reported values."
+      },
+      {
+        "file": "optical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "n_Moss",
+            "n_Ghosh",
+            "R_Moss",
+            "R_Ghosh"
+          ],
+          "units": {
+            "n_Moss": "dimensionless",
+            "n_Ghosh": "dimensionless",
+            "R_Moss": "dimensionless",
+            "R_Ghosh": "dimensionless"
+          }
+        },
+        "description": "Refractive indices and reflection coefficients computed from the agent's ternary direct band gap via Moss and Ghosh models. The checker will recompute n and R from the agent's reported Eg_Gamma and compare."
+      }
+    ],
+    "notes": "Binary band gaps are scored by exact match with hidden reference values (within tolerance). Ternary band gaps are scored by linear consistency check using the agent's own binary gaps; this forces the VCA process step. Optical properties are scored by recomputation from the agent's ternary direct band gap."
+  },
+  "steps": [
+    {
+      "id": "binary_gaps_gold",
+      "output_file": "binary_band_gaps.json",
+      "kind": "gold_comparison",
+      "weight": 0.25,
+      "tolerance": 0.01,
+      "gold": {
+        "MgS": {
+          "Eg_Gamma": 5.09,
+          "Eg_X": 4.5,
+          "Eg_L": 5.03
+        },
+        "ZnS": {
+          "Eg_Gamma": 3.66,
+          "Eg_X": 3.69,
+          "Eg_L": 4.81
+        }
+      },
+      "description": "Compare binary gaps to paper Table 2 values within ±0.01 eV"
+    },
+    {
+      "id": "ternary_vca_recompute",
+      "output_file": "ternary_band_gaps.csv",
+      "kind": "ternary_vca",
+      "weight": 0.4,
+      "tolerance": 0.01,
+      "reference_binary_file": "binary_band_gaps.json",
+      "description": "Recompute ternary gaps via VCA from agent's binary gaps, check monotonic antisymmetric gap"
+    },
+    {
+      "id": "optical_recompute",
+      "output_file": "optical_properties.csv",
+      "kind": "optical_recompute",
+      "weight": 0.35,
+      "tolerance": 0.01,
+      "reference_ternary_file": "ternary_band_gaps.csv",
+      "description": "Recompute refractive index and reflection coefficient from reported Eg_Gamma"
+    }
+  ]
+}

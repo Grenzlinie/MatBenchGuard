@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The paper reports volume compression curve, phonon frequency signs, and force-displacement values that can be checked by comparing the agent's output tables against hidden reference values derived from the paper's computational results.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "equation_of_state.csv": "reference_match",
+    "phonon_min_frequencies.csv": "threshold_or_better",
+    "force_curve.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference volume ratios for equation of state; phonon frequency thresholds; force threshold at 0.02 A",
+      "source_provenance": "Derived from the paper's computed equation of state and phonon instability (validated against the reference solve.sh).",
+      "generation_method": "The reference values for volume_ratio are taken from the reference solve.sh which represents the correct DFT results. The thresholds for phonon and force are based on the paper's descriptions (stable at 5 GPa, imaginary at 16 GPa, positive force at 0.02 A).",
+      "why_not_fabricated": "They are the paper's actual computational results (or derived from them), not invented. The reference solve.sh provides a concrete correct answer that matches those thresholds."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "equation_of_state.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure",
+            "volume",
+            "volume_ratio"
+          ],
+          "units": {
+            "pressure": "GPa",
+            "volume": "A^3",
+            "volume_ratio": "unitless"
+          }
+        },
+        "description": "Volume compression curve (V/V0 vs pressure); the verifier compares volume ratios to hidden reference values using a tolerance."
+      },
+      {
+        "file": "phonon_min_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure",
+            "min_frequency"
+          ],
+          "units": {
+            "pressure": "GPa",
+            "min_frequency": "cm^-1"
+          }
+        },
+        "description": "Lowest phonon frequency at 5 and 16 GPa; the verifier checks the values against hidden thresholds. Imaginary frequencies must be reported as negative numbers."
+      },
+      {
+        "file": "force_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "displacement",
+            "force"
+          ],
+          "units": {
+            "displacement": "A",
+            "force": "eV/A"
+          }
+        },
+        "description": "Force-displacement curve for a displaced K atom at 16 GPa; the verifier checks forces at specified displacements against hidden thresholds."
+      }
+    ],
+    "notes": "All scored quantities are compared against hidden reference criteria. The EOS uses tolerance-based comparison; the phonon and force checks use hidden thresholds."
+  },
+  "checks": [
+    {
+      "id": "eos_check",
+      "output_file": "equation_of_state.csv",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "reference": {
+        "table": [
+          {
+            "pressure": 0,
+            "volume_ratio": 1.0
+          },
+          {
+            "pressure": 5,
+            "volume_ratio": 0.945
+          },
+          {
+            "pressure": 10,
+            "volume_ratio": 0.898
+          },
+          {
+            "pressure": 15,
+            "volume_ratio": 0.855
+          },
+          {
+            "pressure": 20,
+            "volume_ratio": 0.815
+          }
+        ],
+        "key_column": "pressure",
+        "value_column": "volume_ratio",
+        "tolerance_abs": 0.02
+      }
+    },
+    {
+      "id": "phonon_check",
+      "output_file": "phonon_min_frequencies.csv",
+      "weight": 0.3,
+      "kind": "threshold_or_better",
+      "conditions": [
+        {
+          "pressure": 5,
+          "min_frequency_gt": 0
+        },
+        {
+          "pressure": 16,
+          "min_frequency_lt": -5
+        }
+      ]
+    },
+    {
+      "id": "force_check",
+      "output_file": "force_curve.csv",
+      "weight": 0.2,
+      "kind": "threshold_or_better",
+      "condition": {
+        "displacement": 0.02,
+        "force_gt": 0.1
+      }
+    }
+  ]
+}

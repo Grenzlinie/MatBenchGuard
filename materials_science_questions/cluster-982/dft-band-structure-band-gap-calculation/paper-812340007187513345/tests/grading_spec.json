@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline band gap and bulk properties are obtained from a full DFT workflow that the verifier cannot recompute from raw artifacts; the checker compares the agent's reported values against the paper's published results with tolerances that account for code substitution (LMTO-ASA → Quantum ESPRESSO).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_07_bandgap.txt": "threshold_or_better",
+    "step_06_eos_properties.json": "reference_match",
+    "step_09_series_dband_positions.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap, EOS properties, and expected ordering of d-band centers for the pyrite-type disulphides.",
+      "source_provenance": "Paper reported values: band gap 0.64 eV, V0 304.507 a.u.^3, E0 -345.885 Ry, B0 6.75 Mbar; the ordering Mn>Fe>Co>Ni>Cu>Zn for d-band center is described in the text.",
+      "generation_method": "Values extracted from the paper; ordering derived from the qualitative description of the d-band movement to higher binding energies.",
+      "why_not_fabricated": "These are the paper's own headline numbers; they are not invented but taken verbatim from the source."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_07_bandgap.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single float value representing the direct band gap of FeS₂ in eV."
+        },
+        "description": "The direct band gap of FeS₂ calculated at the experimental volume."
+      },
+      {
+        "file": "step_06_eos_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V0": "float (a.u.³)",
+            "E0": "float (Ry)",
+            "B0": "float (Mbar)"
+          }
+        },
+        "description": "Equilibrium unit-cell volume, total valence-electron energy, and bulk modulus of FeS₂ from a Murnaghan equation of state fit."
+      },
+      {
+        "file": "step_09_series_dband_positions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "d_band_center"
+          ],
+          "description": "Metal d-band centre (eV) relative to the Fermi level for each compound MnS₂–ZnS₂."
+        },
+        "description": "Metal d-band centre positions across the pyrite-type disulphide series, verifying the reported trend of the d-band moving to higher binding energies."
+      }
+    ],
+    "notes": "The workflow replaces the original LMTO-ASA method with plane-wave DFT (Quantum ESPRESSO). Scored quantities may differ slightly from the paper due to different basis sets and pseudopotentials; checker tolerances absorb these systematic shifts. The d-band centres are scored by their relative ordering, not by absolute values."
+  },
+  "steps": [
+    {
+      "id": "step_03_bandgap",
+      "output_file": "step_07_bandgap.txt",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": 0.64,
+      "tolerance": 0.2,
+      "description": "Direct band gap of FeS₂"
+    },
+    {
+      "id": "step_05_eos",
+      "output_file": "step_06_eos_properties.json",
+      "kind": "json_field",
+      "weight": 0.4,
+      "properties": [
+        {
+          "field": "V0",
+          "target": 304.507,
+          "tolerance_pct": 5.0,
+          "weight": 0.4
+        },
+        {
+          "field": "E0",
+          "target": -345.885,
+          "tolerance_abs": 0.1,
+          "weight": 0.4
+        },
+        {
+          "field": "B0",
+          "target": 6.75,
+          "tolerance_pct": 50.0,
+          "weight": 0.2
+        }
+      ],
+      "description": "Equation-of-state properties of FeS₂"
+    },
+    {
+      "id": "step_07_dband",
+      "output_file": "step_09_series_dband_positions.csv",
+      "kind": "ordering",
+      "weight": 0.2,
+      "expected_order": [
+        "MnS2",
+        "FeS2",
+        "CoS2",
+        "NiS2",
+        "CuS2",
+        "ZnS2"
+      ],
+      "description": "Metal d-band center ordering across the MS₂ series"
+    }
+  ]
+}

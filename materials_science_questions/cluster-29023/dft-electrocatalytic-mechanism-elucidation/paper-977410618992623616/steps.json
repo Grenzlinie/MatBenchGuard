@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step01",
+    "title": "Construct and optimize MOF structures",
+    "role": "process",
+    "action": "Build periodic slab models for the five specified 2D MOFs (Cu3(HIB)2, Cu3(HITP)2, Ni3HHB, Co3HIB, Cr3HTB) using the provided lattice parameters and atomic coordinates, with a vacuum spacing of at least 15 Å. Perform full geometry optimization (atomic positions and cell) at the PBE level with plane-wave basis, appropriate k‑point sampling, DFT‑D3 van der Waals correction, and an implicit solvation model (e.g., VASPsol‑type continuum, dielectric constant 78.54) to represent aqueous electrolyte. Converge forces to <0.02 eV/Å.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Process step: geometry optimization must converge; the log file serves as evidence.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02",
+    "title": "Compute Gibbs free‑energy changes for all elementary steps",
+    "role": "process",
+    "action": "For each optimized MOF, calculate DFT total energies of the clean slab and of all adsorbed CO2RR intermediates along every plausible PCET pathway up to the final single‑carbon product (HCOOH, CH2O, or CH4), including the competing HER intermediate H*. Use the computational hydrogen electrode (CHE) model to convert total energies to Gibbs free‑energy changes ΔG at zero applied potential (pH 0, 298 K), applying zero‑point energy and entropy corrections from vibrational frequency calculations. Record every ΔG value (in eV) for each elementary step in a JSON file.",
+    "output_file": "",
+    "evidence": "intermediate_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step: compute adsorption energies and free‑energy corrections; the intermediate energies JSON captures all raw values.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03",
+    "title": "Determine pathway, rate‑limiting step, limiting potential, and output results",
+    "role": "scored",
+    "action": "From the computed ΔG values, for each MOF identify the most favorable CO2RR pathway (the sequence of PCET steps with the lowest free‑energy change at each hydrogenation branch, considering *HCOO vs *COOH, subsequent hydrogenation to HCOOH or CO, and further reductions to CH2O or CH4). Confirm that the first CO2 hydrogenation is thermodynamically more favorable than HER (ΔG(first hydrogenation) < ΔG(HER)). Determine the rate‑limiting step (the elementary step with the largest positive ΔG) and compute the limiting potential U_L = −max(ΔG_step) (in V). Write all results to /app/outputs/results.json exactly as specified in the output contract.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing, for each of the five MOFs, the final product, the limiting potential, the rate‑limiting step, and the full list of ΔG values for the most favorable pathway.",
+    "output_schema": "{\n  \"Cu3HIB2\": {\n    \"product\": \"string\",\n    \"limiting_potential\": \"number (V)\",\n    \"rate_limiting_step\": \"string description\",\n    \"delta_G_steps\": [{\"step\": \"string label\", \"DG\": \"number (eV)\"}, ...]\n  },\n  \"Cu3HITP2\": { ... },\n  \"Ni3HHB\": { ... },\n  \"Co3HIB\": { ... },\n  \"Cr3HTB\": { ... },\n  \"summary\": [\n    {\"MOF\": \"string\", \"product\": \"string\", \"U_L\": \"number (V)\"},\n    ... for all five MOFs\n  ]\n}"
+  }
+]

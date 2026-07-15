@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_define_params",
+    "title": "Define physical parameters and free energy functions",
+    "role": "process",
+    "action": "Set the numerical values for pure-solvent GB energy σ_A=1 J/m², GB width 2ξ_A=1 nm, temperature T=1273 K, molar volume v_m=1.06e-5 m³/mol (so β = v_m/(RT) and ω_A = σ_A/(2ξ_A) with βω_A=1.0). Define the matrix free energy density f^m(u) as a dilute regular solution (linear regular solution term L^m plus ideal mixing entropy) and the GB free energy f^g(u) as an ideal solution. Use the α values 2, 3, 4 (α defined from free energy differences and L^m). These functions and parameters are the basis for all later computations.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepares the common parameter set and free energy functions used in all subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_common_gb_composition",
+    "title": "Compute common equilibrium GB composition",
+    "role": "scored",
+    "action": "For each α=2,3,4, use the parallel-tangent condition (equal diffusion potential) to compute the equilibrium GB composition u_g^e as a function of the matrix composition u_m^e. Sample u_m^e from 0.001 to 0.15 with step 0.005, and also determine the upper bound (common tangent) compositions u_m^ct, u_g^ct for Model I. Write the results to /app/outputs/common_gb_composition.csv.",
+    "output_file": "common_gb_composition.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of equilibrium GB composition for the common parallel-tangent construction shared by all models.",
+    "output_schema": "CSV with columns: alpha (int), u_m_e (float), u_g_e (float). Rows for each α and u_m_e step, plus the critical compositions for Model I."
+  },
+  {
+    "id": "step_03_modeli_energy",
+    "title": "Compute Model I GB energy",
+    "role": "scored",
+    "action": "For each α=2,3,4, compute the GB energy σ for Model I (equal composition) as a function of u_m^e. For u_m^e increasing from 0.001 up to the upper bound u_m^ct, determine the equilibrium concentration profile u(φ) via the equal composition condition, then numerically integrate the effective double‑well potential Ω₁(φ) to obtain σ. Record the bound compositions u_m^ct and u_g^ct (same for all rows of that α) in the output. Write to /app/outputs/modelI_gb_energy.csv.",
+    "output_file": "modelI_gb_energy.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "GB energy for Model I (equal composition) as a function of matrix composition. Demonstrates the lower bound beyond which no equilibrium profile exists.",
+    "output_schema": "CSV with columns: alpha (int), u_m_e (float), sigma (float, J/m²), u_m_ct (float, same per alpha), u_g_ct (float, same per alpha). For each α, rows for increasing u_m_e up to the bound."
+  },
+  {
+    "id": "step_04_modelii_energy",
+    "title": "Compute Model II GB energy",
+    "role": "scored",
+    "action": "For each α=2,3,4, compute the GB energy σ for Model II (equal diffusion potential) using the closed‑form expression σ = σ_A √(ω^e / ω_A). ω^e is derived from u_m^e and the common equilibrium GB composition u_g^e as ω^e = ω_A + (1/β) ln((1 - u_g^e)/(1 - u_m^e)) (essentially the parallel‑tangent construction). Use the same u_m^e grid as for Model II (from 0.001 up to the common tangent composition where σ→0). Write to /app/outputs/modelII_gb_energy.csv.",
+    "output_file": "modelII_gb_energy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "GB energy for Model II (equal diffusion potential), showing a square‑root dependence on ω^e and vanishing at the common tangent composition.",
+    "output_schema": "CSV with columns: alpha (int), u_m_e (float), sigma (float, J/m²). Rows for u_m_e from 0.001 to the common tangent composition."
+  },
+  {
+    "id": "step_05_classical_energy",
+    "title": "Compute classical two‑phase model GB energy",
+    "role": "scored",
+    "action": "For each α=2,3,4, compute the GB energy σ of the classical two‑phase model using σ = σ_A (ω^e / ω_A) with the same common equilibrium compositions as Model II. Use the same u_m_e grid. Write to /app/outputs/classical_two_phase_gb_energy.csv.",
+    "output_file": "classical_two_phase_gb_energy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "GB energy for the classical two‑phase model, showing linear dependence on ω^e.",
+    "output_schema": "CSV with columns: alpha (int), u_m_e (float), sigma (float, J/m²). Same grid as modelII."
+  },
+  {
+    "id": "step_06_analytic_results",
+    "title": "Output analytic constants for Model II",
+    "role": "scored",
+    "action": "Compute the gradient energy coefficient ε from ε = (4/π) √(ξ_A σ_A), the pure‑solvent GB energy σ_A and half‑width ξ_A, and the parameter ω_A = σ_A/(2ξ_A). Evaluate the analytic GB energy for the condition u_m^e = 0.09, α = 3 using the closed‑form Model II expression. Also compute the ratios σ/σ_A (using the closed‑form expression) and σ/(2ξ ω^e) (which should equal 1 for Model II). Write to /app/outputs/modelII_analytic_results.json.",
+    "output_file": "modelII_analytic_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Analytic constants and a sample evaluation of the Model II closed‑form expressions.",
+    "output_schema": "JSON object with keys: sigma_A (float, J/m²), xi_A (float, m), epsilon (float), omega_A (float, J/m³), sigma (float, J/m², at u_m^e=0.09, α=3), sigma_over_sigma_A (float), sigma_over_xi_omega (float, expected value 1)."
+  }
+]

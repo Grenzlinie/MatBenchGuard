@@ -1,0 +1,187 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MAE between agent's k(T) and digitized experimental data is recomputed from the artifact; this directly evaluates model accuracy.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermal_conductivity.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "/app/data/exp_data_aln.csv",
+      "purpose": "Reference experimental thermal conductivity data for AlN (digitized from Figure 1)",
+      "source_provenance": "Digitized from Figure 1 of Phys. Rev. B 77, 180302 (2008). Columns: key, T, k.",
+      "generation_method": "Manual digitization of data points from the publication's figure; bundled as a task resource.",
+      "why_not_fabricated": "Values are directly transcribed from the paper's own experimental measurements."
+    },
+    {
+      "path": "/app/data/exp_data_ge.csv",
+      "purpose": "Reference experimental thermal conductivity data for isotopically purified Ge",
+      "source_provenance": "Digitized from published literature (Asen-Palmer et al., PRB 56, 9431 (1997) and Morelli et al., PRB 66, 195304 (2002)). Columns: key, T, k.",
+      "generation_method": "Manual digitization of data points from the references; bundled as a task resource.",
+      "why_not_fabricated": "Values are sourced from independently published experimental data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "AlN_GammaA_Gamma0.03",
+            "AlN_GammaA_Gamma0.13",
+            "AlN_GammaA_Gamma0.42",
+            "AlN_GammaK_Gamma0.03",
+            "AlN_GammaK_Gamma0.13",
+            "AlN_GammaK_Gamma0.42",
+            "Ge_isotropic"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "AlN_GammaA_Gamma0.03": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "AlN_GammaA_Gamma0.13": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "AlN_GammaA_Gamma0.42": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "AlN_GammaK_Gamma0.03": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "AlN_GammaK_Gamma0.13": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "AlN_GammaK_Gamma0.42": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            },
+            "Ge_isotropic": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "T": {
+                    "type": "number"
+                  },
+                  "k": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "T",
+                  "k"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Computed lattice thermal conductivity curves incorporating optical phonon decay. The checker recomputes the mean absolute error between the submitted curves and hidden gold experimental data to verify model accuracy."
+      }
+    ],
+    "notes": "The experimental data to which the curves are compared are bundled in the task as hidden gold; the agent must not access them directly. All material parameters needed for the model are available from the listed public references."
+  },
+  "steps": [
+    {
+      "id": "thermal_conductivity_mae",
+      "output_file": "thermal_conductivity.json",
+      "weight": 1.0,
+      "kind": "recompute_metric",
+      "tolerance_relative": 0.05,
+      "description": "Recompute average relative MAE between submitted k(T) curves and reference experimental data; score 1.0 when average relative error ≤ 0.05, linearly decaying to 0."
+    }
+  ]
+}

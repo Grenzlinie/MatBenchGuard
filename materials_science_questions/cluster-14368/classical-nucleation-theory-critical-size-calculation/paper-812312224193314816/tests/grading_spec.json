@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes nucleation quantities and heat-transfer curve from agent's raw artifacts using the paper's model and known physical constants; pointwise and structural comparisons.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "nucleation.csv": "metric_recompute",
+    "heat_transfer.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "nucleation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_crit_m",
+            "undercooling_K"
+          ],
+          "units": {
+            "r_crit_m": "meters",
+            "undercooling_K": "Kelvin"
+          }
+        },
+        "description": "Critical nucleus radius (meters) and required undercooling (Kelvin) for steam condensation at 100 °C."
+      },
+      {
+        "file": "heat_transfer.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Delta_T_K",
+            "alpha_m_W_m2K"
+          ],
+          "units": {
+            "Delta_T_K": "Kelvin",
+            "alpha_m_W_m2K": "W/(m^2·K)"
+          }
+        },
+        "description": "Heat transfer coefficient α_m (W/(m²·K)) as a function of temperature difference ΔT (K)."
+      }
+    ],
+    "notes": "The checker recomputes the nucleation quantities and α_m(ΔT) using the same theoretical model. For nucleation: comparison of critical radius and undercooling against recomputed values. For heat transfer: comparison of α_m at each ΔT point and verification of the qualitative trend (peak location)."
+  },
+  "steps": [
+    {
+      "id": "check_nucleation",
+      "output_file": "nucleation.csv",
+      "kind": "numeric_compare",
+      "weight": 0.3,
+      "targets": {
+        "r_crit_m": {
+          "value": 1e-09,
+          "rel_tol": 0.2
+        },
+        "undercooling_K": {
+          "value": 3.0,
+          "rel_tol": 0.2
+        }
+      },
+      "description": "Verify critical radius and undercooling within 20% of paper-reported approximate values (r_crit~1e-9, undercooling~3K)."
+    },
+    {
+      "id": "check_heat_transfer",
+      "output_file": "heat_transfer.csv",
+      "kind": "recompute_curve",
+      "weight": 0.7,
+      "params": {
+        "f": 0.045,
+        "f_one_minus_phi": 0.016,
+        "H": 0.019,
+        "K_mh_per_kcal": 5e-06,
+        "T_K": 373.15,
+        "P_Pa": 101325,
+        "s_J_per_kg": 2260000.0,
+        "R_J_per_kgK": 461.5
+      },
+      "tolerance_rel_pointwise": 0.1,
+      "peak_delta_T_range_K": [
+        2.0,
+        4.0
+      ],
+      "scoring": {
+        "pointwise_weight": 0.8,
+        "peak_weight": 0.2
+      },
+      "description": "Recompute α_m(ΔT) using the paper's model and agent's undercooling from nucleation.csv; compare pointwise (10% tol) and check peak ΔT in 2-4 K."
+    }
+  ]
+}

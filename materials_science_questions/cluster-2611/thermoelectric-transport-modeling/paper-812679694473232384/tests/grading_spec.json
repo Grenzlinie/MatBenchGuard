@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the match of agent's reported values against paper-sourced gold constants with tolerances; the raw artifacts (band structure, DFT energies) are not submitted, so result-level compare is used, but scoring is deterministic from reported numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bandgap.json": "exact_match",
+    "adsorption_energy.json": "exact_match",
+    "power_factor_enhancement.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "bandgap gold",
+      "source_provenance": "Paper reported value: 1.06 eV (direct bandgap of GeSe monolayer)",
+      "generation_method": "Extracted from paper text",
+      "why_not_fabricated": "Paper specifies this value explicitly."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "adsorption energy gold",
+      "source_provenance": "Paper reported value: -0.92 eV",
+      "generation_method": "Extracted from paper text",
+      "why_not_fabricated": "Paper specifies this value explicitly."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "power factor enhancement threshold",
+      "source_provenance": "Paper claims 'four-fold enhancement' which corresponds to a ratio >3.5",
+      "generation_method": "Derived from paper claim; threshold set to 3.5 to allow tolerance while still confirming substantial enhancement.",
+      "why_not_fabricated": "Paper states the enhancement factor; a real reproduction must reach at least a ratio of 3.5 to be considered a reproduction of the four-fold claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bandgap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bandgap_eV"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "bandgap_eV": "eV"
+          }
+        },
+        "description": "Electronic bandgap of the pristine GeSe monolayer. The checker compares the value against the paper-reported bandgap within a tolerance."
+      },
+      {
+        "file": "adsorption_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "adsorption_energy_eV"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "adsorption_energy_eV": "eV"
+          }
+        },
+        "description": "Adsorption energy of pyrene on the 4×4 GeSe monolayer. The checker compares the value against the paper-reported adsorption energy within a tolerance."
+      },
+      {
+        "file": "power_factor_enhancement.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "temperature_K",
+            "GeSe_max_power_factor_W_per_mKs",
+            "GQD_GeSe_max_power_factor_W_per_mKs",
+            "power_factor_enhancement_ratio"
+          ],
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "temperature_K": "K",
+            "GeSe_max_power_factor_W_per_mKs": "W/mKs",
+            "GQD_GeSe_max_power_factor_W_per_mKs": "W/mKs",
+            "power_factor_enhancement_ratio": "dimensionless"
+          }
+        },
+        "description": "Thermoelectric power factor enhancement ratio (PF_GQD@GeSe / PF_GeSe) at 300 K. Full credit is awarded if the ratio is at least the paper-reported threshold (≥3.5)."
+      }
+    ],
+    "notes": "The checker extracts the bandgap and adsorption energy for exact-match scoring within hidden tolerances. The power factor enhancement ratio is scored as threshold_or_better, so better-than-paper performance is not penalized. All other fields in the power factor output are for audit and documentation; only the ratio and its meeting of the threshold carry the main weight."
+  },
+  "steps": [
+    {
+      "id": "bandgap_check",
+      "output_file": "bandgap.json",
+      "kind": "numeric_exact_match",
+      "weight": 0.15,
+      "target": 1.06,
+      "tolerance_abs": 0.2,
+      "description": "Check GeSe monolayer bandgap against paper's 1.06 eV ±0.2 eV"
+    },
+    {
+      "id": "adsorption_energy_check",
+      "output_file": "adsorption_energy.json",
+      "kind": "numeric_exact_match",
+      "weight": 0.15,
+      "target": -0.92,
+      "tolerance_abs": 0.15,
+      "description": "Check adsorption energy against paper's -0.92 eV ±0.15 eV"
+    },
+    {
+      "id": "enhancement_ratio_check",
+      "output_file": "power_factor_enhancement.json",
+      "kind": "numeric_threshold",
+      "weight": 0.7,
+      "threshold": 3.5,
+      "description": "Check power factor enhancement ratio is at least 3.5 (four-fold enhancement)"
+    }
+  ]
+}

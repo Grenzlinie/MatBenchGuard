@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the orbital character match from the raw strings (atom/orbital token set) rather than trusting the exact string. Band gap is compared to the paper's gold with tolerance; full credit when within ±0.3 eV, linear partial credit up to ±0.6 eV.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gap.json": "exact_match",
+    "dos_analysis.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap and orbital assignments",
+      "source_provenance": "Paper: direct band gap of about 5.1 eV; HOMO: O p states; LUMO: Si/Al p and s states.",
+      "generation_method": "Values extracted from paper text and used in reference solve.sh.",
+      "why_not_fabricated": "These are the paper's reported quantities for the pristine MASO host; they constrain the reproduction without being arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "direct_gap",
+            "method",
+            "code",
+            "cutoff_ry"
+          ],
+          "properties": {
+            "direct_gap": {
+              "type": "number",
+              "description": "Direct band gap in eV"
+            },
+            "method": {
+              "type": "string"
+            },
+            "code": {
+              "type": "string"
+            },
+            "cutoff_ry": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Extracted direct band gap at the Γ point and the DFT settings used."
+      },
+      {
+        "file": "dos_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "homo_dominant_orbital",
+            "lumo_dominant_orbital"
+          ],
+          "properties": {
+            "homo_dominant_orbital": {
+              "type": "string"
+            },
+            "lumo_dominant_orbital": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Dominant atomic-orbital character of the HOMO and LUMO."
+      }
+    ],
+    "notes": "Only results for the pristine MASO host are scored."
+  },
+  "steps": [
+    {
+      "id": "step3",
+      "output_file": "band_gap.json",
+      "kind": "numeric_exact_match",
+      "weight": 0.6,
+      "target": 5.1,
+      "tolerance": 0.3,
+      "field": "direct_gap"
+    },
+    {
+      "id": "step4",
+      "output_file": "dos_analysis.json",
+      "kind": "orbital_match",
+      "weight": 0.4,
+      "target": {
+        "homo": "O p",
+        "lumo": "Si/Al s,p"
+      },
+      "fields": [
+        "homo_dominant_orbital",
+        "lumo_dominant_orbital"
+      ]
+    }
+  ]
+}

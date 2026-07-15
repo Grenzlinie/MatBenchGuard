@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Crystal structure setup",
+    "role": "process",
+    "action": "Create the initial crystal structures for the six mechanically stable 5d transition metal monocarbides (TaC, WC, ReC, OsC, IrC, PtC) in the WC-type hexagonal structure (space group P-6m2, No. 187) with the transition metal atom at Wyckoff position 1a (0,0,0) and carbon at 1d (1/3,2/3,1/2).",
+    "output_file": "",
+    "evidence": "structure_setup_done.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Define the initial crystal structures that will be used in all subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT geometry optimization and elastic constants",
+    "role": "process",
+    "action": "For each compound, perform DFT calculations with both GGA-PBE and LDA functionals to relax the unit cell (optimize lattice parameters a, c and atomic positions) until forces and stresses are below convergence thresholds. From the relaxed structures, compute the five independent elastic constants (C11, C12, C13, C33, C44) using the stress–strain method. Record the relaxed lattice parameters a0, c0 and the elastic constants for each functional.",
+    "output_file": "",
+    "evidence": "dft_calculation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the relaxed lattice parameters and the full set of independent elastic constants for each functional, which are the primary inputs to all downstream property derivations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Electronic structure analysis",
+    "role": "process",
+    "action": "For each relaxed structure from step 2, perform single-point DFT calculations (GGA and LDA) to obtain the total and orbital-projected density of states (DOS), Mulliken bond populations, and identify the pseudogap energy from the C-2p PDOS. Integrate the total DOS from the pseudogap to the Fermi level to obtain the effective free-electron count n_free. Record the bond distance d, cell volume V, Mulliken population P, pseudogap energy Ep, Fermi-level DOS N(EF), and n_free for each functional.",
+    "output_file": "",
+    "evidence": "electronic_analysis_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Extract the electronic descriptors (Mulliken population, pseudogap energy, free-electron count) required for the semiempirical hardness model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compile lattice parameters, elastic constants, and derived moduli",
+    "role": "scored",
+    "action": "Collect the GGA and LDA lattice parameters and elastic constants from step 2. Compute the arithmetic average for each quantity. From the averaged elastic constants, calculate the Voigt–Reuss–Hill bulk modulus B, shear modulus G, Young's modulus E, and Poisson's ratio ν using standard formulas for hexagonal crystals. Output the results to lattice_and_elastic_constants.csv, containing one row per compound per functional (GGA, LDA, Ave) with all quantities.",
+    "output_file": "lattice_and_elastic_constants.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final tabulation of lattice parameters, elastic constants, and polycrystalline moduli for comparison with the paper's reference values.",
+    "output_schema": "Columns: compound (string), xc (string, one of GGA/LDA/Ave), a0 (float, Å), c0 (float, Å), C11 (float, GPa), C12 (float, GPa), C13 (float, GPa), C33 (float, GPa), C44 (float, GPa), B (float, GPa), G (float, GPa), E (float, GPa), nu (float, dimensionless). One row per xc level per compound."
+  },
+  {
+    "id": "step_05",
+    "title": "Hardness calculation",
+    "role": "scored",
+    "action": "From the relaxed structures (bond distances d, cell volume V), the Mulliken populations P, and the electronic structure quantities (Ep, n_free) obtained in steps 2 and 3, compute the Vickers hardness Hv using the Gao semiempirical model: Hv = 740 * (P - P') * (v_b)^(-5/3), where P' = n_free/V, v_b = V/6, and metallicity f_m = P'/P. Compute these for GGA, LDA, and the arithmetic average. Output all intermediate quantities and final hardness to hardness_data.csv.",
+    "output_file": "hardness_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final tabulation of quantities used in the hardness model and the predicted Vickers hardness for comparison with the paper's reference values.",
+    "output_schema": "Columns: compound (string), xc (string, one of GGA/LDA/Ave), d (float, Å), V (float, Å³), P (float, dimensionless Mulliken population), v_b (float, Å³), Ep (float, eV), N(E_f) (float, states/eV), n_free (float, dimensionless), P' (float, dimensionless), f_m (float, dimensionless), H_v (float, GPa). One row per xc level per compound."
+  }
+]

@@ -1,0 +1,60 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Predicted moduli are deterministic from the provided formula and parameters. The checker recomputes the expected values for each Vf and verifies the agent's output within a small floating-point tolerance.",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "predicted_moduli.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected indentation moduli from the scaling law",
+      "source_provenance": "Computed directly from Eq.(1) with the parameters stated in the instruction (E1%=4 MPa, Gamma values 78.0, 18.5, 10.3 nm, Gamma_min=5 nm). These numbers correspond to the model predictions in Table S1 of the paper.",
+      "generation_method": "Direct evaluation of the algebraic expression with the above constants.",
+      "why_not_fabricated": "The values are exact outputs of the formula which the agent is instructed to implement; no external data or fabricated labels are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "predicted_moduli.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Vf",
+            "predicted_E"
+          ],
+          "units": {
+            "Vf": "percent",
+            "predicted_E": "MPa"
+          }
+        },
+        "description": "Predicted indentation modulus for CNT volume fractions 1%, 10%, 20% from the scaling model."
+      }
+    ],
+    "notes": "The model parameters (inter-CNT spacing values and baseline modulus at Vf=1%) are provided in the instruction. The agent must use the scaling law with a minimum inter-CNT spacing of 5 nm to compute the predicted indentation modulus."
+  },
+  "steps": [
+    {
+      "id": "step_predicted_moduli_score",
+      "output_file": "predicted_moduli.csv",
+      "weight": 1.0,
+      "kind": "predicted_moduli_check",
+      "parameters": {
+        "E_1_percent": 4.0,
+        "Gamma_1_percent": 78.0,
+        "Gamma_min": 5.0,
+        "Gamma_values": {
+          "1": 78.0,
+          "10": 18.5,
+          "20": 10.3
+        },
+        "tolerance_rel": 0.0001,
+        "tolerance_abs": 1e-06
+      }
+    }
+  ]
+}

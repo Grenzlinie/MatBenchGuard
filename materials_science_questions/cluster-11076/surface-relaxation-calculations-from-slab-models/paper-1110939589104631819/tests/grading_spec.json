@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Full recomputation of the Liu-Allen tight-binding model in the verifier is infeasible; therefore we compare the agent's reported critical expansion and blocking ratio to the paper's gold with tolerances, and structurally audit the wavefunction profiles.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_expansion.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number (percentage) representing the critical inter-bilayer expansion Δd_c/d0."
+        },
+        "description": "The critical inter-bilayer expansion (in percent) at which the bulk L-point band gap closes."
+      },
+      {
+        "file": "wavefunction_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z",
+            "prob_S1_0.2",
+            "prob_S2_0.2",
+            "prob_S1_3.0",
+            "prob_S2_3.0"
+          ],
+          "description": "Normalized probability distributions of surface states S1 and S2 for two expansion values."
+        },
+        "description": "Probability distribution of surface states along the bilayer index, used to verify the topological blocking threshold."
+      },
+      {
+        "file": "blocking_ratio.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the blocking ratio (ratio of peak spectral intensities)."
+        },
+        "description": "The ratio of surface state spectral peak intensity with relaxation (Δd=3%) to that without relaxation (Δd=0)."
+      }
+    ],
+    "notes": "The task uses the Liu-Allen model parameters, Saito surface potential, and Bi crystal structure, all publicly available. The inter-bilayer expansion values (0.2% and 3%) and the surface relaxation profile (m_sur=10) are taken from the paper. The critical expansion and blocking ratio are compared to reference values with appropriate hidden tolerances. The wavefunction profiles are subject to structural checks (integrated probability thresholds to confirm blocking)."
+  },
+  "steps": [
+    {
+      "id": "step_02_critical_expansion",
+      "output_file": "critical_expansion.txt",
+      "kind": "numeric",
+      "weight": 0.45,
+      "target": 0.34,
+      "tolerance_abs": 0.02
+    },
+    {
+      "id": "step_06_blocking_ratio",
+      "output_file": "blocking_ratio.txt",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target": 0.49,
+      "tolerance_abs": 0.05
+    },
+    {
+      "id": "step_05_wavefunction_probability",
+      "output_file": "wavefunction_profiles.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "config": {
+        "z_range": [
+          1,
+          5
+        ],
+        "thresholds": {
+          "prob_S1_0.2": {
+            "value": 0.5,
+            "operator": "gt"
+          },
+          "prob_S2_0.2": {
+            "value": 0.5,
+            "operator": "gt"
+          },
+          "prob_S1_3.0": {
+            "value": 0.1,
+            "operator": "lt"
+          },
+          "prob_S2_3.0": {
+            "value": 0.1,
+            "operator": "lt"
+          }
+        }
+      }
+    }
+  ]
+}

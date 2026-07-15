@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_structure_setup",
+    "title": "Prepare crystal structures",
+    "role": "process",
+    "action": "Create initial crystal structure files for PPV-CaPtO3 (space group Cmcm) and hypothetical PV-CaPtO3 (space group Pbnm) using published structural data. For PPV use the experimental lattice parameters and atomic positions from Jung & Oganov (2005). For PV derive from the CaIrO3 perovskite structure (Stølen & Tronnes, 2007) by substituting Pt for Ir and adopting the Pbnm symmetry. Ensure the number of formula units in the simulation cell matches the paper's convention (half-unit cell for Cmcm, full cell for Pbnm).",
+    "output_file": "",
+    "evidence": "initial_structures.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the input structures required for all downstream DFT calculations. This is a preparation step; evidence records the created unit cell parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_energy_volume_scan",
+    "title": "Energy vs. volume calculations",
+    "role": "scored",
+    "action": "Using Quantum ESPRESSO with LDA pseudopotentials, compute total energies for a series of cell volumes for each phase. Choose at least 5 volumes spanning roughly ±5% around the expected equilibrium volume. For each volume, relax all internal coordinates at fixed lattice vectors. Record the total energy (eV per formula unit) and the volume (Å³). Output the data as a CSV file.",
+    "output_file": "ev_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The raw energy-volume data for PPV and PV CaPtO3. Each row contains a phase identifier, the cell volume, and the corresponding total energy. This raw data is the input for Birch equation-of-state fitting and equilibrium property extraction.",
+    "output_schema": "CSV with columns: phase (string, either 'PPV' or 'PV'), volume_A3 (float), total_energy_eV (float). Energy is per formula unit (the cell energy divided by the number of formula units in the simulation cell)."
+  },
+  {
+    "id": "step_03_band_structure",
+    "title": "Band structure and band gap extraction",
+    "role": "process",
+    "action": "For each phase, identify the volume that minimizes the total energy from the E(V) data. Perform a full band structure calculation at that equilibrium geometry using the same DFT setup, following a standard high-symmetry k-point path appropriate for the orthorhombic Bravais lattice. Extract the fundamental band gap (energy difference between the valence band maximum and conduction band minimum). Save the gap values and any auxiliary diagnostics as evidence.",
+    "output_file": "",
+    "evidence": "band_gaps.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Compute the electronic band structure and measure the band gaps. The extracted gap values are used in the final summary.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_summary",
+    "title": "Compile results and report key properties",
+    "role": "scored",
+    "action": "Fit a second-order Birch-Murnaghan equation of state to the energy-volume data from step 2 for each phase to obtain the equilibrium volume V0 and bulk modulus B0. Take the lowest total energy for each phase as the equilibrium energy. Compute the energy difference ΔE = E(PV) – E(PPV). Combine these values with the band gaps from step 3 and write a JSON summary.",
+    "output_file": "summary.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "A JSON file containing the equilibrium volume, equilibrium energy, bulk modulus, and band gap for each phase, as well as the overall energy difference.",
+    "output_schema": "JSON object with keys: 'phases' (array of objects with keys 'phase' (string), 'equilibrium_volume_A3' (float), 'equilibrium_energy_eV_per_fu' (float), 'bulk_modulus_GPa' (float), 'band_gap_eV' (float)), and 'energy_difference_eV' (float, ΔE = E_PV - E_PPV)."
+  }
+]

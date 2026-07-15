@@ -1,0 +1,41 @@
+[
+  {
+    "id": "simulation",
+    "title": "Simulate phonon transport for Sierpinski lattice at level 6",
+    "role": "process",
+    "action": "Construct a Sierpinski triangle lattice at self-similarity level 6. For each disorder probability p in {0.0, 0.1, 0.2, 0.4, 0.6}, apply Watts-Strogatz bond rewiring with probability p (avoid self-connections and duplicates). Build the harmonic dynamical matrix with normalized spring-to-mass ratio of 1. Use the atomistic Green's function formalism with monatomic linear chain surface self-energy to compute the retarded Green's function, the phonon transmission per point, and the average local density of states (ALDoS) over a chosen frequency grid. Average the transmission and ALDoS over 4 random source points to obtain the mean transmission function and mean ALDoS for each p. Save these averaged arrays for each disorder level to a single NumPy archive file simulation_data.npz.",
+    "output_file": "",
+    "evidence": "simulation_data.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step runs the core atomistic Green’s function simulations and produces the ensemble-averaged (over source points) transmission and ALDoS arrays that the subsequent scored steps need.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_correlation_dim",
+    "title": "Compute correlation dimension of ADOS",
+    "role": "scored",
+    "action": "For each disorder level p, load the averaged ALDoS arrays from simulation_data.npz. Compute the correlation sum C₂(ε) as the probability that the difference between transmission values (or ALDoS) at two frequencies is less than ε. Estimate the correlation dimension v from the scaling region of log C₂(ε) vs log ε via linear fit. Output a CSV file with two columns: p and v.",
+    "output_file": "correlation_dimension_level6.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The correlation dimension v of the average density of states quantifies the spectral fractal nature and its trend across disorder levels indicates the transport regime transition.",
+    "output_schema": "Two columns: p (float, disorder probability) and v (float, correlation dimension). Rows for p = 0.0, 0.1, 0.2, 0.4, 0.6."
+  },
+  {
+    "id": "compute_transmission_sum",
+    "title": "Compute total transmission sum",
+    "role": "scored",
+    "action": "For each disorder level p, load the averaged transmission function T(ω²) from simulation_data.npz. Sum T(ω²) over all sampled frequency bins to obtain the transmission sum. Output a CSV file with two columns: p and transmission_sum.",
+    "output_file": "transmission_sum_level6.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The total transmission sum approximates thermal conductance; its variation with disorder reveals the qualitative change from broad-band to low-frequency concentrated transport.",
+    "output_schema": "Two columns: p (float) and transmission_sum (float). Rows for p = 0.0, 0.1, 0.2, 0.4, 0.6."
+  }
+]

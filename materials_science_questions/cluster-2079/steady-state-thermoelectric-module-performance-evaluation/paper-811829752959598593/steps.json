@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_geometry_mesh",
+    "title": "Geometry and mesh generation",
+    "role": "process",
+    "action": "Create the 3D geometry of the air-to-water TEG system: aluminum heat exchanger (60x60x45 mm with 12 inner fins of cross-sectional area 37.5 mm² each), steel inlet/outlet connectors (diameter 40 mm), aluminum heat sink with 5.5 mm diameter coolant pipes, and a commercial thermoelectric module TEG-127020 containing 128 pairs of Bi2Te3-based legs (1.4x1.4x1.0 mm³ per leg, copper electrode slices 3.8x1.4x0.35 mm³, ceramic plates 0.8 mm thick, load resistance 0.5x0.5x35.5 mm³). Generate a computational mesh with approximately 1.5 million elements (grid-ii equivalent). Export the mesh for use in the multiphysics solver. Provide a summary of the mesh (element count, quality) as evidence.",
+    "output_file": "",
+    "evidence": "mesh_info.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build the 3D model and create a mesh that resolves the finned heat exchanger, thermoelectric legs, electrodes, ceramic plates, load resistance, and coolant channels. The mesh must be adequate to obtain grid-independent results.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_material_setup",
+    "title": "Material properties and boundary conditions",
+    "role": "process",
+    "action": "Assign material properties: aluminum (thermal conductivity 217.7 W/m·K), steel (17 W/m·K), copper (thermal conductivity 165.64 W/m·K, electrical resistivity 1.75e-8 Ω·m), ceramic (18 W/m·K). For p-type and n-type Bi2Te3 thermoelectric legs, implement the temperature-dependent polynomial functions for Seebeck coefficient, thermal conductivity, and electrical resistivity as provided in the TEG-127020 datasheet. For air, use temperature-dependent properties. Set boundary conditions: external natural convection (h_am=15 W/m²·K, T_am=300 K); hot air inlet velocity corresponding to a mass flow rate of 40 g/s (approximately 45.67 m/s) at T_air=500 K; cooling water inlet velocity 7.04 m/s at 300 K; outlet at standard atmospheric pressure; electrical ground on the cathode side of the TEM. Document the solver setup (RNG k-ε turbulence model, coupled solution strategy) in a short log file.",
+    "output_file": "",
+    "evidence": "setup_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Configure the multiphysics problem with the given geometric dimensions, material polynomials, and boundary conditions. No calibration or fitting is needed—use the exact functions from the datasheet.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_solve_and_scan",
+    "title": "Solve coupled multiphysics model and scan load resistance",
+    "role": "scored",
+    "action": "Using the mesh and setup from previous steps, solve the fully coupled fluid (RNG k-ε turbulence), thermal (conduction/convection), and electric (thermoelectric + current continuity) equations simultaneously for the air-to-water TEG system. For load resistances of 2, 3, 4, 5, 6, 7, 8 Ω (or a finer grid covering 2–8 Ω), run the steady-state simulation and record the output voltage across the load and the computed output power (U²/R_L). Save all results in a CSV file with columns: load_resistance_ohm, output_voltage_V, output_power_W.",
+    "output_file": "step_03_output_power_vs_load.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Run the full multiphysics simulation for each load resistance value. The CSV must contain at least the seven specified load points; finer sampling is allowed.",
+    "output_schema": "load_resistance_ohm:float, output_voltage_V:float, output_power_W:float"
+  }
+]

@@ -1,0 +1,124 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing DFT and phonon calculations is infeasible in the verifier sandbox; therefore we compare the agent's reported phonon frequencies and thermodynamic properties to hidden paper reference values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_phonon_frequencies.json": "reference_match",
+    "step_02_thermodynamic_properties.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "experimental Raman peak frequencies and paper-reported gamma/kappa values",
+      "source_provenance": "Marcano et al., Solid State Commun. 146, 65 (2008) Table 2 for Raman peaks; the paper (EPL 109, 47004, 2015) Table 3 and text for gamma=1.2 and kappa=2.0",
+      "generation_method": "extracted directly from the papers",
+      "why_not_fabricated": "These are the published reference values used for comparison; they are fixed and verifiable from the literature."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "peak_wavenumber",
+              "computed_frequency",
+              "symmetry_label"
+            ],
+            "properties": {
+              "peak_wavenumber": {
+                "type": "number",
+                "unit": "cm⁻¹"
+              },
+              "computed_frequency": {
+                "type": "number",
+                "unit": "cm⁻¹"
+              },
+              "symmetry_label": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": "Assignment of computed Γ‑point phonon frequencies (cm⁻¹) to the approximate experimental Raman peaks, with symmetry labels."
+      },
+      {
+        "file": "step_02_thermodynamic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "gamma_300K",
+            "kappa_L_300K"
+          ],
+          "properties": {
+            "gamma_300K": {
+              "type": "number",
+              "unit": "dimensionless"
+            },
+            "kappa_L_300K": {
+              "type": "number",
+              "unit": "W/m·K"
+            },
+            "Cv_300K": {
+              "type": "number",
+              "unit": "J/g·K"
+            }
+          }
+        },
+        "description": "Average Grüneisen parameter and lattice thermal conductivity of Cu₂GeSe₃ at 300 K, computed from the phonon data and Slack’s formula."
+      }
+    ],
+    "notes": "The phonon frequencies are compared against hidden experimental reference values with tolerances; symmetry assignments are accepted for all ambiguous peaks. Thermodynamic properties are compared against hidden reference values with tolerances."
+  },
+  "steps": [
+    {
+      "id": "phonon_frequencies",
+      "output_file": "step_01_phonon_frequencies.json",
+      "weight": 0.4,
+      "kind": "phonon_frequency_match",
+      "target_peaks": [
+        135.0,
+        189.0,
+        212.0,
+        235.0,
+        254.0
+      ],
+      "tolerance_abs": 10.0,
+      "tolerance_rel": 0.05,
+      "symmetry_map": {
+        "189.0": "A2",
+        "212.0": "B2"
+      },
+      "symmetry_weight": 0.15
+    },
+    {
+      "id": "gamma_300K",
+      "output_file": "step_02_thermodynamic_properties.json",
+      "weight": 0.3,
+      "kind": "numeric_score",
+      "field": "gamma_300K",
+      "target": 1.2,
+      "tolerance": 0.15,
+      "max_deviation": 0.3
+    },
+    {
+      "id": "kappa_L_300K",
+      "output_file": "step_02_thermodynamic_properties.json",
+      "weight": 0.3,
+      "kind": "numeric_score",
+      "field": "kappa_L_300K",
+      "target": 2.0,
+      "tolerance": 0.5,
+      "max_deviation": 1.0
+    }
+  ]
+}

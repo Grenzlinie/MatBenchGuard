@@ -1,0 +1,177 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Agent provides only final aggregated numbers; recompute from raw DFT output is infeasible within verifier sandbox. Result-level comparison with tolerance and ordering check is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_gaps.json": "exact_match",
+    "static_dielectric.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "band gap gold values",
+      "source_provenance": "paper Table 3: GGA 2.547 eV, mBJ 3.415 eV, GGA+U 2.549 eV, mBJ+U+SO 2.431 eV",
+      "generation_method": "directly extracted from the paper's reported values",
+      "why_not_fabricated": "these are the exact numbers the paper reports as DFT band gaps"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "static dielectric constant gold values",
+      "source_provenance": "paper Table 4 (mBJ+U+SO without scissors correction): ε₁^{xx}(0)=5.522, ε₁^{yy}(0)=5.530, ε₁^{zz}(0)=5.688",
+      "generation_method": "directly extracted from the paper's reported values",
+      "why_not_fabricated": "these are the exact numbers the paper reports for static dielectric constants"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "pbe",
+            "mbj",
+            "pbe_u",
+            "mbj_u_so"
+          ],
+          "properties": {
+            "pbe": {
+              "type": "number"
+            },
+            "mbj": {
+              "type": "number"
+            },
+            "pbe_u": {
+              "type": "number"
+            },
+            "mbj_u_so": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Band gap values in eV obtained from the four DFT functionals."
+      },
+      {
+        "file": "static_dielectric.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "xx",
+            "yy",
+            "zz"
+          ],
+          "properties": {
+            "xx": {
+              "type": "number"
+            },
+            "yy": {
+              "type": "number"
+            },
+            "zz": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Static dielectric constants ε₁(0) from the mBJ+U+SO calculation."
+      }
+    ],
+    "notes": "The Hubbard U correction parameter (0.294 Ry for Pb 5d) is provided as a fixed input and does not need to be refitted. The task does not require reproducing the experimental XPS comparison or the full optical constants curves."
+  },
+  "steps": [
+    {
+      "id": "band_abs_pbe",
+      "output_file": "band_gaps.json",
+      "kind": "json_field",
+      "field": "pbe",
+      "target": 2.547,
+      "tolerance": 0.2,
+      "weight": 0.1,
+      "description": "PBE band gap within ±0.2 eV of paper value"
+    },
+    {
+      "id": "band_abs_mbj",
+      "output_file": "band_gaps.json",
+      "kind": "json_field",
+      "field": "mbj",
+      "target": 3.415,
+      "tolerance": 0.2,
+      "weight": 0.1,
+      "description": "mBJ band gap within ±0.2 eV of paper value"
+    },
+    {
+      "id": "band_abs_pbe_u",
+      "output_file": "band_gaps.json",
+      "kind": "json_field",
+      "field": "pbe_u",
+      "target": 2.549,
+      "tolerance": 0.2,
+      "weight": 0.1,
+      "description": "PBE+U band gap within ±0.2 eV of paper value"
+    },
+    {
+      "id": "band_abs_mbj_u_so",
+      "output_file": "band_gaps.json",
+      "kind": "json_field",
+      "field": "mbj_u_so",
+      "target": 2.431,
+      "tolerance": 0.2,
+      "weight": 0.1,
+      "description": "mBJ+U+SO band gap within ±0.2 eV of paper value"
+    },
+    {
+      "id": "band_ordering",
+      "output_file": "band_gaps.json",
+      "kind": "order_check",
+      "weight": 0.1,
+      "checks": [
+        {
+          "left": "mbj",
+          "op": "gt",
+          "right": "pbe"
+        },
+        {
+          "left": "mbj_u_so",
+          "op": "lt",
+          "right": "pbe"
+        }
+      ],
+      "description": "Required relative ordering: mbj > pbe and mbj_u_so < pbe"
+    },
+    {
+      "id": "dielectric_xx",
+      "output_file": "static_dielectric.json",
+      "kind": "json_field",
+      "field": "xx",
+      "target": 5.522,
+      "tolerance": 0.5,
+      "weight": 0.167,
+      "description": "ε₁(0) (xx) within ±0.5 of paper value"
+    },
+    {
+      "id": "dielectric_yy",
+      "output_file": "static_dielectric.json",
+      "kind": "json_field",
+      "field": "yy",
+      "target": 5.53,
+      "tolerance": 0.5,
+      "weight": 0.167,
+      "description": "ε₁(0) (yy) within ±0.5 of paper value"
+    },
+    {
+      "id": "dielectric_zz",
+      "output_file": "static_dielectric.json",
+      "kind": "json_field",
+      "field": "zz",
+      "target": 5.688,
+      "tolerance": 0.5,
+      "weight": 0.166,
+      "description": "ε₁(0) (zz) within ±0.5 of paper value"
+    }
+  ]
+}

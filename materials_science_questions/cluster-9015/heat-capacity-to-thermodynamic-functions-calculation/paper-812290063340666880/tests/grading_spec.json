@@ -1,0 +1,153 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "The free energy functions and derived quantities are deterministic computations; comparing the agent's results to the paper's reported values with tolerances is the most direct verification. Recomputing in checker is feasible but would duplicate heavy integration code; result-level compare is sufficient.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for free energy table (Table VII), average ΔH₀ (117055 cal/mol), and vapor pressure equation coefficients (Eq. 10)",
+      "source_provenance": "Paper's Table VII and equation (10); verified against reference solve.sh which hard-codes the same values.",
+      "generation_method": "Extracted from the paper's tables and text; confirmed consistent with the hidden solve.sh output.",
+      "why_not_fabricated": "These are the actual published numbers for the same quantities under the specified conditions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energy_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "F_solid",
+            "F_vapor",
+            "Delta_F_evap"
+          ]
+        },
+        "description": "Table of free energy functions for solid and gaseous NiO, compared to the paper’s Table VII values with per‑field tolerance."
+      },
+      {
+        "file": "delta_H0_values.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Per‑run and average ΔH₀; the average is compared to the paper’s 117 055 cal/mol with tolerance ±500 cal."
+      },
+      {
+        "file": "vapor_pressure_equation.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Vapor‑pressure equation for solid NiO; each coefficient is compared to the paper’s equation (10) with tolerance ±1%."
+      }
+    ],
+    "notes": "All constants and the bundled vapor‑pressure CSV are taken from the paper. The hidden checker compares the agent’s computed numbers to the paper‑reported values with the stated tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_free_energy_nio",
+      "output_file": "free_energy_functions.csv",
+      "kind": "table_comparison",
+      "weight": 0.4,
+      "tolerance": 0.05,
+      "gold_rows": [
+        {
+          "T_K": 1000,
+          "F_solid": -13.942,
+          "F_vapor": -57.42,
+          "Delta_F_evap": -43.478
+        },
+        {
+          "T_K": 1100,
+          "F_solid": -14.998,
+          "F_vapor": -58.195,
+          "Delta_F_evap": -43.197
+        },
+        {
+          "T_K": 1200,
+          "F_solid": -15.988,
+          "F_vapor": -58.907,
+          "Delta_F_evap": -42.919
+        },
+        {
+          "T_K": 1300,
+          "F_solid": -16.918,
+          "F_vapor": -59.567,
+          "Delta_F_evap": -42.649
+        },
+        {
+          "T_K": 1400,
+          "F_solid": -17.795,
+          "F_vapor": -60.183,
+          "Delta_F_evap": -42.388
+        },
+        {
+          "T_K": 1500,
+          "F_solid": -18.626,
+          "F_vapor": -60.763,
+          "Delta_F_evap": -42.137
+        },
+        {
+          "T_K": 1600,
+          "F_solid": -19.414,
+          "F_vapor": -61.306,
+          "Delta_F_evap": -41.892
+        },
+        {
+          "T_K": 1700,
+          "F_solid": -20.165,
+          "F_vapor": -61.815,
+          "Delta_F_evap": -41.65
+        },
+        {
+          "T_K": 1800,
+          "F_solid": -20.881,
+          "F_vapor": -62.292,
+          "Delta_F_evap": -41.411
+        },
+        {
+          "T_K": 1900,
+          "F_solid": -21.566,
+          "F_vapor": -62.745,
+          "Delta_F_evap": -41.179
+        },
+        {
+          "T_K": 2000,
+          "F_solid": -22.223,
+          "F_vapor": -63.182,
+          "Delta_F_evap": -40.959
+        }
+      ]
+    },
+    {
+      "id": "step_delta_h0",
+      "output_file": "delta_H0_values.txt",
+      "kind": "extract_average_delta_h0",
+      "weight": 0.35,
+      "gold_avg": 117055.0,
+      "tolerance": 500.0
+    },
+    {
+      "id": "step_vapor_pressure_eq",
+      "output_file": "vapor_pressure_equation.txt",
+      "kind": "coefficient_comparison",
+      "weight": 0.25,
+      "gold_coeffs": {
+        "A": -25586,
+        "B": -0.000767,
+        "C": 7.21e-08,
+        "D": 10.198
+      },
+      "tolerance_percent": 0.01
+    }
+  ]
+}

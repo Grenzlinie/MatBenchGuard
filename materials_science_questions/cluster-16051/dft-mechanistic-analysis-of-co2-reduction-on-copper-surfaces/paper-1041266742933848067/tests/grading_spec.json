@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline quantities are DFT vibrational frequencies and binding energy; the checker cannot run DFT, so it compares the agent's reported values to the paper's gold values within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "vibrational_frequencies.csv": "reference_match",
+    "binding_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold vibrational frequencies and binding energy for *OCHCH2 on OD-Cu-297",
+      "source_provenance": "Paper's reported DFT values for the same site; paper Table 4 and DFT data in ioChem-BD.",
+      "generation_method": "Extracted from paper's published DFT results for OD-Cu-297 (N_Cu-Cu=5.00) and binding energy trend.",
+      "why_not_fabricated": "These are the paper's own computed numbers, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "vibrational_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "intermediate",
+            "site_label",
+            "mode",
+            "frequency_cm-1"
+          ],
+          "units": {
+            "frequency_cm-1": "cm^-1"
+          }
+        },
+        "description": "CSV file containing the four vibrational mode frequencies for *OCHCH2 on OD-Cu-297, as computed by DFT."
+      },
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "intermediate",
+            "site_label",
+            "binding_energy_eV",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "binding_energy_eV": "eV",
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "CSV file containing the binding and formation energy of *OCHCH2 on OD-Cu-297, as computed by DFT."
+      }
+    ],
+    "notes": "The hidden checker compares the reported frequencies and binding energy to the paper's gold values for site OD-Cu-297 within tolerances that absorb code-to-code differences (vibrational tolerance 10 cm⁻¹, energy tolerance 0.15 eV)."
+  },
+  "steps": [
+    {
+      "id": "step_02_vibrations",
+      "output_file": "vibrational_frequencies.csv",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "description": "Check vibrational frequencies of *OCHCH2 on OD-Cu-297.",
+      "modes": {
+        "CCO symmetric stretching": {
+          "target": 1182,
+          "tolerance": 10
+        },
+        "CCO antisymmetric stretching": {
+          "target": 1318,
+          "tolerance": 10
+        },
+        "C-C stretching": {
+          "target": 1453,
+          "tolerance": 10
+        },
+        "C-O stretching": {
+          "target": 1595,
+          "tolerance": 10
+        }
+      },
+      "required_intermediate": "*OCHCH2",
+      "required_site_label": "OD-Cu-297"
+    },
+    {
+      "id": "step_03_energy",
+      "output_file": "binding_energies.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "description": "Check binding energy of *OCHCH2 on OD-Cu-297.",
+      "target_binding_energy": -1.2,
+      "tolerance_binding_energy": 0.15,
+      "required_intermediate": "*OCHCH2",
+      "required_site_label": "OD-Cu-297"
+    }
+  ]
+}

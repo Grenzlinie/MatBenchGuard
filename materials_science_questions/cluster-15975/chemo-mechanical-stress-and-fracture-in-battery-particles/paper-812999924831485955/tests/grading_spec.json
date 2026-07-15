@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Stress-strain curves are recomputed via the constitutive integration; indentation curve uses a functional reference from the paper’s model plus phase checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stress_strain_curves.csv": "metric_recompute",
+    "indentation_P_h_curve_dP_over_P_1.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress_0.1",
+            "stress_0.2",
+            "stress_0.5",
+            "stress_1"
+          ],
+          "units": {
+            "strain": "1",
+            "stress_0.1": "MPa",
+            "stress_0.2": "MPa",
+            "stress_0.5": "MPa",
+            "stress_1": "MPa"
+          }
+        },
+        "description": "Homogeneous true stress-strain curves for lithium at strain rates 0.1, 0.2, 0.5, 1 s⁻¹ up to strain 1.0."
+      },
+      {
+        "file": "indentation_P_h_curve_dP_over_P_1.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "displacement_nm",
+            "load_mN"
+          ],
+          "units": {
+            "displacement_nm": "nm",
+            "load_mN": "mN"
+          }
+        },
+        "description": "Load vs. indentation depth curve for the microindentation experiment under constant dP/P=1 s⁻¹, covering loading, hold, and unloading."
+      }
+    ],
+    "notes": "The hidden checker will compare the agent's submitted stress-strain curves and indentation load-depth curve against reference values derived from the paper's reported results, applying tolerances and qualitative shape checks."
+  },
+  "steps": [
+    {
+      "id": "stress_strain",
+      "output_file": "stress_strain_curves.csv",
+      "kind": "recompute_curve",
+      "weight": 0.6,
+      "strain_column": "strain",
+      "stress_columns": {
+        "0.1": "stress_0.1",
+        "0.2": "stress_0.2",
+        "0.5": "stress_0.5",
+        "1.0": "stress_1"
+      },
+      "strain_rates": [
+        0.1,
+        0.2,
+        0.5,
+        1.0
+      ],
+      "material_params": {
+        "E": 5000,
+        "nu": 0.3,
+        "eps0": 0.05,
+        "m": 0.18,
+        "S0": 2.0,
+        "H0": 40.0,
+        "S_star": 8.0,
+        "a": 1.8
+      },
+      "tolerance_abs_mpa": 10.0
+    },
+    {
+      "id": "indentation",
+      "output_file": "indentation_P_h_curve_dP_over_P_1.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "displacement_column": "displacement_nm",
+      "load_column": "load_mN",
+      "min_rows": 200,
+      "qualitative_checks": {
+        "max_depth_min": 8000.0,
+        "max_load_target": 5.88,
+        "max_load_tol_rel": 0.05,
+        "required_phases": [
+          "loading",
+          "hold",
+          "unload"
+        ]
+      },
+      "reference_params": {
+        "loading": {
+          "type": "power_law",
+          "P_func": "0.009 * exp(1.0 * t)",
+          "h_func": "3700 * sqrt(P)"
+        },
+        "hold": {
+          "delta_h": 500.0,
+          "tau": 3.0
+        },
+        "unload": {
+          "elastic_recovery": 100.0
+        }
+      },
+      "reference_checkpoints": [
+        {
+          "displacement_nm": 2000.0,
+          "load_mN": 0.292,
+          "phase": "loading",
+          "tol_rel": 0.2
+        },
+        {
+          "displacement_nm": 4000.0,
+          "load_mN": 1.169,
+          "phase": "loading",
+          "tol_rel": 0.15
+        },
+        {
+          "displacement_nm": 6000.0,
+          "load_mN": 2.63,
+          "phase": "loading",
+          "tol_rel": 0.15
+        },
+        {
+          "displacement_nm": 8000.0,
+          "load_mN": 4.694,
+          "phase": "loading",
+          "tol_rel": 0.15
+        },
+        {
+          "displacement_nm": 9000.0,
+          "load_mN": 5.88,
+          "phase": "hold",
+          "tol_rel": 0.1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute the full MD trajectories; verify structural properties (RDF peak presence, monotonic yielding strain trends) from agent-submitted CSV artifacts based on the paper’s reported behaviour.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "rdf_data.csv": "structural_audit",
+    "yielding_strain.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "rdf_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "distance",
+            "intensity"
+          ],
+          "units": {
+            "temperature": "K",
+            "distance": "Angstrom",
+            "intensity": "arbitrary"
+          }
+        },
+        "description": "RDF curves for (8,0) CNT after relaxation at 12% strain. For T=0K the 1.5–1.6 Å region must lack a significant peak; for finite T a distinct peak must appear."
+      },
+      {
+        "file": "yielding_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "strain_rate",
+            "defect_type",
+            "yielding_strain"
+          ],
+          "units": {
+            "temperature": "K",
+            "strain_rate": "%/ps",
+            "yielding_strain": "%"
+          }
+        },
+        "description": "Yielding strain at which sp3 bonds or bond rotations first appear during compression of a (10,0) CNT under various strain rates and temperatures."
+      }
+    ],
+    "notes": "Scoring evaluates structural trends: for RDF, peak presence in the 1.5–1.6 Å range only at finite temperatures; for yielding strain, monotonic decrease with increasing temperature (fixed strain rate) and with decreasing strain rate (fixed temperature). Exact numeric values are not required; trends must hold per defect type."
+  },
+  "steps": [
+    {
+      "id": "rdf_sp3_peak",
+      "output_file": "rdf_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "target": "RDF peak in 1.5–1.6 Å present only at finite temperatures (300, 800, 1600 K) and absent at 0 K",
+      "tolerance": "Relative intensity thresholds: for 0 K normalized intensity ≤ 0.15; for finite T ≥ 0.25",
+      "description": "Checks that the RDF of the (8,0) CNT at 12 % strain shows a clear peak around 1.5–1.6 Å only at temperatures 300, 800 and 1600 K, while the 0 K curve lacks such a peak."
+    },
+    {
+      "id": "yielding_strain_trends",
+      "output_file": "yielding_strain.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "target": "Yielding strain decreases monotonically with increasing temperature (fixed strain rate) and decreases with decreasing strain rate (fixed temperature) for each defect type (sp3 and rotation)",
+      "tolerance": "Strict non-increasing order; all required combinations of temperature, strain rate and defect type must be present.",
+      "description": "Verifies that for the (10,0) CNT compression simulations the yielding strain for sp3 bond formation and bond rotation follows the reported strain‑rate and temperature dependence."
+    }
+  ]
+}

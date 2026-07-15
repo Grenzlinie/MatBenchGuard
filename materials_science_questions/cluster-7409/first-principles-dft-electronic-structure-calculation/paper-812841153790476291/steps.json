@@ -1,0 +1,93 @@
+[
+  {
+    "id": "bulk_reference",
+    "title": "Bulk reference DFT+U calculations",
+    "role": "process",
+    "action": "Perform spin-polarized DFT+U calculations for bulk rutile TiO2 and an isolated oxygen molecule to obtain equilibrium lattice constants and total energies per formula unit E(TiO2) and E(O2). These reference values are used later to scale supercells and compute formation energies.",
+    "output_file": "",
+    "evidence": "bulk_reference_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "supercell_build",
+    "title": "Supercell construction with edge dislocation",
+    "role": "process",
+    "action": "Construct a slab supercell (~689-694 atoms) of rutile TiO2 containing an isolated edge dislocation with Burgers vector b=c[001]. The slab is periodic in y=[1-10] and z=[001] and has free surfaces in x=[110]. Use the SMTBQ lattice constants for the initial geometry. Arrange 11 and 12 unit-cell layers on either side of the dislocation core to produce balanced strain. Save the initial atomic structure as evidence.",
+    "output_file": "",
+    "evidence": "initial_supercell.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "smtbq_go",
+    "title": "SMTBQ global optimization and screening",
+    "role": "process",
+    "action": "Run global optimization using the SMTBQ potential implemented in EON. For two compositions — Ti230O460 (stoichiometric) and Ti231O461 (oxygen-deficient) — perform at least 100 saddle-point searches per composition. Starting from a suitable initial configuration, displace atoms near the core randomly, use minimum-mode following to find saddle points, relax into new minima, and collect distinct configurations. For each composition, select configurations within 5 eV of the lowest energy, relax them with charge equilibration, then retain those within 1 eV of the lowest relaxed energy. Write the retained configurations with their SMTBQ energies to step_01_smtbq_configurations.csv.",
+    "output_file": "",
+    "evidence": "step_01_smtbq_configurations.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "dft1_prescreen",
+    "title": "DFT-1 pre-screening",
+    "role": "process",
+    "action": "For every configuration retained from the SMTBQ stage, carry out spin-polarized DFT calculations using the PBE functional, a plane-wave cutoff of 300 eV, and Gamma-point only. Relax atomic positions until forces are below 0.1 eV/Å while keeping cell dimensions fixed. Record the total energy for each configuration and write the results (composition, configuration ID, DFT-1 total energy) to step_02_dft1_energies.csv. Select the lowest-energy structure for each composition for DFT-2 refinement.",
+    "output_file": "",
+    "evidence": "step_02_dft1_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "dft2_structure",
+    "title": "DFT-2 refinement and final structure",
+    "role": "scored",
+    "action": "For the lowest-energy structure of each composition from DFT-1, perform DFT+U refinement with U_Ti=4.2 eV, a plane-wave cutoff of 350 eV, and k-point mesh 1×1×3. Scale the supercell dimensions to the bulk DFT+U lattice constants before relaxation. Optimize all atomic positions until forces are <0.1 eV/Å. Write the final relaxed atomic coordinates for both structures into an XYZ file, with each structure as a separate frame containing the lattice vectors in the comment line.",
+    "output_file": "step_03_dft2_structure.xyz",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "XYZ file with optimized atomic coordinates of the stoichiometric (Ti230O460) and oxygen-deficient (Ti231O461) dislocation models (two frames). Each frame comment includes the cell vectors.",
+    "output_schema": "XYZ format; comment line (line 2) contains lattice vectors, e.g. 'Lattice=\"Ax Ay Az; Bx By Bz; Cx Cz\"'. Atomic lines: element x y z (in Angstrom). Two frames, one per composition."
+  },
+  {
+    "id": "formation_energy",
+    "title": "Formation energy analysis",
+    "role": "scored",
+    "action": "Using the DFT+U total energies from the final structures and the bulk reference energies (E(TiO2) and E(O2)), compute the dislocation formation energy per unit length for both compositions as a function of oxygen chemical potential following the method of expression (1) in the paper. Evaluate at oxygen chemical potentials relative to 0.5*E(O2): -5.0, -4.0, -3.0, -2.0, -1.0, 0.0 eV. Write the results to step_03_formation_energy.csv.",
+    "output_file": "step_03_formation_energy.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Formation energy per unit length for both dislocation models at six oxygen chemical potentials.",
+    "output_schema": "CSV with columns: composition (string, e.g. 'Ti230O460'), oxygen_chemical_potential(eV) (numeric, relative to 0.5*E(O2)), formation_energy(eV/Ang) (numeric). Six rows per composition."
+  },
+  {
+    "id": "electronic_dos",
+    "title": "Projected density of states",
+    "role": "scored",
+    "action": "From the DFT+U calculation for both dislocation structures, compute the projected electronic density of states (PDOS) using Gaussian smearing. Separate atoms into bulk-like regions B1, B2 and the dislocation core region D as defined in the published procedure. Output a DAT file with four columns: energy (eV relative to Fermi), total_DOS, PDOS_B1, PDOS_B2, PDOS_D. Include both structures in the same file, separated by comment lines indicating the composition.",
+    "output_file": "step_03_dft2_dos.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Projected density of states for the dislocation core and bulk-like regions of the two stable dislocation models.",
+    "output_schema": "Four columns: energy(eV) relative to Fermi, total_DOS (states/eV/cell), PDOS_B1, PDOS_B2, PDOS_D. Sections for each composition are separated by a comment line '#' with the composition label."
+  }
+]

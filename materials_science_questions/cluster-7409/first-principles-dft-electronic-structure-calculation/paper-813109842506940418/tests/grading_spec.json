@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The DFT workflow cannot be rerun in the verifier sandbox; the agent's computed band gaps and CBM assignments are compared to the paper's reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "band_gap_direct",
+            "band_gap_type"
+          ],
+          "units": {
+            "band_gap_direct": "eV"
+          }
+        },
+        "description": "CSV file with one row per compound giving the computed direct band gap and gap type."
+      },
+      {
+        "file": "cbm_dominance.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {},
+          "items": {
+            "value": "string, one of 'La5d(6h)', 'La5d(4f)', 'equal'"
+          }
+        },
+        "description": "JSON object mapping each compound name to the dominant La 5d contribution at the conduction band minimum."
+      }
+    ],
+    "notes": "The band gaps are extracted after geometry relaxation and compared to the paper's reported direct gap values with tolerance. The CBM dominance classification is compared to the paper's assignments."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gaps and CBM dominance from paper Table 3 and Fig.5/PDOS analysis",
+      "source_provenance": "Paper Table 3 for band gaps, and paper text/figures for CBM assignments",
+      "generation_method": "Extracted directly from the paper's reported DFT values.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's computed DFT results."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_bandgap",
+      "output_file": "band_gaps.csv",
+      "kind": "numeric_compare",
+      "weight": 0.4,
+      "gold_band_gaps": {
+        "Li": 3.78,
+        "Na": 3.81,
+        "K": 3.88,
+        "Rb": 3.89,
+        "Cs": 3.85,
+        "La1/3": 3.17
+      },
+      "tolerance": 0.15,
+      "band_gap_column": "band_gap_direct",
+      "compound_column": "compound"
+    },
+    {
+      "id": "step_cbm_dominance",
+      "output_file": "cbm_dominance.json",
+      "kind": "string_compare",
+      "weight": 0.6,
+      "gold_cbm_dominance": {
+        "Li": "La5d(6h)",
+        "Na": "La5d(6h)",
+        "K": "La5d(4f)",
+        "Rb": "La5d(4f)",
+        "Cs": "La5d(4f)",
+        "La1/3": "equal"
+      },
+      "compounds": [
+        "Li",
+        "Na",
+        "K",
+        "Rb",
+        "Cs",
+        "La1/3"
+      ]
+    }
+  ]
+}

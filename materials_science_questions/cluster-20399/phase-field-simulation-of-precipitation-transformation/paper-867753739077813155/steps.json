@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_fit_thermo",
+    "title": "Grand-potential parameterization",
+    "role": "process",
+    "action": "Obtain CALPHAD free energy data for austenite, ferrite, and cementite of the Fe-C system near the eutectoid temperature. Fit grand-potential densities as quadratic functions of the chemical potential (Equation 36) using the procedure from the paper (Eqs. 37-39). Determine the coefficients A, B, C for each phase at the eutectoid temperature (989 K) and at an undercooled temperature (979 K, ΔT = 10 K).",
+    "output_file": "",
+    "evidence": "grand_potential_coefficients.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Prepares the thermodynamic inputs needed for the analytical velocity formula and the phase-field model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_calc_relax",
+    "title": "Thin-interface relaxation constants",
+    "role": "process",
+    "action": "Compute the interface relaxation coefficients τ_αγ and τ_βγ using the thin-interface analysis formula (Eq. 43), the equilibrium concentrations from Table 1, the diffusivity D^γ, the surface energies, and the solvability integral M+F = 0.222. The calculation ensures that interface kinetics are eliminated in the quantitative phase-field model.",
+    "output_file": "",
+    "evidence": "relaxation_constants.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Required to set up the phase-field simulation without spurious interface effects.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_phasefield_sim",
+    "title": "Phase-field simulation of lamellar growth",
+    "role": "process",
+    "action": "Set up and run a quantitative multi-phase-field model for the binary eutectoid system (ferrite/cementite growing from austenite) using the grand-potential formulation (double-obstacle potential, thin-interface relaxation constants). Use periodic boundary conditions in the transverse direction to fix the lamellar spacing, and no-flux in the growth direction. Initialize with the eutectoid chemical potential and run the simulation in a moving-frame mode until steady-state front propagation is attained. Perform independent runs for at least 10 different lamellar spacings λ evenly distributed between 10 and 100 μm. For each run, record the time evolution of the triple-point position (or the contour φ_α − φ_β = 0) to enable velocity extraction.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the raw simulation data needed to extract the steady-state growth velocities.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_analyze_velocities",
+    "title": "Compute and report lamellar growth velocities",
+    "role": "scored",
+    "action": "For each simulated lamellar spacing, determine the steady-state growth velocity v_phasefield from the linear portion of the interface-front position versus time curve. Compute the analytical velocity v_analytical using the generalized Jackson‑Hunt relation that includes diffusion in all phases (the formula containing the multiplicative factor ρ). Compute the classical velocity v_classical by evaluating the same relation with ρ = 1 (i.e., no diffusion in the growing phases). Use the same set of material and geometric parameters (Table 1, and the fitted thermodynamic coefficients from step_fit_thermo). Assemble the results into a CSV file.",
+    "output_file": "velocities.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Main scored artifact: contains the lamellar spacing and the three velocities (v_analytical, v_classical, v_phasefield) for at least 10 spacings, enabling verification of the ρ factor effect.",
+    "output_schema": "Columns: lamellar_spacing (float, μm), v_analytical (float, m/s), v_classical (float, m/s), v_phasefield (float, m/s). At least 10 rows."
+  }
+]

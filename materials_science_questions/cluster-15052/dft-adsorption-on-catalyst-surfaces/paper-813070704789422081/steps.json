@@ -1,0 +1,80 @@
+[
+  {
+    "id": "s1",
+    "title": "Construct doped graphene supercell models",
+    "role": "process",
+    "action": "Generate atomic coordinates for a 5×5 graphene supercell (50 carbon atoms) and create substitutional doping configurations for N and B according to standard doping nomenclature (1N, 2N, 3N; 1B, 2B, 3B; plus multi-dopant configurations with three dopants each for validation). For each configuration, identify all inequivalent carbon active sites and label them. Also construct the specific 3-Para site supercell (three N atoms each in para position to a central carbon) needed for the final overpotential calculation.",
+    "output_file": "",
+    "evidence": "structures.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Process step to create all required periodic supercell coordinates and catalogues of active sites.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Perform DFT total‑energy calculations and derive ΔG_OH",
+    "role": "process",
+    "action": "For each supercell from step s1, run Quantum ESPRESSO (PWscf) using the PBE functional, ultrasoft pseudopotentials, kinetic energy cutoff 30 Ry (density cutoff 240 Ry), 5×5×1 k-point mesh, Marzari–Vanderbilt smearing. Perform geometry relaxations for the clean slab and for every OH adsorbate configuration on each inequivalent carbon site. Compute total energies. Apply the standard ORR free‑energy corrections (computational hydrogen electrode) to obtain ΔG_OH for every active site. Additionally, for the 3‑Para site, compute total energies of all ORR intermediates (OOH, O, OH) and gas‑phase references (H₂, H₂O) required to build the ORR free‑energy diagram.",
+    "output_file": "",
+    "evidence": "dft_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Process step that provides the raw DFT energies used to fit models, validate predictions, and compute the overpotential.",
+    "output_schema": ""
+  },
+  {
+    "id": "s3",
+    "title": "Fit structural predictive models for N‑ and B‑doped graphene",
+    "role": "scored",
+    "action": "From the ΔG_OH values computed for the single‑dopant configurations (1N, 2N, 3N; 1B, 2B, 3B) and the structural counts (n_O, n_P, n_M) of each site, perform linear regression ΔG_OH = intercept + a_O * n_O + a_P * n_P + a_M * n_M separately for N and B. Save the fitted coefficients.",
+    "output_file": "step_01_fitted_models.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Linear model coefficients for N‑ and B‑doped graphene.",
+    "output_schema": "JSON object with keys 'N' and 'B', each containing 'intercept' (float), 'c_O' (float), 'c_P' (float), 'c_M' (float) in eV units."
+  },
+  {
+    "id": "s4",
+    "title": "Validate nitrogen structural model",
+    "role": "scored",
+    "action": "For all inequivalent carbon sites in the multi‑dopant nitrogen test configurations (supercells with three N dopants arranged to give various ortho/meta/para combinations), count n_O, n_P, n_M. Compute ΔG_OH_generated from the fitted N model. Record side‑by‑side with the DFT‑computed ΔG_OH (from step s2).",
+    "output_file": "step_02_validation_N.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Validation data comparing predicted vs. DFT ΔG_OH for N‑doped graphene.",
+    "output_schema": "CSV with columns: site_name (str), n_O (int), n_P (int), n_M (int), delta_G_OH_DFT (float, eV), delta_G_OH_generated (float, eV)."
+  },
+  {
+    "id": "s5",
+    "title": "Validate boron structural model",
+    "role": "scored",
+    "action": "Analogous to step s4, but for the boron multi‑dopant test configurations.",
+    "output_file": "step_03_validation_B.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Validation data comparing predicted vs. DFT ΔG_OH for B‑doped graphene.",
+    "output_schema": "CSV with columns: site_name (str), n_O (int), n_P (int), n_M (int), delta_G_OH_DFT (float, eV), delta_G_OH_generated (float, eV)."
+  },
+  {
+    "id": "s6",
+    "title": "Compute ORR overpotential for the 3‑Para optimal site",
+    "role": "scored",
+    "action": "From the DFT total energies computed for the 3‑Para site and its ORR intermediates (step s2), apply the same free‑energy corrections to construct the ORR free‑energy diagram at zero potential. Determine the largest free‑energy uphill step to obtain the overpotential, the corresponding onset potential, and identify the potential‑limiting step.",
+    "output_file": "step_04_overpotential_3Para.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Electrochemical ORR activity metrics for the 3‑Para site.",
+    "output_schema": "JSON object with keys: overpotential_V (float), onset_potential_V (float), limiting_step (string, e.g., 'OOH formation'), limiting_step_energy_eV (float)."
+  }
+]

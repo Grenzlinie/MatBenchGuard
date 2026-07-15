@@ -1,0 +1,146 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gaps are recomputed from the raw DOS CSV curves using peak identification; no trust on self‑reported numbers. The dangling‑bond check uses structural feature (mid‑gap peak > 30% of VBM). The band‑gap trend table is checked for monotonicity and within tolerances of paper's digitized values.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "dos_18A_hcovered.csv": "metric_recompute",
+    "dos_18A_dangling.csv": "structural_audit",
+    "dos_18A_truncated.csv": "metric_recompute",
+    "bandgap_vs_diameter.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap for 18 Å H‑covered (1.6 eV) and truncated (1.6 eV); and digitized band‑gap vs. diameter values (15 Å:2.1, 18 Å:1.6, 25 Å:1.3, 35 Å:1.2 eV).",
+      "source_provenance": "Paper Figure 5 (band gap vs. cluster size) and related discussion; digitized from the plot and rounded to 0.1 eV.",
+      "generation_method": "Values extracted from Figure 5 by reading the approximate gap at each diameter; tolerances set to accommodate implementation variations (±0.2 eV for 18 Å, ±0.3 eV for size trend).",
+      "why_not_fabricated": "These are the paper's own reported results, traceable to the published figure; the tolerances reflect expected methodological spread between different tight‑binding implementations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dos_18A_hcovered.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "total_DOS"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "total_DOS": "arbitrary"
+          }
+        },
+        "description": "Density of states of hydrogen‑saturated 18 Å Si cluster. The checker recomputes the band gap from this DOS and compares to a hidden reference."
+      },
+      {
+        "file": "dos_18A_dangling.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "total_DOS"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "total_DOS": "arbitrary"
+          }
+        },
+        "description": "DOS for 18 Å Si cluster with dangling bonds. The checker verifies presence of a mid‑gap state (intensity >30% of VBM) obscuring the band gap."
+      },
+      {
+        "file": "dos_18A_truncated.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "total_DOS"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "total_DOS": "arbitrary"
+          }
+        },
+        "description": "DOS for 18 Å Si cluster with dangling orbitals removed. Checker recomputes band gap and compares to reference."
+      },
+      {
+        "file": "bandgap_vs_diameter.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "diameter_A",
+            "band_gap_eV"
+          ],
+          "units": {
+            "diameter_A": "Å",
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Band gap vs. diameter for H‑passivated Si nanocrystals. Checker verifies monotonic decrease with diameter and values within tolerance of digitized paper reference."
+      }
+    ],
+    "notes": "No surface relaxation included (negligible effect on band edges). The agent must re‑implement the time‑propagation algorithm from the described method; the hidden checker recomputes band gaps from the raw DOS to prevent self‑reporting."
+  },
+  "steps": [
+    {
+      "id": "step04",
+      "output_file": "dos_18A_hcovered.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "config": {
+        "gold_gap_eV": 1.6,
+        "tolerance_eV": 0.2,
+        "midgap_ratio_thresh": 0.2
+      }
+    },
+    {
+      "id": "step05",
+      "output_file": "dos_18A_dangling.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "config": {
+        "midgap_intensity_ratio_threshold": 0.3,
+        "max_gap_eV": 0.5
+      }
+    },
+    {
+      "id": "step06",
+      "output_file": "dos_18A_truncated.csv",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "config": {
+        "gold_gap_eV": 1.6,
+        "tolerance_eV": 0.2,
+        "midgap_ratio_thresh": 0.2
+      }
+    },
+    {
+      "id": "step07",
+      "output_file": "bandgap_vs_diameter.csv",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "config": {
+        "gold_gaps": {
+          "15.0": 2.1,
+          "18.0": 1.6,
+          "25.0": 1.3,
+          "35.0": 1.2
+        },
+        "tolerance_eV": 0.3
+      }
+    }
+  ]
+}

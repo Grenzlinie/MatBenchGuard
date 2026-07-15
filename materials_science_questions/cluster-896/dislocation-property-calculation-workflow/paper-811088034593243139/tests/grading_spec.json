@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Headline quantities are computed core energies and decomposition confirmation from EAM simulation; full recompute from raw atomic configurations is infeasible in verifier sandbox, so T0 result-level comparison against paper-reported values with tolerance is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "perfect_core.json": "reference_match",
+    "decomposed_core.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "perfect_core.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "radius_nm": "number",
+            "energy_J_per_m": "number"
+          },
+          "units": {
+            "radius_nm": "nm",
+            "energy_J_per_m": "J/m"
+          }
+        },
+        "description": "Core energy of the perfect a[01-1] edge dislocation in NiAl computed within a 9 nm radius. The value will be compared to the paper-reported result within an appropriate tolerance."
+      },
+      {
+        "file": "decomposed_core.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "radius_nm": "number",
+            "energy_J_per_m": "number",
+            "separation_nm": "number",
+            "decomposition_confirmed": "boolean"
+          },
+          "units": {
+            "radius_nm": "nm",
+            "energy_J_per_m": "J/m",
+            "separation_nm": "nm"
+          }
+        },
+        "description": "Core energy (9 nm radius), separation between a<010> dislocation cores, and boolean confirmation for the decomposed a[01-1] edge configuration. Energy and separation are compared to paper values within tolerances, and the boolean must be true."
+      }
+    ],
+    "notes": "The agent must obtain the Rao et al. (1991) EAM potential from the public literature (or equivalent published parameters). The workflow is purely computational; no experimental TEM images or weak-beam simulations are required. All necessary elastic constants are stated in the resources."
+  },
+  "steps": [
+    {
+      "id": "perfect_core_validation",
+      "output_file": "perfect_core.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_value": 4.2e-09,
+      "tolerance_relative": 0.1,
+      "description": "Check perfect core radius=9.0 nm and energy within 10% of paper value 4.2e-9 J/m"
+    },
+    {
+      "id": "decomposed_core_validation",
+      "output_file": "decomposed_core.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_value": 3.6e-09,
+      "tolerance_relative": 0.1,
+      "description": "Check decomposed core radius=9.0 nm, energy within 10% of 3.6e-9 J/m, separation in [0.1,20] nm, and decomposition_confirmed==true"
+    },
+    {
+      "id": "energy_ordering",
+      "output_file": "",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Check that decomposed core energy is strictly less than perfect core energy"
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported core energies: perfect 4.2e-9 J/m, decomposed 3.6e-9 J/m",
+      "source_provenance": "From paper text: 'For a radius of 9 nm, the energy of the relaxed, perfect core ... is 4.2×10^-9 J m^-1, while the energy for the decomposed core is 3.6×10^-9 J m^-1.'",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "Directly quoted from peer-reviewed published result"
+    }
+  ]
+}

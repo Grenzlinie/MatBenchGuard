@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_compute_cv",
+    "title": "Convert Cp to Cv",
+    "role": "process",
+    "action": "Compute constant‑volume heat capacity Cv from the provided smoothed Cp data using the thermal expansion correction. Apply the Grüneisen relation with γ=1.43 (or equivalently the Nernst‑Lindemann approximation with a = 5.41×10⁻⁷ J⁻¹·mol) as described in the methodology. The correction may use the exact expression (β²V/κ)T below 550 K and the Grüneisen approximation above.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare the Cv dataset required for the subsequent anharmonic fit. The procedure uses literature expansion parameters (β, V, κ at 550 K) to derive γ and a, then corrects Cp→Cv for all temperatures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_fit_and_table",
+    "title": "Fit anharmonic terms and produce heat capacity table",
+    "role": "scored",
+    "action": "Using the computed Cv values, perform a linear least‑squares fit of (Cv - 9R)/T against T⁻³ for temperatures T ≥ 650 K to obtain the anharmonic coefficient A (intercept) and high‑temperature Debye temperature θ∞ (from slope). Compute the Einstein temperature θE from θ∞ and the literature Debye temperature θD = 778 K via θ∞² = (1/6)θD² + (25/18)θE². Compute the harmonic heat capacity Ch = 0.5[3R·D(θD/T) + 15R·E(θE/T)] for all temperatures in the Cp dataset. Calculate the anharmonic contribution Ca = Cv - Ch. Write the full table to the specified CSV file.",
+    "output_file": "step_01_cv_ch.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Complete temperature‑dependent heat capacity table containing Cv, the harmonic model Ch, and the anharmonic difference. The hidden checker recomputes A and θE from the Cv column for T≥650 K, deriving the scored quantities without trusting the agent’s reported parameters.",
+    "output_schema": "CSV with header: T (K), Cp (J/mol/K), Cv (J/mol/K), Ch (J/mol/K), anharmonic (J/mol/K). Rows correspond to all temperatures from the input Cp dataset."
+  },
+  {
+    "id": "step_fitted_params",
+    "title": "Record fitted parameters",
+    "role": "scored",
+    "action": "Write the fitted anharmonic coefficient A, Einstein temperature θE, and high‑temperature Debye temperature θ∞ as a JSON object to the specified file.",
+    "output_file": "step_02_fitted_params.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Machine‑readable record of the key derived parameters. The checker cross‑checks these values against those recomputed from the CSV for structural consistency.",
+    "output_schema": "JSON object with keys: \"anharmonic_coefficient_A\" (number, J/mol/K²), \"einstein_temperature_thetaE\" (number, K), \"high_temp_debye_theta_inf\" (number, K)."
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_1",
+    "title": "Material parameter generation",
+    "role": "process",
+    "action": "Compute wavelength-dependent material properties for 11–12 μm: SiC complex permittivity from Lorentz model (high-frequency permittivity, TO/LO phonon frequencies, damping), graphene surface conductivity from Kubo formula (Fermi level 0.7 eV, scattering time 200 fs, temperature 315 K), and spacer permittivity (ε=2.25). Save to material_properties.csv.",
+    "output_file": "",
+    "evidence": "material_properties.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generates all wavelength‑dependent material data required by the RCWA solver.",
+    "output_schema": "CSV with columns: wavelength_um (float), eps_SiC_real (float), eps_SiC_imag (float), sigma_graphene_real (float), sigma_graphene_imag (float), eps_spacer (float)."
+  },
+  {
+    "id": "step_2",
+    "title": "RCWA simulation of composite structure",
+    "role": "scored",
+    "action": "Implement the modified RCWA for TM-polarized light: treat graphene as zero-thickness conducting interfaces via Toeplitz matrices of surface conductivity. Stack: SiC substrate, 30 graphene sheets with 10 nm dielectric spacers (ε=2.25) forming a 300 nm bundle, Si grating (ε=12.1, period Λ=37.51 μm, height 235 nm, duty cycle 39%). Compute emissivity (1 − total reflected power) over wavelengths 11–12 μm (step ~0.01 μm) and emission angles from -90° to 90° (step ~0.5°). Write the emissivity matrix to emissivity_data.csv.",
+    "output_file": "emissivity_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Angle‑ and frequency‑resolved emissivity for the SiC/graphene‑bundle/Si‑grating structure. The raw artifact from which angular dispersion is recomputed.",
+    "output_schema": "CSV. First column: wavelength_um (float). Subsequent columns: angle_{deg} (e.g., angle_-90, angle_-89.5, ...), values emissivity (float in [0,1]). One row per wavelength. Grid uniform."
+  },
+  {
+    "id": "step_3",
+    "title": "Angular dispersion analysis",
+    "role": "scored",
+    "action": "From emissivity_data.csv, for each wavelength locate the angle of peak emissivity, determine the angular span where emissivity ≥ half of that peak (FWHM), then compute the maximum FWHM across wavelengths as the angular dispersion Δθ. Write Δθ (in degrees) to angular_dispersion.txt.",
+    "output_file": "angular_dispersion.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The headline angular dispersion metric (FWHM of emissivity peak over 11–12 µm) written as a single float.",
+    "output_schema": "A single float value representing Δθ in degrees."
+  }
+]

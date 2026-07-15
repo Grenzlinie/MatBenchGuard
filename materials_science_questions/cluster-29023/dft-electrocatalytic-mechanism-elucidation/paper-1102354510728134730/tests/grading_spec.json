@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The adsorption free energy is compared to the paper's reported reference with a tolerance accounting for DFT toolchain spread. The thermodynamic trend flags are recomputed from the stepwise free energies to verify the reported mechanism (ORR downhill, WOR uphill).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "free_energy_profiles.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "OO_adsorption_on_Nplus_delta_G_eV",
+            "ORR",
+            "WOR",
+            "ORR_downhill",
+            "WOR_uphill_steps"
+          ],
+          "properties": {
+            "OO_adsorption_on_Nplus_delta_G_eV": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "ORR": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "species",
+                  "delta_G_eV"
+                ],
+                "properties": {
+                  "species": {
+                    "type": "string"
+                  },
+                  "delta_G_eV": {
+                    "type": "number",
+                    "unit": "eV"
+                  }
+                }
+              }
+            },
+            "WOR": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "species",
+                  "delta_G_eV"
+                ],
+                "properties": {
+                  "species": {
+                    "type": "string"
+                  },
+                  "delta_G_eV": {
+                    "type": "number",
+                    "unit": "eV"
+                  }
+                }
+              }
+            },
+            "ORR_downhill": {
+              "type": "boolean"
+            },
+            "WOR_uphill_steps": {
+              "type": "boolean"
+            }
+          }
+        },
+        "description": "Computed adsorption free energy of *OO* on the pyridinium N⁺ site (eV), stepwise ΔG for ORR and WOR intermediates, and thermodynamic pathway flags."
+      }
+    ],
+    "notes": "The checker compares OO_adsorption_on_Nplus_delta_G_eV to the paper’s reference value within a tolerance that accounts for DFT‑toolchain variance. The boolean flags must be consistent with the agent’s own reported ΔG values: ORR_downhill is true iff all entries in ORR have delta_G_eV < 0; WOR_uphill_steps is true iff at least one entry in WOR has delta_G_eV > 0. No hidden gold is needed for the flags; they are validated against the stepwise data."
+  },
+  "steps": [
+    {
+      "id": "check_oo_adsorption",
+      "output_file": "free_energy_profiles.json",
+      "kind": "numeric",
+      "field": "OO_adsorption_on_Nplus_delta_G_eV",
+      "target": -0.906,
+      "tolerance_abs": 0.2,
+      "weight": 0.6,
+      "description": "Adsorption free energy of *OO* on pyridinium N+ site"
+    },
+    {
+      "id": "check_orr_downhill",
+      "output_file": "free_energy_profiles.json",
+      "kind": "structural",
+      "field": "ORR",
+      "condition": "all entries delta_G_eV < 0",
+      "weight": 0.2,
+      "description": "ORR pathway must be thermodynamically downhill"
+    },
+    {
+      "id": "check_wor_uphill",
+      "output_file": "free_energy_profiles.json",
+      "kind": "structural",
+      "field": "WOR",
+      "condition": "at least one entry delta_G_eV > 0",
+      "weight": 0.2,
+      "description": "WOR pathway must have at least one uphill step"
+    }
+  ]
+}

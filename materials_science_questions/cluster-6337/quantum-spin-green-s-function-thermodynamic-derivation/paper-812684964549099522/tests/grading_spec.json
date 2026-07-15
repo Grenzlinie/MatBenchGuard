@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Analytical spin-wave predictions are recomputed from public parameters (T, J, N, a2D) and compared to the agent's reported simulated moments with tolerance; full recompute from raw MC samples is infeasible without access to the agent's simulation trace.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetization_moments.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Analytical spin-wave mean magnetization and susceptibility/variance used as reference for comparing simulation moments.",
+      "source_provenance": "Derived from equations (4) and (8) in the paper, with parameters T=0.5, J=1, N=1024, a2D=258.6.",
+      "generation_method": "Computed from the formulas using standard math functions in the checker's prepare block.",
+      "why_not_fabricated": "These are exact analytic values derived from the paper's own formulas; the checker recomputes them to ensure correctness."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetization_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "mean",
+            "variance",
+            "skewness",
+            "analytical_mean",
+            "analytical_chi"
+          ],
+          "properties": {
+            "mean": {
+              "type": "number"
+            },
+            "variance": {
+              "type": "number"
+            },
+            "skewness": {
+              "type": "number"
+            },
+            "analytical_mean": {
+              "type": "number"
+            },
+            "analytical_chi": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Monte Carlo magnetization moments (mean, variance, skewness) and the theoretically expected spin‑wave values (analytical_mean, analytical_chi). The hidden checker recomputes the expected references and verifies mean and variance within tolerance and skewness ≥0.1."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "mean_relative_tolerance",
+      "output_file": "magnetization_moments.json",
+      "weight": 0.3333,
+      "kind": "recompute",
+      "description": "Check simulated mean magnetization within 5% of analytical spin-wave mean.",
+      "field": "mean",
+      "tolerance_relative": 0.05
+    },
+    {
+      "id": "variance_relative_tolerance",
+      "output_file": "magnetization_moments.json",
+      "weight": 0.3333,
+      "kind": "recompute",
+      "description": "Check variance within 5% of analytical spin-wave expectation.",
+      "field": "variance",
+      "tolerance_relative": 0.05
+    },
+    {
+      "id": "skewness_threshold",
+      "output_file": "magnetization_moments.json",
+      "weight": 0.3334,
+      "kind": "threshold",
+      "description": "Check skewness >= 0.1.",
+      "field": "skewness",
+      "threshold": 0.1
+    }
+  ]
+}

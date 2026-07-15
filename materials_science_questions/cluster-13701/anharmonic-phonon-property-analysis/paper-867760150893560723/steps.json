@@ -1,0 +1,80 @@
+[
+  {
+    "id": "simulation",
+    "title": "Numerical integration of the reduced integro-differential equation",
+    "role": "process",
+    "action": "Solve the nonlinear Volterra-type integro-differential equation for the anharmonic bond coordinate q(τ) with symmetric quartic potential V(x)/C = 0.5x^2 + 0.25x^4 and memory kernel k(τ) = –J₁(τ)/τ, using initial conditions q(0)=A, dq/dτ(0)=0, for amplitudes A in [1.0, 1.4] (step 0.01) up to τ_max=100000 with integration step h=0.05. Store the time series for subsequent analysis.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core simulation that generates the raw q(τ) data for all amplitudes.",
+    "output_schema": ""
+  },
+  {
+    "id": "envelope",
+    "title": "Compute envelope q_env",
+    "role": "scored",
+    "action": "For each A, compute the envelope of |q(τ)| at late times (τ≈100000). Save as CSV with columns A, q_env.",
+    "output_file": "step_01_envelope.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Envelope values of |q(τ)| at τ≈10^5 for each initial amplitude A.",
+    "output_schema": "A: float, q_env: float"
+  },
+  {
+    "id": "frequency",
+    "title": "Compute breather frequency Ω(A)",
+    "role": "scored",
+    "action": "For A above the critical amplitude, determine the dominant frequency of q(τ) at late times (e.g., from zero crossings or Fourier transform of the tail). Save as CSV with columns A, omega.",
+    "output_file": "step_02_frequency.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Breather frequency Ω(A) for A above the critical amplitude.",
+    "output_schema": "A: float, omega: float"
+  },
+  {
+    "id": "relaxation_time",
+    "title": "Compute relaxation time τ_rel",
+    "role": "scored",
+    "action": "For A below the critical amplitude, determine the time when the envelope q_env(τ) decays to A/10. Save as CSV with columns A, tau_rel.",
+    "output_file": "step_03_relaxation_time.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Relaxation time τ_rel for A below the critical amplitude.",
+    "output_schema": "A: float, tau_rel: float"
+  },
+  {
+    "id": "critical_amplitude",
+    "title": "Determine critical amplitude A_c",
+    "role": "scored",
+    "action": "From the envelope data, identify the amplitude at which the transition occurs (sharp drop in q_env or divergence of τ_rel) and save as a plain text file containing the numerical value.",
+    "output_file": "step_04_critical_amplitude.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Numerically determined critical amplitude A_c.",
+    "output_schema": "single float"
+  },
+  {
+    "id": "powerlaw_exponents",
+    "title": "Extract power-law exponents of divergence",
+    "role": "scored",
+    "action": "From the computed τ_rel(A) for A<A_c and the modulation period 2π/ω_mod(A) (extracted from the modulation envelope of q(τ) for A>A_c) fit power laws: τ_rel ∝ (A_c - A)^{-γ} and 2π/ω_mod ∝ (A - A_c)^{-δ}. Save the fitted exponents and fit ranges as a JSON file with keys gamma, gamma_error, delta, delta_error, fit_range.",
+    "output_file": "step_05_powerlaw_exponents.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted power-law exponents for τ_rel and modulation period divergence near A_c.",
+    "output_schema": "JSON object with keys: gamma, gamma_error, delta, delta_error, fit_range"
+  }
+]

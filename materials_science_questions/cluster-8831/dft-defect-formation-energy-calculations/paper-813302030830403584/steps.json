@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_alb",
+    "title": "Generate adaptive local basis functions (ALBs)",
+    "role": "process",
+    "action": "Partition the supercell into 6×6×6 rectangular elements (each element corresponds to a conventional BCC unit cell containing 2 Na atoms) and their extended elements. For each element, solve the local Kohn-Sham problem in the extended element using plane-wave DFT with the HGH pseudopotential, with the potential taken from the current electron density (or initial guess). Truncate to exactly 42 ALBs per atom and orthonormalize via Gram-Schmidt. This produces orthonormal adaptive local basis functions supported on each element, which serve as the primitive basis for EO construction.",
+    "output_file": "",
+    "evidence": "alb_generation.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Log of the ALB generation process, optionally recording the number of ALBs generated per element, eigenvalues, and convergence status.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_eo",
+    "title": "Construct element orbitals (EOs) from ALBs",
+    "role": "process",
+    "action": "Assemble the global discontinuous Galerkin Hamiltonian matrix in the ALB basis. For each element, extract the local Hamiltonian submatrix restricted to ALBs in its extended element, diagonalize to obtain low-energy candidate functions, then solve the localization generalized eigenvalue problem using a weight function with a localization radius of 6.0 a.u. to select exactly 4 localized EOs per atom. Build the global EO coefficient matrix.",
+    "output_file": "",
+    "evidence": "eo_construction.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Log of the EO construction process, optionally recording timings and the number of EOs retained per element.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_energy",
+    "title": "Compute total free energy per atom vs lattice constant",
+    "role": "scored",
+    "action": "For each lattice constant in {7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9} a.u., set up the BCC Na supercell with 432 atoms accordingly, initialize electron density, and perform self-consistent field iterations in the EO basis until convergence. Record the converged total free energy per atom. Output all results to a CSV file.",
+    "output_file": "na_lattice_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the lattice constant and the computed total free energy per atom for each lattice constant. The checker will read these values, compare against hidden reference data from the paper, compute a mean absolute error, and assign a reward based on whether the error meets a prescribed accuracy threshold (lower error yields higher reward).",
+    "output_schema": "Header: lattice_constant, total_free_energy_per_atom. Each row: lattice_constant (float, in atomic units), total_free_energy_per_atom (float, in Hartree)."
+  }
+]

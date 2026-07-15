@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_1",
+    "title": "BOMD simulations for melting detection",
+    "role": "process",
+    "action": "Run Born–Oppenheimer molecular dynamics (BOMD) simulations using Quantum ESPRESSO for BCC (4×4×4, 128 atoms) and FCC (3×3×3, 108 atoms) sodium at a range of pressures and temperatures. Use a norm-conserving LDA pseudopotential for Na, plane-wave cutoff 20 Ry, Gamma‑point Brillouin‑zone integration, time step 3.6 fs (BCC) / 2.4 fs (FCC), NVT ensemble with a chain of four Nosé–Hoover thermostats. Generate ionic trajectories (positions vs time) for subsequent melting analysis.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Melting temperature determination",
+    "role": "scored",
+    "action": "From the melting simulation trajectories, compute the mean‑square displacement ⟨u²(t)⟩ and optionally the pair correlation function g(r). Detect melting by the onset of linear diffusion (MSD criterion) and optionally confirm with the RMS criterion. Determine melting temperature intervals (accuracy ±50–100 K) for the following pressures: 27.5 GPa, 64.5 GPa, and 99.5 GPa. Report the results in melting_points.json.",
+    "output_file": "melting_points.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object mapping pressure (GPa) to melting temperature (K) with error estimate.",
+    "output_schema": "object with pressure (number, GPa) as keys; each value is an object with keys 'melting_temperature_K' (number) and 'error_K' (number). Example: {\"64.5\": {\"melting_temperature_K\": 850, \"error_K\": 50}}"
+  },
+  {
+    "id": "step_3",
+    "title": "BOMD simulations for dynamic structure factor",
+    "role": "process",
+    "action": "Run additional BOMD simulations for BCC (4×4×4, 128 atoms) at p=64.5 GPa, T=400 K and T=700 K; and for FCC (4×4×4, 256 atoms) at p=67 GPa, T=500 K and p=99.5 GPa, T=250 K. Use the same DFT parameters and pseudopotential as in the melting simulations. Generate ionic trajectories for dynamic structure factor calculation.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Phonon frequency extraction from dynamic structure factor",
+    "role": "scored",
+    "action": "From the DCF simulation trajectories, compute the one‑phonon dynamic structure factor S(q,ω). Identify phonon frequencies as peak positions for selected q‑points along high‑symmetry directions: [100] (Γ–H) for BCC, with q‑points (0.25,0,0), (0.5,0,0), (0.75,0,0), (1,0,0); [110] (Γ–K) for FCC, with q‑points (0.25,0.25,0), (0.5,0.5,0), (0.75,0.75,0), (1,1,0). Extract frequencies for longitudinal and transverse modes. Report the frequencies in phonon_frequencies.json.",
+    "output_file": "phonon_frequencies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Array of objects with phonon frequencies at selected (pressure, q‑point) points.",
+    "output_schema": "array of objects; each object has keys: 'pressure_GPa' (number), 'phase' (string, one of 'bcc','fcc'), 'q_point' (list of 3 numbers in units of reciprocal lattice vectors), 'mode' (string, one of 'longitudinal','transverse'), 'frequency_cm1' (number)."
+  }
+]

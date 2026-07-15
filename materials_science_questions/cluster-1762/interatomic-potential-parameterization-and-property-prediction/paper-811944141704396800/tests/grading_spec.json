@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Full recompute of elastic constants requires implementing the forward-problem formalism (equilibrium, stress-strain) within the checker, which is not feasible in the lightweight verifier environment. Result-level comparison against the paper's reported model values with appropriate tolerances (relative for most constants, absolute for c14) is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_full_model.csv": "reference_match",
+    "step_02_ablation.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold elastic constants and tolerances for the full-model step, and ablation threshold.",
+      "source_provenance": "Paper Table 14, row 'This work' for the quartz forward model. Values: c11=0.868, c12=0.073, c13=0.119, c14=-0.183, c44=0.74, K=0.358 Mb. Paper states model reproduces most constants excellently; c44 within ~20%.",
+      "generation_method": "Direct copy from the paper's own computed model values (the reproduction target). Tolerances: relative 10% for c11, c12, c13, K; relative 20% for c44 (to match paper's own stated accuracy); absolute 0.02 for c14 (small value). Ablation threshold <0.05 Mb derived from paper's claim that bulk modulus vanishes without non-tetrahedral O-O interactions.",
+      "why_not_fabricated": "Gold values are the paper's stated model results that the solver must reproduce by running the prescribed forward procedure. The tolerances are chosen to distinguish a correct re-implementation from a random guess while accounting for minor numerical differences."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_full_model.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "c11",
+            "c12",
+            "c13",
+            "c14",
+            "c44",
+            "K"
+          ],
+          "units": {
+            "c11": "Mb",
+            "c12": "Mb",
+            "c13": "Mb",
+            "c14": "Mb",
+            "c44": "Mb",
+            "K": "Mb"
+          }
+        },
+        "description": "Six independent elastic constants and bulk modulus of alpha quartz computed from the full two-body central-force model. The hidden checker compares each value to the paper's reported model reference using appropriate tolerances."
+      },
+      {
+        "file": "step_02_ablation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "K_ablated"
+          ],
+          "units": {
+            "K_ablated": "Mb"
+          }
+        },
+        "description": "Bulk modulus after setting the force parameters for O-O interactions with separation ≥ 3.33 Å to zero. The hidden checker verifies that the value is negligibly small (< 0.05 Mb), confirming that nontetrahedral O:O interactions control the bulk modulus."
+      }
+    ],
+    "notes": "The force parameters are provided in the step actions; the agent does not need to perform inverse fitting. The ablation step is load-bearing: the correct near-zero result can only be obtained if the forward computation is implemented correctly, preventing bypass of the main computation."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_full_model.csv",
+      "weight": 0.7,
+      "kind": "result_compare",
+      "targets": {
+        "c11": 0.868,
+        "c12": 0.073,
+        "c13": 0.119,
+        "c14": -0.183,
+        "c44": 0.74,
+        "K": 0.358
+      },
+      "tolerances": {
+        "c11": 0.1,
+        "c12": 0.1,
+        "c13": 0.1,
+        "c14": 0.02,
+        "c44": 0.2,
+        "K": 0.1
+      },
+      "tolerance_type": {
+        "c14": "absolute"
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_ablation.csv",
+      "weight": 0.3,
+      "kind": "threshold",
+      "threshold": 0.05,
+      "metric": "K_ablated"
+    }
+  ]
+}

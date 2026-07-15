@@ -1,0 +1,41 @@
+[
+  {
+    "id": "s1",
+    "title": "Compute raw defect and unoccupied trap energies",
+    "role": "process",
+    "action": "Using the provided lattice and gas-lattice potentials and the temperature-dependent lattice constants, perform static Mott-Littleton defect calculations for each trap type (anion vacancy, cation vacancy, divacancy, neutral trivacancy, charged trivacancy, tetravacancy) at each of the four temperatures (298 K, 1773 K, 2273 K, 2773 K). For every configuration, compute the defect energy (with Xe atom present) and the unoccupied trap energy (without Xe). Store the raw energies in a temporary file for the next step.",
+    "output_file": "",
+    "evidence": "raw_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Core simulation step that produces the fundamental defect and trap energies required to build all target quantities. The agent must carefully set up the vacancy aggregate geometries as described in the paper (e.g., linear vs. L-shaped configurations).",
+    "output_schema": "JSON object containing, for each trap type, arrays of defect and unoccupied trap energies (in eV) indexed by temperature."
+  },
+  {
+    "id": "s2",
+    "title": "Derive Schottky trio, Frenkel pair, and binding energies",
+    "role": "process",
+    "action": "From the raw unoccupied trap energies and an additional simulation of an isolated anion interstitial, compute the Frenkel pair formation energy E_f = E(anion vacancy) + E(anion interstitial). Calculate the binding energies of vacancy aggregates (B_dv, B_nt, B_ct, B_tv) using the relation: binding energy = (sum of isolated component formation energies) - (energy of the complex). Derive the Schottky trio formation energy E_s using the stoichiometry-independent neutral trivacancy trap formation relation E_t = E_s - B_nt, referencing the computed unoccupied neutral trivacancy energy. Store the derived E_s, E_f, and binding energies.",
+    "output_file": "",
+    "evidence": "derived_basic_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This step converts raw simulation outputs into the basic energy parameters (E_s, E_f, binding energies) required by the trap formation energy formulas in the paper’s Appendix.",
+    "output_schema": "JSON object with keys schottky_trio_energy, frenkel_pair_energy, and binding_energy_divacancy, binding_energy_neutral_trivacancy, binding_energy_charged_trivacancy, binding_energy_tetravacancy, each a list of 4 floats (eV) for the four temperatures."
+  },
+  {
+    "id": "s3",
+    "title": "Compute final target energies",
+    "role": "scored",
+    "action": "Using the raw energies from Step s1 and the derived basic energies from Step s2, compute: (a) defect energies (Table 3); (b) unoccupied trap energies (Table 4); (c) trap formation energies for anion-deficient, stoichiometric, and anion-excess UO₂ using the expressions in the paper’s Appendix; (d) solution energies for pre-existing traps (defect energy minus unoccupied trap energy); (e) solution energies for full thermodynamic equilibrium (add the appropriate trap formation energy to the pre-existing solution energy); (f) migration activation energies for the trivacancy mechanism by simulating the energy cost to create a second trivacancy adjacent to the trapped Xe and the energy to move the Xe to a midway position. Output all quantities in a single structured JSON file.",
+    "output_file": "computed_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing all the numerical energies required to reproduce Tables 3–8 and the derived basic energies. The checker will validate internal consistency and compare the values against hidden gold references.",
+    "output_schema": "Object with keys: defect_energies (object mapping trap name to list of 4 floats), unoccupied_trap_energies (same structure), trap_formation_energies (object with sub-keys 'anion_deficient', 'stoichiometric', 'anion_excess', each mapping trap name to list of 4 floats), solution_energies_pre_existent (object mapping trap name to list of 4 floats), solution_energies_equilibrium (object with stoichiometry sub-keys each mapping trap name to list of 4 floats), migration_activation_energies (list of 4 floats), basic_energies (object with keys 'schottky_trio_energy', 'frenkel_pair_energy', and binding energies for each aggregate, each a list of 4 floats). All values in eV."
+  }
+]

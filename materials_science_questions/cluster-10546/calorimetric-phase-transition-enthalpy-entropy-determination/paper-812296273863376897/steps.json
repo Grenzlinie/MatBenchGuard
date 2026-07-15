@@ -1,0 +1,54 @@
+[
+  {
+    "id": "compute_moments",
+    "title": "Compute molecular moments of inertia and reduced moment",
+    "role": "process",
+    "action": "From the molecular geometry (bond lengths: C=C 1.353 Å, C-C 1.54 Å, C-H 1.09 Å; bond angles: C-C-C 120°, C-C-H and H-C-H 109°28'), construct atomic coordinates for a planar carbon skeleton with V_h symmetry. Compute the center‑of‑mass moments of inertia tensor, diagonalize to obtain the three principal moments Ia, Ib, Ic (in g·cm²), and compute their product. The overall rotational symmetry number is σ=4. For each methyl group, estimate the reduced moment I_red for internal rotation using the formula I_red = I_α I_t / (I_α + I_t), where I_α ≈ 5.3×10⁻⁴⁰ g·cm² is the moment of the methyl rotor about its symmetry axis, and I_t is the moment of inertia of the remainder of the molecule projected onto the rotation axis. Write all computed constants to /app/outputs/moments.json.",
+    "output_file": "moments.json",
+    "evidence": "moments.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file with the principal moments, product, symmetry number, and reduced moment for methyl rotation.",
+    "output_schema": "JSON object with keys: Ia, Ib, Ic, product_IA, symmetry_number, I_red."
+  },
+  {
+    "id": "assign_freqs",
+    "title": "Assign vibrational fundamentals",
+    "role": "process",
+    "action": "Using the computed normal-mode frequencies and the observed Raman/infrared spectra, assign each fundamental by symmetry and frequency. Write the assigned frequencies to /app/outputs/assigned_frequencies.csv.",
+    "output_file": "assigned_frequencies.csv",
+    "evidence": "assigned_frequencies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file listing all 36 harmonic fundamental frequencies used in the partition function.",
+    "output_schema": "CSV with columns: mode, frequency_cm1."
+  },
+  {
+    "id": "fit_barrier",
+    "title": "Fit internal-rotation barrier and anharmonicity",
+    "role": "process",
+    "action": "Using the assigned frequencies and the computed molecular constants (Step 1), compute harmonic thermodynamic functions. Fit the barrier height V3 and anharmonicity parameters (Z, nu) to calorimetric entropy and heat capacity data. Write the optimized parameters to /app/outputs/barrier_params.json.",
+    "output_file": "barrier_params.json",
+    "evidence": "barrier_params.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the fitted barrier height and anharmonicity constants.",
+    "output_schema": "JSON object with keys: V3 (cal/mol), Z (cal/K/mol), nu (cm⁻¹)."
+  },
+  {
+    "id": "calc_thermo",
+    "title": "Calculate thermodynamic functions",
+    "role": "scored",
+    "action": "Using assigned fundamentals (Step 2), fitted barrier/anharmonicity (Step 3), and computed moments (Step 1), compute the five ideal‑gas thermodynamic functions at the 15 required temperatures via standard statistical mechanics. Write the results to /app/outputs/thermodynamic_functions.csv.",
+    "output_file": "thermodynamic_functions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the final computed thermodynamic functions for the 15 temperatures.",
+    "output_schema": "CSV with columns: T (K), F_minus_H0_over_T (cal/K/mol), H_minus_H0_over_T (cal/K/mol), H_minus_H0 (kcal/mol), S (cal/K/mol), Cp (cal/K/mol)."
+  }
+]

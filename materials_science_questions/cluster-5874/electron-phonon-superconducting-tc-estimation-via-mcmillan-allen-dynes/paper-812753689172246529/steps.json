@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step0_dft",
+    "title": "DFT ground-state calculation",
+    "role": "process",
+    "action": "Perform self-consistent noncollinear DFT calculation for monolayer MoS2 with electron doping n2D=9e13 cm^-2 using Quantum ESPRESSO, LDA functional, and jellium background. Obtain charge density and electronic eigenvalues on a 36x36 k-mesh.",
+    "output_file": "",
+    "evidence": "dft_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step1_dfpt",
+    "title": "DFPT phonon calculation",
+    "role": "process",
+    "action": "Using the ground-state charge density, run DFPT on a coarse 9x9 q-grid to compute phonon frequencies, eigenvectors, and electron-phonon matrix elements on the coarse (k,q) grids.",
+    "output_file": "",
+    "evidence": "dfpt_output.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_wannier",
+    "title": "Wannier interpolation to dense grids",
+    "role": "process",
+    "action": "Use Wannier90 to interpolate electronic and vibrational quantities to dense grids (up to 1e7 k-points, 1e6 q-points) and generate dense electron-phonon matrix elements.",
+    "output_file": "",
+    "evidence": "wannier_interpolation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_self_energy",
+    "title": "Electron self-energy on real axis",
+    "role": "scored",
+    "action": "From the dense electron-phonon matrix elements, compute the Fan-Migdal electron self-energy for the outer spin-up band at momentum k_A (near K). Output the imaginary part ImΣ as a function of energy.",
+    "output_file": "self_energy_imag.dat",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "Imaginary part of electron-phonon self-energy for the outer spin-up band at k=k_A.",
+    "output_schema": "Two tab-separated columns: energy (eV), ImSigma (eV). No header."
+  },
+  {
+    "id": "step4_spectral",
+    "title": "Spectral function calculation",
+    "role": "scored",
+    "action": "Using the self-energy from the previous step, compute the electron spectral function A(k,ω) for the same outer spin-up band along a k-path near the K point covering binding energies from -100 meV to 0 meV. Output a table with k_index, k_path_coordinate, energy, and spectral weight.",
+    "output_file": "spectral_function.dat",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "tsv",
+    "purpose": "scored",
+    "description": "Spectral function along a path near K for the outer spin-up band.",
+    "output_schema": "Four tab-separated columns: k_index (int), k_path_coordinate (float, Å−1), energy (eV), spectral_weight (a.u.). No header."
+  },
+  {
+    "id": "step5_poles",
+    "title": "Complex-plane quasiparticle pole analysis",
+    "role": "scored",
+    "action": "Perform analytic continuation of the self-energy to the lower half-plane and solve the Dyson equation for complex quasiparticle poles for the same outer spin-up band along the same k-path. Output a JSON file with the poles for each k-point.",
+    "output_file": "quasiparticle_poles.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Complex quasi-particle poles (energies, lifetimes, residues) for the outer spin-up band.",
+    "output_schema": "Array of objects: { 'k_index' (int), 'k_path_coordinate' (float), 'poles': [ { 'n' (int 1-3), 'E_qp' (float, eV), 'Gamma_qp' (float, eV positive), 'residue_real' (float), 'residue_imag' (float) } ] }"
+  }
+]

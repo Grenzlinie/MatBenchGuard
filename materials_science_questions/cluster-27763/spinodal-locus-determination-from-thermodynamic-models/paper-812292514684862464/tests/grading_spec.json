@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent's outputs are final curve points with no raw intermediate data to recompute from; the checker independently computes a reference from the same quasichemical equations and compares the agent's curves using RMS deviation (T0 fallback).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_diagram_3d.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "curve_type",
+            "T_star",
+            "P_star"
+          ],
+          "units": {
+            "T_star": "dimensionless (kT/ε)",
+            "P_star": "dimensionless (Pv₀/ε)"
+          }
+        },
+        "description": "CSV containing binodal and spinodal points. The agent's curves must fall within a pre‑set tolerance of independently computed reference curves, with lower RMS deviation being better."
+      },
+      {
+        "file": "density_maxima_3d.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_star",
+            "P_star",
+            "rho"
+          ],
+          "units": {
+            "T_star": "dimensionless (kT/ε)",
+            "P_star": "dimensionless (Pv₀/ε)",
+            "rho": "dimensionless fractional coverage"
+          }
+        },
+        "description": "CSV containing points on the density‑maxima locus. The agent's points must lie within tolerance of reference points, with lower deviation scoring higher."
+      }
+    ],
+    "notes": "The checker will compare the submitted curves to independently derived reference curves using tolerance‑based metrics (e.g., RMS deviation) and will also verify structural properties (e.g., reentrant spinodal shape, location of density‑maxima locus). Scoring is monotonic in quality: better agreement with the reference (within tolerance) yields full credit; deviation beyond tolerance reduces credit proportionally."
+  },
+  "steps": [
+    {
+      "id": "phase_diagram",
+      "output_file": "phase_diagram_3d.csv",
+      "kind": "curve_compare",
+      "weight": 0.7,
+      "tolerance_rms": 0.03,
+      "curve_types": [
+        "binodal",
+        "spinodal"
+      ],
+      "description": "Binodal and spinodal curves in T*-P* plane"
+    },
+    {
+      "id": "density_maxima",
+      "output_file": "density_maxima_3d.csv",
+      "kind": "curve_compare",
+      "weight": 0.3,
+      "tolerance_rms": 0.05,
+      "description": "Density maxima locus in T*-P* plane"
+    }
+  ]
+}

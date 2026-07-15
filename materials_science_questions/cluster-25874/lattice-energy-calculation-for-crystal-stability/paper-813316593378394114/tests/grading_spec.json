@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute energy differences from agent-reported raw energies and compare to paper-reported reference deltas within tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold reference values for delta_cryst (1.30 kcal/mol) and delta_opt (1.56 kcal/mol) from Table 7 of the paper.",
+      "source_provenance": "paper Table 7: total energy difference for crystallographic and optimized structures.",
+      "generation_method": "Directly from paper: delta_cryst = 1.3 kcal/mol (crystallographic), delta_opt = 1.56 kcal/mol (optimized).",
+      "why_not_fabricated": "These are the published values from the paper's Table 7; they are the authoritative reference for the Dreiding 2.21 results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energy_I_cryst": "number (float)",
+            "energy_II_cryst": "number (float)",
+            "energy_I_opt": "number (float)",
+            "energy_II_opt": "number (float)",
+            "delta_cryst": "number (float)",
+            "delta_opt": "number (float)"
+          },
+          "items": {
+            "energy_I_cryst": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "energy_II_cryst": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "energy_I_opt": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "energy_II_opt": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "delta_cryst": {
+              "type": "number",
+              "unit": "kcal/mol"
+            },
+            "delta_opt": {
+              "type": "number",
+              "unit": "kcal/mol"
+            }
+          }
+        },
+        "description": "File containing the computed total lattice energies (kcal/mol) for the two polymorphs in both crystallographic and optimized structures, and the two energy differences. The values of delta_cryst and delta_opt will be compared to hidden reference values with a tolerance; their sign indicates relative stability without revealing the expected direction."
+      }
+    ],
+    "notes": "The agent must use the Dreiding 2.21 force field with QEq charges. The CIF files should be obtained from the IUCr electronic archives. LAMMPS is the recommended tool. Only energies.json is scored."
+  },
+  "steps": [
+    {
+      "id": "shape_and_keys",
+      "output_file": "energies.json",
+      "kind": "shape",
+      "weight": 0.05,
+      "required_keys": [
+        "energy_I_cryst",
+        "energy_II_cryst",
+        "energy_I_opt",
+        "energy_II_opt",
+        "delta_cryst",
+        "delta_opt"
+      ]
+    },
+    {
+      "id": "delta_cryst",
+      "output_file": "energies.json",
+      "kind": "numeric",
+      "metric": "delta_cryst",
+      "reference": 1.3,
+      "tolerance_abs": 0.3,
+      "weight": 0.4,
+      "note": "Recompute delta_cryst from energy_II_cryst - energy_I_cryst, then check abs(recomputed - reference) <= tolerance_abs."
+    },
+    {
+      "id": "delta_opt",
+      "output_file": "energies.json",
+      "kind": "numeric",
+      "metric": "delta_opt",
+      "reference": 1.56,
+      "tolerance_abs": 0.3,
+      "weight": 0.4,
+      "note": "Recompute delta_opt from energy_II_opt - energy_I_opt, then check abs(recomputed - reference) <= tolerance_abs."
+    },
+    {
+      "id": "internal_consistency",
+      "output_file": "energies.json",
+      "kind": "numeric",
+      "metric": "consistency",
+      "weight": 0.15,
+      "note": "Check that |submitted_delta_cryst - recomputed_delta_cryst| < 0.01 and similarly for delta_opt."
+    }
+  ]
+}

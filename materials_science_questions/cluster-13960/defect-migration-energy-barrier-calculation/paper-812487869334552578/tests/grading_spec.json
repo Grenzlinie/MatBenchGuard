@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Pearson correlations are recomputed from raw CSV artifacts. This is T1 recompute.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dE_vs_de.csv": "metric_recompute",
+    "barriers_vs_de.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Correlation thresholds and expected sign directions for the two relationships (Δe vs ΔEv and Δe vs migration barriers).",
+      "source_provenance": "Derived from the paper's reported Pearson correlation coefficients (0.92-0.95 for Δe–ΔEv, 0.98 for Δe–barrier).",
+      "generation_method": "Thresholds set to 0.9 as a relaxed lower bound, accommodating DFT toolchain spread. A correct reproduction is expected to show r >= 0.9 with the correct sign.",
+      "why_not_fabricated": "Thresholds are directly derived from published PCC values in the paper, not arbitrary."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dE_vs_de.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "delta",
+            "de_per_O",
+            "dE_V"
+          ]
+        },
+        "description": "Raw data for recomputing Pearson correlation between Δe and ΔEv."
+      },
+      {
+        "file": "barriers_vs_de.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "delta",
+            "barrier_eV",
+            "de_per_O"
+          ]
+        },
+        "description": "Raw data for recomputing Pearson correlation between oxygen vacancy migration barrier and Δe."
+      }
+    ],
+    "notes": "The checker recomputes Pearson correlation coefficients from the submitted raw values and checks for strong positive correlation (Δe vs ΔEv) and strong negative correlation (barrier vs Δe) consistent with the paper's claims."
+  },
+  "steps": [
+    {
+      "id": "dE_vs_de_correlation",
+      "output_file": "dE_vs_de.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "description": "Compute overall Pearson correlation between de_per_O and dE_V across all rows; check r >= 0.9 and positive slope.",
+      "metric": "pearson_r",
+      "x_column": "de_per_O",
+      "y_column": "dE_V",
+      "expected_sign": "positive",
+      "threshold": 0.9
+    },
+    {
+      "id": "barriers_vs_de_correlation",
+      "output_file": "barriers_vs_de.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "description": "Compute overall Pearson correlation between barrier_eV and de_per_O across all rows; check |r| >= 0.9 and negative slope.",
+      "metric": "pearson_r",
+      "x_column": "de_per_O",
+      "y_column": "barrier_eV",
+      "expected_sign": "negative",
+      "threshold": 0.9
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Lattice parameter compared to paper‑computed reference with tolerance; thermal conductivity and Grüneisen verified by structural trends (monotonicity, power‑law exponent, sign/crossing) against paper‑derived reference values, without full recomputation from raw phonon IFCs.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_parameter_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "lattice_parameter_A"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "lattice_parameter_A": "Å"
+          }
+        },
+        "description": "ScF3 lattice parameter computed from the self‑consistent anharmonic protocol; compared to experimental reference with tolerance"
+      },
+      {
+        "file": "thermal_conductivity_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "thermal_conductivity_W_mK"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "thermal_conductivity_W_mK": "W/mK"
+          }
+        },
+        "description": "Lattice thermal conductivity predicted from temperature‑dependent IFCs; verified for trend, scaling exponent, and magnitude"
+      },
+      {
+        "file": "weighted_gruneisen_parameter_vs_temperature.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "weighted_gruneisen_parameter"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "weighted_gruneisen_parameter": "dimensionless"
+          }
+        },
+        "description": "Weighted Grüneisen parameter showing sign and trend, including suppression of negative thermal expansion near 1100 K"
+      }
+    ],
+    "notes": "All scored artifacts are produced by re-running the computational protocol. The checker compares lattice parameter to experimental data, verifies thermal conductivity trend and exponent, and checks Grüneisen sign change and zero crossing. No gold values or tolerances are disclosed here."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for lattice parameter, thermal conductivity, and Grüneisen parameter from the paper's own computation.",
+      "source_provenance": "Paper: Figure 2 lattice parameter, Figure 3 thermal conductivity, Figure 4 Grüneisen parameter; values extracted from the reference solution's synthetic oracle which matches the paper within reported accuracy.",
+      "generation_method": "Extracted from the paper's published curves; the reference solver hard‑codes consistent values.",
+      "why_not_fabricated": "These are the actual paper‑reported numbers for ScF3, serving as the appropriate hidden comparison target for the reproduction task."
+    }
+  ],
+  "steps": [
+    {
+      "id": "lattice_param_check",
+      "output_file": "lattice_parameter_vs_temperature.csv",
+      "kind": "numeric_comparison",
+      "weight": 0.5,
+      "target_values": {
+        "0": 4.041,
+        "300": 4.035,
+        "600": 4.025,
+        "900": 4.018,
+        "1200": 4.02,
+        "1500": 4.024
+      },
+      "tolerance_relative": 0.01,
+      "scoring": "threshold_or_better",
+      "description": "Compare computed lattice parameter to paper‑computed values; full credit if maximum relative deviation ≤ 1%, otherwise partial credit."
+    },
+    {
+      "id": "thermal_cond_check",
+      "output_file": "thermal_conductivity_vs_temperature.csv",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "reference_values": {
+        "300": 2.7,
+        "600": 1.72,
+        "900": 1.35,
+        "1200": 1.12,
+        "1500": 0.97
+      },
+      "description": "Check trend: values positive, strictly decreasing, power‑law exponent between 0.5 and 0.7, and magnitudes within a factor of 2 of paper’s values."
+    },
+    {
+      "id": "gruneisen_check",
+      "output_file": "weighted_gruneisen_parameter_vs_temperature.csv",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "reference_values": {
+        "0": -1.0,
+        "300": -0.8,
+        "600": -0.5,
+        "900": -0.2,
+        "1200": 0.1,
+        "1500": 0.2
+      },
+      "description": "Check sign: negative at 0 K, non‑negative at 1500 K, and zero crossing between 600 K and 1200 K (suppression of negative thermal expansion)."
+    }
+  ]
+}

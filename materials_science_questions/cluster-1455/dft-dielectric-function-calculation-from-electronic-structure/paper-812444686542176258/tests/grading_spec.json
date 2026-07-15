@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "T0 is the strongest feasible tier: the headline is a set of scalars and a full recompute would require rerunning the shell model in the verifier (infeasible). Instead we compare the agent's reported values to the paper's gold with numerical tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dielectric_parameters.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values (gold) for ε0, ε∞, Vdε0_dV, Vdε∞_dV, γ_TO, γ_LO",
+      "source_provenance": "Paper Table 3 computed values for NaCl0.5Br0.5",
+      "generation_method": "Extracted from the paper's reported results",
+      "why_not_fabricated": "These are the exact values the paper claims as their computed results; they serve as the authoritative reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dielectric_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "ε0",
+            "ε∞",
+            "Vdε0_dV",
+            "Vdε∞_dV",
+            "γ_TO",
+            "γ_LO"
+          ],
+          "properties": {
+            "ε0": {
+              "type": "number"
+            },
+            "ε∞": {
+              "type": "number"
+            },
+            "Vdε0_dV": {
+              "type": "number"
+            },
+            "Vdε∞_dV": {
+              "type": "number"
+            },
+            "γ_TO": {
+              "type": "number"
+            },
+            "γ_LO": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Computed dielectric constants, volume derivatives, and Gruneisen parameters for NaCl0.5Br0.5."
+      }
+    ],
+    "notes": "The agent must implement the extended three-body force shell model from the cited references. All necessary numerical input data and model parameters are provided in the task instruction."
+  },
+  "steps": [
+    {
+      "id": "dielectric_values",
+      "output_file": "dielectric_parameters.json",
+      "weight": 1.0,
+      "kind": "numeric_field_match",
+      "fields": {
+        "ε0": {
+          "gold": 4.9,
+          "rtol": 0.01,
+          "atol": 0.1
+        },
+        "ε∞": {
+          "gold": 2.2,
+          "rtol": 0.01,
+          "atol": 0.1
+        },
+        "Vdε0_dV": {
+          "gold": 14.1,
+          "rtol": 0.01,
+          "atol": 0.1
+        },
+        "Vdε∞_dV": {
+          "gold": -0.96,
+          "rtol": 0.01,
+          "atol": 0.1
+        },
+        "γ_TO": {
+          "gold": 2.41,
+          "rtol": 0.01,
+          "atol": 0.1
+        },
+        "γ_LO": {
+          "gold": 1.05,
+          "rtol": 0.01,
+          "atol": 0.1
+        }
+      },
+      "pass_criterion": "each_to_one",
+      "description": "Compare agent's reported values to paper gold; each field passes if |val - gold| <= max(rtol*|gold|, atol) (i.e. relative ≤ 1% or absolute ≤ 0.1). Score = fraction of fields passing."
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Population_distance: recompute Pearson correlation; vibrational_frequencies: result-level range check; residence_times: structural ordering. T1 where possible.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "population_distance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "timestep",
+            "time_fs",
+            "nearest_Li_H_distance_A",
+            "Mulliken_population_charge"
+          ],
+          "units": {
+            "nearest_Li_H_distance_A": "angstrom",
+            "Mulliken_population_charge": "e"
+          }
+        },
+        "description": "Time series of nearest Li-H distance and Mulliken population for hydrogen. The checker will compute a measure of association between the two columns and score based on the trend."
+      },
+      {
+        "file": "vibrational_frequencies.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "description": "A single number (or space-separated list if multiple runs) in scientific notation, e.g. '2.0e13'. Unit: s⁻¹."
+        },
+        "description": "Li-H vibrational frequency estimated from the MD trajectory. The checker will verify the frequency falls within an expected range typical for this system."
+      },
+      {
+        "file": "residence_times.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "state",
+            "residence_time_fs"
+          ],
+          "units": {
+            "residence_time_fs": "fs"
+          }
+        },
+        "description": "Cumulative residence times for the three hydrogen states (a,b,c). The checker will inspect the relative ordering and magnitude of the residence times."
+      }
+    ],
+    "notes": "The first-principles MD simulation (step_0) is expensive; the agent may run it on external/compute resources and bring the scored artifacts back into the sandbox. The scored targets are derived from the trajectory; absolute values depend on pseudopotential choice and projection scheme, so scoring uses correlation (trend) and a frequency range rather than exact match. The residence-time structure is robust across similar simulation setups."
+  },
+  "steps": [
+    {
+      "id": "step_population",
+      "output_file": "population_distance.csv",
+      "kind": "recompute_metric",
+      "metric": "pearson_r",
+      "target_policy": "metric_recompute",
+      "weight": 0.5,
+      "description": "Recompute Pearson correlation r between nearest_Li_H_distance_A and Mulliken_population_charge. Expect strong negative correlation.",
+      "threshold": -0.5,
+      "tolerance_abs": null
+    },
+    {
+      "id": "step_vibrational",
+      "output_file": "vibrational_frequencies.txt",
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "weight": 0.3,
+      "min": 18000000000000.0,
+      "max": 26000000000000.0,
+      "description": "Read the reported vibrational frequency; score 1.0 if within [1.8e13, 2.6e13] s⁻¹."
+    },
+    {
+      "id": "step_residence",
+      "output_file": "residence_times.csv",
+      "kind": "structural_audit",
+      "target_policy": "structural_audit",
+      "weight": 0.2,
+      "description": "Verify ordering a>b>c and state(c) < 200 fs."
+    }
+  ]
+}

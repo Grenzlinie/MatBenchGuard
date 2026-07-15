@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "result-level comparison",
+  "scoring_justification": "The headline quantities (total energies, binding energies) cannot be recomputed by the lightweight checker; the checker compares agent-reported values to hidden reference values from a standard run with the same ECP/basis. Geometry symmetry is verified by structural audit.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optimized_geometries.csv": "structural_audit",
+    "total_energies.csv": "reference_match",
+    "binding_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference total energies (hartree) for eight species and binding energies (kcal/mol) for three three-center species.",
+      "source_provenance": "Reference solve.sh run with HF/LANL2DZ+double-zeta on H, matching public instruction protocol.",
+      "generation_method": "Values are the exact outputs written by the reference oracle solve.sh; they represent a correct submission with the mandated method.",
+      "why_not_fabricated": "These numbers are the direct outputs of a standard open-source (PySCF) run with the same ECP/basis described in the task; they are not fabricated from thin air."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_geometries.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "atom1",
+            "atom2",
+            "distance_angstrom"
+          ],
+          "units": {
+            "distance_angstrom": "angstrom"
+          }
+        },
+        "description": "Optimized bond lengths for the three-center species. The scorer checks that for T+ the two central Si–H distances are equal to within a tolerance, and that for T0 and T- the two central Si–H distances differ substantially, consistent with asymmetric three-center bonding."
+      },
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "energy_hartree"
+          ],
+          "units": {
+            "energy_hartree": "hartree"
+          }
+        },
+        "description": "Total electronic energies (SCF) of all reference silanes and three-center model species. The scorer compares reported energies to hidden reference values obtained from a standard run with the same ECP/basis."
+      },
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "molecule",
+            "binding_energy_kcal_per_mol"
+          ],
+          "units": {
+            "binding_energy_kcal_per_mol": "kcal/mol"
+          }
+        },
+        "description": "Binding energies of T+, T0, and T- computed from total energies. The scorer checks that the T+ binding energy is negative and substantial (within a hidden range), while T0 and T- are near zero, reflecting the stability of the symmetric three-center bond only in the cation."
+      }
+    ],
+    "notes": "The scoring does not depend on exact agreement with the original paper's LP-31G basis set values. A standard ECP/valence basis (e.g., LANL2DZ on Si, double-zeta on H) is used; the hidden reference values are derived from a run with the same standard protocol. The geometric symmetry conditions are checked via structural audit; energies and binding energies are compared to those reference values."
+  },
+  "steps": [
+    {
+      "id": "geom_audit",
+      "output_file": "optimized_geometries.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "target_policy": "structural_audit",
+      "hidden_params": {
+        "equality_tolerance_angstrom": 0.05,
+        "asymmetry_min_diff_angstrom": 0.5
+      },
+      "description": "Verify that the two central Si–H distances in T+ are equal within tolerance and that for T0 and T- they differ by more than the threshold, indicating asymmetry."
+    },
+    {
+      "id": "energies_compare",
+      "output_file": "total_energies.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "hidden_params": {
+        "reference": {
+          "SiH4": -5.9765,
+          "SiH3+": -5.0876,
+          "SiH3": -5.3755,
+          "SiH3-": -5.383,
+          "SiH2": -4.7815,
+          "T+": -11.1119,
+          "T0": -11.3525,
+          "T-": -11.3583
+        },
+        "tolerance_hartree": 0.01
+      },
+      "description": "Compare each reported total electronic energy to the hidden reference; score 1.0 for each molecule within tolerance, average over all species."
+    },
+    {
+      "id": "binding_compare",
+      "output_file": "binding_energies.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "hidden_params": {
+        "reference": {
+          "T+": -30.0,
+          "T0": -0.31,
+          "T-": -0.75
+        },
+        "tolerance_kcal_per_mol": 5.0
+      },
+      "description": "Compare each reported binding energy to the hidden reference; score 1.0 for each within tolerance, average."
+    }
+  ]
+}

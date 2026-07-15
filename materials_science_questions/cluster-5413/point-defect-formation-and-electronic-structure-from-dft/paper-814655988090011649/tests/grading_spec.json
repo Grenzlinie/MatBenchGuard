@@ -1,0 +1,156 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT NEB calculations cannot be re-executed in the checker; compare agent-reported properties to paper reference with tolerances, plus trend/sign checks.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_bulk_verification.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value",
+            "unit"
+          ],
+          "units": {
+            "value": "as per unit column"
+          }
+        },
+        "description": "Bulk properties: lattice constant in nm, bulk modulus in GPa, band gap in eV."
+      },
+      {
+        "file": "step_03_adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "adsorption_energy_kJ_per_mol",
+            "adsorption_energy_with_ZPE_kJ_per_mol",
+            "notes"
+          ],
+          "units": {
+            "adsorption_energy_kJ_per_mol": "kJ/mol",
+            "adsorption_energy_with_ZPE_kJ_per_mol": "kJ/mol"
+          }
+        },
+        "description": "H adsorption energies on cubic Er2O3(001) at sites A, C, E; site A with ZPE is the key reference."
+      },
+      {
+        "file": "step_04_penetration_and_diffusion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "penetration_energy_barrier_eV": "number",
+            "TS_to_TS_barrier_eV": "number",
+            "TS_to_OS_barrier_eV": "number",
+            "OS_to_OS_barrier_eV": "number"
+          }
+        },
+        "description": "Penetration barrier and bulk diffusion barriers (TS→TS, TS→OS, OS→OS), all with ZPE corrections, in eV."
+      },
+      {
+        "file": "step_05_vacancy_trapping.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "h_near_vacancy_relative_energy_eV": "number"
+          }
+        },
+        "description": "Energy of H near an O vacancy relative to bulk tetrahedral site; negative = exothermic trapping."
+      }
+    ],
+    "notes": "All values are compared to paper-reported reference values with tolerances accounting for different DFT implementations."
+  },
+  "steps": [
+    {
+      "id": "step_01_bulk",
+      "output_file": "step_01_bulk_verification.csv",
+      "weight": 0.2,
+      "kind": "numeric",
+      "targets": {
+        "lattice_constant": {
+          "value": 1.0545,
+          "unit": "nm",
+          "tolerance_abs": 0.01
+        },
+        "bulk_modulus": {
+          "value": 148.0,
+          "unit": "GPa",
+          "tolerance_abs": 8.0
+        },
+        "band_gap": {
+          "value": 4.01,
+          "unit": "eV",
+          "tolerance_abs": 0.3
+        }
+      }
+    },
+    {
+      "id": "step_03_adsorption",
+      "output_file": "step_03_adsorption_energies.csv",
+      "weight": 0.45,
+      "kind": "numeric_and_ordering",
+      "targets": {
+        "site_A_ZPE": {
+          "value": -295.68,
+          "unit": "kJ/mol",
+          "tolerance_abs": 10.0
+        },
+        "sites": [
+          "A",
+          "C",
+          "E"
+        ]
+      }
+    },
+    {
+      "id": "step_04_penetration",
+      "output_file": "step_04_penetration_and_diffusion.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "targets": {
+        "penetration_energy_barrier_eV": {
+          "value": 1.6,
+          "tolerance_abs": 0.1
+        },
+        "TS_to_TS_barrier_eV": {
+          "value": 0.16,
+          "tolerance_abs": 0.04
+        },
+        "TS_to_OS_barrier_eV": {
+          "value": 0.41,
+          "tolerance_abs": 0.06
+        }
+      }
+    },
+    {
+      "id": "step_05_vacancy",
+      "output_file": "step_05_vacancy_trapping.json",
+      "weight": 0.05,
+      "kind": "sign_check",
+      "key": "h_near_vacancy_relative_energy_eV"
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference values for bulk properties, adsorption energy, penetration and diffusion barriers, and exothermic sign requirement",
+      "source_provenance": "paper: bulk lattice constant 1.0545 nm, bulk modulus 148.0 GPa, band gap 4.01 eV; adsorption energy site A with ZPE -295.68 kJ/mol; penetration barrier 1.60 eV; TS-to-TS 0.16 eV; TS-to-OS 0.41 eV; vacancy trapping exothermic (sign). The reference values are taken from the original DFT-PW91 calculations reported in the paper.",
+      "generation_method": "extracted from paper text and used directly as gold in grading spec",
+      "why_not_fabricated": "These are the paper's reported numbers for the same quantities; no derived or synthetic values."
+    }
+  ]
+}

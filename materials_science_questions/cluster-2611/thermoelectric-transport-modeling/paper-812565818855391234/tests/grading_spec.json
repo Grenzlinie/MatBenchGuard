@@ -1,0 +1,384 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute DFT/BoltzTraP results in the verifier sandbox; compare agent's submitted values against paper-reported gold with tolerances and ordering check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for elastic constants, magnetic moments, phonon minimum frequencies, and transport coefficients aligned with the paper's Tables 1 and 2, and Fig. 5.",
+      "source_provenance": "Paper Tables 1 and 2 and spin-Seebeck values from Fig. 5 text.",
+      "generation_method": "Extracted from the paper's published tables and numeric values in the Discussion section.",
+      "why_not_fabricated": "All gold values trace directly to the paper's reported numbers; tolerances allow legitimate method-dependent spread while the relative ordering check ensures the main claim is independently verified."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CoFeTiGa": {
+              "c11": "float (GPa)",
+              "c12": "float (GPa)",
+              "c44": "float (GPa)",
+              "G": "float (GPa)",
+              "B": "float (GPa)",
+              "Y": "float (GPa)",
+              "ν": "float (unitless)"
+            },
+            "CoFeVGa": "same structure",
+            "CoFeCrGa": "same structure",
+            "CoFeMnGa": "same structure",
+            "CoFeCuGa": "same structure",
+            "CoFeNbGa": "same structure"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "c11": "GPa",
+            "c12": "GPa",
+            "c44": "GPa",
+            "G": "GPa",
+            "B": "GPa",
+            "Y": "GPa",
+            "ν": "unitless"
+          }
+        },
+        "description": "Computed elastic constants and derived mechanical moduli for all six CoFeRGa compounds, serving as a secondary scored target for mechanical stability verification."
+      },
+      {
+        "file": "phonon_min_freq.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "CoFeTiGa": "float (THz)",
+            "CoFeVGa": "float (THz)",
+            "CoFeCrGa": "float (THz)",
+            "CoFeMnGa": "float (THz)",
+            "CoFeCuGa": "float (THz)",
+            "CoFeNbGa": "float (THz)"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "THz"
+          }
+        },
+        "description": "Minimum phonon frequency for each alloy across the Brillouin zone. A positive value (within small tolerance) confirms dynamical stability, as claimed in the paper."
+      },
+      {
+        "file": "magnetic_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "Alloy",
+            "Type",
+            "a",
+            "M_Co",
+            "M_Fe",
+            "M_R",
+            "M_Ga",
+            "M_tot",
+            "Phase"
+          ],
+          "units": {
+            "a": "Å",
+            "M_Co": "μB/atom",
+            "M_Fe": "μB/atom",
+            "M_R": "μB/atom",
+            "M_Ga": "μB/atom",
+            "M_tot": "μB/f.u."
+          }
+        },
+        "description": "Total and atomic magnetic moments, lattice constant, structure type, and electronic phase classification for all six CoFeRGa compounds, reproducing the data in Table 1."
+      },
+      {
+        "file": "transport_seebeck_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "Alloy",
+            "S_up",
+            "S_down",
+            "S_spin"
+          ],
+          "units": {
+            "S_up": "μV/K",
+            "S_down": "μV/K",
+            "S_spin": "μV/K"
+          }
+        },
+        "description": "Spin-up, spin-down, and spin-Seebeck coefficients at 300 K for all six CoFeRGa compounds. The main verifiable claim is that CoFeCrGa exhibits the largest (most negative) spin-Seebeck coefficient and that its value meets the threshold derived from the paper's findings."
+      }
+    ],
+    "notes": "The task requires the agent to reproduce the computational pipeline using open-source alternatives (e.g., Quantum ESPRESSO for DFT, BoltzTraP for transport). Scored outputs include elastic constants, dynamical stability, magnetic moments, and transport properties, with the spin-Seebeck coefficient of CoFeCrGa as the headline target. The checker compares the agent's results to hidden reference values with tolerances, and for the spin-Seebeck coefficient, a better (more negative) value does not lower the reward."
+  },
+  "steps": [
+    {
+      "id": "elastic_check",
+      "output_file": "elastic_constants.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "gold": {
+        "CoFeTiGa": {
+          "c11": 316.24,
+          "c12": 125.56,
+          "c44": 125.75,
+          "G": 143.21,
+          "B": 189.12,
+          "Y": 171.52,
+          "ν": 0.2
+        },
+        "CoFeVGa": {
+          "c11": 242.18,
+          "c12": 191.65,
+          "c44": 112.96,
+          "G": 67.35,
+          "B": 208.49,
+          "Y": 91.2,
+          "ν": 0.35
+        },
+        "CoFeCrGa": {
+          "c11": 228.15,
+          "c12": 161.64,
+          "c44": 120.01,
+          "G": 79.16,
+          "B": 183.81,
+          "Y": 103.84,
+          "ν": 0.56
+        },
+        "CoFeMnGa": {
+          "c11": 260.52,
+          "c12": 197.15,
+          "c44": 165.11,
+          "G": 95.1,
+          "B": 214.94,
+          "Y": 248.63,
+          "ν": 0.31
+        },
+        "CoFeCuGa": {
+          "c11": 166.08,
+          "c12": 151.17,
+          "c44": 105.59,
+          "G": 42.17,
+          "B": 156.14,
+          "Y": 58.03,
+          "ν": 0.54
+        },
+        "CoFeNbGa": {
+          "c11": 257.03,
+          "c12": 176.04,
+          "c44": 106.96,
+          "G": 82.75,
+          "B": 203.04,
+          "Y": 218.56,
+          "ν": 0.32
+        }
+      },
+      "tolerance": {
+        "abs": 5,
+        "percent": 5,
+        "whichever_larger": true
+      }
+    },
+    {
+      "id": "phonon_check",
+      "output_file": "phonon_min_freq.json",
+      "weight": 0.05,
+      "kind": "threshold",
+      "threshold": -0.1,
+      "operation": ">="
+    },
+    {
+      "id": "magnetic_check",
+      "output_file": "magnetic_moments.csv",
+      "weight": 0.2,
+      "kind": "table_compare",
+      "gold": [
+        {
+          "Alloy": "CoFeTiGa",
+          "Type": 1,
+          "a": 5.81,
+          "M_Co": 0.0,
+          "M_Fe": 0.0,
+          "M_R": 0.0,
+          "M_Ga": 0.0,
+          "M_tot": 0.0,
+          "Phase": "CS"
+        },
+        {
+          "Alloy": "CoFeVGa",
+          "Type": 1,
+          "a": 5.74,
+          "M_Co": 0.57,
+          "M_Fe": 0.59,
+          "M_R": -0.11,
+          "M_Ga": -0.02,
+          "M_tot": 1.03,
+          "Phase": "HM"
+        },
+        {
+          "Alloy": "CoFeCrGa",
+          "Type": 1,
+          "a": 5.72,
+          "M_Co": 0.94,
+          "M_Fe": -0.74,
+          "M_R": 1.81,
+          "M_Ga": -0.04,
+          "M_tot": 1.97,
+          "Phase": "SGS"
+        },
+        {
+          "Alloy": "CoFeMnGa",
+          "Type": 1,
+          "a": 5.71,
+          "M_Co": 0.72,
+          "M_Fe": -0.24,
+          "M_R": 2.61,
+          "M_Ga": -0.05,
+          "M_tot": 3.04,
+          "Phase": "Nearly-HM"
+        },
+        {
+          "Alloy": "CoFeCuGa",
+          "Type": 2,
+          "a": 5.79,
+          "M_Co": 1.05,
+          "M_Fe": 2.61,
+          "M_R": -0.01,
+          "M_Ga": -0.06,
+          "M_tot": 3.59,
+          "Phase": "Metal"
+        },
+        {
+          "Alloy": "CoFeNbGa",
+          "Type": 1,
+          "a": 5.94,
+          "M_Co": 0.57,
+          "M_Fe": 0.62,
+          "M_R": -0.11,
+          "M_Ga": -0.02,
+          "M_tot": 1.06,
+          "Phase": "HM"
+        }
+      ],
+      "tolerances": {
+        "Type": 0,
+        "a": 0.05,
+        "M_Co": 0.05,
+        "M_Fe": 0.05,
+        "M_R": 0.05,
+        "M_Ga": 0.05,
+        "M_tot": 0.05,
+        "Phase": 0
+      }
+    },
+    {
+      "id": "transport_cocrga",
+      "output_file": "transport_seebeck_300K.csv",
+      "weight": 0.25,
+      "kind": "threshold_or_better",
+      "column": "S_spin",
+      "alloy": "CoFeCrGa",
+      "threshold": -55.29,
+      "direction": "less_equal"
+    },
+    {
+      "id": "transport_others",
+      "output_file": "transport_seebeck_300K.csv",
+      "weight": 0.1,
+      "kind": "table_compare",
+      "gold": [
+        {
+          "Alloy": "CoFeTiGa",
+          "S_spin": 0.0
+        },
+        {
+          "Alloy": "CoFeVGa",
+          "S_spin": 9.72
+        },
+        {
+          "Alloy": "CoFeMnGa",
+          "S_spin": 10.15
+        },
+        {
+          "Alloy": "CoFeCuGa",
+          "S_spin": 0.0
+        },
+        {
+          "Alloy": "CoFeNbGa",
+          "S_spin": 9.05
+        }
+      ],
+      "tolerances": {
+        "S_spin": 2.0
+      }
+    },
+    {
+      "id": "transport_ordering",
+      "output_file": "transport_seebeck_300K.csv",
+      "weight": 0.2,
+      "kind": "structural",
+      "check": "abs(CoFeCrGa_S_spin) > abs(other_alloy_S_spin)"
+    },
+    {
+      "id": "transport_support",
+      "output_file": "transport_seebeck_300K.csv",
+      "weight": 0.05,
+      "kind": "table_compare",
+      "gold": [
+        {
+          "Alloy": "CoFeTiGa",
+          "S_up": 0.0,
+          "S_down": 0.0
+        },
+        {
+          "Alloy": "CoFeVGa",
+          "S_up": 9.76,
+          "S_down": 382.04
+        },
+        {
+          "Alloy": "CoFeCrGa",
+          "S_up": -58.78,
+          "S_down": 442.88
+        },
+        {
+          "Alloy": "CoFeMnGa",
+          "S_up": 17.11,
+          "S_down": 113.37
+        },
+        {
+          "Alloy": "CoFeCuGa",
+          "S_up": -1.55,
+          "S_down": -1.55
+        },
+        {
+          "Alloy": "CoFeNbGa",
+          "S_up": 9.06,
+          "S_down": 789.21
+        }
+      ],
+      "tolerances": {
+        "S_up": 5.0,
+        "S_down": 5.0
+      }
+    }
+  ]
+}

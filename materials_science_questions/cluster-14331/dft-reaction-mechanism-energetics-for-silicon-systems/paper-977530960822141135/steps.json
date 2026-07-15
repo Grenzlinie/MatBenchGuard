@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_build_models",
+    "title": "Build molecular models from crystal structures",
+    "role": "process",
+    "action": "Use the provided CIF files for complexes 3–11 to construct initial geometries of the catalytic intermediates (FeD, FeD·S, AC, FeH, FeSi, FeSi·HD, ACD2) with the AmIm-iron fragment. Replace/add hydrogens/deuterium where needed and set correct charge/multiplicity (all species are neutral, quintet spin state S=2). Prepare ORCA input files for geometry optimization and vibrational frequency analysis.",
+    "output_file": "",
+    "evidence": "orca_input_files.tar.gz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_optimize",
+    "title": "DFT geometry optimization and frequency calculations",
+    "role": "scored",
+    "action": "Perform geometry optimization and vibrational frequency calculations for all catalytic intermediates (FeD, FeD·S, AC, FeH, FeSi, FeSi·HD, ACD2) using ORCA at the B3LYP/def2-SVP level with D3BJ dispersion correction (all species in the quintet spin state S=2). Save the final optimized Cartesian coordinates of each species in XYZ format to `optimized_structures.xyz`.",
+    "output_file": "optimized_structures.xyz",
+    "evidence": "orca_outputs.tar.gz",
+    "load_bearing": true,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "XYZ file containing the optimized geometries of all intermediates, with comment lines indicating species name and charge/multiplicity.",
+    "output_schema": "Standard XYZ format: first line number of atoms, second line comment (species name, charge, spin multiplicity), then lines with element symbol and x y z coordinates in Å."
+  },
+  {
+    "id": "step_03_pes_scan",
+    "title": "Potential energy surface scan for activated complex",
+    "role": "process",
+    "action": "Perform linear-transit and quadratic-transit PES scans using the optimized structures of FeD·S and AC to determine the energy profile for formation of the activated complex. Calculate the barrier height for AC formation and confirm that AC is a local minimum via vibrational analysis.",
+    "output_file": "",
+    "evidence": "pes_scan_summary.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_energies",
+    "title": "Compile Gibbs free energies and relative profile",
+    "role": "scored",
+    "action": "Extract the total Gibbs free energy (electronic energy + thermal correction) at 298.15 K for each intermediate from the ORCA output files of step 02. Compute the relative ΔG (in kcal/mol) with respect to the reactant state FeD + Ph2SiH2 (set to 0.0). Write a CSV file containing the absolute total Gibbs free energy (in Hartree) and the relative ΔG (in kcal/mol) for each species.",
+    "output_file": "gibbs_free_energies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: species, total_gibbs_free_energy_Hartree, relative_gibbs_free_energy_kcal_mol. The ΔG values correspond to the thermodynamic profile for the catalytic cycles.",
+    "output_schema": "species (string), total_gibbs_free_energy_Hartree (float), relative_gibbs_free_energy_kcal_mol (float)"
+  },
+  {
+    "id": "step_05_conclusion",
+    "title": "State pathway viability conclusion",
+    "role": "scored",
+    "action": "Based on the computed relative free energies, write a plain text file stating which catalytic pathway is more viable. Specifically, report the ΔG for FeD→FeH (pathway I) and FeD→FeSi (pathway II), and state whether pathway I or II is thermodynamically favored.",
+    "output_file": "conclusion.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Text file containing the conclusion sentence and the computed ΔG values.",
+    "output_schema": "Plain text; expected to contain the phrases 'Pathway I' or 'Pathway II', the computed ΔG values in kcal/mol, and a clear statement of which pathway is more viable."
+  }
+]

@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full recompute of the DFT/phonon pipeline is computationally prohibitive for a lightweight verifier. The strongest feasible check is comparing the agent's reported final conductivity values to paper-extracted gold within appropriate tolerances, supplemented by a structural monotonicity check for thin films.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "kappa_parallel",
+            "kappa_perp"
+          ],
+          "units": {
+            "T": "K",
+            "kappa_parallel": "W/m·K",
+            "kappa_perp": "W/m·K"
+          }
+        },
+        "description": "Temperature‑dependent bulk lattice thermal conductivity including contributions from Se vacancies and Bi2 intercalation boundary scattering."
+      },
+      {
+        "file": "thin_film_thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "thickness_nm",
+            "kappa_perp"
+          ],
+          "units": {
+            "thickness_nm": "nm",
+            "kappa_perp": "W/m·K"
+          }
+        },
+        "description": "Out‑of‑plane lattice thermal conductivity of Bi2Se3 thin films as a function of film thickness at 300 K, with surface boundary scattering."
+      }
+    ],
+    "notes": "The hidden checker extracts values at specific temperatures (for bulk) and at the listed thicknesses (for thin films) and compares them to paper‑reported gold within appropriate tolerances. The agent must write the complete CSV files as described; no gold values or tolerances are disclosed."
+  },
+  "steps": [
+    {
+      "id": "bulk_kpar",
+      "output_file": "bulk_thermal_conductivity.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "conditions": [
+        {
+          "T": 10,
+          "kappa_parallel": 20.0,
+          "tolerance_rel": 0.2
+        },
+        {
+          "T": 300,
+          "kappa_parallel": 1.55,
+          "tolerance_rel": 0.2
+        }
+      ],
+      "note": "Compare bulk in-plane κ at 10 K and 300 K against paper values (Fig.7/8) within ±20% relative tolerance."
+    },
+    {
+      "id": "bulk_kperp",
+      "output_file": "bulk_thermal_conductivity.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "conditions": [
+        {
+          "T": 300,
+          "kappa_perp": 0.6,
+          "tolerance_abs": 0.1
+        }
+      ],
+      "note": "Compare bulk out-of-plane κ at 300 K against paper value within ±0.1 W/m·K absolute tolerance."
+    },
+    {
+      "id": "thin_film_numeric",
+      "output_file": "thin_film_thermal_conductivity.csv",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target_policy": "exact_match",
+      "expected": {
+        "18": 0.19,
+        "30": 0.32,
+        "53": 0.33,
+        "105": 0.36,
+        "191": 0.48
+      },
+      "tolerance_abs": 0.1,
+      "note": "Compare thin-film out-of-plane κ at 300 K for given thicknesses against Table III values within ±0.1 W/m·K absolute tolerance."
+    },
+    {
+      "id": "thin_film_monotonic",
+      "output_file": "thin_film_thermal_conductivity.csv",
+      "kind": "structural",
+      "weight": 0.05,
+      "target_policy": "structural_audit",
+      "note": "Verify that the out-of-plane κ decreases monotonically with increasing film thickness."
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for bulk in-plane and out-of-plane thermal conductivity (Fig.7/8 of paper) and thin-film out-of-plane conductivity (Table III).",
+      "source_provenance": "Paper Fig.7/8 (bulk best-fit curve with Bi₂ intercalation 100 ppm, Se vacancies 100 ppm) and Table III (thin-film lattice κ⊥).",
+      "generation_method": "Extracted from the paper; reference solve.sh hardcodes these numbers for consistency. The bulk gold values are the curve's peak at 10 K (~20 W/m·K) and its room-temperature value (~1.55 W/m·K); the thin-film gold values are the lattice thermal conductivity entries from Table III (0.19, 0.32, 0.33, 0.36, 0.48 W/m·K).",
+      "why_not_fabricated": "The gold values are directly lifted from the paper's numerical data and figures; they are not invented. The reference oracle writes these exact values to ensure full-reward reachability."
+    }
+  ]
+}

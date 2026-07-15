@@ -1,0 +1,57 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute relative energies (Hartree→eV) from agent-reported total DFT energies and compare to paper's Table 1 values within tolerance ±0.25 eV.",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "dft_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative energies for configurations A–E from paper Table 1",
+      "source_provenance": "Chemical Physics Letters 329 (2000) 304-310, Table 1",
+      "generation_method": "Extracted directly from published table",
+      "why_not_fabricated": "Values are reported in peer-reviewed paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "configurations": "array"
+          },
+          "items": {
+            "name": "string",
+            "total_energy_Hartree": "number",
+            "relative_energy_eV": "number"
+          }
+        },
+        "description": "Reported total DFT energies (Hartree) and relative energies (eV) compared to RS for the five stationary points A through E. The checker recomputes relative energies and compares to paper values within a tolerance."
+      }
+    ],
+    "notes": "Relative energies are computed with 1 Hartree = 27.2114 eV and are referenced to configuration RS (relative_energy_eV = 0). The 'configurations' array must include entries for A, B, C, D, E, and optionally RS; only the relative energies of A–E are scored. The agent must not precompute relative energies from a known paper value."
+  },
+  "steps": [
+    {
+      "id": "dft_energies_check",
+      "output_file": "dft_energies.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "gold_relative_energies": {
+        "A": 0.69,
+        "B": -0.04,
+        "C": -0.76,
+        "D": -0.39,
+        "E": -0.6
+      },
+      "tolerance_ev": 0.25,
+      "hartree_to_ev": 27.2114
+    }
+  ]
+}

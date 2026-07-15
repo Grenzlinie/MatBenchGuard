@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT electronic structure and DOS computation",
+    "role": "process",
+    "action": "Perform density functional theory electronic structure calculations for the Zn₃₆Sb₃₀ supercell (undoped) and for the three doped supercells MZn₃₅Sb₃₀ (M=Fe, Co, Ni). Use an open-source DFT code (e.g., Quantum ESPRESSO) with PBE PAW pseudopotentials. Relax the structures and compute the total density of states g(E) and band structure. Align the DOS of the doped systems to the undoped host by matching core bands and identify the resonant DOS peaks introduced by the transition-metal d-states. Output the processed DOS for each system.",
+    "output_file": "",
+    "evidence": "dos_data_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Intermediate required to produce the density of states g(E) for each system, which is the essential input to the Boltzmann transport calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Obtain relaxation-time scattering parameters",
+    "role": "process",
+    "action": "Obtain the material-specific scattering parameters needed for the relaxation time approximation. Use the published values from the paper's Table 1 directly (deformation potentials E_ac = 30 eV, E_oc = 30 eV; elastic constant C_l = 8.1968×10¹⁰ N/m²; density-of-states effective mass m* = 0.9 m_e; static permittivity ε_0 = 25.6410×ε₀; optical phonon frequency ω_0 = 2.06×10¹³ s⁻¹; and literature values for band gap E_g = 1.2 eV, lattice constant a = 12.231 Å, density ρ = 6077 kg/m³, high-frequency permittivity ε_∞ = 21×ε₀). The agent may optionally refit these parameters to published experimental transport data of pristine β-Zn₄Sb₃, but using the listed values directly is acceptable. Store the final parameter set for use in the transport calculation.",
+    "output_file": "",
+    "evidence": "scattering_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Required to define the relaxation time τ(E) used in the Boltzmann transport integrals. The parameters control the polar optical phonon, optical deformation potential, and acoustic deformation potential scattering contributions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Boltzmann transport simulation — transport curves",
+    "role": "scored",
+    "action": "Compute the room-temperature (T=300 K) Seebeck coefficient S, electrical conductivity σ, carrier thermal conductivity λ_C as functions of carrier concentration n for the undoped Zn₃₆Sb₃₀ system and for the Fe-, Co-, and Ni-doped MZn₃₅Sb₃₀ systems. Use the Boltzmann transport equation within the relaxation time approximation, combining the DFT-computed density of states g(E) for each system with the relaxation time τ(E) obtained from Matthiessen's rule applied to the three scattering mechanisms (polar optical phonon, optical deformation potential, acoustic deformation potential). Integrate the transport kernels L^(a) over energy to obtain S, σ, and λ_C at a range of Fermi energies spanning the band edges; convert to carrier concentration n. Compute the power factor PF = S²σ and the thermoelectric figure of merit ZT = S²σT/(λ_C + λ_L) assuming a constant lattice thermal conductivity λ_L = 0.6 W/m·K. Output the full S(n), σ(n), λ_C(n), PF(n), and ZT(n) curves for all four systems at a sufficiently dense set of carrier concentrations to resolve the peak features.",
+    "output_file": "transport_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The primary transport data: carrier-concentration-dependent thermoelectric properties for undoped and Fe/Co/Ni-doped β-Zn₄Sb₃ at 300 K. This file provides the raw curves from which all enhancement factors and key metrics are derived.",
+    "output_schema": "CSV with columns: system (string, one of: undoped, Fe, Co, Ni), carrier_concentration (float, m⁻³), Seebeck_coefficient (float, μV/K), electrical_conductivity (float, S/m), power_factor (float, W/m·K²), carrier_thermal_conductivity (float, W/m·K), ZT (float, dimensionless). One row per carrier concentration per system."
+  },
+  {
+    "id": "step_04",
+    "title": "Extract doping enhancement factors and key metrics",
+    "role": "scored",
+    "action": "From the transport_results.csv curves, extract for each doped system (Fe, Co, Ni): the maximum Seebeck coefficient value and the carrier concentration at which it occurs; the Seebeck enhancement factor defined as the ratio of the maximum doped Seebeck coefficient to the undoped Seebeck coefficient at the same carrier concentration (or the ratio of maximum values if the peaks do not coincide); the peak power factor value; the maximum ZT value and the carrier concentration at which it occurs; and the ZT enhancement factor relative to the undoped maximum ZT. Also report the undoped peak ZT value for reference.",
+    "output_file": "enhancement_factors.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Summary of the key headline quantities: maximum Seebeck enhancement factors and ZT improvements for each dopant, along with the corresponding optimal carrier concentrations.",
+    "output_schema": "JSON object with keys: 'undoped' (containing peak_ZT: float), and for each dopant 'Fe', 'Co', 'Ni' containing: max_Seebeck_raw (float, μV/K), carrier_concentration_at_max_S (float, m⁻³), max_Seebeck_enhancement (float, dimensionless ratio relative to undoped at comparable n), peak_ZT (float), ZT_enhancement (float, ratio relative to undoped peak_ZT)."
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1_geo_opt",
+    "title": "Geometry optimization of C76(D2)",
+    "role": "process",
+    "action": "Optimize the atomic geometry of a single chiral C76(D2) molecule using the MNDO-PM3 semi-empirical method (e.g., with MOPAC) to obtain the rigid-body coordinates used in MD. This is a required step to generate the molecular structure.",
+    "output_file": "",
+    "evidence": "optimized_geometry.xyz",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces the optimized molecular structure of C76(D2) as a rigid body. The geometry must be at the MNDO-PM3 level to reproduce the paper's simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_md_sim",
+    "title": "MD cooling simulations",
+    "role": "process",
+    "action": "Set up rigid-body MD simulations for fcc and hcp initial configurations of C76(D2) crystals. Use the atom-atom Buckingham potential with parameters A=1.9128e6 Å⁶·J/mol, B=4.3112e7 J/mol, C=3.0612 Å⁻¹, cutoff 15 Å. Integrate equations of motion (e.g., Gear predictor-corrector with 2 fs timestep), control pressure to 1 atm (e.g., Parrinello-Rahman), thermostat via velocity scaling, and cool from 900 K down to low temperatures (100 K for hcp, 50 K for fcc) in steps. Equilibrate at each temperature and record trajectories (cell parameters, atomic positions, potential energies).",
+    "output_file": "",
+    "evidence": "md_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generates the MD trajectories from which all subsequent analysis is derived. The simulation protocol replicates that of the original study.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3_lattice",
+    "title": "Lattice constants at 300 K",
+    "role": "scored",
+    "action": "From the equilibrated MD trajectories at 300 K, determine the crystal phase (fcc, hex1, hex2) and compute the lattice constants a and c. Output a CSV with one row per phase.",
+    "output_file": "lattice_constants_300K.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Simulated lattice constants at 300 K. The checker will compare the fcc and hex2 values to hidden reference values.",
+    "output_schema": "phase (string: fcc, hex1, hex2), a_Angstrom (float), c_Angstrom (float; empty for fcc), c_a_ratio (float; empty for fcc)"
+  },
+  {
+    "id": "step4_ca_ratio",
+    "title": "c/a ratio vs temperature",
+    "role": "scored",
+    "action": "For the hexagonal phases (hex1 and hex2) observed in the simulations, compute the lattice parameter ratio c/a at each sampled temperature. Output a CSV with columns phase, T_K, c_a_ratio.",
+    "output_file": "ca_ratio_vs_T.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature-dependent c/a ratio for hexagonal phases. The checker will derive phase transition temperatures from these curves and compare to hidden reference values.",
+    "output_schema": "phase (string: hex1 or hex2), T_K (float), c_a_ratio (float)"
+  },
+  {
+    "id": "step5_potential_energy",
+    "title": "Potential energy vs temperature",
+    "role": "scored",
+    "action": "From the MD trajectories, extract the potential energy per molecule at each temperature for the fcc, hex1, and hex2 phases. Output a CSV with columns phase, T_K, potential_energy_per_mol_J.",
+    "output_file": "potential_energy_vs_T.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature-dependent potential energy curves. The checker will identify transition signatures (e.g., kinks/discontinuities) and compare derived transition temperatures to hidden reference values.",
+    "output_schema": "phase (string: fcc, hex1, hex2), T_K (float), potential_energy_per_mol_J (float)"
+  }
+]

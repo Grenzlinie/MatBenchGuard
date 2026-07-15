@@ -1,0 +1,61 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes relative energy ordering and magnetic moment compliance directly from the raw CSVs; no trust on agent self-reported metrics.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_label",
+            "structure",
+            "total_energy_per_fu_eV"
+          ],
+          "units": {
+            "total_energy_per_fu_eV": "eV per formula unit"
+          }
+        },
+        "description": "Total energy per formula unit for all calculated (Cr,V)Sb compositions and candidate structures. The hidden checker verifies that the energy ordering matches the phase stability trends predicted by the paper."
+      },
+      {
+        "file": "magnetic_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition_label",
+            "site_index",
+            "magnetic_moment_muB"
+          ],
+          "units": {
+            "magnetic_moment_muB": "μB"
+          }
+        },
+        "description": "Local Cr magnetic moments for the hexagonal Ni2In-type phase for both stoichiometries. The hidden checker verifies that the moments fall within the expected range."
+      }
+    ],
+    "notes": "Scoring is based on relative energy ordering (A15 vs Ni2In etc.) and magnetic moment ranges, with tolerances that absorb code-to-code differences. The solver must run all DFT relaxations; no pre-computed total energies or moments are provided."
+  },
+  "steps": [
+    {
+      "id": "energy_ordering",
+      "output_file": "total_energies.csv",
+      "weight": 0.7,
+      "description": "Verify that the total energy ordering among candidate structures matches the paper's predicted phase stability trends (A15 lowest for 3:1; Ni2In lowest for 2:1 except Heusler in V-rich limit)."
+    },
+    {
+      "id": "magnetic_moments",
+      "output_file": "magnetic_moments.csv",
+      "weight": 0.3,
+      "description": "Verify that Cr magnetic moments in the hexagonal Ni2In-type phase are within the expected range 2.0–3.0 μB."
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute infeasible without running DFT or group‑theory code; verifying deterministic counts, array length, and comparing a physical nominal value with tolerance.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_group_theory.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ir_counts": "object",
+            "total_modes": "int",
+            "acoustic_modes": "string"
+          },
+          "items": {
+            "ir_counts.IR_active.A_u": "int",
+            "ir_counts.IR_active.B_u": "int",
+            "ir_counts.Raman_active.A_g": "int",
+            "ir_counts.Raman_active.B_g": "int"
+          }
+        },
+        "description": "Counts of vibrational irreducible representations from group theory."
+      },
+      {
+        "file": "step_02_phonon_gamma.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gamma_point_frequencies": "array of floats",
+            "max_frequency": "float",
+            "max_frequency_mode": "string"
+          }
+        },
+        "description": "Γ-point phonon frequencies, maximum frequency, and its irreducible representation label."
+      }
+    ],
+    "notes": "The group-theory counts are deterministic from the crystal structure and must match exactly. The phonon frequencies depend on the DFT functional and computational settings; a tolerance is applied to the maximum frequency, and the symmetry label is checked exactly."
+  },
+  "steps": [
+    {
+      "id": "group_theory_counts",
+      "output_file": "step_01_group_theory.json",
+      "kind": "exact_json",
+      "weight": 0.4,
+      "target": {
+        "ir_counts.IR_active.A_u": 32,
+        "ir_counts.IR_active.B_u": 31,
+        "ir_counts.Raman_active.A_g": 30,
+        "ir_counts.Raman_active.B_g": 30,
+        "total_modes": 72,
+        "acoustic_modes": "A_u + 2B_u"
+      }
+    },
+    {
+      "id": "phonon_freq_length",
+      "output_file": "step_02_phonon_gamma.json",
+      "kind": "exact_json",
+      "weight": 0.1,
+      "target": {
+        "gamma_point_frequencies": {
+          "length": 72
+        }
+      }
+    },
+    {
+      "id": "phonon_max_freq",
+      "output_file": "step_02_phonon_gamma.json",
+      "kind": "numeric_reference_match",
+      "weight": 0.4,
+      "field": "max_frequency",
+      "target": 953.0,
+      "tolerance": 10.0
+    },
+    {
+      "id": "phonon_mode_label",
+      "output_file": "step_02_phonon_gamma.json",
+      "kind": "exact_match",
+      "weight": 0.1,
+      "field": "max_frequency_mode",
+      "value": "B_g"
+    }
+  ]
+}

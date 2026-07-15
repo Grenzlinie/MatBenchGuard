@@ -1,0 +1,213 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Derived metrics (efficiency, wavelength/angle ranges, tolerance windows) are recomputed from raw CSV sweeps; no need for T2/T3.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for all six output checks (efficiency point checks, wavelength/angle ranges, thickness/period/angle tolerance ranges)",
+      "source_provenance": "Paper: figures and text (Section 3)",
+      "generation_method": "Directly extracted from the published paper: 39.1% efficiencies at 450nm, wavelength range 429–468 nm, angular range -3.2°–3.2°, etc.",
+      "why_not_fabricated": "Values are verbatim from the paper's reported measurements and tolerance windows."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "efficiency_at_450nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polarization",
+            "order",
+            "efficiency"
+          ],
+          "units": {
+            "efficiency": "%"
+          }
+        },
+        "description": "Diffraction efficiencies of target orders at 450 nm for TE and TM polarizations."
+      },
+      {
+        "file": "wavelength_sweep.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "DE_(-1,0)_TE",
+            "DE_(0,-1)_TE",
+            "DE_(-1,0)_TM",
+            "DE_(0,-1)_TM"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "efficiencies": "%"
+          }
+        },
+        "description": "Efficiency vs. wavelength sweep (400–500 nm)."
+      },
+      {
+        "file": "angle_sweep.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "incident_angle_deg",
+            "DE_(-1,0)_TE",
+            "DE_(0,-1)_TE",
+            "DE_(-1,0)_TM",
+            "DE_(0,-1)_TM"
+          ],
+          "units": {
+            "incident_angle_deg": "degree",
+            "efficiencies": "%"
+          }
+        },
+        "description": "Efficiency vs. incident polar angle sweep (-5° to 5°)."
+      },
+      {
+        "file": "tolerance_thickness.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "h1_nm",
+            "h2_nm",
+            "total_eff_TE",
+            "total_eff_TM",
+            "DE_(-1,0)_TE",
+            "DE_(0,-1)_TE",
+            "DE_(-1,0)_TM",
+            "DE_(0,-1)_TM"
+          ],
+          "units": {
+            "h1_nm": "nm",
+            "h2_nm": "nm",
+            "efficiencies": "%"
+          }
+        },
+        "description": "Tolerance sweep of layer thicknesses (h1 and h2)."
+      },
+      {
+        "file": "tolerance_period_angle.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "period_nm",
+            "slanted_angle_deg",
+            "DE_(-1,0)_TE",
+            "DE_(0,-1)_TE",
+            "DE_(-1,0)_TM",
+            "DE_(0,-1)_TM"
+          ],
+          "units": {
+            "period_nm": "nm",
+            "slanted_angle_deg": "degree",
+            "efficiencies": "%"
+          }
+        },
+        "description": "Tolerance sweep of grating period and slanted angle."
+      },
+      {
+        "file": "tolerance_duty.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "duty_cycle",
+            "DE_(-1,0)_TE",
+            "DE_(0,-1)_TE",
+            "DE_(-1,0)_TM",
+            "DE_(0,-1)_TM"
+          ],
+          "units": {
+            "duty_cycle": "dimensionless",
+            "efficiencies": "%"
+          }
+        },
+        "description": "Tolerance sweep of duty cycle."
+      }
+    ],
+    "notes": "The checker derives tolerance ranges and efficiency thresholds from the raw CSV data and compares them to hidden reference values."
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "output_file": "efficiency_at_450nm.csv",
+      "weight": 0.166666,
+      "kind": "efficiency_point_check",
+      "gold_efficiency": 39.1,
+      "gold_efficiency_tolerance": 1.0
+    },
+    {
+      "id": "s2",
+      "output_file": "wavelength_sweep.csv",
+      "weight": 0.166667,
+      "kind": "wavelength_range_check",
+      "threshold": 35.0,
+      "gold_wavelength_lower": 429.0,
+      "gold_wavelength_upper": 468.0,
+      "wavelength_tolerance": 2.0
+    },
+    {
+      "id": "s3",
+      "output_file": "angle_sweep.csv",
+      "weight": 0.166667,
+      "kind": "angle_range_check",
+      "threshold": 30.0,
+      "gold_angle_lower": -3.2,
+      "gold_angle_upper": 3.2,
+      "angle_tolerance": 0.5
+    },
+    {
+      "id": "s4",
+      "output_file": "tolerance_thickness.csv",
+      "weight": 0.166667,
+      "kind": "thickness_tolerance_check",
+      "total_eff_threshold": 75.0,
+      "gold_h1_lower": 300.0,
+      "gold_h1_upper": 350.0,
+      "gold_h2_lower": 525.0,
+      "gold_h2_upper": 550.0,
+      "thickness_tolerance": 5.0
+    },
+    {
+      "id": "s5",
+      "output_file": "tolerance_period_angle.csv",
+      "weight": 0.166667,
+      "kind": "period_angle_tolerance_check",
+      "order_threshold": 35.0,
+      "gold_period_lower": 580.0,
+      "gold_period_upper": 633.0,
+      "period_tolerance": 2.0,
+      "gold_angle_lower": 12.2,
+      "gold_angle_upper": 21.0,
+      "angle_tolerance": 0.5
+    },
+    {
+      "id": "s6",
+      "output_file": "tolerance_duty.csv",
+      "weight": 0.166666,
+      "kind": "duty_tolerance_check",
+      "order_threshold": 35.0,
+      "gold_duty_lower": 0.46,
+      "gold_duty_upper": 0.53,
+      "duty_tolerance": 0.01
+    }
+  ]
+}

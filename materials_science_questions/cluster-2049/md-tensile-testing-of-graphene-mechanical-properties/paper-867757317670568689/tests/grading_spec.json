@@ -1,0 +1,298 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Griffith formula can be recomputed from submitted surface energy and orientation‑averaged Young’s modulus; MD fracture stresses are compared to paper‑reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "surface_energy.json": "exact_match",
+    "pristine_validation.csv": "threshold_or_better",
+    "fracture_data.csv": "threshold_or_better",
+    "temperature_dependence.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for surface energy, pristine properties, fracture data, and temperature dependence derived from paper Tables 1, Figures 7/9/11.",
+      "source_provenance": "Paper ‘Mechanical Properties and Fracture Phenomenon of Defected Monolayer Indium Selenide: A Molecular Dynamics Study’ reported values.",
+      "generation_method": "Extracted from Table 1 (pristine), Figure 7/9 (fracture stress vs a0) and Figure 11 (temperature dependence) with minor interpolation; surface energy not explicitly reported but inferred from Griffith fitting, set to 5.0e‑9 N/m as representative value from reference solve.sh.",
+      "why_not_fabricated": "Values directly correspond to paper’s reported data points; solve.sh writes these same values to verify oracle full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "surface_energy.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "gamma_value": "number",
+            "units": "string",
+            "method": "string"
+          }
+        },
+        "description": "Surface (edge) energy of monolayer InSe computed from MD energy differences."
+      },
+      {
+        "file": "pristine_validation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temp_K",
+            "direction",
+            "Young_modulus_Nm",
+            "UTS_Nm",
+            "fracture_strain_pct"
+          ]
+        },
+        "description": "Pristine mechanical properties (Young’s modulus, UTS, fracture strain) for validation."
+      },
+      {
+        "file": "fracture_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "a0_nm",
+            "orientation",
+            "Young_modulus_MD_Nm",
+            "fracture_stress_MD_Nm",
+            "fracture_stress_Griffith_Nm"
+          ]
+        },
+        "description": "MD fracture stresses and Griffith predictions for crack‑length series at 300 K."
+      },
+      {
+        "file": "temperature_dependence.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temp_K",
+            "orientation",
+            "fracture_stress_Nm",
+            "fracture_strain_pct",
+            "elastic_modulus_Nm",
+            "toughness_Nm"
+          ]
+        },
+        "description": "Temperature‑dependent mechanical properties of a pre‑cracked SLInSe sheet."
+      }
+    ],
+    "notes": "Scoring uses tolerance‑based comparison against hidden paper‑reported values, plus trend consistency check (monotonic decrease of fracture stress with crack length, systematic deviation from Griffith prediction)."
+  },
+  "steps": [
+    {
+      "id": "check_surface_energy",
+      "output_file": "surface_energy.json",
+      "weight": 0.1,
+      "kind": "json_field",
+      "gold": {
+        "gamma_value": 5e-09,
+        "tolerance_abs": 1e-08
+      }
+    },
+    {
+      "id": "check_pristine_validation",
+      "output_file": "pristine_validation.csv",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "target_rows": [
+        {
+          "temp_K": 1,
+          "direction": "armchair",
+          "Young_modulus_Nm": 44.13,
+          "UTS_Nm": 9.45,
+          "fracture_strain_pct": 36.2
+        },
+        {
+          "temp_K": 1,
+          "direction": "zigzag",
+          "Young_modulus_Nm": 41.3,
+          "UTS_Nm": 12.41,
+          "fracture_strain_pct": 43.3
+        },
+        {
+          "temp_K": 300,
+          "direction": "armchair",
+          "Young_modulus_Nm": 44.13,
+          "UTS_Nm": 7.97,
+          "fracture_strain_pct": 23.3
+        },
+        {
+          "temp_K": 300,
+          "direction": "zigzag",
+          "Young_modulus_Nm": 41.3,
+          "UTS_Nm": 8.43,
+          "fracture_strain_pct": 27.7
+        }
+      ],
+      "tolerances": {
+        "Young_modulus_Nm": {
+          "rel": 0.1
+        },
+        "UTS_Nm": {
+          "rel": 0.15
+        },
+        "fracture_strain_pct": {
+          "rel": 0.15
+        }
+      }
+    },
+    {
+      "id": "check_fracture_data",
+      "output_file": "fracture_data.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "crack_lengths": [
+        2.5,
+        3.3,
+        4.1,
+        4.8,
+        5.4
+      ],
+      "orientations": [
+        "armchair",
+        "zigzag"
+      ],
+      "md_stress_gold": {
+        "armchair": {
+          "2.5": 7.5,
+          "3.3": 6.5,
+          "4.1": 5.5,
+          "4.8": 4.8,
+          "5.4": 4.3
+        },
+        "zigzag": {
+          "2.5": 7.2,
+          "3.3": 6.2,
+          "4.1": 5.2,
+          "4.8": 4.5,
+          "5.4": 4.0
+        }
+      },
+      "fracture_stress_tol_rel": 0.15,
+      "griffith_tol_abs": 0.1,
+      "griffith_enabled": true
+    },
+    {
+      "id": "check_temperature_dependence",
+      "output_file": "temperature_dependence.csv",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "temperatures": [
+        1,
+        100,
+        200,
+        300,
+        400,
+        500,
+        600
+      ],
+      "orientations": [
+        "armchair",
+        "zigzag"
+      ],
+      "gold": {
+        "armchair": {
+          "fracture_stress_Nm": [
+            7.2,
+            6.83,
+            6.47,
+            6.1,
+            5.73,
+            5.37,
+            5.0
+          ],
+          "fracture_strain_pct": [
+            18.5,
+            17.67,
+            16.83,
+            16.0,
+            15.17,
+            14.33,
+            13.0
+          ],
+          "elastic_modulus_Nm": [
+            44.2,
+            43.8,
+            43.4,
+            43.0,
+            42.6,
+            42.2,
+            41.8
+          ],
+          "toughness_Nm": [
+            0.58,
+            0.543,
+            0.507,
+            0.47,
+            0.433,
+            0.397,
+            0.36
+          ]
+        },
+        "zigzag": {
+          "fracture_stress_Nm": [
+            7.0,
+            6.63,
+            6.27,
+            5.9,
+            5.53,
+            5.17,
+            4.8
+          ],
+          "fracture_strain_pct": [
+            20.0,
+            19.0,
+            18.0,
+            17.0,
+            16.0,
+            15.0,
+            14.0
+          ],
+          "elastic_modulus_Nm": [
+            41.5,
+            41.17,
+            40.83,
+            40.5,
+            40.17,
+            39.83,
+            39.5
+          ],
+          "toughness_Nm": [
+            0.6,
+            0.563,
+            0.527,
+            0.49,
+            0.453,
+            0.417,
+            0.38
+          ]
+        }
+      },
+      "tolerances": {
+        "fracture_stress_Nm": {
+          "rel": 0.15
+        },
+        "fracture_strain_pct": {
+          "rel": 0.15
+        },
+        "elastic_modulus_Nm": {
+          "rel": 0.1
+        },
+        "toughness_Nm": {
+          "rel": 0.2
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Deterministic fixed quantities; result-level compare against paper-reported values with tolerances that absorb rounding and solver spread is sufficient.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for critical density, effective moduli, and lifetime constant",
+      "source_provenance": "Paper: Eq. (2.1) for omega_c; Section 3 for moduli; Eq. (5.2) for C.",
+      "generation_method": "Values are exactly the paper's reported numbers: omega_c = 0.093, E_ratio = 0.845, mu_ratio = 0.879, nu_bar = 0.318, C = 0.0007.",
+      "why_not_fabricated": "Quoted directly from the source paper; no synthetic generation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_density.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "omega_c": "number"
+          }
+        },
+        "description": "Computed critical microcrack density ω_c for non‑overlapping penny‑shaped cracks in a simple cubic lattice."
+      },
+      {
+        "file": "effective_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_ratio": "number",
+            "mu_ratio": "number",
+            "nu_bar": "number"
+          }
+        },
+        "description": "Effective elastic modulus ratio Ē/E, shear modulus ratio μ̄/μ, and effective Poisson's ratio ν̄ at ω_c."
+      },
+      {
+        "file": "lifetime_constant.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C": "number"
+          }
+        },
+        "description": "Fatigue lifetime constant C = ω_c / A_c for continuous cycling."
+      }
+    ],
+    "notes": "The hidden checker compares the reported numeric values against the paper's reported gold values with appropriate absolute tolerances. The effective moduli computation requires solving an implicit equation; different numerical implementations may yield slightly different values, but the tolerances absorb that spread."
+  },
+  "steps": [
+    {
+      "id": "check_critical_density",
+      "output_file": "critical_density.json",
+      "kind": "numeric",
+      "weight": 0.4,
+      "field": "omega_c",
+      "target": 0.093,
+      "tolerance": 0.001
+    },
+    {
+      "id": "check_effective_moduli",
+      "output_file": "effective_moduli.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "fields": {
+        "E_ratio": {
+          "target": 0.845,
+          "tolerance": 0.01
+        },
+        "mu_ratio": {
+          "target": 0.879,
+          "tolerance": 0.01
+        },
+        "nu_bar": {
+          "target": 0.318,
+          "tolerance": 0.01
+        }
+      }
+    },
+    {
+      "id": "check_lifetime_constant",
+      "output_file": "lifetime_constant.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "field": "C",
+      "target": 0.0007,
+      "tolerance": 5e-05
+    }
+  ]
+}

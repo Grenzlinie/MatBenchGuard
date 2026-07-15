@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Transition energy E cannot be fully recomputed from displacement alone; we compare reported E to paper gold with tolerance. Zero-crossing counts and max_deltaZ are recomputed/verified from raw displacement maps.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "threshold_or_better",
+    "deltaZ_lambda1_to_lambda1_2.csv": "exact_match",
+    "deltaZ_lambda1_to_lambda1_3.csv": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold transition energies from paper (E12=0.82391 eV/Å, E13=0.82552 eV/Å) and zero-crossing counts (5 and 1)",
+      "source_provenance": "JETP Letters 2014 paper, page 4 lines 'E_{λ1→λ1/2}=0.82391 эВ/Å' and 'E_{λ1→λ1/3}=0.82552 эВ/Å'; text describes 'пять знакопеременных волн' (5 sign-changing waves) and 'one clear sign change'.",
+      "generation_method": "Exact values transcribed from the English translation of the paper",
+      "why_not_fabricated": "These are the paper's reported headline quantities; using the exact published values ensures a faithful reproduction benchmark."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "systems": "array of objects, each with fields initial_condition (string), energy_E (number), max_deltaZ (number), num_zero_crossings_within_W (integer)"
+          },
+          "items": {
+            "systems": {
+              "type": "object",
+              "properties": {
+                "initial_condition": {
+                  "type": "string"
+                },
+                "energy_E": {
+                  "type": "number"
+                },
+                "max_deltaZ": {
+                  "type": "number"
+                },
+                "num_zero_crossings_within_W": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "description": "Agent-reported transition-region energies, maximum out-of-plane displacement, and zero-crossing counts for both initial conditions. The hidden checker recomputes these quantities from the displacement CSV files and verifies the reported values within tolerances."
+      },
+      {
+        "file": "deltaZ_lambda1_to_lambda1_2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "n",
+            "deltaZ"
+          ],
+          "units": {
+            "deltaZ": "nm"
+          }
+        },
+        "description": "Out-of-plane displacement ΔZ for atom k=1 (in nm) at every unit cell index (m,n) for the λ₁→λ₁/2 initial condition. The checker uses this file to recompute zero-crossings and transition energy."
+      },
+      {
+        "file": "deltaZ_lambda1_to_lambda1_3.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "m",
+            "n",
+            "deltaZ"
+          ],
+          "units": {
+            "deltaZ": "nm"
+          }
+        },
+        "description": "Out-of-plane displacement ΔZ for atom k=1 (in nm) at every unit cell index (m,n) for the λ₁→λ₁/3 initial condition. The checker uses this file to recompute zero-crossings and transition energy."
+      }
+    ],
+    "notes": "The three scored outputs together capture the paper's main result: distinct metastable wrinklon configurations with similar transition-region energies but different zero-crossing counts. The checker recomputes energies and zero-crossings from the raw CSV data, ensuring fidelity."
+  },
+  "steps": [
+    {
+      "id": "results_json",
+      "output_file": "results.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "target_policy": "threshold_or_better",
+      "fields": {
+        "energy_expected_12": 0.82391,
+        "energy_expected_13": 0.82552,
+        "energy_tolerance_rel": 0.01,
+        "max_deltaZ_range": [
+          1.3,
+          1.5
+        ],
+        "zero_crossings_12": 5,
+        "zero_crossings_13": 1
+      }
+    },
+    {
+      "id": "deltaz_l12",
+      "output_file": "deltaZ_lambda1_to_lambda1_2.csv",
+      "weight": 0.2,
+      "kind": "recompute_metric",
+      "metric": "zero_crossings_within_W_half",
+      "target": 5,
+      "target_policy": "exact_match",
+      "params": {}
+    },
+    {
+      "id": "deltaz_l13",
+      "output_file": "deltaZ_lambda1_to_lambda1_3.csv",
+      "weight": 0.2,
+      "kind": "recompute_metric",
+      "metric": "zero_crossings_within_W_half",
+      "target": 1,
+      "target_policy": "exact_match",
+      "params": {}
+    }
+  ]
+}

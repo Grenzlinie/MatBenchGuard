@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Thermal conductivity κ(T) compared to paper-extracted values and Slack model (reference match); double-exponential fit parameters recomputed from agent's raw HCACF CSV via refitting (recompute).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermal_conductivity.csv": "reference_match",
+    "fit_parameters_400K.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference thermal conductivity values for ZnTe from paper Fig.7 and Slack model",
+      "source_provenance": "Paper figure 7 (MD κ(T) data points) and text (Slack value 17 W/m/K at 300 K, and high-T consistency).",
+      "generation_method": "Digitized approximate values: 300K=18.0, 400=13.5, 500=10.5, 600=8.8, 700=7.4, 800=6.4 W/m/K. Tolerances ±5 W/m/K to accommodate a correct independent re-implementation.",
+      "why_not_fabricated": "These numbers correspond to the paper's central reported result and were extracted from the published thermal conductivity curve and Slack model reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T_K",
+            "kappa_W_mK"
+          ],
+          "units": {
+            "T_K": "K",
+            "kappa_W_mK": "W/m/K"
+          }
+        },
+        "description": "Thermal conductivity of ZnTe at temperatures 300, 400, 500, 600, 700, 800 K. Values are compared against paper-extracted reference values with tolerance; monotonic decrease with T is also checked."
+      },
+      {
+        "file": "fit_parameters_400K.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "A1": "float",
+            "tau1_ps": "float",
+            "A2": "float",
+            "tau2_ps": "float",
+            "K0": "float"
+          }
+        },
+        "description": "Double-exponential fit parameters for the normalized HCACF at 400 K. Checked for structural consistency (A1+A2 within [0.9,1.1], τ1 < τ2) and compared against a refit of the agent's raw g(t) curve."
+      }
+    ],
+    "notes": "The agent must fetch GULP and LAMMPS, extract Tersoff parameters from the reference paper, and run the full static and MD pipeline. All scored outputs are compared against hidden gold values (thermal conductivity) or structural rules (fit parameters)."
+  },
+  "steps": [
+    {
+      "id": "kappa",
+      "output_file": "thermal_conductivity.csv",
+      "kind": "custom",
+      "weight": 0.7,
+      "reference_values": {
+        "300": 18.0,
+        "400": 13.5,
+        "500": 10.5,
+        "600": 8.8,
+        "700": 7.4,
+        "800": 6.4
+      },
+      "tolerance_abs": 5.0
+    },
+    {
+      "id": "fit_params",
+      "output_file": "fit_parameters_400K.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "structural_checks": {
+        "A1_A2_sum_range": [
+          0.9,
+          1.1
+        ],
+        "tau1_less_than_tau2": true,
+        "all_positive": true
+      },
+      "refit_from_csv": "g_t_400K.csv",
+      "tolerance_params_rel": 0.3
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Arrhenius parameters are recomputed from the agent's diffusion constants (CSV) by a least-squares fit and compared to the paper-reported gold.",
+  "pass_threshold": 0.6,
+  "gold": {
+    "Pd": {
+      "U": 0.245,
+      "D0": 0.0048
+    },
+    "Nb": {
+      "U": 0.101,
+      "D0": 0.00075
+    }
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Arrhenius parameters for Pd and Nb used as gold comparison targets.",
+      "source_provenance": "Paper text: 'D0 = 4.8×10^{-3} cm^{-2}s^{-1} and U = 0.245eV' for Pd; 'U = 0.101eV', 'D0 ~ 7.5 × 10^{-4} cm^{-2}s^{-1}' for Nb.",
+      "generation_method": "Extracted directly from the paper's results section.",
+      "why_not_fabricated": "These are the paper's own central numerical results; the checker uses them as ground truth for the reproduction task."
+    }
+  ],
+  "target_policies": {
+    "diffusion_constants.csv": "metric_recompute",
+    "arrhenius_params.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "diffusion_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "temperature_K",
+            "D_cm2_per_s"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "D_cm2_per_s": "cm^2/s"
+          }
+        },
+        "description": "Hydrogen self-diffusion constants in Pd and Nb at simulated temperatures; the checker refits Arrhenius parameters from this table and compares to paper gold."
+      },
+      {
+        "file": "arrhenius_params.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pd": {
+              "U": "number (eV)",
+              "D0": "number (cm^2/s)"
+            },
+            "Nb": {
+              "U": "number (eV)",
+              "D0": "number (cm^2/s)"
+            }
+          }
+        },
+        "description": "Agent-fitted Arrhenius parameters; the checker refits from diffusion_constants.csv and checks consistency with these reported values."
+      }
+    ],
+    "notes": "The primary scoring is on the Arrhenius parameters recomputed from the D_s values, compared to paper-reported gold with hidden tolerances. The agent's own fit in arrhenius_params.json is used for a consistency check against the checker's refit."
+  },
+  "steps": [
+    {
+      "id": "step3_diffusion_refit",
+      "output_file": "diffusion_constants.csv",
+      "weight": 0.85,
+      "kind": "recompute_fit",
+      "description": "Refit Arrhenius parameters from the diffusion constants and compare to paper gold within tolerances (±10% for U, factor 2 for D0).",
+      "tolerances": {
+        "U_relative": 0.1,
+        "D0_factor": 2.0
+      }
+    },
+    {
+      "id": "step4_consistency",
+      "output_file": "arrhenius_params.json",
+      "weight": 0.15,
+      "kind": "consistency",
+      "description": "Verify that the agent's self-reported Arrhenius parameters match the refit values from diffusion_constants.csv (tight tolerance of 1e-4 relative).",
+      "tolerances": {
+        "relative": 0.0001
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Final thermal conductivities are computed by the agent's own simulation pipeline; recomputing from raw simulation outputs is infeasible without re-running the entire NEMD+TTM workflow, so a result-level comparison with hidden paper-reported values is used.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "thermal_conductivities.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold thermal conductivity values for each condition, derived from the paper's reported pristine value (820 W/mK from Figure 6/prior work) and the stated percentage changes for defective and coated cases.",
+      "source_provenance": "Paper text (Sections 3 and 4) and Figure 6; consistent with solve.sh",
+      "generation_method": "Pristine taken as 820 W/mK. Defective values computed as (1 - reduction%)*pristine: 0.5% vacancies -> 76% reduction -> 196.8 W/mK; 1% vacancies -> 86% reduction -> 114.8 W/mK. Coated values computed as defective * (1 + increase%): for 0.5% vacancies -> 66% increase -> 326.7 W/mK; for 1% vacancies -> 140% increase -> 275.5 W/mK.",
+      "why_not_fabricated": "These numbers are directly traceable to the paper's reported quantitative claims, not invented. The pristine baseline matches the value implied by Figure 6 and is used in the paper's own percentage calculations; the solve.sh reference writes the same values and will score full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_conductivities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "thermal_conductivity"
+          ],
+          "columns": {
+            "condition": "string, one of: pristine, vacancy_0.5, vacancy_1.0, coated_0.5_3nm, coated_1.0_3nm",
+            "thermal_conductivity": "float (W/mK)"
+          }
+        },
+        "description": "Compiled axial thermal conductivity values for each configuration. The checker will verify that (1) each value matches paper-reported gold values within tolerance, and (2) for each vacancy concentration, the coated conductivity exceeds the defective uncoated conductivity."
+      }
+    ],
+    "notes": "Scoring uses a T0 result-level comparison: the checker compares the reported thermal_conductivity values to hidden paper-reported values with a tolerance (e.g., ±15% relative) and additionally checks the coating-induced increase trend. The agent must produce correct values and positive increase."
+  },
+  "checks": [
+    {
+      "id": "conductivity_abs",
+      "output_file": "thermal_conductivities.csv",
+      "weight": 0.7,
+      "kind": "numeric_multi",
+      "gold": {
+        "pristine": 820.0,
+        "vacancy_0.5": 196.8,
+        "vacancy_1.0": 114.8,
+        "coated_0.5_3nm": 326.7,
+        "coated_1.0_3nm": 275.5
+      },
+      "tolerance_relative": 0.25,
+      "description": "Compare each reported thermal conductivity against hidden gold; score is fraction of reported conditions within tolerance (|value - gold| <= tol * gold)."
+    },
+    {
+      "id": "coating_increase",
+      "output_file": "thermal_conductivities.csv",
+      "weight": 0.3,
+      "kind": "structural_relation",
+      "description": "Verify that for both vacancy concentrations (0.5% and 1%), the coated thermal conductivity is strictly greater than the corresponding defective uncoated conductivity.",
+      "conditions": [
+        {
+          "vacancy": "0.5",
+          "defective": "vacancy_0.5",
+          "coated": "coated_0.5_3nm"
+        },
+        {
+          "vacancy": "1.0",
+          "defective": "vacancy_1.0",
+          "coated": "coated_1.0_3nm"
+        }
+      ]
+    }
+  ]
+}

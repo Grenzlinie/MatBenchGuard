@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw DFT supercell energies is infeasible because raw total energy files are not submitted; the agent's computed transition levels and formation energies are compared to paper-reported values with tolerances that accommodate expected PBE implementation differences.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_levels_2D1L.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "V_I_LA": "object with transition_type (string), value_eV (float), reference (CBM)",
+            "V_I_LB": "object with transition_type (string), value_eV (float), reference (CBM)",
+            "I_i_LA": "object with transition_type (string), value_eV (float), reference (VBM)",
+            "I_i_LB": "object with transition_type (string), value_eV (float), reference (VBM)"
+          },
+          "items": {
+            "transition_type": "string, either '(0/1+)' or '(0/1-)'",
+            "value_eV": "float, transition energy in eV",
+            "reference": "string, 'CBM' or 'VBM'"
+          }
+        },
+        "description": "Transition energy levels of V_I and I_i defects on outer (LA) and inner (LB) layers."
+      },
+      {
+        "file": "deep_defect_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pb_i_0": "float (eV)",
+            "Pb_I_0": "float (eV)",
+            "I_M_0": "float (eV)",
+            "I_Pb_0": "float (eV)"
+          },
+          "items": {
+            "": "float, formation energy in eV"
+          }
+        },
+        "description": "Neutral formation energies (μ_i=0) of deep defects Pb_i, Pb_I, I_M, I_Pb."
+      }
+    ],
+    "notes": "The agent must compute these quantities using PBE DFT without spin-orbit coupling. The hidden reference values are derived from the paper's reported results for the 2D1L system."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold transition levels and formation energies for 2D1L perovskite.",
+      "source_provenance": "Paper 812479741532569600, Section 3.2: transition levels for V_I and I_i on LA and LB layers, and formation energies of deep defects Pb_i, Pb_I, I_M, I_Pb at μ_i=0.",
+      "generation_method": "Extracted directly from paper text and cross-checked with reference solve.sh.",
+      "why_not_fabricated": "Values are those published in the paper; no invention."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_05",
+      "output_file": "transition_levels_2D1L.json",
+      "weight": 0.6,
+      "kind": "numeric_reference_match",
+      "expected": {
+        "V_I_LA": {
+          "transition_type": "(0/1+)",
+          "value_eV": -0.02,
+          "reference": "CBM"
+        },
+        "V_I_LB": {
+          "transition_type": "(0/1+)",
+          "value_eV": -0.198,
+          "reference": "CBM"
+        },
+        "I_i_LA": {
+          "transition_type": "(0/1-)",
+          "value_eV": 0.115,
+          "reference": "VBM"
+        },
+        "I_i_LB": {
+          "transition_type": "(0/1-)",
+          "value_eV": 0.131,
+          "reference": "VBM"
+        }
+      },
+      "tolerance_eV": 0.05,
+      "trend_check": {
+        "field_deeper": "V_I_LB",
+        "field_shallower": "V_I_LA",
+        "comparison": "value_deeper < value_shallower"
+      }
+    },
+    {
+      "id": "step_06",
+      "output_file": "deep_defect_formation_energies.json",
+      "weight": 0.4,
+      "kind": "numeric_reference_match",
+      "expected": {
+        "Pb_i_0": 1.4,
+        "Pb_I_0": 3.0,
+        "I_M_0": 4.2,
+        "I_Pb_0": 3.2
+      },
+      "tolerance_eV": 0.2
+    }
+  ]
+}

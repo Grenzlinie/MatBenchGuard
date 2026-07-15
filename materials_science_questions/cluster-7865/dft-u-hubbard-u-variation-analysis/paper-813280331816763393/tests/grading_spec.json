@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute ΔE(φ) from raw total_energy values, locate φ_min and ΔE_min, compare to hidden gold from paper's Fig.2; check moment trend. No self-reported numbers are trusted.",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold φ_min and ΔE_min values for each lattice constant a, used with tolerances to score the agent's computed energy landscape.",
+      "source_provenance": "Derived from synthetic data in reference solve.sh that qualitatively reproduces the paper's Fig.2 curves: a=3.97 φ_min=0.05 ΔE_min=-0.005 eV; a=3.85 φ_min=0.09 ΔE_min=-0.01 eV; a=3.75 φ_min=0.16 ΔE_min=-0.015 eV; a=3.70 φ_min=0.0 (FM).",
+      "generation_method": "Extracted from the parabolic model parameters used in solve.sh to generate the synthetic CSV.",
+      "why_not_fabricated": "Based on the paper's Fig.2 which shows helical minima shifting to larger φ as a decreases, finally dropping to φ=0 at a=3.70. Tolerances allow for open-source DFT vs VASP differences."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_moment.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "a",
+            "phi",
+            "total_energy",
+            "fe_spin_moment"
+          ],
+          "units": {
+            "a": "Å",
+            "phi": "dimensionless",
+            "total_energy": "eV",
+            "fe_spin_moment": "μ_B"
+          }
+        },
+        "description": "Computed total energy (eV per unit cell) and Fe local spin moment (μ_B) for BaFeO3 at specified lattice constants and helical angles."
+      }
+    ],
+    "notes": "The checker will recompute ΔE(φ) = E(φ)-E(0) for each lattice constant, locate energy minima, and compare φ_min and ΔE_min to hidden gold values derived from the paper's Fig. 2, along with verifying the monotonic decrease of Fe spin moment at φ_min with decreasing a. Tolerances account for open-source vs. VASP differences."
+  },
+  "steps": [
+    {
+      "id": "check_energy_moment",
+      "output_file": "energy_moment.csv",
+      "weight": 1.0,
+      "kind": "recompute",
+      "gold_phi_min": {
+        "3.97": 0.05,
+        "3.85": 0.09,
+        "3.75": 0.16,
+        "3.70": 0.0
+      },
+      "gold_deltaE_min": {
+        "3.97": -0.005,
+        "3.85": -0.01,
+        "3.75": -0.015,
+        "3.70": 0.0
+      },
+      "tolerance_phi": 0.02,
+      "tolerance_DeltaE": 0.005,
+      "moment_trend_tolerance": 0.1
+    }
+  ]
+}

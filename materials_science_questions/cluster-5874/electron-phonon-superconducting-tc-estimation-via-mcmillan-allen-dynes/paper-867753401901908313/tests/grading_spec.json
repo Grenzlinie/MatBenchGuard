@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Lattice constants, band energies, and λ are compared to paper-reported values with tolerances; Tc is recomputed from the agent's own λ to verify correct formula application.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optimized_lattice.txt": "reference_match",
+    "band_feature_energies.json": "reference_match",
+    "epc_lambda.txt": "reference_match",
+    "computed_tc.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for lattice constants, band energies, λ, and Tc parameters",
+      "source_provenance": "Paper Table II for lattice constants (GGA+U, U=1eV); main text and supplement for approximate band energies; main text for λ ≈ 0.45; Tc formula parameters from main text (θ_D=280 K, μ*=0.12).",
+      "generation_method": "Values taken directly from the paper; McMillan-Allen-Dynes formula applied to compute expected Tc from the paper's λ (yielding 1.19 K, consistent with ~1 K stated in paper).",
+      "why_not_fabricated": "All numbers appear in the paper or are standard formula evaluations; no synthetic labels or hold-out data are used."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_lattice.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Two whitespace-separated numbers: a and c in Å, each to at least 4 decimal places."
+        },
+        "description": "Optimized lattice constants of LaRu3Si2 after DFT+U relaxation."
+      },
+      {
+        "file": "band_feature_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "flat_band_energy": {
+              "type": "number",
+              "unit": "eV",
+              "description": "Energy of the kagome flat band relative to the Fermi level"
+            },
+            "dirac_point_energy": {
+              "type": "number",
+              "unit": "eV",
+              "description": "Energy of the Dirac point at K relative to the Fermi level"
+            },
+            "van_hove_energy": {
+              "type": "number",
+              "unit": "eV",
+              "description": "Energy of the van Hove singularity near M relative to the Fermi level"
+            }
+          },
+          "required": [
+            "flat_band_energy",
+            "dirac_point_energy",
+            "van_hove_energy"
+          ]
+        },
+        "description": "Energies of the flat band, Dirac point, and van Hove point from the electronic band structure."
+      },
+      {
+        "file": "epc_lambda.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "number",
+          "description": "A single floating-point number representing the electron-phonon coupling constant λ."
+        },
+        "description": "Computed electron-phonon coupling constant λ."
+      },
+      {
+        "file": "computed_tc.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "number",
+          "unit": "K",
+          "description": "A single floating-point number representing the superconducting critical temperature Tc in Kelvin."
+        },
+        "description": "Superconducting critical temperature estimated from McMillan-Allen-Dynes formula."
+      }
+    ],
+    "notes": "All outputs are numerical and deterministic for the given DFT+U protocol. The checker will compare submitted values to the paper's reported values within appropriate tolerances (not disclosed here). The phonon_band.dat is process evidence, not scored."
+  },
+  "steps": [
+    {
+      "id": "dft_opt",
+      "output_file": "optimized_lattice.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": {
+        "a": 5.832,
+        "c": 6.883
+      },
+      "tolerance": 0.02,
+      "unit": "Å"
+    },
+    {
+      "id": "band_features",
+      "output_file": "band_feature_energies.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": {
+        "flat_band_energy": 0.1,
+        "dirac_point_energy": -0.2,
+        "van_hove_energy": -0.05
+      },
+      "tolerance": 0.05,
+      "unit": "eV"
+    },
+    {
+      "id": "epc_lambda",
+      "output_file": "epc_lambda.txt",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_value": 0.45,
+      "tolerance": 0.05,
+      "unit": ""
+    },
+    {
+      "id": "mcmillan_tc",
+      "output_file": "computed_tc.txt",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance": 0.05,
+      "unit": "K"
+    }
+  ]
+}

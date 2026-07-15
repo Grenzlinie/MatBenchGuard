@@ -1,0 +1,113 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker rebuilds histograms from the agent's raw cluster-size CSVs and scores structural properties (dimer counts within tolerance, orientation trend, fragmentation) against paper-reported values from Figure 6. Full recompute from raw artifacts is feasible because the CSVs directly encode the cluster distribution.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cluster_sizes_a_axis.csv": "metric_recompute",
+    "cluster_sizes_c_axis.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold dimer counts and unreacted anthracene counts derived from paper Figure 6 and text for 12 km/s shock simulations (a-axis and c-axis).",
+      "source_provenance": "Paper text: 'the latter simulation produces 49 anthracene dimers (28 carbons) compared to 23 dimers for the c-axis case.' Paper Figure 5/6 context: about 25% reactivity at 12 km/s, ~1260 unreacted 14-carbon clusters for ~1680 molecules. All values from the published paper.",
+      "generation_method": "Direct transcription from paper sentences and figure descriptions.",
+      "why_not_fabricated": "These are the paper's own reported simulation results, not invented. a-axis: 49 dimers, c-axis: 23 dimers, ~1260 unreacted 14-carbon clusters. Tolerances widened to absorb legitimate re-run variation."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cluster_sizes_a_axis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster_size"
+          ],
+          "units": {}
+        },
+        "description": "Carbon cluster sizes (number of carbons per connected cluster) identified from the a-axis shock simulation at 12 km/s and 5 ps."
+      },
+      {
+        "file": "cluster_sizes_c_axis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster_size"
+          ],
+          "units": {}
+        },
+        "description": "Carbon cluster sizes from the c-axis shock simulation at 12 km/s and 5 ps."
+      }
+    ],
+    "notes": "The checker will recompute histograms from these CSVs and compare to hidden gold values from the paper (e.g., 28-carbon dimer count, unreacted 14-carbon count, fragmentation patterns)."
+  },
+  "steps": [
+    {
+      "id": "step_2a_a_axis",
+      "output_file": "cluster_sizes_a_axis.csv",
+      "kind": "rubric",
+      "weight": 0.55,
+      "rubric": {
+        "dimer_count": {
+          "description": "28-carbon dimer count within expected range (paper value: 49)",
+          "gold": 49,
+          "tight_tol": 10,
+          "wide_tol": 20,
+          "sub_weight": 0.35
+        },
+        "unreacted_count": {
+          "description": "14-carbon unreacted anthracene count within expected range (paper value: ~1260)",
+          "gold": 1260,
+          "tight_tol": 50,
+          "wide_tol": 100,
+          "sub_weight": 0.25
+        },
+        "dimer_dominance": {
+          "description": "28-carbon dimer is the most abundant non-unreacted product peak",
+          "sub_weight": 0.2
+        },
+        "fragment_presence": {
+          "description": "Fragments (<14 carbons per cluster) are present in reasonable numbers for a 12 km/s shock",
+          "sub_weight": 0.2
+        }
+      }
+    },
+    {
+      "id": "step_2b_c_axis",
+      "output_file": "cluster_sizes_c_axis.csv",
+      "kind": "rubric",
+      "weight": 0.45,
+      "rubric": {
+        "dimer_count": {
+          "description": "28-carbon dimer count within expected range (paper value: 23)",
+          "gold": 23,
+          "tight_tol": 5,
+          "wide_tol": 10,
+          "sub_weight": 0.25
+        },
+        "orientation_trend": {
+          "description": "a-axis produces more dimers than c-axis (orientation dependence)",
+          "sub_weight": 0.3
+        },
+        "fragmentation_trend": {
+          "description": "c-axis produces more fragmentation (clusters <14 carbons) than a-axis",
+          "sub_weight": 0.25
+        },
+        "unreacted_count": {
+          "description": "14-carbon unreacted anthracene count within expected range (~1260)",
+          "gold": 1260,
+          "tight_tol": 60,
+          "wide_tol": 120,
+          "sub_weight": 0.2
+        }
+      }
+    }
+  ]
+}

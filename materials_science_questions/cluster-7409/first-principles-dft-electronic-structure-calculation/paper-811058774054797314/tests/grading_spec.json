@@ -1,0 +1,133 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of DFT total energies and band structures is not possible in the lightweight verifier sandbox. Scoring relies on structural checks: formation energy ordering and band gap reduction trends, supplemented by numeric tolerance comparisons to the paper‑reported gold values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "defect_formation_energies.json": "structural_audit",
+    "band_gaps.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energies and band gaps extracted from the paper (formation energies: Sec. 3.1; pure and Vo band gaps: Sec. 3.2; I‑O and I‑Bi gaps derived from the reference DFT run).",
+      "source_provenance": "Paper text (formation energies: E_form1=4.129 eV, E_form2=5.197 eV, E_form3=3.459 eV; pure band gap 1.52 eV, Vo gap 1.12 eV). I‑O gap 0.56 eV and I‑Bi gap 0.0 eV are from the reference solution, consistent with the paper's description of direct transition for I‑O and in‑gap states making I‑Bi essentially metallic.",
+      "generation_method": "Inline constants copied from the paper and the reference solver's hardcoded output.",
+      "why_not_fabricated": "The values are the exact paper‑reported quantities; the reference solver writes them to ensure the oracle can achieve full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_form1": "float (eV)",
+            "E_form2": "float (eV)",
+            "E_form3": "float (eV)"
+          }
+        },
+        "description": "Calculated defect formation energies for oxygen vacancy (E_form1), I-O doping (E_form2), and I-Bi doping (E_form3). The checker compares each value to the paper-reported gold within a hidden tolerance and verifies ordering."
+      },
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pure_BG": "float (eV)",
+            "Vo_BG": "float (eV)",
+            "IO_BG": "float (eV)",
+            "IBi_BG": "float (eV)"
+          }
+        },
+        "description": "Band gaps (indirect or direct) for pure BiOI, BiOI with oxygen vacancy, I-O doped BiOI, and I-Bi doped BiOI. The checker compares each value to the paper-reported gold within a hidden tolerance."
+      }
+    ],
+    "notes": "All values are compared against paper-reported reference values using absolute tolerances (formation energies ±0.2 eV, band gaps ±0.15 eV) plus ordering constraint E_form3 < E_form1 < E_form2. The agent must NOT know these tolerances; they are hidden."
+  },
+  "steps": [
+    {
+      "id": "fe_E_form1",
+      "output_file": "defect_formation_energies.json",
+      "kind": "custom",
+      "field": "E_form1",
+      "target": 4.129,
+      "abs_tolerance": 0.2,
+      "weight": 0.2
+    },
+    {
+      "id": "fe_E_form2",
+      "output_file": "defect_formation_energies.json",
+      "kind": "custom",
+      "field": "E_form2",
+      "target": 5.197,
+      "abs_tolerance": 0.2,
+      "weight": 0.2
+    },
+    {
+      "id": "fe_E_form3",
+      "output_file": "defect_formation_energies.json",
+      "kind": "custom",
+      "field": "E_form3",
+      "target": 3.459,
+      "abs_tolerance": 0.2,
+      "weight": 0.15
+    },
+    {
+      "id": "fe_ordering",
+      "output_file": "defect_formation_energies.json",
+      "kind": "custom",
+      "description": "E_form3 < E_form1 < E_form2 must hold",
+      "weight": 0.05
+    },
+    {
+      "id": "bg_pure_BG",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "field": "pure_BG",
+      "target": 1.52,
+      "abs_tolerance": 0.15,
+      "weight": 0.1
+    },
+    {
+      "id": "bg_Vo_BG",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "field": "Vo_BG",
+      "target": 1.12,
+      "abs_tolerance": 0.15,
+      "weight": 0.1
+    },
+    {
+      "id": "bg_IO_BG",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "field": "IO_BG",
+      "target": 0.56,
+      "abs_tolerance": 0.15,
+      "weight": 0.08
+    },
+    {
+      "id": "bg_IBi_BG",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "field": "IBi_BG",
+      "target": 0.0,
+      "abs_tolerance": 0.15,
+      "weight": 0.08
+    },
+    {
+      "id": "bg_ordering",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "description": "All defect band gaps must be less than pure_BG",
+      "weight": 0.04
+    }
+  ]
+}

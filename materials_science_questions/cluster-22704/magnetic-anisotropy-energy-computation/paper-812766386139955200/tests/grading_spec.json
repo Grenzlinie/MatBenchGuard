@@ -1,0 +1,151 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Net orbital magnetization can be recomputed from the paper's Table I tensors and symmetry relations (T1). Optical conductivity spectra are strongly method-dependent, so structural (T3) checks on peak location, sign, and amplitude ordering are appropriate; they are supplemented by shape-gate validation.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_02_net_orbital_magnetization.csv": "reference_match",
+    "step_05_antisymmetric_conductivity.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference orbital magnetization vectors and conductivity structural targets",
+      "source_provenance": "Paper Table I and Eqs. (4)-(5); Figure 2 description",
+      "generation_method": "Computed from local tensor components; conductivity targets are energy region and ordering from paper",
+      "why_not_fabricated": "Values are directly derived from the paper's reported numerical data and figure description; not invented independently."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_net_orbital_magnetization.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "spin_orientation",
+            "M_Lx",
+            "M_Ly",
+            "M_Lz"
+          ],
+          "units": {
+            "M_Lx": "μB",
+            "M_Ly": "μB",
+            "M_Lz": "μB"
+          }
+        },
+        "description": "Net orbital magnetization vectors for three compounds and three spin orientations. Checker compares to known reference values with tolerances."
+      },
+      {
+        "file": "step_05_antisymmetric_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "energy_eV",
+            "imag_sigma_A"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "imag_sigma_A": "10³ Ω⁻¹ cm⁻¹"
+          }
+        },
+        "description": "Antisymmetric part of optical conductivity for each compound's ground state. Checker compares spectra to reference curves (digitized from paper) allowing small energy shifts and scaling."
+      }
+    ],
+    "notes": "The submitted orbital magnetization vectors and conductivity spectra will be compared against reference values derived from the paper's reported local tensors and digitized figure, with tolerances that account for inherent spread due to different DFT implementations and convergence settings. Trends in orientation dependence are also evaluated."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "step_02_net_orbital_magnetization.csv",
+      "weight": 0.4,
+      "kind": "recompute_orbital_magnetization",
+      "target_policy": "reference_match",
+      "config": {
+        "gold_vectors": {
+          "LaCrO3": {
+            "a": [
+              0.0,
+              0.0,
+              0.0008
+            ],
+            "b": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "c": [
+              0.0008,
+              0.0,
+              0.0
+            ]
+          },
+          "LaMnO3": {
+            "a": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "b": [
+              0.0,
+              0.0,
+              -0.0108
+            ],
+            "c": [
+              0.0,
+              -0.0108,
+              0.0
+            ]
+          },
+          "LaFeO3": {
+            "a": [
+              0.0,
+              0.0,
+              -0.0024
+            ],
+            "b": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "c": [
+              -0.0024,
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "tolerance": 0.01
+      }
+    },
+    {
+      "id": "step_05",
+      "output_file": "step_05_antisymmetric_conductivity.csv",
+      "weight": 0.6,
+      "kind": "structural_conductivity",
+      "target_policy": "structural_audit",
+      "config": {
+        "expected_peak_energy_eV": 4.0,
+        "energy_tolerance_eV": 0.5,
+        "sign": "positive",
+        "amplitude_ordering": [
+          "LaMnO3",
+          "LaFeO3",
+          "LaCrO3"
+        ],
+        "required_energy_range": [
+          0.0,
+          8.0
+        ],
+        "max_energy_step": 0.1
+      }
+    }
+  ]
+}

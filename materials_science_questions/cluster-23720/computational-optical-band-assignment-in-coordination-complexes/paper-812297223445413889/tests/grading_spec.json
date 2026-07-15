@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Only qualitative categorical predictions (photoactive state, leaving ligand, fragment energy ordering) are scored; exact numerical reproduction is not expected due to basis-set and code differences, so T1/T2 recompute of numeric metrics is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "photoactive state gold per complex",
+      "source_provenance": "paper Table II, column 'photoactive state', rows for each complex",
+      "generation_method": "extracted from Table II; confirmed by reference solve.sh",
+      "why_not_fabricated": "direct copy of paper's reported experimental consensus"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "leaving ligand gold labels and delta_p key mapping",
+      "source_provenance": "paper Table III, column 'Δp' and 'predicted leaving ligand'; experimental leaving ligand from Section IIa",
+      "generation_method": "extracted from Table III and text; keys derived from column headers",
+      "why_not_fabricated": "exact reported labels and predicted ligands"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "fragment energy ordering gold",
+      "source_provenance": "paper Figure 3B and associated text (Section Va)",
+      "generation_method": "derived from Figure 3B lowest energy states across structures, confirmed by reference solve.sh",
+      "why_not_fabricated": "consistent with paper's correlation diagram and text description"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hexacoordinated": "array of objects",
+            "pentacoordinated": "array of objects"
+          },
+          "items": {
+            "hexacoordinated.element": "object with fields: complex_id (string), photoactive_state (string), excitation_energies (object mapping state label to numeric energy in cm⁻¹), composition (object with d_z2, d_x2_y2 as numbers), delta_p (object with per-ligand Δp values), predicted_leaving_ligand (string)",
+            "pentacoordinated.element": "object with fields: fragment_id (string), structure (string), relative_energies (list of objects with state (string) and energy (number))"
+          }
+        },
+        "description": "Aggregated results from ab initio ligand-field CI calculations: photoactive state, excitation energies, d-orbital compositions, Mulliken population changes, leaving ligand predictions, and pentacoordinated fragment state energies."
+      }
+    ],
+    "notes": "Scoring focuses on qualitative correctness: the photoactive state and leaving ligand must match the experimental consensus (categorical match) and the relative ordering of the pentacoordinated fragment states must reproduce the paper's Figure 3 pattern. No numeric tolerance is applied."
+  },
+  "steps": [
+    {
+      "id": "photoactive_state",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "gold": {
+        "Cr(NH3)5F2+": "4E",
+        "trans-Cr(NH3)4F2+": "4E",
+        "trans-Cr(NH3)4Cl2+": "4E",
+        "cis-Cr(NH3)4F2+": "4B2"
+      }
+    },
+    {
+      "id": "leaving_ligand",
+      "output_file": "results.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "gold": {
+        "Cr(NH3)5F2+": {
+          "expected_label": "(NH3)ax",
+          "key_label_mapping": {
+            "F_total": "F-",
+            "Nax_total": "(NH3)ax",
+            "Neq_total": "(NH3)eq"
+          }
+        },
+        "trans-Cr(NH3)4F2+": {
+          "expected_label": "(NH3)eq",
+          "key_label_mapping": {
+            "F_ax_total": "F-",
+            "Neq_total": "(NH3)eq"
+          }
+        },
+        "trans-Cr(NH3)4Cl2+": {
+          "expected_label": "Cl-",
+          "key_label_mapping": {
+            "Cl_ax_total": "Cl-",
+            "Neq_total": "(NH3)eq"
+          }
+        },
+        "cis-Cr(NH3)4F2+": {
+          "expected_label": "(NH3)eq",
+          "key_label_mapping": {
+            "F_eq_total": "F-",
+            "Nax_total": "(NH3)ax",
+            "Neq_total": "(NH3)eq"
+          }
+        }
+      }
+    },
+    {
+      "id": "fragment_ordering",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "rubric",
+      "gold": {
+        "Cr(NH3)4F2+": [
+          "SP_ap",
+          "TBP_ax",
+          "TBP_eq",
+          "SP_bas"
+        ],
+        "Cr(NH3)4Cl2+": [
+          "SP_ap",
+          "TBP_ax",
+          "TBP_eq",
+          "SP_bas"
+        ]
+      }
+    }
+  ]
+}

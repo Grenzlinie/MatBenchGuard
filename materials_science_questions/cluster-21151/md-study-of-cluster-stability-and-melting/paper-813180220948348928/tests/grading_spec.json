@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The spectral observables (shifts, linewidths) are the final product of a full MD simulation pipeline; recomputing them from raw trajectories inside the verifier sandbox is impossible. Comparing the agent's reported numbers against paper-extracted gold values with tolerances is the viable verification method.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold spectral shift (δν), inhomogeneous FWHM (Γ), and mean homogeneous linewidth (Γ̃) for isomers (5|0), (5|5), (22|0) at T=30 K, and reference temperature-trend rules derived from the paper's figures.",
+      "source_provenance": "Israel Journal of Chemistry 1993, Figures 2,3,4,5,6.",
+      "generation_method": "Values were manually read from the figures and rounded to nearest cm⁻¹. Trend rules were extracted from the paper's textual description of the temperature dependence.",
+      "why_not_fabricated": "These are the actual paper-reported values; the reference solver is expected to reproduce them (within tolerances) by writing the same numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "isomers": "list of isomer codes",
+            "T30": "object mapping isomer code to {shift_cm-1, Gamma_cm-1, Gamma_tilde_cm-1}",
+            "T_series": "object mapping isomer code to {T_K: list of temperatures, shift_cm-1: list, Gamma_cm-1: list, Gamma_tilde_cm-1: list}"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "shift_cm-1": "cm⁻¹",
+            "Gamma_cm-1": "cm⁻¹",
+            "Gamma_tilde_cm-1": "cm⁻¹",
+            "T_K": "K"
+          }
+        },
+        "description": "The final spectral observables (shift, inhomogeneous FWHM, mean homogeneous linewidth) for (5|0), (5|5), (22|0) at T=30 K and across temperatures 5–40 K."
+      }
+    ],
+    "notes": "The checker compares the reported shifts and linewidths to hidden gold values derived from the paper's figures, using tolerances that accommodate stochastic variation and implementation differences. The target_policy is threshold_or_better because a successful reproduction should yield values within an acceptable range relative to the paper."
+  },
+  "steps": [
+    {
+      "id": "shape_valid",
+      "output_file": "results.json",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "description": "Check that results.json exists and contains the required top-level keys: isomers, T30, T_series."
+    },
+    {
+      "id": "T30_shifts",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "(5|0)": -22,
+        "(5|5)": -38,
+        "(22|0)": -78
+      },
+      "tolerance": 5,
+      "description": "Spectral shifts at T=30 K for the three isomers, within ±5 cm⁻¹ tolerance of the gold values."
+    },
+    {
+      "id": "T30_Gamma",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "(5|0)": 13,
+        "(5|5)": 12,
+        "(22|0)": 28
+      },
+      "tolerance": 2,
+      "description": "Inhomogeneous FWHM Γ at T=30 K, within ±2 cm⁻¹ tolerance."
+    },
+    {
+      "id": "T30_Gamma_tilde",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "gold": {
+        "(5|0)": 9,
+        "(5|5)": 9,
+        "(22|0)": 20
+      },
+      "tolerance": 2,
+      "description": "Mean homogeneous linewidth Γ̃ at T=30 K, within ±2 cm⁻¹ tolerance."
+    },
+    {
+      "id": "temp_trend",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.35,
+      "description": "Temperature series trends: shifts remain nearly constant (std ≤ 6 cm⁻¹), linewidths for (5|0) and (5|5) do not decrease substantially and plateau, and (22|0) shows at least a 1.3× increase in linewidth from 20 K to 40 K.",
+      "check_rules": {}
+    }
+  ]
+}

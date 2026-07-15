@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute aggregate statistics (fraction near surface, peak strength) directly from the raw histogram CSVs; no fixed gold table exists, but the derived metrics and thresholds capture the paper's qualitative trends and are checked against paper-consistent reference data.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for cluster surface fraction and dipole orientation peak ratio derived from paper's qualitative findings.",
+      "source_provenance": "Paper Figures 7, 8 and corresponding text stating cluster concentration near Pt(100) surface, uniform for NaCl(100), strong dipole peak for Pt, no distinct peak for NaCl.",
+      "generation_method": "Thresholds were set by examining the reference synthetic histograms (solve.sh) that mimic the paper's expected trends, and then values were relaxed to allow run-to-run variation but exclude trivial uniform/weak distributions.",
+      "why_not_fabricated": "Thresholds represent the physical trend of the paper, not arbitrary numbers; the reference solution achieves full credit, confirming they are reachable."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "clusters_z_Pt.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z_bin_center",
+            "count"
+          ],
+          "units": {
+            "z_bin_center": "nm",
+            "count": "count"
+          }
+        },
+        "description": "Histogram of NaCl cluster center-of-mass positions along the surface normal for the Pt(100) system."
+      },
+      {
+        "file": "clusters_z_NaCl.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "z_bin_center",
+            "count"
+          ],
+          "units": {
+            "z_bin_center": "nm",
+            "count": "count"
+          }
+        },
+        "description": "Histogram of NaCl cluster center-of-mass positions along the surface normal for the NaCl(100) system."
+      },
+      {
+        "file": "dipole_orientation_Pt.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cos_theta_bin_center",
+            "count"
+          ],
+          "units": {
+            "cos_theta_bin_center": "dimensionless",
+            "count": "count"
+          }
+        },
+        "description": "Distribution of water dipole orientation angle (cos theta) near the Pt(100) interface."
+      },
+      {
+        "file": "dipole_orientation_NaCl.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cos_theta_bin_center",
+            "count"
+          ],
+          "units": {
+            "cos_theta_bin_center": "dimensionless",
+            "count": "count"
+          }
+        },
+        "description": "Distribution of water dipole orientation angle (cos theta) near the NaCl(100) interface."
+      }
+    ],
+    "notes": "These artifacts are produced from the MD trajectories. The cluster z-distributions and water orientation distributions capture the key differences between Pt(100) and NaCl(100) interfaces, enabling verification of preferential cluster formation and water ordering."
+  },
+  "steps": [
+    {
+      "id": "cluster_pt",
+      "output_file": "clusters_z_Pt.csv",
+      "weight": 0.25,
+      "params": {
+        "surface_zone_nm": 1.0,
+        "min_fraction_surface": 0.5,
+        "min_total_clusters": 1
+      }
+    },
+    {
+      "id": "cluster_nacl",
+      "output_file": "clusters_z_NaCl.csv",
+      "weight": 0.25,
+      "params": {
+        "surface_zone_nm": 1.0,
+        "max_fraction_surface": 0.35,
+        "min_total_clusters": 1
+      }
+    },
+    {
+      "id": "dipole_pt",
+      "output_file": "dipole_orientation_Pt.csv",
+      "weight": 0.25,
+      "params": {
+        "min_max_mean_ratio": 2.0,
+        "max_peak_offset": 0.2,
+        "min_total_counts": 1
+      }
+    },
+    {
+      "id": "dipole_nacl",
+      "output_file": "dipole_orientation_NaCl.csv",
+      "weight": 0.25,
+      "params": {
+        "max_max_mean_ratio": 1.5,
+        "min_total_counts": 1
+      }
+    }
+  ]
+}

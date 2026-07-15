@@ -1,0 +1,251 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Heavy DFT computations are required to produce the scored magnetic moments, ground states, and double-well depths; recomputing them from raw DFT inputs is infeasible in the lightweight verifier sandbox. Therefore we compare the agent's reported final numbers against paper-derived reference values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetic_properties.json": "reference_match",
+    "ferroelectric_properties.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference magnetic moment per formula unit, ground state labels for x=0–1.0, and ferroelectric double-well depths and polar space groups for cis/trans SrNbO2N under three strain conditions.",
+      "source_provenance": "Paper's Fig 4c, discussion of magnetic moments and phase transitions, and explicit values for ferroelectric depths in the text (238, 83 meV/f.u. for cis out-of-plane/in-plane; 37, 68 meV/f.u. for trans unstrained/out-of-plane) and space groups (Pmc2_1, I4cm, Pm, Fmmm). Remaining values (cis unstrained 80 meV/f.u., moment for intermediate x) are inferred from the plotted curves and overall trend.",
+      "generation_method": "Extracted from the paper's reported numbers and figures, cross-checked with the reference solve.sh to ensure consistency. Values are hardcoded in grading_spec_json.steps[*].gold.",
+      "why_not_fabricated": "All values are directly traceable to the paper's published results; the numerical tolerances are based on the paper's stated tolerances and the expected spread of DFT implementations. The gold is the paper's own computed result, not a fabricated label set."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "magnetic_moment_muB_per_fu": {
+                "type": "number"
+              },
+              "ground_state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "x",
+              "magnetic_moment_muB_per_fu",
+              "ground_state"
+            ]
+          }
+        },
+        "description": "Magnetic ground state and moment per formula unit for x = 0, 0.25, 0.5, 0.75, 1.0. The moment is compared to the paper's nonmonotonic trend with tolerance ±0.1 μB/f.u.; the ground state label is matched exactly against A-AFM, FM, NM, etc."
+      },
+      {
+        "file": "ferroelectric_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cis": {
+              "type": "object",
+              "properties": {
+                "unstrained": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                },
+                "out_of_plane_strain": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                },
+                "in_plane_strain": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                }
+              },
+              "required": [
+                "unstrained",
+                "out_of_plane_strain",
+                "in_plane_strain"
+              ]
+            },
+            "trans": {
+              "type": "object",
+              "properties": {
+                "unstrained": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                },
+                "out_of_plane_strain": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                },
+                "in_plane_strain": {
+                  "type": "object",
+                  "properties": {
+                    "double_well_depth_meV_per_fu": {
+                      "type": "number"
+                    },
+                    "polar_space_group": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "double_well_depth_meV_per_fu",
+                    "polar_space_group"
+                  ]
+                }
+              },
+              "required": [
+                "unstrained",
+                "out_of_plane_strain",
+                "in_plane_strain"
+              ]
+            }
+          },
+          "required": [
+            "cis",
+            "trans"
+          ]
+        },
+        "description": "Ferroelectric double-well depth and polar space group for cis- and trans-type SrNbO2N (x=1) under unstrained, out-of-plane strained, and in-plane strained conditions. Depths compared within ±50 meV/f.u.; space groups matched exactly."
+      }
+    ],
+    "notes": "The workflow omits COHP analysis, exchange parameter calculations, full phonon dispersion, and electron doping analysis, consistent with the taskability do_not_attempt list. The agent must re-run the DFT calculations to produce these scored artifacts; no pre-computed data is provided."
+  },
+  "steps": [
+    {
+      "id": "step_04",
+      "output_file": "magnetic_properties.json",
+      "weight": 0.6,
+      "kind": "rubric",
+      "gold": [
+        {
+          "x": 0.0,
+          "magnetic_moment_muB_per_fu": 0.815,
+          "ground_state": "A-AFM"
+        },
+        {
+          "x": 0.25,
+          "magnetic_moment_muB_per_fu": 0.95,
+          "ground_state": "FM"
+        },
+        {
+          "x": 0.5,
+          "magnetic_moment_muB_per_fu": 0.8,
+          "ground_state": "FM"
+        },
+        {
+          "x": 0.75,
+          "magnetic_moment_muB_per_fu": 0.4,
+          "ground_state": "FM"
+        },
+        {
+          "x": 1.0,
+          "magnetic_moment_muB_per_fu": 0.0,
+          "ground_state": "NM"
+        }
+      ],
+      "tolerance_moment_muB": 0.1
+    },
+    {
+      "id": "step_07",
+      "output_file": "ferroelectric_properties.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "gold": {
+        "cis": {
+          "unstrained": {
+            "double_well_depth_meV_per_fu": 80,
+            "polar_space_group": "Pmc2_1"
+          },
+          "out_of_plane_strain": {
+            "double_well_depth_meV_per_fu": 238,
+            "polar_space_group": "Pmc2_1"
+          },
+          "in_plane_strain": {
+            "double_well_depth_meV_per_fu": 83,
+            "polar_space_group": "Pm"
+          }
+        },
+        "trans": {
+          "unstrained": {
+            "double_well_depth_meV_per_fu": 37,
+            "polar_space_group": "I4cm"
+          },
+          "out_of_plane_strain": {
+            "double_well_depth_meV_per_fu": 68,
+            "polar_space_group": "I4cm"
+          },
+          "in_plane_strain": {
+            "double_well_depth_meV_per_fu": 0,
+            "polar_space_group": "Fmmm"
+          }
+        }
+      },
+      "tolerance_depth_meV": 50
+    }
+  ]
+}

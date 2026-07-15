@@ -1,0 +1,159 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of the Saha solver in the verifier is heavy; structural checks on intermediate data and interval derivation against paper gold provide strong evidence of correct reproduction.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermo_optic_data_532nm.csv": "structural_audit",
+    "error_intervals_532nm.csv": "reference_match",
+    "thermo_optic_data_808nm.csv": "structural_audit",
+    "error_intervals_808nm.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Golden temperature interval bounds for 532 nm from paper Fig 9 and text.",
+      "source_provenance": "Paper Section 4, Fig. 9 and explicit temperature bounds given on pages 493-494.",
+      "generation_method": "Transcribed directly from the paper's legend and discussion.",
+      "why_not_fabricated": "These are the paper's own reported applicable ranges, forming the primary experimental claim."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermo_optic_data_532nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "N_e",
+            "n-1",
+            "dn/dT",
+            "e"
+          ],
+          "units": {
+            "T": "K",
+            "N_e": "cm^-3",
+            "n-1": "dimensionless",
+            "dn/dT": "K^-1",
+            "e": "dimensionless"
+          }
+        },
+        "description": "Computed thermo-optic quantities at 532 nm: temperature T, electron density N_e, refractive index (n-1), temperature derivative dn/dT, and relative measurement error e. Scored via structural consistency checks (peak locations, zero crossings, error formula consistency)."
+      },
+      {
+        "file": "error_intervals_532nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "error_threshold",
+            "T_lower",
+            "T_upper"
+          ],
+          "units": {
+            "error_threshold": "dimensionless",
+            "T_lower": "K",
+            "T_upper": "K"
+          }
+        },
+        "description": "Applicable temperature ranges at 532 nm for error tolerances 0.10, 0.12, 0.15, 0.20."
+      },
+      {
+        "file": "thermo_optic_data_808nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "N_e",
+            "n-1",
+            "dn/dT",
+            "e"
+          ],
+          "units": {
+            "T": "K",
+            "N_e": "cm^-3",
+            "n-1": "dimensionless",
+            "dn/dT": "K^-1",
+            "e": "dimensionless"
+          }
+        },
+        "description": "Computed thermo-optic quantities at 808 nm. Scored via structural consistency checks (peak locations, zero crossings, error formula consistency)."
+      },
+      {
+        "file": "error_intervals_808nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "error_threshold",
+            "T_lower",
+            "T_upper"
+          ],
+          "units": {
+            "error_threshold": "dimensionless",
+            "T_lower": "K",
+            "T_upper": "K"
+          }
+        },
+        "description": "Applicable temperature ranges at 808 nm for error tolerances 0.10, 0.12, 0.15, 0.20."
+      }
+    ],
+    "notes": "All outputs are CSVs with header row. The thermo‑optic data files are scored by structural audit (consistency checks, peak/zero locations); the interval files are scored against hidden reference values."
+  },
+  "steps": [
+    {
+      "id": "step_532_data",
+      "output_file": "thermo_optic_data_532nm.csv",
+      "weight": 0.3,
+      "kind": "custom_scorer"
+    },
+    {
+      "id": "step_532_intervals",
+      "output_file": "error_intervals_532nm.csv",
+      "weight": 0.4,
+      "kind": "custom_scorer",
+      "gold_intervals": {
+        "0.1": {
+          "lower": 12100,
+          "upper": 13900
+        },
+        "0.12": {
+          "lower": 11500,
+          "upper": 14500
+        },
+        "0.15": {
+          "lower": 10800,
+          "upper": 14900
+        },
+        "0.2": {
+          "lower": 10100,
+          "upper": 15300
+        }
+      },
+      "tolerance": 500
+    },
+    {
+      "id": "step_808_data",
+      "output_file": "thermo_optic_data_808nm.csv",
+      "weight": 0.1,
+      "kind": "custom_scorer"
+    },
+    {
+      "id": "step_808_intervals",
+      "output_file": "error_intervals_808nm.csv",
+      "weight": 0.2,
+      "kind": "custom_scorer",
+      "tolerance_width_ratio": 0.01
+    }
+  ]
+}

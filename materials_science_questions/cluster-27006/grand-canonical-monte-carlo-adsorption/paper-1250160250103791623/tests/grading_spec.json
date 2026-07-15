@@ -1,0 +1,214 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts peak positions, step pressures, cluster counts, and adsorption site locations from the agent's output tables and compares them to paper‑reported references with appropriate tolerances; no third‑party hidden labels are required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "kde_pore_size_dut32.csv": "reference_match",
+    "pore_centers_dut32.csv": "structural_audit",
+    "adsorption_isotherm_dut32.csv": "reference_match",
+    "pore_isotherms_dut32.csv": "reference_match",
+    "radial_distribution_dut32.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference characteristic pore diameters for DUT‑32",
+      "source_provenance": "Paper Table 4: DUT‑32 p1=14.0 Å, p2=19.4 Å, p3=28.2 Å",
+      "generation_method": "Direct copy from paper",
+      "why_not_fabricated": "These are the paper's own reported values."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected step pressure range for cooperative filling",
+      "source_provenance": "Paper text: for DUT‑32 'all pores have a drastic increase in uptake at ≈4 × 10⁻² bar' and Figure 5",
+      "generation_method": "Derived from paper description; factor‑of‑2 tolerance ensures robustness",
+      "why_not_fabricated": "Describes the cooperative filling phenomenon reported by the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected adsorption site peak for pore p2 at P3",
+      "source_provenance": "Paper Figure 6 and text: 'p2 has a defined adsorption site at ≈12 Å'",
+      "generation_method": "Reading from paper figure description",
+      "why_not_fabricated": "The site location is a key structural result of the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "kde_pore_size_dut32.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pore_diameter_A",
+            "density"
+          ],
+          "units": {
+            "pore_diameter_A": "Angstrom",
+            "density": "unitless"
+          }
+        },
+        "description": "Continuous pore-size density function from KDE; 200 rows from 0 to 40 Å. Characteristic pore diameters are compared to paper values within a tolerance."
+      },
+      {
+        "file": "pore_centers_dut32.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pore_label",
+            "x_A",
+            "y_A",
+            "z_A"
+          ],
+          "units": {
+            "x_A": "Angstrom",
+            "y_A": "Angstrom",
+            "z_A": "Angstrom"
+          }
+        },
+        "description": "Coordinates of pore centres; the number of distinct pore labels (3 clusters) and their geometric separation are checked."
+      },
+      {
+        "file": "adsorption_isotherm_dut32.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_bar",
+            "loading_mmol_g"
+          ],
+          "units": {
+            "pressure_bar": "bar",
+            "loading_mmol_g": "mmol/g"
+          }
+        },
+        "description": "Total Ar adsorption isotherm at 87 K; step pressure is compared to paper reference."
+      },
+      {
+        "file": "pore_isotherms_dut32.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_bar",
+            "pore1_loading_mmol_g",
+            "pore2_loading_mmol_g",
+            "pore3_loading_mmol_g"
+          ],
+          "units": {
+            "pressure_bar": "bar",
+            "pore1_loading_mmol_g": "mmol/g",
+            "pore2_loading_mmol_g": "mmol/g",
+            "pore3_loading_mmol_g": "mmol/g"
+          }
+        },
+        "description": "Pore-specific isotherms; checked for cooperative filling (all pore loadings increase at the same step pressure)."
+      },
+      {
+        "file": "radial_distribution_dut32.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_point",
+            "pore_label",
+            "radius_A",
+            "density_arb"
+          ],
+          "units": {
+            "radius_A": "Angstrom",
+            "density_arb": "arbitrary units"
+          }
+        },
+        "description": "Radial distribution profiles; presence of expected adsorption sites (e.g., peak at ~12 Å for p2) and overall peak patterns are assessed."
+      }
+    ],
+    "notes": "All outputs are for DUT-32 only. The GCMC simulation (step_4) is computationally intensive; the solving agent may use external compute resources. The verification uses T0 result-level comparison against hidden paper-reported values and structural checks."
+  },
+  "steps": [
+    {
+      "id": "kde_pore_size",
+      "output_file": "kde_pore_size_dut32.csv",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Check that the KDE density function exhibits the three characteristic pore diameters of DUT‑32 (14.0, 19.4, 28.2 Å) within ±0.5 Å.",
+      "expected_peaks": [
+        14.0,
+        19.4,
+        28.2
+      ],
+      "tolerance_A": 0.5,
+      "diameter_column": "pore_diameter_A",
+      "density_column": "density"
+    },
+    {
+      "id": "pore_centers",
+      "output_file": "pore_centers_dut32.csv",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Verify that exactly three distinct pore labels (1, 2, 3) are present, indicating that DBSCAN identified the three pore clusters.",
+      "expected_labels": [
+        1,
+        2,
+        3
+      ],
+      "label_column": "pore_label"
+    },
+    {
+      "id": "adsorption_isotherm",
+      "output_file": "adsorption_isotherm_dut32.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Check that the total adsorption isotherm shows a sharp step (maximum derivative of loading with respect to log10 pressure) within a factor of two of the paper‑reported step pressure ≈4×10⁻² bar.",
+      "pressure_column": "pressure_bar",
+      "loading_column": "loading_mmol_g",
+      "target_p_range": [
+        0.02,
+        0.08
+      ]
+    },
+    {
+      "id": "pore_isotherms",
+      "output_file": "pore_isotherms_dut32.csv",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Verify that all three pore‑specific isotherms (pore1, pore2, pore3) simultaneously exhibit a sharp increase in loading; the step pressure (max derivative) for each pore must lie within [0.02, 0.08] bar.",
+      "pressure_column": "pressure_bar",
+      "pore_columns": [
+        "pore1_loading_mmol_g",
+        "pore2_loading_mmol_g",
+        "pore3_loading_mmol_g"
+      ],
+      "target_p_range": [
+        0.02,
+        0.08
+      ]
+    },
+    {
+      "id": "radial_distribution",
+      "output_file": "radial_distribution_dut32.csv",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Check that, for pressure point 'P3' and pore label 2, the radial density profile displays a peak near the paper‑reported adsorption site at ~12 Å (within ±2 Å).",
+      "target_pressure_point": "P3",
+      "target_pore_label": 2,
+      "expected_peak_A": 12.0,
+      "tolerance_A": 2.0,
+      "radius_column": "radius_A",
+      "density_column": "density_arb",
+      "pressure_col": "pressure_point",
+      "label_col": "pore_label"
+    }
+  ]
+}

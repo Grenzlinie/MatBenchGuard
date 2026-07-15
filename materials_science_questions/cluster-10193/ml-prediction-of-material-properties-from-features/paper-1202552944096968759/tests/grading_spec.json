@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Step_04 metrics are compared to paper's reported values via threshold_or_better (T0) because test labels are unavailable; step_07 counts and top candidates are recomputed from raw predicted_properties.csv (T1).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold test-set metrics from paper Table 2",
+      "source_provenance": "paper Table 2 Mol2vec test-set metrics",
+      "generation_method": "extracted from paper Table 2",
+      "why_not_fabricated": "These values are exactly as reported in the paper; they are used as reference thresholds for scoring."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_04_test_set_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "surface_tension": "object with test_R2 and test_RMSE",
+            "viscosity": "object with test_R2 and test_RMSE",
+            "ionic_conductivity": "object with test_R2 and test_RMSE",
+            "density": "object with test_R2 and test_RMSE",
+            "melting_temperature": "object with test_R2 and test_RMSE; optionally test_accuracy",
+            "toxicity": "object with test_R2 and test_RMSE",
+            "water_activity": "object with test_R2 and test_RMSE"
+          }
+        },
+        "description": "Test-set performance metrics (R² and RMSE) for each IL property model."
+      },
+      {
+        "file": "step_07_candidate_counts.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "co2_capture": "integer",
+            "battery_electrolyte": "integer"
+          }
+        },
+        "description": "Number of generated ILs that pass all screening criteria for CO₂ capture and battery electrolyte, respectively."
+      },
+      {
+        "file": "step_07_top_candidates.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "application",
+            "SMILES",
+            "predicted_ln_eta",
+            "predicted_sigma",
+            "predicted_kappa",
+            "predicted_logEC50",
+            "predicted_gamma_w",
+            "predicted_SA",
+            "predicted_Tm",
+            "passed"
+          ]
+        },
+        "description": "Top 5 ILs per application with their predicted properties and whether they satisfy the screening criteria."
+      }
+    ],
+    "notes": "Biomass pretreatment screening is omitted because it requires proprietary COSMO-RS calculations. The task uses a subset of at least 10,000 novel ILs instead of the full 10.6 million; screening counts are scored against a proportionally scaled reference. Top candidates are verified for structural correctness and compliance with stated thresholds."
+  },
+  "steps": [
+    {
+      "id": "step_04_metrics",
+      "output_file": "step_04_test_set_metrics.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "config": {
+        "gold": {
+          "surface_tension": {
+            "R2": 0.99,
+            "RMSE": 0.755
+          },
+          "viscosity": {
+            "R2": 0.987,
+            "RMSE": 0.151
+          },
+          "ionic_conductivity": {
+            "R2": 0.987,
+            "RMSE": 0.142
+          },
+          "density": {
+            "R2": 0.999,
+            "RMSE": 5.742
+          },
+          "melting_temperature": {
+            "R2": 0.72,
+            "RMSE": 39.87,
+            "test_accuracy": 0.844
+          },
+          "toxicity": {
+            "R2": 0.88,
+            "RMSE": 0.376
+          },
+          "water_activity": {
+            "R2": 0.99,
+            "RMSE": 0.063
+          }
+        }
+      }
+    },
+    {
+      "id": "step_07_counts",
+      "output_file": "step_07_candidate_counts.json",
+      "weight": 0.3,
+      "kind": "custom",
+      "config": {
+        "criteria": {
+          "co2": {
+            "ln_eta_max": 4.5,
+            "sigma_max": 45.0,
+            "kappa_min": 0.1,
+            "kappa_max": 0.5,
+            "hydrophilic": true,
+            "SA_max": 6,
+            "liquid": true
+          },
+          "battery": {
+            "kappa_min": 1.5,
+            "ln_eta_max": 5.0,
+            "logEC50_min": 2.0,
+            "SA_max": 6,
+            "liquid": true
+          }
+        }
+      }
+    },
+    {
+      "id": "step_07_top",
+      "output_file": "step_07_top_candidates.csv",
+      "weight": 0.3,
+      "kind": "custom",
+      "config": {}
+    }
+  ]
+}

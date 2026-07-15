@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "mixed",
+  "scoring_justification": "Zincblende properties use reference_match with tolerances (T0) because recompute from raw MD trajectory is infeasible; Rocksalt diffusion uses structural_audit (T3) because only trends/order-of-magnitude are verifiable without access to the raw MSD data. The paper provides a numeric gold point for D at 40 kbar, 1200K.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zincblende_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_angstrom": "float (Å)",
+            "bulk_modulus_Mbar": "float (Mbar)",
+            "bulk_modulus_derivative": "float (dimensionless)",
+            "cohesive_energy_eV_per_atom": "float (eV/atom)",
+            "elastic_C11_minus_C12_over_2_Mbar": "float (Mbar)",
+            "elastic_C44_Mbar": "float (Mbar)",
+            "rocksalt_lattice_constant_angstrom": "float (Å)",
+            "rocksalt_bulk_modulus_Mbar": "float (Mbar)",
+            "rocksalt_bulk_modulus_derivative": "float (dimensionless)"
+          }
+        },
+        "description": "Scored artifact containing the computed structural and elastic properties of zinc blende AgI and the equilibrium structural properties of rocksalt AgI, all computed with the Tersoff potential. Each field is compared to the paper's reported value with an appropriate hidden tolerance."
+      },
+      {
+        "file": "rocksalt_diffusion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "diffusion_coefficients": "array of objects"
+          },
+          "items": {
+            "pressure_kbar": "float",
+            "temperature_K": "float",
+            "diffusion_coefficient_cm2_per_s": "float"
+          }
+        },
+        "description": "Scored artifact containing Ag⁺ diffusion coefficients in rocksalt AgI. The checker verifies that all coefficients are positive and of order 10⁻⁵ cm²/s, and that for each pressure D increases monotonically with temperature."
+      }
+    ],
+    "notes": "The potential parameters are provided as public constants; re-fitting is not required. The agent may use any open-source MD code (LAMMPS, custom Python, etc.). No external dataset download is necessary. Rocksalt structural properties are scored alongside zincblende properties in the same artifact."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for zincblende properties from paper Table 3 (Present work column)",
+      "source_provenance": "Paper Solid State Communications 112 (1999) 49-54, Table 3",
+      "generation_method": "Direct extraction from paper's published table",
+      "why_not_fabricated": "These are the paper's own computed results for zincblende AgI using the Tersoff potential with the given parameters; they represent the target of reproduction."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold diffusion coefficient point at 40 kbar, 1200 K from paper Figure 6 estimate ~2.5×10⁻⁵ cm²/s",
+      "source_provenance": "Paper Figure 6 (Silver-ion diffusion coefficients for rocksalt-AgI at 20, 30 and 40 kbar)",
+      "generation_method": "Read from the published figure; used as a consistency anchor. The value is approximate but sufficient for a factor-of-2 tolerance check.",
+      "why_not_fabricated": "This value is derived from the paper's graphical result and serves as a soft reference point; the primary scoring relies on structural monotonicity."
+    }
+  ],
+  "steps": [
+    {
+      "id": "zincblende",
+      "output_file": "zincblende_properties.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "reference": {
+        "lattice_constant_angstrom": 6.485,
+        "bulk_modulus_Mbar": 0.192,
+        "bulk_modulus_derivative": 2.35,
+        "cohesive_energy_eV_per_atom": -2.366,
+        "elastic_C11_minus_C12_over_2_Mbar": 0.066,
+        "elastic_C44_Mbar": 0.066
+      },
+      "tolerance": {
+        "lattice_constant_angstrom": 0.01,
+        "bulk_modulus_Mbar": 0.01,
+        "bulk_modulus_derivative": 0.5,
+        "cohesive_energy_eV_per_atom": 0.05,
+        "elastic_C11_minus_C12_over_2_Mbar": 0.01,
+        "elastic_C44_Mbar": 0.01
+      }
+    },
+    {
+      "id": "rocksalt",
+      "output_file": "rocksalt_diffusion.json",
+      "kind": "structural_audit",
+      "weight": 0.6,
+      "gold_point": {
+        "pressure": 40,
+        "temperature": 1200,
+        "D": 2.5e-05,
+        "factor": 2.0
+      },
+      "weight_gold": 0.3,
+      "weight_mono": 0.5,
+      "weight_mag": 0.2
+    }
+  ]
+}

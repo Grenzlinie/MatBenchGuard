@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Headline quantity is a set of scalar CRSS values; recompute from raw simulation outputs is infeasible in the verifier sandbox. We compare agent's reported values to paper-derived gold with generous tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "crss_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold CRSS values for six precipitate conditions",
+      "source_provenance": "Digitized from paper Figures 4, 6, 7, 9",
+      "generation_method": "Extracted approximate values from published plots",
+      "why_not_fabricated": "Values correspond to data presented in the paper, used as reference for reproduction verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "crss_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "crss_MPa"
+          ],
+          "columns": [
+            {
+              "name": "condition",
+              "type": "string",
+              "enum": [
+                "Cu_spherical_1.25nm",
+                "Ni_spherical_1.25nm",
+                "CuNi_ordered_1.25nm",
+                "Fe25Cu75_spherical_1.25nm",
+                "CuNi_core_shell_core0.6nm",
+                "Cu_ellipsoidal_0.5nm_halfaxis"
+              ]
+            },
+            {
+              "name": "crss_MPa",
+              "type": "number",
+              "units": "MPa"
+            }
+          ]
+        },
+        "description": "Critical resolved shear stress (MPa) for each of the six precipitate conditions. The condition column identifies the precipitate type, and crss_MPa is the detachment stress."
+      }
+    ],
+    "notes": "The CSV must include exactly one row per condition with the correct condition identifier and the computed CRSS. The hidden checker will compare crss_MPa values against paper-derived gold using a generous tolerance window; a value equal to or better than the threshold (within tolerance) earns full credit."
+  },
+  "steps": [
+    {
+      "id": "run_crss",
+      "output_file": "crss_results.csv",
+      "kind": "comparison",
+      "weight": 1.0,
+      "target_policy": "reference_match",
+      "tolerance": {
+        "relative": 0.15,
+        "absolute_MPa": 15.0
+      },
+      "gold_values": {
+        "Cu_spherical_1.25nm": 200,
+        "Ni_spherical_1.25nm": 270,
+        "CuNi_ordered_1.25nm": 330,
+        "Fe25Cu75_spherical_1.25nm": 160,
+        "CuNi_core_shell_core0.6nm": 220,
+        "Cu_ellipsoidal_0.5nm_halfaxis": 130
+      }
+    }
+  ]
+}

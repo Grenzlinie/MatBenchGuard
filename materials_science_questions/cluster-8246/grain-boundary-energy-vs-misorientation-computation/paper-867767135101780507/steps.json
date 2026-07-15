@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate training data and train SVR model",
+    "role": "process",
+    "action": "For the four training grain boundaries (Σ5[001]/(210), Σ5[001]/(310), Σ17[001]/(410), Σ17[001]/(350)), generate atomic supercells and perform static‑lattice relaxations for many rigid‑body translation states using LAMMPS and the Cu EAM potential. From each initial configuration, compute the 12 geometric descriptors and their transformations to obtain 83 standardized descriptors. Train an SVR model with Gaussian kernel on these descriptors to predict grain‑boundary energy. Save the trained model, scaler, and descriptor code for reuse.",
+    "output_file": "",
+    "evidence": "training_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step covers the entire training pipeline: configuration generation, static‑lattice reference calculations, descriptor extraction, standardization, and SVR model training. It is a required intermediate process; the trained model is used by downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Predict Σ13 most stable state and relaxed energy",
+    "role": "scored",
+    "action": "Generate initial atomic configurations for the Σ13[001]/(230) test boundary by varying rigid‑body translations. Compute the standardized 83 descriptors and use the trained SVR model to predict the most stable translation state (minimum predicted energy) and its pre‑relaxation energy. Then perform a single static‑lattice relaxation of that predicted state using LAMMPS to obtain the relaxed grain‑boundary energy. Write a JSON file containing the boundary name, the three translation coordinates, and both energies.",
+    "output_file": "sigma13_predictions.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This step delivers the specific prediction for the Σ13 boundary, which serves as the primary indicator of the model's accuracy on an unseen boundary. The JSON file must contain keys: 'boundary' (string), 'predicted_translation_X' (float), 'predicted_translation_Y' (float), 'predicted_translation_Z' (float), 'pre_relaxation_energy' (float, J/m²), 'relaxed_energy' (float, J/m²).",
+    "output_schema": "{\"type\": \"object\", \"required\": {\"boundary\": \"string\", \"predicted_translation_X\": \"float\", \"predicted_translation_Y\": \"float\", \"predicted_translation_Z\": \"float\", \"pre_relaxation_energy\": \"float\", \"relaxed_energy\": \"float\"}, \"units\": {\"pre_relaxation_energy\": \"J/m²\", \"relaxed_energy\": \"J/m²\"}}"
+  },
+  {
+    "id": "step3",
+    "title": "Predict energies for all 13 unseen boundaries",
+    "role": "scored",
+    "action": "Repeat the prediction‑and‑relaxation procedure for the remaining 12 unseen boundaries (Σ25, Σ29, Σ37, Σ41, Σ53, Σ61, Σ125 with two plane indices each) and include the Σ13 results. For each boundary, identify the most stable state via the SVR model, record the pre‑relaxation predicted energy, run one static‑lattice relaxation, and record the relaxed energy. Compute the misorientation angle from the CSL Σ value. Write a CSV file with columns: 'boundary', 'misorientation_angle_deg', 'pre_relaxation_energy', 'relaxed_energy', covering all 13 boundaries.",
+    "output_file": "all_unseen_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "This step produces the full dataset of predicted energies for all unseen boundaries, enabling evaluation of the energy–misorientation curve (convex shape with a maximum near 45°). The CSV must contain one row per boundary with columns as specified.",
+    "output_schema": "columns: boundary (string), misorientation_angle_deg (float, degrees), pre_relaxation_energy (float, J/m²), relaxed_energy (float, J/m²)"
+  }
+]

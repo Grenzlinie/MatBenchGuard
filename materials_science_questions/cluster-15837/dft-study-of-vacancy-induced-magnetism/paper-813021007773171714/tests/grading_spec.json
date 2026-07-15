@@ -1,0 +1,224 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "RMSD and defect displacement are recomputed from CSV time-series and compared to paper-derived stability ranges and ordering; adsorption summary values compared to reference paper data with tolerances.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "adsorption_summary.json": "reference_match",
+    "md_rmsd.csv": "threshold_or_better",
+    "md_defect_displacement.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for adsorption summary, defect displacement ranges, RMSD ranges, extracted from paper Tables 1-2 and Figures 8-9.",
+      "source_provenance": "Paper: del Castillo et al., Computational Condensed Matter (2018), Tables 1 and 2, Figs. 8-9.",
+      "generation_method": "Direct transcription of published numeric values; ranges derived from reported equilibrium displacements and RMSD trends.",
+      "why_not_fabricated": "Values are the published results; no holdout is needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system_name",
+              "adsorption_energy_kcal_mol",
+              "binding_energy_kcal_mol",
+              "distance_angstrom",
+              "D_minus_EF_eV",
+              "doping_type"
+            ],
+            "properties": {
+              "system_name": {
+                "type": "string"
+              },
+              "adsorption_energy_kcal_mol": {
+                "type": "number",
+                "units": "kcal/mol"
+              },
+              "binding_energy_kcal_mol": {
+                "type": "number",
+                "units": "kcal/mol"
+              },
+              "distance_angstrom": {
+                "type": "number",
+                "units": "angstrom"
+              },
+              "D_minus_EF_eV": {
+                "type": "number",
+                "units": "eV"
+              },
+              "doping_type": {
+                "type": "string",
+                "enum": [
+                  "n-type",
+                  "p-type"
+                ]
+              }
+            }
+          }
+        },
+        "description": "Summary of adsorption energies, binding energies, CO2-graphene distances, Fermi level shift, and doping type for pristine graphene, graphitic-N, pyridinic-N, and vacancy graphene."
+      },
+      {
+        "file": "md_rmsd.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "timestep_fs",
+            "rmsd_angstrom"
+          ],
+          "units": {
+            "timestep_fs": "fs",
+            "rmsd_angstrom": "angstrom"
+          }
+        },
+        "description": "Root-mean-square deviation of atomic positions over the MD trajectory for each system."
+      },
+      {
+        "file": "md_defect_displacement.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "timestep_fs",
+            "displacement_angstrom"
+          ],
+          "units": {
+            "timestep_fs": "fs",
+            "displacement_angstrom": "angstrom"
+          }
+        },
+        "description": "z-displacement D(t) of the defect atom for each system during MD, used to verify structural stability."
+      }
+    ],
+    "notes": "Scoring is result-level comparison (T0) against hidden paper reference values and ordering requirements. No raw total energies or intermediate files are scored; only the three listed artifacts."
+  },
+  "steps": [
+    {
+      "id": "adsorption_summary",
+      "output_file": "adsorption_summary.json",
+      "weight": 0.35,
+      "parameters": {
+        "gold": {
+          "pristine graphene": {
+            "adsorption_energy_kcal_mol": -2.17,
+            "binding_energy_kcal_mol": -5.32,
+            "distance_angstrom": 4.04,
+            "D_minus_EF_eV": 0.0,
+            "doping_type": "n-type"
+          },
+          "graphitic-N": {
+            "adsorption_energy_kcal_mol": -26.06,
+            "binding_energy_kcal_mol": -5.0,
+            "distance_angstrom": 3.37,
+            "D_minus_EF_eV": -0.89,
+            "doping_type": "n-type"
+          },
+          "pyridinic-N": {
+            "adsorption_energy_kcal_mol": -2.77,
+            "binding_energy_kcal_mol": -5.31,
+            "distance_angstrom": 4.01,
+            "D_minus_EF_eV": 1.0,
+            "doping_type": "p-type"
+          },
+          "graphene with a vacancy": {
+            "adsorption_energy_kcal_mol": -2.67,
+            "binding_energy_kcal_mol": -5.31,
+            "distance_angstrom": 3.57,
+            "D_minus_EF_eV": 0.39,
+            "doping_type": "p-type"
+          }
+        },
+        "tolerances": {
+          "adsorption_energy_kcal_mol": 2.0,
+          "binding_energy_kcal_mol": 1.0,
+          "distance_angstrom": 0.5,
+          "D_minus_EF_eV": 0.2
+        }
+      }
+    },
+    {
+      "id": "defect_displacement",
+      "output_file": "md_defect_displacement.csv",
+      "weight": 0.4,
+      "parameters": {
+        "ranges": {
+          "pristine graphene": [
+            0.0,
+            0.02
+          ],
+          "graphitic-N": [
+            0.04,
+            0.08
+          ],
+          "pyridinic-N": [
+            0.07,
+            0.12
+          ],
+          "graphene with a vacancy": [
+            0.09,
+            0.13
+          ]
+        },
+        "ordering": [
+          "pristine graphene",
+          "graphitic-N",
+          "pyridinic-N",
+          "graphene with a vacancy"
+        ],
+        "last_fraction": 0.5,
+        "ordering_weight": 0.2,
+        "system_range_weight": 0.2
+      }
+    },
+    {
+      "id": "rmsd",
+      "output_file": "md_rmsd.csv",
+      "weight": 0.25,
+      "parameters": {
+        "ranges": {
+          "pristine graphene": [
+            0.0,
+            0.01
+          ],
+          "graphitic-N": [
+            0.001,
+            0.01
+          ],
+          "pyridinic-N": [
+            0.005,
+            0.02
+          ],
+          "graphene with a vacancy": [
+            0.015,
+            0.04
+          ]
+        },
+        "ordering": [
+          "pristine graphene",
+          "graphitic-N",
+          "pyridinic-N",
+          "graphene with a vacancy"
+        ],
+        "last_fraction": 0.5,
+        "ordering_weight": 0.2,
+        "system_range_weight": 0.2
+      }
+    }
+  ]
+}

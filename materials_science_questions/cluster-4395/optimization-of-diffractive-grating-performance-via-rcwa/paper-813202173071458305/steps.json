@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_setup",
+    "title": "Simulation model setup",
+    "role": "process",
+    "action": "Define the 3D unit-cell geometry (Fig. 3 of the paper) with the given layer stack (InP substrate, SCH, QW, contact layer, Si ridge waveguide, SiO₂ cladding, buried Al bottom layer, and Al grating). Use the material refractive indices (real part for all materials except Al, which has a complex index) from the known table. Set up periodic boundary conditions along the grating direction and scattering boundary conditions in the transverse directions. The operating wavelength is 1.55 μm, and the device cavity length is ℓ=30 μm with mirror loss from dielectric‑air Fresnel reflection.",
+    "output_file": "",
+    "evidence": "simulation_setup_report.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare the parameterized eigenmode simulation model that will be used for all subsequent parameter sweeps. No scored output.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_sweep_h_h",
+    "title": "Eigenmode sweep for ridge height H and grating depth h",
+    "role": "process",
+    "action": "With grating width w=0.1 μm and period p=0.3 μm fixed, perform eigenmode simulations over ridge height H (range 0.05–1.2 μm) and grating depth h (values 50 nm, 100 nm, 200 nm). For each combination compute the complex effective index n_eff (real and imaginary parts) and save the full electric field distribution (required for confinement factor integration).",
+    "output_file": "",
+    "evidence": "sweep_H_h_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generates the raw data for the initial analysis of mode behavior versus ridge height and grating depth. The raw data (effective indices and field snapshots) are saved for subsequent post‑processing.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_analyze_h",
+    "title": "Select optimal ridge height H",
+    "role": "process",
+    "action": "From the H‑h sweep results, compute the power confinement factors Γ_WG (silicon waveguide) and Γ_QW (quantum wells) by volume integration of |E|² over the respective regions. Compute the threshold gain g_th using the given formula with the real and imaginary parts of n_eff, cavity length ℓ=30 μm, and mirror reflectivity R = ((n_eff(r)-1)/(n_eff(r)+1))². Inspect the energy‑density cross‑sections and the number of transverse modes. Select the ridge height H that supports a single guided mode while providing a balanced energy distribution between waveguide and quantum‑well regions; avoid heights that allow multiple transverse hybrid SPP modes.",
+    "output_file": "",
+    "evidence": "H_optimization_report.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Determines the optimal ridge height H based on physical trends (modal purity, confinement factors, threshold gain). The selected H will be used in the next sweeps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_sweep_h_w",
+    "title": "Eigenmode sweep for grating depth h and width w",
+    "role": "process",
+    "action": "Fix the ridge height to the optimal H determined in the previous step and the period p=0.3 μm. Sweep grating depth h (range 0–0.55 μm) and width w (values 0.1, 0.2, 0.3 μm). For each (h,w) compute the complex effective index and save the electric field distribution.",
+    "output_file": "",
+    "evidence": "sweep_h_w_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Provides data for selecting the optimal grating cross‑section (depth and width).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_analyze_h_w",
+    "title": "Select optimal grating depth h and width w",
+    "role": "process",
+    "action": "From the h‑w sweep, compute the confinement factors Γ_WG, Γ_QW and threshold gain g_th for each configuration. Examine energy‑density maps for different grating depths. Select the grating depth h and width w that yield low threshold gain and an equally distributed energy between the QW and waveguide regions, while avoiding the metallic short‑circuit regime where the grating touches the bottom Al layer.",
+    "output_file": "",
+    "evidence": "hw_optimization_report.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Chooses the optimal grating cross‑section based on physical considerations and threshold gain.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_sweep_p",
+    "title": "Eigenmode sweep for grating period p",
+    "role": "process",
+    "action": "With the previously determined optimal H, h, and w, sweep the grating period p over the range 0.1 μm to 3 μm. For each period compute the effective indices, field distributions, confinement factors, and threshold gain.",
+    "output_file": "",
+    "evidence": "sweep_p_raw.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Covers the longitudinal periodicity to find the period that best balances low threshold gain and fabrication tolerance.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_analyze_p",
+    "title": "Select optimal period and report final design",
+    "role": "scored",
+    "action": "From the period sweep, select the optimal period p that gives a favorable trade‑off between low threshold gain and fabrication tolerance (the sub‑micron regime is acceptable as one possible optimum). For the complete optimized design (H, h, w, p) compute the final threshold gain g_th and the quantum‑well power confinement factor Γ_QW. Write the optimized structural parameters (ridge height, grating depth, grating width, period) and the two metrics (threshold gain, QW confinement factor) to optimal_parameters.json.",
+    "output_file": "optimal_parameters.json",
+    "evidence": "final_design_report.txt",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This file contains the optimized geometry and the key performance metrics. The reported values are the result of the complete simulation pipeline and will be checked against the paper’s reference values with appropriate tolerances.",
+    "output_schema": "{\"ridge_height_um\": float in micrometers, \"grating_depth_um\": float in micrometers, \"grating_width_um\": float in micrometers, \"period_um\": float in micrometers, \"threshold_gain_per_um\": float (per μm), \"Qw_confinement_factor\": float (percentage, e.g., 16.3 for 16.3%)}"
+  }
+]

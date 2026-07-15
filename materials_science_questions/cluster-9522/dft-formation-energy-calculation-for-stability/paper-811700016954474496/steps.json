@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step1",
+    "title": "DFT optimization of pure reference elements",
+    "role": "process",
+    "action": "Perform full DFT relaxation (ion positions and cell parameters) of fcc Ir, bcc Nb, and hcp Hf to obtain equilibrium lattice constants and total energies.",
+    "output_file": "",
+    "evidence": "/app/outputs/reference_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "These energies serve as references for heats of formation and provide the fcc Ir lattice constant used in interface models. The evidence file records the total energy and optimized lattice constant for each element.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT optimization and elastic properties of L1₂ Ir₃Nb and Ir₃Hf",
+    "role": "process",
+    "action": "Optimize the L1₂ crystal structures of Ir₃Nb and Ir₃Hf. Perform a series of total-energy calculations at different volumes and fit an equation of state to obtain equilibrium lattice constants, bulk modulus, and elastic constants C₁₁, C₁₂, C₄₄. Compute the shear modulus G and the G/B ratio.",
+    "output_file": "",
+    "evidence": "/app/outputs/elastic_properties.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The elastic properties and equilibrium volumes are needed as inputs for the ideal strength and interface simulations. The evidence file contains the raw fitted values (lattice constants, bulk modulus, shear modulus, G/B, elastic constants) for both compounds.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Heat of formation calculation",
+    "role": "process",
+    "action": "Calculate the heats of formation of L1₂ Ir₃Nb and Ir₃Hf using the total energies from step1 and step2.",
+    "output_file": "",
+    "evidence": "/app/outputs/heats_of_formation.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optional validation of compound stability; not part of the scored output but included to follow the paper's full workflow.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Ideal tensile strength simulations",
+    "role": "process",
+    "action": "For both Ir₃Nb and Ir₃Hf, apply incremental tensile strain along the ⟨100⟩, ⟨110⟩, and ⟨111⟩ directions. At each strain step, relax the atomic positions and cell vectors orthogonal to the strain direction, and record the stress tensor. Identify the maximum tensile stress on each stress–strain curve as the ideal tensile strength.",
+    "output_file": "",
+    "evidence": "/app/outputs/tensile_stress_strain.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the stress–strain curves from which the ideal tensile strengths for each direction and compound are extracted. The evidence file records strain and the corresponding tensile stress component.",
+    "output_schema": ""
+  },
+  {
+    "id": "step5",
+    "title": "Ideal shear strength simulations",
+    "role": "process",
+    "action": "For both compounds, apply incremental shear strain along the four slip systems: (001)[110], (110)[-110], (111)[-110], and (111)[-211]. At each strain step, relax the atomic positions and cell vectors orthogonal to the shear direction, and record the shear stress. Identify the maximum shear stress as the ideal shear strength for each slip system.",
+    "output_file": "",
+    "evidence": "/app/outputs/shear_stress_strain.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Generates shear stress–strain data used to determine the ideal shear strengths. The evidence file contains strain and the corresponding shear stress component.",
+    "output_schema": ""
+  },
+  {
+    "id": "step6",
+    "title": "Interface total energy calculations",
+    "role": "process",
+    "action": "Build supercell slab models for the (100) and (110) interface orientations with configurations I and II (interface layer with or without Hf/Nb atoms) for Ir/Ir₃Nb and Ir/Ir₃Hf. Compute total energies of the full interface slabs and of the separated Ir and Ir₃X surface slabs. Use these to calculate work of separation and interface energy via Eqs. (1) and (2) of the paper.",
+    "output_file": "",
+    "evidence": "/app/outputs/interface_energies_raw.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The raw total energies of the interface and surface slabs are used to derive the work of separation and interface energies for the scored output.",
+    "output_schema": ""
+  },
+  {
+    "id": "step7",
+    "title": "Compile final scored results",
+    "role": "scored",
+    "action": "Aggregate all computed physical properties into a single JSON file. Include: equilibrium lattice constants, bulk modulus, shear modulus, G/B ratio, elastic constants C11, C12, C44 for both Ir₃Nb and Ir₃Hf; ideal tensile strengths for the three directions and ideal shear strengths for the four slip systems for both compounds; work of separation and interface energy for (100)-I, (100)-II, (110)-I, (110)-II interfaces of Ir/Ir₃Nb and Ir/Ir₃Hf.",
+    "output_file": "/app/outputs/results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This single file contains all numerical results that are compared against the paper's reported values. It is the only scored artifact.",
+    "output_schema": "JSON object with numeric keys: Ir3Nb_lattice_constant_A, Ir3Hf_lattice_constant_A, Ir3Nb_bulk_modulus_GPa, Ir3Hf_bulk_modulus_GPa, Ir3Nb_shear_modulus_GPa, Ir3Hf_shear_modulus_GPa, Ir3Nb_GB_ratio, Ir3Hf_GB_ratio, Ir3Nb_C11_GPa, Ir3Nb_C12_GPa, Ir3Nb_C44_GPa, Ir3Hf_C11_GPa, Ir3Hf_C12_GPa, Ir3Hf_C44_GPa, Ir3Nb_tensile_111_GPa, Ir3Nb_tensile_100_GPa, Ir3Nb_tensile_110_GPa, Ir3Hf_tensile_111_GPa, Ir3Hf_tensile_100_GPa, Ir3Hf_tensile_110_GPa, Ir3Nb_shear_001_110_GPa, Ir3Nb_shear_110_1-10_GPa, Ir3Nb_shear_111_1-10_GPa, Ir3Nb_shear_111_2-11_GPa, Ir3Hf_shear_001_110_GPa, Ir3Hf_shear_110_1-10_GPa, Ir3Hf_shear_111_1-10_GPa, Ir3Hf_shear_111_2-11_GPa, Ir3Nb_work_of_separation_100_I_Jm2, Ir3Nb_work_of_separation_100_II_Jm2, Ir3Nb_work_of_separation_110_I_Jm2, Ir3Nb_work_of_separation_110_II_Jm2, Ir3Hf_work_of_separation_100_I_Jm2, Ir3Hf_work_of_separation_100_II_Jm2, Ir3Hf_work_of_separation_110_I_Jm2, Ir3Hf_work_of_separation_110_II_Jm2, Ir3Nb_interface_energy_100_I_Jm2, Ir3Nb_interface_energy_100_II_Jm2, Ir3Nb_interface_energy_110_I_Jm2, Ir3Nb_interface_energy_110_II_Jm2, Ir3Hf_interface_energy_100_I_Jm2, Ir3Hf_interface_energy_100_II_Jm2, Ir3Hf_interface_energy_110_I_Jm2, Ir3Hf_interface_energy_110_II_Jm2."
+  }
+]

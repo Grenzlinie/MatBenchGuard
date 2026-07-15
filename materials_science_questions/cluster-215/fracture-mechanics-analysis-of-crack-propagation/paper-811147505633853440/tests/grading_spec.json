@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All computed quantities are analytical expressions that can be recomputed from the input parameters. The checker recomputes each value independently.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mscb_results.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mscb_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "V_f",
+            "rho",
+            "Phi",
+            "lambda",
+            "h2_over_H",
+            "delta",
+            "L",
+            "B",
+            "H",
+            "sigma_b",
+            "tau_s",
+            "gamma",
+            "E_ratio",
+            "I_z",
+            "S_zmax",
+            "kappa",
+            "sigma_max",
+            "tau_max",
+            "P1",
+            "P2",
+            "chi",
+            "L_c",
+            "W_PASB",
+            "W_MSCB"
+          ],
+          "units": {
+            "V_f": "dimensionless",
+            "rho": "dimensionless",
+            "Phi": "dimensionless",
+            "lambda": "dimensionless",
+            "h2_over_H": "dimensionless",
+            "delta": "m",
+            "L": "m",
+            "B": "m",
+            "H": "m",
+            "sigma_b": "Pa",
+            "tau_s": "Pa",
+            "gamma": "J/m^2",
+            "E_ratio": "dimensionless",
+            "I_z": "m^4",
+            "S_zmax": "m^3",
+            "kappa": "dimensionless",
+            "sigma_max": "Pa",
+            "tau_max": "Pa",
+            "P1": "N",
+            "P2": "N",
+            "chi": "dimensionless",
+            "L_c": "m",
+            "W_PASB": "J",
+            "W_MSCB": "J"
+          }
+        },
+        "description": "CSV file containing all input parameters and the corresponding computed effective modulus ratio, cross‑sectional properties, bending stiffness ratio, stresses, critical loads, bending strength ratio, plastic zone length, and fracture energies. The checker will independently recompute every computed column for the same parameter grid and compare the agent's values to its own recomputed references within tolerance, and will also verify monotonic increasing trends for κ, χ, and W_MSCB with respect to V_f, ρ, Φ, and λ."
+      }
+    ],
+    "notes": "The hidden reference values are recomputed by the checker using the same analytical formulas. The instruction provides the exact parameter grid (ranges and fixed values) so both agent and checker evaluate identical input points."
+  },
+  "steps": [
+    {
+      "id": "numeric",
+      "output_file": "mscb_results.csv",
+      "kind": "numerical_compare",
+      "weight": 0.8,
+      "tolerance_rel": 0.001,
+      "tolerance_abs": 1e-09,
+      "columns_to_check": [
+        "E_ratio",
+        "I_z",
+        "S_zmax",
+        "kappa",
+        "P1",
+        "P2",
+        "chi",
+        "L_c",
+        "W_PASB",
+        "W_MSCB"
+      ],
+      "notes": "Recompute each row's computed columns from input parameters and compare to agent values. sigma_max and tau_max are excluded because they depend on an unspecified load P."
+    },
+    {
+      "id": "trends",
+      "output_file": "mscb_results.csv",
+      "kind": "monotonic_trends",
+      "weight": 0.2,
+      "columns_to_check": {
+        "kappa": [
+          "V_f",
+          "rho",
+          "Phi",
+          "lambda"
+        ],
+        "chi": [
+          "V_f",
+          "rho",
+          "Phi",
+          "lambda"
+        ],
+        "W_MSCB": [
+          "V_f",
+          "rho",
+          "Phi",
+          "lambda"
+        ]
+      },
+      "notes": "Check monotonic increasing for kappa, chi, W_MSCB with respect to V_f, rho, Phi, lambda."
+    }
+  ]
+}

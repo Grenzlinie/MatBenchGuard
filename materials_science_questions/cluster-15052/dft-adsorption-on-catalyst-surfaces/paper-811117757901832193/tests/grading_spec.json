@@ -1,0 +1,185 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The hidden checker recomputes per-row agreement against the paper's reported adsorption energies, heights, charge transfers, midgap booleans, and dissociation barriers using inline gold values and directional tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold adsorption energies, heights, charge transfers, midgap flags, and O2 dissociation barriers from the paper.",
+      "source_provenance": "Paper Table 1 and related paragraphs; values are replicated exactly as reported.",
+      "generation_method": "Extracted directly from the paper's published numeric results; no transformation applied.",
+      "why_not_fabricated": "These are the actual reported quantities that the reproduction task targets; they serve as the authoritative hidden reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "required_columns": [
+            "molecule",
+            "substrate",
+            "adsorption_energy_eV"
+          ],
+          "description": "Each row: molecule (H2O or O2), substrate (perfect, MV, DV), adsorption_energy_eV (float, more negative is better)."
+        },
+        "description": "Adsorption energies; lower (more negative) values indicate stronger binding."
+      },
+      {
+        "file": "adsorption_heights.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "required_columns": [
+            "molecule",
+            "substrate",
+            "height_A"
+          ],
+          "description": "Each row: molecule (H2O or O2), substrate (perfect, MV, DV), height_A (float, distance in Å)."
+        },
+        "description": "Adsorption heights; compared to hidden reference within a small tolerance."
+      },
+      {
+        "file": "charge_transfer.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "required_columns": [
+            "molecule",
+            "substrate",
+            "delta_q_e"
+          ],
+          "description": "Each row: molecule (H2O or O2), substrate (perfect, MV, DV), delta_q_e (float, positive means electron transfer from molecule to phosphorene)."
+        },
+        "description": "Net electron transfer; value must match reference within a tolerance."
+      },
+      {
+        "file": "midgap_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "midgap_states"
+          ],
+          "items": {
+            "molecule": "string",
+            "substrate": "string",
+            "has_midgap_state": "boolean"
+          }
+        },
+        "description": "Boolean flags for midgap state presence; exact match required for each system."
+      },
+      {
+        "file": "O2_dissociation_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "required_columns": [
+            "substrate",
+            "barrier_eV"
+          ],
+          "description": "Each row: substrate (perfect or MV), barrier_eV (float, lower barrier is better/easier dissociation)."
+        },
+        "description": "O₂ dissociation energy barriers; a lower value than the reference is also acceptable."
+      }
+    ],
+    "notes": "All scored artifacts are derived from DFT computations. The checker compares submitted values to hidden gold within predefined tolerances; directional metrics allow better-than-paper results to earn full credit."
+  },
+  "steps": [
+    {
+      "id": "s05a",
+      "output_file": "adsorption_energies.csv",
+      "kind": "adsorption_energies",
+      "weight": 0.35,
+      "gold": {
+        "H2O": {
+          "perfect": -0.187,
+          "MV": -0.193,
+          "DV": -0.205
+        },
+        "O2": {
+          "perfect": -0.489,
+          "MV": -0.489,
+          "DV": -0.705
+        }
+      },
+      "tolerance": 0.05
+    },
+    {
+      "id": "s05b",
+      "output_file": "adsorption_heights.csv",
+      "kind": "adsorption_heights",
+      "weight": 0.15,
+      "gold": {
+        "H2O": {
+          "perfect": 3.01,
+          "MV": 2.42,
+          "DV": 2.66
+        },
+        "O2": {
+          "perfect": 2.8,
+          "MV": 2.94,
+          "DV": 3.02
+        }
+      },
+      "tolerance": 0.1
+    },
+    {
+      "id": "s06",
+      "output_file": "charge_transfer.csv",
+      "kind": "charge_transfer",
+      "weight": 0.2,
+      "gold": {
+        "H2O": {
+          "perfect": 0.01,
+          "MV": 0.12,
+          "DV": 0.05
+        },
+        "O2": {
+          "perfect": -0.036,
+          "MV": -0.03,
+          "DV": 0.01
+        }
+      },
+      "tolerance": 0.02
+    },
+    {
+      "id": "s08",
+      "output_file": "midgap_states.json",
+      "kind": "midgap_states",
+      "weight": 0.15,
+      "gold": {
+        "H2O": {
+          "perfect": false,
+          "MV": false,
+          "DV": false
+        },
+        "O2": {
+          "perfect": true,
+          "MV": true,
+          "DV": true
+        }
+      },
+      "tolerance": 0
+    },
+    {
+      "id": "s11",
+      "output_file": "O2_dissociation_barriers.csv",
+      "kind": "dissociation_barriers",
+      "weight": 0.15,
+      "gold": {
+        "perfect": 0.81,
+        "MV": 0.59
+      },
+      "tolerance": 0.05
+    }
+  ]
+}

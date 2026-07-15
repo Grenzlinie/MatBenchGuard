@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step1",
+    "title": "Obtain experimental crystal structures",
+    "role": "process",
+    "action": "Retrieve the crystal structures of [H2GaNH2]3 (space group P2₁/m), [H2BNH2]3 (Pbcm), and [H2GeCH2]3 (Pmn2₁) from the Cambridge Structural Database. Extract lattice parameters, atomic positions, and symmetry operations.",
+    "output_file": "",
+    "evidence": "structure_files.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Data preparation: obtain the starting geometries for all three compounds.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Gas-phase molecule optimization and energy calculation",
+    "role": "process",
+    "action": "For each compound, optimize the isolated gas-phase molecule in the chair conformation using DFT (B3LYP-D3/pob‑TZVP) to obtain the gas-phase energy, zero-point vibrational energy (ZPVE), and vibrational contributions at 298 K.",
+    "output_file": "",
+    "evidence": "gas_phase_energies.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Compute gas-phase reference energies and vibrational data needed for subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Conformational energy calculation",
+    "role": "process",
+    "action": "For [H2GaNH2]3 and [H2BNH2]3, optimize the twist-boat conformer and compute the energy difference ΔE(conf) relative to the chair conformer. For [H2GeCH2]3 the chair is more stable; ΔE(conf)=0.",
+    "output_file": "",
+    "evidence": "conf_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain conformational corrections required for sublimation enthalpy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Periodic crystal structure optimization and property calculation",
+    "role": "process",
+    "action": "For each compound, perform periodic DFT optimization (atomic positions and lattice parameters) in its native space group and in the two alternative space groups (P2₁/m, Pmn2₁, Pbcm) using B3LYP-D3/pob‑TZVP. For the native space groups only, also compute zero-point vibrational energy (crystal) and vibrational contributions at 298 K.",
+    "output_file": "",
+    "evidence": "periodic_opt.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate optimized crystal structures and associated vibrational data.",
+    "output_schema": ""
+  },
+  {
+    "id": "step5",
+    "title": "BSSE correction calculation",
+    "role": "process",
+    "action": "For each optimized configuration, compute the counterpoise basis set superposition error correction E(BSSE) using the same functional and basis set.",
+    "output_file": "",
+    "evidence": "bsse.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Calculate BSSE corrections to avoid double counting in lattice energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step6",
+    "title": "Lattice energy calculation",
+    "role": "scored",
+    "action": "From the crystal energies, gas-phase chair energies, and BSSE corrections, compute the lattice energy for each of the 9 configurations using the relation E(lattice) = E(Cs) − E(crystal)/Z − E(BSSE). Write the results to lattice_energies.csv.",
+    "output_file": "lattice_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Lattice energies at 0 K for all three compounds in the three space groups (native + two alternatives).",
+    "output_schema": "CSV with columns: compound (string), space_group (string), lattice_energy_kJ_mol (float). One row per configuration."
+  },
+  {
+    "id": "step7",
+    "title": "Sublimation enthalpy calculation",
+    "role": "scored",
+    "action": "For each compound in its native space group, compute the sublimation enthalpy at 298 K using ΔH_sub(298) = E(lattice) + ΔE(conf) + ΔE_ZPVE + ΔE_vib(298) + 4RT. Use the lattice energy from step 6, conformational correction from step 3, and vibrational data from steps 2 and 4. Write the results to sublimation_enthalpies.csv.",
+    "output_file": "sublimation_enthalpies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Enthalpies of sublimation at 298 K for the three compounds.",
+    "output_schema": "CSV with columns: compound (string), space_group (string), sublimation_enthalpy_298K_kJ_mol (float). One row per compound."
+  }
+]

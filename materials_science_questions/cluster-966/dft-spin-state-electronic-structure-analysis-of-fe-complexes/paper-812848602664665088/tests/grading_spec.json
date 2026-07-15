@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The zero-intercept slope is recomputed from the agent’s own (Δρ/ρ, strain) data; individual strain energies are compared to paper values with tolerance (T0).",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "ligand_strain_results.json": "reference_match",
+    "zero_intercept_slope.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold strain energies and zero-intercept slope",
+      "source_provenance": "paper Table 2 and Equation 2 (Inorg. Chem. 2018, DOI: 10.1021/acs.inorgchem.8b02038)",
+      "generation_method": "extracted from the published article",
+      "why_not_fabricated": "values are the paper’s own reported computed results for the hypothetical Zn(II) training set"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ligand_strain_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "ligand",
+              "strain_energy_kJ_mol",
+              "delta_rho_over_rho_relax"
+            ],
+            "properties": {
+              "ligand": {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ]
+              },
+              "strain_energy_kJ_mol": {
+                "type": "number"
+              },
+              "delta_rho_over_rho_relax": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Strain energies and deformation parameters for the five hypothetical Zn(II) complexes."
+      },
+      {
+        "file": "zero_intercept_slope.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single float value (units: kJ mol⁻¹ per unit Δρ/ρ)."
+        },
+        "description": "Zero‑intercept slope of ΔE_L(strain) vs Δρ/ρ_L(relax) from the training set of five ligands."
+      }
+    ],
+    "notes": "Values will be compared to hidden reference values derived from the paper with appropriate tolerances. Only the Zn(II) training set is required; CSD validation and Fe(II) application are excluded."
+  },
+  "steps": [
+    {
+      "id": "step_05_strain",
+      "output_file": "ligand_strain_results.json",
+      "weight": 0.5,
+      "kind": "strain_comparison",
+      "gold_strain_energies": {
+        "A": 38,
+        "B": 67,
+        "C": 113,
+        "D": 118,
+        "E": 170
+      },
+      "tolerance_abs": 10.0
+    },
+    {
+      "id": "step_06_slope",
+      "output_file": "zero_intercept_slope.txt",
+      "weight": 0.5,
+      "kind": "recompute_slope",
+      "gold_slope": 460.0,
+      "tolerance_abs": 30.0
+    }
+  ]
+}

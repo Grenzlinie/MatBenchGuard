@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The final output comprises three independently estimated coupling parameters; recomputing from raw model artifacts would require implementing the full impurity-center model and iterative deconvolution, which is infeasible in the lightweight verifier. Result-level comparison to paper gold with tolerances is the appropriate fallback.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for Debye-Waller factor, Huang-Rhys factor, IDF width",
+      "source_provenance": "Journal of Luminescence 58 (1994) 168-171. Text states: Debye-Waller factor α ≈ 0.5, Huang-Rhys factor S ≈ 0.5–0.6, inhomogeneous distribution width ≈ 250 cm⁻¹.",
+      "generation_method": "Extracted from the paper’s explicit statements and the pre‑approved tolerances in the verification plan.",
+      "why_not_fabricated": "Values and tolerances are directly from the paper’s reported results; the range for S is represented by a midpoint of 0.55 with tolerance ±0.1 to cover the stated interval."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "estimated_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "debye_waller_factor": "float",
+            "huang_rhys_factor": "float",
+            "idf_width_cm-1": "float"
+          },
+          "units": {
+            "debye_waller_factor": "dimensionless",
+            "huang_rhys_factor": "dimensionless",
+            "idf_width_cm-1": "cm⁻¹"
+          }
+        },
+        "description": "The Debye‑Waller factor α, Huang‑Rhys factor S, and the Gaussian inhomogeneous distribution width (cm⁻¹) obtained by enforcing temperature independence of the modelled absorption below 100 K. The checker compares these values to the paper’s reported reference within tolerances."
+      }
+    ],
+    "notes": "The model assumes a phonon wing shape Φ(ω,0)=ω exp(-ω/μ) with μ=110 cm⁻¹ (as reported in the paper). The temperature‑independence condition below 100 K serves as the sole fitting constraint. The Wong‑Rhys factor S is obtained from the integral of f₀(v)/v, not from a simple log‑relation with α. The checker compares the three reported numbers to the hidden reference values; only the correct model yields the correct S."
+  },
+  "steps": [
+    {
+      "id": "step_4_ref_match",
+      "output_file": "estimated_parameters.json",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "fields": [
+        {
+          "name": "debye_waller_factor",
+          "gold": 0.5,
+          "tolerance_abs": 0.1
+        },
+        {
+          "name": "huang_rhys_factor",
+          "gold": 0.55,
+          "tolerance_abs": 0.1
+        },
+        {
+          "name": "idf_width_cm-1",
+          "gold": 250.0,
+          "tolerance_abs": 50.0
+        }
+      ],
+      "scoring_rule": "partial_credit_per_field"
+    }
+  ]
+}

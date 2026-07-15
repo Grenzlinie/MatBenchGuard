@@ -1,0 +1,215 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Bowing parameters and phase crossover are recomputed from the raw results_csv; the CSV fidelity is verified against paper-reported gold with tolerances. Combined this satisfies the recompute tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference for fitted lattice constants, bulk moduli, bowing parameters, and phase crossover from the original DFT paper.",
+      "source_provenance": "Paper-reported values (text, figures, tables). The reference solve.sh hardcodes the exact same numbers.",
+      "generation_method": "Extracted from the paper's numerical results and verified against the reference solution.",
+      "why_not_fabricated": "All values are taken directly from the paper's published claims, ensuring the checker tests reproduction against the original scientific work."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "phase",
+            "lattice_constant_a",
+            "lattice_constant_c",
+            "bulk_modulus",
+            "total_energy"
+          ],
+          "units": {
+            "lattice_constant_a": "Angstrom",
+            "lattice_constant_c": "Angstrom",
+            "bulk_modulus": "GPa",
+            "total_energy": "eV per unit cell"
+          }
+        },
+        "description": "Equilibrium lattice constants, bulk moduli, and total energies for all Sc1-xInxN compositions and phases."
+      },
+      {
+        "file": "bowing_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "NaCl": {
+              "alpha_lattice_bowing_parameter": {
+                "type": "number",
+                "unit": "Angstrom"
+              },
+              "beta_bulk_modulus_bowing_parameter": {
+                "type": "number",
+                "unit": "GPa"
+              }
+            },
+            "wurtzite": {
+              "alpha_lattice_bowing_parameter": {
+                "type": "number",
+                "unit": "Angstrom"
+              },
+              "beta_bulk_modulus_bowing_parameter": {
+                "type": "number",
+                "unit": "GPa"
+              }
+            }
+          }
+        },
+        "description": "Bowing parameters alpha (lattice) and beta (bulk) for NaCl and wurtzite phases."
+      },
+      {
+        "file": "phase_transition_composition.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "crossover_x": {
+              "type": "number"
+            },
+            "stable_NaCl_range": {
+              "type": "string"
+            },
+            "stable_wurtzite_range": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Crossover composition where wurtzite becomes more stable; stable ranges."
+      }
+    ],
+    "notes": "All values compared to paper-reported reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step03",
+      "output_file": "results_summary.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "gold": {
+        "rows": [
+          {
+            "composition": "0",
+            "phase": "NaCl",
+            "a": 4.5114,
+            "c": 0.0,
+            "B0": 189.9
+          },
+          {
+            "composition": "0.25",
+            "phase": "NaCl",
+            "a": 4.567,
+            "c": 0.0,
+            "B0": 180.82
+          },
+          {
+            "composition": "0.5",
+            "phase": "NaCl",
+            "a": 4.6194,
+            "c": 0.0,
+            "B0": 171.182
+          },
+          {
+            "composition": "0.75",
+            "phase": "NaCl",
+            "a": 4.6685,
+            "c": 0.0,
+            "B0": 160.986
+          },
+          {
+            "composition": "1",
+            "phase": "NaCl",
+            "a": 4.7144,
+            "c": 0.0,
+            "B0": 150.233
+          },
+          {
+            "composition": "0",
+            "phase": "wurtzite",
+            "a": 3.5226,
+            "c": 5.6756,
+            "B0": 140.42
+          },
+          {
+            "composition": "0.25",
+            "phase": "wurtzite",
+            "a": 3.5377,
+            "c": 5.7016,
+            "B0": 134.332
+          },
+          {
+            "composition": "0.5",
+            "phase": "wurtzite",
+            "a": 3.5534,
+            "c": 5.7276,
+            "B0": 128.617
+          },
+          {
+            "composition": "0.75",
+            "phase": "wurtzite",
+            "a": 3.5697,
+            "c": 5.7536,
+            "B0": 123.272
+          },
+          {
+            "composition": "1",
+            "phase": "wurtzite",
+            "a": 3.5865,
+            "c": 5.7796,
+            "B0": 118.3
+          }
+        ],
+        "tolerances": {
+          "a": 0.02,
+          "c": 0.02,
+          "B0": 0.1
+        }
+      }
+    },
+    {
+      "id": "step04",
+      "output_file": "bowing_parameters.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "gold": {
+        "NaCl": {
+          "alpha": -0.02602,
+          "beta": -4.4612
+        },
+        "wurtzite": {
+          "alpha": 0.00461,
+          "beta": 2.974
+        },
+        "tolerances": {
+          "alpha": 0.02,
+          "beta": 5.0
+        }
+      }
+    },
+    {
+      "id": "step05",
+      "output_file": "phase_transition_composition.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "gold": {
+        "crossover_x": 0.5,
+        "tolerance": 0.1,
+        "expected_pattern_NaCl": "0<=x<0.5",
+        "expected_pattern_wurtzite": "0.5<=x<=1"
+      }
+    }
+  ]
+}

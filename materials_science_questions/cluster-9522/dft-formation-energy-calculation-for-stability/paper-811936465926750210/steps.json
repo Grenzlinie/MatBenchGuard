@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT total energy calculations and structural relaxations",
+    "role": "process",
+    "action": "Run ABINIT with PAW-GGA (scalar-relativistic, spin-polarized) to relax geometries and compute total energies for αAs (nm), αFe (ferromagnetic), As₂Fe (nm), AsFe (antiferromagnetic with alternating spins along c), and AsFe₂ (antiferromagnetic with doubled unit cell). Use a plane-wave cutoff of 40 Ry, Fermi-Dirac smearing of 0.4 mRy, and Monkhorst-Pack k-point meshes as specified (8×8×8 for αAs, 12×12×12 for αFe, 6×6×12 for As₂Fe, 6×12×6 for AsFe, 10×10×6 for ferromagnetic AsFe₂, 10×10×4 for antiferromagnetic AsFe₂). Perform full geometry optimization (atomic positions and unit cell). Save total energy per formula unit and relaxed lattice parameters to evidence file.",
+    "output_file": "",
+    "evidence": "dft_total_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This process step runs DFT calculations to obtain total energies and geometries needed for formation energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute DFT formation energies",
+    "role": "scored",
+    "action": "From the total energies obtained in step_01, compute the 0 K formation energies (kJ/mol-atom) of As₂Fe, AsFe, AsFe₂ referenced to nm αAs and ferromagnetic αFe. Use the most stable magnetic state for each compound: nm As₂Fe, antiferromagnetic AsFe, antiferromagnetic AsFe₂. Output a CSV with columns compound, magnetic_state, total_energy_Ha, formation_energy_kJ_per_mol, a_Ang, b_Ang, c_Ang, volume_Ang3.",
+    "output_file": "step_02_formation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact providing the DFT formation energies and relaxed lattice parameters. Checker compares these to hidden paper reference values.",
+    "output_schema": "Columns: compound (string), magnetic_state (string), total_energy_Ha (float), formation_energy_kJ_per_mol (float), a_Ang (float), b_Ang (float), c_Ang (float), volume_Ang3 (float)."
+  },
+  {
+    "id": "step_03",
+    "title": "CALPHAD phase diagram and thermodynamic properties",
+    "role": "scored",
+    "action": "Implement the CALPHAD thermodynamic models using the parameters from Table 3 of the paper and SGTE unary Gibbs energy functions. The liquid, bcc, and fcc phases are substitutional solutions; As₂Fe, AsFe, and AsFe₂ are stoichiometric compounds (with AsFe using an absolute reference state expression); As₂Fe₃ is described by the compound energy formalism. Compute the equilibrium phase diagram by convex hull or equivalent method, and extract liquidus temperatures at As atomic fractions corresponding to As₂Fe (33.3 at% As), AsFe (50 at% As), and AsFe₂ (66.7 at% As). Also compute the As activity in liquid at 1423 K and x_As=0.5. Output a CSV with columns property, value, unit.",
+    "output_file": "step_03_calphad.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact verifying the CALPHAD model implementation. Checker compares liquidus temperatures and activity to hidden paper reference values.",
+    "output_schema": "Columns: property (string), value (float), unit (string). Example rows: 'liquidus_T_33at_As', 'liquidus_T_50at_As', 'liquidus_T_67at_As', 'a_As_1423K_50at'."
+  }
+]

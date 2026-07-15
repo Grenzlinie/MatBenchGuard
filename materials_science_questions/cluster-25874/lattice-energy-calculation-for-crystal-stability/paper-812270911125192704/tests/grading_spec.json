@@ -1,0 +1,150 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Zone-centre frequencies and lattice energy use hidden gold with tolerance (T0). Density of states is audited structurally against paper peak positions. Heat capacity Cv is recomputed from the submitted DOS histogram, and the recomputed Cv is compared to the agent's reported Cv for self-consistency (T1) – this avoids needing digitised paper values that are unavailable as exact numbers.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "zone_center_frequencies.json": "exact_match",
+    "density_of_states.json": "structural_audit",
+    "heat_capacity.json": "metric_recompute",
+    "lattice_energy.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold zone-centre frequencies from paper Table I (This work column).",
+      "source_provenance": "Table I in the paper: Ag 74.0, B1g 81.7, B2g 77.6, B3g 75.1, Au 27.6, B1u 68.9, B2u 65.3 cm⁻¹.",
+      "generation_method": "Directly copied from the paper's published table.",
+      "why_not_fabricated": "These are the paper's own calculated values, which the reproduction must match within tolerance."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice energy from paper Table II footnote.",
+      "source_provenance": "Table II footnote of the paper: -9.06 kcal/mol (extrapolated).",
+      "generation_method": "Directly copied from the paper.",
+      "why_not_fabricated": "This is the paper's reported value for the lattice energy at experimental geometry."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Approximate DOS peak positions from paper Fig. 3.",
+      "source_provenance": "Paper Fig. 3 shows clear peaks near 20, 68, 78, and 100 cm⁻¹.",
+      "generation_method": "Visual inspection and approximation from the paper's density-of-states figure.",
+      "why_not_fabricated": "These peaks are the paper's reported shape; they serve as a structural consistency check."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "zone_center_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "mode": "string (one of Ag, B1g, B2g, B3g, Au, B1u, B2u)",
+            "frequency": "float (cm⁻¹)"
+          }
+        },
+        "description": "Seven optically‑active zone‑centre mode frequencies. Each mode must match the hidden reference within ±5 cm⁻¹."
+      },
+      {
+        "file": "density_of_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "bin_centers",
+            "density"
+          ],
+          "bin_centers": "array of float (cm⁻¹)",
+          "density": "array of float (arbitrary units)"
+        },
+        "description": "Histogram of the vibrational density of states with 1 cm⁻¹ resolution. Checked for bin count, reasonable peak positions, and shape consistency."
+      },
+      {
+        "file": "heat_capacity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "temperature": "float (K)",
+            "Cv": "float (cal·mol⁻¹·K⁻¹)"
+          }
+        },
+        "description": "Constant‑volume heat capacity curve from 0 to 100 K. The checker recomputes Cv from the submitted DOS for self‑consistency, then compares Cv at selected temperatures to the hidden paper curve within ±2 cal·mol⁻¹·K⁻¹."
+      },
+      {
+        "file": "lattice_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single float (kcal/mol)"
+        },
+        "description": "Lattice energy at the experimental 5.3 K geometry, extrapolated to infinite cutoff. Scored against the hidden gold (−9.06 kcal/mol) with tolerance ±0.5 kcal/mol."
+      }
+    ],
+    "notes": "The potential‑parameter fitting stage is omitted because the paper explicitly reports the fitted scaling multipliers (U₀×0.85, ρ₀×1.06, L×0.88) and these are used directly. Lattice‑parameter optimisation is excluded per taskability scope."
+  },
+  "steps": [
+    {
+      "id": "zone_center_frequencies",
+      "output_file": "zone_center_frequencies.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "gold_frequencies": {
+        "Ag": 74.0,
+        "B1g": 81.7,
+        "B2g": 77.6,
+        "B3g": 75.1,
+        "Au": 27.6,
+        "B1u": 68.9,
+        "B2u": 65.3
+      },
+      "tolerance": 5.0
+    },
+    {
+      "id": "density_of_states",
+      "output_file": "density_of_states.json",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "gold_bin_range": [
+        1.0,
+        150.0
+      ],
+      "expected_bin_count": 150,
+      "gold_peaks": [
+        20.0,
+        68.0,
+        78.0,
+        100.0
+      ],
+      "tolerance_peaks": 5.0
+    },
+    {
+      "id": "heat_capacity",
+      "output_file": "heat_capacity.json",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "target_policy": "metric_recompute",
+      "recompute_from": "density_of_states.json",
+      "self_consistency_tolerance": 0.1
+    },
+    {
+      "id": "lattice_energy",
+      "output_file": "lattice_energy.txt",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target_policy": "exact_match",
+      "gold_value": -9.06,
+      "tolerance": 0.5
+    }
+  ]
+}

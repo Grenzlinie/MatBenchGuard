@@ -1,0 +1,41 @@
+[
+  {
+    "id": "fe_analysis",
+    "title": "Finite element stress analysis for designs A and B",
+    "role": "process",
+    "action": "Create 3D solid meshes for the two bracket designs according to the provided geometry and boundary conditions (fixed supports, uniform pressure 166.7 N/mm² over a 20 mm × 30 mm area). Use Gmsh for meshing and CalculiX for linear elastic static analysis (material: isotropic elastic constants, e.g., E=70 GPa, ν=0.33). Extract at each element centroid the signed principal stresses σ1 ≥ σ2 ≥ σ3 and the element volume. Save the extracted per-element data to files (e.g., design_A_stresses.csv, design_B_stresses.csv with columns: sigma1, sigma2, sigma3, volume). Produce a summary report fe_analysis_report.json containing mesh size, maximum principal stress, and element count for each design.",
+    "output_file": "",
+    "evidence": "fe_analysis_report.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Pre-processing step that generates per-element stress-volume data required by the subsequent Monte Carlo simulation steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "mc_design_a",
+    "title": "Monte Carlo simulation and failure probability for Design A",
+    "role": "scored",
+    "action": "Using the per-element stress and volume data for Design A, perform a Monte Carlo simulation with 1,000,000 trials. Each trial: (1) select a random element with probability proportional to its volume; (2) sample a flaw diameter D from a log-normal distribution with mean of ln(D)=5 (µm) and standard deviation 0.5 (convert to half-size a = D/2); (3) evaluate the mixed-mode failure criterion using the closed-form expressions for A_max and boundary values (as given in the paper) with the local principal stresses, fracture toughnesses K_Ic=25 MPa√m, K_IIc=21 MPa√m, and the sampled flaw half-size; (4) if A_max ≥ 1, increment the failure counter. Compute F_c = failures / trials and p_flaws = 1 − exp(−λ V F_c) with λ=2 cm⁻³ and the design volume. Save the results to design_A_MC_results.json containing fields F_c, p_flaws, trials, failures.",
+    "output_file": "design_A_MC_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Contains the estimated conditional individual failure probability F_c and the component failure probability p_flaws for Design A, along with simulation statistics.",
+    "output_schema": "JSON object with numeric fields: F_c (float), p_flaws (float), trials (integer), failures (integer)."
+  },
+  {
+    "id": "mc_design_b",
+    "title": "Monte Carlo simulation and failure probability for Design B",
+    "role": "scored",
+    "action": "Same procedure as for Design A, but using the per-element stress and volume data for Design B. Save the results to design_B_MC_results.json containing fields F_c, p_flaws, trials, failures.",
+    "output_file": "design_B_MC_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Contains the estimated conditional individual failure probability F_c and the component failure probability p_flaws for Design B.",
+    "output_schema": "JSON object with numeric fields: F_c (float), p_flaws (float), trials (integer), failures (integer)."
+  }
+]

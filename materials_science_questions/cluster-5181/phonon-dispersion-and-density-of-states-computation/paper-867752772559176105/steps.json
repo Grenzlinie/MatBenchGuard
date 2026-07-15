@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_phonon_dispersion",
+    "title": "Phonon dispersion and group velocities",
+    "role": "process",
+    "action": "Implement the harmonic nearest-neighbor force-constant model for graphene using force constants J1=135, J2=245, J3=83.9 J/m². Build the 6×6 dynamical matrix at each k-point on a dense Monkhorst-Pack mesh covering the Brillouin zone. Diagonalize to obtain phonon frequencies ω_s(k) (six branches) and compute group velocities v_s(k) = ∇_k ω_s(k) via finite differences. Save the phonon spectra for downstream use.",
+    "output_file": "",
+    "evidence": "phonon_dispersion.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute phonon dispersion for ideal graphene using harmonic nearest-neighbor model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_umklapp",
+    "title": "Umklapp relaxation times",
+    "role": "process",
+    "action": "Compute the Umklapp relaxation time for each phonon mode using the Klemens-like expression: τ^U_{k,s} = [m v̄_s² / γ_s²] · [1/(k_B T)] · [ω_{D,s} / ω_s²(k)], where m is the carbon atom mass, v̄_s are sound velocities (v_LA=18.4 km/s, v_TA=16.5 km/s, v_ZA=9.2 km/s), γ_s are Grüneisen parameters (γ_LA=1.8, γ_TA=0.75, γ_ZA=-1.4), ω_{D,s} are Debye frequencies (ω_{D,1}=2.66×10¹⁴, ω_{D,2}=2.38×10¹⁴, ω_{D,3}=1.32×10¹⁴ rad/s), and T=300 K. Store τ^U for each (k,s).",
+    "output_file": "",
+    "evidence": "umklapp_tau.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute Umklapp scattering relaxation times using literature parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_edge",
+    "title": "Edge scattering relaxation times",
+    "role": "process",
+    "action": "Compute the edge-boundary scattering relaxation time for each mode as τ^{edge}_{k,s} = f √S / v_{k,s}, where S = (10 μm)² is the flake area. Determine the form factor f for a square flake through analytical ray-tracing or Monte Carlo integration (a resulting value near 0.47–0.48). Store τ^{edge} for every (k,s).",
+    "output_file": "",
+    "evidence": "edge_tau.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute edge boundary scattering relaxation times using flake geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_defect",
+    "title": "Defect scattering relaxation times (T-matrix)",
+    "role": "process",
+    "action": "Implement the T-matrix formalism for isotopic defects on the graphene lattice. For each phonon mode compute the site‑diagonal Green’s function G_{0,0}^{i,j}(q, ω²+i0) from the ideal dynamical matrix, build the Q(ω²+i0) matrix, invert it, and evaluate the imaginary part of the T-matrix element to obtain τ^{def}_{k,s}. Perform the calculation for three defect scenarios: (a) ideal (Δm/m = 0, n = 0), (b) Al defect (Δm/m = 1.25, n = 0.01), and (c) N defect (Δm/m = 0.1667, n = 0.01). Store τ^{def} arrays.",
+    "output_file": "",
+    "evidence": "defect_tau.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute defect scattering relaxation times using T-matrix approach for three doping scenarios.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_total_kappa",
+    "title": "Total lattice thermal conductivity",
+    "role": "scored",
+    "action": "For each of the three conditions (ideal, doped_Al, doped_N), combine the relaxation times via Matthiessen’s rule (1/τ = 1/τ^U + 1/τ^{def} + 1/τ^{edge}). Compute the mode specific heat and evaluate the thermal conductivity κ = ½ Σ_{k,s} c_{k,s} v_{k,s}² τ_{k,s} at T=300 K. Sum over the full Brillouin zone mesh. Write the three κ values to a CSV file.",
+    "output_file": "thermal_conductivity_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Lattice thermal conductivity for ideal and isotopically doped graphene at T=300 K, L=10 μm.",
+    "output_schema": "CSV with columns: condition (string), kappa_W_mK (float). Entries: ideal, doped_Al, doped_N."
+  }
+]

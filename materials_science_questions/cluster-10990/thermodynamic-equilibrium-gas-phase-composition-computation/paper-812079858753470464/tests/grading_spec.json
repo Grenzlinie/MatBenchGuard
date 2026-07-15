@@ -1,0 +1,447 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: the species JSON step recomputes Ti/Cl ratio from raw partial pressures; deposition/etching CSV steps compare agent-reported ratios against paper-derived gold with 10% tolerance, monotonic fraction correct.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ti_cl_output_deposition.csv": "reference_match",
+    "ti_cl_output_etching.csv": "reference_match",
+    "species_pressures_deposition.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold Ti/Cl output ratios for deposition (36 points) and etching (18 points) conditions extracted from paper Figures 1 and 5, and gold for the recomputed species‑pressure check (3 points).",
+      "source_provenance": "Paper Figures 1 (deposition) and 5 (etching); values digitized and verified against the reference oracle (solve.sh) outputs to ensure consistency.",
+      "generation_method": "Digitized from the paper's solid-vapor solubility curves and cross-checked with reference solver outputs. Embedded inline as reference_points in grading_spec.json steps.",
+      "why_not_fabricated": "These are the paper's published equilibrium values, not invented; they represent the ground truth the agent must reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ti_cl_output_deposition.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "total_pressure_Torr",
+            "TiCl4_NH3_ratio",
+            "temperature_K",
+            "Ti_Cl_output"
+          ],
+          "units": {
+            "total_pressure_Torr": "Torr",
+            "TiCl4_NH3_ratio": "dimensionless",
+            "temperature_K": "K",
+            "Ti_Cl_output": "dimensionless"
+          }
+        },
+        "description": "Deposition solubility curves: equilibrium Ti/Cl output ratio versus temperature. Scored by comparing each reported ratio at prescribed (pressure, ratio, temperature) points against hidden paper‑derived values with a tolerance."
+      },
+      {
+        "file": "ti_cl_output_etching.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "total_pressure_Torr",
+            "temperature_K",
+            "Ti_Cl_output"
+          ],
+          "units": {
+            "total_pressure_Torr": "Torr",
+            "temperature_K": "K",
+            "Ti_Cl_output": "dimensionless"
+          }
+        },
+        "description": "Etching solubility curve: equilibrium Ti/Cl output ratio versus temperature for the Ti‑N‑Cl system. Scored by comparing at hidden reference temperatures against paper‑derived values with tolerance."
+      },
+      {
+        "file": "species_pressures_deposition.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_pressure_Torr": "float",
+            "TiCl4_NH3_ratio": "float",
+            "points": "array"
+          },
+          "items": {
+            "temperature_K": "float",
+            "species": {
+              "TiCl4": "float",
+              "TiCl3": "float",
+              "TiCl2": "float",
+              "TiCl": "float",
+              "NH3": "float",
+              "N2": "float",
+              "H2": "float",
+              "Cl2": "float",
+              "HCl": "float",
+              "H": "float",
+              "Cl": "float"
+            }
+          },
+          "units": "all partial pressures in Torr"
+        },
+        "description": "Raw partial pressures of all vapor species for the deposition condition (0.5 Torr, TiCl4/NH3=1/2) at 800, 1000, 1200 K. The checker recomputes the Ti/Cl output ratio from these partial pressures and compares it to a hidden reference."
+      }
+    ],
+    "notes": "All required thermodynamic data are publicly available from JANAF. The solver may be implemented using any open‑source Gibbs minimization or nonlinear equation solver (e.g., scipy.optimize, Cantera, pycalphad). The hidden checker compares ratios with a tolerance that accounts for minor algorithmic differences."
+  },
+  "steps": [
+    {
+      "id": "dep_check",
+      "output_file": "ti_cl_output_deposition.csv",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "tolerance_rel": 0.1,
+      "reference_points": [
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.18
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.12
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.06
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.02
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.005
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.04
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.14
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.08
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.03
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.008
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.002
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.02
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.15
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.1
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.04
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.008
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.003
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.03
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.1
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.06
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.02
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.004
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.001
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.015
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.12
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.07
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.025
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.006
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.002
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.5,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.04
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.08
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.04
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.015
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.003
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.001
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "TiCl4_NH3_ratio": 0.2,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.02
+        }
+      ]
+    },
+    {
+      "id": "etch_check",
+      "output_file": "ti_cl_output_etching.csv",
+      "kind": "reference_match",
+      "weight": 0.35,
+      "tolerance_rel": 0.1,
+      "reference_points": [
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.3
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.42
+        },
+        {
+          "total_pressure_Torr": 100.0,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.6
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.26
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.38
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.52
+        },
+        {
+          "total_pressure_Torr": 0.5,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.68
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 500.0,
+          "Ti_Cl_output_gold": 0.25
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 600.0,
+          "Ti_Cl_output_gold": 0.26
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.32
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.45
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.6
+        },
+        {
+          "total_pressure_Torr": 0.01,
+          "temperature_K": 1500.0,
+          "Ti_Cl_output_gold": 0.75
+        }
+      ]
+    },
+    {
+      "id": "species_check",
+      "output_file": "species_pressures_deposition.json",
+      "kind": "metric_recompute",
+      "weight": 0.3,
+      "reference_points": [
+        {
+          "temperature_K": 800.0,
+          "Ti_Cl_output_gold": 0.04
+        },
+        {
+          "temperature_K": 1000.0,
+          "Ti_Cl_output_gold": 0.008
+        },
+        {
+          "temperature_K": 1200.0,
+          "Ti_Cl_output_gold": 0.003
+        }
+      ],
+      "deposition_csv_file": "ti_cl_output_deposition.csv",
+      "tolerance_gold": 0.05,
+      "tolerance_csv": 0.05
+    }
+  ]
+}

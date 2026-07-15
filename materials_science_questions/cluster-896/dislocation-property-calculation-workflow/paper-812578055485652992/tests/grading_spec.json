@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The final SIFs are produced by a heavy numerical method (solving singular integral equations) that cannot be re-run in the lightweight verifier sandbox. Result-level comparison against the paper-reported values with generous tolerance is the feasible tier.",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "sif_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold normalized SIF values for crack tips A and B",
+      "source_provenance": "Paper's Fig. 12 for configuration μ1/μ=20, a=R, D=3R, φ=0, W=H=10R. The reference solve.sh's output (compute_sif_infinite.py) matches these values.",
+      "generation_method": "Values read from Fig. 12 at μ1/μ=20 and confirmed by the reference implementation output.",
+      "why_not_fabricated": "These are the paper's own reported results for the exact configuration; they are the hidden gold the reproduction must match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "sif_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "tip_A",
+            "tip_B"
+          ],
+          "properties": {
+            "tip_A": {
+              "type": "object",
+              "required": [
+                "mode_I",
+                "mode_II"
+              ],
+              "properties": {
+                "mode_I": {
+                  "type": "number"
+                },
+                "mode_II": {
+                  "type": "number"
+                }
+              }
+            },
+            "tip_B": {
+              "type": "object",
+              "required": [
+                "mode_I",
+                "mode_II"
+              ],
+              "properties": {
+                "mode_I": {
+                  "type": "number"
+                },
+                "mode_II": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "The normalized mode I and II stress intensity factors for the two crack tips under the specified configuration."
+      }
+    ],
+    "notes": "The checker reads the JSON and compares each of the four values to hidden gold values extracted from the paper's reported results for the same configuration (Fig. 12, μ1/μ = 20, a = R, D = 3R, φ = 0, W = H = 10R), using an absolute tolerance."
+  },
+  "steps": [
+    {
+      "id": "sif_check",
+      "output_file": "sif_results.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "description": "Compare all four normalized SIF values to paper-reported gold with absolute tolerance 0.05. Full credit if all four match within tolerance.",
+      "gold": {
+        "tip_A": {
+          "mode_I": 0.093,
+          "mode_II": 0.0
+        },
+        "tip_B": {
+          "mode_I": 0.042,
+          "mode_II": 0.0
+        }
+      },
+      "tolerance_abs": 0.05
+    }
+  ]
+}

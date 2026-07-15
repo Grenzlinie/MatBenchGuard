@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build atomic structures",
+    "role": "process",
+    "action": "Construct initial flat atomic coordinates for a perfect graphene nanoribbon (PG) of size a×b = 20×10 nm² with armchair (x) and zigzag (y) edges, and two grain‑boundary variants containing a central array of 5–7 defects along the y‑direction: LAGBI (θ=21.8°) and LAGBII (θ=32.2°) as described by the widely used grain‑boundary model. Use a honeycomb lattice with nearest‑neighbour distance 0.142 nm. Write three LAMMPS‑readable data files.",
+    "output_file": "",
+    "evidence": "initial_structures.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate initial atomic configurations for the three systems.",
+    "output_schema": "log file"
+  },
+  {
+    "id": "step_02",
+    "title": "Equilibrate at room temperature",
+    "role": "process",
+    "action": "For each of the three structures (PG, LAGBI, LAGBII), run a classical MD equilibration using Brenner’s bond‑order potential, a Nosé–Hoover thermostat at 300 K, a 0.5 fs timestep, and a total of 150 000 steps (75 ps). Save the final equilibrated coordinates as restart files.",
+    "output_file": "",
+    "evidence": "equilibration.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Thermal equilibration of GNRs before compression.",
+    "output_schema": "log file"
+  },
+  {
+    "id": "step_03",
+    "title": "Compression molecular dynamics simulations",
+    "role": "process",
+    "action": "For each system (PG, LAGBI, LAGBII), each lateral boundary condition (free FBC, supported SBC), and each compression direction (α=0 along x, α=π/2 along y), perform compression MD simulations. Use strain rates ν = 0.027/ns (α=0) and 0.054/ns (α=π/2) with a compression step δx = 0.667 pm applied every 5000 MD steps (δt = 0.5 fs). For each condition run 10 independent realisations with different initial velocities. Record ⟨h²⟩ vs strain, atomic trajectories, and the non‑equilibrium work W.",
+    "output_file": "",
+    "evidence": "compression_summary.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "MD compression runs that generate the raw data for all analyses.",
+    "output_schema": "log file"
+  },
+  {
+    "id": "step_04",
+    "title": "Determine buckling strains",
+    "role": "scored",
+    "action": "From the ⟨h²⟩ vs strain data collected in step_03, identify the sudden increase that marks the buckling transition. Extract the buckling strain ε_b for each configuration and write the results to a CSV file covering all conditions that have a reported value.",
+    "output_file": "buckling_strains.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Buckling strain determinations for perfect graphene (PG) and the two grain‑boundary configurations under free (FBC) and supported (SBC) lateral boundary conditions, for compression directions α=0 and α=π/2. Contains all rows from the paper’s Table I.",
+    "output_schema": "system (string: PG/LAGBI/LAGBII), boundary_condition (string: FBC/SBC), compression_direction (string: alpha0/alpha_pi_2), buckling_strain_percent (float). 9 rows covering all combinations listed in the paper."
+  },
+  {
+    "id": "step_05",
+    "title": "Compute free energy minima",
+    "role": "scored",
+    "action": "Apply the Jarzynski equality to the work data from step_03 to obtain ΔF(ε) for PG and LAGBI under SBC with α=0. Locate the equilibrium strain ε_m at the free‑energy minimum and record the corresponding ΔF value. Write one CSV row per system.",
+    "output_file": "free_energy_minima.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Free energy minima and equilibrium strains for PG and LAGBI under supported boundary conditions (α=0).",
+    "output_schema": "system (string), boundary_condition (string), compression_direction (string), free_energy_min_eV (float), equilibrium_strain_percent (float). Two rows."
+  },
+  {
+    "id": "step_06",
+    "title": "Analyze deformation shape",
+    "role": "scored",
+    "action": "From the compression trajectories at strain ε = 2.45 % under SBC with α=0, extract the out‑of‑plane atomic positions. Compute the y‑averaged z‑deviation profile as a function of x for PG, LAGBI, and LAGBII. Write the profiles to a CSV file.",
+    "output_file": "shape_profiles.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "y‑averaged out‑of‑plane deflection profiles at ε=2.45 % for SBC α=0, used to verify the departure from a single‑mode sinusoid in grain‑boundary systems.",
+    "output_schema": "system (string), x_position_nm (float), average_z_deviation_nm (float). Three sets of data."
+  }
+]

@@ -1,0 +1,434 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The output artifacts are final numerical results from a full DFT+Debye pipeline; recomputing from raw intermediate data (E(V), strains) would require extra artifacts not in the output contract, so we compare each reported quantity to paper gold with tolerances and cross-compound trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_structural.csv": "reference_match",
+    "step_02_elastic.csv": "reference_match",
+    "step_03_derived_elastic.csv": "reference_match",
+    "step_04_thermodynamic.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported reference values for all structural, elastic, and thermodynamic quantities.",
+      "source_provenance": "Tables 1, 2, and 4 of the paper.",
+      "generation_method": "Extracted directly from the paper's numerical tables.",
+      "why_not_fabricated": "These are the authentic computed results from the paper's DFT study; they are the target any reproduction attempts to match within reasonable tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_structural.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "a_A",
+            "B_GPa",
+            "B_prime",
+            "E_coh_eV_per_atom"
+          ],
+          "units": {
+            "a_A": "Angstrom",
+            "B_GPa": "GPa",
+            "B_prime": "dimensionless",
+            "E_coh_eV_per_atom": "eV/atom"
+          }
+        },
+        "description": "Equilibrium lattice constant, bulk modulus, pressure derivative of bulk modulus, and cohesive energy for HoAs and HoP."
+      },
+      {
+        "file": "step_02_elastic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "C11_GPa",
+            "C12_GPa",
+            "C44_GPa"
+          ],
+          "units": {
+            "C11_GPa": "GPa",
+            "C12_GPa": "GPa",
+            "C44_GPa": "GPa"
+          }
+        },
+        "description": "Second-order elastic constants C11, C12, C44 for HoAs and HoP."
+      },
+      {
+        "file": "step_03_derived_elastic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "A",
+            "nu",
+            "E_GPa",
+            "G_GPa"
+          ],
+          "units": {
+            "A": "dimensionless",
+            "nu": "dimensionless",
+            "E_GPa": "GPa",
+            "G_GPa": "GPa"
+          }
+        },
+        "description": "Zener anisotropy factor, Poisson's ratio, Young's modulus, and isotropic shear modulus for HoAs and HoP."
+      },
+      {
+        "file": "step_04_thermodynamic.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "Cv_300K_J_per_mol_K",
+            "Debye_T_0K_K",
+            "gamma_0K"
+          ],
+          "units": {
+            "Cv_300K_J_per_mol_K": "J/(mol*K)",
+            "Debye_T_0K_K": "K",
+            "gamma_0K": "dimensionless"
+          }
+        },
+        "description": "Heat capacity at 300 K, Debye temperature at 0 K, and Grüneisen parameter at 0 K at zero pressure for HoAs and HoP."
+      }
+    ],
+    "notes": "All outputs are scored by comparison with hidden reference values using appropriate tolerances. The checker also validates basic structural requirements (e.g., HoP has larger bulk modulus and Young's modulus than HoAs, Zener anisotropy < 1)."
+  },
+  "steps": [
+    {
+      "id": "step01_structural",
+      "output_file": "step_01_structural.csv",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "checks": [
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "a_A",
+          "target": 5.8,
+          "tolerance_rel": 0.05
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "B_GPa",
+          "target": 76.75,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "B_prime",
+          "target": 3.88,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "E_coh_eV_per_atom",
+          "target": 6.37,
+          "tolerance_rel": 0.05
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "a_A",
+          "target": 5.64,
+          "tolerance_rel": 0.05
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "B_GPa",
+          "target": 86.57,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "B_prime",
+          "target": 3.7,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "E_coh_eV_per_atom",
+          "target": 7.2,
+          "tolerance_rel": 0.05
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "B_GPa",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoAs",
+          "material2": "HoP",
+          "field": "a_A",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "E_coh_eV_per_atom",
+          "relation": "greater"
+        }
+      ]
+    },
+    {
+      "id": "step02_elastic",
+      "output_file": "step_02_elastic.csv",
+      "weight": 0.15,
+      "kind": "reference_match",
+      "checks": [
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "C11_GPa",
+          "target": 114.27,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "C12_GPa",
+          "target": 57.99,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "C44_GPa",
+          "target": 10.68,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "C11_GPa",
+          "target": 126.89,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "C12_GPa",
+          "target": 66.41,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "C44_GPa",
+          "target": 12.71,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "C11_GPa",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "C12_GPa",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "C44_GPa",
+          "relation": "greater"
+        }
+      ]
+    },
+    {
+      "id": "step03_derived_elastic",
+      "output_file": "step_03_derived_elastic.csv",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "checks": [
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "A",
+          "target": 0.38,
+          "tolerance_abs": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "nu",
+          "target": 0.4,
+          "tolerance_abs": 0.05
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "E_GPa",
+          "target": 44.71,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "G_GPa",
+          "target": 15.93,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "A",
+          "target": 0.42,
+          "tolerance_abs": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "nu",
+          "target": 0.4,
+          "tolerance_abs": 0.05
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "E_GPa",
+          "target": 50.85,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "G_GPa",
+          "target": 18.13,
+          "tolerance_rel": 0.15
+        },
+        {
+          "type": "trend",
+          "material1": "HoAs",
+          "field": "A",
+          "relation": "less",
+          "threshold": 1.0
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "field": "A",
+          "relation": "less",
+          "threshold": 1.0
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "E_GPa",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "G_GPa",
+          "relation": "greater"
+        }
+      ]
+    },
+    {
+      "id": "step04_thermodynamic",
+      "output_file": "step_04_thermodynamic.csv",
+      "weight": 0.35,
+      "kind": "reference_match",
+      "checks": [
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "Cv_300K_J_per_mol_K",
+          "target": 49.16,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "Debye_T_0K_K",
+          "target": 165.74,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoAs",
+          "field": "gamma_0K",
+          "target": 1.905,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "Cv_300K_J_per_mol_K",
+          "target": 48.9,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "Debye_T_0K_K",
+          "target": 192.62,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "numeric",
+          "material": "HoP",
+          "field": "gamma_0K",
+          "target": 1.778,
+          "tolerance_rel": 0.1
+        },
+        {
+          "type": "trend",
+          "material1": "HoP",
+          "material2": "HoAs",
+          "field": "Debye_T_0K_K",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoAs",
+          "material2": "HoP",
+          "field": "Cv_300K_J_per_mol_K",
+          "relation": "greater"
+        },
+        {
+          "type": "trend",
+          "material1": "HoAs",
+          "material2": "HoP",
+          "field": "gamma_0K",
+          "relation": "greater"
+        }
+      ]
+    }
+  ]
+}

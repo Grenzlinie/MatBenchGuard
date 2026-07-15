@@ -1,0 +1,167 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute B and G from Cij via Voigt-Reuss-Hill, then derive E/v/Hv; compare to paper Tables 2-3 with tolerances; structural trend check also applied.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "properties.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for bulk modulus B, shear modulus G, Young's modulus E, Poisson's ratio v, and Vickers hardness Hv for all vanadium carbide phases.",
+      "source_provenance": "Extracted from paper Tables 2 and 3 (the DFT-calculated results).",
+      "generation_method": "Direct transcription of the paper's published numbers.",
+      "why_not_fabricated": "These are the paper's own computed results, traceable to specific rows in the published article."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "phases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "phase_name": {
+                    "type": "string"
+                  },
+                  "space_group": {
+                    "type": "string"
+                  },
+                  "Cij": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "B": {
+                    "type": "number",
+                    "unit": "GPa"
+                  },
+                  "G": {
+                    "type": "number",
+                    "unit": "GPa"
+                  },
+                  "E": {
+                    "type": "number",
+                    "unit": "GPa"
+                  },
+                  "v": {
+                    "type": "number"
+                  },
+                  "Hv": {
+                    "type": "number",
+                    "unit": "GPa"
+                  }
+                },
+                "required": [
+                  "phase_name",
+                  "space_group",
+                  "Cij",
+                  "B",
+                  "G",
+                  "E",
+                  "v",
+                  "Hv"
+                ]
+              }
+            }
+          },
+          "required": [
+            "phases"
+          ]
+        },
+        "description": "Aggregated elastic properties and Vickers hardness for all vanadium carbide phases, computed from DFT elastic constants via Voigt-Reuss-Hill averaging and Chen's hardness model."
+      }
+    ],
+    "notes": "The checker recomputes B and G from the submitted Cij using Voigt-Reuss-Hill averaging, then derives E, ν, Hv and compares these to reference values with tolerances. A structural trend check verifies that E and G increase monotonically with carbon content across the phases."
+  },
+  "steps": [
+    {
+      "id": "phase_accuracy",
+      "output_file": "properties.json",
+      "kind": "numeric",
+      "weight": 0.8,
+      "params": {
+        "gold": {
+          "V": {
+            "B": 180,
+            "G": 34,
+            "E": 96,
+            "v": 0.411,
+            "Hv": null
+          },
+          "V2C": {
+            "B": 242,
+            "G": 121,
+            "E": 311,
+            "v": 0.286,
+            "Hv": 11.7
+          },
+          "V4C3": {
+            "B": 299,
+            "G": 162,
+            "E": 412,
+            "v": 0.271,
+            "Hv": 16.2
+          },
+          "P31-V6C5": {
+            "B": 237,
+            "G": 176,
+            "E": 423,
+            "v": 0.202,
+            "Hv": 26.1
+          },
+          "V8C7": {
+            "B": 243,
+            "G": 180,
+            "E": 433,
+            "v": 0.203,
+            "Hv": 26.4
+          },
+          "VC": {
+            "B": 302,
+            "G": 228,
+            "E": 546,
+            "v": 0.198,
+            "Hv": 31.5
+          }
+        },
+        "tolerances": {
+          "B": 0.1,
+          "G": 0.1,
+          "E": 0.1,
+          "v": 0.05,
+          "Hv": 0.15
+        }
+      }
+    },
+    {
+      "id": "monotonic_trend",
+      "output_file": "properties.json",
+      "kind": "structural",
+      "weight": 0.2,
+      "params": {
+        "order": [
+          "V",
+          "V2C",
+          "V4C3",
+          "P31-V6C5",
+          "V8C7",
+          "VC"
+        ],
+        "properties": [
+          "G",
+          "E"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "b3lyp",
+    "title": "B3LYP geometry optimization, frequencies, and potential scans",
+    "role": "process",
+    "action": "For each of the 14 target species (AlOH, AlO(OH), Al(OH)2, Al(OH)3, ZrOH, ZrOOH, Zr(OH)2, Zr(OH)3, ZrO(OH)2, Zr(OH)4, YOH, YO(OH), Y(OH)2, Y(OH)3), perform B3LYP geometry optimization and harmonic frequency calculation using the basis sets prescribed in the computational protocol (aug-cc-pVTZ for Al; cc-pwCVTZ-PP for Y and Zr). Additionally, compute the M-O-H bending potential energy curve by fixing the angle and optimizing all other coordinates, and compute the full 360° torsional rotational potential of each -OH group. Collect the optimized geometries, harmonic frequencies, bending potential curves, and torsional rotational potential curves.",
+    "output_file": "",
+    "evidence": "b3lyp_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces molecular geometries, harmonic vibrational frequencies, bending potentials, and torsional rotational potentials needed for the thermodynamic analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "ccsdt",
+    "title": "CCSD(T) reaction energies and CBS extrapolation",
+    "role": "process",
+    "action": "Using the B3LYP-optimized geometries, run CCSD(T) single-point energy calculations for each species with the basis set series (TZ, QZ, 5Z) as specified in the protocol. Extrapolate to the complete basis set (CBS) limit using the X^-3 formula. Apply the core-correlation treatments: for Al species, correlate all electrons except Al 1s; for Y and Zr species, correlate metal 4s and 4p but freeze metal 1s-3d and O 1s. For Y and Zr, also perform an all-electron (Douglas–Kroll) CCSD(T)/TZ calculation to compute the AE–ECP correction. Collect the final CBS reaction energies and the AE vs ECP corrections.",
+    "output_file": "",
+    "evidence": "cc_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Computes the high-level electronic reaction energies and the AE/ECP correction needed to derive accurate enthalpies of formation.",
+    "output_schema": ""
+  },
+  {
+    "id": "thermo_assembly",
+    "title": "Compute thermodynamic functions and generate final table",
+    "role": "scored",
+    "action": "From the B3LYP outputs: apply the hindered rotor Pitzer–Gwinn treatment to the torsional potentials; solve the 1D vibrational levels for the bending potentials to obtain anharmonic corrections; combine with harmonic frequencies to compute standard entropy at 298 K (S°(298)) and heat capacity (Cp) as a function of temperature. Using the CCSD(T) CBS reaction energies: add B3LYP zero-point energy corrections, spin-orbit corrections (0.9 kJ/mol for Al, 8.6 kJ/mol for Zr, 3.8 kJ/mol for Y), and the known systematic error corrections for H₂/H₂O atomization to obtain standard enthalpy of formation at 298 K (ΔfH°(298)). For Y and Zr species, correct the ECP-based reaction energy by the AE–ECP difference before deriving ΔfH°. Fit Cp(T) to the polynomial form A + B·T + C·T² + D/T + E/T². Write the final thermodynamic data for all 14 species to a JSON file.",
+    "output_file": "thermo_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final thermodynamic results for all 14 species: S°(298), ΔfH°(298), and Cp polynomial coefficients.",
+    "output_schema": "A JSON array of 14 objects. Each object has keys: species (string), S298 (number, unit J/(mol·K)), delta_f_H298 (number, unit kJ/mol), Cp_polynomial (object with numeric fields A, B, C, D, E representing the polynomial A + B*T + C*T^2 + D/T + E/T^2)."
+  }
+]

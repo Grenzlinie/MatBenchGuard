@@ -1,0 +1,89 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the spinodal condition v_s, the critical point conditions v_s=0 and gradient alignment, and the coexistence conditions (equal μ_A, μ_B, p) directly from the agent's raw CSVs/JSON using the paper's equations (19)–(20), (24)–(25). No hidden holdout data is needed.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "spinodal.csv": "metric_recompute",
+    "critical_point.json": "metric_recompute",
+    "binodal.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "spinodal.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi_A",
+            "phi_B"
+          ]
+        },
+        "description": "Points on the spinodal curve. The verifying checker will recompute the spinodal condition at each point and check that it meets a threshold (i.e., the condition is satisfied within tolerance)."
+      },
+      {
+        "file": "critical_point.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "phi_A_star": "number",
+            "phi_B_star": "number",
+            "phi_s_star": "number"
+          }
+        },
+        "description": "Critical point composition. The checker will recompute the spinodal condition and the gradient-alignment equation to verify correctness."
+      },
+      {
+        "file": "binodal.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phi_A_a",
+            "phi_B_a",
+            "phi_s_a",
+            "phi_A_b",
+            "phi_B_b",
+            "phi_s_b"
+          ]
+        },
+        "description": "Coexisting phase compositions on the binodal line. The checker will recompute the chemical potentials and pressure for each pair and verify that the equilibrium conditions hold within tolerance."
+      }
+    ],
+    "notes": "All calculations assume low densities (second virial approximation) as in the original derivation. The demixing boundary mapping (Fig. 3a/b of the paper) — which requires an additional parameter scan over (α_T, α_v) space solving the spinodal condition for each grid point — is excluded from this minimal reproduction task per the original approved scope; the task focuses on the spinodal, binodal, and critical point for the specified parameter set (T_A/T_B=20, equal sizes)."
+  },
+  "steps": [
+    {
+      "id": "step02_spinodal",
+      "output_file": "spinodal.csv",
+      "kind": "recompute_spinodal",
+      "weight": 0.3,
+      "tolerance_vs": 0.0001
+    },
+    {
+      "id": "step03_critical_point",
+      "output_file": "critical_point.json",
+      "kind": "recompute_critical",
+      "weight": 0.2,
+      "tolerance_vs": 0.0001,
+      "tolerance_ratio": 0.0001
+    },
+    {
+      "id": "step04_binodal",
+      "output_file": "binodal.csv",
+      "kind": "recompute_binodal",
+      "weight": 0.5,
+      "tolerance_mu": 0.001,
+      "tolerance_p": 0.001,
+      "min_points": 20
+    }
+  ]
+}

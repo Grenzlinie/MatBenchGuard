@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Checker compares each agent-reported supersaturation and critical radius to the paper's reported gold using relative tolerances (2% for supersaturation, 5% for radius). Recomputing the metric from raw intermediates is not feasible because the agent only writes the final computed values; there are no intermediate raw artifacts to base a recompute on.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported gold values for supersaturation and critical radius at the three condensation thresholds.",
+      "source_provenance": "Taken directly from the paper's tables: supersaturation from the final column of the 'Supersaturation Required ...' tables, radii from the 'Radius ... of drops just large enough to grow' tables.",
+      "generation_method": "Extracted from the paper's published numeric results.",
+      "why_not_fabricated": "These are the exact numbers the paper reports; they serve as the authentic reproduction target."
+    }
+  ],
+  "gold": [
+    {
+      "threshold": "rain",
+      "S": 4.2,
+      "r": 8.6e-08
+    },
+    {
+      "threshold": "cloud",
+      "S": 7.9,
+      "r": 6.4e-08
+    },
+    {
+      "threshold": "sensitive",
+      "S": 9.9,
+      "r": 5.9e-08
+    }
+  ],
+  "tolerances": {
+    "S": 0.02,
+    "r": 0.05
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "threshold",
+              "volume_ratio",
+              "supersaturation",
+              "critical_radius_m"
+            ],
+            "properties": {
+              "threshold": {
+                "type": "string",
+                "enum": [
+                  "rain",
+                  "cloud",
+                  "sensitive"
+                ]
+              },
+              "volume_ratio": {
+                "type": "number"
+              },
+              "supersaturation": {
+                "type": "number"
+              },
+              "critical_radius_m": {
+                "type": "number",
+                "units": "meters"
+              }
+            }
+          }
+        },
+        "description": "The computed supersaturation (dimensionless) and critical droplet radius (meters) for each of the three condensation thresholds, compared to the paper-reported reference values within specified relative tolerances."
+      }
+    ],
+    "notes": "The hidden checker will compare each reported supersaturation and radius to the paper's gold values using relative tolerances (2% for supersaturation, 5% for radius). Full credit if all six values are within tolerance; partial credit scales linearly with the number of in-tolerance values."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "compare_to_gold",
+      "description": "Compare agent's supersaturation and critical radius with paper gold using relative tolerances."
+    }
+  ]
+}

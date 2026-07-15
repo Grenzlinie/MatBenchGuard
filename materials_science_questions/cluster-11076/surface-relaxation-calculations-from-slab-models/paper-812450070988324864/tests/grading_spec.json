@@ -1,0 +1,53 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing corrugation and symmetry from raw SCF charge density would require running DFT post-processing, which is infeasible in the lightweight verifier sandbox. The only scored artifact is the agent's derived CSV, so we verify the structural trends (slipped vs ideal ratios) that correspond to the paper's main claim.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "corrugation_results.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for corrugation and symmetry ratio trends",
+      "source_provenance": "Paper-reported trends: slipped configuration yields somewhat larger corrugation and absence of trigonal symmetry. The actual 1987 paper values are not used for exact match, only trend thresholds.",
+      "generation_method": "Set thresholds to capture the qualitative trend while being permissive enough for different DFT implementations.",
+      "why_not_fabricated": "Thresholds are based on the paper's own qualitative conclusion that slipped gives larger corrugation and broken symmetry; the specific numeric thresholds chosen (1.5 and 0.5) are reasonable for this purpose and verified against the reference solution."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "corrugation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "slab_type",
+            "configuration",
+            "corrugation_angstrom",
+            "trigonal_symmetry_metric"
+          ],
+          "units": {
+            "corrugation_angstrom": "Angstrom"
+          }
+        },
+        "description": "CSV containing corrugation amplitude and trigonal symmetry metric for each slab configuration."
+      }
+    ],
+    "notes": "The checker will derive the ratio of corrugation amplitudes (slipped/ideal) and the ratio of trigonal symmetry metrics (slipped/ideal) and verify structural trends (larger corrugation and broken symmetry for the slipped configuration)."
+  },
+  "steps": [
+    {
+      "id": "corrugation_results",
+      "output_file": "corrugation_results.csv",
+      "weight": 1.0,
+      "target_policy": "structural_audit",
+      "thresholds": {
+        "corrugation_ratio_min": 1.5,
+        "symmetry_ratio_max": 0.5
+      }
+    }
+  ]
+}

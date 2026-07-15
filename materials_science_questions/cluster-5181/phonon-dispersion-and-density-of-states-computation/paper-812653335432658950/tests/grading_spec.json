@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full MD simulation and recursion method is not feasible in the verifier sandbox; compare reported Y111 values to digitized reference and check LDOS structural features.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference Y111 values per modulation wavelength digitized from paper Figure 2 for tolerance-based comparison.",
+      "source_provenance": "Digitized from Figure 2 of the paper (Sasajima et al. 1984).",
+      "generation_method": "Read off data points from the published figure.",
+      "why_not_fabricated": "These are the paper's reported simulation results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "youngs_modulus_per_lambda.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "modulation_wavelength",
+            "Y111"
+          ],
+          "units": {
+            "modulation_wavelength": "Angstrom",
+            "Y111": "10^12 dyn/cm^2"
+          }
+        },
+        "description": "Young's modulus Y[111] as a function of modulation wavelength for Au/Ni superlattices."
+      },
+      {
+        "file": "ldos_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency",
+            "LDOS_Au_interface",
+            "LDOS_Ni_interface",
+            "LDOS_Au_interior",
+            "LDOS_Ni_interior"
+          ],
+          "units": {
+            "frequency": "Hz"
+          }
+        },
+        "description": "Vibrational local density of states for interface and interior atoms in the Au/Ni (3/3) superlattice."
+      }
+    ],
+    "notes": "The agent must produce both scored artifacts by executing the full pipeline. Young's modulus values are compared to reference values digitized from the paper's Figure 2 within a hidden absolute tolerance; at least four of five must be within tolerance and the overall trend must be monotonically decreasing with wavelength. For LDOS, the frequency of the maximum LDOS for interface atoms must lie within a hidden range and the interface peak must exceed the interior peak by a minimum ratio."
+  },
+  "steps": [
+    {
+      "id": "step_youngs_modulus",
+      "output_file": "youngs_modulus_per_lambda.csv",
+      "kind": "numeric",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "reference_points": [
+        {
+          "modulation_wavelength": 4.39,
+          "Y111": 8.5
+        },
+        {
+          "modulation_wavelength": 13.17,
+          "Y111": 6.3
+        },
+        {
+          "modulation_wavelength": 21.95,
+          "Y111": 5.1
+        },
+        {
+          "modulation_wavelength": 30.73,
+          "Y111": 4.3
+        },
+        {
+          "modulation_wavelength": 39.51,
+          "Y111": 3.8
+        }
+      ],
+      "tolerance_abs": 0.8,
+      "description": "Young's modulus per modulation wavelength must match reference within tolerance and trend monotonically decreasing."
+    },
+    {
+      "id": "step_ldos",
+      "output_file": "ldos_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "target_policy": "structural_audit",
+      "params": {
+        "freq_range": [
+          3500000000000.0,
+          4500000000000.0
+        ],
+        "ratio_min": 1.15
+      },
+      "description": "LDOS peak positions and interface enhancement checks."
+    }
+  ]
+}

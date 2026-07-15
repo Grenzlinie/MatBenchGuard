@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker independently recomputes A1,A2,A3,tau_c from the explicit formulas and solves the derived ODE for C12(s); no hidden labels or external gold files required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "stability_output.csv": "metric_recompute",
+    "correlation_C12.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stability_output.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha",
+            "D",
+            "A1",
+            "A2",
+            "A3",
+            "tau_c"
+          ],
+          "units": {}
+        },
+        "description": "Table of spin-wave damping/frequency coefficients and critical correlation time computed from analytic formulas for given (alpha, D) grid."
+      },
+      {
+        "file": "correlation_C12.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "s",
+            "C12"
+          ],
+          "units": {}
+        },
+        "description": "Time evolution of the spin-spin correlation component C₁₂(s) for s in [0,10] step 0.1, computed from the ODE."
+      }
+    ],
+    "notes": "The checker recomputes the coefficients and ODE solution from the same formulas and compares point-wise with tolerances."
+  },
+  "steps": [
+    {
+      "id": "stability_coeffs",
+      "output_file": "stability_output.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "description": "Recompute A1,A2,A3,tau_c for each row and compare against agent values with rtol=1e-5, atol=1e-8."
+    },
+    {
+      "id": "correlation_C12",
+      "output_file": "correlation_C12.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "description": "Recompute C12(s) by solving the full ODE system and compare at each s with rtol=1e-4, atol=1e-6."
+    }
+  ]
+}

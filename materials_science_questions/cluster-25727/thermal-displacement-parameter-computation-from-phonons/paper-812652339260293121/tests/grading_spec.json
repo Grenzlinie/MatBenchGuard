@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute u_f contour from raw simulation grid because agent does not output the underlying grid; instead verify melt curve consistency with paper's published Simon curve and internal consistency with agent's own Simon fit, and compare fitted Simon parameters to paper-reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper's Simon equation parameters (T0=6279, P0=346, exponent=0.552) from Eq. 1",
+      "source_provenance": "Paper Section IV, Eq. 1",
+      "generation_method": "direct transcription from paper",
+      "why_not_fabricated": "These are the paper's reported numerical values for their fit, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "melt_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "density_g_cm3",
+            "temperature_K",
+            "pressure_GPa"
+          ],
+          "units": {
+            "density_g_cm3": "g/cm^3",
+            "temperature_K": "K",
+            "pressure_GPa": "GPa"
+          }
+        },
+        "description": "High-pressure melt curve of iron (u_f=0.12 contour). Minimum 20 rows, each with density, temperature, and pressure."
+      },
+      {
+        "file": "simon_fit.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T0": "number",
+            "P0": "number",
+            "exponent": "number"
+          }
+        },
+        "description": "Simon equation parameters for the melt curve. T0 (K) at reference pressure P0 (GPa), exponent."
+      }
+    ],
+    "notes": "The melt curve is scored by comparing the agent's computed points to a hidden set digitized from the paper's Fig. 2; the Simon parameters are compared to the paper's reported values. Both use tolerances appropriate for implementation-dependent differences."
+  },
+  "steps": [
+    {
+      "id": "melt_curve_shape",
+      "output_file": "melt_curve.csv",
+      "weight": 0.02,
+      "kind": "rubric",
+      "description": "Check melt_curve.csv exists, has required columns and at least 20 rows, and density/pressure are positive."
+    },
+    {
+      "id": "melt_curve_self_consistency",
+      "output_file": "melt_curve.csv",
+      "weight": 0.18,
+      "kind": "rubric",
+      "description": "Check that melt curve points are consistent with the agent's own Simon fit parameters (T0, P0, exponent) to within 5% relative temperature error.",
+      "params": {
+        "max_rel_error": 0.05,
+        "required_pass_fraction": 0.8
+      }
+    },
+    {
+      "id": "melt_curve_paper_curve_match",
+      "output_file": "melt_curve.csv",
+      "weight": 0.4,
+      "kind": "rubric",
+      "description": "Check that melt curve points lie close to the paper's Simon equation T = 6279*(P/346)^0.552, within 5% relative temperature error.",
+      "paper_simon": {
+        "T0": 6279.0,
+        "P0": 346.0,
+        "b": 0.552
+      },
+      "params": {
+        "max_rel_error": 0.05,
+        "required_pass_fraction": 0.8
+      }
+    },
+    {
+      "id": "simon_fit_parameters",
+      "output_file": "simon_fit.json",
+      "weight": 0.4,
+      "kind": "rubric",
+      "description": "Check that the Simon fit parameters T0 and exponent are within 5% relative error of the paper's published values (T0=6279, exponent=0.552).",
+      "paper_simon": {
+        "T0": 6279.0,
+        "P0": 346.0,
+        "exponent": 0.552
+      },
+      "tolerance_relative": 0.05
+    }
+  ]
+}

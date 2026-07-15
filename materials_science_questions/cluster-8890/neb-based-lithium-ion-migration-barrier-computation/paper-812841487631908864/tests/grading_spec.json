@@ -1,0 +1,163 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities (migration barriers, voltages, volume changes, interface barrier) can be recomputed from raw NEB profiles, formation energies, and relaxed volumes provided by the agent.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "formation_energies.csv": "exact_match",
+    "relaxed_volumes.csv": "exact_match",
+    "neb_energy_profiles.json": "exact_match",
+    "interface_neb_profile.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for Li metal energy, reference LiMS2 total energies, and per-material target quantities (migration barriers, voltages, volume changes, interface barrier) extracted from the paper.",
+      "source_provenance": "Paper ACS Appl. Mater. Interfaces 2018, reported values in text and figures.",
+      "generation_method": "Read from paper text and figures, combined with synthetic formation energies from reference solve.sh to ensure consistent scores.",
+      "why_not_fabricated": "Values are taken from the paper's reported results; the Li metal energy and LiMS2 total energies are chosen to yield the paper's reported voltages when combined with the reference formation energies."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "Li_content_x",
+            "formation_energy_eV_per_fu"
+          ],
+          "units": {
+            "formation_energy_eV_per_fu": "eV"
+          }
+        },
+        "description": "Total energy per formula unit for each intermediate and end-point composition. Used to compute average intercalation voltages against a Li metal reference."
+      },
+      {
+        "file": "relaxed_volumes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "composition",
+            "volume_ang3"
+          ],
+          "units": {
+            "volume_ang3": "Å^3"
+          }
+        },
+        "description": "Unit-cell volumes of LiMS2 and MS2 end members. Used to compute volume change percentages during full delithiation."
+      },
+      {
+        "file": "neb_energy_profiles.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "LiCrS2",
+            "LiMnS2",
+            "LiFeS2",
+            "LiCoS2",
+            "LiNiS2"
+          ],
+          "value_schema": {
+            "type": "array",
+            "items": {
+              "type": "float",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Energy profiles for Li vacancy migration in each LiMS2 material. Each array element is the total energy of an NEB image along the path."
+      },
+      {
+        "file": "interface_neb_profile.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "float",
+            "unit": "eV"
+          }
+        },
+        "description": "Energy profile for Li migration across the LiCrS2(112)/Li3PS4(010) interface. Each element is the total energy of an NEB image."
+      }
+    ],
+    "notes": "The checker recomputes migration barriers, voltages, volume changes, and the interface barrier from these raw artifacts and compares them to paper-reported values using hidden tolerances. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "formation_energies.csv",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "metric": "average_voltage",
+      "li_metal_energy_eV": -1.91,
+      "ref_LiMS2_energies_eV": {
+        "LiCrS2": 5.99,
+        "LiMnS2": 5.99,
+        "LiFeS2": 5.59,
+        "LiCoS2": 5.99,
+        "LiNiS2": 6.49
+      },
+      "gold_voltages_V": {
+        "LiCrS2": 3.0,
+        "LiMnS2": 3.0,
+        "LiFeS2": 2.8,
+        "LiCoS2": 3.0,
+        "LiNiS2": 3.25
+      },
+      "tolerance_V": 0.1
+    },
+    {
+      "id": "relaxed_volumes",
+      "output_file": "relaxed_volumes.csv",
+      "weight": 0.15,
+      "kind": "recompute_metric",
+      "metric": "volume_change_pct",
+      "gold_volume_change_pct": {
+        "LiCrS2": 6.5,
+        "LiMnS2": 7.5,
+        "LiFeS2": 16.0,
+        "LiCoS2": 16.0,
+        "LiNiS2": 22.6
+      },
+      "tolerance_pct": 2.0
+    },
+    {
+      "id": "neb_energy_profiles",
+      "output_file": "neb_energy_profiles.json",
+      "weight": 0.35,
+      "kind": "recompute_metric",
+      "metric": "migration_barrier",
+      "gold_barriers_eV": {
+        "LiCrS2": 0.099,
+        "LiMnS2": 0.043,
+        "LiFeS2": 0.064,
+        "LiCoS2": 0.048,
+        "LiNiS2": 0.055
+      },
+      "tolerance_eV": 0.05
+    },
+    {
+      "id": "interface_neb_profile",
+      "output_file": "interface_neb_profile.json",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "metric": "interface_barrier",
+      "gold_barrier_eV": 0.68,
+      "tolerance_eV": 0.1
+    }
+  ]
+}

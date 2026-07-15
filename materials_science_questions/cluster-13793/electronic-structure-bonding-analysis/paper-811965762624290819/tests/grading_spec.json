@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing the full band structure is impractical for the checker; compare extracted energies at high-symmetry points to paper-reported reference energies with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_structure.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference band energies at Gamma, X, K, L points extracted from Fig. 3 of the paper",
+      "source_provenance": "paper Fig. 3 band structure plot for CrN",
+      "generation_method": "visual estimation from the band structure plot; approximate values for the lowest 5 bands at each symmetry point",
+      "why_not_fabricated": "values are taken from the paper's published plot and serve as the expected gold reference for the checker"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "direction",
+            "k_index",
+            "kx",
+            "ky",
+            "kz",
+            "energy"
+          ],
+          "units": {
+            "energy": "eV"
+          }
+        },
+        "description": "Band energies E(k) computed from the finite‑difference Bloch‑lattice model. The hidden checker will extract energies at the high‑symmetry points Γ, X, K, L and compare them to paper reference values within an appropriate tolerance; it will also verify metallic character (at least one band crossing the Fermi level along each direction)."
+      }
+    ],
+    "notes": "The agent must implement the finite‑difference scheme as described; any reasonable grid spacing that yields a converged band structure is acceptable. The hidden tolerance accounts for the expected spread from different discretisation choices and software environments."
+  },
+  "steps": [
+    {
+      "id": "check_high_symmetry_points",
+      "output_file": "band_structure.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "targets": {
+        "Gamma": {
+          "k": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "energy_ref": [
+            -7.8,
+            -3.2,
+            -0.2,
+            2.2,
+            4.5
+          ]
+        },
+        "X": {
+          "k": [
+            0.5,
+            0.0,
+            0.0
+          ],
+          "energy_ref": [
+            -6.0,
+            -1.5,
+            0.3,
+            2.8,
+            5.0
+          ]
+        },
+        "K": {
+          "k": [
+            0.375,
+            0.375,
+            0.0
+          ],
+          "energy_ref": [
+            -6.5,
+            -2.0,
+            0.0,
+            2.5,
+            4.8
+          ]
+        },
+        "L": {
+          "k": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "energy_ref": [
+            -7.0,
+            -2.4,
+            0.1,
+            2.6,
+            4.9
+          ]
+        }
+      },
+      "tolerance_abs": 0.5,
+      "k_distance_tol": 0.05
+    },
+    {
+      "id": "check_metallic_crossing",
+      "output_file": "band_structure.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "targets": {
+        "crossing_threshold_eV": 0.1,
+        "required_directions": [
+          "Delta",
+          "Sigma",
+          "Lambda"
+        ]
+      }
+    }
+  ]
+}

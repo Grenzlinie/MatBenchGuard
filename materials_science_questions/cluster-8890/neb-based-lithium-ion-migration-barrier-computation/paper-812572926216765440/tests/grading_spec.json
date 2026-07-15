@@ -1,0 +1,60 @@
+{
+  "pass_threshold": 0.6,
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute of the migration barrier from raw NEB energies is not feasible because the agent submits only the final reported number, not the energy profile. The path is a structural check, which is a T3 element. The barrier is scored by threshold_or_better against the paper-reported gold.",
+  "target_policies": {
+    "li_migration_barriers.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold barrier value and migration path for li_migration_barriers.csv",
+      "source_provenance": "paper Figure 5d and text: 'a small value of around 0.36 eV' and '2b→4d→2b'",
+      "generation_method": "extracted directly from the paper's reported DFT/NEB result (PBE, VASP)",
+      "why_not_fabricated": "values are the exact published quantities used in the paper's own analysis"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "li_migration_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "barrier_eV",
+            "migration_path"
+          ],
+          "units": {
+            "barrier_eV": "eV"
+          }
+        },
+        "description": "Computed Li+ migration energy barrier (maximum barrier along the NEB path) and the site sequence. Scoring uses the barrier value with a tolerance and requires the migration_path to contain '2b→4d→2b'."
+      }
+    ],
+    "notes": "The NEB calculation must be performed on the 1a×1b×2c supercell using a PBE-based DFT setup. The reported barrier is the maximum energy barrier along the computed path."
+  },
+  "checks": [
+    {
+      "id": "barrier_check",
+      "output_file": "li_migration_barriers.csv",
+      "kind": "numeric",
+      "description": "Maximum Li+ migration energy barrier along 2b→4d→2b path in eV. Scored with threshold_or_better: barrier <= target+tolerance earns full credit.",
+      "weight": 0.7,
+      "target_barrier": 0.36,
+      "tolerance_barrier": 0.1,
+      "target_policy": "threshold_or_better"
+    },
+    {
+      "id": "path_check",
+      "output_file": "li_migration_barriers.csv",
+      "kind": "structural",
+      "description": "Migration path string must contain the sequence '2b→4d→2b' (order and site labels, ignoring whitespace). Exact match after normalization earns full credit.",
+      "weight": 0.3,
+      "expected_path": "2b→4d→2b",
+      "target_policy": "exact_match"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The output contract only requires the final computed numbers; no raw computational trace is submitted, so a full recompute from raw artifacts is infeasible. We compare the agent's reported numbers to the paper-verified gold values with tolerances appropriate for a recompute spread.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for delta0, a0, and growth time",
+      "source_provenance": "Paper text: 'supersaturation level is ~0.1', 'maximum radius a0≈0.38 µm', 'grow to 0.9a0 over 123 µsec'",
+      "generation_method": "Directly extracted from the paper's reported experimental quantification.",
+      "why_not_fabricated": "These are the paper's own headline results; the task is to reproduce them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "supersaturation.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "delta0": {
+              "type": "number",
+              "description": "dimensionless supersaturation value"
+            }
+          },
+          "required": [
+            "delta0"
+          ]
+        },
+        "description": "Computed supersaturation δ₀⁰ for the clouding scenario."
+      },
+      {
+        "file": "max_radius.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "a0_microns": {
+              "type": "number",
+              "description": "maximum droplet radius in micrometers"
+            }
+          },
+          "required": [
+            "a0_microns"
+          ]
+        },
+        "description": "Maximum droplet radius a₀ achievable under the given supersaturation."
+      },
+      {
+        "file": "growth_time.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "t_90_microsec": {
+              "type": "number",
+              "description": "time to reach 0.9*a0 in microseconds"
+            }
+          },
+          "required": [
+            "t_90_microsec"
+          ]
+        },
+        "description": "Droplet growth time to 0.9 of the maximum radius."
+      }
+    ],
+    "notes": "All three quantities are numerically recomputed by the hidden checker using the paper's analytical expressions with a gold reference set of constants and input parameters. The agent must implement the three formulas and output the numerical results. Scattering cross-section and optical thickness are omitted as they require additional Mie theory parameters not fully specified."
+  },
+  "steps": [
+    {
+      "id": "check_delta0",
+      "output_file": "supersaturation.json",
+      "weight": 0.34,
+      "kind": "numeric",
+      "target_value": 0.1,
+      "tolerance_rel": 0.1,
+      "max_tolerance_multiplier": 2.0,
+      "description": "Supersaturation δ₀⁰"
+    },
+    {
+      "id": "check_a0",
+      "output_file": "max_radius.json",
+      "weight": 0.33,
+      "kind": "numeric",
+      "target_value": 0.38,
+      "tolerance_rel": 0.1,
+      "max_tolerance_multiplier": 2.0,
+      "description": "Maximum droplet radius in µm"
+    },
+    {
+      "id": "check_growth_time",
+      "output_file": "growth_time.json",
+      "weight": 0.33,
+      "kind": "numeric",
+      "target_value": 123.0,
+      "tolerance_rel": 0.2,
+      "max_tolerance_multiplier": 2.0,
+      "description": "Growth time to 0.9a0 in µs"
+    }
+  ]
+}

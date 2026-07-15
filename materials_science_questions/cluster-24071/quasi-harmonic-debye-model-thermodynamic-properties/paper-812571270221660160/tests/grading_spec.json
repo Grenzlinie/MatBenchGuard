@@ -1,0 +1,704 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes closeness of submitted numeric values to paper-reported gold values using tolerance comparisons; a full recompute from raw simulation logs is infeasible because the verifier sandbox cannot redo the heavy RIP model minimization. This is a legitimate fallback (T0) with a real hidden gold (paper tables).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "transition_pressures_volume_drops.csv": "reference_match",
+    "elastic_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for transition pressures, volume drops, and elastic properties extracted directly from the paper's Tables 2 and 3.",
+      "source_provenance": "paper/paper.md Tables 2 and 3, columns 'Present' for the model.",
+      "generation_method": "Extracted from the paper markdown and verified against the reference solver (solution/solve.sh).",
+      "why_not_fabricated": "Values are the paper's own published numerical results, used as hidden gold for the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transition_pressures_volume_drops.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "temperature_K",
+            "transition_pressure_GPa",
+            "volume_drop_percent"
+          ],
+          "columns": {
+            "compound": "string",
+            "temperature_K": "int",
+            "transition_pressure_GPa": "float",
+            "volume_drop_percent": "float"
+          }
+        },
+        "description": "Computed structural phase transition pressures (GPa) and volume drops (%) for LaS and PrS at T=0K and T=300K."
+      },
+      {
+        "file": "elastic_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "temperature_K",
+            "property",
+            "value"
+          ],
+          "columns": {
+            "compound": "string",
+            "temperature_K": "int",
+            "property": "string",
+            "value": "float"
+          }
+        },
+        "description": "Computed second‑order elastic constants and derived mechanical properties. Possible property names: C11, C12, C44, Y, BT, G, CS, CL, A, zeta, sigma, nu_l, nu_t, nu_m, dBT_dP, dCS_dP, dC44_dP, C12_minus_C44, BT_over_G, s1, s2, s3, F12, F44. Units: elastic moduli in GPa, velocities in m/s, others dimensionless."
+      }
+    ],
+    "notes": "The agent must implement the full RIP model from scratch. Input constants (lattice constants, bulk moduli, ionic radii) are listed in the paper’s Table 1 and should be hard‑coded. Only pure LaS and PrS are required; mixed‑concentration alloys are excluded."
+  },
+  "steps": [
+    {
+      "id": "check_transition_table",
+      "output_file": "transition_pressures_volume_drops.csv",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "gold": [
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "transition_pressure_GPa": 28.05,
+          "volume_drop_percent": 9.28
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "transition_pressure_GPa": 27.25,
+          "volume_drop_percent": 9.55
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "transition_pressure_GPa": 22.9,
+          "volume_drop_percent": 9.08
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "transition_pressure_GPa": 22.0,
+          "volume_drop_percent": 9.33
+        }
+      ],
+      "tolerances": {
+        "transition_pressure_GPa_0K": 0.5,
+        "transition_pressure_GPa_300K": 1.0,
+        "volume_drop_percent": 0.5
+      }
+    },
+    {
+      "id": "check_transition_trend",
+      "output_file": "transition_pressures_volume_drops.csv",
+      "weight": 0.1,
+      "target_policy": "reference_match",
+      "trend": "transition_pressure_decreases_with_temperature"
+    },
+    {
+      "id": "check_elastic_table",
+      "output_file": "elastic_properties.csv",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "gold": [
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "C11",
+          "value": 218
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "C12",
+          "value": 24
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "C44",
+          "value": 50
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "Y",
+          "value": 214
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "BT",
+          "value": 89
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "G",
+          "value": 66
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "CS",
+          "value": 97
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "CL",
+          "value": 172
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "A",
+          "value": 0.52
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "zeta",
+          "value": 0.26
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "sigma",
+          "value": 0.09
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "nu_l",
+          "value": 5366
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "nu_t",
+          "value": 3277
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "nu_m",
+          "value": 3619
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "dBT_dP",
+          "value": 5.08
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "dCS_dP",
+          "value": 6.34
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "dC44_dP",
+          "value": 0.29
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "C12_minus_C44",
+          "value": -26
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "BT_over_G",
+          "value": 1.35
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "s1",
+          "value": 320
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "s2",
+          "value": 0.52
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "s3",
+          "value": 0.29
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "F12",
+          "value": 0.11
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 0,
+          "property": "F44",
+          "value": 0.23
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "C11",
+          "value": 215
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "C12",
+          "value": 23
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "C44",
+          "value": 49
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "Y",
+          "value": 210
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "BT",
+          "value": 87
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "G",
+          "value": 65
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "CS",
+          "value": 95
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "CL",
+          "value": 169
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "A",
+          "value": 0.51
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "zeta",
+          "value": 0.26
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "sigma",
+          "value": 0.09
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "nu_l",
+          "value": 5314
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "nu_t",
+          "value": 3240
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "nu_m",
+          "value": 3587
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "dBT_dP",
+          "value": 5.21
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "dCS_dP",
+          "value": 6.53
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "dC44_dP",
+          "value": 0.28
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "C12_minus_C44",
+          "value": -26
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "BT_over_G",
+          "value": 1.33
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "s1",
+          "value": 315
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "s2",
+          "value": 0.52
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "s3",
+          "value": 0.29
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "F12",
+          "value": 0.1
+        },
+        {
+          "compound": "LaS",
+          "temperature_K": 300,
+          "property": "F44",
+          "value": 0.23
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "C11",
+          "value": 238
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "C12",
+          "value": 41
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "C44",
+          "value": 49
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "Y",
+          "value": 226
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "BT",
+          "value": 107
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "G",
+          "value": 65
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "CS",
+          "value": 98
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "CL",
+          "value": 188
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "A",
+          "value": 0.5
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "zeta",
+          "value": 0.32
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "sigma",
+          "value": 0.14
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "nu_l",
+          "value": 6196
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "nu_t",
+          "value": 3592
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "nu_m",
+          "value": 3986
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "dBT_dP",
+          "value": 6.74
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "dCS_dP",
+          "value": 8.62
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "dC44_dP",
+          "value": 0.11
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "C12_minus_C44",
+          "value": -8
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "BT_over_G",
+          "value": 1.64
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "s1",
+          "value": 335
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "s2",
+          "value": 0.56
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "s3",
+          "value": 0.29
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "F12",
+          "value": 0.17
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 0,
+          "property": "F44",
+          "value": 0.2
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "C11",
+          "value": 233
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "C12",
+          "value": 39
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "C44",
+          "value": 48
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "Y",
+          "value": 222
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "BT",
+          "value": 105
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "G",
+          "value": 64
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "CS",
+          "value": 97
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "CL",
+          "value": 184
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "A",
+          "value": 0.5
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "zeta",
+          "value": 0.32
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "sigma",
+          "value": 0.14
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "nu_l",
+          "value": 6129
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "nu_t",
+          "value": 3567
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "nu_m",
+          "value": 3958
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "dBT_dP",
+          "value": 6.95
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "dCS_dP",
+          "value": 8.94
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "dC44_dP",
+          "value": 0.12
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "C12_minus_C44",
+          "value": -9
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "BT_over_G",
+          "value": 1.62
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "s1",
+          "value": 329
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "s2",
+          "value": 0.56
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "s3",
+          "value": 0.3
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "F12",
+          "value": 0.17
+        },
+        {
+          "compound": "PrS",
+          "temperature_K": 300,
+          "property": "F44",
+          "value": 0.2
+        }
+      ],
+      "tolerances": {
+        "default_relative": 0.05,
+        "default_absolute": 5.0,
+        "velocity_absolute": 50,
+        "pressure_derivative_absolute": 0.5,
+        "dimensionless_absolute": 0.05
+      }
+    }
+  ]
+}

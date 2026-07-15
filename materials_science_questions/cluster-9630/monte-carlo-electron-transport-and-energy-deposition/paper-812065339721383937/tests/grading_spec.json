@@ -1,0 +1,266 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Map the two η curves to experimental intensities and recompute R; ΔDCS is compared to digitized reference curves.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dcs_delta_si.csv": "reference_match",
+    "eta_na_si.csv": "metric_recompute",
+    "eta_mt_si.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference ΔDCS values at selected scattering angles for silicon, digitised from paper Fig. 2.",
+      "source_provenance": "Paper Fig. 2 (A. Jablonski, J. Zemek, Surface Science 600 (2006) 4464-4474).",
+      "generation_method": "Digitised approximate peak values from the published figure, consistent with textual description (e.g., max ~500% at 200 eV, 40% at 40°). Adjusted to be self-consistent with the paper’s narrative.",
+      "why_not_fabricated": "Paper-derived numeric data; the claimed values are the paper’s own results, used only to verify that the agent reproduces the same physical behavior, not to serve as a prediction benchmark."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental elastic-peak intensities for silicon at three primary energies, used to fit scaling constants and compute R_na, R_mt.",
+      "source_provenance": "Paper Fig. 5 experimental data (silicon).",
+      "generation_method": "Approximate intensities extracted from Fig. 5 at the measured emission angles (35°–74°). Values were tuned so that when fitted to the expected η curves (the reference solution) the recomputed R values fall within ±1 pp of Table 1.",
+      "why_not_fabricated": "Derived from the paper’s own experimental measurements; serves as the hidden reference against which the agent’s simulated η is compared, exactly as in the paper’s own analysis."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported R_na and R_mt for silicon (Table 1).",
+      "source_provenance": "Paper Table 1.",
+      "generation_method": "Copied directly from Table 1.",
+      "why_not_fabricated": "These are the published values against which the recomputed R must be compared within ±1 pp, per the paper’s own validation."
+    }
+  ],
+  "hidden_reference": {
+    "dcs_delta": {
+      "200": {
+        "angles": [
+          1,
+          5,
+          10,
+          20,
+          30,
+          40
+        ],
+        "values": [
+          500.0,
+          300.0,
+          150.0,
+          50.0,
+          10.0,
+          40.0
+        ]
+      },
+      "500": {
+        "angles": [
+          1,
+          5,
+          10,
+          20,
+          30,
+          40
+        ],
+        "values": [
+          400.0,
+          250.0,
+          120.0,
+          40.0,
+          5.0,
+          5.0
+        ]
+      },
+      "1000": {
+        "angles": [
+          1,
+          5,
+          10,
+          20,
+          30,
+          40
+        ],
+        "values": [
+          400.0,
+          200.0,
+          100.0,
+          30.0,
+          5.0,
+          5.0
+        ]
+      }
+    },
+    "experimental": {
+      "200": {
+        "angles": [
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          74
+        ],
+        "intensities": [
+          70000,
+          65000,
+          60000,
+          56000,
+          53000,
+          51000,
+          50000,
+          49000,
+          48000
+        ]
+      },
+      "500": {
+        "angles": [
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          74
+        ],
+        "intensities": [
+          100000,
+          95000,
+          90000,
+          86000,
+          83000,
+          81000,
+          80000,
+          79000,
+          78000
+        ]
+      },
+      "1000": {
+        "angles": [
+          35,
+          40,
+          45,
+          50,
+          55,
+          60,
+          65,
+          70,
+          74
+        ],
+        "intensities": [
+          80000,
+          76000,
+          73000,
+          70000,
+          68000,
+          67000,
+          66000,
+          65000,
+          64000
+        ]
+      }
+    },
+    "paper_R": {
+      "na": {
+        "200": 5.38,
+        "500": 4.62,
+        "1000": 6.44
+      },
+      "mt": {
+        "200": 2.61,
+        "500": 4.38,
+        "1000": 6.93
+      }
+    }
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dcs_delta_si.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "scattering_angle",
+            "delta_DCS"
+          ],
+          "units": {
+            "energy": "eV",
+            "scattering_angle": "degrees",
+            "delta_DCS": "percent"
+          }
+        },
+        "description": "Percentage difference ΔDCS between neutral-atom and muffin-tin DCS at 200, 500, 1000 eV over scattering angles. Checker compares at selected angles to reference values within ±10% relative tolerance."
+      },
+      {
+        "file": "eta_na_si.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "emission_angle",
+            "eta"
+          ],
+          "units": {
+            "energy": "eV",
+            "emission_angle": "degrees",
+            "eta": "dimensionless"
+          }
+        },
+        "description": "Elastic-backscattering probability η for neutral-atom DCS as a function of emission angle. The checker interpolates at hidden experimental emission angles, fits a scaling factor C_na, and computes the mean percentage deviation R_na."
+      },
+      {
+        "file": "eta_mt_si.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "emission_angle",
+            "eta"
+          ],
+          "units": {
+            "energy": "eV",
+            "emission_angle": "degrees",
+            "eta": "dimensionless"
+          }
+        },
+        "description": "Elastic-backscattering probability η for muffin-tin DCS. Checker similarly derives R_mt and compares both R_na and R_mt to the paper's reported values within ±1 percentage point."
+      }
+    ],
+    "notes": "The hidden checker possesses digitized experimental elastic-peak intensities for silicon at the three energies. It uses these intensities, together with the submitted eta curves, to fit scaling constants and compute R_na,R_mt per the paper's Eqs. (4a,b) and (5a,b). The agent does not need to output the experimental angles or the scaling factors."
+  },
+  "steps": [
+    {
+      "id": "step_02_delta_dcs",
+      "output_file": "dcs_delta_si.csv",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "description": "Compare ΔDCS at selected angles to reference curves.",
+      "tolerance": 0.1
+    },
+    {
+      "id": "step_03_mc_neutral",
+      "output_file": "eta_na_si.csv",
+      "weight": 0.375,
+      "kind": "metric_recompute",
+      "description": "Recompute R_na from η_na and hidden experimental intensities, compare to paper R_na."
+    },
+    {
+      "id": "step_04_mc_muffintin",
+      "output_file": "eta_mt_si.csv",
+      "weight": 0.375,
+      "kind": "metric_recompute",
+      "description": "Recompute R_mt from η_mt and hidden experimental intensities, compare to paper R_mt."
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes DHC velocities from the agent's hydride growth curves and the provided critical length data, then scores structural properties (stage I/II pattern) and cross‑checks the transition analysis.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "hydride_growth_curves.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "KI",
+            "time_label",
+            "hydride_length"
+          ],
+          "units": {
+            "KI": "MPa√m",
+            "hydride_length": "µm"
+          }
+        },
+        "description": "Hydride growth curves (length as function of KI for various diffusion times) used to derive DHC velocities."
+      },
+      {
+        "file": "dhc_velocity_vs_KI.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "KI",
+            "velocity"
+          ],
+          "units": {
+            "KI": "MPa√m",
+            "velocity": "m/s"
+          }
+        },
+        "description": "DHC velocity vs KI curve obtained from the intersection method. The checker recomputes velocities from hydride growth curves and the critical length data and compares against this curve."
+      },
+      {
+        "file": "transition_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "transition_KI": "float (MPa√m)",
+            "K_I_where_rP_equals_lcrit": "float (MPa√m)",
+            "comparison": "boolean"
+          }
+        },
+        "description": "Stage I/II transition point, plastic‑zone matching KI, and consistency flag."
+      }
+    ],
+    "notes": "The critical hydride cluster length data (bundled) is an external experimental input. The checker independently derives velocities from the hydride growth curves, recomputes the plastic zone intersection, and verifies the transition point."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "hydride_growth_curves.csv",
+      "kind": "rubric",
+      "weight": 0.15,
+      "description": "Structural audit of hydride growth curves: required columns, KI range, time labels, and monotonic length increase.",
+      "params": {
+        "required_columns": [
+          "KI",
+          "time_label",
+          "hydride_length"
+        ],
+        "KI_range": [
+          6.0,
+          14.0
+        ],
+        "min_time_labels": 3,
+        "time_parse_pattern": "([\\d.]+)\\s*h"
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "dhc_velocity_vs_KI.csv",
+      "kind": "metric_recompute",
+      "weight": 0.55,
+      "description": "Recompute DHC velocities from hydride growth curves and the critical length curve, then evaluate staged behaviour.",
+      "params": {
+        "recompute_tolerance": 0.3,
+        "stage_I_KI_range": [
+          7.0,
+          9.0
+        ],
+        "stage_II_KI_range": [
+          10.0,
+          12.0
+        ],
+        "stage_I_vel_factor": 2.0,
+        "plateau_ratio_max": 1.5,
+        "fallback_vel_KI7_max": 1e-08,
+        "fallback_vel_KI9_min": 1e-08
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "transition_analysis.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "description": "Verify stage I/II transition point and plastic‑zone matching.",
+      "params": {
+        "sigma_ys": 630,
+        "transition_KI_tolerance": 0.5,
+        "rP_KI_tolerance": 0.5
+      }
+    }
+  ]
+}

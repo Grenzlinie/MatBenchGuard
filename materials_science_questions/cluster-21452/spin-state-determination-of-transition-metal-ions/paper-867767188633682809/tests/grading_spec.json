@@ -1,0 +1,49 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "T1 recompute from raw XAS/XMCD spectra not possible because the reference solve.sh does not output those files; therefore the checker validates the reported total_magnetic_moment against the paper‑reported gold (1.6 μB/Co ±0.2 μB/Co) and enforces structural relations.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold for Co magnetic moment (total_magnetic_moment) from cluster-model calculation",
+      "source_provenance": "paper: 'The magnetic moment obtained from cluster-model calculation (Fig.3) is 1.6 μB/Co.'",
+      "generation_method": "directly taken from the paper text",
+      "why_not_fabricated": "matches the paper's stated cluster-model result"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_moment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_magnetic_moment": "float (μB/Co)",
+            "spin_moment": "float (μB/Co)",
+            "orbital_moment": "float (μB/Co)"
+          }
+        },
+        "description": "Co magnetic moment per ion computed from XMCD sum rules. The hidden verifier compares the submitted total_magnetic_moment against a hidden reference value with a tolerance of ±0.2 μB/Co and checks structural sanity: spin_moment > 0 and orbital_moment < spin_moment."
+      }
+    ],
+    "notes": "Only magnetic_moment.json is directly scored by the verifier; raw XAS and XMCD spectra are not inspected."
+  },
+  "steps": [
+    {
+      "id": "magnetic_moment_check",
+      "output_file": "magnetic_moment.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target": 1.6,
+      "tolerance_abs": 0.2,
+      "check_fields": [
+        "spin_moment",
+        "orbital_moment"
+      ],
+      "description": "Validate total_magnetic_moment against paper-reported value (exact_match within tolerance), and enforce spin_moment>0, orbital_moment<spin_moment."
+    }
+  ]
+}

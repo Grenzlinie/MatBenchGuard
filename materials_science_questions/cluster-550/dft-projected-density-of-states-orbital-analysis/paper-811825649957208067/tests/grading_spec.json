@@ -1,0 +1,217 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DOS orbital composition is verified structurally via integration; band gap and refractive index are T0 result-level comparison with tolerances due to code/pseudopotential differences.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference band gap value and tolerance (1.94 ±0.2 eV)",
+      "source_provenance": "Paper text: calculated band gap without scissor operator is 1.94 eV.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "paper-reported value"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference refractive index and tolerance (2.26 ±0.1)",
+      "source_provenance": "Paper text: n=2.26 from low-energy limit of dielectric function.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "paper-reported value"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Orbital composition criteria (energy windows and thresholds) derived from paper figures and text.",
+      "source_provenance": "Paper Figs 3,7,11,15 and corresponding text descriptions.",
+      "generation_method": "derived from paper description",
+      "why_not_fabricated": "paper textual description of band composition"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap_CuAlS2.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single float value representing the direct band gap at Γ in eV."
+        },
+        "description": "Computed direct band gap without scissor operator."
+      },
+      {
+        "file": "dos_total_CuAlS2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_DOS"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_DOS": "states/eV"
+          }
+        },
+        "description": "Total density of states for CuAlS2."
+      },
+      {
+        "file": "dos_partial_CuAlS2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "Cu_s",
+            "Cu_p",
+            "Cu_d",
+            "Al_s",
+            "Al_p",
+            "Al_d",
+            "S_s",
+            "S_p"
+          ],
+          "units": {
+            "energy": "eV",
+            "Cu_s": "states/eV",
+            "Cu_p": "states/eV",
+            "Cu_d": "states/eV",
+            "Al_s": "states/eV",
+            "Al_p": "states/eV",
+            "Al_d": "states/eV",
+            "S_s": "states/eV",
+            "S_p": "states/eV"
+          }
+        },
+        "description": "Orbital-projected DOS for CuAlS2."
+      },
+      {
+        "file": "dielectric_function_CuAlS2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon1",
+            "epsilon2"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon1": "dimensionless",
+            "epsilon2": "dimensionless"
+          }
+        },
+        "description": "Real and imaginary parts of the dielectric function."
+      },
+      {
+        "file": "refractive_index_CuAlS2.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Single float value: refractive index n(ω→0)."
+        },
+        "description": "Refractive index from low-energy limit of ε1."
+      }
+    ],
+    "notes": "All energy values are relative to the valence band maximum. Band gap and refractive index are compared to the paper's values; DOS and dielectric function are verified structurally by integrating over specified energy windows to confirm orbital composition and peak positions."
+  },
+  "steps": [
+    {
+      "id": "step_02_bandgap",
+      "output_file": "band_gap_CuAlS2.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 1.94,
+      "tolerance_abs": 0.2,
+      "description": "Band gap comparison with tolerance"
+    },
+    {
+      "id": "step_06_refractive_index",
+      "output_file": "refractive_index_CuAlS2.txt",
+      "kind": "numeric",
+      "weight": 0.1,
+      "target": 2.26,
+      "tolerance_abs": 0.1,
+      "description": "Refractive index comparison with tolerance"
+    },
+    {
+      "id": "step_03_totaldos",
+      "output_file": "dos_total_CuAlS2.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Total DOS basic structure check"
+    },
+    {
+      "id": "step_04_pdos",
+      "output_file": "dos_partial_CuAlS2.csv",
+      "kind": "structural_audit",
+      "weight": 0.45,
+      "description": "Orbital composition checks",
+      "checks": [
+        {
+          "type": "orbital_fraction",
+          "window": [
+            3.5,
+            10.5
+          ],
+          "numerator_columns": [
+            "Cu_s",
+            "Cu_p",
+            "Al_s",
+            "Al_p"
+          ],
+          "min_fraction": 0.5,
+          "name": "conduction_band"
+        },
+        {
+          "type": "orbital_fraction",
+          "window": [
+            -2.0,
+            0.0
+          ],
+          "numerator_columns": [
+            "Cu_d"
+          ],
+          "min_fraction": 0.25,
+          "name": "upper_valence"
+        },
+        {
+          "type": "orbital_fraction",
+          "window": [
+            -16.0,
+            -14.0
+          ],
+          "numerator_columns": [
+            "Al_d"
+          ],
+          "min_fraction": 0.7,
+          "name": "deep_band"
+        }
+      ]
+    },
+    {
+      "id": "step_05_dielectric",
+      "output_file": "dielectric_function_CuAlS2.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Dielectric function shape check (Im peak near band gap)",
+      "checks": [
+        {
+          "type": "epsilon2_peak",
+          "energy_range": [
+            1.5,
+            3.0
+          ],
+          "min_value": 0.1
+        }
+      ]
+    }
+  ]
+}

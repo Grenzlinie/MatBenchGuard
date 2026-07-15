@@ -1,0 +1,54 @@
+[
+  {
+    "id": "struct_setup",
+    "title": "Crystal structure setup and DFT input generation",
+    "role": "process",
+    "action": "Construct initial atomic models for orthorhombic β and hexagonal δ_A phases of Ta2O5 and Nb2O5 using crystallographic data from Ramprasad et al. (orthorhombic) and Fukumoto and Miwa (hexagonal δ_A). Also construct the mixed β-NbTaO5 phase by randomly substituting half of the metal sites with Nb and Ta. Prepare Quantum ESPRESSO input files for LDA calculations with Vanderbilt ultrasoft pseudopotentials for each structure.",
+    "output_file": "",
+    "evidence": "structures_archive",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build crystal models and input files for all five phases.",
+    "output_schema": ""
+  },
+  {
+    "id": "geo_opt",
+    "title": "DFT geometry optimization of crystalline phases",
+    "role": "process",
+    "action": "Use Quantum ESPRESSO pw.x to relax atomic positions and cell parameters for the five phases (β-Ta2O5, β-Nb2O5, δ_A-Ta2O5, δ_A-Nb2O5, β-NbTaO5) to obtain relaxed structures and total energies.",
+    "output_file": "",
+    "evidence": "relax_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Geometry relaxations to determine equilibrium structures and energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "lin_resp",
+    "title": "DFT linear response and band structure calculations",
+    "role": "process",
+    "action": "Use Quantum ESPRESSO ph.x to compute dielectric permittivity tensors (electronic + ionic contributions) and Born effective charge tensors for all atoms. Compute the LDA band gap via a pw.x band structure calculation for each relaxed phase.",
+    "output_file": "",
+    "evidence": "dielectric_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Linear response calculations to extract dielectric response, Born charges, and band gaps.",
+    "output_schema": ""
+  },
+  {
+    "id": "compile_results",
+    "title": "Compile dielectric constants, band gaps, and stability energies",
+    "role": "scored",
+    "action": "From the relaxed geometries and linear response outputs, extract total energy per formula unit (in Ry) for each phase; dielectric tensor components (ε_xx, ε_yy, ε_zz) and directionally averaged dielectric constant ε_avg = (ε_xx+ε_yy+ε_zz)/3; LDA band gap (eV); and average Born effective charges for metal (Ta/Nb) and oxygen ions. Compute energy differences ΔE = E(δ_A) − E(β) in eV per formula unit for Ta2O5 and Nb2O5. Write all results to /app/outputs/results.json following the output schema.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final compilation of all targeted quantities. Contains for each phase an object with energy, dielectric tensor components, epsilon_avg, band_gap, metal and oxygen Born charge averages; plus energy differences between β and δ_A for both binary oxides.",
+    "output_schema": "JSON object with keys 'beta_Ta2O5', 'deltaA_Ta2O5', 'beta_Nb2O5', 'deltaA_Nb2O5', 'beta_NbTaO5' each containing: energy_per_fu (number, Ry), epsilon_xx, epsilon_yy, epsilon_zz (numbers), epsilon_avg (number), band_gap (number, eV), metal_Born_charge_avg (number), oxygen_Born_charge_avg (number). Top-level keys: 'energy_diff_beta_vs_deltaA_Ta2O5' (number, eV/f.u.), 'energy_diff_beta_vs_deltaA_Nb2O5' (number, eV/f.u.)."
+  }
+]

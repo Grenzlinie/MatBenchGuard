@@ -1,0 +1,204 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities (total power, efficiency, system efficiency improvement) are recomputable from the agent's raw per-node data. The checker recomputes aggregate metrics and compares to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_outputs.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for total power, efficiency, and SOFC improvement taken from paper text and Fig 5.",
+      "source_provenance": "Paper text (Fig 5, Results and Discussions): 'power and efficiency reach 11.5 W and 1.79%, respectively... corresponds to improvement of SOFC generating efficiency by 0.756 points'.",
+      "generation_method": "digitized from paper",
+      "why_not_fabricated": "Values are the paper's reported quantitative results for the specific simulation case."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_outputs.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "summary",
+            "nodes"
+          ],
+          "properties": {
+            "summary": {
+              "type": "object",
+              "required": [
+                "total_P_TEG",
+                "total_eta_TE",
+                "delta_eta_SOFC",
+                "final_length",
+                "V_WH",
+                "V_TE",
+                "power_density_WH",
+                "power_density_TE"
+              ],
+              "properties": {
+                "total_P_TEG": {
+                  "type": "number",
+                  "unit": "W"
+                },
+                "total_eta_TE": {
+                  "type": "number",
+                  "unit": "dimensionless ratio"
+                },
+                "delta_eta_SOFC": {
+                  "type": "number",
+                  "unit": "percentage points"
+                },
+                "final_length": {
+                  "type": "number",
+                  "unit": "m"
+                },
+                "V_WH": {
+                  "type": "number",
+                  "unit": "m³",
+                  "description": "Total TEG-HEX physical volume"
+                },
+                "V_TE": {
+                  "type": "number",
+                  "unit": "m³",
+                  "description": "Sum of TE elements volume"
+                },
+                "power_density_WH": {
+                  "type": "number",
+                  "unit": "W/m³",
+                  "description": "Power density based on TEG-HEX volume (total_P_TEG / V_WH)"
+                },
+                "power_density_TE": {
+                  "type": "number",
+                  "unit": "W/m³",
+                  "description": "Power density based on TE elements volume (total_P_TEG / V_TE)"
+                }
+              }
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "node_index",
+                  "position",
+                  "T_hj",
+                  "T_cj",
+                  "T_ex",
+                  "T_water",
+                  "P_TEG",
+                  "Q_in_TE",
+                  "Q_out_TE",
+                  "I_TEG"
+                ],
+                "properties": {
+                  "node_index": {
+                    "type": "integer"
+                  },
+                  "position": {
+                    "type": "number",
+                    "unit": "fraction of total TEG-HEX length (0 to 1)"
+                  },
+                  "T_hj": {
+                    "type": "number",
+                    "unit": "K"
+                  },
+                  "T_cj": {
+                    "type": "number",
+                    "unit": "K"
+                  },
+                  "T_ex": {
+                    "type": "number",
+                    "unit": "K"
+                  },
+                  "T_water": {
+                    "type": "number",
+                    "unit": "K"
+                  },
+                  "P_TEG": {
+                    "type": "number",
+                    "unit": "W"
+                  },
+                  "Q_in_TE": {
+                    "type": "number",
+                    "unit": "W"
+                  },
+                  "Q_out_TE": {
+                    "type": "number",
+                    "unit": "W"
+                  },
+                  "I_TEG": {
+                    "type": "number",
+                    "unit": "A"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Main simulation output: per‑node thermoelectric data and aggregated performance metrics including power densities and cumulative distribution information for the baseline case (L_TE=0.9 cm, r_hte=3.0, V_WH=2205 cm³)."
+      }
+    ],
+    "notes": "The agent must run the full finite‑difference simulation; the summary values are recomputed by the checker from the node data. The per‑node temperatures must reflect the physical monotonicity constraints (exhaust decreasing, water increasing) and the water outlet must satisfy the 348 K target within solver tolerance. The volume and power density fields allow the checker to verify structural and reported quantities."
+  },
+  "steps": [
+    {
+      "id": "water_outlet_temp",
+      "output_file": "simulation_outputs.json",
+      "kind": "numeric",
+      "weight": 0.05,
+      "target": 348.0,
+      "tolerance_abs": 0.5,
+      "value_path": "nodes[-1].T_water"
+    },
+    {
+      "id": "total_qout_te",
+      "output_file": "simulation_outputs.json",
+      "kind": "recompute_metric",
+      "weight": 0.05,
+      "target": 630.0,
+      "tolerance_rel": 0.05,
+      "value_key": "Q_out_TE"
+    },
+    {
+      "id": "total_power",
+      "output_file": "simulation_outputs.json",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "target": 11.5,
+      "tolerance_rel": 0.05,
+      "value_key": "P_TEG"
+    },
+    {
+      "id": "total_efficiency",
+      "output_file": "simulation_outputs.json",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "target": 0.0179,
+      "tolerance_rel": 0.1,
+      "value_keys": [
+        "P_TEG",
+        "Q_in_TE"
+      ]
+    },
+    {
+      "id": "delta_eta_sofc",
+      "output_file": "simulation_outputs.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "target": 0.756,
+      "tolerance_rel": 0.1,
+      "value_key": "P_TEG"
+    },
+    {
+      "id": "temperature_monotonicity",
+      "output_file": "simulation_outputs.json",
+      "kind": "structural_audit",
+      "weight": 0.1
+    }
+  ]
+}

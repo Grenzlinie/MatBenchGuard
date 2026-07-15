@@ -1,0 +1,209 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "T1 recompute infeasible because hidden JANAF benchmark Cp values at 100, 200, 298.15 K are not published and cannot be embedded; instead compare agent's self-reported Cp, Delta, R to paper gold with tolerances and verify Δ ordering (298–700 K minimal).",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "step_02_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for coefficients a, b, c; predicted Cp at 100, 200, 298.15 K; Delta and R for LiBO2 and BaS across all intervals.",
+      "source_provenance": "paper Table 2 (Geochemistry International, 2008, Vol. 46, No. 2, pp. 182-186) for a, b, c, Delta, R; predicted Cp computed from those coefficients using the Lorentz formula Cp(T)=a(1-1/(1+bT²))+cT.",
+      "generation_method": "coefficients taken verbatim from Table 2; Cp values computed with double-precision arithmetic using the same formula.",
+      "why_not_fabricated": "these are the paper's exact reported results; they serve as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_02_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "interval_start",
+            "interval_end",
+            "a",
+            "b",
+            "c",
+            "Cp_100",
+            "Cp_200",
+            "Cp_298",
+            "Delta",
+            "R"
+          ],
+          "units": {
+            "interval_start": "K",
+            "interval_end": "K",
+            "a": "J/(mol·K)",
+            "b": "1/K^2",
+            "c": "J/(mol·K^2)",
+            "Cp_100": "J/(mol·K)",
+            "Cp_200": "J/(mol·K)",
+            "Cp_298": "J/(mol·K)",
+            "Delta": "J^2/(mol^2·K^2)",
+            "R": "dimensionless"
+          }
+        },
+        "description": "Main scored artifact: results of fitting the Lorentz approximation to JANAF data for LiBO₂ and BaS over multiple temperature intervals, including coefficients, predicted low-temperature Cp, and error metrics Δ and R."
+      }
+    ],
+    "notes": "The checker will recompute Δ and R from the reported Cp values and hidden benchmark values, compare coefficients to reference values, and verify that Δ is minimal for the 298.15–700 K interval."
+  },
+  "steps": [
+    {
+      "id": "check_coefficients",
+      "output_file": "step_02_results.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Verify fitted coefficients a, b, c are within 1% relative tolerance of paper gold values."
+    },
+    {
+      "id": "check_delta_R",
+      "output_file": "step_02_results.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "description": "Verify reported Delta and R are within absolute tolerance of paper gold values (Delta: 0.001, R: 0.0001)."
+    },
+    {
+      "id": "check_ordering",
+      "output_file": "step_02_results.csv",
+      "kind": "structural",
+      "weight": 0.2,
+      "description": "Verify that for each compound, the row with interval_end=700 has the smallest Delta value."
+    },
+    {
+      "id": "check_cp_values",
+      "output_file": "step_02_results.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "description": "Verify reported Cp_100, Cp_200, Cp_298 are within 0.1 J/(mol·K) of gold values."
+    }
+  ],
+  "gold_values": [
+    {
+      "compound": "LiBO2",
+      "interval_end": 700,
+      "a": 62.082,
+      "b": 3.384e-05,
+      "c": 0.04636,
+      "Cp_100": 20.329,
+      "Cp_200": 44.98,
+      "Cp_298": 60.41,
+      "Delta": 0.27738,
+      "R": 0.99995
+    },
+    {
+      "compound": "LiBO2",
+      "interval_end": 1000,
+      "a": 58.259,
+      "b": 3.888e-05,
+      "c": 0.05135,
+      "Cp_100": 19.645,
+      "Cp_200": 42.52,
+      "Cp_298": 59.34,
+      "Delta": 0.57288,
+      "R": 0.99993
+    },
+    {
+      "compound": "LiBO2",
+      "interval_end": 1117,
+      "a": 57.364,
+      "b": 4.057e-05,
+      "c": 0.0524,
+      "Cp_100": 19.391,
+      "Cp_200": 41.89,
+      "Cp_298": 58.76,
+      "Delta": 0.6843,
+      "R": 0.99994
+    },
+    {
+      "compound": "LiBO2",
+      "interval_end": 1500,
+      "a": 56.095,
+      "b": 4.369e-05,
+      "c": 0.05371,
+      "Cp_100": 18.955,
+      "Cp_200": 41.02,
+      "Cp_298": 58.05,
+      "Delta": 0.92854,
+      "R": 0.99995
+    },
+    {
+      "compound": "LiBO2",
+      "interval_end": 2000,
+      "a": 55.191,
+      "b": 4.663e-05,
+      "c": 0.05452,
+      "Cp_100": 18.662,
+      "Cp_200": 40.42,
+      "Cp_298": 57.46,
+      "Delta": 1.1699,
+      "R": 0.99996
+    },
+    {
+      "compound": "BaS",
+      "interval_end": 700,
+      "a": 47.994,
+      "b": 0.00028381,
+      "c": 0.0107,
+      "Cp_100": 23.737,
+      "Cp_200": 30.57,
+      "Cp_298": 38.21,
+      "Delta": 0.18121,
+      "R": 0.99942
+    },
+    {
+      "compound": "BaS",
+      "interval_end": 1000,
+      "a": 49.612,
+      "b": 0.0001882,
+      "c": 0.00838,
+      "Cp_100": 27.556,
+      "Cp_200": 33.33,
+      "Cp_298": 41.24,
+      "Delta": 0.33651,
+      "R": 0.99926
+    },
+    {
+      "compound": "BaS",
+      "interval_end": 1500,
+      "a": 50.236,
+      "b": 0.00016309,
+      "c": 0.00765,
+      "Cp_100": 28.962,
+      "Cp_200": 34.5,
+      "Cp_298": 42.55,
+      "Delta": 0.41666,
+      "R": 0.9996
+    },
+    {
+      "compound": "BaS",
+      "interval_end": 2000,
+      "a": 50.362,
+      "b": 0.00015813,
+      "c": 0.00753,
+      "Cp_100": 29.193,
+      "Cp_200": 34.69,
+      "Cp_298": 42.75,
+      "Delta": 0.43245,
+      "R": 0.99979
+    },
+    {
+      "compound": "BaS",
+      "interval_end": 3000,
+      "a": 50.328,
+      "b": 0.00015971,
+      "c": 0.00755,
+      "Cp_100": 29.043,
+      "Cp_200": 34.59,
+      "Cp_298": 42.68,
+      "Delta": 0.43765,
+      "R": 0.99993
+    }
+  ]
+}

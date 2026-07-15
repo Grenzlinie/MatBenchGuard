@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_build_interface",
+    "title": "Build Pt(111)–water interface models with OHad and cation",
+    "role": "process",
+    "action": "Construct a periodic Pt(111) slab (three-layer 4×4 supercell), add an explicit water layer (~22 water molecules), place an adsorbed OH at an fcc hollow site on the surface, and replace one water molecule by a hydrated cation (Li⁺, Na⁺, K⁺ in separate models). The agent may use the optional GOCIA tool for sampling water configurations. Alternatively, use the pre-built geometries from the Zenodo resource.",
+    "output_file": "",
+    "evidence": "interface_structures.zip",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare atomic coordinates for the three interface systems: Pt(111) + water + OHad + cation (Li, Na, K).",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_static_dft_adsorption_energies",
+    "title": "Static DFT optimization and OHad adsorption energy calculation",
+    "role": "scored",
+    "action": "For each cation (Li⁺, Na⁺, K⁺), perform a static DFT geometry optimization of the interface (with the bottom two Pt layers frozen). From the total energies, compute the OHad adsorption energy E_ad^OH = E(*OHad) – E(*) – E(OH), using the same OH reference energy for all cations. Report the three adsorption energies.",
+    "output_file": "adsorption_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the OHad adsorption energies (in eV) for Li, Na, and K.",
+    "output_schema": "{'Li': float, 'Na': float, 'K': float}"
+  },
+  {
+    "id": "step_03_bader_dipole_analysis",
+    "title": "Bader charge and dipole moment analysis",
+    "role": "scored",
+    "action": "Using the optimized charge densities from Step 02, perform Bader charge analysis to obtain the net charge on the O atom in OHad. From the Bader charges and atomic positions, compute the dipole moment of the OHad group and the Pt–O bond for each cation. Report the O charge, OHad dipole moment, and Pt–O dipole moment for Li⁺, Na⁺, and K⁺.",
+    "output_file": "bader_charges_dipoles.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'Li', 'Na', 'K', each an object with fields 'O_charge' (float in |e|), 'OH_dipole_D' (float in Debye), 'PtO_dipole_D' (float in Debye).",
+    "output_schema": "{'Li': {'O_charge': float, 'OH_dipole_D': float, 'PtO_dipole_D': float}, 'Na': {...}, 'K': {...}}"
+  },
+  {
+    "id": "step_04_grand_canonical_free_energy",
+    "title": "Potential-dependent OHad adsorption free energy via grand canonical DFT",
+    "role": "scored",
+    "action": "For each cation, perform grand canonical DFT calculations by varying the number of electrons in the system to sample the relation between electronic energy and applied potential. Use the surface-charging method to fit the free energy G(U) as a function of potential U. Compute G_ad^OH(U) = G(U; *OHad) – G(U; *) – E(OH) for at least five potentials evenly spaced between -1.0 and 1.0 V_RHE. Report the free energies for all cations in a CSV file.",
+    "output_file": "free_energy_vs_potential.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with columns: potential_V, G_ad_OH_Li, G_ad_OH_Na, G_ad_OH_K. Each row corresponds to a potential value.",
+    "output_schema": "CSV header: potential_V, G_ad_OH_Li, G_ad_OH_Na, G_ad_OH_K. Numeric values in eV."
+  }
+]

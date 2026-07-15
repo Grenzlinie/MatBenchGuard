@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Headline band edge positions cannot be recomputed from raw artifacts without full DFT rerun; compare reported final values to paper reference within tolerance, plus internal consistency check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold E_C_edge - A_edge values for the six materials from the paper's Table V.",
+      "source_provenance": "Paper Table V, column 2.",
+      "generation_method": "Extracted directly from the published paper.",
+      "why_not_fabricated": "The values are the paper's own reported results and are verified against the reference solve.sh output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "material",
+              "E_C_bulk_minus_H_semi_bulk",
+              "A_bulk_minus_H_sol_bulk",
+              "H_semi_edge_minus_H_sol_edge",
+              "E_C_edge_minus_A_edge"
+            ],
+            "properties": {
+              "material": {
+                "type": "string",
+                "description": "Semiconductor name (e.g., TiO2, WO3, CdS, ZnSe, GaAs, GaP)."
+              },
+              "E_C_bulk_minus_H_semi_bulk": {
+                "type": "number",
+                "units": "eV",
+                "description": "CBM eigenvalue relative to average Hartree potential in the bulk semiconductor."
+              },
+              "A_bulk_minus_H_sol_bulk": {
+                "type": "number",
+                "units": "eV",
+                "description": "Water acceptor level (H3O+ LUMO) relative to average Hartree potential in bulk liquid water."
+              },
+              "H_semi_edge_minus_H_sol_edge": {
+                "type": "number",
+                "units": "eV",
+                "description": "Difference in average Hartree potentials between the semiconductor side and the water side at the interface."
+              },
+              "E_C_edge_minus_A_edge": {
+                "type": "number",
+                "units": "eV",
+                "description": "CBM band edge position relative to the H2O/H2 level; equals (E_C_bulk_minus_H_semi_bulk) - (A_bulk_minus_H_sol_bulk) + (H_semi_edge_minus_H_sol_edge)."
+              }
+            }
+          }
+        },
+        "description": "Computed CBM band edge positions relative to water H2O/H2 level for six photocatalyst semiconductors."
+      }
+    ],
+    "notes": "The checker will verify that for each material the reported E_C_edge_minus_A_edge equals the algebraic combination of the three component fields (within a small numerical tolerance) and will then compare each final value to a hidden reference with an absolute tolerance of 0.2 eV. All six materials must be present."
+  },
+  "steps": [
+    {
+      "id": "eval_final_edges",
+      "output_file": "results.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "gold_final": {
+        "TiO2": -0.01,
+        "WO3": -0.54,
+        "CdS": 1.27,
+        "ZnSe": 1.6,
+        "GaAs": 1.07,
+        "GaP": 1.29
+      },
+      "tolerance": 0.2,
+      "consistency_tolerance": 0.0001
+    }
+  ]
+}

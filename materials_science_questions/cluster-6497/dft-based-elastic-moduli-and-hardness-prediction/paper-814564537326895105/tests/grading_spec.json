@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "DFT re-run is infeasible in the verifier sandbox; T0 result-level comparison against the paper's reported reference values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Inline reference values for all properties of the five compounds, extracted from the paper's Table 1, Table 2, and explicit text claims.",
+      "source_provenance": "Paper Table 1 (a0, B0, E0), Table 2 (Ef), text (magnetic moment 2 μB per V, minority gap half‑metallic/metallic assignment). AlN minority gap set to 6.1 eV (paper states direct band gap), VN set to 0.0 eV (metallic).",
+      "generation_method": "Direct transcription from paper tables and explicit statements in the Results section.",
+      "why_not_fabricated": "Values are the exact numbers the paper reports; they serve as the authentic target for a correct DFT reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "compounds": "array"
+          },
+          "items": {
+            "name": "string",
+            "a0": "float (Å)",
+            "B0": "float (GPa)",
+            "E0": "float (eV)",
+            "Ef": "float or null",
+            "mag_moment": "float or null (μB per V atom)",
+            "minority_gap": "float (eV)"
+          },
+          "required_columns": [],
+          "units": {
+            "a0": "Å",
+            "B0": "GPa",
+            "E0": "eV",
+            "Ef": "eV",
+            "mag_moment": "μB",
+            "minority_gap": "eV"
+          }
+        },
+        "description": "Comprehensive structural, energetic, and magnetic properties of the five compounds as described in the paper. Each field must be present; use null for Ef and mag_moment on the binary compounds where the definition does not apply. The checker compares each numerical value against hidden reference data within tolerances derived from expected DFT spread."
+      }
+    ],
+    "notes": "The binary compounds serve as reference endpoints for the formation energy calculation. The array order is not enforced, but the five required entries must be present. Only the single scored file results.json is evaluated; all preceding steps are process stages required to produce the necessary intermediate quantities."
+  },
+  "steps": [
+    {
+      "id": "results_json_check",
+      "output_file": "results.json",
+      "kind": "reference_match",
+      "weight": 1.0,
+      "gold_compounds": [
+        {
+          "name": "AlN_wz",
+          "a0": 3.13,
+          "B0": 193.45,
+          "E0": -443.331,
+          "Ef": null,
+          "mag_moment": null,
+          "minority_gap": 6.1
+        },
+        {
+          "name": "VN_NaCl",
+          "a0": 3.092,
+          "B0": 232.564,
+          "E0": -648.837,
+          "Ef": null,
+          "mag_moment": null,
+          "minority_gap": 0.0
+        },
+        {
+          "name": "Al0.25V0.75N",
+          "a0": 3.107,
+          "B0": 224.544,
+          "E0": -597.14,
+          "Ef": 0.32,
+          "mag_moment": 2.0,
+          "minority_gap": 0.1
+        },
+        {
+          "name": "Al0.50V0.50N",
+          "a0": 3.118,
+          "B0": 209.35,
+          "E0": -545.815,
+          "Ef": 0.27,
+          "mag_moment": 2.0,
+          "minority_gap": 0.1
+        },
+        {
+          "name": "Al0.75V0.25N",
+          "a0": 3.126,
+          "B0": 198.17,
+          "E0": -494.559,
+          "Ef": 0.148,
+          "mag_moment": 2.0,
+          "minority_gap": 0.0
+        }
+      ],
+      "tolerances": {
+        "a0": 0.02,
+        "B0": 15.0,
+        "E0": 0.05,
+        "Ef": 0.05,
+        "mag_moment": 0.2,
+        "minority_gap": {
+          "AlN_wz": 3.0,
+          "VN_NaCl": 0.1
+        }
+      },
+      "note": "For minority_gap, the ternary compounds are scored by threshold: Al0.25V0.75N and Al0.50V0.50N must have gap > 0.01 eV (half‑metallic), Al0.75V0.25N must have gap ≤ 0.01 eV (metallic). For binaries, AlN uses a generous tolerance (3 eV) to accommodate DFT band‑gap underestimation, VN expects a near‑zero gap."
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes ΔE from the agent's raw total energies and compares to the paper's reported values with tolerance ±0.4 eV; full recompute from raw artifact.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "adsorption_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold energy differences for Zn-face and O-face ZnO, derived from the paper's reported minimum total energies.",
+      "source_provenance": "Paper Figures 7 and discussion: N on Zn-face minimum = −21.65 eV, In on Zn-face minimum = −20.08 eV, N on O-face minimum = −21.75 eV, In on O-face minimum = −20.05 eV. Thus ΔE_Znface = −1.57 eV, ΔE_Oface = −1.70 eV.",
+      "generation_method": "Computed as E(N) − E(In) from the paper's stated energies.",
+      "why_not_fabricated": "These are the exact numbers reported by the paper; they represent the authoritative computational reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "N_Znface": "float (eV)",
+            "N_Oface": "float (eV)",
+            "In_Znface": "float (eV)",
+            "In_Oface": "float (eV)"
+          }
+        },
+        "description": "Minimum total energies in eV for N and In adatoms on Zn-face and O-face ZnO surfaces. The hidden checker recomputes the differences ΔE(Zn-face) = N_Znface – In_Znface and ΔE(O-face) = N_Oface – In_Oface, and compares them to hidden paper-derived reference values with tolerance."
+      }
+    ],
+    "notes": "Only the DFT calculation is reproduced; experimental MBE growth data are excluded. The original VASP code is replaced by Quantum ESPRESSO, so absolute total energies may differ, but relative adsorption energy differences are comparable within tolerance."
+  },
+  "steps": [
+    {
+      "id": "adsorption_differences",
+      "output_file": "adsorption_energies.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "target_policy": "metric_recompute",
+      "parameters": {
+        "keys": [
+          "N_Znface",
+          "N_Oface",
+          "In_Znface",
+          "In_Oface"
+        ],
+        "gold_differences": {
+          "Znface": -1.57,
+          "Oface": -1.7
+        },
+        "tolerance": 0.4
+      }
+    }
+  ]
+}

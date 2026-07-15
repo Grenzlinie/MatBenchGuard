@@ -1,0 +1,242 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Compute-driven DFT reproduction; the checker compares the agent's computed properties to the paper's reported values with tolerances accounting for methodological differences (CASTEP vs QE).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "geometry_optimization.json": "exact_match",
+    "elastic_constants.json": "exact_match",
+    "phonon_stability.json": "threshold_or_better",
+    "dos_metallicity.json": "threshold_or_better",
+    "hardness.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for ZB-IrC properties from paper Table 1 and Table 2.",
+      "source_provenance": "Paper Table 1 and Table 2",
+      "generation_method": "Copied directly from the paper's reported values.",
+      "why_not_fabricated": "These are the exact values the paper reports; the task aims to reproduce these from DFT calculations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "geometry_optimization.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_A": "float",
+            "total_energy_eV_per_fu": "float",
+            "formation_energy_eV_per_atom": "float"
+          }
+        },
+        "description": "Optimized lattice parameter, total energy, and formation energy of ZB-IrC."
+      },
+      {
+        "file": "elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11_GPa": "float",
+            "C12_GPa": "float",
+            "C44_GPa": "float",
+            "bulk_modulus_B_GPa": "float",
+            "shear_modulus_G_GPa": "float",
+            "B_over_G": "float"
+          }
+        },
+        "description": "Elastic constants (C11, C12, C44), bulk and shear moduli, and B/G ratio of ZB-IrC."
+      },
+      {
+        "file": "phonon_stability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "has_imaginary_frequencies": "bool",
+            "lowest_frequency_cm-1": "float",
+            "note": "string"
+          }
+        },
+        "description": "Dynamical stability verdict: absence of imaginary phonon modes (true = stable)."
+      },
+      {
+        "file": "dos_metallicity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "DOS_at_Fermi_level_states_per_eV_per_fu": "float",
+            "is_metallic": "bool"
+          }
+        },
+        "description": "DOS at Fermi level and metallic character of ZB-IrC."
+      },
+      {
+        "file": "hardness.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "bond_length_d_A": "float",
+            "electron_density_N_e": "float",
+            "overlap_population_P": "float",
+            "covalent_population_Pc": "float",
+            "ionicity_factor_fi": "float",
+            "metallicity_factor_fm": "float",
+            "Vickers_hardness_Hv_GPa": "float"
+          }
+        },
+        "description": "Vickers hardness and bond parameters of ZB-IrC computed with the semi-empirical model."
+      }
+    ],
+    "notes": "All outputs are scored against the paper-reported values with tolerances accounting for code differences (CASTEP vs Quantum ESPRESSO). The hardness step is load-bearing; it cannot be produced without the Mulliken population analysis (step_07)."
+  },
+  "steps": [
+    {
+      "id": "step_03_geometry_optimization",
+      "output_file": "geometry_optimization.json",
+      "weight": 0.2,
+      "checks": [
+        {
+          "field": "lattice_constant_A",
+          "gold": 4.663,
+          "tolerance_abs": 0.02
+        },
+        {
+          "field": "total_energy_eV_per_fu",
+          "gold": -712.65,
+          "tolerance_abs": 0.2
+        },
+        {
+          "field": "formation_energy_eV_per_atom",
+          "gold": 0.587,
+          "tolerance_abs": 0.1
+        }
+      ]
+    },
+    {
+      "id": "step_04_elastic_constants",
+      "output_file": "elastic_constants.json",
+      "weight": 0.3,
+      "checks": [
+        {
+          "field": "C11_GPa",
+          "gold": 299.3,
+          "tolerance_rel": 0.15
+        },
+        {
+          "field": "C12_GPa",
+          "gold": 265.1,
+          "tolerance_rel": 0.15
+        },
+        {
+          "field": "C44_GPa",
+          "gold": 81.6,
+          "tolerance_rel": 0.15
+        },
+        {
+          "field": "bulk_modulus_B_GPa",
+          "gold": 276.5,
+          "tolerance_rel": 0.15
+        },
+        {
+          "field": "shear_modulus_G_GPa",
+          "gold": 55.8,
+          "tolerance_rel": 0.15
+        },
+        {
+          "field": "B_over_G",
+          "gold": 4.96,
+          "tolerance_abs": 0.5
+        }
+      ]
+    },
+    {
+      "id": "step_05_phonon",
+      "output_file": "phonon_stability.json",
+      "weight": 0.1,
+      "checks": [
+        {
+          "field": "has_imaginary_frequencies",
+          "gold": false,
+          "exact": true
+        },
+        {
+          "field": "lowest_frequency_cm-1",
+          "threshold_min": -1.0
+        }
+      ]
+    },
+    {
+      "id": "step_06_dos",
+      "output_file": "dos_metallicity.json",
+      "weight": 0.1,
+      "checks": [
+        {
+          "field": "is_metallic",
+          "gold": true,
+          "exact": true
+        },
+        {
+          "field": "DOS_at_Fermi_level_states_per_eV_per_fu",
+          "threshold_min": 1e-09
+        }
+      ]
+    },
+    {
+      "id": "step_08_hardness",
+      "output_file": "hardness.json",
+      "weight": 0.3,
+      "checks": [
+        {
+          "field": "bond_length_d_A",
+          "gold": 2.019,
+          "tolerance_abs": 0.05
+        },
+        {
+          "field": "electron_density_N_e",
+          "gold": 0.316,
+          "tolerance_rel": 0.1
+        },
+        {
+          "field": "overlap_population_P",
+          "gold": 0.52,
+          "tolerance_rel": 0.1
+        },
+        {
+          "field": "covalent_population_Pc",
+          "gold": 0.75,
+          "tolerance_rel": 0.1
+        },
+        {
+          "field": "ionicity_factor_fi",
+          "gold": 0.469,
+          "tolerance_rel": 0.1
+        },
+        {
+          "field": "metallicity_factor_fm",
+          "gold": 0.00186,
+          "tolerance_rel": 0.1
+        },
+        {
+          "field": "Vickers_hardness_Hv_GPa",
+          "gold": 17.5,
+          "tolerance_abs": 3.0
+        }
+      ]
+    }
+  ]
+}

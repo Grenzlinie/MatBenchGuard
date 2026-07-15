@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "The checker recomputes the expected critical velocity and storage fraction from the paper's analytic formulas using fixed deterministic assumptions (x=0). This cross-check ensures the agent's reported values are consistent with the model derivation. A full recompute from agent raw artifacts is infeasible because the agent only submits final numeric summaries, not intermediate model states.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_velocity.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "format": "single_float",
+          "description": "A single float value representing the critical dislocation velocity in m/s."
+        },
+        "description": "Critical dislocation velocity v_cr computed from material constants."
+      },
+      {
+        "file": "k_s_vs_velocity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "vd_over_vcr",
+            "t_ns",
+            "k_s"
+          ],
+          "units": {
+            "vd_over_vcr": "dimensionless",
+            "t_ns": "ns",
+            "k_s": "dimensionless"
+          },
+          "description": "vd_over_vcr: normalized dislocation velocity ratio (v_d / v_cr); t_ns: time in nanoseconds (5, 10, or 20); k_s: instantaneous storage fraction."
+        },
+        "description": "Instantaneous storage fraction k_s vs normalized dislocation velocity for three time instances."
+      }
+    ],
+    "notes": "The CSV should contain exactly 30 rows (10 velocity ratios x 3 times). The checker will compare k_s values at checkpoints (vd_over_vcr = 0.1, 0.3, 0.5, 0.7, 0.9) for each time instance against paper-derived reference values using a mean absolute error tolerance."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for critical dislocation velocity and storage fraction computed from the paper's formulas using material constants from Tables I and II, with x=0 for the ς path.",
+      "source_provenance": "Derived from the paper's equations and constants.",
+      "generation_method": "Checker computes gold analytically using the formulas in its prepare function.",
+      "why_not_fabricated": "The gold is the paper's own derived result; the checker deterministically reproduces it from the paper's publicly stated model."
+    }
+  ],
+  "steps": [
+    {
+      "id": "vcr_step",
+      "output_file": "critical_velocity.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "tolerance_abs": 50,
+      "target_value": 1065.13,
+      "description": "Compare reported v_cr to paper-derived gold."
+    },
+    {
+      "id": "ks_step",
+      "output_file": "k_s_vs_velocity.csv",
+      "kind": "consistency_check_custom",
+      "weight": 0.8,
+      "params": {
+        "checkpoints": [
+          {
+            "vd_over_vcr": 0.1,
+            "t_ns": 5
+          },
+          {
+            "vd_over_vcr": 0.1,
+            "t_ns": 10
+          },
+          {
+            "vd_over_vcr": 0.1,
+            "t_ns": 20
+          },
+          {
+            "vd_over_vcr": 0.3,
+            "t_ns": 5
+          },
+          {
+            "vd_over_vcr": 0.3,
+            "t_ns": 10
+          },
+          {
+            "vd_over_vcr": 0.3,
+            "t_ns": 20
+          },
+          {
+            "vd_over_vcr": 0.5,
+            "t_ns": 5
+          },
+          {
+            "vd_over_vcr": 0.5,
+            "t_ns": 10
+          },
+          {
+            "vd_over_vcr": 0.5,
+            "t_ns": 20
+          },
+          {
+            "vd_over_vcr": 0.7,
+            "t_ns": 5
+          },
+          {
+            "vd_over_vcr": 0.7,
+            "t_ns": 10
+          },
+          {
+            "vd_over_vcr": 0.7,
+            "t_ns": 20
+          },
+          {
+            "vd_over_vcr": 0.9,
+            "t_ns": 5
+          },
+          {
+            "vd_over_vcr": 0.9,
+            "t_ns": 10
+          },
+          {
+            "vd_over_vcr": 0.9,
+            "t_ns": 20
+          }
+        ],
+        "tolerance_abs": 0.05
+      }
+    }
+  ]
+}

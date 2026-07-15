@@ -1,0 +1,41 @@
+[
+  {
+    "id": "simulate",
+    "title": "Monte Carlo simulation of primary electron transport",
+    "role": "process",
+    "action": "Implement and run a Monte Carlo simulation of primary electron trajectories inside a spherical grain for each specified grain diameter (2.35 μm and 9.78 μm for melamine formaldehyde; 1.2 μm for SiO2) and primary beam energy (1, 2, 5, 10 keV). Use the given material parameters: for MF resin ΔE=37 eV, λ0=0.21 nm, α=0.03, T_SE=3 eV; for SiO2 ΔE=34 eV, λ0=0.12 nm, α=0.016, T_SE=2.2 eV. Follow the model assumptions: fixed energy loss ΔE per collision, path length λ = λ0·(E/ΔE), cosine-weighted scattering, exponential secondary escape probability P(x)=A·exp(-αx) with A normalized to 1/2 at a planar surface. For each condition, launch N_prim = 1e5 primary electrons from the grain surface and simulate until exit or energy exhaustion. Accumulate total sum of escape probabilities S, the number of launched primaries N_prim, and the number of escaping primaries P_esc. Store results as a JSON list of per-condition dictionaries with keys: grain_material (str), grain_diameter_um (float), beam_energy_eV (float), N_prim (int), S (float), P_esc (int). Write the JSON to `simulation_events.json`.",
+    "output_file": "",
+    "evidence": "simulation_events.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Collects raw tally data from Monte Carlo runs for subsequent computation of yield and potential.",
+    "output_schema": ""
+  },
+  {
+    "id": "yield",
+    "title": "Compute secondary electron yield",
+    "role": "scored",
+    "action": "From the simulation_events.json tally data, for each condition compute the secondary electron yield δ = S / N_prim. Write the results to a CSV file `secondary_yield.csv` with one row per condition and columns: grain_material, grain_diameter_um, beam_energy_eV, secondary_yield.",
+    "output_file": "secondary_yield.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with computed secondary emission yield per condition.",
+    "output_schema": "Columns: grain_material (string), grain_diameter_um (float), beam_energy_eV (float), secondary_yield (float)."
+  },
+  {
+    "id": "potential",
+    "title": "Compute grain surface potential",
+    "role": "scored",
+    "action": "From the simulation_events.json and the secondary yield, for each condition compute the net charge Q_net = e * N_prim * (1 - η - δ) where η = P_esc / N_prim, e = 1.602e-19 C. Compute grain capacitance C = 4πε0 r with ε0 = 8.854e-12 F/m and grain radius r = (grain_diameter_um/2)*1e-6 m. Compute raw potential φ_r = Q_net / C. Set φ = max(0, φ_r) following the paper's convention. Write the results to `grain_potential.csv` with columns: grain_material, grain_diameter_um, beam_energy_eV, potential_V.",
+    "output_file": "grain_potential.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with computed grain surface potential per condition.",
+    "output_schema": "Columns: grain_material (string), grain_diameter_um (float), beam_energy_eV (float), potential_V (float)."
+  }
+]

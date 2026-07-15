@@ -1,0 +1,172 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes peak ε₂, peak energy, and ε₁(0) from the raw dielectric CSV files and compares to paper-reported values within tolerances; ordering and metallicity are also recomputed/checked.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "undoped_dielectric.csv": "metric_recompute",
+    "Ga_dielectric.csv": "metric_recompute",
+    "As_dielectric.csv": "metric_recompute",
+    "results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values from Table 2 of the paper for ε₂ peak, peak energy, ε₁(0) of undoped, Ga-doped, As-doped systems, and the band gap requirement for Ga metallic.",
+      "source_provenance": "Table 2 in the paper (DOI: 10.1016/j.jallcom.2009.10.267) and text stating the undoped band gap is 1.58 eV.",
+      "generation_method": "Direct transcription: ε₂ peak=13.056, peak energy=6.653 eV, ε₁(0)=6.461 for undoped; 35.898, 0.422 eV, 49.533 for Ga; 24.348, 0.068 eV, 33.2616 for As. Ga band gap = 0.",
+      "why_not_fabricated": "Values are explicitly reported in the paper's Table 2 and Section 3.1."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "undoped_dielectric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "epsilon1",
+            "epsilon2"
+          ]
+        },
+        "description": "Dielectric function for undoped γ-SiGe₂N₄: columns energy_eV (float), epsilon1 (float), epsilon2 (float)."
+      },
+      {
+        "file": "Ga_dielectric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "epsilon1",
+            "epsilon2"
+          ]
+        },
+        "description": "Dielectric function for (Si₀.₅Ga₀.₅)Ge₂N₄: columns energy_eV (float), epsilon1 (float), epsilon2 (float)."
+      },
+      {
+        "file": "As_dielectric.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "epsilon1",
+            "epsilon2"
+          ]
+        },
+        "description": "Dielectric function for (Si₀.₅As₀.₅)Ge₂N₄: columns energy_eV (float), epsilon1 (float), epsilon2 (float)."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "undoped": {
+              "type": "object",
+              "required": [
+                "epsilon2_peak",
+                "peak_energy_eV",
+                "epsilon1_0",
+                "band_gap_eV"
+              ]
+            },
+            "Ga": {
+              "type": "object",
+              "required": [
+                "epsilon2_peak",
+                "peak_energy_eV",
+                "epsilon1_0",
+                "band_gap_eV"
+              ]
+            },
+            "As": {
+              "type": "object",
+              "required": [
+                "epsilon2_peak",
+                "peak_energy_eV",
+                "epsilon1_0",
+                "band_gap_eV"
+              ]
+            }
+          },
+          "required": [
+            "undoped",
+            "Ga",
+            "As"
+          ]
+        },
+        "description": "Extracted optical quantities for the three systems. Each system object contains: epsilon2_peak (float), peak_energy_eV (float), epsilon1_0 (float), band_gap_eV (float, 0 for metallic)."
+      }
+    ],
+    "notes": "The dielectric CSV files must have a header row. The results.json must be consistent with the peaks and static limits derived from the CSVs; the checker will cross-validate."
+  },
+  "steps": [
+    {
+      "id": "undoped_check",
+      "output_file": "undoped_dielectric.csv",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "target": {
+        "epsilon2_peak": 13.056,
+        "peak_energy_eV": 6.653,
+        "epsilon1_0": 6.461
+      },
+      "tolerances": {
+        "epsilon2_peak": 0.2,
+        "peak_energy_eV": 0.2,
+        "epsilon1_0": 0.2
+      }
+    },
+    {
+      "id": "Ga_check",
+      "output_file": "Ga_dielectric.csv",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "target": {
+        "epsilon2_peak": 35.898,
+        "peak_energy_eV": 0.422,
+        "epsilon1_0": 49.533
+      },
+      "tolerances": {
+        "epsilon2_peak": 0.2,
+        "peak_energy_eV": 0.2,
+        "epsilon1_0": 0.2
+      }
+    },
+    {
+      "id": "As_check",
+      "output_file": "As_dielectric.csv",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "target": {
+        "epsilon2_peak": 24.348,
+        "peak_energy_eV": 0.068,
+        "epsilon1_0": 33.2616
+      },
+      "tolerances": {
+        "epsilon2_peak": 0.2,
+        "peak_energy_eV": 0.2,
+        "epsilon1_0": 0.2
+      }
+    },
+    {
+      "id": "ordering_metallicity",
+      "output_file": "results.json",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "target": null,
+      "tolerances": null
+    }
+  ]
+}

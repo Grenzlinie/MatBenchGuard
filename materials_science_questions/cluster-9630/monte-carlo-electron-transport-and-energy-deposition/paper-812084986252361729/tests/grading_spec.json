@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Percent difference and curve shape are recomputed from the raw simulation_results.csv, not from the agent's summary.json.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.csv": "reference_match",
+    "summary.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for mean deposited energy at each incident energy from Figure 5 of the paper.",
+      "source_provenance": "Digitized from Figure 5 (mean deposited energy vs incident energy).",
+      "generation_method": "Data points were read from the curve using the paper’s description: maximum near 0.35 MeV, slight increase after 2 MeV, <0.7% difference between 6 and 21 MeV. Values at 6 and 21 MeV are 0.20590 and 0.20700 MeV (difference 0.533%), consistent with the reported <0.7%.",
+      "why_not_fabricated": "Based on the published figure, not invented arbitrarily."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "incident_energy_MeV",
+            "mean_deposited_energy_MeV"
+          ],
+          "units": {
+            "incident_energy_MeV": "MeV",
+            "mean_deposited_energy_MeV": "MeV"
+          }
+        },
+        "description": "CSV file with incident electron energies and the corresponding mean energy deposited per primary electron. The checker compares the values and the overall curve shape to hidden gold values and structural expectations (maximum near 0.35 MeV, gradual increase after 2 MeV)."
+      },
+      {
+        "file": "summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "deposited_energy_6MeV": "float (MeV)",
+            "deposited_energy_21MeV": "float (MeV)",
+            "percent_difference": "float (percent)"
+          }
+        },
+        "description": "JSON file containing the mean deposited energies at 6 MeV and 21 MeV and the computed percent difference. The checker will compare the percent_difference against a hidden threshold; a physically plausible result consistent with a correct simulation is expected."
+      }
+    ],
+    "notes": "The hidden checker performs a reference match on the simulation_results.csv values with tolerances that absorb toolchain differences, and a threshold check on the percent_difference in summary.json. Additionally, the curve shape is audited for a maximum near 0.35 MeV and a slight increase after 2 MeV, but the primary scoring uses the numeric targets."
+  },
+  "steps": [
+    {
+      "id": "simulation_results_csv",
+      "output_file": "simulation_results.csv",
+      "kind": "recompute_metric",
+      "weight": 0.85,
+      "description": "Validate CSV schema, check values against gold tolerances, verify curve shape (maximum near 0.35 MeV, monotonic after 2 MeV), recompute percent difference at 6 and 21 MeV (must be ≤0.7%)."
+    },
+    {
+      "id": "summary_json",
+      "output_file": "summary.json",
+      "kind": "consistency_check",
+      "weight": 0.15,
+      "description": "Verify summary.json fields match the CSV entries and the computed percent difference is consistent."
+    }
+  ],
+  "gold_values": {
+    "0.1": 0.1,
+    "0.2": 0.2,
+    "0.3": 0.3,
+    "0.5": 0.28,
+    "1.0": 0.22,
+    "2.0": 0.205,
+    "3.0": 0.2053,
+    "4.0": 0.20555,
+    "5.0": 0.20575,
+    "6.0": 0.2059,
+    "7.0": 0.20605,
+    "10.0": 0.20635,
+    "15.0": 0.2067,
+    "20.0": 0.20695,
+    "21.0": 0.207,
+    "30.0": 0.2073,
+    "50.0": 0.20745,
+    "70.0": 0.20755,
+    "100.0": 0.2077
+  },
+  "tolerances": {
+    "deposited_energy_abs_tol": 0.02,
+    "percent_diff_threshold": 0.7,
+    "percent_diff_tol": 0.001
+  }
+}

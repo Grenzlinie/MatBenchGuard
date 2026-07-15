@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes λ3(t), λ1(t), η^∞, τ from the same analytic expressions (numerical integration + error functions) and compares to agent's submitted values; this is a direct recompute of the target quantities.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bloch_vector_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected Bloch vector components and derived constants recomputed from analytic formulas",
+      "source_provenance": "Derived from the paper's analytic expressions (Eqs. 79, 84, 85, 88, and the integral form) for parameters α=1, g=1, β=5, Δ=0.5, μ=0.4.",
+      "generation_method": "The checker's prepare block computes expected λ3 and λ1 via scipy.integrate.quad and scipy.special.erf/exp1; no fixed gold numbers are embedded beyond the formulas and parameters.",
+      "why_not_fabricated": "Values are deterministically computed from the paper's own expressions; they are the standard reference values for these parameter conditions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bloch_vector_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "t",
+            "lambda3",
+            "lambda1",
+            "eta_inf",
+            "tau"
+          ],
+          "properties": {
+            "t": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "9 time points in units of 1/alpha"
+            },
+            "lambda3": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "longitudinal Bloch vector component at each time"
+            },
+            "lambda1": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "description": "transverse Bloch vector component at each time"
+            },
+            "eta_inf": {
+              "type": "number",
+              "description": "asymptotic decoherence factor"
+            },
+            "tau": {
+              "type": "number",
+              "description": "decoherence time constant in units of 1/alpha"
+            }
+          }
+        },
+        "description": "Agent-computed Bloch vector components and derived decoherence constants for the infinite-N limit at γ=0."
+      }
+    ],
+    "notes": "Scoring compares the reported values to hidden gold values with absolute tolerances; tolerances are not revealed here."
+  },
+  "steps": [
+    {
+      "id": "lambda3_check",
+      "output_file": "bloch_vector_results.json",
+      "kind": "numeric_array_compare",
+      "weight": 0.3,
+      "tolerance": 0.05
+    },
+    {
+      "id": "lambda1_check",
+      "output_file": "bloch_vector_results.json",
+      "kind": "numeric_array_compare",
+      "weight": 0.3,
+      "tolerance": 0.05
+    },
+    {
+      "id": "eta_inf_check",
+      "output_file": "bloch_vector_results.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "tolerance": 0.1
+    },
+    {
+      "id": "tau_check",
+      "output_file": "bloch_vector_results.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "tolerance": 0.1
+    },
+    {
+      "id": "short_time_consistency_check",
+      "output_file": "bloch_vector_results.json",
+      "kind": "consistency",
+      "weight": 0.1,
+      "tolerance": 0.05
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The five scored quantities are single summary scalars reported in JSON files; the underlying raw artifacts (phonon dispersion curves, AIMD trajectories, NEB paths, free energy data) are too heavy for the verifier sandbox to recompute, so we compare the reported values against paper-derived thresholds with monotonic scoring (threshold_or_better) and exact_match with tolerance, as described in doctrine D4 T0.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "thresholds, targets, and tolerances for each scored artifact",
+      "source_provenance": "Paper reported quantities: no imaginary phonon frequencies → min freq >= 0; O₂ dissociation barrier 0.09 eV; partial current density 3.0 mA/cm² at 0.65 V vs SHE; HSE06 band gap 1.14 eV. AIMD thresholds set from the checker strategy description.",
+      "generation_method": "Thresholds are set from the paper's reported values plus margins (for directional metrics) or a tolerance (for the band gap) to accommodate legitimate toolchain spread while still requiring a correct reproduction. Exact values taken from the checker strategy: AIMD std 0.05 eV, max displacement 0.5 Å; O₂ barrier threshold 0.14 eV; current density threshold 2.5 mA/cm²; band gap tolerance ±0.15 eV; phonon threshold –0.1 THz.",
+      "why_not_fabricated": "All thresholds trace directly back to the paper's own reported values or the task's checker strategy description, not invented independently."
+    }
+  ],
+  "target_policies": {
+    "step_01_phonon_stability.json": "threshold_or_better",
+    "step_02_aimd_stability.json": "threshold_or_better",
+    "step_03_o2_dissociation_barrier.json": "threshold_or_better",
+    "step_04_current_density.json": "threshold_or_better",
+    "step_05_band_gap.json": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phonon_stability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "minimum_phonon_frequency": "float (THz)",
+            "unit": "string (must be 'THz')"
+          }
+        },
+        "description": "Minimum phonon frequency across high-symmetry points. Must be non-negative (threshold: > -0.1 THz to account for numerical noise) indicating dynamical stability."
+      },
+      {
+        "file": "step_02_aimd_stability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energy_std_ev": "float (eV)",
+            "max_out_of_plane_displacement_A": "float (Å)"
+          }
+        },
+        "description": "Metrics from 5 ps NVT AIMD at 300 K: standard deviation of total energy and maximum out-of-plane atomic displacement. Must be below thresholds indicating thermal stability."
+      },
+      {
+        "file": "step_03_o2_dissociation_barrier.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "dissociation_barrier_eV": "float (eV)"
+          }
+        },
+        "description": "Energy barrier for O2 dissociation on the C=C dimer. Lower barrier indicates better catalytic performance."
+      },
+      {
+        "file": "step_04_current_density.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "partial_current_density_at_0_65V_mA_per_cm2": "float (mA/cm²)"
+          }
+        },
+        "description": "Partial current density at 0.65 V vs. SHE predicted by the microkinetic model. Higher value indicates better ORR activity."
+      },
+      {
+        "file": "step_05_band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hse06_band_gap_eV": "float (eV)"
+          }
+        },
+        "description": "Quasi-direct band gap computed with the HSE06 hybrid functional. Must match the reference within a tolerance."
+      }
+    ],
+    "notes": "The agent must use open-source DFT codes (Quantum ESPRESSO, CP2K) to compute all quantities. The scoring compares the reported values against hidden reference data from the paper with appropriate tolerances and threshold policies. The microkinetics step is load-bearing because it depends on all earlier calculations and requires correct simulation of the free-energy landscape."
+  },
+  "steps": [
+    {
+      "id": "phonon_stability_check",
+      "output_file": "step_01_phonon_stability.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "threshold_or_better",
+      "field": "minimum_phonon_frequency",
+      "threshold": -0.1
+    },
+    {
+      "id": "aimd_stability_check",
+      "output_file": "step_02_aimd_stability.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "threshold_or_better",
+      "fields": [
+        "total_energy_std_ev",
+        "max_out_of_plane_displacement_A"
+      ],
+      "thresholds": {
+        "total_energy_std_ev": {
+          "threshold": 0.05,
+          "max": 0.2
+        },
+        "max_out_of_plane_displacement_A": {
+          "threshold": 0.5,
+          "max": 2.0
+        }
+      }
+    },
+    {
+      "id": "o2_dissociation_barrier_check",
+      "output_file": "step_03_o2_dissociation_barrier.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "target_policy": "threshold_or_better",
+      "field": "dissociation_barrier_eV",
+      "threshold": 0.14,
+      "max": 0.3
+    },
+    {
+      "id": "current_density_check",
+      "output_file": "step_04_current_density.json",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target_policy": "threshold_or_better",
+      "field": "partial_current_density_at_0_65V_mA_per_cm2",
+      "threshold": 2.5
+    },
+    {
+      "id": "band_gap_check",
+      "output_file": "step_05_band_gap.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "exact_match",
+      "field": "hse06_band_gap_eV",
+      "target": 1.14,
+      "tolerance": 0.15
+    }
+  ]
+}

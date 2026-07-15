@@ -1,0 +1,63 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The HOMO-LUMO gap and orbital character are final quantities derived from a full DFT workflow; recomputing them from raw LDOS curves in the verifier sandbox is infeasible. A result-level comparison against the paper's reported values (with appropriate tolerance for DFT toolchain differences) is the most direct and faithful verification.",
+  "pass_threshold": 0.8,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "molecule_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "molecule",
+              "HOMOexp_character",
+              "gap_HOMO_exp_LUMO_exp",
+              "sigma2_present"
+            ],
+            "extra": false,
+            "properties": {
+              "molecule": {
+                "type": "string"
+              },
+              "HOMOexp_character": {
+                "type": "string"
+              },
+              "gap_HOMO_exp_LUMO_exp": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "sigma2_present": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Computed electronic structure quantities for BCA and ortho-PyCA. Used to verify that CH→N substitution changes the HOMOexp orbital character from π to σ and yields a gap consistent with the paper's reference (hidden)."
+      }
+    ],
+    "notes": "The checker compares the agent's reported gap and orbital character against hidden paper-reference values within a tolerance. No raw LDOS recomputation is performed."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported HOMOexp-LUMOexp gaps (4.4 eV for BCA, 3.5 eV for ortho-PyCA) and orbital characters (π for BCA, σ for ortho-PyCA), plus sigma2_present flags.",
+      "source_provenance": "Extracted from the paper: Fig. 2(b) gives BCA gap 4.4 eV and π character; Fig. 6(b) gives ortho-PyCA gap 3.5 eV and σ character, and Fig. 3(b) shows the σ2 orbital.",
+      "generation_method": "Values were read directly from the paper’s text and figures; no transformation was applied.",
+      "why_not_fabricated": "These are the paper's own published numbers, used as the authoritative reference for the reproduction target."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_results",
+      "output_file": "molecule_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Compare the agent's reported HOMOexp gap, orbital character, and sigma2_present for both molecules with the paper's reference values. Gap tolerance ±0.5 eV; character and sigma2_present must match exactly."
+    }
+  ]
+}

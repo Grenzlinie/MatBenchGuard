@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "Bulk crystal structure optimization",
+    "role": "process",
+    "action": "Optimize the bulk crystal structures of IrO₂, CrO₂, and β-PtO₂ using plane-wave DFT with PBE functional (and DFT+U: U_eff=7.5 eV for Pt 5d in β-PtO₂). Use the CIF files obtained from Materials Project as starting geometries. Relax cell shape and ionic positions until forces converge. Save the final lattice parameters and relaxed coordinates.",
+    "output_file": "",
+    "evidence": "bulk_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain optimized lattice constants and internal coordinates for constructing surface slab models. This is a necessary precursor to all subsequent surface calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Surface slab construction and relaxation",
+    "role": "process",
+    "action": "From the optimized bulk structures, build slab models of the (110) surface for each dioxide: a p(3×1) supercell with 12 atomic layers (4 O–M–O trilayers) and a 15 Å vacuum gap. Fix the bottom 6 atomic layers. Relax the clean surface geometries (ions only) using DFT to obtain total energies and relaxed surface structures. Also perform a single-point calculation for an isolated CH₄ molecule placed in a large vacuum box (22 Å cubic cell) to obtain its total energy.",
+    "output_file": "",
+    "evidence": "surface_relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate clean slab reference states and the isolated methane reference, which are required for computing adsorption energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "CH₄ adsorption, NEB, and ICOHP computation",
+    "role": "scored",
+    "action": "For each surface (IrO₂, CrO₂, β-PtO₂): (1) optimize the geometry of a methane molecule adsorbed on the surface; (2) compute the adsorption energy E_ad = E(CH₄/surf) – E(CH₄) – E(surf); (3) perform Bader charge analysis on the adsorbed CH₄; (4) use the climbing-image nudged elastic band (CI-NEB) method to locate the transition state and final state (co‑adsorbed CH₃ + H) for C–H bond dissociation; (5) from the NEB results, extract the true activation energy E_a and the heat of reaction E_r; (6) from the final-state wavefunction, compute the projected COHP and integrate ICOHP for the metal–CH₃ bond. Report all quantities in a CSV file.",
+    "output_file": "adsorption_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Combines adsorption properties, activation barriers, and bond strengths into one machine-readable table. This step is load-bearing because the activation energies and ICOHP cannot be guessed without running the full DFT+NEB pipeline.",
+    "output_schema": "Columns: surface (str), E_ad (float, kcal/mol), CH4_charge (float, electron charge), E_a (float, kcal/mol), E_r (float, kcal/mol), ICOHP_M-CH3 (float, eV). Write a header row. One row per surface."
+  },
+  {
+    "id": "step4",
+    "title": "pCOHP analysis of IrO₂ C-H bond",
+    "role": "scored",
+    "action": "Using the adsorbed methane wavefunction on IrO₂(110) from Step 3, run LOBSTER to compute the projected crystal orbital Hamilton population (pCOHP) for the elongated C–H bond. Save the −pCOHP values as a function of energy relative to the Fermi level in a CSV (two columns, no header).",
+    "output_file": "pCOHP_IrO2_CH.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produces the -pCOHP spectrum for the activated C–H bond, directly testing the orbital interaction picture. Load-bearing because it requires the full DFT wavefunction and specialized post-processing.",
+    "output_schema": "Two-column CSV with no header row. Column 1: energy relative to Fermi level (eV). Column 2: -pCOHP (arbitrary units). Data must cover at least the range from -15 eV to +5 eV."
+  },
+  {
+    "id": "step5",
+    "title": "pCOHP peak information for IrO₂",
+    "role": "scored",
+    "action": "Extract from the pCOHP analysis the energies of the main occupied bonding peak (maximum -pCOHP below E_F) and the unoccupied bonding peak lying between 1 and 2 eV. Write a single line of text in the format: 'Occupied bonding peak at X.X eV; Unoccupied bonding peak at X.X eV.'",
+    "output_file": "pCOHP_peak_info.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "A compact summary of the pCOHP peak positions required for quantitative verification of the orbital interaction model.",
+    "output_schema": "Plain text with the exact format: 'Occupied bonding peak at X.X eV; Unoccupied bonding peak at X.X eV.'"
+  }
+]

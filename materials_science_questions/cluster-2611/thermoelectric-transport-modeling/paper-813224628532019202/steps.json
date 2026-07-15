@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s1",
+    "title": "DFT spin-polarized self-consistent calculation",
+    "role": "process",
+    "action": "Perform a spin-polarized DFT calculation with PBE exchange-correlation functional to relax the atomic positions and obtain the self-consistent charge density, wavefunctions, and band structure for Bi₂MnTe₄. Use the publicly available CIF file as the starting structure.",
+    "output_file": "",
+    "evidence": "dft_log.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This required intermediate runs the core DFT simulation that all downstream scored quantities depend on. The solver may choose appropriate k-point meshes, energy cutoffs, and convergence criteria.",
+    "output_schema": ""
+  },
+  {
+    "id": "s2",
+    "title": "Compute spin-polarized DOS at Fermi level",
+    "role": "scored",
+    "action": "From the DFT self-consistent output, compute the spin-polarized density of states and extract the DOS value at the Fermi level for both majority (up) and minority (down) spin channels.",
+    "output_file": "step_03_dos_at_ef.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with two rows (spin 'up' and 'down') and column 'dos_f' (states/eV/spin) at the Fermi level.",
+    "output_schema": "CSV with headers: spin, dos_f. Two rows: up, down. dos_f is a floating-point number."
+  },
+  {
+    "id": "s3",
+    "title": "Compute minority spin band gap",
+    "role": "scored",
+    "action": "From the DFT band structure or DOS, determine the band gap (eV) for the minority spin channel.",
+    "output_file": "step_03_bandgap.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "A single ASCII text file containing the band gap in eV (precision to 0.01) for the minority spin.",
+    "output_schema": "Single floating-point number, e.g., '0.40'."
+  },
+  {
+    "id": "s4",
+    "title": "Compute Boltzmann transport properties",
+    "role": "scored",
+    "action": "Using BoltzTrap2, compute the Seebeck coefficient and electrical conductivity per relaxation time as functions of chemical potential at 300 K from the DFT band energies. Extract the values at the Fermi level (Seebeck_at_EF, sigma_over_tau_at_EF), the maximum Seebeck coefficient and the chemical potential (relative to Fermi level) at which it occurs.",
+    "output_file": "step_04_transport_at_ef.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys: Seebeck_at_EF (µV/K), sigma_over_tau_at_EF (S/(cm·s)), Seebeck_max (µV/K), Seebeck_max_mu (eV).",
+    "output_schema": "JSON object with keys: Seebeck_at_EF (float, µV/K), sigma_over_tau_at_EF (float, S/(cm·s)), Seebeck_max (float, µV/K), Seebeck_max_mu (float, eV relative to Fermi level)."
+  }
+]

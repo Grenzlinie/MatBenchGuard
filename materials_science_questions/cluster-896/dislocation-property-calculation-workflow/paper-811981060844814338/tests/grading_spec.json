@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recomputation of the atomistic simulation pipeline is infeasible for the verifier sandbox; comparing the agent's reported final energies to the paper's published values with tolerances is the appropriate scoring method.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "final_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all fields in final_results.json, plus structural range checks.",
+      "source_provenance": "Paper: Section 4.2.2 (ni1 constriction formation energies 6.30, -1.45, total 4.85 eV; ni2 3.05, -0.70, total 2.35 eV), Figure 10 and Section 4.2.4 (interaction energy at 21b ~ -0.06 eV), Section 4.2.5 and 4.2.3 (activation energy for Cu at zero stress 1.17 eV and at 0.00045μ 0.95 eV). Ratio and range from paper discussion (Cu cross-slip energy 1.07-1.28 eV, Ni(1)/Ni(2) ratio ~2.06).",
+      "generation_method": "Numbers extracted directly from the paper's reported results and scaling relationships.",
+      "why_not_fabricated": "These are the exact quantities the paper reports or derives; each gold value is traceable to a specific section/figure of the source paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "final_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ni1_positive_formation_energy": "number",
+            "ni1_negative_formation_energy": "number",
+            "ni1_total_cross_slip_energy": "number",
+            "ni2_positive_formation_energy": "number",
+            "ni2_negative_formation_energy": "number",
+            "ni2_total_cross_slip_energy": "number",
+            "interaction_energy_lambda_21b": "number",
+            "activation_energy_tau_0": "number",
+            "activation_energy_tau_0_00045mu": "number"
+          },
+          "units": {
+            "ni1_positive_formation_energy": "eV",
+            "ni1_negative_formation_energy": "eV",
+            "ni1_total_cross_slip_energy": "eV",
+            "ni2_positive_formation_energy": "eV",
+            "ni2_negative_formation_energy": "eV",
+            "ni2_total_cross_slip_energy": "eV",
+            "interaction_energy_lambda_21b": "eV",
+            "activation_energy_tau_0": "eV",
+            "activation_energy_tau_0_00045mu": "eV"
+          }
+        },
+        "description": "Computed cross-slip energies, constriction formation energies, and activation energies for Ni(1), Ni(2), and Cu."
+      }
+    ],
+    "notes": "All energies must be scalar floats in eV. The checker compares these values to hidden gold values from the source paper with tolerances."
+  },
+  "steps": [
+    {
+      "id": "check_final_results",
+      "output_file": "final_results.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Score the nine energy fields against hidden gold values with tolerances and two structural ratio checks. Each sub-check contributes equally to the step score (11 checks total).",
+      "check_config": {
+        "fields": {
+          "ni1_positive_formation_energy": {
+            "gold": 6.3,
+            "tol_abs": 0.3
+          },
+          "ni1_negative_formation_energy": {
+            "gold": -1.45,
+            "tol_abs": 0.3
+          },
+          "ni1_total_cross_slip_energy": {
+            "gold": 4.85,
+            "tol_abs": 0.3
+          },
+          "ni2_positive_formation_energy": {
+            "gold": 3.05,
+            "tol_abs": 0.3
+          },
+          "ni2_negative_formation_energy": {
+            "gold": -0.7,
+            "tol_abs": 0.3
+          },
+          "ni2_total_cross_slip_energy": {
+            "gold": 2.35,
+            "tol_abs": 0.3
+          },
+          "interaction_energy_lambda_21b": {
+            "gold": -0.06,
+            "tol_abs": 0.3,
+            "tol_rel": 0.2
+          },
+          "activation_energy_tau_0": {
+            "gold": 1.17,
+            "tol_abs": 0.3,
+            "tol_rel": 0.2
+          },
+          "activation_energy_tau_0_00045mu": {
+            "gold": 0.95,
+            "tol_abs": 0.3,
+            "tol_rel": 0.2
+          }
+        },
+        "ratio_checks": [
+          {
+            "name": "activation_energy_tau_0_range",
+            "field": "activation_energy_tau_0",
+            "low": 1.0,
+            "high": 1.4
+          },
+          {
+            "name": "ni1_ni2_ratio",
+            "low": 1.5,
+            "high": 2.5
+          }
+        ]
+      }
+    }
+  ]
+}

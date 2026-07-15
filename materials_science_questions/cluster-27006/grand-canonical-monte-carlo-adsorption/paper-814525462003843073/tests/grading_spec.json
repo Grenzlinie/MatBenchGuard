@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the zero-loading isosteric heat of adsorption from the agent's simulated isotherm CSV data and compares it to the paper's reported simulated Qst; T1 is feasible because the isotherm data are provided and the computation is lightweight.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_isotherms_Ni.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Fugacity_bar",
+            "Loading_mmol_g"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "Fugacity_bar": "bar",
+            "Loading_mmol_g": "mmol/g"
+          }
+        },
+        "description": "CO₂ adsorption isotherm from GCMC simulation for DICRO-3-Ni-i at 273, 283, and 293 K. The checker reads this file to verify physical plausibility (monotonicity with pressure, correct temperature ordering) and to independently recompute the zero-loading isosteric heat of adsorption via virial fitting and the Clausius-Clapeyron relation."
+      },
+      {
+        "file": "step_02_isotherms_Cu.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Fugacity_bar",
+            "Loading_mmol_g"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "Fugacity_bar": "bar",
+            "Loading_mmol_g": "mmol/g"
+          }
+        },
+        "description": "CO₂ adsorption isotherm from GCMC simulation for DICRO-3-Cu-i at 273, 283, and 293 K. The checker reads this file to verify physical plausibility and to independently recompute the zero-loading isosteric heat of adsorption."
+      },
+      {
+        "file": "step_03_Qst_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "DICRO-3-Ni-i_zero_loading_Qst_kJmol": "number (float, kJ/mol)",
+            "DICRO-3-Cu-i_zero_loading_Qst_kJmol": "number (float, kJ/mol)"
+          }
+        },
+        "description": "Agent-derived zero-loading isosteric heat of adsorption for both materials. The checker independently recomputes Qst from the submitted isotherm CSVs and compares both the agent's reported values and the checker's recomputed values to the hidden paper-reported simulated Qst."
+      }
+    ],
+    "notes": "The primary scored artifacts are the isotherm CSVs, from which the checker recomputes Qst. The Qst JSON provides the agent's own derived values for cross-validation. Isotherm physical plausibility (monotonic increase with pressure, higher uptake at lower temperature) is also verified. All fields needed by the checker are declared in the schema; no hidden columns or keys exist."
+  },
+  "steps": [
+    {
+      "id": "recompute_qst_ni",
+      "output_file": "step_01_isotherms_Ni.csv",
+      "kind": "recompute_metric",
+      "metric": "zero_loading_Qst",
+      "target": 32.8,
+      "tolerance": 3.0,
+      "max_error": 15.0,
+      "weight": 0.45,
+      "description": "Recompute zero-loading Qst for DICRO-3-Ni-i from its isotherm CSV and score against the paper-reported simulated Qst of 32.8 kJ/mol."
+    },
+    {
+      "id": "recompute_qst_cu",
+      "output_file": "step_02_isotherms_Cu.csv",
+      "kind": "recompute_metric",
+      "metric": "zero_loading_Qst",
+      "target": 33.5,
+      "tolerance": 3.0,
+      "max_error": 15.0,
+      "weight": 0.45,
+      "description": "Recompute zero-loading Qst for DICRO-3-Cu-i from its isotherm CSV and score against the paper-reported simulated Qst of 33.5 kJ/mol."
+    },
+    {
+      "id": "cross_check_reported_qst",
+      "output_file": "step_03_Qst_results.json",
+      "kind": "consistency",
+      "weight": 0.1,
+      "description": "Cross-check the agent’s self-reported Qst values against the checker’s independently recomputed Qst values."
+    }
+  ]
+}

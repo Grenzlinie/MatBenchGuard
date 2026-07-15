@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The cohesive parameters and stress-displacement data are fully recomputable from the public Lennard-Jones parameters and given formulas; the analytical expressions are checkable by structural audit.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cohesive_parameters.json": "exact_match",
+    "stress_displacement_data.csv": "metric_recompute",
+    "cohesive_law_expressions.txt": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference values for cohesive parameters and reference stress curves computed from known formulas",
+      "source_provenance": "paper equations (5),(7),(22) and paper-reported values Phi_total=0.245 J/m^2, sigma_max=1.35 GPa, delta_0=0.0480 nm, derived from ε=0.00239 eV, σ=0.3415 nm, l0=0.142 nm",
+      "generation_method": "formulas implemented in checker's prepare function using the given constants",
+      "why_not_fabricated": "These are the actual paper-reported values and the exact formulas from the cohesive law; the checker recomputes them to compare agent's results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cohesive_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Phi_total": "number (J/m^2)",
+            "sigma_max": "number (GPa)",
+            "delta_0": "number (nm)",
+            "epsilon": "number (eV)",
+            "sigma": "number (nm)"
+          }
+        },
+        "description": "Derived cohesive parameters from the infinite graphene Lennard‑Jones cohesive law."
+      },
+      {
+        "file": "stress_displacement_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "v_nm",
+            "sigma_cohesive_GPa",
+            "tau_cohesive_GPa"
+          ],
+          "units": {
+            "v_nm": "nm",
+            "sigma_cohesive_GPa": "GPa",
+            "tau_cohesive_GPa": "GPa"
+          }
+        },
+        "description": "Tensile and shear cohesive stresses vs. opening displacement for infinite graphene and a finite overlap of 10 nm."
+      },
+      {
+        "file": "cohesive_law_expressions.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text"
+        },
+        "description": "Plain-text rendering of the derived analytical cohesive law expressions."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "cohesive_parameters",
+      "output_file": "cohesive_parameters.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "targets": {
+        "Phi_total": 0.245,
+        "sigma_max": 1.35,
+        "delta_0": 0.048
+      },
+      "tolerances_relative": {
+        "Phi_total": 0.02,
+        "sigma_max": 0.02,
+        "delta_0": 0.05
+      }
+    },
+    {
+      "id": "stress_displacement",
+      "output_file": "stress_displacement_data.csv",
+      "weight": 0.55,
+      "kind": "vector_recompute",
+      "tolerance_abs_sigma": 0.05,
+      "tolerance_rel_tau": 0.1,
+      "monotonic_tau": true
+    },
+    {
+      "id": "expressions",
+      "output_file": "cohesive_law_expressions.txt",
+      "weight": 0.1,
+      "kind": "structural",
+      "required_terms": [
+        "Phi_total",
+        "sigma_cohesive",
+        "tau_cohesive",
+        "rho_c",
+        "epsilon",
+        "sigma"
+      ]
+    }
+  ]
+}

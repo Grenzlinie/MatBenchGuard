@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "Neutral molecule calculations",
+    "role": "process",
+    "action": "Perform unrestricted Hartree-Fock geometry optimization with the 6-31G* basis set for neutral methionine, methionine sulfoxide, and methionine sulfone. Record the total electronic energies and dipole moments of each optimized structure.",
+    "output_file": "",
+    "evidence": "neutral_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step that runs the neutral-molecule calculations. The evidence file (neutral_results.json) contains total energies and dipole moments, which are consumed by downstream scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Protonated species calculations",
+    "role": "process",
+    "action": "For each compound, perform unrestricted Hartree-Fock geometry optimization with the 6-31G* basis set for all relevant protonated forms: methionine protonated at amino nitrogen, carboxyl oxygen, and sulfur; methionine sulfoxide protonated at amino nitrogen, carboxyl oxygen, and the SO oxygen; methionine sulfone protonated at amino nitrogen, carboxyl oxygen, and one of the SO2 oxygens. Record the total electronic energy for each optimized cation.",
+    "output_file": "",
+    "evidence": "protonated_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step that runs the protonated-form calculations. The evidence file stores the total energies, which are used by the proton-affinity scored step.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Proton affinity computation",
+    "role": "scored",
+    "action": "Compute proton affinities (PA) as the difference between the neutral total energy and the protonated total energy for each site, using the energies recorded in steps 1 and 2. Output the values in kcal/mol.",
+    "output_file": "proton_affinities.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calculates all proton affinities from the computed total energies. This step is load-bearing because the PA values depend on the full quantum chemical calculations.",
+    "output_schema": "JSON object with top-level keys 'methionine', 'methionine_sulfoxide', 'methionine_sulfone'. Each maps to an object containing site-specific keys ('N', 'O', 'S' for methionine; 'N', 'O', 'SO' for sulfoxide; 'N', 'O', 'SO2' for sulfone) and the corresponding proton affinity (float, kcal/mol)."
+  },
+  {
+    "id": "step_4",
+    "title": "Most favorable site determination",
+    "role": "scored",
+    "action": "For each compound, identify the protonation site with the highest proton affinity from the values in proton_affinities.json. Output the site name (string) for each compound.",
+    "output_file": "most_favorable_sites.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Determines the thermodynamically preferred protonation centre per compound as the one with the maximum PA.",
+    "output_schema": "JSON object with keys 'methionine', 'methionine_sulfoxide', 'methionine_sulfone' mapping to a string: 'N', 'S', 'O', 'SO', or 'SO2'."
+  },
+  {
+    "id": "step_5",
+    "title": "Dipole moment reporting",
+    "role": "scored",
+    "action": "Extract the dipole moments of the neutral molecules from the results of step 1 and output them in Debye.",
+    "output_file": "dipole_moments.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reports the computed dipole moments of the three neutral compounds.",
+    "output_schema": "JSON object with keys 'methionine', 'methionine_sulfoxide', 'methionine_sulfone' mapping to the dipole moment (float, Debye)."
+  }
+]

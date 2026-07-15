@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: checker recomputes max temperature and max thermal distortion from raw temperature grid, compares to paper's reported values with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported max temperature and distortion values for sigma=0, 0.6, and infinity (approximated by large sigma)",
+      "source_provenance": "directly from the paper text: for σ=0 max temp 142.7°C at (0,0), distortion 0.99 µm; σ=0.6 max temp 117.6°C at (0,0), distortion 0.88 µm; σ→∞ max temp 62.6°C at (0,0.34), distortion 0.52 µm.",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "these are the published experimental/computational reference values"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "temperature_field.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "sigma",
+            "r_mm",
+            "z_mm",
+            "u_degC"
+          ],
+          "units": {
+            "r_mm": "mm",
+            "z_mm": "mm",
+            "u_degC": "°C"
+          }
+        },
+        "description": "Gridded temperature field u(r,z) for three heat-transfer conditions. The checker will extract temperature maxima and compute thermal distortion l_z(r) = alpha * integral_0^L u(r,z) dz, compare the maxima to hidden gold, and verify the trend that both maxima decrease as sigma increases."
+      }
+    ],
+    "notes": "The checker recomputes derived quantities from the raw temperature field; no separate thermal distortion output is required from the agent. The hidden gold values are the paper's reported maximum temperatures and thermal distortions for each sigma value."
+  },
+  "steps": [
+    {
+      "id": "main_result",
+      "output_file": "temperature_field.csv",
+      "weight": 1.0,
+      "kind": "recompute_metric",
+      "description": "Recompute max temperature and max thermal distortion from the temperature field for sigma=0, 0.6, and a large sigma, compare to paper values, and check trend.",
+      "target_values": {
+        "sigma0": {
+          "max_temp": 142.7,
+          "max_temp_tol": 5.0,
+          "max_dist": 0.99,
+          "max_dist_tol": 0.05
+        },
+        "sigma06": {
+          "max_temp": 117.6,
+          "max_temp_tol": 5.0,
+          "max_dist": 0.88,
+          "max_dist_tol": 0.05
+        },
+        "sigma_large": {
+          "max_temp": 62.6,
+          "max_temp_tol": 5.0,
+          "max_dist": 0.52,
+          "max_dist_tol": 0.05,
+          "peak_z": 0.34,
+          "peak_z_tol": 0.1
+        }
+      },
+      "trend_check": true,
+      "alpha": 8.2e-05,
+      "length_mm": 2.0
+    }
+  ]
+}

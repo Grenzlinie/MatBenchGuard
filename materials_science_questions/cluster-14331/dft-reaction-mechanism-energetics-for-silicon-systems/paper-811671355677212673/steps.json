@@ -1,0 +1,28 @@
+[
+  {
+    "id": "dft_optimization",
+    "title": "DFT geometry optimization and frequency analysis",
+    "role": "process",
+    "action": "Perform DFT calculations at the B3LYP/TZV level of theory for all relevant species in mechanistic pathways A and B (hydrazone isomers, TMSOTf catalyst, reactant complexes, intermediates, syn and anti transition states of the cycloaddition step). Optimize geometries, compute harmonic frequencies, and obtain electronic energies, zero-point vibrational energies, thermal corrections to enthalpy and free energy at 298.15 K. Use the charged reference state TMS+ + TfO− as the separated-ion limit.",
+    "output_file": "",
+    "evidence": "stationary_point_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces raw thermodynamic data for all stationary points. The agent should save the computed energies in a structured JSON file (stationary_point_energies.json) for use by the next step.",
+    "output_schema": "JSON object with species labels and per-species enthalpy/free energy values."
+  },
+  {
+    "id": "energetics_analysis",
+    "title": "Reaction energetics and diastereoselectivity prediction",
+    "role": "scored",
+    "action": "From the computed energies in stationary_point_energies.json, determine the relative stabilities of intermediates and transition states. For pathway B, calculate activation enthalpy (ΔH‡) and activation free energy (ΔG‡) for the syn and anti transition states relative to the separated reactants. Compute ΔΔH‡_syn-anti = ΔH‡(syn) - ΔH‡(anti) and ΔΔG‡_syn-anti = ΔG‡(syn) - ΔG‡(anti). Use the Eyring equation (rate ∝ exp(-ΔG‡/RT)) to predict the syn:anti product ratio from the free-energy difference. Determine whether pathway A or pathway B has the lower overall barrier. Write the results as computed_data.json.",
+    "output_file": "computed_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "This scored step reads the raw DFT energies and computes the headline quantities: activation energy differences and the product ratio prediction.",
+    "output_schema": "{ 'pathway_A_relative_energy': float, 'pathway_B_relative_energy': 0.0, 'syn_TS_barrier_H': float, 'anti_TS_barrier_H': float, 'syn_TS_barrier_G': float, 'anti_TS_barrier_G': float, 'DeltaDeltaH_dagger': float, 'DeltaDeltaG_dagger': float, 'predicted_ratio_from_H': string (e.g., '84:16'), 'predicted_ratio_from_G': string, 'pathway_preference': string ('B_favored' or 'A_favored') }"
+  }
+]

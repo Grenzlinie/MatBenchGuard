@@ -1,0 +1,54 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T0 result-level compare: the agent reports computed dipole moments in a CSV; recomputing from raw wavefunction is infeasible in the verifier sandbox, so the checker compares reported values to hidden paper experimental gold with symmetric tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_complex_dipoles.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Expected dipole moment values (paper experimental results) for three complexes.",
+      "source_provenance": "From the paper conclusion: C6H5SnCl3·2CH3OH = 6.36 D, C6H5SnCl3·2C2H5OH = 6.47 D, C6H5SnCl3·2C4H8O = 6.29 D.",
+      "generation_method": "Extracted directly from the paper's experimental results.",
+      "why_not_fabricated": "These are the original reported experimental values from the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_complex_dipoles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "complex",
+            "dipole_moment_D"
+          ],
+          "units": {
+            "dipole_moment_D": "Debye"
+          }
+        },
+        "description": "Computed total dipole moment in Debye for the three 1:2 donor-acceptor complexes of phenyltin trichloride. The agent reports the magnitude and the checker compares it to hidden reference values with a tolerance; meeting or beating the reference earns full credit."
+      }
+    ],
+    "notes": "The CSV must contain rows for the three named complexes. The checker will extract the dipole moment for each complex and compare to hidden gold values. No other intermediate data files are scored."
+  },
+  "steps": [
+    {
+      "id": "step_dipole_check",
+      "output_file": "step_01_complex_dipoles.csv",
+      "weight": 1.0,
+      "kind": "numeric",
+      "target_values": {
+        "C6H5SnCl3·2CH3OH": 6.36,
+        "C6H5SnCl3·2C2H5OH": 6.47,
+        "C6H5SnCl3·2C4H8O": 6.29
+      },
+      "tolerance": 0.5,
+      "notes": "Each complex is scored independently; the total step score is the mean of the three complex scores. Score is 1.0 when |computed - gold| ≤ tolerance; beyond tolerance score decays linearly to 0 at |computed - gold| = 2*tolerance."
+    }
+  ]
+}

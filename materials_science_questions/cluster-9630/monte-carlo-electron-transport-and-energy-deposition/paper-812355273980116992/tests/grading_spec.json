@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Full recompute from raw particle histories is infeasible in the verifier; beam radii compared to paper gold with tolerance. For flux profile, 80% radius recomputed from agent's profile and checked against gold.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold effective beam radii at 400, 350, 300, 250 km for 10 keV total H⁺+H (from Figure 4c) and gold H⁺ beam radius at 350 km (from Figure 4a)",
+      "source_provenance": "digitized from Figure 4c and Figure 4a of the paper",
+      "generation_method": "approximate reading from the published figure; Table 1 confirms peak radius 169 km",
+      "why_not_fabricated": "values are faithful to the paper's reported curve shape and magnitude"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "beam_radii.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "altitude_km",
+            "beam_radius_km"
+          ],
+          "units": {
+            "altitude_km": "km",
+            "beam_radius_km": "km"
+          }
+        },
+        "description": "Effective beam radius (80% radius) of downward H⁺+H fluxes at altitudes 400, 350, 300, and 250 km."
+      },
+      {
+        "file": "flux_profile_350km.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "radial_distance_km",
+            "downward_Hplus_flux"
+          ],
+          "units": {
+            "radial_distance_km": "km",
+            "downward_Hplus_flux": "arbitrary units normalized to 1 erg/cm²/s total flux"
+          }
+        },
+        "description": "Azimuthally averaged downward H⁺ flux as a function of radial distance at 350 km altitude."
+      }
+    ],
+    "notes": "The checker will compare the submitted beam radii to paper-reported reference values with an appropriate tolerance, and will verify the flux profile shape and values against the published profile using a tolerance that accounts for statistical and implementation differences. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "step_03_beam_radii",
+      "output_file": "beam_radii.csv",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "gold": {
+        "400": 160.0,
+        "350": 155.0,
+        "300": 130.0,
+        "250": 100.0
+      },
+      "tolerance_rel": 0.2
+    },
+    {
+      "id": "step_04_flux_profile",
+      "output_file": "flux_profile_350km.csv",
+      "kind": "recompute_structural",
+      "weight": 0.4,
+      "gold_radius_80": 140.0,
+      "tolerance_rel_radius": 0.2,
+      "sub_weights": {
+        "monotonic": 0.3,
+        "radius_80": 0.7
+      }
+    }
+  ]
+}

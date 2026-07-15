@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute rs_stability and Tc from raw DFT artifacts because the verifier sandbox cannot run heavy DFT/DFPT calculations; therefore compare reported values to paper's reported gold with generous tolerances.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "rs_stability.txt": "threshold_or_better",
+    "tc_value.txt": "threshold_or_better"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "rs_stability.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "dimensionless (r_s)"
+          }
+        },
+        "description": "The Wigner-Seitz radius r_s at which FCC metallic hydrogen becomes dynamically stable (all phonon modes real). Compared to a hidden reference value with a tolerance; credit decays as the difference increases."
+      },
+      {
+        "file": "tc_value.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "Kelvin"
+          }
+        },
+        "description": "Superconducting critical temperature T_c (in Kelvin) for FCC hydrogen at r_s=1.0. Compared to a hidden reference value with a tolerance; credit decays as the difference increases."
+      }
+    ],
+    "notes": "The agent must run full DFT and DFPT calculations using Quantum ESPRESSO (open-source) and a publicly available hydrogen pseudopotential. The scored artifacts are derived from the raw simulation outputs; the checker compares the reported values to the paper's results with generous tolerances to account for code/pseudopotential differences. No paper identity or gold values are revealed to the agent."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for rs_stability and tc_value.",
+      "source_provenance": "Solid State Communications 119 (2001) 569-572. The paper states 'Our value r_s=1.05, when this structure becomes stable' and 'T_c ≈ 600 K'.",
+      "generation_method": "Extracted from the paper's explicit statements.",
+      "why_not_fabricated": "These are the exact values reported by the authors as their main quantitative results."
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_rs_stability",
+      "output_file": "rs_stability.txt",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": 1.05,
+      "tolerance": 0.1,
+      "target_policy": "threshold_or_better",
+      "description": "Check rs_stability value against paper gold with tolerance"
+    },
+    {
+      "id": "check_tc_value",
+      "output_file": "tc_value.txt",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": 600,
+      "tolerance": 200,
+      "target_policy": "threshold_or_better",
+      "description": "Check Tc value against paper gold with tolerance"
+    }
+  ]
+}

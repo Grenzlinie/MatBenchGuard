@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Structural optimization and ground-state identification",
+    "role": "process",
+    "action": "For each CoFeRGa compound (R = Ti, V, Cr, Mn, Cu, Nb), perform spin-polarized DFT structural relaxations in the three possible Wyckoff arrangements (type-I, II, III) to determine the energetically most stable crystal structure and its equilibrium lattice constant. The calculation must be spin-polarized to correctly identify the ground-state magnetic ordering.",
+    "output_file": "",
+    "evidence": "structure_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "A log file confirming that relaxations were performed for all compounds and structures, used to determine the ground-state structure type and lattice constant for subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Elastic constants and mechanical moduli",
+    "role": "scored",
+    "action": "Using the optimized ground-state structures from step_01, compute the elastic constants c11, c12, c44 (in GPa) via density functional perturbation theory or stress-strain method. Derive the shear modulus G, bulk modulus B, Young's modulus Y, and Poisson's ratio ν using Voigt-Reuss-Hill averaging. Report results for all six CoFeRGa compounds.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object mapping each alloy name to an object with keys c11, c12, c44, G, B, Y, ν (all floats, units GPa for moduli, ν unitless). Must cover all six CoFeRGa alloys.",
+    "output_schema": "{\"CoFeTiGa\": {\"c11\": <float>, \"c12\": <float>, \"c44\": <float>, \"G\": <float>, \"B\": <float>, \"Y\": <float>, \"ν\": <float>}, \"CoFeVGa\": {...}, ...}"
+  },
+  {
+    "id": "step_03",
+    "title": "Dynamical stability (phonon minimum frequency)",
+    "role": "scored",
+    "action": "Calculate the phonon dispersion of each CoFeRGa compound using DFPT or finite-displacement methods on a supercell. Extract the minimum phonon frequency across the Brillouin zone for each alloy. Report the value in THz; a positive value (within small tolerance) indicates dynamical stability.",
+    "output_file": "phonon_min_freq.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object mapping each alloy name to its minimum phonon frequency (in THz). All six alloys must be present.",
+    "output_schema": "{\"CoFeTiGa\": <float>, \"CoFeVGa\": <float>, \"CoFeCrGa\": <float>, \"CoFeMnGa\": <float>, \"CoFeCuGa\": <float>, \"CoFeNbGa\": <float>}"
+  },
+  {
+    "id": "step_04",
+    "title": "Spin-polarized electronic structure and magnetic moments",
+    "role": "scored",
+    "action": "Perform a spin-polarized electronic structure calculation for the ground-state structure of each CoFeRGa compound using a functional that accurately predicts band-edge energetics (e.g., mBJ or HSE06). Extract the total magnetic moment per formula unit (μB/f.u.) and site-resolved atomic magnetic moments for Co, Fe, R, and Ga (μB/atom). Classify the electronic phase (CS, HM, SGS, nearly-HM, metal) based on the band structure. Report the data in a CSV file.",
+    "output_file": "magnetic_moments.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with one row per alloy. Columns: Alloy (str), Type (int, 1 for type-I, 2 for type-II), a (float, lattice constant in Å), M_Co, M_Fe, M_R, M_Ga (all float, magnetic moments in μB/atom), M_tot (float, total magnetic moment in μB/f.u.), Phase (str, one of CS, HM, SGS, nearly-HM, metal). Must include all six alloys and report values for the ground-state ordering.",
+    "output_schema": "Alloy,Type,a,M_Co,M_Fe,M_R,M_Ga,M_tot,Phase"
+  },
+  {
+    "id": "step_05",
+    "title": "Transport properties and spin-Seebeck coefficient",
+    "role": "scored",
+    "action": "Using the spin-resolved band structure from step_04 as input, run BoltzTraP to compute the spin-up Seebeck coefficient (S_up) and spin-down Seebeck coefficient (S_down) at 300 K for each compound. Compute the spin-Seebeck coefficient S_spin = (σ_up·S_up − σ_down·S_down)/(σ_up+σ_down) using the conductivities from BoltzTraP. Report S_up, S_down, and S_spin (in μV/K) for all six alloys in a CSV file.",
+    "output_file": "transport_seebeck_300K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with one row per alloy. Columns: Alloy (str), S_up (float, μV/K), S_down (float, μV/K), S_spin (float, μV/K). The spin-Seebeck coefficient must be computed from the band structure and Boltzmann transport at 300 K. The main claim is that CoFeCrGa exhibits a significantly larger spin-Seebeck coefficient than the other alloys.",
+    "output_schema": "Alloy,S_up,S_down,S_spin"
+  }
+]

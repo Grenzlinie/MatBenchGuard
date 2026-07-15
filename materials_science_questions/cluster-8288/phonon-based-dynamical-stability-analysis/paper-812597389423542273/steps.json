@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Construct TiMoCO2 structure",
+    "role": "process",
+    "action": "Build the TiMoCO2 crystal structure (O(fcc)-Ti-C-Mo-O(hcp), space group P3m1) using atomic coordinates and lattice constants from the paper's Supporting Information (DOI: 10.1039/d0ma00391c).",
+    "output_file": "",
+    "evidence": "structure_constructed.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT structural relaxation (PBE)",
+    "role": "process",
+    "action": "Relax the TiMoCO2 structure using DFT-PBE as implemented in Quantum ESPRESSO, with PseudoDojo norm-conserving pseudopotentials, plane-wave cutoff 100 Ry, sufficient k-point density, dipole correction, and ~15 Å vacuum. Converge forces below 1e-3 eV/Å.",
+    "output_file": "",
+    "evidence": "relaxed_structure.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Phonon dispersion (DFPT)",
+    "role": "process",
+    "action": "Compute the phonon dispersion of the relaxed structure using DFPT in Quantum ESPRESSO with the same pseudopotentials and cutoff. Use a k/q-point mesh consistent with convergence requirements.",
+    "output_file": "",
+    "evidence": "phonon_frequencies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "PBE band structure for Wannierization",
+    "role": "process",
+    "action": "Perform a PBE band structure calculation on a dense k-point mesh (suitable for Wannierization and electron-phonon coupling) using Quantum ESPRESSO.",
+    "output_file": "",
+    "evidence": "pbe_bands.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Wannierization and EPW transport",
+    "role": "process",
+    "action": "Generate maximally localized Wannier functions and compute electron-phonon matrix elements using EPW. Within EPW, evaluate relaxation times and band velocities using the SERTA method to produce transport spectral quantities required for mobility and thermoelectric properties.",
+    "output_file": "",
+    "evidence": "epw_output/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "HSE06 electronic structure and optics",
+    "role": "process",
+    "action": "Using the relaxed structure, perform a HSE06 hybrid functional calculation to obtain the electronic band structure (band gap) and the frequency-dependent dielectric function. Use sufficient k-point sampling and include dipole correction.",
+    "output_file": "",
+    "evidence": "hse06_epsilon.dat",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Extract and report all key properties",
+    "role": "scored",
+    "action": "From the raw outputs of previous steps, compute: (1) band gap (eV) from HSE06 band structure; (2) phonon stability (boolean, true if no imaginary frequencies beyond a small tolerance) from phonon frequencies; (3) room-temperature hole and electron mobilities (cm²/V/s) from EPW SERTA results; (4) peak n-type and p-type power factors (μW/cm/K²) and optimal doping concentrations (cm⁻³) by applying rigid-band approximation and solving Boltzmann transport using EPW data, assuming an effective monolayer thickness of 7.2 Å; (5) maximum short-circuit current (mA/cm²) by integrating the optical absorption coefficient (derived from HSE06 dielectric function) with the AM1.5G solar spectrum. Write all results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregated output containing the main reproduction targets.",
+    "output_schema": "{\n  \"band_gap\": float (eV),\n  \"phonon_stable\": bool,\n  \"hole_mobility\": float (cm2/V/s),\n  \"electron_mobility\": float (cm2/V/s),\n  \"n_type_power_factor\": float (muW/cm/K2),\n  \"p_type_power_factor\": float (muW/cm/K2),\n  \"n_opt_doping\": float (cm-3),\n  \"p_opt_doping\": float (cm-3),\n  \"max_short_circuit_current\": float (mA/cm2)\n}"
+  }
+]

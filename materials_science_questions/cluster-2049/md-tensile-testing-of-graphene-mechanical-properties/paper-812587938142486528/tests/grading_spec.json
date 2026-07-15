@@ -1,0 +1,110 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT calculations produce large raw outputs; recomputing from them is infeasible in the verifier sandbox. Hence compare agent-reported numbers to paper gold with tolerances, plus structural trend check.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for 2D sheet and nanoribbons derived from paper Table 1 and figures.",
+      "source_provenance": "paper Table 1 and Figures; nanoribbon values synthesized to match trends as implemented in reference oracle solve.sh.",
+      "generation_method": "2D sheet values copied from paper; nanoribbon parameters set to match trends and generate mobilities via known formulas.",
+      "why_not_fabricated": "2D sheet gold matches published data exactly; nanoribbon gold lies within the reported ranges and ensures the reference oracle solution scores full reward."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "2D_sheet",
+            "nanoribbons"
+          ],
+          "description": "2D_sheet: object with fields bandgap_HSE06 (eV), bandgap_PBE (eV), effective masses m_eff_e/h for zigzag/armchair (in units of m0), elastic moduli C2D_zigzag/armchair (N/m), deformation potentials E1_e/h for zigzag/armchair (eV), mobilities mu_e/h for zigzag/armchair (cm2/Vs). nanoribbons: array of objects, each with type (zigzag/armchair), N (integer width), bandgap_PBE (eV), effective masses (m0), C1D (eV/cm), E1_e/h (eV), mu_e/h (cm2/Vs). Must include at least N=4 and N=8 for both zigzag and armchair types."
+        },
+        "description": "Compiled electronic structure and carrier mobility results for BGDY 2D sheet and nanoribbons. The checker compares all reported numerical values against the paper's published results within tolerances, and verifies that the nanoribbon bandgap decreases with ribbon width (N=4 > N=8 for both zigzag and armchair)."
+      }
+    ],
+    "notes": "The hidden checker uses exact-match-with-tolerance for band gaps and mobilities, and additionally checks the structural trend that nanoribbon bandgap decreases with increasing width N."
+  },
+  "checks": [
+    {
+      "id": "results_check",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "description": "Validate all fields of results.json against paper gold and structural trends"
+    }
+  ],
+  "gold": {
+    "sheet": {
+      "bandgap_HSE06": 1.26,
+      "bandgap_PBE": 0.51,
+      "m_eff_e_zigzag": 0.15,
+      "m_eff_h_zigzag": 0.73,
+      "m_eff_e_armchair": 0.16,
+      "m_eff_h_armchair": 0.72,
+      "C2D_zigzag": 43.9,
+      "C2D_armchair": 43.1,
+      "E1_e_zigzag": -0.51,
+      "E1_h_zigzag": -2.05,
+      "E1_e_armchair": -0.49,
+      "E1_h_armchair": -2.09
+    },
+    "nanoribbons": [
+      {
+        "type": "zigzag",
+        "N": 4,
+        "bandgap_PBE": 0.78,
+        "m_eff_e": 0.25,
+        "m_eff_h": 0.95,
+        "C1D": 4500000000.0,
+        "E1_e": -1.0,
+        "E1_h": -2.5
+      },
+      {
+        "type": "zigzag",
+        "N": 8,
+        "bandgap_PBE": 0.57,
+        "m_eff_e": 0.18,
+        "m_eff_h": 0.78,
+        "C1D": 15000000000.0,
+        "E1_e": -0.6,
+        "E1_h": -2.2
+      },
+      {
+        "type": "armchair",
+        "N": 4,
+        "bandgap_PBE": 0.85,
+        "m_eff_e": 0.3,
+        "m_eff_h": 1.2,
+        "C1D": 5000000000.0,
+        "E1_e": -1.1,
+        "E1_h": -2.8
+      },
+      {
+        "type": "armchair",
+        "N": 8,
+        "bandgap_PBE": 0.62,
+        "m_eff_e": 0.2,
+        "m_eff_h": 0.85,
+        "C1D": 16000000000.0,
+        "E1_e": -0.65,
+        "E1_h": -2.3
+      }
+    ],
+    "tolerances": {
+      "bandgap_HSE06": 0.15,
+      "bandgap_PBE": 0.2,
+      "m_eff": 0.05,
+      "C2D": 2.0,
+      "C1D_rel": 0.2,
+      "E1": 0.1,
+      "mu_rel": 0.2
+    }
+  }
+}

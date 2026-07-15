@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Deterministic compute; the agent reports the derived formula and four computed coefficients. A full recompute from raw artifacts is not needed because the computation is trivial and the reported values can be compared directly to the paper's theoretical results with appropriate tolerances.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported theoretical temperature coefficients for quartz and calcite at Hα, and the derived formula.",
+      "source_provenance": "Paper Section 3: 'Temperaturabhängigkeit der Brechungsverhältnisse...' where the authors state dλ/λ = -1.12e-4 for quartz and -6.4e-5 for calcite, and absolute shifts 0.74 Å/deg and 0.42 Å/deg. The formula is given as d(ln λ′)/dT = d(ln d)/dT + d(ln Δn)/dT.",
+      "generation_method": "Extracted verbatim from the paper text.",
+      "why_not_fabricated": "These are the actual theoretical results reported in the paper; they serve as the authoritative hidden gold."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "derived_formula",
+            "quartz_relative_coefficient",
+            "calcite_relative_coefficient",
+            "quartz_absolute_shift_A_per_deg",
+            "calcite_absolute_shift_A_per_deg"
+          ],
+          "properties": {
+            "derived_formula": {
+              "type": "string"
+            },
+            "quartz_relative_coefficient": {
+              "type": "number"
+            },
+            "calcite_relative_coefficient": {
+              "type": "number"
+            },
+            "quartz_absolute_shift_A_per_deg": {
+              "type": "number"
+            },
+            "calcite_absolute_shift_A_per_deg": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Derived formula and numerical temperature coefficients for quartz and calcite at 6563 Å. The numeric values are compared to the paper-reported theoretical values with appropriate tolerances; the formula is checked for structural correctness."
+      }
+    ],
+    "notes": "All material constants are provided explicitly in the instruction, so this is a self-contained computation."
+  },
+  "steps": [
+    {
+      "id": "struct_formula",
+      "output_file": "results.json",
+      "kind": "structural_string",
+      "weight": 0.2,
+      "required_substrings": [
+        "d(ln d)/dT",
+        "d(ln Δn)/dT"
+      ]
+    },
+    {
+      "id": "num_quartz_rel",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "quartz_relative_coefficient",
+      "target": -0.000112,
+      "tolerance": 2e-06,
+      "weight": 0.2
+    },
+    {
+      "id": "num_calcite_rel",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "calcite_relative_coefficient",
+      "target": -6.4e-05,
+      "tolerance": 2e-06,
+      "weight": 0.2
+    },
+    {
+      "id": "num_quartz_abs",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "quartz_absolute_shift_A_per_deg",
+      "target": -0.74,
+      "tolerance": 0.05,
+      "weight": 0.2
+    },
+    {
+      "id": "num_calcite_abs",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "calcite_absolute_shift_A_per_deg",
+      "target": -0.42,
+      "tolerance": 0.05,
+      "weight": 0.2
+    }
+  ]
+}

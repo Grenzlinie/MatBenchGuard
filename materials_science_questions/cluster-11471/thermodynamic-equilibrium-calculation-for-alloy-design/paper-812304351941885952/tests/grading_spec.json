@@ -1,0 +1,280 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes the thermodynamic formulas and compares the agent's reported values to the paper's exact reported numbers with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "table2_results.csv": "exact_match",
+    "table3_results.csv": "exact_match",
+    "table5_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported gold values for each output file",
+      "source_provenance": "paper Tables 2, 3, and 5",
+      "generation_method": "extracted directly from the paper's tables as reported",
+      "why_not_fabricated": "these are the paper's own published numeric results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "table2_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "zone",
+            "temperature_C",
+            "boundary_Cb",
+            "A_C",
+            "C_b"
+          ],
+          "units": {
+            "temperature_C": "degree Celsius",
+            "boundary_Cb": "percent",
+            "A_C": "dimensionless",
+            "C_b": "percent"
+          }
+        },
+        "description": "Reproduce the computed carbon black deposition boundary (at A_C=1) and the actual carbon activity and potential for each of the three furnace zones."
+      },
+      {
+        "file": "table3_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "steel",
+            "regime",
+            "C_surf",
+            "C_a",
+            "f"
+          ],
+          "units": {
+            "C_surf": "percent",
+            "C_a": "percent",
+            "f": "dimensionless"
+          }
+        },
+        "description": "Reproduce the computed surface carbon concentrations for unalloyed (C_surf) and alloyed (C_a) steels under the actual and calculated cyaniding regimes, together with the alloying coefficient f."
+      },
+      {
+        "file": "table5_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "atmosphere",
+              "CO",
+              "CO2",
+              "CH4",
+              "H2",
+              "H2O",
+              "N2",
+              "A_C",
+              "C_b",
+              "t_d"
+            ],
+            "units": {
+              "CO": "percent",
+              "CO2": "percent",
+              "CH4": "percent",
+              "H2": "percent",
+              "H2O": "percent",
+              "N2": "percent",
+              "A_C": "dimensionless",
+              "C_b": "percent",
+              "t_d": "degree Celsius"
+            }
+          }
+        },
+        "description": "Reproduce six optimum equilibrium atmosphere compositions that yield a carbon potential between 0.75% and 0.94% at 820°C, together with their carbon activity, carbon potential, and dew point."
+      }
+    ],
+    "notes": "The hidden checker recomputes the required quantities from the public inputs using the same thermodynamic formulas and diffusion equations, and compares the agent's reported values to the paper's reported results within appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "check_table2",
+      "output_file": "table2_results.csv",
+      "weight": 0.25,
+      "kind": "numeric",
+      "gold": {
+        "rows": [
+          {
+            "zone": 1,
+            "temperature_C": 810,
+            "boundary_Cb": 0.91,
+            "A_C": 0.77,
+            "C_b": 0.73
+          },
+          {
+            "zone": 2,
+            "temperature_C": 830,
+            "boundary_Cb": 0.97,
+            "A_C": 0.79,
+            "C_b": 0.8
+          },
+          {
+            "zone": 3,
+            "temperature_C": 820,
+            "boundary_Cb": 0.94,
+            "A_C": 1.58,
+            "C_b": 1.35
+          }
+        ]
+      },
+      "tolerances": {
+        "temperature_C": 0.01,
+        "boundary_Cb": 0.01,
+        "A_C": 0.01,
+        "C_b": 0.01
+      }
+    },
+    {
+      "id": "check_table3",
+      "output_file": "table3_results.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "gold": {
+        "rows": [
+          {
+            "steel": "35G2",
+            "regime": "Actual",
+            "C_surf": 0.97,
+            "C_a": 1.0,
+            "f": 0.97
+          },
+          {
+            "steel": "08kp",
+            "regime": "Actual",
+            "C_surf": 0.908,
+            "C_a": 0.916,
+            "f": 0.99
+          },
+          {
+            "steel": "35G2",
+            "regime": "Calculated",
+            "C_surf": 0.893,
+            "C_a": 0.924,
+            "f": 0.97
+          },
+          {
+            "steel": "08kp",
+            "regime": "Calculated",
+            "C_surf": 0.945,
+            "C_a": 0.95,
+            "f": 0.99
+          }
+        ]
+      },
+      "tolerances": {
+        "C_surf": 0.002,
+        "C_a": 0.002,
+        "f": 0.01
+      }
+    },
+    {
+      "id": "check_table5",
+      "output_file": "table5_results.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "gold": {
+        "entries": [
+          {
+            "atmosphere": 1,
+            "CO": 17.05,
+            "CO2": 0.371,
+            "CH4": 0.1,
+            "H2": 18.04,
+            "H2O": 0.403,
+            "N2": 64.08,
+            "A_C": 0.76,
+            "C_b": 0.75,
+            "t_d": -5.3
+          },
+          {
+            "atmosphere": 2,
+            "CO": 18.02,
+            "CO2": 0.403,
+            "CH4": 0.1,
+            "H2": 17.99,
+            "H2O": 0.413,
+            "N2": 63.08,
+            "A_C": 0.77,
+            "C_b": 0.766,
+            "t_d": -5.1
+          },
+          {
+            "atmosphere": 3,
+            "CO": 17.96,
+            "CO2": 0.324,
+            "CH4": 0.12,
+            "H2": 18.07,
+            "H2O": 0.335,
+            "N2": 63.2,
+            "A_C": 0.961,
+            "C_b": 0.91,
+            "t_d": -7.9
+          },
+          {
+            "atmosphere": 4,
+            "CO": 18.61,
+            "CO2": 0.358,
+            "CH4": 0.118,
+            "H2": 18.16,
+            "H2O": 0.359,
+            "N2": 63.5,
+            "A_C": 0.93,
+            "C_b": 0.89,
+            "t_d": -6.9
+          },
+          {
+            "atmosphere": 5,
+            "CO": 17.16,
+            "CO2": 0.297,
+            "CH4": 0.12,
+            "H2": 18.11,
+            "H2O": 0.322,
+            "N2": 64.1,
+            "A_C": 0.96,
+            "C_b": 0.91,
+            "t_d": -8.4
+          },
+          {
+            "atmosphere": 6,
+            "CO": 17.97,
+            "CO2": 0.314,
+            "CH4": 0.122,
+            "H2": 17.96,
+            "H2O": 0.323,
+            "N2": 63.285,
+            "A_C": 0.99,
+            "C_b": 0.94,
+            "t_d": -8.4
+          }
+        ]
+      },
+      "tolerances": {
+        "CO": 0.01,
+        "CO2": 0.001,
+        "CH4": 0.001,
+        "H2": 0.01,
+        "H2O": 0.001,
+        "N2": 0.01,
+        "A_C": 0.005,
+        "C_b": 0.005,
+        "t_d": 0.2
+      }
+    }
+  ]
+}

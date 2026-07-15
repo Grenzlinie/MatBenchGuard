@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate alloy crystal structures",
+    "role": "process",
+    "action": "For each Co concentration x in {0.0, 0.3, 0.5, 0.8, 1.0}, linearly interpolate the experimental lattice parameters a, c and internal coordinate u between the end compounds Fe2B and Co2B to construct structural models of (Fe1-xCox)2B in the I4/mcm structure. Approximate random disorder, for example using virtual crystal approximation or special quasirandom structures.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Structural model preparation required for DFT input.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Self-consistent DFT calculations without spin-orbit coupling",
+    "role": "process",
+    "action": "For each alloy structure, perform a spin-polarized DFT self-consistent field calculation using the GGA (PBE) functional and a dense Monkhorst-Pack k-point mesh to obtain the ground-state charge density and magnetization. Do not include spin-orbit coupling in this stage.",
+    "output_file": "",
+    "evidence": "scf_logs/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "SCF calculations without SOC; the charge density will be used in later K calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Compute magnetocrystalline anisotropy energy K(x)",
+    "role": "scored",
+    "action": "For each Co concentration, using the charge density from the previous step as a fixed starting point, compute the magnetocrystalline anisotropy energy K as the single-particle energy difference between magnetization along [100] (or [010]) and along [001] directions, including spin-orbit coupling perturbatively.",
+    "output_file": "K_vs_x.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "K values for the concentration series (x=0.0, 0.3, 0.5, 0.8, 1.0), in meV per formula unit.",
+    "output_schema": "columns: x (float, cobalt fraction), K_meV_per_fu (float, MCA energy in meV/f.u.)"
+  },
+  {
+    "id": "step4",
+    "title": "Compute K vs. tetragonal strain at x=0.3",
+    "role": "scored",
+    "action": "For x=0.3, apply volume-conserving tetragonal distortions to vary the c/a ratio by -3%, 0%, +3% (three structures). For each distortion, recompute the SCF charge density without spin-orbit coupling, then compute K as in the previous step.",
+    "output_file": "K_vs_strain_x03.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "K values as function of tetragonal distortion at x=0.3.",
+    "output_schema": "columns: c_over_a (float, tetragonal ratio), K_meV_per_fu (float, MCA energy in meV/f.u.)"
+  }
+]

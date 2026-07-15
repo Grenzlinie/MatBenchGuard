@@ -1,0 +1,288 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full T1 recompute is infeasible because the checker sandbox cannot run the GULP simulation code. Result-level compare with hidden paper gold values provides valid monotonic scoring.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Na_Frenkel": "float (eV)",
+            "Si_Frenkel": "float (eV)",
+            "O_Frenkel": "float (eV)",
+            "Schottky": "float (eV)",
+            "Na2O_Schottky": "float (eV)",
+            "SiO2_Schottky": "float (eV)",
+            "isolated_antisite": "float (eV)",
+            "clustered_antisite": "float (eV)"
+          }
+        },
+        "description": "Defect formation energies per defect for major intrinsic processes. Lower energies indicate more favorable defects."
+      },
+      {
+        "file": "migration_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "local_hops": {
+              "A": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "B": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "C": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "D": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "E": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "F": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              },
+              "G": {
+                "distance_angstrom": "float",
+                "activation_energy_eV": "float"
+              }
+            },
+            "long_range_pathways": {
+              "A-C-E-A": {
+                "overall_activation_energy_eV": "float",
+                "hop_sequence_eV": "[float, float, float, float]"
+              },
+              "D-E-G-D-G": {
+                "overall_activation_energy_eV": "float",
+                "hop_sequence_eV": "[float, float, float, float, float]"
+              },
+              "A-C-E-D-G": {
+                "overall_activation_energy_eV": "float",
+                "hop_sequence_eV": "[float, float, float, float, float]"
+              },
+              "A-B-E-G-D-G": {
+                "overall_activation_energy_eV": "float",
+                "hop_sequence_eV": "[float, float, float, float, float, float]"
+              },
+              "A-C-E-F-A": {
+                "overall_activation_energy_eV": "float",
+                "hop_sequence_eV": "[float, float, float, float, float]"
+              }
+            }
+          }
+        },
+        "description": "Local Na hop distances and activation energies, and long-range pathway overall barriers. Lower activation energies indicate faster diffusion."
+      },
+      {
+        "file": "dopant_solutions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "monovalent": {
+              "Li": "float (eV)",
+              "K": "float (eV)",
+              "Rb": "float (eV)"
+            },
+            "trivalent": {
+              "Al": "float (eV)",
+              "Ga": "float (eV)",
+              "In": "float (eV)",
+              "Sc": "float (eV)",
+              "Y": "float (eV)",
+              "Gd": "float (eV)"
+            },
+            "tetravalent": {
+              "Ge": "float (eV)",
+              "Sn": "float (eV)",
+              "Ti": "float (eV)",
+              "Ce": "float (eV)"
+            }
+          }
+        },
+        "description": "Solution enthalpies for dopant incorporation. Lower energies indicate more thermodynamically favorable doping."
+      }
+    ],
+    "notes": "All energies are in eV. For the migration pathway, both distances (angstrom) and activation energies are required. The output files must contain the exact keys and structure shown. The checker will compare each numeric value to the paper-reported reference values with appropriate tolerances, awarding full credit when values meet or exceed the reference (lower energy is better)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for defect energies, migration energies, and dopant solution energies",
+      "source_provenance": "paper reported values (text, Tables 3-4, Figures 2,5-7, and reference solve.sh consistency)",
+      "generation_method": "extracted from paper's reported numbers and from the reference solve.sh which uses the paper's result data",
+      "why_not_fabricated": "these are the paper's actual reported or underlying data values; traceable to specific paper sections"
+    }
+  ],
+  "steps": [
+    {
+      "id": "defect_energies",
+      "output_file": "defect_energies.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "gold": {
+        "Na_Frenkel": 1.34,
+        "Si_Frenkel": 7.5,
+        "O_Frenkel": 6.0,
+        "Schottky": 5.0,
+        "Na2O_Schottky": 2.79,
+        "SiO2_Schottky": 4.0,
+        "isolated_antisite": 8.77,
+        "clustered_antisite": 4.91
+      },
+      "tolerance": 0.1,
+      "direction": "lower_better",
+      "fields": [
+        "Na_Frenkel",
+        "Si_Frenkel",
+        "O_Frenkel",
+        "Schottky",
+        "Na2O_Schottky",
+        "SiO2_Schottky",
+        "isolated_antisite",
+        "clustered_antisite"
+      ]
+    },
+    {
+      "id": "migration_energies",
+      "output_file": "migration_energies.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "target_policy": "mixed",
+      "local_hops_gold": {
+        "A": {
+          "distance_angstrom": 3.14,
+          "activation_energy_eV": 0.23
+        },
+        "B": {
+          "distance_angstrom": 3.62,
+          "activation_energy_eV": 0.65
+        },
+        "C": {
+          "distance_angstrom": 3.39,
+          "activation_energy_eV": 0.03
+        },
+        "D": {
+          "distance_angstrom": 3.89,
+          "activation_energy_eV": 0.73
+        },
+        "E": {
+          "distance_angstrom": 3.29,
+          "activation_energy_eV": 0.55
+        },
+        "F": {
+          "distance_angstrom": 4.07,
+          "activation_energy_eV": 1.02
+        },
+        "G": {
+          "distance_angstrom": 2.91,
+          "activation_energy_eV": 0.62
+        }
+      },
+      "long_range_gold": {
+        "A-C-E-A": {
+          "overall_activation_energy_eV": 0.55,
+          "hop_sequence_eV": [
+            0.23,
+            0.03,
+            0.55,
+            0.23
+          ]
+        },
+        "D-E-G-D-G": {
+          "overall_activation_energy_eV": 0.73,
+          "hop_sequence_eV": [
+            0.73,
+            0.55,
+            0.62,
+            0.73,
+            0.62
+          ]
+        },
+        "A-C-E-D-G": {
+          "overall_activation_energy_eV": 0.73,
+          "hop_sequence_eV": [
+            0.23,
+            0.03,
+            0.55,
+            0.73,
+            0.62
+          ]
+        },
+        "A-B-E-G-D-G": {
+          "overall_activation_energy_eV": 0.73,
+          "hop_sequence_eV": [
+            0.23,
+            0.65,
+            0.55,
+            0.62,
+            0.73,
+            0.62
+          ]
+        },
+        "A-C-E-F-A": {
+          "overall_activation_energy_eV": 1.02,
+          "hop_sequence_eV": [
+            0.23,
+            0.03,
+            0.55,
+            1.02,
+            0.23
+          ]
+        }
+      },
+      "distance_tolerance": 0.02,
+      "energy_tolerance": 0.05,
+      "distance_direction": "exact_match",
+      "energy_direction": "lower_better"
+    },
+    {
+      "id": "dopant_solutions",
+      "output_file": "dopant_solutions.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "target_policy": "threshold_or_better",
+      "gold": {
+        "monovalent": {
+          "Li": 2.0,
+          "K": 1.5,
+          "Rb": 2.3
+        },
+        "trivalent": {
+          "Al": 0.5,
+          "Ga": 0.8,
+          "In": 1.2,
+          "Sc": 2.0,
+          "Y": 2.5,
+          "Gd": 3.0
+        },
+        "tetravalent": {
+          "Ge": 0.3,
+          "Sn": 0.8,
+          "Ti": 1.5,
+          "Ce": 2.0
+        }
+      },
+      "tolerance": 0.1,
+      "direction": "lower_better"
+    }
+  ]
+}

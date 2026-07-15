@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact dose values depend on Monte Carlo code and parameters; only structural trends and thresholds are checkable.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "depth_dose_profiles.csv": "structural_audit",
+    "transmission_fractions.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "depth_dose_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "voltage_keV",
+            "depth_um",
+            "dose_per_electron"
+          ],
+          "units": {
+            "voltage_keV": "keV",
+            "depth_um": "μm",
+            "dose_per_electron": "keV or MeV per primary electron"
+          }
+        },
+        "description": "Per-electron depth-dose profiles for soft EB (150-190 keV) and ultra-low EB (40-110 keV) at 10 μm depth intervals in FEP. Checked by structural properties: monotonic decrease with depth for soft EB, energy-dependent shift, near-surface peak for ultra-low EB, and consistent units."
+      },
+      {
+        "file": "transmission_fractions.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "40",
+            "60",
+            "110"
+          ],
+          "items": {
+            "40": "float (0-1)",
+            "60": "float (0-1)",
+            "110": "float (0-1)"
+          }
+        },
+        "description": "Transmitted electron fractions through 25 μm FEP for 40, 60, and 110 keV. Checked against threshold ranges: 40 keV fraction < 0.05, 60 keV fraction between 0.05 and 0.5 inclusive, 110 keV fraction > 0.5."
+      }
+    ],
+    "notes": "The checker validates structural trends and threshold constraints, not exact numeric matches to paper values. No absolute gold numbers are required."
+  },
+  "steps": [
+    {
+      "id": "step_depth_dose",
+      "output_file": "depth_dose_profiles.csv",
+      "file_format": "csv",
+      "weight": 0.75,
+      "kind": "structural_audit",
+      "description": "Check structural trends in depth-dose profiles",
+      "params": {}
+    },
+    {
+      "id": "step_transmission",
+      "output_file": "transmission_fractions.json",
+      "file_format": "json",
+      "weight": 0.25,
+      "kind": "structural_audit",
+      "description": "Check transmission fraction thresholds",
+      "params": {
+        "thresholds": {
+          "40": {
+            "max": 0.05
+          },
+          "60": {
+            "min": 0.05,
+            "max": 0.5
+          },
+          "110": {
+            "min": 0.5
+          }
+        }
+      }
+    }
+  ]
+}

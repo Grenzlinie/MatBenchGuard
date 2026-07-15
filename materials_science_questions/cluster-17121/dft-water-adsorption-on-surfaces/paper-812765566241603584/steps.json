@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1_prepare_oh",
+    "title": "Prepare Pt(111) slab and 2/3 ML OH reference phase",
+    "role": "process",
+    "action": "Construct a three-layer Pt(111) slab with a √3×√3-R30° unit cell using a lattice constant of 3.9711 Å. Freeze the metal atoms. Place two OH groups per cell at top sites in a zigzag configuration to form the high-coverage OH network. Optimize the geometry with plane-wave DFT using the PW91 GGA functional and ultrasoft pseudopotentials, with a plane-wave kinetic energy cutoff of 300 eV, a 5×5×1 k‑point mesh, Fermi smearing of 0.1 eV, and vacuum >11 Å. Save the optimized geometry as the pure 2/3 ML OH phase.",
+    "output_file": "",
+    "evidence": "oh_sqrt3_optimized.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtains the starting structure for the coadsorption study. This geometry is required for the subsequent H addition steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2_coadsorption_search",
+    "title": "OH+H coadsorption and structure search",
+    "role": "process",
+    "action": "Starting from the optimized 2/3 ML OH phase, add one H atom at each of the nine plausible adsorption sites suggested in the paper (e.g., top sites on bare Pt, bridging positions near OH). Perform full geometry relaxation for each initial placement using the same DFT settings. From the converged structures, identify the two distinct minima: structure (b) where the added H remains on a top site of the Pt not bound to OH, and structure (c) where the H is incorporated into the OH network, converting one OH into H2O (mixed OH+H2O phase). Save the optimized geometries of both minima.",
+    "output_file": "",
+    "evidence": "structure_b.xyz, structure_c.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reproduces the heart of the paper's argument: two competing structures emerge, and their relative energies determine the identity of the intermediate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01",
+    "title": "Compute ΔE between structures (b) and (c)",
+    "role": "scored",
+    "action": "Extract the total energies of structure (b) and structure (c) from the DFT output. Compute ΔE = E(b) – E(c). Write a JSON file containing both absolute energies and the energy difference.",
+    "output_file": "step_01_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The energy difference is the primary quantitative evidence for the mixed intermediate.",
+    "output_schema": "{\"structure_b_total_energy\": float (eV), \"structure_c_total_energy\": float (eV), \"delta_E\": float (eV)}"
+  },
+  {
+    "id": "step_3_vibrational_calc",
+    "title": "Vibrational analysis of mixed OH+H2O phase (c)",
+    "role": "process",
+    "action": "Take the optimized geometry of structure (c). Perform a numerical finite-difference vibrational calculation: displace each relevant atom by ±δ (e.g., 0.01 Å), compute forces, and construct the dynamical matrix. Diagonalize to obtain normal-mode frequencies. Include only the atoms of the adsorbed species (OH and H2O fragments); keep the Pt slab fixed. Use the same DFT parameters as before.",
+    "output_file": "",
+    "evidence": "vibrations_raw.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Computes the vibrational spectrum from first principles.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Report key vibrational frequencies",
+    "role": "scored",
+    "action": "From the computed spectrum, identify the normal modes corresponding to: OH stretch (ν(OH)), three OH bending modes (δ1–δ3), Pt–OH stretch (ν(Pt–OH)), and two translational modes (T∥ and T⊥). Report the frequency (cm⁻¹) and an assignment for each. Write the results as a JSON array.",
+    "output_file": "step_02_vibrations.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The vibrational fingerprint provides independent confirmation of the mixed phase model.",
+    "output_schema": "[{\"mode\": \"ν(OH)\", \"frequency\": float, \"assignment\": \"OH stretch\"}, {\"mode\": \"δ1(OH)\", \"frequency\": float, \"assignment\": \"bending mode 1\"}, {\"mode\": \"δ2(OH)\", \"frequency\": float, \"assignment\": \"bending mode 2\"}, {\"mode\": \"δ3(OH)\", \"frequency\": float, \"assignment\": \"bending mode 3\"}, {\"mode\": \"ν(Pt–OH)\", \"frequency\": float, \"assignment\": \"Pt-OH stretch\"}, {\"mode\": \"T∥(Pt–OH)\", \"frequency\": float, \"assignment\": \"translational parallel\"}, {\"mode\": \"T⊥(Pt–OH)\", \"frequency\": float, \"assignment\": \"translational perpendicular\"}]"
+  }
+]

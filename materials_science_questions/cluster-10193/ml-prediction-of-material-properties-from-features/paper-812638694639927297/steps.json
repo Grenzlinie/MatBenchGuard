@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step1",
+    "title": "Adaptive training set design",
+    "role": "process",
+    "action": "Implement the adaptive training set design algorithm for the 1D test function y = 1/(x*(1+exp(-150*(x-0.5)))) on x in [0.001,1]. Start with 4 evenly spaced initial points (e.g., 0.001, 0.333..., 0.666..., 1.0) and evaluate y. Iteratively: (i) train an ExtraTrees regressor with 200 trees, leaf size 1, training fraction 0.7, splitting variables = 1, using bootstrapping; (ii) compute OOB MSE and permutation importance; (iii) select directions with importance > 0.2 (for 1D this is the only direction); (iv) compute discrete derivatives between consecutive training points and add midpoints of intervals where max absolute derivative > 0.5; (v) evaluate y at new points and append to training set; (vi) recompute ExtraTrees and compute normalized OOB (OOB/OOB^(1)) and RAD (relative approximation difference between current and previous iteration evaluated on newly added points). Terminate when normalized OOB < 0.014 and RAD < 0.01. Save the final training set (x and y values) as a CSV file.",
+    "output_file": "",
+    "evidence": "final_training_set.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Run the complete adaptive design loop to produce a curated training set for the 1D function.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Benchmark evaluation",
+    "role": "scored",
+    "action": "Generate a benchmark set of 1000 random points uniformly distributed in [0.001,1]. Compute the true function values y = 1/(x*(1+exp(-150*(x-0.5)))). Use the final ExtraTrees model trained in the adaptive procedure to predict y for these points. Calculate the average relative error (mean of |y_true - y_pred|/|y_true|) and the maximum relative error (max of the same). Also record the size of the final training set (number of points). Write these three numbers to a JSON file.",
+    "output_file": "benchmark_errors.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Assess the accuracy of the surrogate on a 1000-point random benchmark set. The errors and training set size are the main quantitative claims of the 1D showcase.",
+    "output_schema": "{\"average_relative_error\": \"float\", \"max_relative_error\": \"float\", \"training_set_size\": \"int\"}"
+  }
+]

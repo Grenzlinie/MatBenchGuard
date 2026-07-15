@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_binary_epm",
+    "title": "Compute binary band gaps for MgS and ZnS",
+    "role": "scored",
+    "action": "Implement the empirical pseudopotential method (EPM) for a zinc-blende crystal using the given symmetric and antisymmetric form factors and lattice constants for MgS and ZnS. Set up the Hamiltonian in reciprocal space, solve the secular equation at high-symmetry points Γ, X, L, and extract the band-gap energies: E_g^Γ (Γ→Γ), E_g^X (Γ→X), and E_g^L (Γ→L). Write the results.",
+    "output_file": "binary_band_gaps.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'MgS' and 'ZnS', each containing keys 'Eg_Gamma', 'Eg_X', 'Eg_L' (floats in eV) for the binary compound band gaps.",
+    "output_schema": "{\"MgS\": {\"Eg_Gamma\": float, \"Eg_X\": float, \"Eg_L\": float}, \"ZnS\": {\"Eg_Gamma\": float, \"Eg_X\": float, \"Eg_L\": float}}"
+  },
+  {
+    "id": "step_02_ternary_vca",
+    "title": "Compute ternary alloy form factors via VCA",
+    "role": "process",
+    "action": "For each composition x in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], compute symmetric and antisymmetric form factors for Mg_xZn_{1-x}S using the virtual crystal approximation: V(x) = x * V(MgS) + (1-x) * V(ZnS). Also compute the lattice constant using linear interpolation (Vegard's law).",
+    "output_file": "",
+    "evidence": "vca_interpolation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_ternary_bands",
+    "title": "Compute ternary alloy band gaps",
+    "role": "scored",
+    "action": "Using the interpolated form factors and lattice constant for each x from the previous step, perform EPM band structure calculations for the ternary alloys. Extract the direct band gap E_g^Γ, indirect gaps E_g^X and E_g^L, and the antisymmetric gap (energy difference between the first and second valence bands at the X point). Write the results.",
+    "output_file": "ternary_band_gaps.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: x, Eg_Gamma, Eg_X, Eg_L, antisymmetric_gap. Rows for x values from 0.0 to 1.0 in steps of 0.1.",
+    "output_schema": "columns: x (float), Eg_Gamma (float eV), Eg_X (float eV), Eg_L (float eV), antisymmetric_gap (float eV)"
+  },
+  {
+    "id": "step_04_optical",
+    "title": "Compute refractive index and reflection coefficient",
+    "role": "scored",
+    "action": "For each composition x, compute the refractive index n using the Moss model (n^4 = 1 + A/(E_g + B)^2 with A = 25*E_g + 212, B = 0.21*E_g + 4.25) and the Ghosh model (n^4 = 1 + (25*E_g + 212)/(E_g + 4.25)^2). Then compute the normal-incidence reflection coefficient R = ((n-1)^2)/((n+1)^2) for each model. Use the direct band gap E_g^Γ from the ternary band gaps file.",
+    "output_file": "optical_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with columns: x, n_Moss, n_Ghosh, R_Moss, R_Ghosh. Rows for the same composition x values as the ternary band gaps.",
+    "output_schema": "columns: x (float), n_Moss (float), n_Ghosh (float), R_Moss (float), R_Ghosh (float)"
+  }
+]

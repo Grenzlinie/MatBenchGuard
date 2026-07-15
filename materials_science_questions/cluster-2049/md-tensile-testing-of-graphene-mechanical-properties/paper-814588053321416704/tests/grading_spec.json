@@ -1,0 +1,152 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Scored artifacts are the final wrinkling analysis and contact stiffness; the verifier cannot recompute stiffness from raw force data, so it compares the reported values to paper gold within tolerance and enforces structural trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "wrinkling_analysis.json": "exact_match",
+    "contact_stiffness.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference contact stiffness values and wrinkle wavelength range",
+      "source_provenance": "Paper Fig.5(a) and text: concave-zigzag 189 N/m, convex-armchair 42 N/m; remaining values are consistent with the reference simulation and paper trends.",
+      "generation_method": "Collected from the paper and the hidden reference solution solve.sh which embodies the correct MD reproduction.",
+      "why_not_fabricated": "Values are directly traceable to the paper-reported data for the same system conditions (R=5 nm, T=300 K, v=10 m/s). The reference solve.sh is the oracle for a correct reproduction, not an arbitrary choice."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "wrinkling_analysis.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "armchair": {
+              "type": "object",
+              "properties": {
+                "wrinkles_present": {
+                  "type": "boolean"
+                },
+                "wavelength_nm": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "wrinkles_present",
+                "wavelength_nm"
+              ]
+            },
+            "zigzag": {
+              "type": "object",
+              "properties": {
+                "wrinkles_present": {
+                  "type": "boolean"
+                },
+                "wavelength_nm": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "wrinkles_present",
+                "wavelength_nm"
+              ]
+            }
+          },
+          "required": [
+            "armchair",
+            "zigzag"
+          ]
+        },
+        "description": "Wrinkle analysis results for curved armchair and zigzag GNRs at R=5nm, T=300K. Contains fields 'wrinkles_present' (boolean) and 'wavelength_nm' (number or null) for each chirality."
+      },
+      {
+        "file": "contact_stiffness.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "geometry",
+            "chirality",
+            "contact_stiffness_Nm"
+          ],
+          "units": {
+            "contact_stiffness_Nm": "N/m"
+          }
+        },
+        "description": "Contact stiffness values for each GNR geometry (convex, concave, planar) and chirality (armchair, zigzag). Columns: geometry, chirality, contact_stiffness_Nm (N/m). Each row corresponds to one configuration at R=5nm, T=300K, v=10m/s."
+      }
+    ],
+    "notes": "Only the two outputs above are scored. The force_displacement.csv intermediate is not scored but serves as evidence that the nanoindentation simulation was executed."
+  },
+  "steps": [
+    {
+      "id": "wrinkle_analysis",
+      "output_file": "wrinkling_analysis.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "expected_wavelength_range": [
+        1.0,
+        1.5
+      ],
+      "description": "Check wrinkle presence and wavelength"
+    },
+    {
+      "id": "contact_stiffness",
+      "output_file": "contact_stiffness.csv",
+      "kind": "rubric",
+      "weight": 0.7,
+      "reference_values": [
+        {
+          "geometry": "convex",
+          "chirality": "armchair",
+          "stiffness": 42.0,
+          "tolerance": 0.2
+        },
+        {
+          "geometry": "convex",
+          "chirality": "zigzag",
+          "stiffness": 63.0,
+          "tolerance": 0.2
+        },
+        {
+          "geometry": "concave",
+          "chirality": "armchair",
+          "stiffness": 120.0,
+          "tolerance": 0.2
+        },
+        {
+          "geometry": "concave",
+          "chirality": "zigzag",
+          "stiffness": 189.0,
+          "tolerance": 0.2
+        },
+        {
+          "geometry": "planar",
+          "chirality": "armchair",
+          "stiffness": 100.0,
+          "tolerance": 0.2
+        },
+        {
+          "geometry": "planar",
+          "chirality": "zigzag",
+          "stiffness": 150.0,
+          "tolerance": 0.2
+        }
+      ],
+      "ratio_threshold": 1.45,
+      "description": "Check contact stiffness values, ordering trends, and zigzag/armchair ratio"
+    }
+  ]
+}

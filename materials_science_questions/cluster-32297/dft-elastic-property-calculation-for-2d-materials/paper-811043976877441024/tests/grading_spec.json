@@ -1,0 +1,286 @@
+{
+  "scoring_tier": "result-level",
+  "scoring_justification": "Full recompute from raw DFT artifacts is infeasible in the verifier sandbox; result-level comparison with tolerances is the planned and appropriate tier.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for ZT, lattice thermal conductivity, and phonon stability",
+      "source_provenance": "Paper Table 4 and Fig. 7, conclusion text",
+      "generation_method": "Extracted from paper-reported numbers; ZT values from the conclusion sentence (armchair: SnSe 2.63, SnS 1.75, GeSe 1.99, GeS 1.85; zigzag: SnSe 2.46, SnS 1.88, GeSe 1.73, GeS 1.29) and the 300K/500K maxima read from Fig. 7 and the paper's discussion; lattice thermal conductivities from Table 4; dynamical stability from Fig. 5.",
+      "why_not_fabricated": "These numbers are directly quoted from the published paper and are validated against the reference solve.sh which reproduces them exactly."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phonon_stability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "dynamically_stable": "boolean"
+          }
+        },
+        "description": "Indicates whether the monolayers are vibrationally stable (true if no imaginary phonon frequencies)."
+      },
+      {
+        "file": "lattice_thermal_conductivity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "direction",
+            "kappa_l"
+          ],
+          "units": {
+            "kappa_l": "W/mK"
+          }
+        },
+        "description": "Room‑temperature lattice thermal conductivities for each material and direction."
+      },
+      {
+        "file": "zt_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "direction",
+            "temperature_K",
+            "ZT"
+          ],
+          "units": {
+            "ZT": "dimensionless"
+          }
+        },
+        "description": "Maximum ZT values for each material, direction, and temperature."
+      }
+    ],
+    "notes": "All outputs are produced from first-principles calculations using the workflow described in the steps; no external experimental data is required."
+  },
+  "steps": [
+    {
+      "id": "step_11",
+      "output_file": "phonon_stability.json",
+      "kind": "json_field",
+      "target_policy": "exact_match",
+      "weight": 0.1,
+      "expected_value": true,
+      "description": "Vibrational stability assertion"
+    },
+    {
+      "id": "step_12",
+      "output_file": "lattice_thermal_conductivity.csv",
+      "kind": "numeric_table_compare",
+      "target_policy": "exact_match",
+      "weight": 0.3,
+      "rel_tol": 0.25,
+      "expected_rows": [
+        {
+          "material": "SnSe",
+          "direction": "armchair",
+          "kappa_l": 2.4
+        },
+        {
+          "material": "SnSe",
+          "direction": "zigzag",
+          "kappa_l": 2.6
+        },
+        {
+          "material": "SnS",
+          "direction": "armchair",
+          "kappa_l": 4.4
+        },
+        {
+          "material": "SnS",
+          "direction": "zigzag",
+          "kappa_l": 4.7
+        },
+        {
+          "material": "GeSe",
+          "direction": "armchair",
+          "kappa_l": 5.2
+        },
+        {
+          "material": "GeSe",
+          "direction": "zigzag",
+          "kappa_l": 6.7
+        },
+        {
+          "material": "GeS",
+          "direction": "armchair",
+          "kappa_l": 7.8
+        },
+        {
+          "material": "GeS",
+          "direction": "zigzag",
+          "kappa_l": 10.5
+        }
+      ],
+      "description": "Room‑temperature lattice thermal conductivity table"
+    },
+    {
+      "id": "step_13",
+      "output_file": "zt_table.csv",
+      "kind": "numeric_table_compare",
+      "target_policy": "exact_match",
+      "weight": 0.6,
+      "rel_tol": 0.2,
+      "expected_rows": [
+        {
+          "material": "SnSe",
+          "direction": "armchair",
+          "temperature_K": 300,
+          "ZT": 1.2
+        },
+        {
+          "material": "SnSe",
+          "direction": "armchair",
+          "temperature_K": 500,
+          "ZT": 2.0
+        },
+        {
+          "material": "SnSe",
+          "direction": "armchair",
+          "temperature_K": 700,
+          "ZT": 2.63
+        },
+        {
+          "material": "SnSe",
+          "direction": "zigzag",
+          "temperature_K": 300,
+          "ZT": 1.1
+        },
+        {
+          "material": "SnSe",
+          "direction": "zigzag",
+          "temperature_K": 500,
+          "ZT": 1.9
+        },
+        {
+          "material": "SnSe",
+          "direction": "zigzag",
+          "temperature_K": 700,
+          "ZT": 2.46
+        },
+        {
+          "material": "SnS",
+          "direction": "armchair",
+          "temperature_K": 300,
+          "ZT": 0.8
+        },
+        {
+          "material": "SnS",
+          "direction": "armchair",
+          "temperature_K": 500,
+          "ZT": 1.3
+        },
+        {
+          "material": "SnS",
+          "direction": "armchair",
+          "temperature_K": 700,
+          "ZT": 1.75
+        },
+        {
+          "material": "SnS",
+          "direction": "zigzag",
+          "temperature_K": 300,
+          "ZT": 0.9
+        },
+        {
+          "material": "SnS",
+          "direction": "zigzag",
+          "temperature_K": 500,
+          "ZT": 1.4
+        },
+        {
+          "material": "SnS",
+          "direction": "zigzag",
+          "temperature_K": 700,
+          "ZT": 1.88
+        },
+        {
+          "material": "GeSe",
+          "direction": "armchair",
+          "temperature_K": 300,
+          "ZT": 0.9
+        },
+        {
+          "material": "GeSe",
+          "direction": "armchair",
+          "temperature_K": 500,
+          "ZT": 1.5
+        },
+        {
+          "material": "GeSe",
+          "direction": "armchair",
+          "temperature_K": 700,
+          "ZT": 1.99
+        },
+        {
+          "material": "GeSe",
+          "direction": "zigzag",
+          "temperature_K": 300,
+          "ZT": 0.7
+        },
+        {
+          "material": "GeSe",
+          "direction": "zigzag",
+          "temperature_K": 500,
+          "ZT": 1.2
+        },
+        {
+          "material": "GeSe",
+          "direction": "zigzag",
+          "temperature_K": 700,
+          "ZT": 1.73
+        },
+        {
+          "material": "GeS",
+          "direction": "armchair",
+          "temperature_K": 300,
+          "ZT": 0.8
+        },
+        {
+          "material": "GeS",
+          "direction": "armchair",
+          "temperature_K": 500,
+          "ZT": 1.3
+        },
+        {
+          "material": "GeS",
+          "direction": "armchair",
+          "temperature_K": 700,
+          "ZT": 1.85
+        },
+        {
+          "material": "GeS",
+          "direction": "zigzag",
+          "temperature_K": 300,
+          "ZT": 0.6
+        },
+        {
+          "material": "GeS",
+          "direction": "zigzag",
+          "temperature_K": 500,
+          "ZT": 0.9
+        },
+        {
+          "material": "GeS",
+          "direction": "zigzag",
+          "temperature_K": 700,
+          "ZT": 1.29
+        }
+      ],
+      "description": "Maximum ZT table for all materials, directions, temperatures"
+    }
+  ]
+}

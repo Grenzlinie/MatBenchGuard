@@ -1,0 +1,166 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker compares transmittance values at key wavelengths and fill-factor trend against hidden reference values from paper figures, with tolerance windows. Full RCWA recomputation from raw artifacts is infeasible within verifier sandbox, so result-level comparison is used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "transmittance_spectrum.csv": "threshold_or_better",
+    "fill_factor_transmittance.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference transmittance values at key wavelengths and fill-factor trend points digitized from paper Figures 6 and 7",
+      "source_provenance": "Paper figures",
+      "generation_method": "Manual digitization with 5% margin",
+      "why_not_fabricated": "Extracted from published paper results to confirm reproduction fidelity"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transmittance_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_um",
+            "transmittance"
+          ],
+          "units": {
+            "wavelength_um": "μm",
+            "transmittance": "fraction (0 to 1)"
+          }
+        },
+        "description": "Zeroth-order transmittance spectrum of the capacitive grid with finite-substrate correction, covering 2–5 μm. The checker compares transmittance at key spectral features (e.g., SPW peak, Wood's anomaly) against paper-derived tolerances."
+      },
+      {
+        "file": "fill_factor_transmittance.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "fill_factor",
+            "transmittance_at_4.3um"
+          ],
+          "units": {
+            "fill_factor": "dimensionless (0 to 1)",
+            "transmittance_at_4.3um": "fraction (0 to 1)"
+          }
+        },
+        "description": "Transmittance at λ=4.3 μm as a function of dot fill factor. The checker verifies monotonic decrease of transmittance with fill factor and that values are within ±0.05 of the expected trend."
+      }
+    ],
+    "notes": "The agent must run RCWA with finite-conductivity metals and the scattering-matrix algorithm. Use at least N=10 Fourier harmonics and a 100×100 unit-cell grid as per the paper's convergence discussion. The finite-substrate model corrects for incoherent multiple reflections in the thick silicon substrate."
+  },
+  "steps": [
+    {
+      "id": "transmittance_spectrum",
+      "output_file": "transmittance_spectrum.csv",
+      "kind": "numeric_vector_compare",
+      "weight": 0.6,
+      "columns": {
+        "wavelength": "wavelength_um",
+        "value": "transmittance"
+      },
+      "reference_points": [
+        {
+          "wavelength_um": 2.0,
+          "transmittance": 0.58
+        },
+        {
+          "wavelength_um": 2.5,
+          "transmittance": 0.59
+        },
+        {
+          "wavelength_um": 3.0,
+          "transmittance": 0.58
+        },
+        {
+          "wavelength_um": 3.5,
+          "transmittance": 0.55
+        },
+        {
+          "wavelength_um": 4.0,
+          "transmittance": 0.45
+        },
+        {
+          "wavelength_um": 4.28,
+          "transmittance": 0.35
+        },
+        {
+          "wavelength_um": 4.5,
+          "transmittance": 0.42
+        },
+        {
+          "wavelength_um": 5.0,
+          "transmittance": 0.48
+        }
+      ],
+      "tolerance_abs": 0.08,
+      "score_function": "fraction_within_tolerance"
+    },
+    {
+      "id": "fill_factor_transmittance",
+      "output_file": "fill_factor_transmittance.csv",
+      "kind": "monotonic_and_reference",
+      "weight": 0.4,
+      "columns": {
+        "fill": "fill_factor",
+        "transmittance": "transmittance_at_4.3um"
+      },
+      "expected_direction": "decreasing",
+      "reference_points": [
+        {
+          "fill_factor": 0.082,
+          "transmittance_at_4.3um": 0.73
+        },
+        {
+          "fill_factor": 0.12,
+          "transmittance_at_4.3um": 0.68
+        },
+        {
+          "fill_factor": 0.164,
+          "transmittance_at_4.3um": 0.58
+        },
+        {
+          "fill_factor": 0.214,
+          "transmittance_at_4.3um": 0.49
+        },
+        {
+          "fill_factor": 0.267,
+          "transmittance_at_4.3um": 0.42
+        },
+        {
+          "fill_factor": 0.323,
+          "transmittance_at_4.3um": 0.36
+        },
+        {
+          "fill_factor": 0.382,
+          "transmittance_at_4.3um": 0.33
+        },
+        {
+          "fill_factor": 0.445,
+          "transmittance_at_4.3um": 0.3
+        },
+        {
+          "fill_factor": 0.515,
+          "transmittance_at_4.3um": 0.27
+        },
+        {
+          "fill_factor": 0.587,
+          "transmittance_at_4.3um": 0.24
+        },
+        {
+          "fill_factor": 0.663,
+          "transmittance_at_4.3um": 0.22
+        }
+      ],
+      "tolerance_abs": 0.07,
+      "score_breakdown": "0.5 * fraction_within_tolerance + 0.5 * monotonic_penalty"
+    }
+  ]
+}

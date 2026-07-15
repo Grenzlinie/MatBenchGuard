@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "T0: the agent reports α statistics; we compare to paper gold with tolerance 0.002. T1 recompute infeasible – would require re‑implementing Wolff‑Gualtieri bond density formulas and knowing the molar volume v, which is not specified in the task.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold α_min, α_max, α_avg values for fcc, hcp, bcc, diamond, sc at T_m as reported in the paper (Section 3.1).",
+      "source_provenance": "Paper 'Solid-liquid interfacial free energy', Gránásy et al., Materials Science and Engineering A, 1991. Values taken verbatim from Section 3.1: fcc: α_min=0.458, α_max=0.592, α_a=0.561; hcp: α_min=0.458, α_max=0.582 (no α_a); bcc: 0.445,0.630,0.546; diamond: 0.289,0.500,0.433; sc: 0.333,0.577,0.500.",
+      "generation_method": "Direct transcription of the paper's published numeric results; no transformation applied.",
+      "why_not_fabricated": "These numbers are the paper's primary computational claim. The reference solver writes exactly these values, so the oracle can reach full reward."
+    }
+  ],
+  "target_policies": {
+    "alpha_values.json": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "alpha_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "required": {
+            "top_level": "array of objects"
+          },
+          "items": {
+            "structure": "string",
+            "alpha_min": "float",
+            "alpha_max": "float",
+            "alpha_avg": "float or null"
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Contains the computed dimensionless coefficient α statistics for fcc, hcp, bcc, diamond, and sc lattices. Values are compared to the paper's reported numbers within a tolerance."
+      }
+    ],
+    "notes": "The homogeneous nucleation analysis (Section 3.2) is omitted because it requires element-specific experimental data not available as public inputs. The task focuses on the plane-surface coefficients at the melting point, which is the primary computational claim."
+  },
+  "steps": [
+    {
+      "id": "check_alpha_values",
+      "output_file": "alpha_values.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "tolerance_abs": 0.002,
+      "gold": {
+        "fcc": {
+          "alpha_min": 0.458,
+          "alpha_max": 0.592,
+          "alpha_avg": 0.561
+        },
+        "hcp": {
+          "alpha_min": 0.458,
+          "alpha_max": 0.582,
+          "alpha_avg": null
+        },
+        "bcc": {
+          "alpha_min": 0.445,
+          "alpha_max": 0.63,
+          "alpha_avg": 0.546
+        },
+        "diamond": {
+          "alpha_min": 0.289,
+          "alpha_max": 0.5,
+          "alpha_avg": 0.433
+        },
+        "sc": {
+          "alpha_min": 0.333,
+          "alpha_max": 0.577,
+          "alpha_avg": 0.5
+        }
+      }
+    }
+  ]
+}

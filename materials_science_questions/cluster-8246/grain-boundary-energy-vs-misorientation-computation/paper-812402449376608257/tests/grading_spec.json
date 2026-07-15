@@ -1,0 +1,116 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The scored artifacts are final aggregate results from a compute-driven simulation; recomputing from lower-level artifacts would require re-running the full hard-sphere construction and numerical sphere packing, which is infeasible in the lightweight checker environment. Therefore, T0 result-level compare against the paper-reported values with tolerances is employed.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for excess volume, interstitial diameters and substitutional diameter threshold for the [100] Σ5 tilt boundary",
+      "source_provenance": "Paper text: 'the excess volume decreased from 0.39 to 0.32; maximum interstitial diameter decreased from 0.753 to 0.567; in the densest boundary there are no substitutionals with diameter larger than 1.0' (Section 3.1, Fig. 4 description).",
+      "generation_method": "Extracted directly from the paper's reported numeric values.",
+      "why_not_fabricated": "These are the actual published results for the specific boundary model; they form the authoritative reference for reproduction verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_noZ_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "excess_volume",
+            "max_interstitial_diameter"
+          ],
+          "units": {
+            "condition": "string (exact: no_Z)",
+            "excess_volume": "normalized excess volume V_EX (unitless)",
+            "max_interstitial_diameter": "units of atom diameter"
+          }
+        },
+        "description": "Excess volume and maximum interstitial diameter for the configuration without Z-translation."
+      },
+      {
+        "file": "step_02_withZ_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "excess_volume",
+            "max_interstitial_diameter"
+          ],
+          "units": {
+            "condition": "string (exact: with_Z)",
+            "excess_volume": "normalized excess volume V_EX (unitless)",
+            "max_interstitial_diameter": "units of atom diameter"
+          }
+        },
+        "description": "Excess volume and maximum interstitial diameter for the configuration with Z-translation."
+      },
+      {
+        "file": "step_03_substitutional.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "max_substitutional_diameter"
+          ],
+          "units": {
+            "condition": "string (exact: with_Z)",
+            "max_substitutional_diameter": "units of atom diameter"
+          }
+        },
+        "description": "Maximum substitutional hole diameter for the densest configuration. The acceptance threshold is ≤1.0 atom diameters."
+      }
+    ],
+    "notes": "All outputs are deterministic given the reconstruction procedure. The checker compares reported values against hidden gold from the paper's reported numbers with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step2",
+      "output_file": "step_01_noZ_results.csv",
+      "kind": "scalar_compare",
+      "weight": 0.34,
+      "target_policy": "exact_match",
+      "target_values": {
+        "excess_volume": 0.39,
+        "max_interstitial_diameter": 0.753
+      },
+      "tolerance": 0.05,
+      "description": "Excess volume and max interstitial diameter for configuration without Z-translation"
+    },
+    {
+      "id": "step3",
+      "output_file": "step_02_withZ_results.csv",
+      "kind": "scalar_compare",
+      "weight": 0.33,
+      "target_policy": "exact_match",
+      "target_values": {
+        "excess_volume": 0.32,
+        "max_interstitial_diameter": 0.567
+      },
+      "tolerance": 0.05,
+      "description": "Excess volume and max interstitial diameter for configuration with Z-translation"
+    },
+    {
+      "id": "step4",
+      "output_file": "step_03_substitutional.csv",
+      "kind": "scalar_compare",
+      "weight": 0.33,
+      "target_policy": "threshold_or_better",
+      "target_values": {
+        "threshold": 1.0
+      },
+      "description": "Maximum substitutional hole diameter for the with-Z configuration; must be ≤ 1.0 atom diameters"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Supercell construction",
+    "role": "process",
+    "action": "Build initial crystal structures for AlN (wurtzite, 4-atom cell), VN (rocksalt, primitive cell), and ternary Al_xV_{1-x}N wurtzite supercells: 1x1x2 for x=0.25 and 0.75, 1x1x1 for x=0.50. Include both ferromagnetic and antiferromagnetic spin arrangements for each ternary.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT energy-volume scans",
+    "role": "process",
+    "action": "For each compound and spin configuration, run spin-polarized DFT total energy calculations (Quantum ESPRESSO pw.x, GGA-PBE) at 5–7 volumes around the expected equilibrium. Collect total energy vs. volume data.",
+    "output_file": "",
+    "evidence": "ev_vs_volume.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Total energy vs. volume points for each structure and magnetic configuration.",
+    "output_schema": "JSON mapping compound/configuration identifier to list of {volume, total_energy} pairs."
+  },
+  {
+    "id": "step_03",
+    "title": "Equation-of-state (EOS) fitting",
+    "role": "process",
+    "action": "Fit each E(V) dataset to the Murnaghan equation of state. Extract equilibrium lattice constant a0, equilibrium volume V0, bulk modulus B0, and ground-state total energy E0 for every compound (both FM and AFM where applicable).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Magnetic ground-state determination",
+    "role": "process",
+    "action": "Compare FM and AFM ground-state total energies from the EOS fits; confirm the FM state is lower for all ternaries. Retain the FM equilibrium structure for subsequent electronic calculations and label it as the ground state.",
+    "output_file": "",
+    "evidence": "magnetic_energy_diff.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "FM vs AFM energy differences and ground-state assignment for each ternary.",
+    "output_schema": "JSON object listing each composition with ΔE = E_FM - E_AFM (eV) and the chosen magnetic ground-state."
+  },
+  {
+    "id": "step_05",
+    "title": "Electronic structure calculations at equilibrium",
+    "role": "process",
+    "action": "For each FM ground-state structure at its equilibrium lattice constant, perform spin-polarized SCF and non-SCF calculations to compute the total density of states (DOS). Record the total magnetization and the DOS data.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Compile final results",
+    "role": "scored",
+    "action": "Using the fitted results from steps 03–05, compute formation energies Ef = E(ternary) - x*E(AlN_wz) - (1-x)*E(VN_NaCl). Extract the magnetic moment per V atom (total magnetization divided by number of V atoms) and the minority spin band gap from the DOS (difference between Fermi level and conduction band minimum in the minority channel; set to zero if the gap is negative or the system is metallic). Write all properties into /app/outputs/results.json according to the specified schema.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing all computed equilibrium properties and magnetic indicators for the five compounds.",
+    "output_schema": "JSON object with key 'compounds' containing an array of objects. Each object must have fields: name (str), a0 (float, Å), B0 (float, GPa), E0 (float, eV), Ef (float or null for binaries), mag_moment (float or null, μB per V atom), minority_gap (float, eV). The array must contain entries for AlN_wz, VN_NaCl, Al0.25V0.75N, Al0.50V0.50N, Al0.75V0.25N."
+  }
+]

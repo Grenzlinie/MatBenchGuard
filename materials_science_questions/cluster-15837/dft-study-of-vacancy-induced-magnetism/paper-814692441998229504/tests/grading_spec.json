@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "DFT outputs are large and cannot be recomputed in the verifier; score self-reported values against paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_and_electronic_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "configuration",
+              "total_magnetic_moment_muB",
+              "majority_band_gap_eV",
+              "minority_band_gap_eV",
+              "spin_polarization_percent"
+            ],
+            "properties": {
+              "configuration": {
+                "type": "string",
+                "description": "Defect configuration label, e.g. B15N16/C32, B16N16/C31, B15CN16/C31, B16N15C/C31"
+              },
+              "total_magnetic_moment_muB": {
+                "type": "number",
+                "description": "Total magnetic moment in μB"
+              },
+              "majority_band_gap_eV": {
+                "type": "number",
+                "description": "Band gap for majority spin in eV"
+              },
+              "minority_band_gap_eV": {
+                "type": "number",
+                "description": "Band gap for minority spin in eV"
+              },
+              "spin_polarization_percent": {
+                "type": "number",
+                "description": "Spin polarization at Fermi level P(Ef) in percent"
+              }
+            }
+          }
+        },
+        "description": "Array of objects for the four defect configurations, each containing the computed total magnetic moment, majority/minority spin band gaps, and spin polarization."
+      }
+    ],
+    "notes": ""
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for the four defect configurations (magnetic moments, band gaps, spin polarization, structural conditions).",
+      "source_provenance": "Paper Table 1 (B15N16/C32, B16N16/C31) and Table 3 (B15CN16/C31, B16N15C/C31).",
+      "generation_method": "Extracted directly from the paper's published tables.",
+      "why_not_fabricated": "These are the paper's own reported numbers; no fabrication is needed."
+    }
+  ],
+  "steps": [
+    {
+      "id": "schema",
+      "output_file": "magnetic_and_electronic_results.json",
+      "kind": "json_schema",
+      "weight": 0.05,
+      "description": "Validate that the JSON file is an array of four objects with all required fields and the expected configuration names."
+    },
+    {
+      "id": "magnetic_moments",
+      "output_file": "magnetic_and_electronic_results.json",
+      "kind": "numeric_value",
+      "weight": 0.4,
+      "gold": {
+        "B15N16/C32": 1.79,
+        "B16N16/C31": 1.22,
+        "B15CN16/C31": 1.0,
+        "B16N15C/C31": 1.0
+      },
+      "tolerance": 0.2,
+      "description": "Compare total magnetic moment for each configuration to the paper's value within ±0.2 μB."
+    },
+    {
+      "id": "band_gaps",
+      "output_file": "magnetic_and_electronic_results.json",
+      "kind": "numeric_value",
+      "weight": 0.2,
+      "gold": {
+        "B15N16/C32": {
+          "majority": -0.04,
+          "minority": -0.05
+        },
+        "B16N16/C31": {
+          "majority": -0.17,
+          "minority": -0.15
+        },
+        "B15CN16/C31": {
+          "majority": 0.0,
+          "minority": 0.23
+        },
+        "B16N15C/C31": {
+          "majority": 0.08,
+          "minority": 0.41
+        }
+      },
+      "tolerance": 0.5,
+      "description": "Compare majority and minority band gaps for each configuration to the paper's value within ±0.5 eV."
+    },
+    {
+      "id": "half_metallic",
+      "output_file": "magnetic_and_electronic_results.json",
+      "kind": "structural_condition",
+      "weight": 0.2,
+      "condition": "B15CN16/C31 spin_polarization_percent >= 95",
+      "description": "Verify that B15CN16/C31 has spin polarization ≥ 95% (half‑metallic character)."
+    },
+    {
+      "id": "asymmetric_semiconductor",
+      "output_file": "magnetic_and_electronic_results.json",
+      "kind": "structural_condition",
+      "weight": 0.15,
+      "condition": "B16N15C/C31 majority_band_gap_eV > 0, minority_band_gap_eV > 0, and majority < minority",
+      "description": "Verify that B16N15C/C31 is an asymmetric semiconductor with both band gaps positive and majority gap smaller than minority gap."
+    }
+  ]
+}

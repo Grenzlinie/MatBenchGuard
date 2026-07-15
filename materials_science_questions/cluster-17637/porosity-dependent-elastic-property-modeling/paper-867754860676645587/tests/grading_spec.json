@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the coefficient of determination R² between M_FEM and M_analytical columns, and the relative error of E_wall_implied against the paper's 95 GPa; no trust is placed on any self‑reported metric.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "porosity_modulus_data.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference target for pore‑wall Young’s modulus",
+      "source_provenance": "paper reports inferred E_wall = 95 GPa from experimental M=34.5 GPa at φ=0.60 using the analytical model",
+      "generation_method": "extracted from paper text",
+      "why_not_fabricated": "actual paper‑reported quantity, not arbitrarily chosen"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "porosity_modulus_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "porosity",
+            "M_FEM",
+            "M_analytical",
+            "E_wall_implied"
+          ],
+          "units": {
+            "M_FEM": "GPa",
+            "M_analytical": "GPa",
+            "E_wall_implied": "GPa"
+          }
+        },
+        "description": "CSV with the FEM and analytical pore-load moduli for five porosities, and the implied wall Young's modulus at φ=0.60."
+      }
+    ],
+    "notes": "The experimental pore-load modulus (34.5 GPa) is a fixed input parameter used to infer the wall modulus; it is not an output. The checker recomputes the R² between M_FEM and M_analytical and verifies the E_wall_implied value against a hidden reference."
+  },
+  "steps": [
+    {
+      "id": "check_r2",
+      "output_file": "porosity_modulus_data.csv",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "target_policy": "threshold_or_better",
+      "metric": "r2",
+      "target": 0.99,
+      "description": "R² between M_FEM and M_analytical columns (higher is better)"
+    },
+    {
+      "id": "check_ewall",
+      "output_file": "porosity_modulus_data.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "target": 95.0,
+      "tolerance_relative": 0.1,
+      "description": "Inferred wall Young’s modulus for φ=0.6 must be within 10% relative error of 95 GPa"
+    }
+  ]
+}

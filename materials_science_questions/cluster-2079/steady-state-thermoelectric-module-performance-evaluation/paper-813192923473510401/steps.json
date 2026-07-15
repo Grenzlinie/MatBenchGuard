@@ -1,0 +1,28 @@
+[
+  {
+    "id": "step_1",
+    "title": "Compute water flow rate",
+    "role": "process",
+    "action": "Using the given exhaust composition, inlet temperature (538 K), and the SOFC system parameters, calculate the water flow rate (mol/s) that absorbs 92% of the exhaust enthalpy to heat liquid water from 298.15 K to about 348 K. Use standard enthalpy functions for the gases and liquid water. Write the resulting flow rate to a simple text file for the next step.",
+    "output_file": "",
+    "evidence": "water_flow_rate.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The computed water flow rate is needed as an input to the finite‑difference simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Run finite‑difference TEG‑HEX simulation and compute performance metrics",
+    "role": "scored",
+    "action": "Implement a node‑by‑node finite‑difference model that solves the coupled enthalpy balances (plates, exhaust, water), condensation heat transfer, and thermoelectric equations (Seebeck effect, Joule heating, thermal conduction). Iteratively adjust the TEG‑HEX length until the total heat transferred to water (sum of Q_out_TE) reaches 630 W (which also gives a water outlet temperature of 348 K). Run the simulation for the case: TE element height L_TE = 0.9 cm, heat‑transfer enhancement rate r_hte = 3.0, and total physical volume V_WH = 2205 cm³. Output a single JSON file containing: per‑node temperatures (T_hj, T_cj, T_ex, T_water), TE current I_TEG, generated power P_TEG, and heat flows Q_in_TE and Q_out_TE; plus a summary object with total electrical power, total TEG conversion efficiency, and SOFC efficiency improvement.",
+    "output_file": "simulation_outputs.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main simulation output containing all node‑level data and aggregated performance metrics.",
+    "output_schema": "{\n  \"summary\": {\n    \"total_P_TEG\": float,\n    \"total_eta_TE\": float,\n    \"delta_eta_SOFC\": float,\n    \"final_length\": float\n  },\n  \"nodes\": [\n    {\n      \"node_index\": int,\n      \"T_hj\": float,\n      \"T_cj\": float,\n      \"T_ex\": float,\n      \"T_water\": float,\n      \"P_TEG\": float,\n      \"Q_in_TE\": float,\n      \"Q_out_TE\": float,\n      \"I_TEG\": float\n    }\n  ]\n}"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step1",
+    "title": "Generate penta-graphene atomic models",
+    "role": "process",
+    "action": "Create the penta-graphene unit cell (square lattice a=3.64 Å, 6 carbon atoms in Cairo-tiling) for DFT. Also build a periodic supercell (approx. 80×80 Å) for MD. Save coordinates in standard formats.",
+    "output_file": "",
+    "evidence": "structure_gen.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare initial atomic structures for DFT and MD simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "DFT elastic constants calculation",
+    "role": "scored",
+    "action": "Perform DFT total-energy calculations on the unit cell under uniaxial and equi-biaxial strain series (small strains). Fit strain-energy per area to obtain elastic constants C11 and C12. Compute Young's modulus Y = (C11^2 - C12^2)/C11 and Poisson's ratio ν = C12/C11. Save results to dft_elastic_constants.json.",
+    "output_file": "dft_elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "DFT benchmark for Young's modulus and Poisson's ratio. The checker reads these values and compares them to reference values within tolerances.",
+    "output_schema": "{\"youngs_modulus_GPa_nm\": float, \"poissons_ratio\": float}"
+  },
+  {
+    "id": "step3",
+    "title": "ReaxFF MD fracture simulation",
+    "role": "scored",
+    "action": "Equilibrate the supercell at 300 K (NPT), then apply uniaxial tensile deformation at a constant engineering strain rate of 1e-6 fs⁻¹ (NVT) using the Mueller ReaxFF set. Record engineering strain and engineering stress at every timestep up to complete fracture. Write the stress-strain data to md_stress_strain.csv.",
+    "output_file": "md_stress_strain.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reactive MD stress-strain curve from which the checker computes the engineering failure strain (strain at which stress first drops below 10% of peak stress). The strain-stress trace also documents the two mechanical regimes.",
+    "output_schema": "CSV with columns: strain (dimensionless), stress (GPa·nm)"
+  }
+]

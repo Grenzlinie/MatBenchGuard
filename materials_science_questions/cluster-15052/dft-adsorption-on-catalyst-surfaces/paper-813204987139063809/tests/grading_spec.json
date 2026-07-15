@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "CO adsorption energy is compared against the paper's reported value 1.31 eV with tolerance ±0.15 eV and relative ordering surface > interior is enforced. DOS enhancement is a structural check (slab average > 1.5 × bulk average within 1 eV below VBM). Direct recompute of DFT outputs in the verifier sandbox is infeasible, so result-level compare and structural audit are used.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for CO adsorption energy scoring",
+      "source_provenance": "Paper text: 'the four-coordinate surface Sn atoms have an adsorption energy (absolute value) of 1.31 eV'",
+      "generation_method": "Extracted verbatim from paper; ordering surface > interior derived from same sentence.",
+      "why_not_fabricated": "Directly taken from published result."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "DOS enhancement threshold (min_ratio = 1.5)",
+      "source_provenance": "Paper states 'significantly increased DOS at the valence band edge with respect to bulk SnO2'. The numeric threshold 1.5 is chosen conservatively from the synthetic reference data that models the described enhancement.",
+      "generation_method": "Derived from the synthetic solve.sh DOS curves that reflect the paper's qualitative claim; the threshold ensures the structural check is met by a correct solution while excluding no-effect scenarios.",
+      "why_not_fabricated": "Based on the paper's qualitative conclusion; quantified by a safe lower bound consistent with the synthetic reference."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "co_adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "adsorption_energy"
+          ],
+          "units": {
+            "adsorption_energy": "eV"
+          }
+        },
+        "description": "CO adsorption energies in eV for surface Sn (CN=4) and interior Sn (CN=6)."
+      },
+      {
+        "file": "dos_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos_slab",
+            "dos_bulk"
+          ],
+          "units": {
+            "energy": "eV relative to Fermi level",
+            "dos_slab": "arbitrary units",
+            "dos_bulk": "arbitrary units"
+          }
+        },
+        "description": "Total density of states for the 0.66 nm SnO2 slab and bulk SnO2; energy aligned to the Fermi level."
+      }
+    ],
+    "notes": "The ethylenediamine adsorption calculation is omitted as it is not a headline result. The scoring for DOS verifies that the slab DOS exceeds bulk DOS near the valence band edge."
+  },
+  "steps": [
+    {
+      "id": "co_adsorption",
+      "output_file": "co_adsorption_energies.csv",
+      "weight": 0.7,
+      "surface_adsorption_gold": 1.31,
+      "tolerance": 0.15
+    },
+    {
+      "id": "dos_enhancement",
+      "output_file": "dos_data.csv",
+      "weight": 0.3,
+      "min_ratio": 1.5
+    }
+  ]
+}

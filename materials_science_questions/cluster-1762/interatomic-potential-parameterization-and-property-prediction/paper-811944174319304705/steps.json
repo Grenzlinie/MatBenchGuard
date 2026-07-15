@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_phonons_r",
+    "title": "Phonon calculation for rutile phase",
+    "role": "process",
+    "action": "Using GULP, relax the rutile structure of VO2 with the given interatomic potential parameters, then compute the Γ-point phonon frequencies and eigenvectors. Save the phonon output as evidence.",
+    "output_file": "",
+    "evidence": "phonon_R.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Required to obtain the soft phonon modes that drive the phase transition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_soft_modes",
+    "title": "Identify and orthogonalise soft phonon modes",
+    "role": "process",
+    "action": "From the phonon calculation, identify the two degenerate soft modes with dominant vanadium motion. Perform a circular-path energy scan in the subspace of these modes near the R phase to find the orthogonal displacement vectors e1 and e2 that correspond to the shallowest energy-increase directions. Record these eigenvectors as the basis for the order parameters L1, L2.",
+    "output_file": "",
+    "evidence": "e1_e2_vectors.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The orthogonalisation defines the order-parameter space used in all subsequent mapping. Execution of this step is forced because the downstream scored steps depend on e1 and e2.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_map_e_latt",
+    "title": "Map lattice energy and compute ΔE",
+    "role": "scored",
+    "action": "For a grid of (L1, L2) values, impose the displacement pattern L1·e1 + L2·e2, relax the lattice parameters and oxygen shell positions with GULP, and record the minimized lattice energy for each point. From the resulting energy surface, identify the four symmetry-equivalent M1 minima (|L1|=|L2|>0) and the R phase origin (L1=L2=0). Compute the lattice energy difference ΔE = E(M1) − E(R) per VO2 formula unit. Save the value as a JSON file.",
+    "output_file": "lattice_energy_minimum_difference.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The lattice energy difference quantifies the driving force for the transition and is one of the paper's reported results.",
+    "output_schema": "{\"delta_E_eV_per_fu\": <float>}"
+  },
+  {
+    "id": "step_free_energy_tc",
+    "title": "Compute quasi‑harmonic free energy and extract Tc",
+    "role": "scored",
+    "action": "For each (L1, L2) grid point from the previous step, compute phonon frequencies over the Brillouin zone (excluding soft modes), evaluate the harmonic free energy at several temperatures using the quasi-harmonic expression (standard formula). For each temperature, locate the free-energy minima corresponding to the R and M1 regions, compute the difference ΔF(T) = F(M1) − F(R). Output a CSV file with columns Temperature_K and Delta_F_eV. The critical temperature Tc is derived later by the checker from the ΔF(T) curve.",
+    "output_file": "free_energy_difference.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The free energy difference as a function of temperature is the primary quantity used to predict Tc, the main claim of the paper.",
+    "output_schema": "Two columns: Temperature_K (float), Delta_F_eV (float). At least 10 temperature points."
+  }
+]

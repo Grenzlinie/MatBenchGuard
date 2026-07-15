@@ -1,0 +1,73 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputation of the FDTD simulation is infeasible inside the verifier; structural audit of the extracted reflectance spectrum and field intensity map verifies the presence of the LSPR dip and the asymmetric enhancement pattern.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reflectance_spectrum.csv": "structural_audit",
+    "field_intensity_550nm.csv": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reflectance_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "reflectance"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "reflectance": "dimensionless"
+          }
+        },
+        "description": "Reflectance spectrum over 400–900 nm; structural audit checks LSPR dip position (within 600–650 nm) and depth (drop ≥0.3)."
+      },
+      {
+        "file": "field_intensity_550nm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x_nm",
+            "y_nm",
+            "intensity"
+          ],
+          "units": {
+            "x_nm": "nm",
+            "y_nm": "nm",
+            "intensity": "dimensionless"
+          }
+        },
+        "description": "2D |E|² map at 550 nm; structural audit checks asymmetric enhancement (max intensity in top/bottom regions ≥60× minimum in central region, clear dark central band)."
+      }
+    ],
+    "notes": "The core FDTD simulation is the main computational reproduction; structural audits of derived properties from the two CSV artifacts verify the LSPR and field enhancement patterns quantitatively. No absolute values from the paper are exposed."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "reflectance_spectrum.csv",
+      "weight": 0.4,
+      "kind": "structural",
+      "dip_wavelength_min": 600,
+      "dip_wavelength_max": 650,
+      "dip_depth": 0.3
+    },
+    {
+      "id": "step_03",
+      "output_file": "field_intensity_550nm.csv",
+      "weight": 0.6,
+      "kind": "structural",
+      "ratio_threshold": 60,
+      "top_bottom_y_min": 20,
+      "center_y_max": 15
+    }
+  ]
+}

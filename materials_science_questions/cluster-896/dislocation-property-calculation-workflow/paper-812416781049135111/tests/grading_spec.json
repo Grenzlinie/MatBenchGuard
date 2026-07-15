@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: plateau velocity extracted from md_velocity_stress.csv and compared to paper gold; v1 recomputed from dispersion curve and compared to paper gold; drag and dispersion scored structurally (low weight).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for plateau velocity (2.1 nm/ps) and lattice-dynamics limiting velocity v1 (1.56 nm/ps) and wavevector kx (3.28 Å^{-1})",
+      "source_provenance": "paper reported values: subsonic plateau ~2.1 nm/ps; v1=1.56 nm/ps; kx=3.28 Å^{-1} from dispersion analysis.",
+      "generation_method": "extracted directly from the paper's results section.",
+      "why_not_fabricated": "these are the paper's headline quantities, traceable to the paper text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "md_velocity_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "stress_MPa",
+            "velocity_nm_ps"
+          ],
+          "units": {
+            "stress_MPa": "MPa",
+            "velocity_nm_ps": "nm/ps"
+          }
+        },
+        "description": "Tabulated steady‑state dislocation velocity versus applied shear stress from MD simulations. The checker derives the subsonic plateau velocity and compares to the paper‑reported value within a tolerance."
+      },
+      {
+        "file": "drag_coefficient_B.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "B_Pa_s"
+          ],
+          "units": {
+            "temperature_K": "K",
+            "B_Pa_s": "Pa·s"
+          }
+        },
+        "description": "Dislocation drag coefficient B estimated from the tangent‑line slope of the velocity‑stress curve. Checker compares to the paper‑derived reference at the selected temperature."
+      },
+      {
+        "file": "ld_dispersion_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx_angstrom_inv",
+            "omega_THz"
+          ],
+          "units": {
+            "kx_angstrom_inv": "1/Å",
+            "omega_THz": "THz"
+          }
+        },
+        "description": "Phonon dispersion curve ω(kx) at fixed ky, kz. The checker performs a structural audit (e.g., verifies existence of a valid branch and checks that the tangent point yields a consistent limiting velocity)."
+      },
+      {
+        "file": "ld_limiting_velocity.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "v1_nm_ps",
+            "kx_angstrom_inv"
+          ],
+          "units": {
+            "v1_nm_ps": "nm/ps",
+            "kx_angstrom_inv": "1/Å"
+          }
+        },
+        "description": "Lattice‑dynamics predicted limiting dislocation velocity v1 and the corresponding tangent wavevector kx, obtained from the dispersion curve via the Celli‑Flytzanis criterion. Checker compares to the paper‑reported value within a tolerance."
+      }
+    ],
+    "notes": "All scored artifacts correspond to the paper's headline quantities: subsonic limiting velocity, drag coefficient, and lattice‑dynamics prediction. The finite‑size scaling analysis (stages 5‑7 of the full paper workflow) is omitted as a supporting check; its essence is captured by the comparison between MD plateau and v1. The proprietary 'vibra' code is replaced by open‑source phonon tools. The transonic velocity regime is excluded per scope."
+  },
+  "steps": [
+    {
+      "id": "md_plateau",
+      "output_file": "md_velocity_stress.csv",
+      "kind": "numeric",
+      "weight": 0.45,
+      "target": 2.1,
+      "tolerance_abs": 0.3,
+      "description": "Plateau velocity: mean of velocities for applied stresses >500 MPa compared to paper gold 2.1 nm/ps"
+    },
+    {
+      "id": "drag_B",
+      "output_file": "drag_coefficient_B.csv",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Drag coefficient structural: B>0 and temperature in {10,50,100,200} K"
+    },
+    {
+      "id": "ld_dispersion_struct",
+      "output_file": "ld_dispersion_curve.csv",
+      "kind": "rubric",
+      "weight": 0.1,
+      "description": "Dispersion curve structural: at least 10 points, kx increasing, omega positive"
+    },
+    {
+      "id": "ld_v1",
+      "output_file": "ld_limiting_velocity.csv",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target": 1.56,
+      "tolerance_abs": 0.15,
+      "description": "Lattice-dynamics limiting velocity v1 recomputed from dispersion curve and compared to gold 1.56 nm/ps; reported kx checked against paper gold 3.28 Å^{-1}"
+    }
+  ]
+}

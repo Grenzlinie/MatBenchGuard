@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "MD failure strain is recomputed from the raw stress-strain CSV; DFT elastic constants are compared to the paper's reported values (T0 result-level compare) because the raw strain-energy data is not required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_elastic_constants.json": "reference_match",
+    "md_stress_strain.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for DFT Young's modulus and Poisson's ratio",
+      "source_provenance": "Paper Table 1 row 'DFT from our calculations': Young's modulus 257.6 GPa.nm, Poisson's ratio -0.096",
+      "generation_method": "Extracted directly from the paper's reported calculated values",
+      "why_not_fabricated": "These values are the paper's own DFT results, used as benchmark for parameter screening and elastic properties."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference value for MD failure strain",
+      "source_provenance": "Paper statement: 'fracture takes place at about 20%' (abstract and Section 3.2); also mentioned as 20% in text.",
+      "generation_method": "Extracted from the paper's text",
+      "why_not_fabricated": "This is the fracture strain reported in the paper for the Mueller ReaxFF simulations, used as the target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "youngs_modulus_GPa_nm": "float",
+            "poissons_ratio": "float"
+          }
+        },
+        "description": "DFT computed Young's modulus (in GPa·nm) and Poisson's ratio (dimensionless). Both quantities must be present and the Poisson's ratio must be negative. The checker compares them to the paper's DFT reference values."
+      },
+      {
+        "file": "md_stress_strain.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strain",
+            "stress"
+          ],
+          "units": {
+            "strain": "dimensionless",
+            "stress": "GPa·nm"
+          }
+        },
+        "description": "Engineering stress-strain curve from ReaxFF tensile simulation. The checker recomputes the engineering failure strain from this data and compares it to the paper's MD failure strain (20%) within tolerance."
+      }
+    ],
+    "notes": "The unit cell coordinates are provided in the instruction.md. The agent may use any GGA-PBE DFT code. The Mueller ReaxFF parameter file is a public resource listed above. No other outputs are required."
+  },
+  "steps": [
+    {
+      "id": "step2_check",
+      "output_file": "dft_elastic_constants.json",
+      "weight": 0.4,
+      "description": "Validate DFT Young's modulus and Poisson's ratio against paper reference; Poisson's ratio must be negative.",
+      "youngs_modulus_gold": 257.6,
+      "youngs_modulus_tolerance_relative": 0.1,
+      "poissons_ratio_gold": -0.096,
+      "poissons_ratio_tolerance_abs": 0.05
+    },
+    {
+      "id": "step3_check",
+      "output_file": "md_stress_strain.csv",
+      "weight": 0.6,
+      "description": "Recompute MD failure strain from stress-strain CSV and compare to paper value (20%) within ±2% absolute.",
+      "failure_strain_gold": 0.2,
+      "failure_strain_tolerance_abs": 0.02
+    }
+  ]
+}

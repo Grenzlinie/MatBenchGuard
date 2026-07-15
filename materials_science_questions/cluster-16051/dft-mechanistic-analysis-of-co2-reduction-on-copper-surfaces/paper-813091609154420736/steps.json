@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_build_structures",
+    "title": "Build atomic models",
+    "role": "process",
+    "action": "Construct all required input geometries: Cu(100) slab (3×3 surface unit cell, 4 atomic layers, bottom two layers fixed), with adsorbed species *CO, *CHO, *OCCO, *OCCOH on their stable sites. For cation-containing calculations, place one explicit Li⁺, Na⁺, or Cs⁺ near the oxygen atom(s) of the adsorbate at the electrochemical double layer. Prepare input files for all combinations.",
+    "output_file": "",
+    "evidence": "structures.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_dft",
+    "title": "DFT total energy calculations",
+    "role": "process",
+    "action": "Perform total energy calculations using Quantum ESPRESSO with the PBE exchange‑correlation functional and SSSP efficiency pseudopotentials. Run for: clean Cu(100) slab; slab+CO (monomer), slab+CHO, slab+2CO, slab+OCCO, slab+OCCOH; the same adsorbate systems with an explicit Li⁺, Na⁺, and Cs⁺; and gas‑phase H₂. Save total energies.",
+    "output_file": "",
+    "evidence": "dft_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_adsorption_energies",
+    "title": "Compute adsorption energies",
+    "role": "process",
+    "action": "Calculate adsorption energies: E_ads = E(slab+adsorbate) – E(clean slab) – n * E(CO_gas) for all intermediates (with and without cations). Save per‑configuration adsorption energies.",
+    "output_file": "",
+    "evidence": "adsorption_energies.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_scored",
+    "title": "Compute reaction energies and cation shifts",
+    "role": "scored",
+    "action": "From the adsorption energies and the gas‑phase H₂ reference, compute reaction energies ΔE using the computational hydrogen electrode: ΔE(C1) = E_ads(*CHO) – E_ads(*CO) + E(H₂)/2, and ΔE(C2) = E_ads(*OCCOH) – E_ads(2*CO) + E(H₂)/2. Calculate values for vacuum and for each cation, then average the cation results to obtain C1_with_cations and C2_with_cations. Also compute the cation‑induced adsorption energy shifts ΔΔE_ads = E_ads(with cation) – E_ads(vacuum) for *OCCO, 2*CO, and *OCCOH, averaging over the three cations. Write all seven values in eV to the output file.",
+    "output_file": "computed_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final computed energies required to verify the paper's quantitative claim. Contains reaction energies (vacuum and cation‑averaged) and cation‑induced adsorption shifts.",
+    "output_schema": "{\"type\": \"object\", \"properties\": {\"C1_vacuum_eV\": {\"type\": \"number\"}, \"C2_vacuum_eV\": {\"type\": \"number\"}, \"C1_with_cations_eV\": {\"type\": \"number\"}, \"C2_with_cations_eV\": {\"type\": \"number\"}, \"OCCO_adsorption_shift_eV\": {\"type\": \"number\"}, \"2CO_adsorption_shift_eV\": {\"type\": \"number\"}, \"OCCOH_adsorption_shift_eV\": {\"type\": \"number\"}}, \"required\": [\"C1_vacuum_eV\", \"C2_vacuum_eV\", \"C1_with_cations_eV\", \"C2_with_cations_eV\", \"OCCO_adsorption_shift_eV\", \"2CO_adsorption_shift_eV\", \"OCCOH_adsorption_shift_eV\"]}"
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_prepare_cells",
+    "title": "Prepare initial primitive cells",
+    "role": "process",
+    "action": "Create primitive unit cells for wurtzite ZnO (hexagonal, P63mc) with lattice parameters a=3.25 Å, c=5.21 Å, and for rocksalt ZnO (cubic, Fm-3m) with a=4.28 Å, using the experimental lattice constants from the paper.",
+    "output_file": "",
+    "evidence": "primitive_cells.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate starting atomic geometries for the two ZnO polymorphs using the lattice parameters measured experimentally and employed in the paper’s DFT setup.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relax_cells",
+    "title": "Geometry relaxation of primitive cells",
+    "role": "process",
+    "action": "Perform spin-polarized DFT geometry optimization of the primitive cells (keeping the lattice vectors fixed) using a hybrid functional (e.g., PBE0 or HSE06) to obtain relaxed internal coordinates. Use Quantum ESPRESSO’s pw.x with appropriate k-point sampling and energy cutoffs.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Optimize the internal positions of the primitive cells before supercell construction, ensuring the starting structures for defect calculations are at equilibrium.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_build_supercells",
+    "title": "Construct supercells and introduce oxygen vacancies",
+    "role": "process",
+    "action": "Build a 2×2×2 supercell for wurtzite (16 Zn + 16 O atoms) and a 2×2×1 supercell for rocksalt (16 Zn + 16 O atoms) by replicating the relaxed primitive cells. From each supercell, create an oxygen-vacancy model by removing one O atom and placing a ‘ghost’ basis function at that site, yielding four configurations: (1) ideal wurtzite, (2) wurtzite with 6.25 at.% O vacancy, (3) ideal rocksalt, (4) rocksalt with 6.25 at.% O vacancy.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the four structural models that are required for the electronic structure calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_run_dft",
+    "title": "Run DFT electronic structure calculations",
+    "role": "process",
+    "action": "For each of the four supercells, perform a spin-polarized DFT single-point calculation using a hybrid functional (PBE0 or HSE06) to compute the total and projected density of states (DOS). Use sufficient k-point mesh and energy cutoffs to converge the electronic structure.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain the DOS for all four systems, which serves as the raw data for extracting band gaps and confirms the absence of significant magnetic moments.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_extract_gaps",
+    "title": "Extract band gaps and write result file",
+    "role": "scored",
+    "action": "For each of the four configurations, determine the band gap from the computed DOS (difference between the valence band maximum and conduction band minimum). Write a JSON file `band_gaps.json` with keys 'ideal_wurtzite', 'wurtzite_vacancy', 'ideal_rocksalt', 'rocksalt_vacancy' and values as the band gap in eV.",
+    "output_file": "band_gaps.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Report the four DFT-calculated band gaps. This file is the single scored artifact.",
+    "output_schema": "JSON object with four float fields: 'ideal_wurtzite', 'wurtzite_vacancy', 'ideal_rocksalt', 'rocksalt_vacancy'; each value is the band gap in eV."
+  }
+]

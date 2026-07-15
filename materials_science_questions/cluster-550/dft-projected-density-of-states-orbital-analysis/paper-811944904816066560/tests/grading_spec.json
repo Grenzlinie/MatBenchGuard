@@ -1,0 +1,171 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "For lattice parameter and elastic constants, compare to paper reference within tolerances (T0). For bulk modulus, Poisson's ratio, and optical peaks, recompute from agent's raw artifacts (T1: B0/v from submitted Cij; peaks from dielectric_function.csv). Structural checks on dielectric function CSV.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lattice_parameter.txt": "exact_match",
+    "elastic_constants.txt": "exact_match",
+    "dielectric_function.csv": "structural_audit",
+    "optical_peak_energies.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for lattice parameter, elastic constants, bulk modulus, Poisson's ratio, and reference peak energies",
+      "source_provenance": "Paper Table 1 and text values (a0=0.4053393 nm, C11=181.00667 GPa, C12=37.28050 GPa, C44=38.86243 GPa, B0=85.18922 GPa, v=0.1708); peak energies 10.5 eV (strong) and 29.8 eV (small) from paper text/figures.",
+      "generation_method": "Direct copy from paper reported numbers.",
+      "why_not_fabricated": "Values are taken from the paper's own reported results (Table 1 and text)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_parameter.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "value": "nm"
+          }
+        },
+        "description": "Equilibrium lattice parameter a0 of cubic Al3Sc."
+      },
+      {
+        "file": "elastic_constants.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "C11": "GPa",
+            "C12": "GPa",
+            "C44": "GPa",
+            "B0": "GPa",
+            "v": "dimensionless"
+          }
+        },
+        "description": "Elastic stiffness constants C11, C12, C44, bulk modulus B0, and Poisson's ratio v."
+      },
+      {
+        "file": "dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required": {},
+          "items": {},
+          "required_columns": [
+            "energy",
+            "epsilon1",
+            "epsilon2"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon1": "dimensionless",
+            "epsilon2": "dimensionless"
+          }
+        },
+        "description": "Frequency-dependent complex dielectric function covering 0–40 eV; three columns: energy (eV), ε1, ε2."
+      },
+      {
+        "file": "optical_peak_energies.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "strong_peak": "eV",
+            "small_peak": "eV"
+          }
+        },
+        "description": "Energies of the strong absorptive peak (0–15 eV) and the small peak (20–35 eV) in the dielectric function."
+      }
+    ],
+    "notes": "All values are computed from DFT using a plane-wave pseudopotential method with PBE-GGA. The checker verifies B0 and v consistency from Cij, and checks that the reported peak energies are derivable from the submitted dielectric function ε2."
+  },
+  "steps": [
+    {
+      "id": "step_lattice",
+      "output_file": "lattice_parameter.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": 0.4053393,
+      "tolerance_rel": 0.02,
+      "description": "Lattice parameter a0 in nm, compare to paper reference with ±2% relative tolerance."
+    },
+    {
+      "id": "step_elastic_constants",
+      "output_file": "elastic_constants.txt",
+      "kind": "text_array",
+      "weight": 0.3,
+      "fields": [
+        "C11",
+        "C12",
+        "C44"
+      ],
+      "targets": [
+        181.00667,
+        37.2805,
+        38.86243
+      ],
+      "tolerance_rel": 0.1,
+      "derived_targets": {
+        "B0": 85.18922,
+        "v": 0.1708
+      },
+      "description": "Check C11, C12, C44 within ±10% of paper values; recompute B0 and v from submitted Cij and verify consistency with paper-derived values within ±10%."
+    },
+    {
+      "id": "step_dielectric_csv",
+      "output_file": "dielectric_function.csv",
+      "kind": "structural",
+      "weight": 0.25,
+      "min_rows": 50,
+      "energy_range": [
+        0.0,
+        40.0
+      ],
+      "description": "Structural checks: CSV has three numeric columns, ascending energy covering 0-40 eV, at least 50 data points."
+    },
+    {
+      "id": "step_peaks",
+      "output_file": "optical_peak_energies.txt",
+      "kind": "recompute_peaks",
+      "weight": 0.25,
+      "dielectric_file": "dielectric_function.csv",
+      "peak_ranges": {
+        "strong": [
+          0,
+          15
+        ],
+        "small": [
+          20,
+          35
+        ]
+      },
+      "target_peaks": {
+        "strong": 10.5,
+        "small": 29.8
+      },
+      "tolerance_abs": {
+        "strong": 2.0,
+        "small": 3.0
+      },
+      "description": "Recompute peak energies from eps2 in dielectric_function.csv; compare to paper reference (strong ~10.5 eV, small ~29.8 eV) within absolute tolerance."
+    }
+  ]
+}

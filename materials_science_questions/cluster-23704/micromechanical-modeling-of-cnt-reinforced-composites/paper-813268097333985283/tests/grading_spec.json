@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Linear regression slopes of shear properties vs. rho and power-law exponent of tensile strength vs. hole size are recomputed from the agent's CSV tables.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "shear_properties.csv": "metric_recompute",
+    "tensile_properties.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference slopes for μ/ρ, τ_y/ρ, τ/ρ and reference exponent for σ_ult ∝ c⁻ᵐ",
+      "source_provenance": "Paper Fig. 6 and equations (1), (3), (4) for slopes; Fig. 7(d) and text for exponent 0.35.",
+      "generation_method": "Extracted from paper and confirmed against reference solve.sh output.",
+      "why_not_fabricated": "These are the paper's reported quantitative scaling constants; they are the target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "shear_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "rho",
+            "G",
+            "tau_yield",
+            "tau_sliding"
+          ],
+          "units": {
+            "rho": "nm^-2",
+            "G": "GPa",
+            "tau_yield": "GPa",
+            "tau_sliding": "GPa"
+          }
+        },
+        "description": "Per-irradiation-condition interfacial shear properties and corresponding areal inter-tube link density. The hidden checker will perform linear regressions of G vs rho, tau_yield vs rho, and tau_sliding vs rho, and compare the slopes to reference values."
+      },
+      {
+        "file": "tensile_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "condition",
+            "UTS_GPa",
+            "max_strain",
+            "largest_hole_size_nm"
+          ],
+          "units": {
+            "UTS_GPa": "GPa",
+            "max_strain": "dimensionless",
+            "largest_hole_size_nm": "nm"
+          }
+        },
+        "description": "Per-irradiation-condition tensile properties and largest hole size. The hidden checker will fit a power law σ_ult ∝ c^{-m} to the data and compare the exponent to a reference value."
+      }
+    ],
+    "notes": "The checker uses the provided tables to recompute scaling relationships; no raw simulation files are scored."
+  },
+  "steps": [
+    {
+      "id": "step_06",
+      "output_file": "shear_properties.csv",
+      "kind": "custom",
+      "weight": 0.6,
+      "description": "Linear scaling of shear modulus, yield stress, and sliding stress with cross-link density",
+      "ref_slopes": {
+        "G": 10.0,
+        "tau_yield": 3.7,
+        "tau_sliding": 2.6
+      },
+      "tolerance_relative": 0.25,
+      "score_function": "mean_over_properties"
+    },
+    {
+      "id": "step_07",
+      "output_file": "tensile_properties.csv",
+      "kind": "custom",
+      "weight": 0.4,
+      "description": "Power-law exponent of tensile strength vs hole size",
+      "ref_exponent": 0.35,
+      "tolerance_exponent": 0.1
+    }
+  ]
+}

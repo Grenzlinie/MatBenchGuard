@@ -1,0 +1,74 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot re-run DFT in verifier; verify energy ordering and angle ranges from the reported CSV.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_optimization_results.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold angle ranges and ordering check to verify the computed results follow the expected physical trend.",
+      "source_provenance": "Paper Table 4: PBE-D3 bent angle ~130.7°, linear ~179.7°; PBE ordering linear more stable than bent; PBE-D3 ordering bent more stable than linear.",
+      "generation_method": "Extracted from the paper's Table 4 and used as structural constraints.",
+      "why_not_fabricated": "Values are from the published paper; used only to set acceptable angle ranges and ordering expectations."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_optimization_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "functional",
+            "final_PCP_angle_deg",
+            "total_energy_per_CDP_eV",
+            "relative_energy_per_CDP_kcal_mol"
+          ],
+          "units": {
+            "final_PCP_angle_deg": "degrees",
+            "total_energy_per_CDP_eV": "eV",
+            "relative_energy_per_CDP_kcal_mol": "kcal/mol"
+          }
+        },
+        "description": "Computed results from periodic DFT optimizations, including energy ordering between bent and linear polymorphs with and without dispersion correction."
+      }
+    ],
+    "notes": "The ordering of relative energies (which structure is more stable) and the numerical ranges of the P-C-P angles are the scored quantities. The checker will verify that the reported values follow the physically meaningful trend and lie within acceptable tolerances derived from the paper's reference data."
+  },
+  "checks": [
+    {
+      "id": "check_ordering_pbe",
+      "output_file": "step_01_optimization_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "PBE: Cprime_linear must have lower total energy per molecule than A_bent (linear more stable)."
+    },
+    {
+      "id": "check_ordering_pbed3",
+      "output_file": "step_01_optimization_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "PBE-D3: A_bent must have lower total energy per molecule than Cprime_linear (bent more stable)."
+    },
+    {
+      "id": "check_angle_A",
+      "output_file": "step_01_optimization_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "A_bent PCP angle in [125, 145] degrees for both PBE and PBE-D3 rows."
+    },
+    {
+      "id": "check_angle_Cprime",
+      "output_file": "step_01_optimization_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.2,
+      "description": "Cprime_linear PCP angle in [170, 180] degrees for both PBE and PBE-D3 rows."
+    }
+  ]
+}

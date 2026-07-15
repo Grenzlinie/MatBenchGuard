@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "GGA reference calculations",
+    "role": "process",
+    "action": "Run spin-polarized GGA calculations for all lithiated and delithiated TM compounds: olivine LiMPO4 (M=Mn,Fe,Co,Ni), layered LiMO2 (M=Co,Ni), and spinel LiM2O4 (M=Mn,Co). Perform full structural relaxation, obtain total energies and d-orbital occupation matrices (U=0 reference). Use high-spin states and the magnetic orderings consistent with the paper (AFM for olivines, FM for layered/spinel).",
+    "output_file": "",
+    "evidence": "gga_reference.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Compute Hubbard U values via linear response",
+    "role": "scored",
+    "action": "Using the GGA reference structures and occupation matrices from step1, apply the linear-response method (e.g., hp.x in Quantum ESPRESSO) to calculate the self-consistent Hubbard U parameter for each TM ion in each valence and crystal environment. For each site, apply a local perturbation dV = α P_d, compute the screened (χ) and bare (χ0) response matrices from d-manifold occupation changes, and obtain U = (χ0⁻¹ - χ⁻¹)ᵢᵢ. Converge in supercell size. Compile all resulting U values (in eV) into a JSON file.",
+    "output_file": "computed_U_values.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Self-consistent Hubbard U parameters for all TM ion/structure combinations listed in Table II of the source.",
+    "output_schema": "JSON object: keys are compound identifiers like \"Mn2+_olivine\", \"Fe3+_spinel\", etc.; values are floating-point numbers (U in eV). Includes all entries from Table II."
+  },
+  {
+    "id": "step3",
+    "title": "DFT+U total energy calculations",
+    "role": "process",
+    "action": "Perform spin-polarized GGA+U calculations for all lithiated/delithiated end-member phases using the U values from step2. Include full structural relaxation. Use high-spin states and the same magnetic orderings as in step1. Compute also the total energy of metallic Li (bcc) with the same functional and pseudopotentials.",
+    "output_file": "",
+    "evidence": "dft_u_total_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Compute average lithium intercalation voltages",
+    "role": "scored",
+    "action": "Calculate the average lithium intercalation voltage for each redox couple from the DFT+U total energies of step3. Use the formula ⟨V⟩ = -[E(Liₓ₂MOy) - E(Liₓ₁MOy) - (x₂-x₁)E(Li metal)]/((x₂-x₁)F), with x₁=0 and x₂=1 unless otherwise noted. For spinel LiₓM₂O₄, compute separate voltages for the 0<x<1 and 1<x<2 plateaus. Produce a CSV file.",
+    "output_file": "computed_voltages.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Average lithium intercalation voltages for all redox couples studied.",
+    "output_schema": "Columns: compound (string), computed_voltage (float, V), experimental_voltage (float, V). The experimental column may be filled with literature values or left blank; scoring uses only computed_voltage."
+  }
+]

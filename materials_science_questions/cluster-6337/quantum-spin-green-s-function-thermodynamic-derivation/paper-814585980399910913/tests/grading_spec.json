@@ -1,0 +1,77 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the expected correlation lengths and spin gaps directly from the sigma‑model equations (Eqs. 17, 28, 30) using the given macroscopic parameters. The agent’s CSV values are compared to these recomputed results with appropriate relative tolerances, and monotonicity trends are verified.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "correlation_gap_results.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "correlation_gap_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "legs",
+            "temperature",
+            "correlation_length",
+            "gap"
+          ],
+          "units": {
+            "temperature": "J",
+            "correlation_length": "lattice spacing a",
+            "gap": "J"
+          }
+        },
+        "description": "Computed correlation lengths and spin gaps. The checker compares the values against hidden reference values derived from the paper (Table 1 for T=0, Fig. 3 for finite T) within predefined tolerances, and also checks that the computed quantities are physically consistent with the sigma-model predictions (e.g., trends with leg number and temperature)."
+      }
+    ],
+    "notes": "Only the even-legged isotropic cases are required. The gap column may contain NaN for rows where the gap is not defined (e.g., certain finite-temperature 2-leg cases)."
+  },
+  "steps": [
+    {
+      "id": "shape_check",
+      "output_file": "correlation_gap_results.csv",
+      "kind": "file_exists",
+      "weight": 0.05,
+      "config": {
+        "required_columns": [
+          "legs",
+          "temperature",
+          "correlation_length",
+          "gap"
+        ],
+        "expected_rows": 11
+      }
+    },
+    {
+      "id": "values_check",
+      "output_file": "correlation_gap_results.csv",
+      "kind": "numeric",
+      "weight": 0.85,
+      "config": {
+        "params": {
+          "rho_s": 0.18,
+          "hc": 1.657,
+          "Lambda": 4.442882938158366,
+          "N_components": 3
+        },
+        "tolerances": {
+          "T0": 0.1,
+          "finite_T": 0.15
+        }
+      }
+    },
+    {
+      "id": "monotonicity_check",
+      "output_file": "correlation_gap_results.csv",
+      "kind": "rubric",
+      "weight": 0.1,
+      "config": {}
+    }
+  ]
+}

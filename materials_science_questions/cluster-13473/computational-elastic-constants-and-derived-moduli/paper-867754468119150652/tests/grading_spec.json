@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker fully recomputes ℓ_c from raw C(r) data and verifies constancy of ℓ_c √δz; no trust of self-reported values is required for the main weight.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_C_r_data.csv": "metric_recompute",
+    "step_02_ell_c.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Tolerance for constancy check (CV < 0.1) derived from the paper's claim that ℓ_c ~ δz^{-1/2}.",
+      "source_provenance": "paper's reported scaling relation",
+      "generation_method": "constancy condition translated into CV threshold; no external dataset needed",
+      "why_not_fabricated": "Direct mathematical consequence of the paper's main result. Used to set scoring threshold."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_C_r_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r",
+            "delta_z",
+            "C_r"
+          ]
+        },
+        "description": "Bond response function C(r) averaged over bond pairs at distance r, for each δz. The checker recomputes ℓ_c from this raw data."
+      },
+      {
+        "file": "step_02_ell_c.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "delta_z",
+            "ell_c"
+          ]
+        },
+        "description": "Extracted lengthscale ℓ_c for each δz. The checker recomputes ℓ_c independently from step_01 and cross-checks these reported values."
+      }
+    ],
+    "notes": "The main scientific claim is that ℓ_c and δz are related by a well-defined scaling law. The checker recomputes ℓ_c from the C(r) data and verifies the consistency of the inferred scaling relationship."
+  },
+  "steps": [
+    {
+      "id": "step_01_sanity",
+      "output_file": "step_01_C_r_data.csv",
+      "kind": "sanity",
+      "weight": 0.05
+    },
+    {
+      "id": "step_04_constancy",
+      "output_file": "step_01_C_r_data.csv",
+      "kind": "recompute_constancy",
+      "weight": 0.75
+    },
+    {
+      "id": "step_04_crosscheck",
+      "output_file": "step_02_ell_c.csv",
+      "kind": "cross_check",
+      "weight": 0.2
+    }
+  ]
+}

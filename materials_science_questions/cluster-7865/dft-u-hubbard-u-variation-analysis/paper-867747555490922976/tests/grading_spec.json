@@ -1,0 +1,127 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The main claims are threshold-screened orbital moments, exact orbital order classification, and monotonic conductivity ordering; recomputing these from raw DFT wavefunctions is infeasible in the lightweight checker sandbox, so we compare the agent's reported artifacts against paper-derived thresholds and structural relations.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "co_phase2_orbital_moment.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "description": "A single floating-point number representing the vanadium orbital moment in μB for the I41/amd phase. The sign must be included."
+        },
+        "description": "Vanadium orbital moment for the I41/amd phase; scored by checking that its absolute value exceeds a hidden threshold consistent with a large unquenched orbital moment."
+      },
+      {
+        "file": "co_phase3_orbital_moment.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "required": {},
+          "description": "A single floating-point number representing the vanadium orbital moment in μB for the I41/a phase. The sign must be included."
+        },
+        "description": "Vanadium orbital moment for the I41/a phase; scored by checking that its absolute value is below a hidden threshold consistent with a quenched orbital moment."
+      },
+      {
+        "file": "orbital_order_classification.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "I41/amd": "string",
+            "I41/a": "string"
+          }
+        },
+        "description": "Classification of orbital order for the two tetragonal phases. 'I41/amd' must be either 'complex' or 'A-type real'; 'I41/a' likewise. Exact string matching is used."
+      },
+      {
+        "file": "conductivity_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "x0.0": "positive number",
+            "x0.5": "positive number",
+            "x1.0": "positive number"
+          },
+          "units": {
+            "conductivity": "S/m"
+          }
+        },
+        "description": "Electrical conductivity values at 300 K for three Co doping levels. The structural audit verifies that the values increase monotonically: σ(x0.0) < σ(x0.5) < σ(x1.0)."
+      }
+    ],
+    "notes": "All scored artifacts must be generated from first-principles calculations using the public tools and structures listed in resources. Hidden thresholds for orbital moments and the expected classification strings are derived from the paper's reported values; the exact magnitude separation is part of the hidden grading."
+  },
+  "target_policies": {
+    "co_phase2_orbital_moment.txt": "threshold_or_better",
+    "co_phase3_orbital_moment.txt": "threshold_or_better",
+    "orbital_order_classification.json": "exact_match",
+    "conductivity_values.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden thresholds for orbital moments and exact classification strings, derived from the paper's reported values.",
+      "source_provenance": "Paper text: orbital moment -0.66 μB for I41/amd and -0.06 μB for I41/a, orbital order complex vs A-type real.",
+      "generation_method": "Thresholds set to capture magnitude separation: >0.5 μB for large moment, <0.2 μB for quenched moment, based on paper's values. Classification strings taken verbatim from paper conclusions.",
+      "why_not_fabricated": "These are directly extracted from the paper's explicit reported numbers and descriptions; they constitute the gold reproduction target."
+    }
+  ],
+  "steps": [
+    {
+      "id": "orbital_moment_phase2",
+      "output_file": "co_phase2_orbital_moment.txt",
+      "kind": "numeric",
+      "metric": "absolute_value",
+      "threshold": 0.5,
+      "direction": "greater_equal",
+      "weight": 0.3,
+      "description": "Check that absolute orbital moment for I41/amd phase is >= 0.5 μB (large unquenched moment)."
+    },
+    {
+      "id": "orbital_moment_phase3",
+      "output_file": "co_phase3_orbital_moment.txt",
+      "kind": "numeric",
+      "metric": "absolute_value",
+      "threshold": 0.2,
+      "direction": "less_equal",
+      "weight": 0.3,
+      "description": "Check that absolute orbital moment for I41/a phase is <= 0.2 μB (quenched moment)."
+    },
+    {
+      "id": "orbital_order_classification",
+      "output_file": "orbital_order_classification.json",
+      "kind": "exact_match",
+      "expected": {
+        "I41/amd": "complex",
+        "I41/a": "A-type real"
+      },
+      "weight": 0.2,
+      "description": "Exact string match for orbital order classification."
+    },
+    {
+      "id": "conductivity_ordering",
+      "output_file": "conductivity_values.json",
+      "kind": "structural_audit",
+      "check": "monotonic_increasing",
+      "keys": [
+        "x0.0",
+        "x0.5",
+        "x1.0"
+      ],
+      "weight": 0.2,
+      "description": "Verify σ(x0.0) < σ(x0.5) < σ(x1.0)."
+    }
+  ]
+}

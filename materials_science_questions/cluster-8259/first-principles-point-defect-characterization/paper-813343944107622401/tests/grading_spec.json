@@ -1,0 +1,96 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Coordination defect counts can be recomputed from the submitted XYZ geometries using the bond criterion, and compared with agent's reported counts, enabling T1 recompute scoring.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "66-sph-1_final.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Standard XYZ file: first line atom count, second line comment (including '66-sph-1'), then lines with element symbol and Cartesian coordinates in Å."
+        },
+        "description": "Relaxed geometry of the embedded cluster model. The checker recomputes coordination defect counts from this file."
+      },
+      {
+        "file": "66-sup_final.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "description": "Standard XYZ file: first line atom count, second line comment (including '66-sup'), then lines with element symbol and Cartesian coordinates in Å."
+        },
+        "description": "Relaxed geometry of the periodic supercell model. The checker recomputes coordination defect counts from this file."
+      },
+      {
+        "file": "coordination_errors.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "66-sph-1": {
+              "type": "object",
+              "required": [
+                "initial",
+                "final"
+              ],
+              "properties": {
+                "initial": {
+                  "type": "object",
+                  "description": "mapping element ('O','C','Si') to deviation counts"
+                },
+                "final": {
+                  "type": "object",
+                  "description": "mapping element ('O','C','Si') to deviation counts"
+                }
+              }
+            },
+            "66-sup": {
+              "type": "object",
+              "required": [
+                "initial",
+                "final"
+              ],
+              "properties": {
+                "initial": "object",
+                "final": "object"
+              }
+            }
+          }
+        },
+        "description": "Coordination deviation counts per element and per model for initial and final structures. The checker will recompute the final counts from the XYZ geometries, compare them with tolerance, and verify that total undercoordination decreases and that the periodic model retains more carbon undercoordination."
+      }
+    ],
+    "notes": "The scored output contract covers the two final geometries and the coordination error report. The checker recomputes the coordination from the geometries and validates the paper's trends; absolute counts are compared with a tolerance."
+  },
+  "steps": [
+    {
+      "id": "xyz_66sph1_exists",
+      "output_file": "66-sph-1_final.xyz",
+      "weight": 0.05,
+      "kind": "custom",
+      "description": "Validate that the 66-sph-1 XYZ file is present, readable, and contains correct atom count and comment."
+    },
+    {
+      "id": "xyz_66sup_exists",
+      "output_file": "66-sup_final.xyz",
+      "weight": 0.05,
+      "kind": "custom",
+      "description": "Validate that the 66-sup XYZ file is present, readable, and contains correct atom count and comment."
+    },
+    {
+      "id": "coordination_errors",
+      "output_file": "coordination_errors.json",
+      "weight": 0.9,
+      "kind": "custom",
+      "description": "Recompute final coordination counts from XYZ files, verify consistency with agent's reported final counts, and check trends: undercoordination decrease and C undercoordination higher in periodic model."
+    }
+  ]
+}

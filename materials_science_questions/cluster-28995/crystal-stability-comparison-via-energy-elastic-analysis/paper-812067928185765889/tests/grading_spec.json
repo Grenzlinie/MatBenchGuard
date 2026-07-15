@@ -1,0 +1,183 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The task is compute-driven; the checker recomputes total ΔF from per-stage CSV and compares summary values to paper-reported gold with absolute tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lj_multistage_results.csv": "metric_recompute",
+    "lj_summary.json": "reference_match",
+    "rb_multistage_results.csv": "metric_recompute",
+    "rb_summary.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for LJ ΔF, ΔS, and Rb ΔF from the paper (Table I and section 6).",
+      "source_provenance": "Il Nuovo Cimento D 1984, Table I and Section 6 (Rubidium at STP).",
+      "generation_method": "Extracted directly from the paper's reported numbers: LJ ΔF = -0.1044, ΔS = -0.1318; Rb ΔF = 0.1063.",
+      "why_not_fabricated": "These are the experimentally unaltered published values the task aims to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lj_multistage_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lambda_start",
+            "lambda_end",
+            "delta_F_per_particle",
+            "error"
+          ],
+          "units": {
+            "delta_F_per_particle": "reduced Lennard-Jones energy unit",
+            "error": "reduced Lennard-Jones energy unit"
+          }
+        },
+        "description": "Per-interval free-energy contributions for the LJ system. The hidden checker will sum delta_F_per_particle and compare the total to a hidden gold value with an absolute tolerance, and will also verify that column values are numeric and errors are positive."
+      },
+      {
+        "file": "lj_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_F": "number",
+            "delta_F_error": "number",
+            "delta_S": "number",
+            "delta_S_error": "number"
+          },
+          "units": {
+            "delta_F": "reduced Lennard-Jones energy unit",
+            "delta_F_error": "reduced Lennard-Jones energy unit",
+            "delta_S": "reduced Lennard-Jones unit (k_B)",
+            "delta_S_error": "reduced Lennard-Jones unit (k_B)"
+          }
+        },
+        "description": "Aggregate free-energy and entropy difference for the LJ system. The hidden checker will compare delta_F and delta_S to hidden gold values (paper-reported) with absolute tolerance 0.02 each, and will verify that errors are positive and that the sum of per-stage contributions from the CSV matches the summary delta_F."
+      },
+      {
+        "file": "rb_multistage_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lambda_start",
+            "lambda_end",
+            "delta_F_per_particle",
+            "error"
+          ],
+          "units": {
+            "delta_F_per_particle": "reduced Rubidium energy unit",
+            "error": "reduced Rubidium energy unit"
+          }
+        },
+        "description": "Per-interval free-energy contributions for the Rb system. The hidden checker will sum delta_F_per_particle and compare the total to a hidden gold value with an absolute tolerance."
+      },
+      {
+        "file": "rb_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_F": "number",
+            "delta_F_error": "number"
+          },
+          "units": {
+            "delta_F": "reduced Rubidium energy unit",
+            "delta_F_error": "reduced Rubidium energy unit"
+          }
+        },
+        "description": "Aggregate free-energy difference for the Rb system. The hidden checker will compare delta_F to a hidden gold value (paper-reported) with absolute tolerance 0.02, and will verify that the sum of per-stage contributions from the CSV matches the summary delta_F."
+      }
+    ],
+    "notes": "All energies are per-particle. The hidden checker also enforces internal consistency: the per-stage delta_F sums must equal the values in the summary JSON files. Scoring weights: LJ delta_F 40%, LJ delta_S 30%, Rb delta_F 30%."
+  },
+  "steps": [
+    {
+      "id": "lj_csv_sum",
+      "output_file": "lj_multistage_results.csv",
+      "kind": "recompute_metric",
+      "metric": "sum_of_delta_F",
+      "weight": 0.3,
+      "target": -0.1044,
+      "tolerance_abs": 0.02,
+      "description": "Sum the per-stage delta_F_per_particle from lj_multistage_results.csv and compare to the paper-reported total raw ΔF (-0.1044) for Rc=2.35."
+    },
+    {
+      "id": "lj_summary_dF",
+      "output_file": "lj_summary.json",
+      "kind": "json_field",
+      "field": "delta_F",
+      "weight": 0.1,
+      "target": -0.1044,
+      "tolerance_abs": 0.02,
+      "description": "Compare the reported delta_F in lj_summary.json to the paper gold (-0.1044)."
+    },
+    {
+      "id": "lj_summary_dS",
+      "output_file": "lj_summary.json",
+      "kind": "json_field",
+      "field": "delta_S",
+      "weight": 0.3,
+      "target": -0.1318,
+      "tolerance_abs": 0.02,
+      "description": "Compare the reported delta_S in lj_summary.json to the paper gold -0.1318."
+    },
+    {
+      "id": "rb_csv_sum",
+      "output_file": "rb_multistage_results.csv",
+      "kind": "recompute_metric",
+      "metric": "sum_of_delta_F",
+      "weight": 0.2,
+      "target": 0.1063,
+      "tolerance_abs": 0.02,
+      "description": "Sum the per-stage delta_F_per_particle from rb_multistage_results.csv and compare to the paper-reported total ΔF (0.1063)."
+    },
+    {
+      "id": "rb_summary_dF",
+      "output_file": "rb_summary.json",
+      "kind": "json_field",
+      "field": "delta_F",
+      "weight": 0.1,
+      "target": 0.1063,
+      "tolerance_abs": 0.02,
+      "description": "Compare the reported delta_F in rb_summary.json to the paper gold (0.1063)."
+    },
+    {
+      "id": "lj_consistency",
+      "output_file": "lj_multistage_results.csv",
+      "kind": "rubric",
+      "weight": 0.0,
+      "description": "Verify that the sum of CSV delta_F matches lj_summary.json delta_F, and that all reported errors are non-negative.",
+      "check_consistency": {
+        "compare_csv_sum_to_summary": "lj_summary.json",
+        "field": "delta_F",
+        "tolerance": 1e-06,
+        "errors_positive": true
+      }
+    },
+    {
+      "id": "rb_consistency",
+      "output_file": "rb_multistage_results.csv",
+      "kind": "rubric",
+      "weight": 0.0,
+      "description": "Verify that the sum of CSV delta_F matches rb_summary.json delta_F, and that all reported errors are non-negative.",
+      "check_consistency": {
+        "compare_csv_sum_to_summary": "rb_summary.json",
+        "field": "delta_F",
+        "tolerance": 1e-06,
+        "errors_positive": true
+      }
+    }
+  ]
+}

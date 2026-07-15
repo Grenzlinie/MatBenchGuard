@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_00_pretrain",
+    "title": "Pretrain LapNet wavefunction for benzene",
+    "role": "process",
+    "action": "Initialize the LapNet neural network ansatz for the benzene molecule using the experimental equilibrium geometry. Pretrain the network parameters by fitting to a reference wavefunction expanded in the aug-cc-pVDZ basis set.",
+    "output_file": "",
+    "evidence": "pretrain_checkpoint.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Process step: pretrain to provide a good initial guess for LAVA optimization.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_01_lava_train",
+    "title": "Run LAVA optimization for multiple network sizes",
+    "role": "process",
+    "action": "For at least five distinct network sizes (e.g., (4,64,2,16), (4,96,2,24), (4,128,4,32), (4,256,4,32), (4,408,4,48)), train the LapNet wavefunction using the LAVA algorithm. Each training run must use the default hyperparameters and the pretrained checkpoint. The model size is increased by varying network width, depth, and number of determinants.",
+    "output_file": "",
+    "evidence": "lava_train_log.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Process step: core LAVA optimization that produces the trained wavefunction parameters needed for the downstream energy evaluation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_eval",
+    "title": "Evaluate total energy and variance for each trained model",
+    "role": "scored",
+    "action": "For each trained wavefunction, perform a long MCMC run to estimate the total energy and the local energy variance. Output a CSV table containing the results for all network configurations.",
+    "output_file": "step_01_scaling_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact: CSV file with columns network_config (str), N_p (int), total_energy (float, Hartree), var_local_energy (float, Ha²). Each row corresponds to one trained model.",
+    "output_schema": "Columns: network_config (string), N_p (int), total_energy (float, Hartree), var_local_energy (float, Ha²). One row per trained model."
+  },
+  {
+    "id": "step_03_fit",
+    "title": "Fit power-law and variance-energy scaling relations",
+    "role": "scored",
+    "action": "From the data in step_01_scaling_data.csv, fit the power law E - E_SE = alpha * N_p^{-beta} by log-log least squares, and the linear variance-energy relation E = k * V + E_SE. Report the fitted parameters in a JSON file.",
+    "output_file": "step_02_fit_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact: JSON file containing the fitted scaling law parameters. The checker will recompute these fits from the CSV and compare the results.",
+    "output_schema": "{ \"power_law\": { \"alpha\": float, \"beta\": float, \"E_SE\": float (Hartree) }, \"variance_energy\": { \"slope\": float, \"intercept\": float (Hartree) } }"
+  }
+]

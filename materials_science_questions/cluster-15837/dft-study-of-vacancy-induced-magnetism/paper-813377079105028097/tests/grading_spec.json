@@ -1,0 +1,108 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Cannot recompute magnetic moments from raw DFT data in the verifier; we compare agent-reported values in results.json to the paper's hidden gold within tolerances. The paper's exact computed values are used as hidden references.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold magnetic moments and coupling indicators for all defect configurations.",
+      "source_provenance": "Paper's reported values: single cation vacancies (V_Bi 1.5 μB, V_Zn 1.1 μB), single sulfur vacancies (0 μB), single interstitials (Zn_i 0.582 μB, Bi_i 0.591 μB), two-vacancy moments (Bi: 3.01, 3.6, 4.29 μB; Zn: 2.21, 2.62, 3.04 μB), and FM lower than AFM for all two-vacancy cases.",
+      "generation_method": "Extracted from paper text and encoded in the reference solve.sh. Each value is the paper's own computed result under the stated conditions.",
+      "why_not_fabricated": "These are the exact published DFT magnetic moments; the reference solution outputs them to prove the checker awards full credit to a correct submission."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "single_vacancies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "system": {
+                    "type": "string"
+                  },
+                  "mu_B": {
+                    "type": "number",
+                    "unit": "μB"
+                  }
+                },
+                "required": [
+                  "system",
+                  "mu_B"
+                ]
+              }
+            },
+            "two_vacancies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "system": {
+                    "type": "string"
+                  },
+                  "mu_B": {
+                    "type": "number",
+                    "unit": "μB"
+                  },
+                  "FM_lower_than_AFM": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "system",
+                  "mu_B",
+                  "FM_lower_than_AFM"
+                ]
+              }
+            },
+            "single_interstitials": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "system": {
+                    "type": "string"
+                  },
+                  "mu_B": {
+                    "type": "number",
+                    "unit": "μB"
+                  }
+                },
+                "required": [
+                  "system",
+                  "mu_B"
+                ]
+              }
+            }
+          },
+          "required": [
+            "single_vacancies",
+            "two_vacancies",
+            "single_interstitials"
+          ]
+        },
+        "description": "JSON file containing computed magnetic moments (in μB) and FM/AFM coupling indicators for all defect configurations."
+      }
+    ],
+    "notes": "The hidden checker compares each mu_B value against the paper's reference values within a tolerance, and verifies that FM_lower_than_AFM is true for every two-vacancy configuration."
+  },
+  "steps": [
+    {
+      "id": "defect_results",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 1.0
+    }
+  ]
+}

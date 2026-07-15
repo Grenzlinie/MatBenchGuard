@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1: recompute SFE (q=1) and unstable SFE (max relaxed) from gsf_energy.csv; structural audit interlayer spacing trends; reference-match summary values against paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for SFE, unstable SFE, c/a, and interlayer trend specifications.",
+      "source_provenance": "Paper Table I, Fig.2, and inline text. Pd relaxed SFE=225, unstable SFE=383 mJ/m²; Pt relaxed SFE=339, unstable SFE=432 mJ/m²; c/a values 1.632 (Pd) and 1.620 (Pt); interlayer trends: Pd first contracts, third expands, second expands then contracts; Pt first+second contract, third expands.",
+      "generation_method": "Extracted from paper; tolerances set to ~50-60 mJ/m² for energies (typical expected spread for tight-binding implementation) and 0.02 for c/a.",
+      "why_not_fabricated": "Values are taken verbatim from the paper's reported results and physical constants; they are not invented."
+    }
+  ],
+  "gold_data": {
+    "Pd": {
+      "SFE": 225,
+      "unstable_SFE": 383,
+      "c_over_a": 1.632,
+      "SFE_tol_abs": 50,
+      "unstable_SFE_tol_abs": 60,
+      "c_over_a_tol": 0.02
+    },
+    "Pt": {
+      "SFE": 339,
+      "unstable_SFE": 432,
+      "c_over_a": 1.62,
+      "SFE_tol_abs": 50,
+      "unstable_SFE_tol_abs": 60,
+      "c_over_a_tol": 0.02
+    }
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "gsf_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "q",
+            "relaxed_energy",
+            "unrelaxed_energy"
+          ],
+          "units": {
+            "relaxed_energy": "mJ/m²",
+            "unrelaxed_energy": "mJ/m²"
+          }
+        },
+        "description": "Generalized stacking fault energy curve (relaxed and unrelaxed) as a function of stacking fault variable q. The checker will recompute SFE (energy at q=1) and unstable SFE (maximum relaxed energy) from this file and compare to hidden paper-reported values within tolerances."
+      },
+      {
+        "file": "interlayer_spacings.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "q",
+            "layer_number",
+            "relaxed_spacing",
+            "unrelaxed_spacing"
+          ],
+          "units": {
+            "relaxed_spacing": "Å",
+            "unrelaxed_spacing": "Å"
+          }
+        },
+        "description": "Interlayer spacing changes vs q for the first, second, and third layers. The checker will audit qualitative trends (e.g., expansion/contraction patterns)."
+      },
+      {
+        "file": "summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "SFE",
+            "unstable_SFE",
+            "c_over_a"
+          ],
+          "units": {
+            "SFE": "mJ/m²",
+            "unstable_SFE": "mJ/m²",
+            "c_over_a": "dimensionless"
+          }
+        },
+        "description": "Summary of SFE, unstable SFE, and c/a ratio at the stacking fault. Checker compares these values to hidden paper-reported references within tolerances."
+      }
+    ],
+    "notes": "The tight-binding solver must be implemented or adapted from an open-source code (e.g., pyscf, sisl, or a custom NRL-TB implementation). The original Mehl TB code is proprietary; the agent is expected to use an equivalent open-source engine. All results are computed from scratch; no pre-made intermediate files are provided."
+  },
+  "steps": [
+    {
+      "id": "step_04_gsf_energy",
+      "output_file": "gsf_energy.csv",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "description": "Recompute relaxed SFE (q=1) and unstable SFE (max relaxed) for Pd and Pt from gsf_energy.csv; compare to paper gold with absolute tolerances."
+    },
+    {
+      "id": "step_05_interlayer_spacings",
+      "output_file": "interlayer_spacings.csv",
+      "kind": "structural_audit",
+      "weight": 0.25,
+      "description": "Structural audit: verify qualitative interlayer spacing trends for Pd (first contracts, third expands, second expands then contracts) and Pt (first+second contract, third expands)."
+    },
+    {
+      "id": "step_06_summary",
+      "output_file": "summary.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "description": "Reference match: compare reported SFE, unstable SFE, and c/a for each metal to paper gold with tolerances."
+    }
+  ]
+}

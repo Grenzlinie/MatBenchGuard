@@ -1,0 +1,132 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes band gaps and metallicity from the raw total DOS file, then compares to paper-reported values with tolerances. This is a full T1 recompute, as the DOS file contains all necessary data.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_dos_all_compositions.dat": "metric_recompute",
+    "band_gap_summary.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Table of paper-reported band gaps and metallic/insulating classification for each composition.",
+      "source_provenance": "Extracted from the paper text (Fig. 1 descriptions and body).",
+      "generation_method": "Directly transcribed from the paper's published results section; all values are the authors' own reported quantities.",
+      "why_not_fabricated": "These are the actual numerical results from the source paper that the task claims to reproduce. Without them, scoring has no ground truth."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_dos_all_compositions.dat",
+        "format": "tsv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "energy_in_eV",
+            "total_dos"
+          ],
+          "units": {
+            "energy_in_eV": "eV",
+            "total_dos": "states/eV"
+          }
+        },
+        "description": "Total density of states for each of the twelve α-Al2O3-based compositions. The checker recomputes band gaps and metallicity from this file."
+      },
+      {
+        "file": "band_gap_summary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "band_gap"
+          ],
+          "units": {
+            "band_gap": "eV or 'metallic'"
+          }
+        },
+        "description": "Summary of band gaps (eV) or metallicity for each composition. Compared against the paper's reference band gaps with hidden tolerance."
+      }
+    ],
+    "notes": "The checker recomputes the electronic character and band gaps from the raw DOS file to ensure consistency. The band_gap_summary is also checked for agreement with the recomputed values. Gold band gaps are paper-reported values and are hidden."
+  },
+  "steps": [
+    {
+      "id": "step_03_dos_recompute",
+      "output_file": "total_dos_all_compositions.dat",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "description": "Recompute band gaps and metallicity classification from the raw DOS file, then score against paper gold values.",
+      "dos_threshold": 0.001,
+      "zero_tol": 0.01,
+      "gold_table": {
+        "pure α-Al2O3": {
+          "type": "insulator",
+          "gap": 8.3,
+          "tolerance": 0.3
+        },
+        "Al1.94Zr0.06O3": {
+          "type": "metal"
+        },
+        "Al1.94Nb0.06O3": {
+          "type": "metal"
+        },
+        "Al1.94Mo0.06O3": {
+          "type": "metal"
+        },
+        "Al1.94O3": {
+          "type": "metal"
+        },
+        "Al1.97Ga0.03O3": {
+          "type": "insulator",
+          "gap": 8.1,
+          "tolerance": 0.3
+        },
+        "Al1.96Zr0.03O3": {
+          "type": "insulator",
+          "gap": 7.2,
+          "tolerance": 0.3
+        },
+        "Al1.95Nb0.03O3": {
+          "type": "insulator",
+          "gap": 5.7,
+          "tolerance": 0.3
+        },
+        "Al1.94Mo0.03O3": {
+          "type": "insulator",
+          "gap": 4.3,
+          "tolerance": 0.3
+        },
+        "Al1.97Ga0.03O2.97": {
+          "type": "insulator",
+          "gap": 2.1,
+          "tolerance": 0.3
+        },
+        "Al1.96Zr0.03O2.97": {
+          "type": "insulator",
+          "gap": 1.0,
+          "tolerance": 0.6
+        },
+        "Al1.91Nb0.03Sn0.06O2.97": {
+          "type": "insulator",
+          "gap": 1.0,
+          "tolerance": 0.6
+        }
+      }
+    },
+    {
+      "id": "step_04_summary_consistency",
+      "output_file": "band_gap_summary.csv",
+      "kind": "consistency_check",
+      "weight": 0.4,
+      "description": "Verify that the band_gap_summary.csv matches the recomputed band gaps and metallicity from the DOS file.",
+      "gap_tolerance": 0.05
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities are DFT barriers and free energies; full recompute in verifier is infeasible. Compare self-reported CSV values to paper golds within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for DFT derived quantities (barrier and free energies)",
+      "source_provenance": "Paper text gives E_a (0.508 and 0.360 eV); ΔG_H2 and ΔG_H2O2 values are taken from free energy diagrams in Fig.5(c,d) and reproduced by the oracle solve.sh.",
+      "generation_method": "Extracted from the paper's results and encoded directly in solve.sh, which writes the expected CSV.",
+      "why_not_fabricated": "Values directly traceable to published paper's numerical results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "E_a",
+            "ΔG_H2",
+            "ΔG_H2O2"
+          ],
+          "units": {
+            "E_a": "eV",
+            "ΔG_H2": "eV",
+            "ΔG_H2O2": "eV"
+          }
+        },
+        "description": "DFT-computed water dissociation barrier and Gibbs free energy changes for H₂ and H₂O₂ evolution on pristine NaNbO₃ and V-doped NaNbO₃ surfaces."
+      }
+    ],
+    "notes": "The hidden checker will compare the reported values to the paper's reported gold numbers with appropriate tolerances. The agent must compute all required values from scratch using a DFT implementation with the PBE functional."
+  },
+  "steps": [
+    {
+      "id": "score_nanbo3",
+      "output_file": "dft_results.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "system": "NaNbO3",
+      "metrics": {
+        "E_a": {
+          "gold": 0.508,
+          "tol": 0.05
+        },
+        "ΔG_H2": {
+          "gold": 0.924,
+          "tol": 0.1
+        },
+        "ΔG_H2O2": {
+          "gold": 1.8,
+          "tol": 0.1
+        }
+      }
+    },
+    {
+      "id": "score_vnanbo3",
+      "output_file": "dft_results.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "system": "V-NaNbO3",
+      "metrics": {
+        "E_a": {
+          "gold": 0.36,
+          "tol": 0.05
+        },
+        "ΔG_H2": {
+          "gold": 0.67,
+          "tol": 0.1
+        },
+        "ΔG_H2O2": {
+          "gold": 1.2,
+          "tol": 0.1
+        }
+      }
+    }
+  ]
+}

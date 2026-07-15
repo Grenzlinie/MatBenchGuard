@@ -1,0 +1,122 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities (Cu-K correlation, Zr-K correlation, peak-splitting indicator, Cu-centered icosahedron fraction increase, and Ag–Ag coordination) are recomputed directly from the agent's delivered EXAFS spectra, Voronoi statistics, and coordination file; no self-reported metrics are trusted.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_exafs_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Cu50Zr50_Cu_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu50Zr50_Zr_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu45Zr45Ag10_Cu_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu45Zr45Ag10_Zr_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu45Zr45Ag10_Ag_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu40Zr40Ag20_Cu_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu40Zr40Ag20_Zr_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            },
+            "Cu40Zr40Ag20_Ag_K": {
+              "k": "array of float",
+              "chi": "array of float"
+            }
+          }
+        },
+        "description": "EXAFS spectra for the three alloys at the Cu-K, Zr-K, and Ag-K absorption edges. The checker will compute correlation coefficients and peak splitting indicators to verify the atomic-scale heterogeneity."
+      },
+      {
+        "file": "step_02_voronoi_statistics.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "composition",
+            "center_type",
+            "voronoi_index",
+            "fraction"
+          ],
+          "units": {
+            "fraction": "none"
+          }
+        },
+        "description": "Voronoi polyhedra fractions for each composition and center type. The checker will verify that the fraction of Cu-centered <0 2 8 1> icosahedronlike clusters is higher in Cu45Zr45Ag10 than in Cu50Zr50."
+      },
+      {
+        "file": "step_03_ag_coordination.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Cu45Zr45Ag10": "float",
+            "Cu40Zr40Ag20": "float"
+          },
+          "units": {
+            "Cu45Zr45Ag10": "dimensionless",
+            "Cu40Zr40Ag20": "dimensionless"
+          }
+        },
+        "description": "Average number of Ag nearest neighbors for each Ag atom. The checker will confirm that the average coordination number exceeds 1.0 for both alloys, demonstrating Ag pairing/strings."
+      }
+    ],
+    "notes": "All outputs are produced from the MD-derived configurations. The checker recomputes metrics (e.g., correlations, trend comparisons, threshold checks) from these artifacts; hidden reference values and tolerances are applied to verify the paper's claims about selective replacement and atomic-scale heterogeneity."
+  },
+  "steps": [
+    {
+      "id": "exafs_check",
+      "output_file": "step_01_exafs_data.json",
+      "kind": "recompute_metric",
+      "weight": 0.5,
+      "target": {
+        "cu_corr_min": 0.95,
+        "zr_corr_max": 0.9
+      }
+    },
+    {
+      "id": "voronoi_check",
+      "output_file": "step_02_voronoi_statistics.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "target": {
+        "delta_fraction": 0.05
+      }
+    },
+    {
+      "id": "ag_coord_check",
+      "output_file": "step_03_ag_coordination.json",
+      "kind": "threshold_or_better",
+      "weight": 0.2,
+      "target": {
+        "min_ag_ag_coord": 1.0
+      }
+    }
+  ]
+}

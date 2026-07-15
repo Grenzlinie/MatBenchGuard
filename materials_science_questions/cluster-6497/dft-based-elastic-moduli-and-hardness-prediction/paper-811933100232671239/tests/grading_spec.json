@@ -1,0 +1,175 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Recomputing DFT total-energy vs volume data or band structure from raw artifacts is infeasible in the verifier sandbox. The paper's main reported numbers are compared to the agent's submitted values with appropriate tolerances. An internal consistency check between B and B_el is also applied as a structural cross-check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for result comparison",
+      "source_provenance": "Paper Table 1 and Table 2 and main text (band gap 3.30 eV, indirect)",
+      "generation_method": "Copied directly from the paper’s reported numbers: a=4.138 Å, V0=70.855 Å³, E_coh=29.527 eV, B=154.9 GPa, B'=4.216, c11=322.9 GPa, c12=70.7 GPa, c44=62.5 GPa, B_el=154.8 GPa, G=87.9 GPa, E=221.8 GPa, band_gap_eV=3.30, band_gap_type=indirect.",
+      "why_not_fabricated": "These are the exact paper-reported values, extracted from the published article; they define the reproduction target for a correct DFT re-run."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step01_eos_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a_angstrom": "float",
+            "V0_angstrom3_per_fu": "float",
+            "E_coh_eV": "float",
+            "B_GPa": "float",
+            "B_prime": "float"
+          },
+          "units": {
+            "a_angstrom": "Å",
+            "V0_angstrom3_per_fu": "Å³",
+            "E_coh_eV": "eV",
+            "B_GPa": "GPa",
+            "B_prime": "dimensionless"
+          }
+        },
+        "description": "Equilibrium structural and equation-of-state parameters from Murnaghan fit, compared to hidden paper-reported values with appropriate tolerances."
+      },
+      {
+        "file": "step02_elastic_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "c11_GPa": "float",
+            "c12_GPa": "float",
+            "c44_GPa": "float",
+            "B_el_GPa": "float",
+            "G_GPa": "float",
+            "E_GPa": "float"
+          },
+          "units": {
+            "c11_GPa": "GPa",
+            "c12_GPa": "GPa",
+            "c44_GPa": "GPa",
+            "B_el_GPa": "GPa",
+            "G_GPa": "GPa",
+            "E_GPa": "GPa"
+          }
+        },
+        "description": "Single-crystal elastic constants and derived polycrystalline moduli, compared to hidden paper-reported values with relative tolerance and internal consistency check."
+      },
+      {
+        "file": "step03_band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "float",
+            "band_gap_type": "string"
+          },
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Fundamental band gap value and type (direct/indirect), compared to hidden paper-reported value and exact string for gap type with tight tolerance."
+      }
+    ],
+    "notes": "The single-crystal elastic constants and band gap are derived from DFT strain-stress and band structure calculations, respectively. These are computation-dependent quantities; the hidden checker compares to paper values with tolerances that absorb legitimate toolchain spread. The charge density and bonding analysis (Fig. 3) is not required."
+  },
+  "steps": [
+    {
+      "id": "step01_eos",
+      "output_file": "step01_eos_properties.json",
+      "kind": "json_fields_match",
+      "weight": 0.4,
+      "fields": {
+        "a_angstrom": {
+          "target": 4.138,
+          "tolerance": 0.015,
+          "message": "lattice constant a (Å)"
+        },
+        "V0_angstrom3_per_fu": {
+          "target": 70.855,
+          "tolerance": 0.3,
+          "message": "equilibrium volume V0 (Å³)"
+        },
+        "E_coh_eV": {
+          "target": 29.527,
+          "tolerance": 0.15,
+          "message": "cohesive energy E_coh (eV)"
+        },
+        "B_GPa": {
+          "target": 154.9,
+          "tolerance": 8.0,
+          "message": "bulk modulus B (GPa)"
+        },
+        "B_prime": {
+          "target": 4.216,
+          "tolerance": 0.5,
+          "message": "pressure derivative B'"
+        }
+      }
+    },
+    {
+      "id": "step02_elastic",
+      "output_file": "step02_elastic_moduli.json",
+      "kind": "json_fields_match",
+      "weight": 0.35,
+      "fields": {
+        "c11_GPa": {
+          "target": 322.9,
+          "tolerance": 16.0,
+          "message": "elastic constant c11 (GPa)"
+        },
+        "c12_GPa": {
+          "target": 70.7,
+          "tolerance": 4.0,
+          "message": "elastic constant c12 (GPa)"
+        },
+        "c44_GPa": {
+          "target": 62.5,
+          "tolerance": 4.0,
+          "message": "elastic constant c44 (GPa)"
+        },
+        "B_el_GPa": {
+          "target": 154.8,
+          "tolerance": 8.0,
+          "message": "bulk modulus from elastic constants B_el (GPa)"
+        },
+        "G_GPa": {
+          "target": 87.9,
+          "tolerance": 5.0,
+          "message": "shear modulus G (GPa)"
+        },
+        "E_GPa": {
+          "target": 221.8,
+          "tolerance": 12.0,
+          "message": "Young's modulus E (GPa)"
+        }
+      }
+    },
+    {
+      "id": "step03_bandgap",
+      "output_file": "step03_band_gap.json",
+      "kind": "band_gap_check",
+      "weight": 0.2,
+      "gap_target": 3.3,
+      "gap_tolerance": 0.15,
+      "type_target": "indirect"
+    },
+    {
+      "id": "consistency_bulk",
+      "output_file": null,
+      "kind": "consistency_check",
+      "weight": 0.05,
+      "max_ratio": 0.12
+    }
+  ]
+}

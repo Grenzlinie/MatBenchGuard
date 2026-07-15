@@ -1,0 +1,67 @@
+[
+  {
+    "id": "semiconductor_bulk",
+    "title": "Compute bulk semiconductor CBM positions",
+    "role": "process",
+    "action": "Using DFT with the PBE functional, optimize the crystal structures of TiO₂, WO₃, CdS, ZnSe, GaAs, and GaP (lattice parameters from provided table) and perform static calculations to obtain the CBM eigenvalue (lowest unoccupied state) and average Hartree potential for each material. Record the resulting E_C_bulk - H_semi_bulk values.",
+    "output_file": "",
+    "evidence": "bulk_ec.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Bulk term for the semiconductor side, needed as input to the final step.",
+    "output_schema": ""
+  },
+  {
+    "id": "water_md",
+    "title": "Generate liquid water configuration via classical MD",
+    "role": "process",
+    "action": "Run classical molecular dynamics (TIP4P water model) on a system of 128 H₂O molecules at 300 K (NVT ensemble, 100 ps). Extract a representative snapshot (e.g., at t=100 ps) for subsequent DFT calculations. Optionally verify that the DFT band gap (~3.8 eV at Γ-point) is consistent with published liquid water values.",
+    "output_file": "",
+    "evidence": "water_snapshot.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Classical MD snapshot used to construct the DFT water cell.",
+    "output_schema": ""
+  },
+  {
+    "id": "water_acceptor",
+    "title": "Compute water acceptor term via H₃O⁺ insertion",
+    "role": "process",
+    "action": "Construct a 127H₂O + H₃O⁺ system by replacing one water molecule in the MD snapshot cell with a DFT‑relaxed H₃O⁺ ion. Perform DFT ionic relaxation on the H₃O⁺ within the liquid environment, then a static calculation to obtain the LUMO energy and average Hartree potential, yielding A_bulk - H_sol_bulk. Repeat for a few replacement positions; select the lowest total-energy configuration (expected around −0.70 eV). Record the chosen component data.",
+    "output_file": "",
+    "evidence": "acceptor.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Acceptor term for the liquid water side, needed as input to the final step.",
+    "output_schema": ""
+  },
+  {
+    "id": "interface_slab",
+    "title": "Construct semiconductor-water interface slabs and compute Hartree potential offset",
+    "role": "process",
+    "action": "For each semiconductor, build a slab model joining the semiconductor cell and the water cell. Perform DFT static calculations (Γ-point) to obtain planar-averaged Hartree potentials on both sides and compute the difference H_semi_edge - H_sol_edge. Ensure convergence of the offset with respect to slab thickness.",
+    "output_file": "",
+    "evidence": "interface_offsets.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Interface Hartree potential offset, needed as input to the final step.",
+    "output_schema": ""
+  },
+  {
+    "id": "final_band_edges",
+    "title": "Compute CBM band edge positions relative to H₂O/H₂",
+    "role": "scored",
+    "action": "For each semiconductor, compute the CBM edge position using the relation E_C_edge - A_edge = (E_C_bulk - H_semi_bulk) - (A_bulk - H_sol_bulk) + (H_semi_edge - H_sol_edge). Assemble all values into a JSON file containing an array of objects with keys: material, E_C_bulk_minus_H_semi_bulk, A_bulk_minus_H_sol_bulk, H_semi_edge_minus_H_sol_edge, E_C_edge_minus_A_edge.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final compilation of component terms and calculated CBM edge positions for all six materials.",
+    "output_schema": "Array of 6 objects; each object has string 'material', float 'E_C_bulk_minus_H_semi_bulk' (eV), float 'A_bulk_minus_H_sol_bulk' (eV), float 'H_semi_edge_minus_H_sol_edge' (eV), float 'E_C_edge_minus_A_edge' (eV)."
+  }
+]

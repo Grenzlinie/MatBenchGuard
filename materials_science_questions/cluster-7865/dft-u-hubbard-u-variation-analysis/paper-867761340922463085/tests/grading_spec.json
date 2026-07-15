@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT re-run is too heavy for the verifier; we verify bulk properties against paper-reported values with tolerance and surface moment trends via thresholds, consistent with the task's target_policies (exact_match for bulk, threshold_or_better for surface).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_bulk_properties.json": "exact_match",
+    "step_02_surface_moments.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold bulk properties and surface moment thresholds",
+      "source_provenance": "Paper reported values: alpha-Ce a=4.808 Å, μ=0; gamma-Ce a=5.169 Å, μ=1.142 μB; alpha surface moments from Table I; gamma surface zeros.",
+      "generation_method": "Extracted directly from the paper's text and Table I; thresholds derived from the claim (alpha surface magnetic >0.2 μB, gamma dead <0.01 μB).",
+      "why_not_fabricated": "These are the genuine paper results, which define the hidden gold for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_bulk_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "alpha-Ce",
+            "gamma-Ce"
+          ],
+          "properties": {
+            "alpha-Ce": {
+              "type": "object",
+              "required": [
+                "lattice_constant_angstrom",
+                "total_magnetic_moment_muB"
+              ],
+              "properties": {
+                "lattice_constant_angstrom": {
+                  "type": "number",
+                  "unit": "angstrom"
+                },
+                "total_magnetic_moment_muB": {
+                  "type": "number",
+                  "unit": "muB"
+                }
+              }
+            },
+            "gamma-Ce": {
+              "type": "object",
+              "required": [
+                "lattice_constant_angstrom",
+                "total_magnetic_moment_muB"
+              ],
+              "properties": {
+                "lattice_constant_angstrom": {
+                  "type": "number",
+                  "unit": "angstrom"
+                },
+                "total_magnetic_moment_muB": {
+                  "type": "number",
+                  "unit": "muB"
+                }
+              }
+            }
+          }
+        },
+        "description": "Bulk equilibrium lattice constants and total magnetic moments per atom for α-Ce and γ-Ce, used to validate the DFT setup."
+      },
+      {
+        "file": "step_02_surface_moments.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "phase",
+            "layer",
+            "spin_moment_muB",
+            "orbital_moment_muB",
+            "total_moment_muB"
+          ],
+          "units": {
+            "spin_moment_muB": "muB",
+            "orbital_moment_muB": "muB",
+            "total_moment_muB": "muB"
+          },
+          "note": "Exactly 10 rows (5 layers each for alpha-Ce and gamma-Ce). Phase values: 'alpha-Ce' and 'gamma-Ce'. Layer integers 1 through 5."
+        },
+        "description": "Layer-resolved spin, orbital, and total magnetic moments for α-Ce(111) and γ-Ce(111) slabs. The checker compares the trend against a hidden reference without disclosing thresholds."
+      }
+    ],
+    "notes": "All output files must be placed under /app/outputs/. The solver must fetch and use the open‑source code Quantum ESPRESSO and the specified pseudopotential. No proprietary code or data is required."
+  },
+  "steps": [
+    {
+      "id": "bulk_properties",
+      "output_file": "step_01_bulk_properties.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "tolerances": {
+        "lattice_constant": 0.02,
+        "magnetic_moment": 0.1
+      },
+      "gold": {
+        "alpha-Ce": {
+          "lattice_constant_angstrom": 4.808,
+          "total_magnetic_moment_muB": 0.0
+        },
+        "gamma-Ce": {
+          "lattice_constant_angstrom": 5.169,
+          "total_magnetic_moment_muB": 1.142
+        }
+      }
+    },
+    {
+      "id": "surface_moments",
+      "output_file": "step_02_surface_moments.csv",
+      "weight": 0.7,
+      "kind": "rubric",
+      "thresholds": {
+        "alpha_magnetic_min": 0.2,
+        "gamma_moment_max": 0.01
+      }
+    }
+  ]
+}

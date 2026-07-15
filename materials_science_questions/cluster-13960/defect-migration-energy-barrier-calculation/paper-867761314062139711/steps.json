@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Construct atomic models",
+    "role": "process",
+    "action": "Build the atomic model of a finite, hydrogen-terminated (5,5) SWCNT (180 C atoms + 10 H atoms, length ~1.98 nm). Place a single carbon adatom at the three bridge adsorption sites (site 1, 2, 3) as described in the paper. Generate initial Cartesian coordinates for all subsequent DFT calculations.",
+    "output_file": "",
+    "evidence": "model_coordinates.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Geometry setup step providing the input structures for the DFT workflow.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT adsorption energy calculations",
+    "role": "process",
+    "action": "Using NWChem with PBE0/6-31G* basis set, perform geometry optimizations for: (i) pristine (5,5) SWCNT at charges q = 0, -2e, -4e, -6e, -8e, -10e, -12e; (ii) SWCNT + adatom at each of the three sites for each charge state. Compute the total energy of a spin-polarized isolated carbon atom (triplet). For each site and charge, calculate the adsorption energy via E_a^q = E(CNT+C)^q - E(CNT)^q - E(C). Output a table of adsorption energies.",
+    "output_file": "",
+    "evidence": "adsorption_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reference DFT calculations yielding the binding energies needed for KMC input.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "NEB migration barrier calculations",
+    "role": "process",
+    "action": "For each charge state, perform nudged elastic band (NEB) calculations between pairs of adjacent adsorption sites to determine the minimum energy path and energy barriers. Use NWChem with PBE0/6-31G*. Extract the energy barrier heights (difference between transition state and equilibrium energy). Output a table of barriers.",
+    "output_file": "",
+    "evidence": "migration_barriers.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "NEB calculations providing the kinetic energy barriers used in KMC hopping rates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Vibrational frequency calculations",
+    "role": "process",
+    "action": "For each charge and adsorption site, compute normal-mode vibrational frequencies of the adatom via numerical Hessian in NWChem. Identify the three vibrational modes (radial, axial, circumferential). Output the frequencies.",
+    "output_file": "",
+    "evidence": "vibrational_frequencies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Frequency calculations needed for the prefactors in the Arrhenius rate expressions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Transition rate calculation",
+    "role": "process",
+    "action": "Using the computed adsorption energies, migration barriers, and vibrational frequencies, calculate the hopping rates (k_{s->f}) and desorption rates (k_d^s) at T=1700 K via Arrhenius-type formulas: k_{s->f} = ν_s exp(-E_{s->f}/k_B T), k_d^s = ν_s exp(-E_a^s/k_B T). Project the normal-mode frequencies onto the reaction coordinate to obtain the prefactor ν_s. Output a table of all transition rates.",
+    "output_file": "",
+    "evidence": "transition_rates.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Derivation of the rate constants that drive the KMC simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "KMC simulation and lifetime/migration distance calculation",
+    "role": "scored",
+    "action": "Implement a kinetic Monte Carlo simulation of adatom diffusion and desorption on an infinite (5,5) SWCNT using the transition rates from step_05. The adatom is initially adsorbed at site 2. Run 400,000 independent trajectories (each up to 1e10 steps) for each charge state (0, -2e, -4e, -6e, -8e, -10e, -12e), tracking the adatom’s axial position. Compute the average lifetime before desorption (in seconds) and the average migration distance along the tube axis (in meters). Output these values for all charges in a single JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main result file containing the average adatom lifetime and migration distance versus charge. The file will be checked against hidden reference values and trend requirements.",
+    "output_schema": "Array of objects, each with keys: 'charge_e' (integer, negative multiples of 2 from 0 to -12), 'lifetime_s' (float, seconds), 'migration_distance_m' (float, meters). Must cover all charges 0, -2, -4, -6, -8, -10, -12."
+  }
+]

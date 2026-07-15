@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level comparison against paper-reported gold; recomputing from raw DFT outputs is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_band_gap.json": "threshold_or_better",
+    "step_02_effective_couplings.json": "threshold_or_better",
+    "step_03_anisotropic_mobilities.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for BPVB band gap, effective couplings, and maximum mobilities",
+      "source_provenance": "Paper section 3.6 (band gap 2.28 eV), Table 4 (effective couplings for P/T1/T2 dimers of BPVB), section 3.4 (maximum mobilities 0.0889 cm²/Vs for holes and 0.0152 cm²/Vs for electrons).",
+      "generation_method": "Direct transcription from the paper; cross-checked against the reference solve.sh that writes these exact numbers.",
+      "why_not_fabricated": "These are the paper's own reported values for the same system, same units, and same conditions, traceable to published tables and text."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Eg": "number"
+          },
+          "units": {
+            "Eg": "eV"
+          }
+        },
+        "description": "Electronic band gap Eg (VBM − CBM) of the BPVB crystal. Compare to paper gold with tolerance; lower is better."
+      },
+      {
+        "file": "step_02_effective_couplings.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "array",
+          "items": {
+            "channel": "string",
+            "V_eff_h": "number (meV)",
+            "V_eff_e": "number (meV)"
+          }
+        },
+        "description": "Effective hole and electron transfer integrals for P, T1, T2 dimers. Compare each component to paper gold within tolerance."
+      },
+      {
+        "file": "step_03_anisotropic_mobilities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "mu_h_max": "number",
+            "mu_e_max": "number"
+          },
+          "units": {
+            "mu_h_max": "cm²/Vs",
+            "mu_e_max": "cm²/Vs"
+          }
+        },
+        "description": "Maximum anisotropic hole and electron mobilities. Compare to paper gold with relative tolerance; meeting or exceeding the reference earns full credit."
+      }
+    ],
+    "notes": "Only the BPVB crystal is reproduced. Absorption spectra (TDDFT) and Hirshfeld surface analysis are omitted as per the scoped taskability scope. All outputs are compared to the hidden paper-reported values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_band_gap",
+      "output_file": "step_01_band_gap.json",
+      "weight": 0.25,
+      "kind": "numeric_field",
+      "field": "Eg",
+      "target": 2.28,
+      "tolerance_abs": 0.15,
+      "target_policy": "threshold_or_better",
+      "description": "Band gap of BPVB. Lower is better (gap ≤ target + tolerance earns full credit)."
+    },
+    {
+      "id": "step_effective_couplings",
+      "output_file": "step_02_effective_couplings.json",
+      "weight": 0.45,
+      "kind": "effective_couplings",
+      "expected": [
+        {
+          "channel": "P",
+          "V_eff_h": -13.0,
+          "V_eff_e": 0.4,
+          "tol_h": 3.0,
+          "tol_e": 3.0
+        },
+        {
+          "channel": "T1",
+          "V_eff_h": -4.6,
+          "V_eff_e": 10.9,
+          "tol_h": 3.0,
+          "tol_e": 3.0
+        },
+        {
+          "channel": "T2",
+          "V_eff_h": -4.6,
+          "V_eff_e": 10.9,
+          "tol_h": 3.0,
+          "tol_e": 3.0
+        }
+      ],
+      "target_policy": "threshold_or_better",
+      "description": "Effective transfer integrals for each channel. Each component compared to gold with tolerance (±3 meV)."
+    },
+    {
+      "id": "step_mobilities",
+      "output_file": "step_03_anisotropic_mobilities.json",
+      "weight": 0.3,
+      "kind": "numeric_fields",
+      "fields": {
+        "mu_h_max": {
+          "target": 0.0889,
+          "tolerance_abs": 0.03
+        },
+        "mu_e_max": {
+          "target": 0.0152,
+          "tolerance_abs": 0.006
+        }
+      },
+      "target_policy": "threshold_or_better",
+      "description": "Maximum hole and electron mobilities. Full credit when each computed mobility is within tolerance of the paper value."
+    }
+  ]
+}

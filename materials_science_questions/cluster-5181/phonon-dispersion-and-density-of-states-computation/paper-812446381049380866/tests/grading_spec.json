@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute infeasible: the RHF calculations cannot be rerun inside the lightweight verifier. We use structural audit (monotonicity) for the molecular scan and result-level comparison against the paper's reported values with tolerances for atomic relative energies and vibrational frequency.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for atomic relative energies and vibrational frequency, plus monotonic trend expectations",
+      "source_provenance": "Paper Table 1 and text; molecular O2 trend is the negative result described in the paper",
+      "generation_method": "Manually transcribed from the paper's reported numbers (Table 1) and the statement that no stable molecular minimum exists",
+      "why_not_fabricated": "The numbers are the paper's own reported results, exactly as they appear in the source"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "molecular_O2_adsorption_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "distance_angstrom",
+            "total_energy_hartree"
+          ],
+          "units": {
+            "distance_angstrom": "angstrom",
+            "total_energy_hartree": "hartree"
+          }
+        },
+        "description": "Total energies for molecular O2 adsorption at several distances. The checker will verify a monotonic increase as distance decreases, indicating no bound state."
+      },
+      {
+        "file": "atomic_adsorption_relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site",
+            "relative_energy_eV"
+          ],
+          "units": {
+            "relative_energy_eV": "eV"
+          }
+        },
+        "description": "Relative adsorption energies of atomic oxygen at high‑symmetry sites. Each value is compared to a hidden reference with tolerance."
+      },
+      {
+        "file": "vibrational_frequency_meV.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "text",
+          "units": {
+            "value": "meV"
+          }
+        },
+        "description": "Harmonic vibrational energy of the Cu–O mode on the long‑bridge site. Compared to a hidden reference with tolerance."
+      }
+    ],
+    "notes": "All gold values and tolerances are hidden; the instruction only requires the agent to compute and report the quantities. The molecular scan is scored by structural audit (monotonicity); atomic relative energies and vibrational frequency are scored by threshold_or_better against the paper's reported numbers."
+  },
+  "steps": [
+    {
+      "id": "molecular_O2_trend",
+      "output_file": "molecular_O2_adsorption_energies.csv",
+      "kind": "monotonic_energy_check",
+      "weight": 0.25,
+      "target_policy": "structural_audit",
+      "params": {
+        "min_points": 5
+      }
+    },
+    {
+      "id": "atomic_relative_energies",
+      "output_file": "atomic_adsorption_relative_energies.csv",
+      "kind": "numeric_comparison",
+      "weight": 0.45,
+      "target_policy": "exact_match",
+      "gold": {
+        "long_bridge": {
+          "value": 0.0,
+          "tolerance": 1e-06
+        },
+        "short_bridge": {
+          "value": 0.55,
+          "tolerance": 0.15
+        },
+        "atop_first_layer": {
+          "value": 1.2,
+          "tolerance": 0.15
+        },
+        "atop_second_layer": {
+          "value": 0.21,
+          "tolerance": 0.15
+        }
+      }
+    },
+    {
+      "id": "vibrational_frequency",
+      "output_file": "vibrational_frequency_meV.txt",
+      "kind": "numeric_comparison",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "gold": {
+        "value": 52.9,
+        "tolerance": 5.0
+      }
+    }
+  ]
+}

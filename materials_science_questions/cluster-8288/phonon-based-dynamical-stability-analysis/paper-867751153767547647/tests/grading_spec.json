@@ -1,0 +1,254 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute from raw artifacts not possible without rerunning expensive DFT+BTE pipeline; scoring compares reported quantities against paper gold with tolerances and internal consistency checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match",
+    "branch_contributions_300K.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported gold values for κL, sheet conductance, Debye T, MFP, branch contributions and fractions",
+      "source_provenance": "extracted from the paper text and figures: Table/Fig 3(a) for κL, sheet conductance, Debye temperature, and representative MFP; Fig 4(a) and text for branch fractions",
+      "generation_method": "manually transcribed from the paper and checked against solve.sh which writes the same values",
+      "why_not_fabricated": "values are direct reproductions of the paper's main reported numbers; solve.sh acts as the positive control writing them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "kappa_L_300K_W_mK": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "kappa_2D_sheet_conductance_nW_K": {
+              "type": "number",
+              "unit": "nW K^-1"
+            },
+            "Debye_temperature_K": {
+              "type": "number",
+              "unit": "K"
+            },
+            "representative_MFP_nm": {
+              "type": "number",
+              "unit": "nm"
+            },
+            "optical_contribution_fraction": {
+              "type": "number",
+              "unit": "unitless"
+            },
+            "quasi_acoustic_contribution_fraction": {
+              "type": "number",
+              "unit": "unitless"
+            },
+            "ZA_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "TA_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "LA_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "Q1_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "Q2_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            },
+            "other_optical_contribution": {
+              "type": "number",
+              "unit": "W m^-1 K^-1"
+            }
+          },
+          "required": [
+            "kappa_L_300K_W_mK",
+            "kappa_2D_sheet_conductance_nW_K",
+            "Debye_temperature_K",
+            "representative_MFP_nm",
+            "optical_contribution_fraction",
+            "quasi_acoustic_contribution_fraction",
+            "ZA_contribution",
+            "TA_contribution",
+            "LA_contribution",
+            "Q1_contribution",
+            "Q2_contribution",
+            "other_optical_contribution"
+          ]
+        },
+        "description": "Thermal conductivity, Debye temperature, representative MFP, and branch-summarised contributions for the monolayer."
+      },
+      {
+        "file": "branch_contributions_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "branch",
+            "contribution_kappa_W_mK",
+            "percentage"
+          ],
+          "units": {
+            "contribution_kappa_W_mK": "W m^-1 K^-1",
+            "percentage": "%"
+          }
+        },
+        "description": "Per-branch thermal conductivity and percentage at 300 K. Branch values: ZA, TA, LA, Q1, Q2, other_optical."
+      }
+    ],
+    "notes": "All results are obtained from a DFT+phonon BTE pipeline using open-source tools. The effective thickness 7.57 Å must be used for 2D sheet conductance. The Debye temperature is calculated from the maximum acoustic frequency. The representative MFP l_0 is obtained by fitting cumulative κ_L vs MFP with the single-parametric function given in the task."
+  },
+  "steps": [
+    {
+      "id": "results_parse",
+      "output_file": "results.json",
+      "kind": "parse_json",
+      "weight": 0.02,
+      "description": "results.json exists and is a valid JSON object with all required keys"
+    },
+    {
+      "id": "csv_parse",
+      "output_file": "branch_contributions_300K.csv",
+      "kind": "parse_csv",
+      "weight": 0.02,
+      "description": "branch_contributions_300K.csv exists, is a CSV with required columns branch, contribution_kappa_W_mK, percentage, and at least 6 rows"
+    },
+    {
+      "id": "results_values",
+      "output_file": "results.json",
+      "kind": "results_reference",
+      "weight": 0.44,
+      "fields": [
+        {
+          "name": "kappa_L_300K_W_mK",
+          "target": 10.28,
+          "abs_tol": 0.514
+        },
+        {
+          "name": "kappa_2D_sheet_conductance_nW_K",
+          "target": 7.77,
+          "abs_tol": 0.39
+        },
+        {
+          "name": "Debye_temperature_K",
+          "target": 241.0,
+          "abs_tol": 5.0
+        },
+        {
+          "name": "representative_MFP_nm",
+          "target": 15.0,
+          "abs_tol": 2.0
+        },
+        {
+          "name": "optical_contribution_fraction",
+          "target": 0.38,
+          "abs_tol": 0.05
+        },
+        {
+          "name": "quasi_acoustic_contribution_fraction",
+          "target": 0.27,
+          "abs_tol": 0.05
+        },
+        {
+          "name": "ZA_contribution",
+          "target": 1.8504,
+          "abs_tol": 0.1
+        },
+        {
+          "name": "TA_contribution",
+          "target": 2.056,
+          "abs_tol": 0.1
+        },
+        {
+          "name": "LA_contribution",
+          "target": 2.4672,
+          "abs_tol": 0.1
+        },
+        {
+          "name": "Q1_contribution",
+          "target": 1.3364,
+          "abs_tol": 0.1
+        },
+        {
+          "name": "Q2_contribution",
+          "target": 1.4392,
+          "abs_tol": 0.1
+        },
+        {
+          "name": "other_optical_contribution",
+          "target": 1.1308,
+          "abs_tol": 0.1
+        }
+      ]
+    },
+    {
+      "id": "branch_values",
+      "output_file": "branch_contributions_300K.csv",
+      "kind": "branch_reference",
+      "weight": 0.38,
+      "expected_rows": [
+        {
+          "branch": "ZA",
+          "contribution_kappa_W_mK": 1.8504,
+          "percentage": 0.18
+        },
+        {
+          "branch": "TA",
+          "contribution_kappa_W_mK": 2.056,
+          "percentage": 0.2
+        },
+        {
+          "branch": "LA",
+          "contribution_kappa_W_mK": 2.4672,
+          "percentage": 0.24
+        },
+        {
+          "branch": "Q1",
+          "contribution_kappa_W_mK": 1.3364,
+          "percentage": 0.13
+        },
+        {
+          "branch": "Q2",
+          "contribution_kappa_W_mK": 1.4392,
+          "percentage": 0.14
+        },
+        {
+          "branch": "other_optical",
+          "contribution_kappa_W_mK": 1.1308,
+          "percentage": 0.11
+        }
+      ],
+      "tol_contrib": 0.1,
+      "tol_perc": 0.02
+    },
+    {
+      "id": "branch_sum_check",
+      "output_file": "branch_contributions_300K.csv",
+      "kind": "sum_consistency",
+      "weight": 0.07,
+      "abs_tol_sum": 0.1
+    },
+    {
+      "id": "fraction_self_check",
+      "output_file": "results.json",
+      "kind": "fraction_consistency",
+      "weight": 0.07,
+      "tol_fraction": 0.03
+    }
+  ]
+}

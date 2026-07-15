@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recomputation of Ea/AIMD from raw trajectories is beyond the verifier sandbox; therefore we compare agent's reported values against paper gold with tolerances and structural inequality/ordering rules.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "activation_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold activation energies and pre-exponential factors from the paper (Table I).",
+      "source_provenance": "Paper 1811.07936, Table I: Li3N (Ea0=0.03, Ea=0.15±0.01, D0=2.5e-5), LiGaO2 (0.78, 1.2±0.1, 5e-2), LiIO3 (0.09, 0.36±0.07, 3.5e-4), Li3OCl (0.37, 0.90±0.05, 1.4e-2). LiF excluded as scored material.",
+      "generation_method": "Directly copied from the paper's summary table; all values traceable to specific sections.",
+      "why_not_fabricated": "These are the actual reported results; used only as reference with generous 50% tolerance to absorb legitimate implementation variance while anchoring the required trend."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "activation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": {
+            "material": "string",
+            "Ea_0_NEB_eV": "number",
+            "Ea_AIMD_eV": "number",
+            "D0_cm2_per_s": "number"
+          },
+          "items": {
+            "material": "string",
+            "Ea_0_NEB_eV": "number",
+            "Ea_AIMD_eV": "number",
+            "D0_cm2_per_s": "number"
+          }
+        },
+        "description": "Activation energies and diffusion pre-exponential factors for lithium-ion migration in at least three superionic conductors (Li3N, LiGaO2, LiIO3, Li3OCl), comparing zero-temperature NEB barriers with finite-temperature AIMD results."
+      }
+    ],
+    "notes": "The hidden checker verifies that for each material Ea_AIMD > Ea_0_NEB by at least 0.05 eV, that the Ea_AIMD ordering across materials is monotonic with respect to paper-reported values (Li3N < LiIO3 < Li3OCl < LiGaO2) allowing small inversions (<0.1 eV), and that absolute values are within 50% tolerance of the paper's reported values. LiF is optional and not scored. At least three materials must satisfy both inequality and ordering for full credit."
+  },
+  "steps": [
+    {
+      "id": "check_activation_energies",
+      "output_file": "activation_energies.json",
+      "kind": "rubric",
+      "weight": 1.0,
+      "gold_Ea_0_NEB_eV": {
+        "Li3N": 0.03,
+        "LiGaO2": 0.78,
+        "LiIO3": 0.09,
+        "Li3OCl": 0.37
+      },
+      "gold_Ea_AIMD_eV": {
+        "Li3N": 0.15,
+        "LiGaO2": 1.2,
+        "LiIO3": 0.36,
+        "Li3OCl": 0.9
+      },
+      "gold_D0_cm2_per_s": {
+        "Li3N": 2.5e-05,
+        "LiGaO2": 0.05,
+        "LiIO3": 0.00035,
+        "Li3OCl": 0.014
+      },
+      "tolerance_rel": 0.5,
+      "inequality_margin": 0.05,
+      "ordering_margin": 0.1,
+      "expected_order": [
+        "Li3N",
+        "LiIO3",
+        "Li3OCl",
+        "LiGaO2"
+      ]
+    }
+  ]
+}

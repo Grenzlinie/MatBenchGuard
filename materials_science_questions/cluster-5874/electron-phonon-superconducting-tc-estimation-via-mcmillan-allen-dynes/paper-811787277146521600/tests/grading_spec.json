@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute: the checker directly extracts N(ε_F) from the agent's raw total DOS CSV evidence files and recalculates λ via the McMillan formula, comparing to paper-reported N(ε_F) and procedurally derived λ targets.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_results.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported N(ε_F) values (Table 1) and procedurally derived λ targets (McMillan formula with ω_log=180 K)",
+      "source_provenance": "Paper Table 1 for N(ε_F); λ derived by solving McMillan Eq. (2) using the paper's N(ε_F) and fixed ω_log=180 K (text Section 4).",
+      "generation_method": "N(ε_F) taken from Table 1; λ solved numerically with bisection from those N(ε_F) and experimental Tc (0.57 K, 0.08 K, 2.7 K) via the McMillan formula.",
+      "why_not_fabricated": "All hidden numbers are either directly from the paper or derived from the paper's reported N(ε_F) using the same procedure described in the paper and required in the task. The reference solve.sh (oracle) writes exactly these derived values, so the checker's gold is consistent with the oracle's output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "N_EF",
+            "lambda"
+          ],
+          "units": {
+            "N_EF": "states/Ry.cell",
+            "lambda": "dimensionless"
+          }
+        },
+        "description": "DFT-calculated density of states at the Fermi level and the estimated electron-phonon coupling constant λ for V3Ni, V3Pd, V3Pt. The checker recomputes N(ε_F) from the raw DOS evidence files and then computes λ, comparing both to the paper's hidden gold with asymmetric tolerances (meeting or beating the target earns full credit)."
+      }
+    ],
+    "notes": "The raw total DOS CSV files (dos_V3Ni.csv, dos_V3Pd.csv, dos_V3Pt.csv) are required process evidence; the scored file dft_results.csv must match them self-consistently. No gold values or tolerances are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "eval_dft_results",
+      "output_file": "dft_results.csv",
+      "weight": 1.0,
+      "kind": "recompute_lambda_from_dos",
+      "target_policy": "threshold_or_better",
+      "tc_values": {
+        "V3Ni": 0.57,
+        "V3Pd": 0.08,
+        "V3Pt": 2.7
+      },
+      "omega_log": 180.0,
+      "ry_to_ev": 13.605693,
+      "natoms": 8,
+      "target_N_EF": {
+        "V3Ni": 152.1,
+        "V3Pd": 219.0,
+        "V3Pt": 186.2
+      },
+      "target_lambda": {
+        "V3Ni": 0.47,
+        "V3Pd": 0.413,
+        "V3Pt": 0.662
+      },
+      "tolerance_N_EF_rel": 0.15,
+      "tolerance_lambda_abs": 0.1,
+      "dos_files": {
+        "V3Ni": "dos_V3Ni.csv",
+        "V3Pd": "dos_V3Pd.csv",
+        "V3Pt": "dos_V3Pt.csv"
+      }
+    }
+  ]
+}

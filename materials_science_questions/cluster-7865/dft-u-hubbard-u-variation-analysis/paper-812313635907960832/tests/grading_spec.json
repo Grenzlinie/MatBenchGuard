@@ -1,0 +1,195 @@
+{
+  "scoring_tier": "T0_result_level_compare",
+  "scoring_justification": "Cannot recompute U and voltages from raw DFT outputs; lightweight verifier compares agent's reported numbers to paper gold within tolerances that accommodate toolchain spread while excluding random guesses.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_U_values.json": "reference_match",
+    "computed_voltages.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold Hubbard U values (eV) from Table II",
+      "source_provenance": "Paper Table II (Phys. Rev. B 70, 235121 (2004))",
+      "generation_method": "Extracted exactly from Table II; includes monoxide reference values for completeness but those are not required to be produced by the agent.",
+      "why_not_fabricated": "All values are the paper's own reported numbers; no random fabrication."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lithium intercalation voltages (V) from GGA+U calculations",
+      "source_provenance": "Paper text and Figures 4-5; voltage values reported in the paper: 4.1, 3.47, 4.73, 5.07, 3.82, 3.92, 4.19, 2.97, 3.56 V",
+      "generation_method": "Extracted from the paper's GGA+U results (large filled circles / averaged U values); matched to the reference solve.sh constants.",
+      "why_not_fabricated": "Taken directly from the paper's reported computational results; not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_U_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {},
+          "items": {
+            "compound_identifier": "float"
+          },
+          "description": "Self-consistent Hubbard U parameters (eV) for each TM ion/valence/environment combination listed in the paper's Table II."
+        },
+        "description": "JSON dictionary of self-consistent Hubbard U values (eV). Keys like \"Mn2+_olivine\", values are floats."
+      },
+      {
+        "file": "computed_voltages.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "computed_voltage",
+            "experimental_voltage"
+          ],
+          "units": {
+            "computed_voltage": "V",
+            "experimental_voltage": "V"
+          }
+        },
+        "description": "CSV table of average lithium intercalation voltages for all redox couples, including optional experimental reference. Scoring uses the computed_voltage column."
+      }
+    ],
+    "notes": "The checker compares the agent's computed U values and voltages to the paper-reported gold values within hidden tolerances. Voltage comparison uses the paper's GGA+U calculated values and/or experimental voltages; the agent must produce all entries from the paper's full dataset."
+  },
+  "steps": [
+    {
+      "id": "check_u_values",
+      "output_file": "computed_U_values.json",
+      "weight": 0.4,
+      "kind": "reference_match_u_values",
+      "tolerance": 0.2,
+      "gold": {
+        "Mn2+_olivine": 3.92,
+        "Mn3+_olivine": 5.09,
+        "Fe2+_olivine": 3.71,
+        "Fe3+_olivine": 4.9,
+        "Co2+_olivine": 5.05,
+        "Co3+_olivine": 6.34,
+        "Ni2+_olivine": 5.26,
+        "Ni3+_olivine": 6.93,
+        "Co3+_layered": 4.91,
+        "Co4+_layered": 5.37,
+        "Ni3+_layered": 6.7,
+        "Ni4+_layered": 6.04,
+        "Mn3+_spinel": 4.64,
+        "Mn4+_spinel": 5.04,
+        "Co3+_spinel": 5.62,
+        "Co4+_spinel": 6.17
+      },
+      "trend_bonus": 0.1,
+      "trend_rules": [
+        {
+          "description": "U increases with oxidation state (except Ni layered, already known)",
+          "pairs": [
+            [
+              "Mn2+_olivine",
+              "Mn3+_olivine"
+            ],
+            [
+              "Fe2+_olivine",
+              "Fe3+_olivine"
+            ],
+            [
+              "Co2+_olivine",
+              "Co3+_olivine"
+            ],
+            [
+              "Ni2+_olivine",
+              "Ni3+_olivine"
+            ],
+            [
+              "Co3+_layered",
+              "Co4+_layered"
+            ],
+            [
+              "Mn3+_spinel",
+              "Mn4+_spinel"
+            ],
+            [
+              "Co3+_spinel",
+              "Co4+_spinel"
+            ]
+          ],
+          "direction": "higher_valence_larger"
+        },
+        {
+          "description": "Olivine U > oxide U for same valence (Mn3+, Co3+, Ni3+ where both exist)",
+          "pairs": [
+            [
+              "Mn3+_olivine",
+              "Mn3+_spinel"
+            ],
+            [
+              "Co3+_olivine",
+              "Co3+_layered"
+            ],
+            [
+              "Co3+_olivine",
+              "Co3+_spinel"
+            ],
+            [
+              "Ni3+_olivine",
+              "Ni3+_layered"
+            ]
+          ],
+          "direction": "olivine_larger"
+        }
+      ]
+    },
+    {
+      "id": "check_voltages",
+      "output_file": "computed_voltages.csv",
+      "weight": 0.6,
+      "kind": "reference_match_voltages",
+      "tolerance": 0.1,
+      "expected_rows": [
+        {
+          "compound": "LiMnPO4/MnPO4",
+          "gold_voltage": 4.1
+        },
+        {
+          "compound": "LiFePO4/FePO4",
+          "gold_voltage": 3.47
+        },
+        {
+          "compound": "LiCoPO4/CoPO4",
+          "gold_voltage": 4.73
+        },
+        {
+          "compound": "LiNiPO4/NiPO4",
+          "gold_voltage": 5.07
+        },
+        {
+          "compound": "LiCoO2/CoO2",
+          "gold_voltage": 3.82
+        },
+        {
+          "compound": "LiNiO2/NiO2",
+          "gold_voltage": 3.92
+        },
+        {
+          "compound": "LiMn2O4/Mn2O4_0-1",
+          "gold_voltage": 4.19
+        },
+        {
+          "compound": "LiMn2O4/Mn2O4_1-2",
+          "gold_voltage": 2.97
+        },
+        {
+          "compound": "LiCo2O4/Co2O4_1-2",
+          "gold_voltage": 3.56
+        }
+      ]
+    }
+  ]
+}

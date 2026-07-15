@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Cannot recompute absolute barriers from raw DFT outputs because verifier sandbox lacks DFT results; compare reported barriers to paper gold with tolerance appropriate for method variation.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "activation_barriers.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference activation barriers for four reactions on AlH cluster",
+      "source_provenance": "Paper Table 1 (E_bar incl. ZPE)",
+      "generation_method": "Extracted from paper numerical values",
+      "why_not_fabricated": "These are the exact paper-reported values; the reference solve.sh reproduces them and full credit ensures correctness."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "activation_barriers.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "hydrogen_exchange": "number",
+            "cracking": "number",
+            "dehydrogenation": "number",
+            "hydride_transfer": "number"
+          },
+          "description": "Activation barriers in kJ/mol (with ZPE)"
+        },
+        "description": "Computed activation barriers for hydrogen exchange, cracking (path 1), dehydrogenation, and hydride transfer on the AlH zeolite cluster. Values in kJ/mol."
+      }
+    ],
+    "notes": "The ordering hydrogen_exchange < hydride_transfer < cracking ≈ dehydrogenation is verified by the hidden checker, but not required to be stated in the output."
+  },
+  "steps": [
+    {
+      "id": "barriers_check",
+      "output_file": "activation_barriers.json",
+      "weight": 1.0,
+      "gold_barriers": {
+        "hydrogen_exchange": 118,
+        "cracking": 292,
+        "dehydrogenation": 297,
+        "hydride_transfer": 202
+      },
+      "tolerance_kjmol": 20,
+      "ordering_checks": [
+        {
+          "pair": [
+            "hydrogen_exchange",
+            "hydride_transfer"
+          ],
+          "type": "less"
+        },
+        {
+          "pair": [
+            "hydride_transfer",
+            "cracking"
+          ],
+          "type": "less"
+        },
+        {
+          "pair": [
+            "cracking",
+            "dehydrogenation"
+          ],
+          "type": "less"
+        },
+        {
+          "pair": [
+            "cracking",
+            "dehydrogenation"
+          ],
+          "type": "abs_diff_le",
+          "max_diff": 20
+        }
+      ]
+    }
+  ]
+}

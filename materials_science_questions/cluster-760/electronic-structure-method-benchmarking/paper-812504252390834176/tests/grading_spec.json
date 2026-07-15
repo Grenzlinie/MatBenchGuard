@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "T1 recompute from component_enthalpy is infeasible due to hidden checker lacking the full gasoline composition; scoring uses direct comparison of reported percentages against paper gold plus structural relations.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cp_validation.csv": "threshold_or_better",
+    "enthalpy_analysis.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold percentage benchmarks and NIST Cp value",
+      "source_provenance": "Paper-reported: Cp relative error ≤4%, NIST Cp=381.6 J/mol·K; ΔH%: G100 13.8% G10E 8.5% G20E 3.1% higher than n-butanol; compensation: G10E+60% n-butanol ≈ G20E, G100+40% n-butanol ≈ G10E.",
+      "generation_method": "Extracted from paper text.",
+      "why_not_fabricated": "Directly traced to the paper's reported values."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cp_validation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Cp_theoretical_JmolK",
+            "Cp_experimental_JmolK",
+            "RelativeError_percent"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "Cp_theoretical_JmolK": "J/(mol K)",
+            "Cp_experimental_JmolK": "J/(mol K)",
+            "RelativeError_percent": "%"
+          }
+        },
+        "description": "Validation of DFT computed Cp for n-butanol against experimental NIST value. At least one row at T=298.15 K. The checker will extract RelativeError_percent and score it against a ≤4% threshold."
+      },
+      {
+        "file": "enthalpy_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Blend",
+            "Delta_H_kJ_per_mol",
+            "Delta_H_percent_vs_n_butanol"
+          ],
+          "units": {
+            "Delta_H_kJ_per_mol": "kJ/mol",
+            "Delta_H_percent_vs_n_butanol": "%"
+          },
+          "required_blend_values": [
+            "n-butanol",
+            "G100",
+            "G10E",
+            "G20E",
+            "G10E_plus_60pct_nbutanol",
+            "G100_plus_40pct_nbutanol"
+          ]
+        },
+        "description": "Molar enthalpy change and percentage difference relative to pure n-butanol for the listed fuel blends. The verifier will check the required rows exist and verify structural properties: the relative ordering of ΔH values among G100, G10E, G20E, n-butanol, and the compensation effects (G10E+60% n-butanol ≈ G20E; G100+40% n-butanol ≈ G10E)."
+      }
+    ],
+    "notes": "All files are placed under /app/outputs. The Cp validation uses the NIST experimental value (the agent must fetch it from the provided NIST URL). The mixture analysis uses the component enthalpies computed by the agent in step_1; the verifier will validate the reported enthalpy_analysis.csv against structural constraints and may check that the intermediate component_enthalpy.csv contains the required columns as evidence of the process step."
+  },
+  "steps": [
+    {
+      "id": "cp_validation_check",
+      "output_file": "cp_validation.csv",
+      "kind": "threshold_or_better",
+      "weight": 0.3,
+      "threshold": 4.0,
+      "experimental_cp": 381.6,
+      "temperature": 298.15
+    },
+    {
+      "id": "enthalpy_analysis_check",
+      "output_file": "enthalpy_analysis.csv",
+      "kind": "compare_to_paper",
+      "weight": 0.7,
+      "gold_percentages": {
+        "n-butanol": 0.0,
+        "G100": 13.8,
+        "G10E": 8.5,
+        "G20E": 3.1
+      },
+      "tolerance_percent": 2.0,
+      "ordering": [
+        "G100",
+        "G10E",
+        "G20E",
+        "n-butanol"
+      ],
+      "compensation": {
+        "G10E_plus_60pct_nbutanol": {
+          "target_blend": "G20E",
+          "max_diff_percent": 3.0
+        },
+        "G100_plus_40pct_nbutanol": {
+          "target_blend": "G10E",
+          "max_diff_percent": 3.0
+        }
+      }
+    }
+  ]
+}

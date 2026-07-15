@@ -1,0 +1,135 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes relative heat flux difference, percent mass flux error (via agent's submitted fluxes), and identifies CHF peak from boiling curve points; then compares to paper-reported thresholds and gold values.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "static_interface_test_results.csv": "threshold_or_better",
+    "film_evaporation_results.csv": "threshold_or_better",
+    "boiling_curve.csv": "structural_audit",
+    "critical_heat_flux.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold CHF location (Ja, q_star) and tolerances from paper's boiling curve (Fig. 11(a)).",
+      "source_provenance": "Paper reported CHF at Ja ≈ 0.186 with q* ≈ 0.0032.",
+      "generation_method": "Extracted from paper section 4.4 and Fig. 11(a).",
+      "why_not_fabricated": "These are the paper's own results; fabricating would defeat reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "static_interface_test_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "boundary",
+            "heat_flux"
+          ],
+          "units": {
+            "boundary": "categorical",
+            "heat_flux": "dimensionless"
+          }
+        },
+        "description": "CSV with heat fluxes at the hot and cold boundaries. The relative difference between the two fluxes must be below a hidden threshold (energy conservation check)."
+      },
+      {
+        "file": "film_evaporation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "conductivity_ratio",
+            "mass_flux",
+            "analytical_mass_flux"
+          ],
+          "units": {
+            "conductivity_ratio": "dimensionless",
+            "mass_flux": "dimensionless",
+            "analytical_mass_flux": "dimensionless"
+          }
+        },
+        "description": "CSV with simulated mass flux and analytical mass flux for each conductivity ratio. The percent error between mass_flux and analytical_mass_flux for each ratio must be below a hidden threshold."
+      },
+      {
+        "file": "boiling_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Ja",
+            "q_star"
+          ],
+          "units": {
+            "Ja": "dimensionless",
+            "q_star": "dimensionless"
+          }
+        },
+        "description": "CSV with at least six (Ja, q_star) data points. The curve must exhibit a monotonic increase to a peak (CHF) followed by a decrease. The peak location (Ja, q_star) will be compared to a hidden reference within tolerance."
+      },
+      {
+        "file": "critical_heat_flux.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Ja_CHF",
+            "q_star_CHF"
+          ],
+          "units": {
+            "Ja_CHF": "dimensionless",
+            "q_star_CHF": "dimensionless"
+          }
+        },
+        "description": "CSV with the identified CHF point (Ja_CHF, q_star_CHF). The values must match the peak found in boiling_curve.csv and be within tolerance of the hidden reference."
+      }
+    ],
+    "notes": "All outputs are required. The static interface test and film evaporation test validate the energy conservation of the implemented model. The boiling curve and CHF point constitute the main reproduction target. The verifier will apply tolerances appropriate for re-run variability."
+  },
+  "steps": [
+    {
+      "id": "check_static_interface",
+      "output_file": "static_interface_test_results.csv",
+      "weight": 0.2,
+      "target_policy": "threshold_or_better",
+      "threshold": 1e-10
+    },
+    {
+      "id": "check_film_evaporation",
+      "output_file": "film_evaporation_results.csv",
+      "weight": 0.2,
+      "target_policy": "threshold_or_better",
+      "threshold_percent": 5.0
+    },
+    {
+      "id": "check_boiling_curve",
+      "output_file": "boiling_curve.csv",
+      "weight": 0.4,
+      "target_policy": "structural_audit",
+      "gold_Ja_CHF": 0.186,
+      "tol_Ja": 0.02,
+      "gold_q_star_CHF": 0.0032,
+      "tol_q_star": 0.0005
+    },
+    {
+      "id": "check_critical_heat_flux",
+      "output_file": "critical_heat_flux.csv",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "gold_Ja_CHF": 0.186,
+      "tol_Ja": 0.02,
+      "gold_q_star_CHF": 0.0032,
+      "tol_q_star": 0.0005
+    }
+  ]
+}

@@ -1,0 +1,374 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Step 03 recomputes band gap from TDOS; step 04 and 05 use structural checks; other steps compare to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice constants and volumes from paper Table 1",
+      "source_provenance": "Paper Table 1 (PZ81, PBE, optB86b+vdWDF)",
+      "generation_method": "Transcribed from the source paper",
+      "why_not_fabricated": "Values are the exact numerical results reported in the published paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold band gap energies from paper text",
+      "source_provenance": "Paper text (PZ81=1.51 eV, PBE≈1.84 eV, optB86b=1.74 eV)",
+      "generation_method": "Derived from paper text: LDA 1.51 eV, 17.9% less than PBE → PBE=1.84 eV; optB86b explicitly 1.74 eV.",
+      "why_not_fabricated": "These numbers are the paper's own reported band gaps."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold Bader atomic and fragment charges from paper Table 3",
+      "source_provenance": "Paper Table 3 (LDA, PBE, optB86b columns)",
+      "generation_method": "Transcribed from the source paper",
+      "why_not_fabricated": "Direct reproduction of the paper's data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_optimized_lattice.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "a_A",
+            "b_A",
+            "c_A",
+            "volume_A3"
+          ],
+          "units": {
+            "a_A": "Å",
+            "b_A": "Å",
+            "c_A": "Å",
+            "volume_A3": "Å³"
+          }
+        },
+        "description": "Optimized lattice constants and volume for each functional, compared to the paper‑reported values."
+      },
+      {
+        "file": "step_02_band_gap.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "band_gap_eV"
+          ],
+          "units": {
+            "band_gap_eV": "eV"
+          }
+        },
+        "description": "Theoretical band gap energies for three functionals, compared to the paper‑reported values."
+      },
+      {
+        "file": "step_03_total_dos_optB86b.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "text",
+          "required": {
+            "column_1": "energy_eV (float)",
+            "column_2": "total_dos (float)"
+          }
+        },
+        "description": "Total DOS; the checker recomputes the band gap by finding the HOMO‑LUMO separation and scores a directional band‑gap error."
+      },
+      {
+        "file": "step_04_partial_dos_optB86b.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "atom",
+            "orbital",
+            "energy_eV",
+            "pdos"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "pdos": "arb. units"
+          }
+        },
+        "description": "Partial DOS; structural audit confirms distinct I1 and I2 PDOS curves and that I2 peaks lie closer to the Fermi level."
+      },
+      {
+        "file": "step_05_band_structure_optB86b.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kpoint_index",
+            "kx",
+            "ky",
+            "kz"
+          ],
+          "items": {
+            "band_*_eV": "float"
+          }
+        },
+        "description": "Band structure; the checker verifies a direct band gap at the Γ point by examining eigenenergy differences."
+      },
+      {
+        "file": "step_06_bader_charges.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "atom_type",
+            "charge_e"
+          ],
+          "units": {
+            "charge_e": "elementary charge"
+          }
+        },
+        "description": "Bader atomic charges; compared to the paper‑reported values for each functional and atom/fragment."
+      }
+    ],
+    "notes": "The checker recomputes the band gap from step_03 and verifies the structural properties of PDOS and band structure. Lattice constants, volumes, band gaps, and Bader charges are compared to the paper‑reported values with hidden tolerances. The load‑bearing step_05 forces the agent to actually run the DFT pipeline."
+  },
+  "steps": [
+    {
+      "id": "step_01_lattice",
+      "output_file": "step_01_optimized_lattice.csv",
+      "kind": "reference_match",
+      "weight": 0.15,
+      "description": "Compare optimized lattice constants and volume against paper Table 1.",
+      "gold_data": [
+        {
+          "functional": "PZ81",
+          "a_A": 8.678,
+          "b_A": 12.387,
+          "c_A": 8.318,
+          "volume_A3": 894.05
+        },
+        {
+          "functional": "PBE",
+          "a_A": 9.226,
+          "b_A": 12.876,
+          "c_A": 8.619,
+          "volume_A3": 1023.88
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "a_A": 8.831,
+          "b_A": 12.648,
+          "c_A": 8.57,
+          "volume_A3": 957.18
+        }
+      ],
+      "tolerance": {
+        "a_A": 0.05,
+        "b_A": 0.05,
+        "c_A": 0.05,
+        "volume_A3": 10.0
+      }
+    },
+    {
+      "id": "step_02_band_gap",
+      "output_file": "step_02_band_gap.csv",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "description": "Compare band gap energies against paper-reported values.",
+      "gold_data": [
+        {
+          "functional": "PZ81",
+          "band_gap_eV": 1.51
+        },
+        {
+          "functional": "PBE",
+          "band_gap_eV": 1.84
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "band_gap_eV": 1.74
+        }
+      ],
+      "tolerance": 0.1
+    },
+    {
+      "id": "step_03_dos_recompute",
+      "output_file": "step_03_total_dos_optB86b.dat",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "description": "Recompute band gap from total DOS and compare to paper's optB86b+vdWDF gap (1.74 eV).",
+      "gold_gap_eV": 1.74,
+      "dos_threshold_fraction": 0.05,
+      "max_allowed_deviation": 0.15,
+      "decay_range": 0.3
+    },
+    {
+      "id": "step_04_pdos_structural",
+      "output_file": "step_04_partial_dos_optB86b.csv",
+      "kind": "structural_audit",
+      "weight": 0.1,
+      "description": "Verify I1 and I2 are chemically inequivalent: I2 p-DOS peak lies closer to Fermi than I1 p-DOS peak.",
+      "energy_window": [
+        -2.0,
+        0.0
+      ],
+      "atoms_of_interest": [
+        {
+          "atom": "I1",
+          "orbital": "p"
+        },
+        {
+          "atom": "I2",
+          "orbital": "p"
+        }
+      ]
+    },
+    {
+      "id": "step_05_band_structure",
+      "output_file": "step_05_band_structure_optB86b.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "Verify the minimum direct band gap occurs at the Γ point.",
+      "gamma_tolerance_frac": 1e-06
+    },
+    {
+      "id": "step_06_bader",
+      "output_file": "step_06_bader_charges.csv",
+      "kind": "reference_match",
+      "weight": 0.1,
+      "description": "Compare Bader atomic and fragment charges to paper Table 3.",
+      "gold_data": [
+        {
+          "functional": "PZ81",
+          "atom_type": "Pb",
+          "charge_e": 0.85
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "I1",
+          "charge_e": -0.52
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "I2",
+          "charge_e": -0.5
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "N",
+          "charge_e": -3.01
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "C",
+          "charge_e": 0.35
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "PbI3",
+          "charge_e": -0.67
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "CH3",
+          "charge_e": 0.67
+        },
+        {
+          "functional": "PZ81",
+          "atom_type": "NH3",
+          "charge_e": -0.01
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "Pb",
+          "charge_e": 0.95
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "I1",
+          "charge_e": -0.57
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "I2",
+          "charge_e": -0.55
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "N",
+          "charge_e": -2.96
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "C",
+          "charge_e": 0.53
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "PbI3",
+          "charge_e": -0.72
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "CH3",
+          "charge_e": 0.67
+        },
+        {
+          "functional": "PBE",
+          "atom_type": "NH3",
+          "charge_e": 0.04
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "Pb",
+          "charge_e": 0.92
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "I1",
+          "charge_e": -0.55
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "I2",
+          "charge_e": -0.54
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "N",
+          "charge_e": -2.95
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "C",
+          "charge_e": 0.48
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "PbI3",
+          "charge_e": -0.7
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "CH3",
+          "charge_e": 0.64
+        },
+        {
+          "functional": "optB86b+vdWDF",
+          "atom_type": "NH3",
+          "charge_e": 0.05
+        }
+      ],
+      "tolerance": 0.1
+    }
+  ]
+}

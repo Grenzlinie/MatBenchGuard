@@ -1,0 +1,85 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Young's modulus can be recomputed from the stress-strain data by linear fitting in the strain interval 0.03-0.05, and the paper provides the gold values.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "stress_strain_data.json": "metric_recompute",
+    "young_moduli.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Young's modulus gold values for diameters 2,3,4,6 nm",
+      "source_provenance": "Paper Section 3.1: 'The Young's moduli of the four types of single-crystal Cu nanopillars in the strain range from 0.03 to 0.05 are 90.2, 103.6, 112.4, and 124.5 GPa, respectively.' Also Table 1.",
+      "generation_method": "extracted directly from paper text",
+      "why_not_fabricated": "These are the paper's reported simulation results; they are traceable and used as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "stress_strain_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "array",
+          "required": {
+            "diameter_nm": "number",
+            "strain": "number",
+            "stress_GPa": "number"
+          },
+          "items": {
+            "diameter_nm": "number",
+            "strain": "number",
+            "stress_GPa": "number"
+          }
+        },
+        "description": "Raw stress–strain data points for Cu nanopillars; the checker will recompute Young's modulus from these points in the strain range 0.03–0.05."
+      },
+      {
+        "file": "young_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "2": "number",
+            "3": "number",
+            "4": "number",
+            "6": "number"
+          }
+        },
+        "description": "Self-reported Young's modulus values for each diameter; the checker compares these to the paper-derived hidden reference."
+      }
+    ],
+    "notes": "The hidden grading specification bundles paper-reported Young's moduli as gold; the checker recomputes moduli from stress_strain_data.json and also verifies young_moduli.json against the same hidden reference."
+  },
+  "steps": [
+    {
+      "id": "recompute_young_from_stress_strain",
+      "output_file": "stress_strain_data.json",
+      "kind": "recompute",
+      "weight": 0.5,
+      "strain_min": 0.03,
+      "strain_max": 0.05,
+      "gold_moduli": {
+        "2": 90.2,
+        "3": 103.6,
+        "4": 112.4,
+        "6": 124.5
+      },
+      "tolerance_rel": 0.1,
+      "falloff_multiplier": 2.0
+    },
+    {
+      "id": "young_moduli_consistency",
+      "output_file": "young_moduli.json",
+      "kind": "consistency",
+      "weight": 0.5,
+      "tolerance_abs": 0.01,
+      "tolerance_rel": 1e-06
+    }
+  ]
+}

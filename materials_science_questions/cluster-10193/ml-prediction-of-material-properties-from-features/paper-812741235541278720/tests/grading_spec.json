@@ -1,0 +1,361 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Agent reports aggregated metrics in a JSON; checker compares each metric to hidden paper gold using direction-aware threshold_or_better with monotonic scoring. Structural checks verify FCV > CV and 1NN/RF E_accuracy≈0.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "benchmark_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "formation_energy": "object containing model_results and m_step_results",
+            "band_gap": "object containing model_results",
+            "superconducting_Tc": "object containing model_results",
+            "formation_energy_complete_onehot": "array of objects",
+            "band_gap_complete_onehot": "array of objects",
+            "superconducting_Tc_complete_onehot": "array of objects"
+          },
+          "items": {
+            "model_results_item": {
+              "model": "string",
+              "cv_MAE": "number (float)",
+              "cv_RMSE": "number (float)",
+              "cv_R2": "number (float)",
+              "fcv_MAE": "number (float)",
+              "fcv_RMSE": "number (float)",
+              "fcv_R2": "number (float)",
+              "fcv_E_accuracy": "number (float; 0-1)"
+            },
+            "m_step_results_item": {
+              "model": "string",
+              "m": "integer",
+              "cv_MAE": "number (float)",
+              "fcv_MAE": "number (float)",
+              "fcv_E_accuracy": "number (float; 0-1)"
+            },
+            "onehot_result_item": {
+              "model": "string",
+              "cv_MAE": "number (float)",
+              "fcv_MAE": "number (float)"
+            }
+          },
+          "description": "Top-level keys for each property, containing model_results arrays and (for formation_energy) m_step_results. Additional keys for complete-set one-hot encoding results."
+        },
+        "description": "Aggregated benchmark metrics covering all model/dataset combinations. The metrics are directional (lower MAE/RMSE better; higher R²/E_accuracy better)."
+      }
+    ],
+    "notes": "The checker compares the agent's reported metrics to hidden paper gold values using threshold-or-better tolerances and also checks structural relationships (e.g., FCV MAE > CV MAE, 1NN/RF E_accuracy ≈ 0). All gold values and tolerances are hidden."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold metrics (MAE, RMSE, R², E_accuracy) for each model/dataset extracted from Tables 4, 5, and 6 of the paper.",
+      "source_provenance": "Paper Tables 4, 5, 6; values were copied directly from the paper text and matched to the reference solve.sh output.",
+      "generation_method": "Manually transcribed from the paper and verified against the reference oracle.",
+      "why_not_fabricated": "These are the paper's own reported numbers; they serve as the authoritative hidden reference for reproduction."
+    }
+  ],
+  "steps": [
+    {
+      "id": "formation_energy_main",
+      "output_file": "benchmark_results.json",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "error_tol_rel": 0.05,
+      "r2_tol_abs": 0.05,
+      "eacc_tol_abs": 0.02,
+      "gold": [
+        {
+          "model": "1NN-Magpie",
+          "cv_MAE": 0.2178,
+          "cv_RMSE": 0.3641,
+          "cv_R2": 0.8833,
+          "fcv_MAE": 0.2484,
+          "fcv_RMSE": 0.3835,
+          "fcv_R2": 0.8293,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "RF-Magpie",
+          "cv_MAE": 0.0929,
+          "cv_RMSE": 0.1722,
+          "cv_R2": 0.9739,
+          "fcv_MAE": 0.1923,
+          "fcv_RMSE": 0.2468,
+          "fcv_R2": 0.9293,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "MLP-Onehot",
+          "cv_MAE": 0.0785,
+          "cv_RMSE": 0.1598,
+          "cv_R2": 0.9775,
+          "fcv_MAE": 0.1129,
+          "fcv_RMSE": 0.1898,
+          "fcv_R2": 0.9582,
+          "fcv_E_accuracy": 0.2061
+        },
+        {
+          "model": "CNN-PTR",
+          "cv_MAE": 0.1085,
+          "cv_RMSE": 0.2027,
+          "cv_R2": 0.9638,
+          "fcv_MAE": 0.1606,
+          "fcv_RMSE": 0.2406,
+          "fcv_R2": 0.9328,
+          "fcv_E_accuracy": 0.0584
+        },
+        {
+          "model": "CGCNN",
+          "cv_MAE": 0.1235,
+          "cv_RMSE": 0.1719,
+          "cv_R2": 0.9739,
+          "fcv_MAE": 0.112,
+          "fcv_RMSE": 0.1555,
+          "fcv_R2": 0.9658,
+          "fcv_E_accuracy": 0.2869
+        }
+      ]
+    },
+    {
+      "id": "band_gap_main",
+      "output_file": "benchmark_results.json",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "error_tol_rel": 0.05,
+      "r2_tol_abs": 0.05,
+      "eacc_tol_abs": 0.02,
+      "gold": [
+        {
+          "model": "1NN-Magpie",
+          "cv_MAE": 0.7553,
+          "cv_RMSE": 1.103,
+          "cv_R2": 0.3592,
+          "fcv_MAE": 0.7689,
+          "fcv_RMSE": 1.099,
+          "fcv_R2": 0.2476,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "RF-Magpie",
+          "cv_MAE": 0.4511,
+          "cv_RMSE": 0.6085,
+          "cv_R2": 0.805,
+          "fcv_MAE": 0.6967,
+          "fcv_RMSE": 0.78,
+          "fcv_R2": 0.621,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "MLP-Onehot",
+          "cv_MAE": 0.5156,
+          "cv_RMSE": 0.7331,
+          "cv_R2": 0.7169,
+          "fcv_MAE": 0.6266,
+          "fcv_RMSE": 0.7663,
+          "fcv_R2": 0.6342,
+          "fcv_E_accuracy": 0.0327
+        },
+        {
+          "model": "CNN-PTR",
+          "cv_MAE": 0.5428,
+          "cv_RMSE": 0.7645,
+          "cv_R2": 0.6921,
+          "fcv_MAE": 0.651,
+          "fcv_RMSE": 0.7603,
+          "fcv_R2": 0.6399,
+          "fcv_E_accuracy": 0.0136
+        },
+        {
+          "model": "CGCNN",
+          "cv_MAE": 0.5372,
+          "cv_RMSE": 0.7095,
+          "cv_R2": 0.7348,
+          "fcv_MAE": 0.6966,
+          "fcv_RMSE": 0.7985,
+          "fcv_R2": 0.6028,
+          "fcv_E_accuracy": 0.0303
+        }
+      ]
+    },
+    {
+      "id": "superconducting_Tc_main",
+      "output_file": "benchmark_results.json",
+      "weight": 0.25,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "error_tol_rel": 0.05,
+      "r2_tol_abs": 0.05,
+      "eacc_tol_abs": 0.02,
+      "gold": [
+        {
+          "model": "1NN-Magpie",
+          "cv_MAE": 6.0926,
+          "cv_RMSE": 12.1576,
+          "cv_R2": 0.8526,
+          "fcv_MAE": 7.7584,
+          "fcv_RMSE": 14.0036,
+          "fcv_R2": 0.7905,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "RF-Magpie",
+          "cv_MAE": 5.3,
+          "cv_RMSE": 9.1888,
+          "cv_R2": 0.9158,
+          "fcv_MAE": 8.8649,
+          "fcv_RMSE": 12.8201,
+          "fcv_R2": 0.8244,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "MLP-Onehot",
+          "cv_MAE": 8.6967,
+          "cv_RMSE": 14.2092,
+          "cv_R2": 0.7987,
+          "fcv_MAE": 10.6022,
+          "fcv_RMSE": 14.1407,
+          "fcv_R2": 0.7864,
+          "fcv_E_accuracy": 0.0318
+        },
+        {
+          "model": "CNN-PTR",
+          "cv_MAE": 29.9755,
+          "cv_RMSE": 41.6868,
+          "cv_R2": -0.7329,
+          "fcv_MAE": 30.9053,
+          "fcv_RMSE": 49.6371,
+          "fcv_R2": -1.6321,
+          "fcv_E_accuracy": 0.0047
+        }
+      ]
+    },
+    {
+      "id": "formation_energy_mstep",
+      "output_file": "benchmark_results.json",
+      "weight": 0.1,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "error_tol_rel": 0.05,
+      "eacc_tol_abs": 0.02,
+      "gold": [
+        {
+          "model": "RF-Onehot",
+          "m": 1,
+          "cv_MAE": 0.1505,
+          "fcv_MAE": 0.2839,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "RF-Onehot",
+          "m": 2,
+          "cv_MAE": 0.1505,
+          "fcv_MAE": 0.326,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "RF-Onehot",
+          "m": 3,
+          "cv_MAE": 0.1505,
+          "fcv_MAE": 0.365,
+          "fcv_E_accuracy": 0.0
+        },
+        {
+          "model": "MLP-Onehot",
+          "m": 1,
+          "cv_MAE": 0.0719,
+          "fcv_MAE": 0.1022,
+          "fcv_E_accuracy": 0.2052
+        },
+        {
+          "model": "MLP-Onehot",
+          "m": 2,
+          "cv_MAE": 0.0719,
+          "fcv_MAE": 0.1189,
+          "fcv_E_accuracy": 0.2955
+        },
+        {
+          "model": "MLP-Onehot",
+          "m": 3,
+          "cv_MAE": 0.0719,
+          "fcv_MAE": 0.136,
+          "fcv_E_accuracy": 0.3629
+        }
+      ]
+    },
+    {
+      "id": "complete_onehot",
+      "output_file": "benchmark_results.json",
+      "weight": 0.1,
+      "kind": "recompute_metric",
+      "target_policy": "threshold_or_better",
+      "error_tol_rel": 0.05,
+      "gold": {
+        "formation_energy_complete_onehot": [
+          {
+            "model": "1NN",
+            "cv_MAE": 0.2034,
+            "fcv_MAE": 0.2157
+          },
+          {
+            "model": "RF",
+            "cv_MAE": 0.1505,
+            "fcv_MAE": 0.2839
+          },
+          {
+            "model": "MLP",
+            "cv_MAE": 0.0719,
+            "fcv_MAE": 0.1022
+          }
+        ],
+        "band_gap_complete_onehot": [
+          {
+            "model": "1NN",
+            "cv_MAE": 0.8692,
+            "fcv_MAE": 0.9412
+          },
+          {
+            "model": "RF",
+            "cv_MAE": 0.5957,
+            "fcv_MAE": 0.8575
+          },
+          {
+            "model": "MLP",
+            "cv_MAE": 0.521,
+            "fcv_MAE": 0.6612
+          }
+        ],
+        "superconducting_Tc_complete_onehot": [
+          {
+            "model": "1NN",
+            "cv_MAE": 6.6673,
+            "fcv_MAE": 7.8075
+          },
+          {
+            "model": "RF",
+            "cv_MAE": 5.7657,
+            "fcv_MAE": 9.351
+          },
+          {
+            "model": "MLP",
+            "cv_MAE": 9.0829,
+            "fcv_MAE": 10.8964
+          }
+        ]
+      }
+    },
+    {
+      "id": "structural_checks",
+      "output_file": "benchmark_results.json",
+      "weight": 0.05,
+      "kind": "structural_audit",
+      "target_policy": "structural_audit"
+    }
+  ]
+}

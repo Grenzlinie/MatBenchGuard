@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_compute_scattering_rates",
+    "title": "Compute electron scattering rates and mean free paths",
+    "role": "process",
+    "action": "Using the material parameters for crystalline SiO2 (ħω_LO, ε, ε_∞, C1, σ, ρ, Cs, M, T, Cii, Dii, α, m*, etc.), compute the energy-dependent scattering rates for longitudinal optical phonons (Fröhlich theory), acoustic phonons (low-energy and high-energy regimes), and impact ionization, as well as the mean free path as a function of energy. Tabulate these for use in the Monte Carlo simulation.",
+    "output_file": "",
+    "evidence": "rates_and_mfp.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulated scattering rates and mean free path per energy for all relevant processes. Columns: energy, f_LO_plus, f_LO_minus, f_ac_plus, f_ac_minus, f_ii, mfp.",
+    "output_schema": "energy (eV), f_LO_plus (1/s), f_LO_minus (1/s), f_ac_plus (1/s), f_ac_minus (1/s), f_ii (1/s), mfp (nm)"
+  },
+  {
+    "id": "step_02_run_monte_carlo",
+    "title": "Run Monte Carlo simulation of electron transport",
+    "role": "process",
+    "action": "For electric field strengths from 1 to 15 MV/cm (with sufficient resolution to capture the breakdown onset), simulate 10,000 electron trajectories starting from a localization depth of 100 nm. Use the previously computed scattering rates, the energy update rule, the cascading probability factor, and the surface emission condition. Record all emission events (electron count, energies, angles).",
+    "output_file": "",
+    "evidence": "simulation_event_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Raw event log of emitted electrons per field strength including energies and angles.",
+    "output_schema": "Per-field-strength event entries: emitted electron count, list of emission energies (eV), list of emission angles (degrees)."
+  },
+  {
+    "id": "step_03_emission_curve",
+    "title": "Produce emitted electron count vs. field strength curve",
+    "role": "scored",
+    "action": "From the recorded emission events, compute the number (or fraction) of emitted electrons for each field strength and save as a CSV.",
+    "output_file": "emitted_electrons_vs_field.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Emitted electron count (or fraction) as a function of electric field strength from 1 to 15 MV/cm.",
+    "output_schema": "Two columns: electric_field_strength (MV/cm, float), emitted_electron_count (float, unitless)"
+  },
+  {
+    "id": "step_04_determine_breakdown",
+    "title": "Determine breakdown electric field range",
+    "role": "scored",
+    "action": "Analyze the emission vs field curve to identify the electric field range where an avalanche increase (breakdown) occurs. The range should correspond to a sharp, sustained rise in emitted electron count, not just a gradual increase. Report the lower and upper bounds in a JSON file.",
+    "output_file": "breakdown_range.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The electric field range (MV/cm) where breakdown occurs due to avalanche electron multiplication.",
+    "output_schema": "{\"breakdown_range_MV_per_cm\": [lower_bound, upper_bound]}"
+  }
+]

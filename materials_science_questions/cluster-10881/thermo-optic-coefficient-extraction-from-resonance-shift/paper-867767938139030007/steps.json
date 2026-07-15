@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Device Specification and Mode Calculation",
+    "role": "process",
+    "action": "Define the design region (250 nm thick silicon slab, ε_Si=12.25, ε_SiO2=2.25) and compute the electric field profiles of the fundamental TE mode and the second-order TE mode at 1550 nm wavelength. Set up the objective-first optimization problem: for the fundamental TE input mode, define output overlap vectors c_{11} (second-order mode) and c_{12} (fundamental mode), impose field-overlap constraints 0.9 ≤ |c_{11}† x_1| ≤ 1.0 and 0.0 ≤ |c_{12}† x_1| ≤ 0.01, and define the source term b_1 corresponding to a fundamental TE mode excitation.",
+    "output_file": "",
+    "evidence": "mode_profiles.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepares the design problem by computing waveguide modes and encoding the performance specification into the optimization formalism.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "ADMM Inverse Design Optimization",
+    "role": "process",
+    "action": "Implement the objective-first optimization (minimizing physics residual sum subject to hard field-overlap constraints) using an alternating direction method of multipliers (ADMM) algorithm with a 3D finite-difference frequency-domain (FDFD) Maxwell solver. Initialize the permittivity uniformly in the design region and iteratively update the electric fields x_i and permittivity z until convergence. Output the optimized continuous permittivity distribution.",
+    "output_file": "",
+    "evidence": "optimized_permittivity.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Core computational stage that solves the constrained optimization to produce a continuously-varying permittivity structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step3",
+    "title": "Boundary Extraction and Binary Conversion",
+    "role": "process",
+    "action": "Convert the continuously optimized permittivity map into a binary silicon/silica structure. Apply a level-set or thresholding method to extract boundaries and refine them with a steepest-descent procedure to ensure a manufacturable two-material layout.",
+    "output_file": "",
+    "evidence": "binary_structure.png",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Post-processing step that produces the final manufacturable binary device geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4",
+    "title": "Final Performance Verification",
+    "role": "scored",
+    "action": "Run a full-wave FDFD simulation on the final binary structure with the fundamental TE mode input excitation. Compute the squared magnitudes of the overlap integrals |c_{11}† x_1|^2 and |c_{12}† x_1|^2 and convert them to power fractions relative to the input power. Output the conversion efficiency (power fraction into the second-order TE mode) and the rejection power (power fraction into the transmitted fundamental TE mode).",
+    "output_file": "final_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the final verified device performance. The checker compares the reported numbers to hidden paper-reported gold values.",
+    "output_schema": "{\"type\": \"object\", \"properties\": {\"conversion_efficiency\": {\"type\": \"number\"}, \"rejection_power\": {\"type\": \"number\"}}, \"required\": [\"conversion_efficiency\", \"rejection_power\"]}"
+  }
+]

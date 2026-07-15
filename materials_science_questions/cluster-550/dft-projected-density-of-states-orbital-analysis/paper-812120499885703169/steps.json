@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_geom_opt",
+    "title": "DFT geometry optimization and ground‑state calculation",
+    "role": "process",
+    "action": "Using the TGS crystal structure from COD, perform a full DFT geometry optimization (atomic positions and, if needed, cell parameters) with the PBEsol functional and a plane‑wave cutoff of ~340 eV. Then run a self‑consistent field (SCF) calculation to obtain the ground‑state charge density and wavefunctions. Save the final relaxed structure.",
+    "output_file": "",
+    "evidence": "relaxed_geometry.cif",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required intermediate: the optimized geometry and ground‑state charge density are needed by all subsequent property calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_band_structure",
+    "title": "Electronic band structure computation",
+    "role": "scored",
+    "action": "Using the relaxed geometry and ground‑state density, perform a non‑self‑consistent band structure calculation along the high‑symmetry path Γ–Y–B–D–Γ. Write the band energies at each k‑point to band_structure.csv.",
+    "output_file": "band_structure.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the band energies along the selected k‑path. The checker recomputes the indirect band gap from this file.",
+    "output_schema": "CSV with columns: kpoint_label, kx, ky, kz, band_1, band_2, ..., band_n (one column per sorted energy band; energies in eV)."
+  },
+  {
+    "id": "step_total_dos",
+    "title": "Total density of states computation",
+    "role": "scored",
+    "action": "Using the relaxed geometry and ground‑state charge density, compute the total electronic density of states (DOS) on a uniform energy grid and write it to total_dos.csv.",
+    "output_file": "total_dos.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with total DOS vs energy. The checker verifies the presence of a gap near the expected energy.",
+    "output_schema": "CSV with columns: energy (eV), total_dos (states/eV)."
+  },
+  {
+    "id": "step_projected_dos",
+    "title": "Projected density of states computation",
+    "role": "scored",
+    "action": "Using the same ground‑state calculation, compute the projected density of states by orbital (s, p) and by element (O, C, N, H, S) and save the result to projected_dos.csv.",
+    "output_file": "projected_dos.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with projected DOS. The checker verifies dominant p‑character (~80%) near the VBM and element‑resolved contributions.",
+    "output_schema": "CSV with columns: energy (eV), s_dos, p_dos, O_dos, C_dos, N_dos, H_dos, S_dos (states/eV)."
+  },
+  {
+    "id": "step_dielectric",
+    "title": "Dielectric function computation with scissor correction",
+    "role": "scored",
+    "action": "Using the ground‑state wavefunctions, compute the frequency‑dependent dielectric tensor ε_ij(ω). Apply a scissor shift of 0.9 eV to the conduction bands. Write the real (ε1) and imaginary (ε2) diagonal components to dielectric_function.csv.",
+    "output_file": "dielectric_function.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scissor‑corrected dielectric function. The checker identifies the epsilon2_xx peak in the 5–10 eV range and compares to the hidden paper value.",
+    "output_schema": "CSV with columns: energy (eV), epsilon1_xx, epsilon1_yy, epsilon1_zz, epsilon2_xx, epsilon2_yy, epsilon2_zz (all dimensionless)."
+  }
+]

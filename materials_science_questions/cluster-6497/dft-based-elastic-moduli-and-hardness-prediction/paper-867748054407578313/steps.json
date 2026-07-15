@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_atomic_energies",
+    "title": "Compute reference atomic energies for Ag and N",
+    "role": "process",
+    "action": "Perform spin-polarized DFT calculations on isolated Ag and N atoms using the same computational parameters as the main volume scan (PBE functional, PAW pseudopotentials, plane-wave cutoff 600 eV). Store the total energies in a JSON file.",
+    "output_file": "",
+    "evidence": "atomic_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Reference energies needed to compute the cohesive energy per atom according to the paper's definition.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_volume_scan",
+    "title": "DFT total-energy volume scan for Agâ‚ƒN phases",
+    "role": "process",
+    "action": "For each of the three Agâ‚ƒN crystal structures (anti-ReOâ‚ƒ D0â‚‰, CoAsâ‚ƒ D0â‚‚, RhFâ‚ƒ), set up unit cells and perform spin-polarized DFT calculations at a set of volumes spanning approximately Â±10% around the expected equilibrium. At each volume, relax internal atomic positions until forces are <0.01 eV/Ã…. Use a Î“-centered 17Ã—17Ã—17 k-point mesh, plane-wave cutoff 600 eV, PBE functional with PAW pseudopotentials. Collect total energy and relaxed coordinates for each volume. Output raw data in a structured file.",
+    "output_file": "",
+    "evidence": "volume_scan_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Raw energy-volume data required for subsequent EOS fitting and equilibrium property extraction.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_equilibrium_properties",
+    "title": "Equilibrium properties and band gaps for Agâ‚ƒN phases",
+    "role": "scored",
+    "action": "From the energy-volume data and atomic reference energies, fit the third-order Birch-Murnaghan equation of state for each phase to obtain equilibrium atomic volume Vâ‚€ (Ã…Â³/atom), lattice constant(s), cohesive energy E_coh (eV/atom), bulk modulus Bâ‚€ (GPa), and its pressure derivative Bâ‚€â€². Then, at the equilibrium geometry, perform a band structure calculation and determine the Kohn-Sham band gap and whether it is direct or indirect. Compile all results into a single JSON file.",
+    "output_file": "ag3n_equilibrium_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main reproduction artifact containing equilibrium structural and electronic properties for the three Agâ‚ƒN phases.",
+    "output_schema": "{\"phases\": [{\"name\": \"D0_9\", \"a\": <float, Ã…>, \"V0\": <float, Ã…Â³/atom>, \"Ecoh\": <float, eV/atom>, \"B0\": <float, GPa>, \"B0_prime\": <float>, \"band_gap\": <float, eV>, \"band_gap_type\": \"indirect\"|\"direct\"}, {\"name\": \"D0_2\", ...}, {\"name\": \"RhF3\", ...}]}"
+  }
+]

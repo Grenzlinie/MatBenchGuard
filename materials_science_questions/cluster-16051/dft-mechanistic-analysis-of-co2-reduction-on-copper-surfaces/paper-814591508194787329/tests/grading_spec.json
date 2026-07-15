@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Cu-O distances and coordination numbers are recomputed from submitted XYZ files; Bader charges are compared to paper-reported values.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Cu-O distances, Cu-O-Ce distances, coordination numbers, and Bader charges",
+      "source_provenance": "Tables 2 and 3 of the paper 'A Thermally Stable Cr–Cu Nanostructure Embedded in the CeO2 Surface as a Substitute for Platinum-Group Metal Catalysts' (ACS Catal. 2015, 5, 6738–6747).",
+      "generation_method": "Extracted the exact reported numbers for the specific models: monometallic CuCe15O31 with O1 vacancy (Table 2) and bimetallic CrCuCe14O30 type Iα (Table 3).",
+      "why_not_fabricated": "These are the paper's own DFT results serving as the reference reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "monometallic_optimized_geometry.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "other",
+          "description": "XYZ file with lattice vectors and atomic coordinates. The checker recomputes Cu–O distances and coordination numbers from this file."
+        },
+        "description": "Optimized geometry of the monometallic CuCe15O31 slab (XYZ)."
+      },
+      {
+        "file": "bimetallic_optimized_geometry.xyz",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "other",
+          "description": "XYZ file with lattice vectors and atomic coordinates. The checker recomputes Cu–O distances and coordination numbers from this file."
+        },
+        "description": "Optimized geometry of the bimetallic CrCuCe14O30 slab (type Iα) (XYZ)."
+      },
+      {
+        "file": "structural_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "monometallic": "object",
+            "bimetallic": "object"
+          },
+          "items": {
+            "monometallic": {
+              "Cu-O_distances": "array of floats (Å)",
+              "Cu-O-Ce_distances": "array of floats (Å)",
+              "Cu coordination_number": "int",
+              "Cu Bader_charge": "float"
+            },
+            "bimetallic": {
+              "Cu-O_distances": "array of floats (Å)",
+              "Cu-O-Ce_distances": "array of floats (Å)",
+              "Cu coordination_number": "int",
+              "Cu Bader_charge": "float",
+              "Cr Bader_charge": "float"
+            }
+          },
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Self-reported structural parameters and Bader charges. Bader charges are compared directly to the paper‑reported values; distances are cross‑checked against the submitted XYZ files."
+      }
+    ],
+    "notes": "The checker relies on the two XYZ files for distance‑recomputation scoring and on the JSON for Bader charge scoring. The coordination numbers reported in the JSON are also verified against the XYZ‑derived values."
+  },
+  "target_policies": {
+    "monometallic_optimized_geometry.xyz": "metric_recompute",
+    "bimetallic_optimized_geometry.xyz": "metric_recompute",
+    "structural_parameters.json": "reference_match"
+  },
+  "steps": [
+    {
+      "id": "step_mono_geom",
+      "output_file": "monometallic_optimized_geometry.xyz",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "params": {
+        "target_cu_o_min": 1.877,
+        "target_cu_o_max": 1.895,
+        "tolerance": 0.05,
+        "target_cn": 3
+      }
+    },
+    {
+      "id": "step_bimet_geom",
+      "output_file": "bimetallic_optimized_geometry.xyz",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "params": {
+        "target_cu_o_min": 1.866,
+        "target_cu_o_max": 2.133,
+        "tolerance": 0.05,
+        "target_cn": 3
+      }
+    },
+    {
+      "id": "step_structural_params",
+      "output_file": "structural_parameters.json",
+      "kind": "json_validation",
+      "weight": 0.4,
+      "params": {
+        "monometallic": {
+          "bader_cu": 1.048,
+          "bader_tolerance": 0.15
+        },
+        "bimetallic": {
+          "bader_cu": 0.598,
+          "bader_cr": 1.946,
+          "bader_tolerance": 0.15
+        }
+      }
+    }
+  ]
+}

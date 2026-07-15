@@ -1,0 +1,181 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "The task's outputs are final DFT-computed physical quantities; the checker compares them to the paper's reported gold values with tolerances appropriate for differing DFT implementations. A full recompute from raw simulation files is infeasible as the checker does not have access to the DFT code or compute resources.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_monomer_results.json": "exact_match",
+    "step_02_dimer_results.json": "exact_match",
+    "step_03_solid_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for monomer, dimer, and solid properties",
+      "source_provenance": "Extracted from the paper: monomer H binding energy 3.36 eV, HOMO-LUMO gap 1.77 eV; dimer isomer A relaxed binding energy 1.78 eV, separation 12.62 au; isomer B binding energy 3.03 eV, separation 12.35 au; solid binding energy per cluster 15 eV, lattice constant 24.2 au, structural preservation true, max displacement <0.3 au.",
+      "generation_method": "Values are directly taken from the paper's text, figures, and tables; they are the paper's own reported computed quantities.",
+      "why_not_fabricated": "These are the paper's actual headline results, not arbitrary numbers; they define the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_monomer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energy_ev": "float",
+            "homo_energy_ev": "float",
+            "lumo_energy_ev": "float",
+            "h_binding_energy_ev": "float",
+            "h_correction_used": "string"
+          }
+        },
+        "description": "Computed electronic properties and H binding energy of the Al13H monomer. The H binding energy must be within tolerance of the paper's reported value."
+      },
+      {
+        "file": "step_02_dimer_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "isomer_A": {
+              "frozen_eq_dist_au": "float",
+              "frozen_well_depth_ev": "float",
+              "relaxed_eq_dist_au": "float",
+              "relaxed_binding_energy_ev": "float"
+            },
+            "isomer_B": {
+              "frozen_eq_dist_au": "float",
+              "frozen_well_depth_ev": "float",
+              "relaxed_eq_dist_au": "float",
+              "relaxed_binding_energy_ev": "float"
+            },
+            "morse_fit_parameters": {}
+          }
+        },
+        "description": "Relaxed binding energies and equilibrium separations for dimer isomers A and B, plus frozen-geometry metrics and Morse fit parameters. The relaxed quantities must match paper values within tolerances."
+      },
+      {
+        "file": "step_03_solid_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "lattice_constant_au": "float",
+            "binding_energy_per_cluster_ev": "float",
+            "clusters_preserved": "bool",
+            "max_atomic_displacement_au": "float"
+          }
+        },
+        "description": "Lattice constant and binding energy per cluster of the assembled simple cubic solid, structural preservation flag, and maximum atomic displacement after MD. Energy and lattice constant must match paper values within tolerances; clusters_preserved must be true and displacement below a threshold."
+      }
+    ],
+    "notes": "Tolerances are set to absorb differences due to DFT implementation and pseudopotentials. The expected values used for scoring are derived from the original publication but are not disclosed to encourage independent reproduction."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_monomer_results.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "checks": [
+        {
+          "name": "h_binding_energy",
+          "field": "h_binding_energy_ev",
+          "gold": 3.36,
+          "tolerance": 0.3,
+          "max_dev": 0.6,
+          "sub_weight": 0.5
+        },
+        {
+          "name": "homo_lumo_gap",
+          "fields": [
+            "homo_energy_ev",
+            "lumo_energy_ev"
+          ],
+          "compute": "lumo - homo",
+          "gold": 1.77,
+          "tolerance": 0.2,
+          "max_dev": 0.4,
+          "sub_weight": 0.5
+        }
+      ]
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_dimer_results.json",
+      "weight": 0.4,
+      "kind": "numeric",
+      "checks": [
+        {
+          "name": "relaxed_binding_A",
+          "field": "isomer_A.relaxed_binding_energy_ev",
+          "gold": 1.78,
+          "tolerance": 0.3,
+          "max_dev": 0.6,
+          "sub_weight": 0.25
+        },
+        {
+          "name": "relaxed_separation_A",
+          "field": "isomer_A.relaxed_eq_dist_au",
+          "gold": 12.62,
+          "tolerance": 0.1,
+          "max_dev": 0.2,
+          "sub_weight": 0.25
+        },
+        {
+          "name": "relaxed_binding_B",
+          "field": "isomer_B.relaxed_binding_energy_ev",
+          "gold": 3.03,
+          "tolerance": 0.3,
+          "max_dev": 0.6,
+          "sub_weight": 0.25
+        },
+        {
+          "name": "relaxed_separation_B",
+          "field": "isomer_B.relaxed_eq_dist_au",
+          "gold": 12.35,
+          "tolerance": 0.1,
+          "max_dev": 0.2,
+          "sub_weight": 0.25
+        }
+      ]
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_solid_results.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "checks": [
+        {
+          "name": "lattice_constant",
+          "field": "lattice_constant_au",
+          "gold": 24.2,
+          "tolerance": 0.5,
+          "max_dev": 1.0,
+          "sub_weight": 0.3
+        },
+        {
+          "name": "binding_energy_per_cluster",
+          "field": "binding_energy_per_cluster_ev",
+          "gold": 15.0,
+          "tolerance": 1.5,
+          "max_dev": 3.0,
+          "sub_weight": 0.3
+        },
+        {
+          "name": "structural_preservation",
+          "sub_weight": 0.4,
+          "score_logic": "if clusters_preserved is True and max_atomic_displacement_au <= 0.3: 1.0; if clusters_preserved is True and max_atomic_displacement_au > 0.3: 0.5; else: 0.0"
+        }
+      ]
+    }
+  ]
+}

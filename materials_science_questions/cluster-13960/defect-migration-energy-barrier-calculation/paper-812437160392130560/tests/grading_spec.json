@@ -1,0 +1,170 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot re-run the MD simulation in the verifier; instead compare reported values to paper gold with generous tolerances and perform an internal consistency check (Γ from P0 and S using the exact theoretical expression with standard atomic masses).",
+  "pass_threshold": 0.5,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "saddle_plane_probabilities.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "P0"
+          ],
+          "units": {
+            "T": "K",
+            "P0": "Å⁻¹"
+          }
+        },
+        "description": "Saddle-plane probability P(0) for each temperature."
+      },
+      {
+        "file": "transmission_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "S"
+          ],
+          "units": {
+            "T": "K",
+            "S": "dimensionless"
+          }
+        },
+        "description": "Transmission coefficient ⟨S⟩ for each temperature."
+      },
+      {
+        "file": "migration_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "P_0_Angstrom_inv",
+            "transmission_coeff",
+            "Gamma_per_s",
+            "nu_bar_1e12_per_s"
+          ],
+          "units": {
+            "T": "K",
+            "P_0_Angstrom_inv": "Å⁻¹",
+            "transmission_coeff": "dimensionless",
+            "Gamma_per_s": "s⁻¹",
+            "nu_bar_1e12_per_s": "10¹² s⁻¹"
+          }
+        },
+        "description": "Final migration quantities: saddle-plane probability, transmission coefficient, effective hopping rate, and frequency prefactor for each temperature."
+      }
+    ],
+    "notes": "The checker will compare these values to hidden reference values (paper Table 2) with generous relative tolerances (P0 ±35%, S ±40%, Γ and ν̄ ±50%). Internal consistency (recomputing Γ from P0, S, and the known pre-factor) may also be verified."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for all scored quantities (paper Table 2).",
+      "source_provenance": "Extracted directly from Table 2 of the paper (J. Phys. C: Solid State Phys. 20 2331).",
+      "generation_method": "Manually read the four temperatures and corresponding P(0), ⟨S⟩, Γ, ν̄ values from the printed table.",
+      "why_not_fabricated": "These are the actual reported numbers the task aims to reproduce; they are the only authoritative reference for scoring."
+    }
+  ],
+  "steps": [
+    {
+      "id": "saddle_plane_probabilities",
+      "output_file": "saddle_plane_probabilities.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "reference_values": {
+        "temperatures": [
+          995,
+          1368,
+          1520,
+          1760
+        ],
+        "P0": [
+          9.6e-09,
+          1.6e-06,
+          7.8e-06,
+          2.3e-05
+        ],
+        "tolerance_relative": 0.35
+      }
+    },
+    {
+      "id": "transmission_coefficients",
+      "output_file": "transmission_coefficients.csv",
+      "kind": "numeric",
+      "weight": 0.25,
+      "reference_values": {
+        "temperatures": [
+          995,
+          1368,
+          1520,
+          1760
+        ],
+        "S": [
+          0.37,
+          0.32,
+          0.54,
+          0.33
+        ],
+        "tolerance_relative": 0.4
+      }
+    },
+    {
+      "id": "migration_results",
+      "output_file": "migration_results.csv",
+      "kind": "numeric",
+      "weight": 0.5,
+      "reference_values": {
+        "temperatures": [
+          995,
+          1368,
+          1520,
+          1760
+        ],
+        "P0": [
+          9.6e-09,
+          1.6e-06,
+          7.8e-06,
+          2.3e-05
+        ],
+        "S": [
+          0.37,
+          0.32,
+          0.54,
+          0.33
+        ],
+        "Gamma": [
+          18000.0,
+          3000000.0,
+          26000000.0,
+          50000000.0
+        ],
+        "nu_bar": [
+          5.2,
+          4.2,
+          8.8,
+          3.0
+        ],
+        "tol_P0": 0.35,
+        "tol_S": 0.4,
+        "tol_Gamma": 0.5,
+        "tol_nu_bar": 0.5,
+        "tol_consistency": 0.01,
+        "mu_amu": 21.12,
+        "m_O_amu": 15.999,
+        "m_Co_amu": 58.933,
+        "DeltaE_mig_eV": 1.62
+      }
+    }
+  ]
+}

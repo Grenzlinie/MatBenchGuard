@@ -1,0 +1,93 @@
+[
+  {
+    "id": "s0",
+    "title": "Set up all-silica offretite unit cell",
+    "role": "process",
+    "action": "Obtain the crystallographic data of all-silica offretite from the public reference (Gard & Tait, Acta Cryst. B28, 825, 1972) and construct a periodic unit cell input for the DFT code using the hexagonal lattice parameters a=b=13.291 Å, c=7.582 Å, α=β=90°, γ=120°, space group P6₃/mmc, and the published fractional coordinates of 18 Si and 36 O atoms.",
+    "output_file": "",
+    "evidence": "initial_structure_input.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Evidence file: the initial crystallographic input used for DFT calculations (plain text).",
+    "output_schema": ""
+  },
+  {
+    "id": "s1",
+    "title": "Relax all-silica offretite",
+    "role": "scored",
+    "action": "Perform a full geometry optimization of the all-silica offretite unit cell using LDA (Perdew–Zunger), a plane-wave cutoff of 16 Ry, Γ-point Brillouin-zone sampling, norm-conserving pseudopotentials for Si, and the Vanderbilt ultrasoft pseudopotential for O. Relax all atomic positions until residual forces are below 0.0014 au. Extract SiO bond lengths, T-O-T bond angles, and the total energy.",
+    "output_file": "offretite_geometry.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Optimized geometry and total energy of all-silica offretite, containing SiO distances (Å), T-O-T angles (deg), and total energy (au) in key=value format.",
+    "output_schema": "type=text; pattern=One line per parameter: key=value. Keys include T1O1, T1O2, T1O3, T1O4, T2O4, T2O5, T2O6, T2O7 (bond lengths in Å), O1T1O2, O2T1O3, O3T1O4, O4T1O1, T1O3T1, T2O6T2, O4T2O5, O4T2O7, O5T2O6, O6T2O7 (angles in deg), and final line: E_tot_offretite=<value> (total energy in au)."
+  },
+  {
+    "id": "s2",
+    "title": "Relax Al-substituted offretite (T1 and T2)",
+    "role": "scored",
+    "action": "Starting from the relaxed all-silica structure, substitute one Si by Al at the T1 site and separately at the T2 site, compensating the net charge with a uniform positive background charge. Perform full geometry optimization of each Al-substituted cell until residual forces are below 0.0006 au. Report Al-O bond lengths, Al-O-Si bond angles, and total energies for both Al(T1) and Al(T2).",
+    "output_file": "al_substituted_geometries.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed geometries and total energies of Al-substituted offretite at T1 and T2 sites, containing Al-O distances (Å), Al-O-Si angles (deg), and total energies (au).",
+    "output_schema": "type=text; pattern=Two blocks, one for Al(T1) and one for Al(T2). Each block lists: dAlO#=<value> (for #=1-4 for T1, #=4-7 for T2, Å), αAlO#Si=<value> (deg for corresponding oxygen), and a final line: E_tot=<value> (total energy in au)."
+  },
+  {
+    "id": "s3",
+    "title": "Relax protonated configurations",
+    "role": "scored",
+    "action": "For each inequivalent oxygen adjacent to Al(T1) (O1-O4) and Al(T2) (O4-O7), attach a proton and perform a full geometry optimization until residual forces are below 0.0006 au. For each configuration (T1OiH, T2OiH) extract the optimized bond lengths (Al-O, Si-O, O-H), Al-O-Si angle, Al-O-H angle, and the total energy.",
+    "output_file": "protonated_geometries.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Structural parameters of all protonated offretite configurations, containing bond lengths (Å) and angles (deg), and total energies (au).",
+    "output_schema": "type=text; pattern=Blocks for each site: T1O1H, T1O2H, T1O3H, T1O4H, T2O5H, T2O6H, T2O7H. Each block contains lines: dAlO#=<value> (for relevant #, Å), dSiO=<value> (Å), dOH=<value> (Å), αAlOSi=<value> (deg), αAlOH=<value> (deg), and a final line: E_tot=<value> (total energy in au)."
+  },
+  {
+    "id": "s4",
+    "title": "Compute atomic reference energies",
+    "role": "process",
+    "action": "Compute the total energies of isolated Si, Al, and H atoms using the same pseudopotentials, functional, and cutoff (16 Ry) by placing each atom in a large supercell. Save the resulting atomic energies.",
+    "output_file": "",
+    "evidence": "atomic_energies.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Evidence file listing the computed atomic total energies: E_at_Si, E_at_Al, E_at_H.",
+    "output_schema": ""
+  },
+  {
+    "id": "s5",
+    "title": "Compute proton affinities and substitution energies",
+    "role": "scored",
+    "action": "Using the total energies of offretite (s1), Al(T1)/Al(T2) (s2), protonated configurations (s3), and atomic energies (s4), compute proton affinities and (Al,H)/Si substitution energies for each protonated oxygen site according to the energy difference schemes: proton affinity = E_tot[Al(Ti)] + E_at(H) – E_tot[TiOjH]; substitution energy = E_tot[TiOjH] + E_at(Si) – E_tot[offretite] – E_at(Al) – E_at(H). Output a table of results.",
+    "output_file": "protonated_energies.txt",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Proton affinities and (Al,H)/Si substitution energies for each protonated oxygen site.",
+    "output_schema": "type=table; columns=['site', 'total_energy', 'proton_affinity', 'substitution_energy']; units=total_energy in au, proton_affinity and substitution_energy in kcal/mol; description=One line per protonated site (e.g., T1O1H, T1O2H, ..., T2O7H) with space-separated columns."
+  },
+  {
+    "id": "s6",
+    "title": "Compute relative Al substitution energies",
+    "role": "scored",
+    "action": "From the total energies of Al(T1) and Al(T2) and the substitution energies computed in s5, determine the most stable protonated configuration at T1 (i.e., the site with the lowest substitution energy) and use its substitution energy as the reference. Report the total energies of Al(T1) and Al(T2) and the relative (Al,H)/Si substitution energies (difference in kcal/mol with respect to the chosen reference).",
+    "output_file": "al_substitution_energies.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Total energies of Al(T1) and Al(T2) together with their relative substitution energies referenced to the most stable T1 site.",
+    "output_schema": "type=table; columns=['site', 'total_energy', 'relative_substitution_energy']; units=total_energy in au, relative_substitution_energy in kcal/mol; description=Two lines: Al(T1) <total_energy> 0.0; Al(T2) <total_energy> <relative_substitution_energy>."
+  }
+]

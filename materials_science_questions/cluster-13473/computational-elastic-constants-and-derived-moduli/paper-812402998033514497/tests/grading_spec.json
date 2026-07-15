@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Cannot recompute critical doses from raw MD trajectories because agent only submits final values; elastic constant curves and huge trajectory files are not in the output contract. Result-level comparison against paper-reported gold with tolerances is the necessary compromise.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for amorphization outcomes, critical doses (dpa), and shear modulus ratio from the paper Cu-Ti intermetallic MD study.",
+      "source_provenance": "Paper Fig. 2, Section 3.1, and the description of Fig. 2 for Cu4Ti: critical doses for Cu4Ti3 (0.6 dpa), CuTi (1.0 dpa), CuTi2 (0.45 dpa), Cu4Ti grouped (4.17 dpa); Cu4Ti not amorphized under single Frenkel pairs; Cu4Ti amorphized under grouped Frenkel pairs; shear modulus ratio C_avg_d/C_avg_c ≈ 0.5.",
+      "generation_method": "Values extracted directly from the paper's reported text and figures. Booleans reflect the stated findings. The ratio 0.5 is the factor-of-two drop noted in the conclusions.",
+      "why_not_fabricated": "This is a paper reproduction task; the hidden gold must be the paper's actual reported results so that an honest reimplementation of the protocol can hit them within tolerances."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Cu4Ti_single_FP_amorphized",
+            "Cu4Ti_grouped_FP_amorphized",
+            "Cu4Ti3_critical_dose",
+            "CuTi_critical_dose",
+            "CuTi2_critical_dose",
+            "Cu4Ti_grouped_critical_dose",
+            "C_avg_ratio_at_amorphization"
+          ],
+          "properties": {
+            "Cu4Ti_single_FP_amorphized": {
+              "type": "boolean",
+              "description": "whether Cu4Ti becomes amorphous under single Frenkel pair introduction"
+            },
+            "Cu4Ti_grouped_FP_amorphized": {
+              "type": "boolean",
+              "description": "whether Cu4Ti becomes amorphous under grouped Frenkel pair introduction"
+            },
+            "Cu4Ti3_critical_dose": {
+              "type": "number",
+              "description": "critical dose for amorphization of Cu4Ti3 under single Frenkel pairs, in dpa"
+            },
+            "CuTi_critical_dose": {
+              "type": "number",
+              "description": "critical dose for amorphization of CuTi under single Frenkel pairs, in dpa"
+            },
+            "CuTi2_critical_dose": {
+              "type": "number",
+              "description": "critical dose for amorphization of CuTi2 under single Frenkel pairs, in dpa"
+            },
+            "Cu4Ti_grouped_critical_dose": {
+              "type": "number",
+              "description": "critical dose for amorphization of Cu4Ti under grouped Frenkel pairs, in dpa"
+            },
+            "C_avg_ratio_at_amorphization": {
+              "type": "number",
+              "description": "ratio of average shear modulus at amorphization to that of the perfect crystal"
+            }
+          }
+        },
+        "description": "Scored JSON file containing the amorphization outcomes, critical doses, and shear modulus reduction factor."
+      }
+    ],
+    "notes": "The hidden checker compares the reported boolean flags, critical doses, and ratio to paper-derived gold values with tolerances: ±20% relative on critical doses, exact match for boolean outcomes, and ratio within 0.5 ± 0.1."
+  },
+  "steps": [
+    {
+      "id": "step_results",
+      "output_file": "results.json",
+      "kind": "json_field_compare",
+      "weight": 1.0,
+      "gold": {
+        "Cu4Ti_single_FP_amorphized": false,
+        "Cu4Ti_grouped_FP_amorphized": true,
+        "Cu4Ti3_critical_dose": 0.6,
+        "CuTi_critical_dose": 1.0,
+        "CuTi2_critical_dose": 0.45,
+        "Cu4Ti_grouped_critical_dose": 4.17,
+        "C_avg_ratio_at_amorphization": 0.5
+      },
+      "tolerances": {
+        "dose_relative": 0.2,
+        "ratio_absolute": 0.1
+      },
+      "sub_weights": {
+        "Cu4Ti_single_FP_amorphized": 0.1,
+        "Cu4Ti_grouped_FP_amorphized": 0.1,
+        "Cu4Ti3_critical_dose": 0.15,
+        "CuTi_critical_dose": 0.15,
+        "CuTi2_critical_dose": 0.15,
+        "Cu4Ti_grouped_critical_dose": 0.15,
+        "C_avg_ratio_at_amorphization": 0.2
+      }
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The verifier cannot re-run the full MD simulations nor recompute the average defect counts from raw per-cascade data (only aggregated averages are provided). The main claims of monotonic increase with energy/temperature and interfacial peak can be verified as structural properties from the output artifacts.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "defect_counts.csv": "structural_audit",
+    "radial_profiles.yaml": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "defect_counts.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cell_type",
+            "recoil_energy_eV",
+            "temperature_K",
+            "avg_antisites",
+            "avg_vacancies",
+            "avg_interstitials"
+          ],
+          "units": {
+            "recoil_energy_eV": "eV",
+            "temperature_K": "K"
+          }
+        },
+        "description": "Averaged Wigner-Seitz defect counts per cascade for each combination of cell type, recoil energy, and temperature."
+      },
+      {
+        "file": "radial_profiles.yaml",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "condition_key": "list of shell objects"
+          },
+          "items": {
+            "radius_center": "float (Å)",
+            "antisite_density": "float (atoms/Å³)",
+            "vacancy_density": "float (atoms/Å³)",
+            "interstitial_density": "float (atoms/Å³)"
+          }
+        },
+        "description": "Radial yield density profiles of defects for the Fe₃C inclusion cell."
+      }
+    ],
+    "notes": "The scored outputs are evaluated by structural audit and statistical checks."
+  },
+  "steps": [
+    {
+      "id": "step_ws_defects",
+      "output_file": "defect_counts.csv",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "description": "Check monotonic increase of defect counts with energy and temperature, and vacancy=interstitial equality."
+    },
+    {
+      "id": "step_radial",
+      "output_file": "radial_profiles.yaml",
+      "kind": "structural_audit",
+      "weight": 0.5,
+      "description": "Verify interfacial peak in antisite and vacancy density for Fe_Fe3C_inclusion_3000eV_1000K near 18-22 Å."
+    }
+  ],
+  "hidden_assets": []
+}

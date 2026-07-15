@@ -1,0 +1,151 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "The raw DFT output files are not part of the output contract; the agent compiles energies and moments into a scored JSON. The checker compares these reported numbers to paper‑reported gold with tolerances (±50 meV for ΔE, ±0.2 μB for moment) and verifies structural properties (all ΔE negative, correct ground state ID, vacancy trend).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "reproduction_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for ΔE (meV) and magnetic moments (μB) for 2×2×4 configurations and vacancy effects, ground state id, and expected trends.",
+      "source_provenance": "Paper Table 1 (2×2×4 rows) and Section 3.3 text; values extracted exactly: -326, -196, -225, -303, -193, -227; moments 3.08, 3.02, 2.88, 2.90, 3.03, 2.82; ground state (0,3); V_O ΔE -17, V_Sn ΔE -304.",
+      "generation_method": "Copied directly from the published paper. No transformation.",
+      "why_not_fabricated": "These are the exact paper‑reported values; they are used as reference targets with tolerances to accommodate implementation differences between codes/functionals."
+    }
+  ],
+  "gold": {
+    "configs": {
+      "2x2x4_(0,1)": {
+        "delta_E_meV": -326.0,
+        "total_moment_muB": 3.08
+      },
+      "2x2x4_(0,2)": {
+        "delta_E_meV": -196.0,
+        "total_moment_muB": 3.02
+      },
+      "2x2x4_(0,3)": {
+        "delta_E_meV": -225.0,
+        "total_moment_muB": 2.88
+      },
+      "2x2x4_(0,4)": {
+        "delta_E_meV": -303.0,
+        "total_moment_muB": 2.9
+      },
+      "2x2x4_(0,5)": {
+        "delta_E_meV": -193.0,
+        "total_moment_muB": 3.03
+      },
+      "2x2x4_(0,6)": {
+        "delta_E_meV": -227.0,
+        "total_moment_muB": 2.82
+      }
+    },
+    "ground_state": "2x2x4_(0,3)",
+    "V_O_delta_E_meV": -17.0,
+    "V_Sn_delta_E_meV": -304.0,
+    "tolerance_delta_E": 50.0,
+    "tolerance_moment": 0.2
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduction_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "configurations",
+            "ground_state",
+            "vacancy_effects"
+          ],
+          "properties": {
+            "configurations": {
+              "type": "array",
+              "description": "List of results for each Zn configuration",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "delta_E_meV",
+                  "total_moment_muB"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Configuration identifier, e.g. 2x2x4_(0,3)"
+                  },
+                  "delta_E_meV": {
+                    "type": "number",
+                    "description": "FM-AFM energy difference in meV"
+                  },
+                  "total_moment_muB": {
+                    "type": "number",
+                    "description": "Total magnetic moment of the supercell in μB"
+                  }
+                }
+              }
+            },
+            "ground_state": {
+              "type": "string",
+              "description": "The id of the configuration with the lowest FM total energy"
+            },
+            "vacancy_effects": {
+              "type": "object",
+              "required": [
+                "V_O_delta_E_meV",
+                "V_Sn_delta_E_meV"
+              ],
+              "properties": {
+                "V_O_delta_E_meV": {
+                  "type": "number",
+                  "description": "FM-AFM energy difference with one oxygen vacancy, in meV"
+                },
+                "V_Sn_delta_E_meV": {
+                  "type": "number",
+                  "description": "FM-AFM energy difference with one tin vacancy, in meV"
+                }
+              }
+            }
+          }
+        },
+        "description": "Scored artifact containing the computed FM-AFM energy differences, total magnetic moments, ground-state identification, and vacancy effects. The hidden checker compares reported values to paper references (±50 meV tolerance for ΔE, ±0.2 μB for moments), verifies all ΔE values are negative, checks that the ground-state id matches (0,3) and that V_Sn ΔE is more negative than the ground-state ΔE while V_O ΔE is less negative."
+      }
+    ],
+    "notes": "The checker will also verify structural properties (all ΔE negative, correct ground state ID, expected vacancy effect ordering). The numeric comparisons use tolerances that account for typical DFT code/functional variations."
+  },
+  "steps": [
+    {
+      "id": "configs_dE",
+      "output_file": "reproduction_results.json",
+      "weight": 0.4,
+      "description": "Check all six configuration delta_E_meV values are negative and within ±50 meV of paper values; ground_state ID must correspond to the configuration with lowest FM total energy."
+    },
+    {
+      "id": "configs_moment",
+      "output_file": "reproduction_results.json",
+      "weight": 0.2,
+      "description": "Check total magnetic moment of the ground‑state configuration within ±0.2 μB of paper's 2.88 μB."
+    },
+    {
+      "id": "vacancy_dE",
+      "output_file": "reproduction_results.json",
+      "weight": 0.15,
+      "description": "Check V_O_delta_E_meV and V_Sn_delta_E_meV are within ±50 meV of paper values (-17, -304)."
+    },
+    {
+      "id": "ground_state_id_exact",
+      "output_file": "reproduction_results.json",
+      "weight": 0.15,
+      "description": "Check ground_state string equals expected '2x2x4_(0,3)'."
+    },
+    {
+      "id": "vacancy_trend",
+      "output_file": "reproduction_results.json",
+      "weight": 0.1,
+      "description": "Verify V_Sn ΔE is more negative than ground state ΔE, and V_O ΔE is less negative."
+    }
+  ]
+}

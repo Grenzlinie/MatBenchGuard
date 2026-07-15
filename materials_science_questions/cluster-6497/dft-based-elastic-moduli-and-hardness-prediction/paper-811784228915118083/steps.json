@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare crystal structures",
+    "role": "process",
+    "action": "Define the hexagonal WC prototype (space group P-6m2) with fractional coordinates TM(0,0,0) and C(1/3,2/3,1/2). Generate input files for all 5d TM monocarbides: LaC, HfC, TaC, WC, ReC, OsC, IrC, PtC, AuC.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Set up the initial crystal geometries needed for DFT.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT geometry optimization",
+    "role": "process",
+    "action": "For each compound, run full geometry optimization using a plane-wave pseudopotential code (e.g., Quantum ESPRESSO) at GGA-PBE and LDA levels. Use Vanderbilt ultrasoft pseudopotentials and standard tight convergence criteria for energy, forces, and stresses.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain relaxed lattice parameters a0, c0 and total energies. This step must be repeated for each functional and each compound.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Elastic constants calculation",
+    "role": "process",
+    "action": "For each compound and each functional (GGA/LDA), apply finite strains to the relaxed cell, compute the stress tensors, and extract the five independent hexagonal elastic constants C11, C12, C13, C33, C44 using standard stress-strain methods.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes the raw elastic constants that will later be averaged and used to derive polycrystalline moduli.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Electronic structure and population analysis",
+    "role": "process",
+    "action": "Perform single-point DFT calculations on the relaxed structures (GGA and LDA) to obtain total and partial density of states (DOS), Mulliken bond population P, the pseudogap energy Ep, and the number of free electrons n_free by integrating DOS from Ep to the Fermi energy EF.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Provides the electronic inputs (metallicity, free-electron count) needed for the semi-empirical hardness model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Mechanical properties compilation",
+    "role": "scored",
+    "action": "For each compound, compute the arithmetic average of the GGA and LDA lattice parameters (a0, c0) and elastic constants C11, C12, C13, C33, C44. Apply the Voigt–Reuss–Hill formulas (bulk modulus B, shear modulus G, Young's modulus E, Poisson's ratio nu) to the averaged elastic constants. For compounds with a negative C44 (mechanically unstable), set G, E, nu to empty values. Write the results to 'mechanical_properties.csv'.",
+    "output_file": "mechanical_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Averaged elastic properties and derived polycrystalline moduli. The checker compares these values to hidden references (paper's Table 1).",
+    "output_schema": "Columns: compound, a0_avg, c0_avg, C11_avg, C33_avg, C44_avg, C12_avg, C13_avg, B, G, E, nu. Include one row per compound (9 total). Use empty strings for G, E, nu when C44_avg < 0."
+  },
+  {
+    "id": "step_06",
+    "title": "Hardness prediction",
+    "role": "scored",
+    "action": "For each compound, compute bond distance d from the averaged lattice parameters, cell volume V, bond volume vb = V/6, Mulliken population P (average of GGA/LDA), metallic population P' = n_free / V, metallicity fm = P'/P, and Vickers hardness Hv = 740 * (P - P') * vb^(-5/3). Compute these quantities separately for the GGA and LDA results, then report their arithmetic average. Write all intermediate quantities and the final Hv to 'hardness_properties.csv'.",
+    "output_file": "hardness_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Semi-empirical Vickers hardness using Chen's model. The checker compares the final averaged Hv values and relevant intermediate quantities to hidden references (paper's Table 2).",
+    "output_schema": "Columns: compound, d_avg, V_avg, P, vb, Ep, N_Ef, n_free, P_prime, fm, Hv_calc. Include one row per compound for the averaged result (the GGA and LDA rows are optional)."
+  }
+]

@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute defect-state energy and absorption peak energy from agent-provided spectra (tdos.dat, absorption.dat) and compare to paper-reported values within tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "tdos.dat": "reference_match",
+    "absorption.dat": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference defect state energy (3.0 eV) and optical absorption peak (5.3 eV) extracted from the source paper.",
+      "source_provenance": "Paper section 20.4, figures Fig. 20.4D and Fig. 20.4I; explicit statements: 'a feature of TDOS at 3.0 eV' and 'The dominant peak has a value of 5.3 eV'.",
+      "generation_method": "Read directly from paper text.",
+      "why_not_fabricated": "These are the exact paper-reported numbers; the checker compares recomputed peak positions against them."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "tdos.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "dos"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "dos": "arbitrary"
+          }
+        },
+        "description": "Total density of states for the oxygen‑vacancy supercell. The checker locates the first prominent peak above the valence band maximum (energy > 0) and compares its energy to a hidden reference."
+      },
+      {
+        "file": "absorption.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_eV",
+            "absorption"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "absorption": "arbitrary"
+          }
+        },
+        "description": "Optical absorption spectrum for the oxygen‑vacancy supercell. The checker locates the energy of the maximum absorption value and compares it to a hidden reference."
+      }
+    ],
+    "notes": "Both files are plain text with two whitespace‑separated columns. The checker recomputes the relevant peak positions from the supplied data and compares them to the paper‑reported values using appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_tdos",
+      "output_file": "tdos.dat",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": {
+        "reference": 3.0,
+        "tolerance": 0.3
+      },
+      "description": "Find the energy of the first prominent peak in TDOS above 0 eV (defect state energy). Compare to paper-reported 3.0 eV within ±0.3 eV tolerance, with linear partial credit beyond."
+    },
+    {
+      "id": "step_absorption",
+      "output_file": "absorption.dat",
+      "kind": "numeric",
+      "weight": 0.5,
+      "target": {
+        "reference": 5.3,
+        "tolerance": 0.3
+      },
+      "description": "Find the energy of the maximum absorption intensity. Compare to paper-reported 5.3 eV within ±0.3 eV tolerance, with linear partial credit beyond."
+    }
+  ]
+}

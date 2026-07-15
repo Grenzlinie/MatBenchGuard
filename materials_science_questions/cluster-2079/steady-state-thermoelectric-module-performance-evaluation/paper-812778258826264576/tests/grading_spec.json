@@ -1,0 +1,141 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The analytical model is fully described; the hidden checker re-implements the iterative thermoelectric model to recompute efficiency, power, current, and work ratios from the agent's reported parameter combinations, comparing with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "efficiency_vs_a.csv": "metric_recompute",
+    "power_vs_a.csv": "metric_recompute",
+    "current_vs_a.csv": "metric_recompute",
+    "work_ratio_vs_a.csv": "metric_recompute"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "efficiency_vs_a.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta",
+            "RL_R0",
+            "a",
+            "efficiency_percent"
+          ],
+          "units": {
+            "theta": "dimensionless",
+            "RL_R0": "dimensionless",
+            "a": "dimensionless",
+            "efficiency_percent": "percent"
+          }
+        },
+        "description": "Device efficiency for every combination of temperature ratio, load resistance ratio, and geometric parameter."
+      },
+      {
+        "file": "power_vs_a.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta",
+            "RL_R0",
+            "a",
+            "power_W"
+          ],
+          "units": {
+            "theta": "dimensionless",
+            "RL_R0": "dimensionless",
+            "a": "dimensionless",
+            "power_W": "W"
+          }
+        },
+        "description": "Output power for every combination of temperature ratio, load resistance ratio, and geometric parameter."
+      },
+      {
+        "file": "current_vs_a.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta",
+            "RL_R0",
+            "a",
+            "current_A"
+          ],
+          "units": {
+            "theta": "dimensionless",
+            "RL_R0": "dimensionless",
+            "a": "dimensionless",
+            "current_A": "A"
+          }
+        },
+        "description": "Output current for every combination of temperature ratio, load resistance ratio, and geometric parameter."
+      },
+      {
+        "file": "work_ratio_vs_a.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta",
+            "RL_R0",
+            "a",
+            "xi1",
+            "xi2"
+          ],
+          "units": {
+            "theta": "dimensionless",
+            "RL_R0": "dimensionless",
+            "a": "dimensionless",
+            "xi1": "dimensionless",
+            "xi2": "dimensionless"
+          }
+        },
+        "description": "Work ratios for material-1 and material-2 over the parameter grid; checked for trend consistency (peak location, sign, monotonicity)."
+      }
+    ],
+    "notes": "The analytical model uses temperature-dependent material properties from Table 1 of the paper. No external datasets are required. The solver must implement the closed-form expressions for effective Seebeck coefficients, resistances, thermal conductance, and efficiency/power/current/work ratios as derived in the paper."
+  },
+  "steps": [
+    {
+      "id": "eff",
+      "output_file": "efficiency_vs_a.csv",
+      "kind": "recompute_quantity",
+      "weight": 0.3,
+      "tolerance_relative": 0.05,
+      "description": "Recompute efficiency from analytical model; fraction of rows within 5% relative tolerance."
+    },
+    {
+      "id": "pow",
+      "output_file": "power_vs_a.csv",
+      "kind": "recompute_quantity",
+      "weight": 0.3,
+      "tolerance_relative": 0.1,
+      "description": "Recompute output power; fraction of rows within 10% relative tolerance."
+    },
+    {
+      "id": "cur",
+      "output_file": "current_vs_a.csv",
+      "kind": "recompute_quantity",
+      "weight": 0.2,
+      "tolerance_relative": 0.1,
+      "description": "Recompute output current; fraction of rows within 10% relative tolerance."
+    },
+    {
+      "id": "wr",
+      "output_file": "work_ratio_vs_a.csv",
+      "kind": "recompute_quantity",
+      "weight": 0.2,
+      "tolerance_relative": 0.05,
+      "description": "Recompute work ratios xi1, xi2 from unsegmented and segmented power; fraction of rows within 5% relative tolerance."
+    }
+  ]
+}

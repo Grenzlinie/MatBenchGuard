@@ -1,0 +1,120 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band structure dispersion and flatness are recomputed from raw eigenvalues; relative energies are compared against paper gold with tolerance because recomputing total energies from scratch in the verifier is infeasible.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative surface energies for the five Pb structural models",
+      "source_provenance": "Table I of the paper (Krawiec, Pb chains on reconstructed Si(335) surface)",
+      "generation_method": "Extracted verbatim from the paper's reported values",
+      "why_not_fabricated": "These are the exact published DFT total-energy results from the paper's structural survey"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relative_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "model",
+            "relative_energy_eV"
+          ],
+          "units": {
+            "relative_energy_eV": "eV"
+          }
+        },
+        "description": "Relative surface energies of the five stable Pb structural models referenced to the clean Si(335)-Au surface and bulk Pb."
+      },
+      {
+        "file": "band_structure_gamma_K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "energy_eV",
+            "band_index"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "kx": "reciprocal lattice coordinate"
+          }
+        },
+        "description": "Electronic band structure along direction parallel to the atomic chain. The checker will verify that at least one band crosses the Fermi level and that the dispersive band shows a peaked shape near the K point."
+      },
+      {
+        "file": "band_structure_gamma_M.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "energy_eV",
+            "band_index"
+          ],
+          "units": {
+            "energy_eV": "eV",
+            "kx": "reciprocal lattice coordinate"
+          }
+        },
+        "description": "Electronic band structure along direction perpendicular to the steps. The checker will verify that all bands are essentially flat (dispersion within ±0.2 eV) confirming the one-dimensional nature."
+      }
+    ],
+    "notes": "The agent must produce the three CSV artifacts. The hidden checker will compare relative energies to the paper's Table I and analyze the band eigenvalues for metallicity and dispersion."
+  },
+  "steps": [
+    {
+      "id": "step_relative_energies",
+      "output_file": "relative_energies.csv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "gold_models": [
+        {
+          "model": "Si3-Au-Au",
+          "relative_energy_eV": -0.41
+        },
+        {
+          "model": "Si1(subst)",
+          "relative_energy_eV": -0.31
+        },
+        {
+          "model": "Si5-Si6-Si1",
+          "relative_energy_eV": -0.25
+        },
+        {
+          "model": "Au-Si1-Si1",
+          "relative_energy_eV": -0.06
+        },
+        {
+          "model": "Si4-Au",
+          "relative_energy_eV": -0.02
+        }
+      ],
+      "tolerance": 0.15,
+      "expected_lowest": "Si3-Au-Au"
+    },
+    {
+      "id": "step_band_k",
+      "output_file": "band_structure_gamma_K.csv",
+      "weight": 0.4,
+      "kind": "structural_audit",
+      "min_dispersion_ev": 0.2
+    },
+    {
+      "id": "step_band_m",
+      "output_file": "band_structure_gamma_M.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "max_flatness_ev": 0.2
+    }
+  ]
+}

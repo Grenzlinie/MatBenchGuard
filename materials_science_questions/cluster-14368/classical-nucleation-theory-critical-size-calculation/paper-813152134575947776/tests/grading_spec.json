@@ -1,0 +1,131 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The burst energy CSV allows recomputing the fitted slope from raw data; critical radius and nucleation outcomes are compared against paper-reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "critical_radius.json": "reference_match",
+    "burst_energy_vs_molecules.csv": "metric_recompute",
+    "fitted_slope.json": "reference_match",
+    "nucleation_outcomes.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for critical radius (3.8 nm), per-molecule energy constant (53.5 kJ/mol), and nucleation outcomes.",
+      "source_provenance": "Paper-reported values: R_c from Eq.5, E_mol0 from Fig.7 fit, nucleation outcomes from Fig.5 and text.",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the exact numerical results reported in the original publication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "critical_radius.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "R_c_nm": "number"
+          }
+        },
+        "description": "Computed 2D critical bubble radius from surface tension and pressure difference."
+      },
+      {
+        "file": "burst_energy_vs_molecules.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "burst_total_energy_kJ_per_mol",
+            "burst_molecules_count"
+          ]
+        },
+        "description": "Total burst kinetic energy and number of molecules released per burst event across all rubbing runs."
+      },
+      {
+        "file": "fitted_slope.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "E_mol0_kJ_per_mol": "number"
+          }
+        },
+        "description": "Fitted per-molecule kinetic energy constant from burst data."
+      },
+      {
+        "file": "nucleation_outcomes.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "velocity_m_per_s",
+            "nucleation_occurred",
+            "number_of_runs"
+          ]
+        },
+        "description": "Nucleation outcome per pressure/velocity condition."
+      }
+    ],
+    "notes": "All scored outputs are compared against hidden reference values derived from the paper, using appropriate tolerances. The burst energy CSV is used by the checker to recompute the fitted slope, while the other outputs are directly compared to the paper's reported numbers."
+  },
+  "steps": [
+    {
+      "id": "critical_radius",
+      "output_file": "critical_radius.json",
+      "kind": "json_field",
+      "field": "R_c_nm",
+      "target": 3.8,
+      "tolerance": 0.5,
+      "weight": 0.2
+    },
+    {
+      "id": "burst_csv",
+      "output_file": "burst_energy_vs_molecules.csv",
+      "kind": "recompute_metric",
+      "columns": {
+        "energy": "burst_total_energy_kJ_per_mol",
+        "molecules": "burst_molecules_count"
+      },
+      "target": 53.5,
+      "tolerance_relative": 0.3,
+      "weight": 0.4
+    },
+    {
+      "id": "fitted_slope",
+      "output_file": "fitted_slope.json",
+      "kind": "json_field",
+      "field": "E_mol0_kJ_per_mol",
+      "target": "recomputed_slope",
+      "tolerance_abs": 1e-06,
+      "weight": 0.1
+    },
+    {
+      "id": "nucleation",
+      "output_file": "nucleation_outcomes.csv",
+      "kind": "custom",
+      "expected_conditions": [
+        {
+          "pressure_GPa": 6.3,
+          "velocity_m_per_s": 1.0,
+          "nucleation_occurred": "true"
+        },
+        {
+          "pressure_GPa": 1.6,
+          "velocity_m_per_s": 1.0,
+          "nucleation_occurred": "false"
+        }
+      ],
+      "weight": 0.3
+    }
+  ]
+}

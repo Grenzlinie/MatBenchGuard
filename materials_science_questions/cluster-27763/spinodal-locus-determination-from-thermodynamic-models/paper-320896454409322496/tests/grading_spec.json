@@ -1,0 +1,98 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "The headline quantities (D_c/D_s, T_s, T_b) are produced by a complex MD pipeline that cannot be recomputed in the verifier sandbox; we compare the agent's reported scalars to the paper-reported values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_Ds_values.csv": "reference_match",
+    "step_02_spinodal_binodal.txt": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for spinodal/binodal temperatures and D_c/D_s ratio at 85K and 100K",
+      "source_provenance": "Paper Fig. 15b (spinodal/binodal for isochore ρ=1.37 g/cm³), Table 3 (D_c/D_s at 85K and 100K), Table 4 (characteristic function values).",
+      "generation_method": "Extracted from published figures and tables; T_s ≈ 60 K, T_b ≈ 80 K from Fig.15b; D_c/D_s (characteristic function) 0.138 and 0.182 from Table 4.",
+      "why_not_fabricated": "These are the exact paper-reported values the task targets; the reference solve.sh writes them as the correct answer, and the paper is the authoritative source."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_Ds_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "D_s_VACF",
+            "D_s_MSD",
+            "D_c_Ds_char_func"
+          ],
+          "units": {
+            "temperature": "K",
+            "D_s_VACF": "10^-5 cm^2/s",
+            "D_s_MSD": "10^-5 cm^2/s",
+            "D_c_Ds_char_func": "dimensionless"
+          }
+        },
+        "description": "Self-diffusion coefficient D_s (from VACF and MSD) and the collective fraction D_c/D_s obtained from the characteristic function, at 85 K and 100 K."
+      },
+      {
+        "file": "step_02_spinodal_binodal.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Two lines: first line is spinodal temperature T_s in K, second line is binodal temperature T_b in K."
+        },
+        "description": "Spinodal and binodal temperatures for argon on the isochore ρ=1.37 g/cm³."
+      }
+    ],
+    "notes": "The hidden checker will compare the reported scalar values to paper‑reported reference numbers with appropriate relative or absolute tolerances. No gold values are disclosed here."
+  },
+  "steps": [
+    {
+      "id": "step_01_ds_values",
+      "output_file": "step_01_Ds_values.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target": {
+        "85K": {
+          "D_c_Ds_char_func": 0.138,
+          "D_s_ref": 1.91
+        },
+        "100K": {
+          "D_c_Ds_char_func": 0.182,
+          "D_s_ref": 3.62
+        }
+      },
+      "tolerance": {
+        "D_c_Ds_relative": 0.15,
+        "D_s_relative": 0.3
+      },
+      "scoring": {
+        "D_c_Ds_weight": 0.8,
+        "D_s_weight": 0.2
+      }
+    },
+    {
+      "id": "step_02_spinodal_binodal",
+      "output_file": "step_02_spinodal_binodal.txt",
+      "weight": 0.5,
+      "kind": "numeric",
+      "target": {
+        "T_s": 60.0,
+        "T_b": 80.0
+      },
+      "tolerance": {
+        "abs": 5.0
+      },
+      "scoring": {
+        "decay_range": 20.0
+      }
+    }
+  ]
+}

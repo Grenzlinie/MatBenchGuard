@@ -1,0 +1,119 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The main load-bearing step (supercell_dispersion.csv) is scored via structural audit of edge-state branches and group-velocity signs, because a full recomputation of the FEM eigenproblem is infeasible in the verifier sandbox. The Dirac/bandgap step uses result-level compare with hidden gold from the paper.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Dirac degeneracy frequencies and bandgap edges for S and A modes.",
+      "source_provenance": "Paper text: Dirac S-mode 3.26 GHz, A-mode 3.77 GHz; bandgaps S-mode 3.14–3.39 GHz, A-mode 3.70–3.87 GHz.",
+      "generation_method": "Extracted directly from the paper's numerical results (Fig. 1(c,d) and text).",
+      "why_not_fabricated": "These are the paper's actual reported values for the defined geometry and rotation angles."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "summary_dirac_bandgaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "dirac_frequencies_0deg",
+            "bandgap_S_mode",
+            "bandgap_A_mode"
+          ],
+          "properties": {
+            "dirac_frequencies_0deg": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "units": "GHz"
+            },
+            "bandgap_S_mode": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "units": "GHz"
+            },
+            "bandgap_A_mode": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "units": "GHz"
+            }
+          }
+        },
+        "description": "Extracted Dirac degeneracy frequencies for α=0° and complete bandgap edges for S and A modes for α=4°. The checker compares the reported values against the paper's published values within tolerance."
+      },
+      {
+        "file": "supercell_dispersion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "frequency",
+            "mode_index"
+          ],
+          "optional_columns": [
+            "interface_type"
+          ],
+          "units": {
+            "kx": "2π/a",
+            "frequency": "GHz"
+          }
+        },
+        "description": "Projected band structure of the supercell with AB/BA domain walls. The checker verifies that within each bandgap frequency range (S and A) there exist edge state branches with opposite group velocities, consistent with valley-protected transport."
+      }
+    ],
+    "notes": "The Berry curvature stage and full Z‑shaped waveguide simulation are omitted from the minimal reproduction because they are computationally expensive and the core claim is verified by the bandgap and edge state dispersion."
+  },
+  "steps": [
+    {
+      "id": "step_1",
+      "output_file": "summary_dirac_bandgaps.json",
+      "weight": 0.3,
+      "kind": "numeric_compare",
+      "gold": {
+        "dirac_s_ghz": 3.26,
+        "dirac_a_ghz": 3.77,
+        "bandgap_s_lower": 3.14,
+        "bandgap_s_upper": 3.39,
+        "bandgap_a_lower": 3.7,
+        "bandgap_a_upper": 3.87,
+        "tolerance_rel": 0.05,
+        "tolerance_abs_ghz": 0.05
+      }
+    },
+    {
+      "id": "step_2",
+      "output_file": "supercell_dispersion.csv",
+      "weight": 0.7,
+      "kind": "structural_audit",
+      "gold_bandgap_ranges": {
+        "s_mode": [
+          3.14,
+          3.39
+        ],
+        "a_mode": [
+          3.7,
+          3.87
+        ]
+      }
+    }
+  ]
+}

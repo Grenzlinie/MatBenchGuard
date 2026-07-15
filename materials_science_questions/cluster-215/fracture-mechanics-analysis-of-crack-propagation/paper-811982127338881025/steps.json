@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_compile_data",
+    "title": "Compile experimental data",
+    "role": "process",
+    "action": "Obtain the measured bulk adhesive properties (yield stress σ_y, Young's modulus E, bulk fracture energy G_IC(bulk)) and the measured adhesive joint fracture energy G_IC(joint) at six temperatures (50, 37, 25, 0, -20, -40 °C) from Bascom & Cottington (1976) Table I. Tabulate the data for subsequent fitting.",
+    "output_file": "",
+    "evidence": "compiled_data.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Process step to compile the required experimental data from the literature.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_fit_params",
+    "title": "Fit in-situ failure model parameters",
+    "role": "scored",
+    "action": "For the compiled data, separate into high-temperature (T > 0°C) and low-temperature (T ≤ 0°C) groups. Transform the model to log-log form: log(G_IC(joint)/G_IC(bulk)) = log M + (1-m) log(σ_y^2/(E G_IC(bulk))). Perform ordinary least-squares linear regression on each group to obtain the slope and intercept, from which m and M are derived. Write the fitted parameters to fitted_parameters.json.",
+    "output_file": "fitted_parameters.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON file containing the fitted model parameters m and M for the high- and low-temperature regimes.",
+    "output_schema": "JSON object with keys: high_temp_m (float), high_temp_M (float), low_temp_m (float), low_temp_M (float). Values are dimensionless or in consistent units derived from the data."
+  },
+  {
+    "id": "step_predict_gic",
+    "title": "Compute predicted joint fracture energy",
+    "role": "scored",
+    "action": "Using the fitted parameters from fitted_parameters.json and the bulk properties for each temperature, compute the predicted adhesive joint fracture energy via G_IC(joint) = M * (σ_y^2/E)^(1-m) * G_IC(bulk)^m. Write the results (one row per temperature) to predicted_GIC_joint.csv.",
+    "output_file": "predicted_GIC_joint.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with the predicted adhesive joint fracture energy for the six temperature conditions.",
+    "output_schema": "Columns: temperature_C (integer), predicted_GIC_joint_kJm2 (float). One row per temperature."
+  }
+]

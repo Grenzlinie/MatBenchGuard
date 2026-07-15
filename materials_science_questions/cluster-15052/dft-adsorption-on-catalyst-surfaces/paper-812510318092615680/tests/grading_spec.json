@@ -1,0 +1,94 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "The headline barriers are DFT results that cannot be recomputed from raw artifacts without re‑running the full NEB calculations in the verifier; scored by comparing the agent’s reported barriers to the paper‑reported gold values with tolerances and trend verification.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference barrier values from paper (Ni‑Cu‑OOH step₁ = 4.91 eV, Ni‑Cu‑Fe‑OOH step₁ = 1.08 eV, ratio ≈4.5, N₂ formation exothermic) and tolerances used to verify the agent’s CSV.",
+      "source_provenance": "Paper Fig. 1b and text; values are the DFT/NEB computed barriers reported by the authors.",
+      "generation_method": "Extracted verbatim from the paper; tolerances chosen to accommodate expected toolchain spread (PBE+U, different pseudopotentials).",
+      "why_not_fabricated": "Values are the paper’s original reported results; they are the same as those used to construct the reference solve.sh, guaranteeing positive control."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "step_number",
+            "barrier_ev"
+          ],
+          "units": {
+            "barrier_ev": "eV"
+          }
+        },
+        "description": "Computed energy barriers for the five elementary steps of the N+N mechanism on Ni-Cu-OOH and Ni-Cu-Fe-OOH surfaces. Checked against paper-reported barriers with tolerances, and verified that Step 1 is the rate-limiting step and Fe codoping reduces barrier by approximately 4.5-fold."
+      }
+    ],
+    "notes": "The checker will compare individual barrier values to reference values and assess trends (rate-limiting step, exothermicity of N2 formation on codoped system). Charge difference analysis is omitted because it provides only qualitative isosurface maps without a numerical reference."
+  },
+  "steps": [
+    {
+      "id": "barrier_step1_NiCuOOH",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "params": {
+        "target": 4.91,
+        "tolerance": 0.8,
+        "system": "Ni-Cu-OOH",
+        "step_number": 1
+      }
+    },
+    {
+      "id": "barrier_step1_NiCuFeOOH",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "params": {
+        "target": 1.08,
+        "tolerance": 0.4,
+        "system": "Ni-Cu-Fe-OOH",
+        "step_number": 1
+      }
+    },
+    {
+      "id": "rate_limiting",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.2,
+      "kind": "structural_audit",
+      "params": {
+        "description": "Step 1 must be the highest barrier for both Ni-Cu-OOH and Ni-Cu-Fe-OOH."
+      }
+    },
+    {
+      "id": "ratio",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.25,
+      "kind": "reference_match",
+      "params": {
+        "target_ratio": 4.546,
+        "tolerance_ratio": 1.0,
+        "system_NiCu": "Ni-Cu-OOH",
+        "system_NiCuFe": "Ni-Cu-Fe-OOH",
+        "step_number": 1
+      }
+    },
+    {
+      "id": "step5_sign",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "params": {
+        "exothermic_condition": "Ni-Cu-Fe-OOH step 5 barrier must be negative; Ni-Cu-OOH step 5 barrier must be positive."
+      }
+    }
+  ]
+}

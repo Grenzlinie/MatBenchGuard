@@ -1,0 +1,235 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing the headline quantities from raw DFT artifacts is impossible in the verifier sandbox. Instead, we compare the agent's reported numeric results (bond lengths, formation energies, LVM frequencies) to the paper's reference values with predefined tolerances. This ensures that only a genuine reproduction that matches the paper's expected numbers within code-to-code spread earns credit.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold bond‑length values for BeGa (Ga3d/0, nlcc/0, nlcc/−1) from Table I",
+      "source_provenance": "Table I of Phys. Rev. B 67, 205206 (2003)",
+      "generation_method": "Copied directly from the paper's Table I.",
+      "why_not_fabricated": "The paper reports these exact numbers in Table I; they are the target of the reproduction."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold formation energies for neutral BeGa under Ga‑rich and N‑rich conditions",
+      "source_provenance": "Text of Sec. III A of Phys. Rev. B 67, 205206 (2003)",
+      "generation_method": "Copied from the paper: Ef(0)=2.45 eV (Ga‑rich) and 2.03 eV (N‑rich).",
+      "why_not_fabricated": "These are the paper's explicit reported formation energies."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold A1‑symmetry LVM frequencies for neutral BeGa (nlcc basis)",
+      "source_provenance": "Table II of Phys. Rev. B 67, 205206 (2003)",
+      "generation_method": "Copied from the table: 445, 562, 593, 663 cm⁻¹.",
+      "why_not_fabricated": "The paper's Table II lists these computed frequencies for the BeGa acceptor."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold three highest LVM frequencies for neutral (Be‑Be)Ga",
+      "source_provenance": "Text of Sec. III B of Phys. Rev. B 67, 205206 (2003)",
+      "generation_method": "Copied from the paper: 1041, 789, 738 cm⁻¹.",
+      "why_not_fabricated": "The paper explicitly reports these three frequencies."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bega_bond_lengths.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "basis",
+            "charge",
+            "N-Be_a",
+            "Be-N_b",
+            "N-Ga_c",
+            "Ga-N_d"
+          ],
+          "properties": {
+            "basis": {
+              "type": "array",
+              "items": "string"
+            },
+            "charge": {
+              "type": "array",
+              "items": "integer"
+            },
+            "N-Be_a": {
+              "type": "array",
+              "items": "number",
+              "unit": "Å"
+            },
+            "Be-N_b": {
+              "type": "array",
+              "items": "number",
+              "unit": "Å"
+            },
+            "N-Ga_c": {
+              "type": "array",
+              "items": "number",
+              "unit": "Å"
+            },
+            "Ga-N_d": {
+              "type": "array",
+              "items": "number",
+              "unit": "Å"
+            }
+          }
+        },
+        "description": "Four Be‑N bond lengths for the Be_Ga acceptor for three basis/charge combinations (Ga3d neutral, nlcc neutral, nlcc −1)."
+      },
+      {
+        "file": "bega_formation_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ga_rich_Ef0",
+            "N_rich_Ef0"
+          ],
+          "properties": {
+            "Ga_rich_Ef0": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "N_rich_Ef0": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Neutral Be_Ga formation energy under Ga‑rich and N‑rich conditions, computed from the DFT total energies and reference chemical potentials."
+      },
+      {
+        "file": "bega_lvm.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "basis",
+            "charge",
+            "frequencies"
+          ],
+          "properties": {
+            "basis": {
+              "type": "string"
+            },
+            "charge": {
+              "type": "integer"
+            },
+            "frequencies": {
+              "type": "array",
+              "items": "number",
+              "unit": "cm⁻¹",
+              "minItems": 4,
+              "maxItems": 4
+            }
+          }
+        },
+        "description": "The four highest A1‑symmetry local vibrational mode frequencies for neutral Be_Ga."
+      },
+      {
+        "file": "bebe_ga_lvm.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "charge",
+            "frequencies"
+          ],
+          "properties": {
+            "charge": {
+              "type": "integer"
+            },
+            "frequencies": {
+              "type": "array",
+              "items": "number",
+              "unit": "cm⁻¹",
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        },
+        "description": "The three highest local vibrational mode frequencies for neutral (Be‑Be)Ga split‑interstitial defect."
+      }
+    ],
+    "notes": "All scored outputs must be placed directly in /app/outputs. The bond-length JSON must contain exactly three entries (Ga3d/0, nlcc/0, nlcc/−1) in the order shown. The LVM JSONs must list frequencies in descending order. Tolerances are hidden; the solving agent must compute the values from first‑principles DFT, not from the paper."
+  },
+  "steps": [
+    {
+      "id": "step_2_bega_bonds",
+      "output_file": "bega_bond_lengths.json",
+      "weight": 0.25,
+      "kind": "numeric_array_compare",
+      "tolerance": 0.02,
+      "gold": {
+        "N-Be_a": [
+          1.797,
+          1.811,
+          1.805
+        ],
+        "Be-N_b": [
+          1.775,
+          1.781,
+          1.802
+        ],
+        "N-Ga_c": [
+          1.929,
+          1.951,
+          1.943
+        ],
+        "Ga-N_d": [
+          1.933,
+          1.955,
+          1.954
+        ]
+      }
+    },
+    {
+      "id": "step_3_bega_ef",
+      "output_file": "bega_formation_energies.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "tolerance": 0.1,
+      "gold": {
+        "Ga_rich_Ef0": 2.45,
+        "N_rich_Ef0": 2.03
+      }
+    },
+    {
+      "id": "step_4_bega_lvm",
+      "output_file": "bega_lvm.json",
+      "weight": 0.2,
+      "kind": "numeric_array_compare",
+      "tolerance": 15.0,
+      "gold_frequencies": [
+        445,
+        562,
+        593,
+        663
+      ]
+    },
+    {
+      "id": "step_6_bebega_lvm",
+      "output_file": "bebe_ga_lvm.json",
+      "weight": 0.2,
+      "kind": "numeric_array_compare",
+      "tolerance": 15.0,
+      "gold_frequencies": [
+        1041,
+        789,
+        738
+      ]
+    }
+  ]
+}

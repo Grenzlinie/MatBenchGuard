@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_gen_defects",
+    "title": "Enumerate Li/Fe anti-site defect configurations with a Li vacancy",
+    "role": "process",
+    "action": "Using the olivine LiFePO4 crystal structure and CASM (or manual enumeration), generate all 45 unique supercell configurations containing one Li vacancy at M1, one Fe anti-site at M1, and one Li anti-site at M2 within a 1×2×2 supercell (112 atoms, 16 formula units). Output the list of generated structures, e.g., as defect_configurations.json.",
+    "output_file": "",
+    "evidence": "defect_configurations.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the set of supercell configurations that serve as input for DFT total-energy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_dft_total",
+    "title": "Run DFT total-energy calculations for all configurations",
+    "role": "process",
+    "action": "Perform spin-polarized GGA+U (PBE, U=4.3 eV, J=1.0 eV on Fe) total-energy calculations on every defect configuration, the stoichiometric defect-free supercell, and the Li-deficient defect-free supercell using Quantum ESPRESSO. Record the relaxed total energy for each configuration in a structured file (total_energies.json).",
+    "output_file": "",
+    "evidence": "total_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "DFT total-energy calculations that yield the base total energies for all subsequent steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_formation_energies",
+    "title": "Compute and report defect formation energies",
+    "role": "scored",
+    "action": "From the DFT total energies, compute the defect formation energies of the two most stable anti-site configurations (corner-shared and edge-shared) in stoichiometric and Li-deficient LiFePO4 relative to the appropriate defect-free references. Write the results to defect_formation_energies.json.",
+    "output_file": "defect_formation_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Defect formation energies for the corner-shared and edge-shared anti-site motifs in both stoichiometric and Li-deficient LiFePO4.",
+    "output_schema": "JSON object with keys: stoichiometric_corner_energy_eV (float), stoichiometric_edge_energy_eV (float), li_deficient_corner_energy_eV (float), li_deficient_edge_energy_eV (float), stoichiometric_defect_free_energy_eV (float), li_deficient_defect_free_energy_eV (float)."
+  },
+  {
+    "id": "step_04_neb_calc",
+    "title": "Run NEB calculations for the corner-shared defect recombination path",
+    "role": "process",
+    "action": "Take the lowest-energy corner-shared defect configuration from step 2, construct initial and final states for the recombination pathway, and perform nudged-elastic-band (NEB) calculations without and with one excess electron (simulated by a homogeneous background charge) using the same DFT settings. Record the raw NEB profiles (neb_raw.json).",
+    "output_file": "",
+    "evidence": "neb_raw.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "NEB energy profiles that form the basis for extracting activation barriers.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_neb_barriers",
+    "title": "Report NEB activation barriers",
+    "role": "scored",
+    "action": "Extract the minimum-energy path and activation barriers from the NEB calculations, and write neb_barriers.json containing the barriers and the discretized energy profiles.",
+    "output_file": "neb_barriers.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "NEB activation barriers for recombination without and with an extra electron, along with the reaction coordinate and energy profiles.",
+    "output_schema": "JSON object with keys: barrier_without_electron_eV (float), barrier_with_electron_eV (float), reaction_coordinates (list of floats 0-1), energy_profile_without_electron_eV (list of floats), energy_profile_with_electron_eV (list of floats)."
+  }
+]

@@ -1,0 +1,158 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Band gap and dielectric peak are recomputed directly from agent's CSV artifacts; structural DOS checks supplement.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "band_structure.csv": "reference_match",
+    "dielectric_function.csv": "reference_match",
+    "total_dos.csv": "structural_audit",
+    "projected_dos.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for indirect band gap (4.65 eV) and epsilon2_xx peak (7.3 eV).",
+      "source_provenance": "Paper Section 4: 'The energy band gap … is indirect and corresponds to optical transitions between Gamma and D points … E_gi=4.65 eV' and 'strong spectral band of epsilon''(E) with maximum at E=7.3 eV'.",
+      "generation_method": "Extracted verbatim from paper text.",
+      "why_not_fabricated": "Directly quoted from the published paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_structure.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kpoint_label",
+            "kx",
+            "ky",
+            "kz"
+          ],
+          "additional_columns_pattern": "band_N (one column per sorted energy band, energies in eV)",
+          "units": {
+            "kx": "reciprocal lattice units",
+            "ky": "reciprocal lattice units",
+            "kz": "reciprocal lattice units",
+            "band_*": "eV"
+          }
+        },
+        "description": "Band energies along the Γ–Y–B–D–Γ path. The checker recomputes the indirect band gap (VBM at Γ, CBM at D point) and compares it to a hidden reference value."
+      },
+      {
+        "file": "total_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_dos": "states/eV"
+          }
+        },
+        "description": "Total DOS. The checker verifies the presence of a band gap near the expected energy and the qualitative shape of the valence/conduction bands."
+      },
+      {
+        "file": "projected_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "s_dos",
+            "p_dos",
+            "O_dos",
+            "C_dos",
+            "N_dos",
+            "H_dos",
+            "S_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "s_dos": "states/eV",
+            "p_dos": "states/eV",
+            "O_dos": "states/eV",
+            "C_dos": "states/eV",
+            "N_dos": "states/eV",
+            "H_dos": "states/eV",
+            "S_dos": "states/eV"
+          }
+        },
+        "description": "Projected DOS by orbital and element. The checker confirms that near the VBM the p‑character dominates (>80%) and that O and C contributions match the paper’s description."
+      },
+      {
+        "file": "dielectric_function.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "epsilon1_xx",
+            "epsilon1_yy",
+            "epsilon1_zz",
+            "epsilon2_xx",
+            "epsilon2_yy",
+            "epsilon2_zz"
+          ],
+          "units": {
+            "energy": "eV",
+            "epsilon1_xx": "dimensionless",
+            "epsilon1_yy": "dimensionless",
+            "epsilon1_zz": "dimensionless",
+            "epsilon2_xx": "dimensionless",
+            "epsilon2_yy": "dimensionless",
+            "epsilon2_zz": "dimensionless"
+          }
+        },
+        "description": "Dielectric tensor after scissor shift (0.9 eV). The checker locates the peak of epsilon2_xx in the 5–10 eV window and compares its position to a hidden reference value."
+      }
+    ],
+    "notes": "The task reproduces only the DFT computational part of the paper. Experimental ellipsometry, Mulliken population analysis, and effective mass calculations are excluded. The scissor shift of 0.9 eV must be applied in the dielectric step."
+  },
+  "steps": [
+    {
+      "id": "band_gap",
+      "output_file": "band_structure.csv",
+      "weight": 0.3,
+      "kind": "recompute_gap",
+      "target": 4.65,
+      "tolerance": 0.2,
+      "description": "Indirect band gap between VBM at Gamma and CBM at D point"
+    },
+    {
+      "id": "dielectric_peak",
+      "output_file": "dielectric_function.csv",
+      "weight": 0.4,
+      "kind": "recompute_peak",
+      "target": 7.3,
+      "tolerance": 0.1,
+      "description": "Peak of epsilon2_xx in 5-10 eV window"
+    },
+    {
+      "id": "total_dos_structure",
+      "output_file": "total_dos.csv",
+      "weight": 0.15,
+      "kind": "structural_dos_gap",
+      "description": "Presence of band gap in total DOS (0-4.65 eV)"
+    },
+    {
+      "id": "projected_dos_structure",
+      "output_file": "projected_dos.csv",
+      "weight": 0.15,
+      "kind": "structural_orbital",
+      "description": "Dominant p-character and oxygen contribution near VBM"
+    }
+  ]
+}

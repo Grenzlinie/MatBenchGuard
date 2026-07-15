@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The absolute ΔG values are method-dependent; the robust verifiable claim is the relative ordering and positivity. A full recompute of exact values from raw DFT outputs would require an identical functional/basis and is infeasible without controlling the solver's exact setup.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "deltaG_values.json": "structural_audit",
+    "optimized_structures.xyz": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Logical check: ΔG(Py-CITP-BT-COF) < ΔG(Py-FTP-BT-COF) < ΔG(Py-HTP-BT-COF) and all > 0",
+      "source_provenance": "derived from paper's statement that the energy barrier for H* formation on site 4 is reduced by 0.83 eV for Cl and 0.15 eV for F relative to H, implying Cl < F < H and all endothermic",
+      "generation_method": "Enforced in checker logic; no numeric gold table is stored.",
+      "why_not_fabricated": "The ordering is the explicit structural claim of the paper, not a fabricated test set."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "deltaG_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Py-HTP-BT-COF": "float",
+            "Py-FTP-BT-COF": "float",
+            "Py-CITP-BT-COF": "float"
+          },
+          "units": {
+            "Py-HTP-BT-COF": "eV",
+            "Py-FTP-BT-COF": "eV",
+            "Py-CITP-BT-COF": "eV"
+          }
+        },
+        "description": "Gibbs free energy changes for H* adsorption on the halogenated BT unit site 4, in eV, for the three COF variants."
+      },
+      {
+        "file": "optimized_structures.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Concatenated XYZ files; each molecular geometry preceded by a comment line '# Py-XTP-BT-COF' with X=H,F,Cl."
+        },
+        "description": "Optimized Cartesian coordinates of the three fragment+H* complexes."
+      }
+    ],
+    "notes": "The primary scored target is the relative ordering of ΔG values: ΔG(Py-CITP-BT-COF) < ΔG(Py-FTP-BT-COF) < ΔG(Py-HTP-BT-COF) and all must be positive. The optimized structures are checked for existence and basic format."
+  },
+  "steps": [
+    {
+      "id": "deltaG_order",
+      "output_file": "deltaG_values.json",
+      "weight": 0.8,
+      "kind": "custom",
+      "description": "Verify that all three ΔG values are positive and that ΔG(Cl) < ΔG(F) < ΔG(H)."
+    },
+    {
+      "id": "xyz_structure",
+      "output_file": "optimized_structures.xyz",
+      "weight": 0.2,
+      "kind": "custom",
+      "description": "Check that the XYZ file contains three properly formatted molecular geometry blocks with expected comment headers."
+    }
+  ]
+}

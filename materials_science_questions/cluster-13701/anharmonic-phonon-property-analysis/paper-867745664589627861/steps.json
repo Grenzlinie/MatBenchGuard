@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Prepare equilibrium configurations",
+    "role": "process",
+    "action": "Generate initial equilibrium configurations for a 2D polydisperse harmonic sphere model with N=64000 particles, size distribution f(d) ∝ d^{-3}, polydispersity δ=0.23, nonadditivity ε=0.2, volume fraction φ=1.2. For the high‑temperature limit (T→∞) create a random non‑overlapping configuration. For the low‑temperature condition (T=0.035) equilibrate using swap Monte Carlo (swap probability 0.2, similar‑diameter restriction |d_i-d_j|<0.2). Save the configurations as files to be used by the dynamics step.",
+    "output_file": "",
+    "evidence": "init_highT.data, init_lowT.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required initial states for the steepest descent dynamics.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_high",
+    "title": "Run steepest descent dynamics (high temperature)",
+    "role": "scored",
+    "action": "Starting from the high‑temperature configuration, integrate the overdamped equations of motion ζ dr_i/dt = -∂E/∂r_i using LAMMPS or equivalent. Record the root‑mean‑squared velocity ⟨|v(t)|⟩ = sqrt( (1/N)∑_i |dr_i/dt|^2 ) at logarithmically spaced time points covering the power‑law decay regime. Save the time series as a CSV file with columns 'time' (simulation time units) and 'velocity' (RMS velocity).",
+    "output_file": "velocity_highT.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw velocity time series for the high‑temperature case; the checker will refit β from these data.",
+    "output_schema": "Columns: time (float, simulation time units), velocity (float, RMS velocity). At least 100 time points covering the power‑law decay regime."
+  },
+  {
+    "id": "step_02_low",
+    "title": "Run steepest descent dynamics (low temperature)",
+    "role": "scored",
+    "action": "Starting from the low‑temperature configuration, integrate the overdamped equations of motion and record ⟨|v(t)|⟩ as described for the high‑temperature case. Save the time series as velocity_lowT.csv with the same schema.",
+    "output_file": "velocity_lowT.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw velocity time series for the low‑temperature case; the checker will refit β from these data.",
+    "output_schema": "Columns: time (float), velocity (float)."
+  },
+  {
+    "id": "step_03",
+    "title": "Fit velocity decay exponents",
+    "role": "scored",
+    "action": "Read velocity_highT.csv and velocity_lowT.csv. For each file, select the long‑time window where the decay is power‑law (after initial transients, before finite‑size cutoff). Fit a model ⟨|v(t)|⟩ = A·t^{-β} (e.g., linear regression on log-log data). Extract the exponents β_highT and β_lowT. Write the results as a JSON file containing \"beta_highT\" and \"beta_lowT\".",
+    "output_file": "beta_results.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted power‑law decay exponents from the velocity data. The checker will recompute β independently from the raw CSV files and cross‑verify the self‑reported values.",
+    "output_schema": "{\"beta_highT\": float, \"beta_lowT\": float}"
+  }
+]

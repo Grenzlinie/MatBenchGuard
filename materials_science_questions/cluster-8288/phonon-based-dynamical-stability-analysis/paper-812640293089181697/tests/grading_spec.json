@@ -1,0 +1,117 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Phonon stability, AIMD energy drift, and HER activity are recomputed from raw arrays; elastic and magnetic compared to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for magnetic moments (paper Table 3)",
+      "source_provenance": "Paper Table 3 – Magnetic moments for ground state of MS monolayers.",
+      "generation_method": "Extracted from Table 3: FeS M=1.42 (average of 1.47,1.37), S=-0.04; MnS M=±1.55 (~1.545), S=0; VS M=0, S=0.",
+      "why_not_fabricated": "These are the actual values reported in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "phonon",
+            "aimd_potential",
+            "elastic_constants",
+            "magnetic_moments",
+            "her_gibbs"
+          ],
+          "properties": {
+            "phonon": {
+              "type": "object",
+              "description": "Phonon dispersions for FeS, MnS, VS; each with q_points (array of arrays) and frequencies (array of arrays)"
+            },
+            "aimd_potential": {
+              "type": "object",
+              "description": "AIMD potential energies for FeS_673K, VS_673K, MnS_300K; each with time_ps (array) and potential_energy_eV (array)"
+            },
+            "elastic_constants": {
+              "type": "object",
+              "description": "2D elastic constants c11, c12, c66 (floats) for FeS, MnS, VS"
+            },
+            "magnetic_moments": {
+              "type": "object",
+              "description": "Magnetic moments for FeS, MnS, VS; each with M_moment_muB and S_moment_muB (floats)"
+            },
+            "her_gibbs": {
+              "type": "object",
+              "description": "HER Gibbs free energies for FeS and VS; each with differential_dG_H (8 floats) and average_dG_H (8 floats)"
+            }
+          }
+        },
+        "description": "Aggregated quantitative results: phonon dispersions, AIMD potential energies, elastic constants, magnetic moments, and HER Gibbs free energies."
+      }
+    ],
+    "notes": "The checker verifies dynamic, thermal, and mechanical stability criteria and HER activity by comparing these values to hidden paper references and physical thresholds."
+  },
+  "steps": [
+    {
+      "id": "phonon_stability",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "params": {
+        "imaginary_threshold_cm1": -10.0
+      }
+    },
+    {
+      "id": "thermal_stability",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 0.25,
+      "params": {
+        "max_drift_ev": 2.0
+      }
+    },
+    {
+      "id": "mechanical_stability",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 0.15,
+      "params": {}
+    },
+    {
+      "id": "magnetic_moments",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 0.15,
+      "params": {
+        "gold": {
+          "FeS": {
+            "M": 1.42,
+            "S": -0.04
+          },
+          "MnS": {
+            "M": 1.545,
+            "S": 0.0
+          },
+          "VS": {
+            "M": 0.0,
+            "S": 0.0
+          }
+        },
+        "tolerance": 0.2
+      }
+    },
+    {
+      "id": "her_activity",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 0.2,
+      "params": {
+        "threshold_ev": 0.2
+      }
+    }
+  ]
+}

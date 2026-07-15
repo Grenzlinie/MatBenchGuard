@@ -1,0 +1,92 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Exact numerical values for Q_L are not directly reported in the paper; the main claims are qualitative (bridge formation for l_g ≤13 Å, no bridge for l_g=18 Å, peak flow in 3200-4200 atm range). Scoring is based on verifying these structural properties from the agent's reported flow_results.json.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "flow_results.json": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "flow_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "gap": {
+                    "type": "number"
+                  },
+                  "dP": {
+                    "type": "number"
+                  },
+                  "Q_L": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "gap",
+                  "dP",
+                  "Q_L"
+                ]
+              }
+            },
+            "peak_dP": {
+              "type": "object",
+              "properties": {
+                "8": {
+                  "type": "number"
+                },
+                "13": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "8",
+                "13"
+              ]
+            }
+          },
+          "required": [
+            "results",
+            "peak_dP"
+          ]
+        },
+        "description": "Mean water flow rate Q_L into the low-pressure CNT for each (l_g, ΔP) combination, and the ΔP giving maximum Q_L for each gap length."
+      }
+    ],
+    "notes": "The checker compares the reported Q_L values and peak ΔP against hidden paper-derived references with tolerances. The agent must run the full MD pipeline to compute these values."
+  },
+  "steps": [
+    {
+      "id": "flow_analysis",
+      "output_file": "flow_results.json",
+      "kind": "custom",
+      "weight": 1.0,
+      "params": {
+        "bridge_threshold_positive": 0.0,
+        "bridge_threshold_close_to_zero": 2.0,
+        "dP_values": [
+          3200,
+          3700,
+          4200
+        ],
+        "gap_lengths_forming": [
+          8,
+          13
+        ],
+        "gap_length_no_bridge": [
+          18
+        ]
+      },
+      "description": "Verify that bridge forms for gaps 8 and 13 (Q_L > 0), no bridge for gap 18 (|Q_L| < 2.0), and peak_dP identification is consistent with the Q_L maxima."
+    }
+  ]
+}

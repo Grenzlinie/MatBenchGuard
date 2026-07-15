@@ -1,0 +1,54 @@
+[
+  {
+    "id": "generate_specimens",
+    "title": "Generate stochastic pore structures",
+    "role": "process",
+    "action": "For each combination of total porosity Ct (0.075, 0.15, 0.223) and a set of C2/Ct values (e.g., 0, 0.25, 0.5, 0.75, 1), generate nine independent stochastic realizations of a 60 μm square specimen discretized into 1.2 μm automata. Create small pores (diameter 1.2 μm) by removing single automata; large pores (diameter 3.6 μm) by removing an automaton and its six nearest neighbors. Ensure C1 = Ct - C2 and random spatial distributions.",
+    "output_file": "",
+    "evidence": "specimen_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Prepare initial specimen configurations with specified partial porosities.",
+    "output_schema": ""
+  },
+  {
+    "id": "run_mca_simulations",
+    "title": "Run MCA shear simulations",
+    "role": "process",
+    "action": "For each generated specimen, run a 2D plane strain movable cellular automata simulation of simple shear. Use the following: automata shear modulus G=32 GPa, Poisson ratio ν=0.3, compressive strength 1750 MPa; shear loading: top layer velocity sinusoidally ramped to 0.5 m/s, bottom layer fixed; periodic lateral boundaries; inter-automaton bond rupture governed by shear stress intensity threshold calibrated to the compressive strength. Record the shear stress–shear angle response.",
+    "output_file": "",
+    "evidence": "simulation_diagrams.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Execute the MCA simulation to obtain the stress–strain curves for each realization.",
+    "output_schema": ""
+  },
+  {
+    "id": "extract_per_specimen",
+    "title": "Extract per-specimen τ_i and G_i",
+    "role": "process",
+    "action": "From each simulated shear stress–shear angle diagram, extract the effective shear strength τ_i as the maximum specific resistance (peak stress) and the effective shear modulus G_i as the slope of the linear part of the curve.",
+    "output_file": "",
+    "evidence": "per_specimen_properties.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Derive the two scalar properties for each individual specimen.",
+    "output_schema": ""
+  },
+  {
+    "id": "ensemble_average",
+    "title": "Compute ensemble-averaged effective properties",
+    "role": "scored",
+    "action": "For each (Ct, C2/Ct) combination, compute τ_mean = arithmetic mean of the nine τ_i values, and G_mean = arithmetic mean of the nine G_i values. Write the results to effective_properties.csv with columns: Ct, C2_over_Ct, tau_mean (GPa), G_mean (GPa).",
+    "output_file": "effective_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "This file is the main scored output; it must contain the required (Ct, C2/Ct) combinations and their averaged shear strength and modulus.",
+    "output_schema": "CSV with columns: Ct (float), C2_over_Ct (float), tau_mean (float, units: GPa), G_mean (float, units: GPa). Each row corresponds to one porosity combination."
+  }
+]

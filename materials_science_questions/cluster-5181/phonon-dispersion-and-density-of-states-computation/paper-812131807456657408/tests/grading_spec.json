@@ -1,0 +1,118 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The task is compute-driven: Ziman resistivity and thermopower are produced by numerical integration of pseudopotential and structure factor. The verifier cannot rerun that full computation; it compares the agent's output numbers to the paper-reported values with tolerances that accommodate legitimate implementation differences.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "ziman_results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Ziman resistivity, thermopower, Mott g² and volume derivative for liquid Hg",
+      "source_provenance": "Paper §2 Table: resistivities 35.0, 38.6, 42.1, 46.0 µΩ·cm; thermopowers 1.73, 2.38, 2.71, 2.88 µV/K; g²≈0.357 (35/98); derivative ≈ -30",
+      "generation_method": "Transcribed from paper table and text. g² computed as ρ_Ziman(Ω=164.5)/98 = 35.0/98 ≈ 0.357142857; derivative = ∂ln g²/∂ln a = -30 from paper Eq. (5).",
+      "why_not_fabricated": "Values are taken verbatim from the source paper and are the exact targets the reproduction aims to match."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ziman_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "resistivities",
+            "thermopowers",
+            "g2_ambient",
+            "dln_g2_dln_a"
+          ],
+          "properties": {
+            "resistivities": {
+              "type": "object",
+              "required": [
+                "164.5",
+                "155",
+                "147",
+                "140"
+              ],
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "thermopowers": {
+              "type": "object",
+              "required": [
+                "164.5",
+                "155",
+                "147",
+                "140"
+              ],
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "g2_ambient": {
+              "type": "number"
+            },
+            "dln_g2_dln_a": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "JSON file containing the four Ziman resistivities (µΩ·cm), four thermopowers (µV/K), the derived ambient g², and the logarithmic pressure derivative ∂ln g²/∂ln a."
+      }
+    ],
+    "notes": "Phonon dispersion calculation omitted per task scoping. The checker compares each numeric field to hidden reference values with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_ziman_results",
+      "output_file": "ziman_results.json",
+      "weight": 1.0,
+      "kind": "reference_match",
+      "gold": {
+        "resistivities": {
+          "164.5": 35.0,
+          "155": 38.6,
+          "147": 42.1,
+          "140": 46.0
+        },
+        "thermopowers": {
+          "164.5": 1.73,
+          "155": 2.38,
+          "147": 2.71,
+          "140": 2.88
+        },
+        "g2_ambient": 0.35714285714285715,
+        "dln_g2_dln_a": -30.0
+      },
+      "rel_tolerances": {
+        "resistivities": 0.1,
+        "thermopowers": 0.15,
+        "g2_ambient": 0.2,
+        "dln_g2_dln_a": 0.25
+      },
+      "score_weights_within": {
+        "resistivities": [
+          0.1,
+          0.1,
+          0.1,
+          0.1
+        ],
+        "thermopowers": [
+          0.05,
+          0.05,
+          0.05,
+          0.05
+        ],
+        "g2_ambient": 0.2,
+        "dln_g2_dln_a": 0.2
+      },
+      "decay_factor": 2.0,
+      "description": "Compare the agent's computed transport coefficients and derived Mott factors to paper-reported values with tolerances. Each field is scored piecewise: full credit within tolerance, linear decay to zero at 2× tolerance."
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Load material parameters and dielectric functions",
+    "role": "process",
+    "action": "Load the bundled material_parameters.csv and dielectric_functions.csv into memory. Parse conduction electron densities, work functions, Debye temperatures, electron‑phonon coupling constants, and energy‑dependent refractive index/extinction coefficient for each metal.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial data ingestion; no scored output.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Solve electronic structure: spherical potential well",
+    "role": "process",
+    "action": "For each material and for radius R=6 nm, determine the well depth V0 such that the Fermi energy matches the work function. Solve the radial Schrödinger equation numerically to obtain bound and discretized continuum single‑particle wavefunctions and energy eigenvalues for all relevant angular momenta.",
+    "output_file": "",
+    "evidence": "eigenstates_info.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build the electronic structure model; foundation for all hot‑carrier calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute hot‑carrier linewidths and lifetimes",
+    "role": "process",
+    "action": "Using state energies and material parameters, compute the electron‑phonon contribution (Debye model) and electron‑electron contribution (Fermi‑liquid formula) for each state, then combine via Matthiessen’s rule to obtain transition linewidths γ_if and lifetimes τ_if.",
+    "output_file": "",
+    "evidence": "linewidths_summary.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute energy‑dependent broadening that enters the density of available transitions and Fermi’s golden rule.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute optical matrix elements in quasistatic approximation",
+    "role": "process",
+    "action": "Construct the total perturbing potential Φ_tot (external field plus dipolar response) for each photon energy and dielectric environment (ε_m=1,5,10). Compute transition matrix elements ⟨Ψ_f|Φ_tot|Ψ_i⟩ for all initial‑final state pairs using wavefunctions and dielectric functions.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Evaluate optical coupling strengths needed for transition rates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute energy‑resolved hot‑carrier generation rates",
+    "role": "process",
+    "action": "Apply Fermi’s golden rule with two‑Lorentzian density of available transitions and a Gaussian‑smeared delta function to obtain hot‑electron energy distribution N_e(E,ω) and hot‑hole distribution N_h(E,ω) for relevant photon energies.",
+    "output_file": "",
+    "evidence": "hotcarrier_distributions/",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produce raw hot‑carrier spectra from which all integrated quantities derive.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Compute Figure of Merit (FoM) for hot carriers",
+    "role": "scored",
+    "action": "Integrate the hot‑carrier distributions over energy to obtain total numbers and absorbed power. Compute the figure of merit N_e^{δE} and N_h^{δE} using δE = 0.3·ħω_LSP, where ω_LSP is the localized surface plasmon energy for each material and environment. Output the FoM for each material, each dielectric constant ε_m (1,5,10) at radius 6 nm.",
+    "output_file": "figure_of_merit.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing the figure of merit for hot electrons and holes. The checker will verify that the values follow the material‑ and environment‑dependent trends.",
+    "output_schema": "Columns: material (string), epsilon_m (float), radius_nm (float), FoM_electrons (float), FoM_holes (float). One row per (material, epsilon_m, 6.0)."
+  },
+  {
+    "id": "step_07",
+    "title": "Compute hot‑carrier counts for water splitting under sunlight",
+    "role": "scored",
+    "action": "Using the AM1.5 spectral irradiance S(ω), integrate the hot‑carrier distributions over photon energy and count electrons with energy above E_HER = –4.44 eV and holes with energy below E_OER = –5.67 eV. Output the total counts for each material and ε_m at radius 6 nm.",
+    "output_file": "water_splitting_counts.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing total hot electrons (above HER) and hot holes (below OER) per nanoparticle under solar illumination.",
+    "output_schema": "Columns: material (string), epsilon_m (float), radius_nm (float), N_electrons_HER (float), N_holes_OER (float). One row per (material, epsilon_m, 6.0)."
+  }
+]

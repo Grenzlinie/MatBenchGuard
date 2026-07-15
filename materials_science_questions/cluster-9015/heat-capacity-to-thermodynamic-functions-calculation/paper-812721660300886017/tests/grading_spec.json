@@ -1,0 +1,91 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker analytically integrates the Cp polynomial with the paper's coefficients and reference values, then compares agent's values pointwise with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Cp polynomial coefficients and reference thermodynamic values at 298 K.",
+      "source_provenance": "Paper Section III and Table I; coefficients a, b, c, d and H_f(298), S_f(298) are explicitly reported.",
+      "generation_method": "Copied directly from the paper.",
+      "why_not_fabricated": "These are the essential input parameters required to recompute the thermodynamic functions; they are not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "Cp(J/mol/K)",
+            "S(J/mol/K)",
+            "G(kJ/mol)",
+            "H(kJ/mol)"
+          ],
+          "units": {
+            "T(K)": "K",
+            "Cp(J/mol/K)": "J mol^{-1} K^{-1}",
+            "S(J/mol/K)": "J mol^{-1} K^{-1}",
+            "G(kJ/mol)": "kJ mol^{-1}",
+            "H(kJ/mol)": "kJ mol^{-1}"
+          }
+        },
+        "description": "CSV file of Cp, S, G, H vs. temperature (298–1150 K in 50 K increments) computed from the Cp polynomial."
+      },
+      {
+        "file": "zero_crossing.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "content": "integer",
+          "unit": "K"
+        },
+        "description": "Temperature (K) where the computed enthalpy H(T) crosses zero, rounded to the nearest integer."
+      }
+    ],
+    "notes": "The checker recomputes the thermodynamic functions from the supplied Cp polynomial and reference values; it compares the CSV pointwise within tolerances and verifies the zero-crossing temperature against the paper-reported value of 984 K within ±2 K. The integration step is mandatory because the zero-crossing depends on the computed H(T) values."
+  },
+  "integration_params": {
+    "a": 2.65e-05,
+    "b": -0.0724,
+    "c": -1590.0,
+    "d": 143.0,
+    "H_f_298": -30.0,
+    "S_f_298": 40.0
+  },
+  "steps": [
+    {
+      "id": "step_02_export_csv",
+      "output_file": "thermodynamic_functions.csv",
+      "kind": "recompute_metric",
+      "weight": 0.4,
+      "description": "Recompute Cp, S, H, G at each temperature and compare to agent's values within tolerances.",
+      "target_policy": "metric_recompute",
+      "tolerance": {
+        "S_abs_tol": 1.0,
+        "H_rel_tol": 0.01,
+        "H_abs_floor": 0.01,
+        "G_rel_tol": 0.01,
+        "G_abs_floor": 0.01,
+        "Cp_rel_tol": 0.01,
+        "Cp_abs_floor": 0.01
+      }
+    },
+    {
+      "id": "step_03_zero_crossing",
+      "output_file": "zero_crossing.txt",
+      "kind": "exact_match",
+      "weight": 0.6,
+      "target": 984,
+      "tolerance_abs": 2,
+      "description": "Check that the zero-enthalpy crossing temperature is within ±2 K of 984 K."
+    }
+  ]
+}

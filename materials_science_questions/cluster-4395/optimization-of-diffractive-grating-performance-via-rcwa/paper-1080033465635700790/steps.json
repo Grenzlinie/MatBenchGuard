@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s01_prepare_model",
+    "title": "Prepare grating geometry and fiber mode model",
+    "role": "process",
+    "action": "Compile the layer structure and material indices; compute the fiber Gaussian mode expansion through the sapphire substrate and air gap to obtain the spot diameter at the grating plane; design the apodized grating periods and fill factors using the equations provided in the paper (target diffraction angle 12°, fill factor taper 0.85→0.70, optimized phase center xc=43 µm).",
+    "output_file": "",
+    "evidence": "grating_design.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Produces a grating design file containing the period array, fill factor distribution, and key fiber mode parameters required by the FDTD simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "s02_sim_power_ratio",
+    "title": "Simulate downward scattering power ratio",
+    "role": "scored",
+    "action": "Run 2D FDTD simulations of the grating coupler for TM polarization, first without and then with the top metal reflector, launching the TM0 waveguide mode. Monitor the power flow through the monitor plane placed 3 µm below the AlN film and record the fraction of power directed downward as a function of wavelength. Save the scattered field amplitude distribution at the monitor plane for subsequent overlap analysis.",
+    "output_file": "downward_power_ratio.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with wavelength (nm) and the downward power ratios (without and with reflector), dimensionless fractions between 0 and 1.",
+    "output_schema": "wavelength_nm (float), power_ratio_without_reflector (float), power_ratio_with_reflector (float)"
+  },
+  {
+    "id": "s03_efficiency",
+    "title": "Compute coupling efficiency for TM and TE, and misalignment tolerance",
+    "role": "scored",
+    "action": "Using the scattered field amplitude at the monitor plane obtained from the FDTD simulations, compute the overlap integral between the scattered field and the propagated Gaussian fiber mode (waist ω0=5.2 µm, effective propagation path ~567 µm) for both TM and TE polarizations. Determine the peak coupling efficiency and the corresponding wavelength for each polarization. Additionally, using the same scattered field and Gaussian mode profiles, compute the normalized transmission as a function of lateral position misalignment δx along the x-axis, and extract the full width (in µm) where the transmission drops to half (−3 dB) of its peak value. Report all results in a single JSON file.",
+    "output_file": "coupling_efficiency.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object with keys 'TM' and 'TE' (each containing 'peak_efficiency' and 'peak_wavelength_nm'), and a top-level key 'tolerance_3dB_um' (float, µm) giving the 3 dB misalignment width.",
+    "output_schema": "{ \"TM\": { \"peak_efficiency\": <float>, \"peak_wavelength_nm\": <float> }, \"TE\": { \"peak_efficiency\": <float>, \"peak_wavelength_nm\": <float> }, \"tolerance_3dB_um\": <float> }"
+  },
+  {
+    "id": "s04_overlap_bound",
+    "title": "Compute theoretical coupling efficiency upper bound",
+    "role": "scored",
+    "action": "Analytically evaluate the mode-overlap integral between a Gaussian profile (fiber mode) and an exponential profile (scattered field shape from a low-index-contrast grating) to obtain the fundamental maximum achievable coupling efficiency.",
+    "output_file": "mode_overlap_upper_bound.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Plain text file containing a single decimal number (float between 0 and 1) representing the theoretical upper bound of coupling efficiency.",
+    "output_schema": "Single float value."
+  }
+]

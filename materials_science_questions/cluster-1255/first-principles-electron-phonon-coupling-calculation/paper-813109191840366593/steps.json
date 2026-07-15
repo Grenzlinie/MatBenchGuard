@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Compute anisotropic phonon properties for GaAs",
+    "role": "process",
+    "action": "Using the GaAs elastic constants (C11=11.88e10 Pa, C12=5.38e10 Pa, C44=5.94e10 Pa), numerically solve the Christoffel equation for a dense grid of wavevector directions to obtain acoustic phonon frequencies, group velocities, phase velocities, polarization vectors, and phonon focusing factors for all three acoustic modes (LA, fast TA, slow TA). This precomputation is required for the emission model to map wavevector directions to real-space group velocity directions.",
+    "output_file": "",
+    "evidence": "phonon_properties.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Precompute phonon dispersion and focusing data needed for later steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute electron wavefunction form factors",
+    "role": "process",
+    "action": "For each of the five device structures (quantum well widths 5.1, 6.8, 12, 15 nm with a finite confinement potential of 350 meV, and a heterostructure with a conduction band offset of 225 meV), solve the effective-mass Schrödinger equation to obtain the electron ground-state wavefunction. Then compute the form factors G(q⊥) and g(q||) that account for the finite extension of the 2DEG perpendicular to the plane. Use the GaAs electron effective mass of 0.067 m_e.",
+    "output_file": "",
+    "evidence": "form_factors.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute wavefunction-based form factors for all structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute RPA dynamical screening",
+    "role": "process",
+    "action": "For each structure and electron temperature T_e=50 K, compute the finite-temperature dynamic polarizability function χ_{T_e}(ω, q||) of a non-interacting 2DEG and then the RPA dielectric function. Use the same effective mass and the form factor g(q||) from step_02. Evaluate the screening function Im{χ/(1 - v g χ)} over the frequency and in-plane wavevector ranges needed for the emission rate integral (Eq. 3 of the model).",
+    "output_file": "",
+    "evidence": "screening_data.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Precompute RPA screening tables required in the emission rate integral.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Compute LA/TA phonon ratio for all structures and export CSV",
+    "role": "scored",
+    "action": "Using the phonon properties from step_01, form factors from step_02, and screening factors from step_03, implement the directional acoustic phonon emission model. For each structure, evaluate the emitted power per solid angle (Eq. 3) for LA and TA modes, accounting for phonon focusing and the electron-phonon matrix element (deformation potential Ξ_D=9 eV, piezoelectric constant h_14=1.4e9 eV/m). Map wavevector directions to real-space group velocity directions using the focusing factors. Project the flux onto the (001) surface and integrate over a detector window of 100×10 µm centrally opposite a 120×50 µm 2DEG on a 0.4 mm thick substrate. Compute the total LA and TA signals and calculate the LA/TA ratio. Output a CSV file with one row for each of the five structures: quantum wells of 5.1 nm (density 1.8e15 m^{-2}), 6.8 nm (2.0e15), 12 nm (3.7e15), 15 nm (3.6e15), and the heterostructure (2.8e15).",
+    "output_file": "la_ta_ratios.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final scored artifact: the LA/TA phonon emission ratio for each device structure.",
+    "output_schema": "CSV with header structure,well_width_nm,density_10_15_m2,la_ta_ratio. Five rows, one per structure: e.g., '5.1nm',5.1,1.8,<ratio>; for HET, well_width_nm is empty."
+  }
+]

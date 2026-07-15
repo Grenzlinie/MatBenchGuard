@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01",
+    "title": "Derive model potential parameters",
+    "role": "process",
+    "action": "Using atomic data for gold (atomic radius R_a, core radius R_c, effective valence parameter α_eff, chemical valence z), determine the pseudocore radius R_ps and the core-plus-d-electron radius R_c+d from the relations in the paper. Save the determined parameters for subsequent steps.",
+    "output_file": "",
+    "evidence": "parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Determines R_ps and R_c+d required by the model potential in q-space.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute bare and screened form factor",
+    "role": "scored",
+    "action": "Compute the bare pseudopotential V_b(q) using the model potential expression with the parameters from step 1 on a q-grid from 0 to 2k_F (k_F=0.637 a.u., Ω0=114.6 a.u.). Then compute the screened form factor v(q) = V_b(q)/ε*(q) using the Vashishta-Singwi dielectric function. Output a CSV with columns q (atomic units) and v_screened (Rydbergs).",
+    "output_file": "form_factor.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Screened pseudopotential form factor of gold; the central evaluation of the model potential.",
+    "output_schema": "q (float, atomic units), v_screened (float, Rydbergs)"
+  },
+  {
+    "id": "step_03",
+    "title": "Calculate liquid metal resistivity",
+    "role": "scored",
+    "action": "Using the screened form factor from step 2, the liquid structure factor a(K) for gold from Moriarty (1970), the Fermi energy derived from k_F, and Ziman's resistivity formula, compute the liquid metal resistivity ρ in μΩ·cm. Output a single float number.",
+    "output_file": "resistivity.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Liquid metal resistivity of gold computed from the pseudopotential.",
+    "output_schema": "float (μΩ·cm)"
+  },
+  {
+    "id": "step_04",
+    "title": "Compute repulsive contribution to dynamical matrix",
+    "role": "process",
+    "action": "Compute the repulsive part ω_R^2(q) of the dynamical matrix for gold along the q-paths [00ζ], [0ζζ], [ζζζ] following the procedure of Moriarty for core-overlap exchange. Use the ionic radius R_c+d and the fcc lattice constant.",
+    "output_file": "",
+    "evidence": "repulsive_contrib.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Repulsive contribution needed for phonon calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute Coulomb contribution",
+    "role": "process",
+    "action": "Compute the Coulomb part ω_C^2(q) for the fcc gold lattice along the same symmetry directions using standard Ewald summation (or equivalently, tabulated values from Animalu et al., 1966).",
+    "output_file": "",
+    "evidence": "coulomb_contrib.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Coulomb contribution to the dynamical matrix.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Compute band-structure contribution",
+    "role": "process",
+    "action": "For each q along the symmetry directions, evaluate the band-structure part ω_E^2(q) using the lattice-sum formula with the bare pseudopotential V_b(q) (from step 2) and the dielectric function ε*(q). Sum over reciprocal lattice vectors H until convergence.",
+    "output_file": "",
+    "evidence": "band_structure_contrib.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Band-structure contribution from the pseudopotential.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07",
+    "title": "Compute phonon dispersion curves",
+    "role": "scored",
+    "action": "Combine the Coulomb, repulsive, and band-structure contributions to obtain total ω²(q) = ω_C² + ω_R² - ω_E². Convert to frequency ν = ω/(2π) in THz. Output a CSV with columns: direction (string: '100','110','111'), zeta (float between 0 and 1), branch (string: 'L','T1','T2'), frequency (float, THz).",
+    "output_file": "phonon_frequencies.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Phonon dispersion curves of gold along principal symmetry directions.",
+    "output_schema": "direction (string), zeta (float, 0-1), branch (string: 'L','T1','T2'), frequency (float, THz)"
+  }
+]

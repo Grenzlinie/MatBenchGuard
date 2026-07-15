@@ -1,0 +1,54 @@
+[
+  {
+    "id": "setup",
+    "title": "Model setup and input preparation",
+    "role": "process",
+    "action": "Prepare the simulation inputs for case V2: define the 3D half‑symmetry geometry (domain dimensions 100 mm × 32 mm × 2.5 mm) and a finite‑element mesh with refinement near the irradiated surface. Set up temperature‑dependent material thermal properties (density, thermal conductivity, specific heat) from the published literature. Initialize the as‑cast microstructure: graphite volume fraction 0.1165, ferrite fraction 0.8835, pearlite fraction 0.0, graphite nodule count 1.0635e13 m⁻³. Set the laser parameters: rectangular beam 23 mm × 2 mm with uniform spatial energy distribution, incident laser power linearly varying from 2500 W to 3500 W along the scanning path, scanning velocity 1000 mm/min. Compute the local laser absorptivity using the bilinear model with the published coefficients k₁ = −2.268×10⁻⁴ /W, k₂ = −9.0967×10⁻⁵ min/mm, k₃ = 7.3033×10⁻⁸ min/(W·mm), k₄ = 1.227. Record the prepared parameters in a log file.",
+    "output_file": "",
+    "evidence": "setup_report.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "thermal_metallurgical_simulation",
+    "title": "Run thermo‑metallurgical simulation",
+    "role": "process",
+    "action": "Implement the coupled thermo‑metallurgical model. Solve the 3D transient heat conduction equation with the moving laser heat source and convection‑radiation boundary conditions on all external faces using the finite‑element method. Simultaneously, for each material point, integrate the system of ordinary differential equations describing the reverse eutectoid transformation (stable ferrite → austenite+graphite and metastable pearlite → austenite), carbon homogenisation in austenite, melting, eutectoid transformation during cooling, solidification into ledeburite, and martensitic transformations in the nodular cast iron and the ledeburite. The phase kinetics follow spherical‑domain diffusion‑controlled growth for the stable path and unidimensional‑domain diffusion for the pearlite path, with volume fractions updated from the domain radii or interface coordinates. Use the temperature history from the thermal solver as forcing. Run the simulation for case V2 until the whole domain returns to room temperature. Record a log of the simulation progress.",
+    "output_file": "",
+    "evidence": "simulation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "phase_fractions",
+    "title": "Extract phase fraction profiles",
+    "role": "scored",
+    "action": "From the final simulation state at the centreline of the treated region, extract the volume fractions of graphite, ferrite, pearlite, austenite, ledeburite, and martensite at depths 0, 100, 200, 300, 400 µm below the irradiated surface. Write the results to /app/outputs/phase_fractions.csv as one row per depth.",
+    "output_file": "phase_fractions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final phase volume fractions at selected depths for case V2.",
+    "output_schema": "Columns: depth_um (integer, micrometres), f_graphite (float, 0–1), f_ferrite (float, 0–1), f_pearlite (float, 0–1), f_austenite (float, 0–1), f_ledeburite (float, 0–1), f_martensite (float, 0–1). One row per depth point."
+  },
+  {
+    "id": "layer_thickness",
+    "title": "Compute ledeburite‑martensite layer thickness",
+    "role": "scored",
+    "action": "Using the ledeburite volume fraction field from the completed simulation, determine the depth (in micrometres) where the ledeburite fraction first reaches or exceeds 0.9. Report this value as the ledeburite‑martensite layer thickness. Write a JSON file /app/outputs/layer_thickness.json with the case identifier and the thickness.",
+    "output_file": "layer_thickness.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Ledeburite–martensite layer thickness for case V2.",
+    "output_schema": "JSON object with keys: 'case' (string, 'V2') and 'ledeburite_martensite_layer_thickness_um' (float, micrometres)."
+  }
+]

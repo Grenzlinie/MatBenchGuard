@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Full recompute from agent's DFT parameters is feasible; hidden gold from paper's Table 2 is used as reference with wide tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "lattice_thermal_conductivity_results.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice thermal conductivity values for comparison",
+      "source_provenance": "Paper Table 2: calculated κ_l for TiNiSn and (Ti0.97Al0.03)NiSn at 300 K and 700 K, with and without secondary-phase inclusions.",
+      "generation_method": "Direct transcription from the published paper (DOI: 10.1039/c9cp06123a), Table 2 rows for TiNiSn, TiNiSn+inclusions, (Ti0.97Al0.03)NiSn, (Ti0.97Al0.03)NiSn+inclusions.",
+      "why_not_fabricated": "These are the paper's own quantitative results that the reproduction aims to match; no synthetic values were invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_thermal_conductivity_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "DFT_parameters": "object with sub‑objects TiNiSn and Ti0.97Al0.03NiSn",
+            "kappa_l_values": "object"
+          },
+          "items": {
+            "a0_angstrom": "number",
+            "B0_GPa": "number",
+            "B0_prime": "number",
+            "Theta_D_K": "number",
+            "gamma": "number",
+            "vs_m_per_s": "number",
+            "TiNiSn_intrinsic_300K": "number",
+            "TiNiSn_intrinsic_700K": "number",
+            "TiNiSn_with_inclusions_300K": "number",
+            "TiNiSn_with_inclusions_700K": "number",
+            "Ti0.97Al0.03NiSn_intrinsic_300K": "number",
+            "Ti0.97Al0.03NiSn_intrinsic_700K": "number",
+            "Ti0.97Al0.03NiSn_with_inclusions_300K": "number",
+            "Ti0.97Al0.03NiSn_with_inclusions_700K": "number"
+          },
+          "units": {
+            "a0_angstrom": "Å",
+            "B0_GPa": "GPa",
+            "Thermodynamic parameters": "K for Θ_D, dimensionless for γ, m/s for v_s",
+            "kappa_l": "W m⁻¹ K⁻¹"
+          }
+        },
+        "description": "Lattice thermal conductivity results from DFT‑based semi‑empirical model. The hidden checker recomputes κ_l_values from the reported DFT_parameters to verify self‑consistency, then compares the recomputed values to hidden gold reference values and checks structural ordering (κ_l_with_inclusions < κ_l_intrinsic, and larger reduction for the Al‑doped composition)."
+      }
+    ],
+    "notes": "The checker will use the same semi‑empirical formulas and the agent‑supplied DFT parameters to recompute the κ_l values. Differences due to numerical rounding are absorbed by a generous tolerance. The structural ordering (trend) carries part of the reward."
+  },
+  "steps": [
+    {
+      "id": "kappa_gold",
+      "output_file": "lattice_thermal_conductivity_results.json",
+      "kind": "numeric",
+      "weight": 0.6,
+      "description": "Recompute the eight κ_l values from the agent's DFT_parameters and compare each to the paper's reported gold (Table 2). Tolerance: ±30% relative; score is linear from 1 at 0 error down to 0 at 30% error.",
+      "gold": {
+        "TiNiSn_intrinsic_300K": 19.9,
+        "TiNiSn_intrinsic_700K": 8.5,
+        "TiNiSn_with_inclusions_300K": 13.1,
+        "TiNiSn_with_inclusions_700K": 7.0,
+        "Ti0.97Al0.03NiSn_intrinsic_300K": 18.7,
+        "Ti0.97Al0.03NiSn_intrinsic_700K": 8.0,
+        "Ti0.97Al0.03NiSn_with_inclusions_300K": 12.5,
+        "Ti0.97Al0.03NiSn_with_inclusions_700K": 6.6
+      }
+    },
+    {
+      "id": "kappa_ordering",
+      "output_file": "lattice_thermal_conductivity_results.json",
+      "kind": "structural",
+      "weight": 0.4,
+      "description": "Verify structural ordering: (a) for each composition and temperature, κ_l with inclusions < intrinsic; (b) the reduction (intrinsic - with) for (Ti0.97Al0.03)NiSn is larger than for pure TiNiSn (mass-fluctuation effect). Score is the fraction of fulfilled conditions."
+    }
+  ]
+}

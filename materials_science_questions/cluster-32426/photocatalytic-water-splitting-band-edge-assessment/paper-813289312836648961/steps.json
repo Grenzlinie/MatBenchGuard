@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_calibrate",
+    "title": "Calibrate hybrid functional for anatase TiO2",
+    "role": "process",
+    "action": "Calibrate a hybrid DFT functional by adjusting the Hartree-Fock exchange fraction to reproduce the experimental band gap of bulk anatase (~3.18 eV) using a consistent computational setup (basis set/pseudopotential). This step is required to ensure accurate electronic structure description for subsequent nanotube calculations.",
+    "output_file": "",
+    "evidence": "calibration_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Determines optimal HF exchange fraction for the hybrid functional; outputs a log documenting the calibration procedure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_model_gen",
+    "title": "Generate nanosheet and nanotube atomic models",
+    "role": "process",
+    "action": "Construct the 9-layered anatase (001) nanosheet from the bulk anatase structure. Roll the nanosheet into (0,n) single-walled nanotubes with diameters ranging from approximately 2.5 to 4.0 nm. Prepare input structures for subsequent DFT calculations.",
+    "output_file": "",
+    "evidence": "structure_files",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the atomic coordinates for the nanosheet and several nanotube models covering the required diameter range.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dft_energy",
+    "title": "Compute total energies of nanosheet and nanotubes",
+    "role": "process",
+    "action": "Run DFT single-point energy calculations for the flat nanosheet and each nanotube model using the calibrated hybrid functional with a consistent basis set and k-point sampling.",
+    "output_file": "",
+    "evidence": "energy_outputs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Calculates total energies of the nanosheet and each nanotube, required to derive strain energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_strain_energy",
+    "title": "Compute strain energy and write results",
+    "role": "scored",
+    "action": "Calculate the strain energy (E_nanotube - E_nanosheet) per formula unit for each nanotube diameter. Write the data to a CSV file with columns diameter_nm (float) and strain_energy_eV_per_formula_unit (float). Include at least three data points covering diameters from 2.5 to 4.0 nm.",
+    "output_file": "strain_energy_001_0n.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Strain energy vs. diameter for the (0,n) 9-layered (001) nanotube. The checker verifies that the strain energy indicates thermodynamic stability.",
+    "output_schema": "CSV with columns: diameter_nm (float), strain_energy_eV_per_formula_unit (float)"
+  },
+  {
+    "id": "step_dft_doped",
+    "title": "S-doped nanotube DFT band structure calculation",
+    "role": "process",
+    "action": "Construct an S-doped nanotube model by substituting one oxygen atom at an outer surface site on a (0,n) nanotube with a diameter close to 3.5 nm. Run a DFT electronic structure calculation to obtain the band gap (eV) and the absolute energies of the valence band maximum and conduction band minimum (eV, relative to vacuum).",
+    "output_file": "",
+    "evidence": "doped_band_output",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Performs the DFT calculation for the S-doped system to extract electronic structure information.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_band_structure",
+    "title": "Report band structure of S-doped nanotube",
+    "role": "scored",
+    "action": "Convert the computed band edge energies to the standard hydrogen electrode (SHE) scale using E_vs_SHE = E_vacuum + 4.44 eV. Write a JSON file with keys: band_gap_eV (float), valence_band_edge_vs_SHE (float, in eV), conduction_band_edge_vs_SHE (float, in eV).",
+    "output_file": "band_structure_s_doped.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Band gap and band edge positions of the S-doped nanotube relative to SHE. The checker verifies that the band gap and band edges satisfy photocatalytic water-splitting criteria.",
+    "output_schema": "JSON object with keys: band_gap_eV (float), valence_band_edge_vs_SHE (float, eV), conduction_band_edge_vs_SHE (float, eV)"
+  }
+]

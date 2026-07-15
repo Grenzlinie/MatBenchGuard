@@ -1,0 +1,129 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Static free energies and barriers are compared against paper-reported reference values with tolerances (T0 result-level compare); surface roughness time series is structurally audited (T3) by validating columns, row count, time coverage, and recomputing the standard deviation from the raw CSV; dynamic C-C coupling barrier uses threshold_or_better (T0). Full recompute of DFT energies in the verifier sandbox is infeasible. The overall tier 'consistency' reflects the hybrid approach combining result-level compare, structural audit, and threshold checking.",
+  "pass_threshold": 0.55,
+  "target_policies": {
+    "static_results.json": "reference_match",
+    "roughness_data.csv": "structural_audit",
+    "barrier_rough.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported reference values for free energy changes and C-C coupling barriers on isolated Cu clusters and Cu(100) surface, used as hidden gold for the static_results.json check",
+      "source_provenance": "Paper text: 'the average value of 0.70 eV for the selected Cu clusters' and 'Cu(100) surface of 0.76 eV' for *CO→*COH free-energy change; 'energy barriers for *CO-*CHO coupling for Cu clusters remain as high as 0.73 eV on average' and 'reference Cu(100) surface (0.77 eV)' for the C-C coupling barrier. These are the paper's own reported DFT computational results from Figure 1 and the Results section.",
+      "generation_method": "Extracted verbatim from the paper's Results and Discussion section, subsection 'Isolated Cu clusters', paragraphs 2-3 and Figure 1 description.",
+      "why_not_fabricated": "These are the paper's published quantitative results for the exact quantities the agent is asked to compute; they serve as the authoritative reproduction target for the static DFT free-energy step. The values are from the paper, not invented."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Threshold value (0.55 eV) for the dynamic C-C coupling barrier check in barrier_rough.json",
+      "source_provenance": "Paper text (Results section, 'Dynamic structure change' subsection): 'the energy barriers of C-C coupling ranging from 0.25 to 0.55 eV' computed on structures extracted from AIMD trajectories. The upper bound of this reported range (0.55 eV) is used as the threshold.",
+      "generation_method": "Extracted from the paper's description of barrier calculations on AIMD-derived rough-surface snapshots; 0.55 eV is the highest barrier they observed among dynamically roughened configurations, all substantially lower than the Cu(100) reference of 0.77 eV.",
+      "why_not_fabricated": "This is the paper's own reported upper bound for dynamic-surface barriers; it defines the threshold for 'significantly reduced barrier' relative to Cu(100)."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "static_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "required": {
+            "system": "string (e.g., Cu8)",
+            "free_energy_COOH": "number (eV)",
+            "free_energy_COH": "number (eV)",
+            "barrier_CC": "number (eV)",
+            "unit": "string (always 'eV')"
+          },
+          "items": {}
+        },
+        "description": "Computed free energy changes and C-C coupling barrier for each isolated cluster and Cu(100). Compared against the paper's reported average values with absolute and trend tolerances."
+      },
+      {
+        "file": "roughness_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "time_ps",
+            "roughness_au"
+          ],
+          "units": {
+            "time_ps": "picoseconds",
+            "roughness_au": "arbitrary units (standard deviation of surface Cu z-coordinates)"
+          },
+          "items": {}
+        },
+        "description": "Time series of surface roughness during AIMD. Must contain at least 500 rows and show measurable fluctuations (standard deviation > 0.1)."
+      },
+      {
+        "file": "barrier_rough.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "barrier": "number (eV)",
+            "unit": "string (always 'eV')"
+          },
+          "items": {}
+        },
+        "description": "Activation barrier for C-C coupling on a dynamically roughened Cu surface. Compared against a hidden threshold (direction and exact value are not disclosed)."
+      }
+    ],
+    "notes": "Scoring of static_results.json uses paper-reported averages (0.70 eV for *CO→*COH on clusters, 0.76 eV on Cu(100); 0.73 eV for *CO-*CHO on clusters, 0.77 eV on Cu(100)) with hidden tolerances. Roughness is audited structurally. The dynamic barrier is load-bearing: computing it requires genuinely running the AIMD and NEB steps, preventing bypass."
+  },
+  "steps": [
+    {
+      "id": "static_results_check",
+      "output_file": "static_results.json",
+      "kind": "reference_match",
+      "weight": 0.45,
+      "description": "Validate static_results.json schema and compare computed free energies and barriers against paper-reported reference values with tolerances, plus check COOH trend",
+      "config": {
+        "ref_coh_cluster": 0.7,
+        "ref_coh_cu100": 0.76,
+        "ref_barrier_cluster": 0.73,
+        "ref_barrier_cu100": 0.77,
+        "tol_abs": 0.1,
+        "expected_systems": [
+          "Cu8",
+          "Cu13",
+          "Cu20",
+          "Cu38",
+          "Cu55",
+          "Cu(100)"
+        ]
+      }
+    },
+    {
+      "id": "roughness_check",
+      "output_file": "roughness_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Validate roughness_data.csv structure: required columns, minimum 500 rows, monotonic time covering at least 4.5 ps, and standard deviation of roughness > 0.1",
+      "config": {
+        "min_rows": 500,
+        "min_time_span_ps": 4.5,
+        "min_roughness_std": 0.1
+      }
+    },
+    {
+      "id": "barrier_rough_check",
+      "output_file": "barrier_rough.json",
+      "kind": "threshold_or_better",
+      "weight": 0.4,
+      "description": "Validate barrier_rough.json schema and check that the reported C-C coupling barrier is ≤ 0.55 eV (threshold_or_better, lower is better)",
+      "config": {
+        "threshold": 0.55
+      }
+    }
+  ]
+}

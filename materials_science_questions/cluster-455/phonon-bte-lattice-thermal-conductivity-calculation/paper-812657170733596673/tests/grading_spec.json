@@ -1,0 +1,83 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute from raw phonon channels is infeasible because the agent only produces final kappas; intermediate channels are not scored artifacts. Therefore we score result consistency against hidden reference values using threshold_or_better and range checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {},
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for bulk Si and composite kappas and reduction ratio threshold, derived from the paper's experimental calibration and the reference solver.",
+      "source_provenance": "Paper Table I, Fig.7, text; experimental bulk Si reference 150 W/mK; reference solve.sh output.",
+      "generation_method": "Adopted from paper's stated calibration (150 W/mK) and derived composite value ~1.2 W/mK (consistent with ~2 orders reduction). Ratio threshold 50 from paper's claim of 'almost two order' reduction.",
+      "why_not_fabricated": "Values are extracted from the paper's own reported calibration and experimental agreement; they represent a plausible and deterministic target for the given geometry and model assumptions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "kappa_ph_bulk_Si",
+            "kappa_ph_composite",
+            "kappa_ph_reduction_ratio"
+          ],
+          "properties": {
+            "kappa_ph_bulk_Si": {
+              "type": "number",
+              "units": "W/mK"
+            },
+            "kappa_ph_composite": {
+              "type": "number",
+              "units": "W/mK"
+            },
+            "kappa_ph_reduction_ratio": {
+              "type": "number",
+              "dimensionless": true
+            }
+          }
+        },
+        "description": "Computed lattice thermal conductivity values. The checker validates that kappa_ph_composite is within an expected range and that kappa_ph_reduction_ratio meets a required threshold, with credit increasing as composite conductivity is lower and ratio is higher."
+      }
+    ],
+    "notes": "The composite geometry (radius 5 nm, spacing 15 nm) and the internal scattering length (nanowire diameter 10 nm) are fixed to enable a deterministic reproduction. The checker uses hidden gold values and thresholds."
+  },
+  "steps": [
+    {
+      "id": "bulk_si_kappa_sanity",
+      "output_file": "results.json",
+      "kind": "numerical_range",
+      "weight": 0.2,
+      "field": "kappa_ph_bulk_Si",
+      "min": 100.0,
+      "max": 200.0,
+      "description": "Sanity check: bulk Si kappa must be within [100,200] W/mK, consistent with experimental 150 W/mK."
+    },
+    {
+      "id": "composite_kappa_threshold",
+      "output_file": "results.json",
+      "kind": "threshold_or_better",
+      "weight": 0.4,
+      "field": "kappa_ph_composite",
+      "direction": "lower_better",
+      "gold": 1.2,
+      "max_tolerance": 0.8,
+      "max_acceptable": 10.0,
+      "description": "Composite kappa must be <= gold + tolerance (2.0) for full credit; zero credit beyond 10.0."
+    },
+    {
+      "id": "reduction_ratio_threshold",
+      "output_file": "results.json",
+      "kind": "threshold_or_better",
+      "weight": 0.4,
+      "field": "kappa_ph_reduction_ratio",
+      "direction": "higher_better",
+      "threshold": 50,
+      "description": "Reduction ratio must be at least 50 for full credit; partial credit for ratio less than 50."
+    }
+  ]
+}

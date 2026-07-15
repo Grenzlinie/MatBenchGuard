@@ -1,0 +1,211 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "T0 is the strongest feasible tier because the checker cannot re-run the full DFT+QHA computation; it compares agent-reported results to paper-reported reference values with tolerances. T1 recompute is infeasible due to compute cost.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for phonon frequencies and thermodynamic properties from the paper.",
+      "source_provenance": "Extracted from paper's Table 2 (phonon frequencies) and Table 3 and text (thermodynamic properties at 300 K).",
+      "generation_method": "Manually transcribed from the paper.",
+      "why_not_fabricated": "These are the exact paper-reported computed values used as reference for result-level comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "mode_index",
+              "symmetry",
+              "frequency_cm-1"
+            ],
+            "properties": {
+              "mode_index": {
+                "type": "integer"
+              },
+              "symmetry": {
+                "type": "string",
+                "enum": [
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2"
+                ]
+              },
+              "frequency_cm-1": {
+                "type": "number"
+              }
+            }
+          },
+          "minItems": 15,
+          "maxItems": 15
+        },
+        "description": "Gamma-point optical phonon frequencies and symmetry assignments of Cu2GeSe3."
+      },
+      {
+        "file": "step_02_thermodynamic_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "heat_capacity_Cv_JgK",
+            "young_modulus_E_GPa",
+            "thermal_expansion_beta_10-6perK",
+            "gruneisen_parameter",
+            "lattice_thermal_conductivity_kappa_L_WmK"
+          ],
+          "properties": {
+            "heat_capacity_Cv_JgK": {
+              "type": "number"
+            },
+            "young_modulus_E_GPa": {
+              "type": "number"
+            },
+            "thermal_expansion_beta_10-6perK": {
+              "type": "number"
+            },
+            "gruneisen_parameter": {
+              "type": "number"
+            },
+            "lattice_thermal_conductivity_kappa_L_WmK": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Thermodynamic properties at 300 K from the quasi-harmonic approximation and Slack's formula."
+      }
+    ],
+    "notes": "All values correspond to 300 K. The Young's modulus is derived from the computed bulk modulus and an assumed Poisson's ratio. The lattice thermal conductivity uses Slack's formula with A = 3.1e-6."
+  },
+  "steps": [
+    {
+      "id": "step_01_phonon_frequencies",
+      "output_file": "step_01_phonon_frequencies.json",
+      "weight": 0.35,
+      "kind": "numeric",
+      "description": "Check phonon frequencies and symmetry assignments against reference.",
+      "target_policy": "reference_match",
+      "gold_symmetry_counts": {
+        "A1": 5,
+        "A2": 2,
+        "B1": 5,
+        "B2": 3
+      },
+      "gold_frequencies": [
+        {
+          "symmetry": "A1",
+          "frequency": 52.1
+        },
+        {
+          "symmetry": "A1",
+          "frequency": 138.2
+        },
+        {
+          "symmetry": "A1",
+          "frequency": 175.3
+        },
+        {
+          "symmetry": "A1",
+          "frequency": 235.5
+        },
+        {
+          "symmetry": "A1",
+          "frequency": 286.7
+        },
+        {
+          "symmetry": "A2",
+          "frequency": 87.3
+        },
+        {
+          "symmetry": "A2",
+          "frequency": 193.0
+        },
+        {
+          "symmetry": "B1",
+          "frequency": 45.2
+        },
+        {
+          "symmetry": "B1",
+          "frequency": 105.7
+        },
+        {
+          "symmetry": "B1",
+          "frequency": 136.4
+        },
+        {
+          "symmetry": "B1",
+          "frequency": 252.2
+        },
+        {
+          "symmetry": "B1",
+          "frequency": 280.3
+        },
+        {
+          "symmetry": "B2",
+          "frequency": 70.8
+        },
+        {
+          "symmetry": "B2",
+          "frequency": 191.4
+        },
+        {
+          "symmetry": "B2",
+          "frequency": 210.5
+        }
+      ],
+      "frequency_tolerance_abs": 5.0,
+      "frequency_tolerance_rel": 0.03,
+      "ordering_check": {
+        "sym1": "B2",
+        "freq1": 191.4,
+        "sym2": "A2",
+        "freq2": 193.0
+      }
+    },
+    {
+      "id": "step_02_thermodynamic_properties",
+      "output_file": "step_02_thermodynamic_properties.json",
+      "weight": 0.65,
+      "kind": "numeric",
+      "description": "Check thermodynamic properties at 300 K against reference.",
+      "target_policy": "reference_match",
+      "properties": [
+        {
+          "key": "heat_capacity_Cv_JgK",
+          "gold": 0.328,
+          "rel_tol": 0.1
+        },
+        {
+          "key": "young_modulus_E_GPa",
+          "gold": 90.6,
+          "rel_tol": 0.1
+        },
+        {
+          "key": "thermal_expansion_beta_10-6perK",
+          "gold": 13.2,
+          "rel_tol": 0.2
+        },
+        {
+          "key": "gruneisen_parameter",
+          "gold": 1.2,
+          "rel_tol": 0.2
+        },
+        {
+          "key": "lattice_thermal_conductivity_kappa_L_WmK",
+          "gold": 2.0,
+          "rel_tol": 0.25
+        }
+      ]
+    }
+  ]
+}

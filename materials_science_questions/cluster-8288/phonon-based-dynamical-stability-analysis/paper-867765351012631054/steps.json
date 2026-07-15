@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_relax_sheets",
+    "title": "Geometry optimization of β and γ borophene sheets",
+    "role": "process",
+    "action": "Perform DFT geometry relaxation for both β (Pmmn8) and γ (Pmmn2) freestanding sheets using SIESTA with GGA‑PBE functional, double‑ζ basis, and norm‑conserving B pseudopotential. Relax atomic positions and lattice vectors to obtain equilibrium structures. Record total energies per unit cell.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This stage produces the equilibrium geometries and total energies needed for binding energy and phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_binding_energies",
+    "title": "Calculate binding energies",
+    "role": "scored",
+    "action": "Using the total energies of the relaxed unit cells and the energy of an isolated B atom computed with the same SIESTA setup, compute the binding energy per atom E_B = –(E_cell – n*E_atom)/n for both sheets. Write a JSON file with the two values.",
+    "output_file": "binding_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Binding energies per atom (eV/atom) for β and γ sheets. The assertion that β is more stable is checked by comparing these values and verifying β > γ with tolerance.",
+    "output_schema": "{\"beta_binding_energy\": <float in eV/atom>, \"gamma_binding_energy\": <float in eV/atom>}"
+  },
+  {
+    "id": "step_phonon_beta",
+    "title": "Compute phonon dispersion for β sheet",
+    "role": "scored",
+    "action": "Using the relaxed β structure, perform phonon calculations with the finite‑displacement method via Phonopy and SIESTA force computations. Enforce rotational symmetry on the force constants. Extract phonon frequencies at high‑symmetry points Γ, X, Y and the midpoint M (halfway between Γ and X). Write frequencies into a JSON file.",
+    "output_file": "phonon_dispersion_beta.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Phonon frequencies (cm⁻¹) at Γ, X, Y, and M for the β sheet. Used to verify that all frequencies are non‑negative and that the ZA branch shows no low‑frequency valley.",
+    "output_schema": "{\"Gamma\": [<list of floats>], \"X\": [<list of floats>], \"Y\": [<list of floats>], \"M\": [<list of floats>]}"
+  },
+  {
+    "id": "step_phonon_gamma",
+    "title": "Compute phonon dispersion for γ sheet",
+    "role": "scored",
+    "action": "Using the relaxed γ structure, perform phonon calculation with Phonopy and SIESTA, enforcing rotational symmetry. Extract frequencies at Γ, X, Y, and the midpoint M along Γ–X. Write to a JSON file.",
+    "output_file": "phonon_dispersion_gamma.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Phonon frequencies at the same points. The key check is that all frequencies are non‑negative and that the ZA branch at M is a low‑frequency valley (< ~30 cm⁻¹ and lower than at Γ and X).",
+    "output_schema": "{\"Gamma\": [<list of floats>], \"X\": [<list of floats>], \"Y\": [<list of floats>], \"M\": [<list of floats>]}"
+  }
+]

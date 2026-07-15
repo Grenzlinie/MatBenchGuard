@@ -1,0 +1,76 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker independently recomputes the enthalpy and entropy increments using fine-step trapezoidal integration; pointwise comparison against agent's submitted CSV provides a rigorous check. Since the equations and transition/fusion enthalpies are fully specified, a recompute from the agent's raw output is straightforward.",
+  "pass_threshold": 0.9,
+  "target_policies": {
+    "thermodynamic_functions_caf2.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_functions_caf2.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "cp",
+            "enthalpy_increment",
+            "entropy_increment"
+          ],
+          "units": {
+            "T": "K",
+            "cp": "kJ kg⁻¹ K⁻¹",
+            "enthalpy_increment": "kJ kg⁻¹",
+            "entropy_increment": "kJ K⁻¹ kg⁻¹"
+          }
+        },
+        "description": "Thermodynamic functions (heat capacity, enthalpy increment, entropy increment) for CaF₂ at the temperatures specified in the task. The checker recomputes the reference values using the same piecewise heat capacity equations and numerical integration, and compares the agent's output with proportional tolerances."
+      }
+    ],
+    "notes": "The transition and fusion enthalpies are 13.2 kJ kg⁻¹ and 393 kJ kg⁻¹, respectively. The checker implements the same cₚ(T) functions and trapezoidal integration with a fine step, then compares enthalpy_increment and entropy_increment within 1% and 0.5% relative error, respectively."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "thermodynamic_functions_caf2.csv",
+      "kind": "recompute_reference",
+      "description": "Compare agent's computed enthalpy_increment and entropy_increment against checker recomputed reference values at each temperature point. Full credit if all rows satisfy relative error tolerances (1% for enthalpy, 0.5% for entropy). Partial credit proportional to the fraction of rows that meet both tolerances.",
+      "weight": 1.0,
+      "tolerances": {
+        "enthalpy_relative": 0.01,
+        "entropy_relative": 0.005
+      },
+      "reference_compute": {
+        "method": "trapezoidal",
+        "step_K": 0.01,
+        "temperature_points": [
+          298,
+          400,
+          500,
+          600,
+          700,
+          800,
+          900,
+          1000,
+          1100,
+          1200,
+          1300,
+          1400,
+          1424,
+          1424,
+          1500,
+          1600,
+          1695,
+          1695,
+          1700,
+          1800,
+          1900
+        ]
+      }
+    }
+  ]
+}

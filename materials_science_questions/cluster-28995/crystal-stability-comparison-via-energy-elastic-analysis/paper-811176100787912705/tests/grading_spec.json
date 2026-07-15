@@ -1,0 +1,144 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "T1 recompute infeasible: transition pressures and melting temperatures result from full MD simulations that the verifier sandbox cannot rerun. T0 result-level compare with hidden gold tolerances + structural trend checks is the strongest feasible tier.",
+  "pass_threshold": 0.7,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for compression_limit_transitions.csv",
+      "source_provenance": "Paper Figure 3 (temperature-dependent compression-limit phase diagram) and the paper's text: for 240 K, BL-A→BL-VHDI at ~1.2 GPa, BL-VHDI→BL-AAI at ~4.15 GPa; for 260 K, similar; for 280 and 300 K, transitions do not occur (NaN).",
+      "generation_method": "Read from the paper's description and cross-checked with reference solve.sh values that the oracle writes.",
+      "why_not_fabricated": "Values are the paper's own numeric results, taken directly from the described phase boundaries."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for superheating_limit_melting.csv",
+      "source_provenance": "Paper Figure 5 and text: melting temperatures of BL-VHDI and BL-AAI at lateral pressures 1.0, 2.0, 3.0, 4.0 GPa. Values as reported: BL-AAI 330, 342, 355, 368 K; BL-VHDI 310, 322, 335, 320 K.",
+      "generation_method": "Extracted from the paper's superheating-limit diagram description and verified with the reference solve.sh.",
+      "why_not_fabricated": "These are paper-reported quantities; no fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "compression_limit_transitions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "P_BL_A_to_BL_VHDI",
+            "P_BL_VHDI_to_BL_AAI"
+          ],
+          "units": {
+            "temperature": "K",
+            "P_BL_A_to_BL_VHDI": "GPa",
+            "P_BL_VHDI_to_BL_AAI": "GPa"
+          }
+        },
+        "description": "Compression-limit transition pressures for bilayer water at four temperatures. The hidden checker compares each reported pressure to the paper's gold value with an absolute tolerance. NaN is used if a transition is not observed at that temperature."
+      },
+      {
+        "file": "superheating_limit_melting.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "lateral_pressure",
+            "T_melt_BL_VHDI",
+            "T_melt_BL_AAI"
+          ],
+          "units": {
+            "lateral_pressure": "GPa",
+            "T_melt_BL_VHDI": "K",
+            "T_melt_BL_AAI": "K"
+          }
+        },
+        "description": "Superheating-limit melting temperatures for BL-VHDI and BL-AAI bilayer ice at four lateral pressures. The hidden checker compares each reported temperature to the paper's gold value with an absolute tolerance. NaN is used when the phase is not stable or melting is not observed."
+      }
+    ],
+    "notes": "The task reproduces the key quantitative boundaries of the compression-limit and superheating-limit phase diagrams. Only the specified CSV entries are required; trends (temperature threshold, monotonicity of T_melt_BL_AAI, local maximum for BL-VHDI) are verified as additional checks in the hidden checker but do not require separate output files."
+  },
+  "steps": [
+    {
+      "id": "compression_numeric",
+      "output_file": "compression_limit_transitions.csv",
+      "kind": "numeric",
+      "weight": 0.45,
+      "gold": [
+        {
+          "temperature": 240,
+          "P_BL_A_to_BL_VHDI": 1.2,
+          "P_BL_VHDI_to_BL_AAI": 4.15
+        },
+        {
+          "temperature": 260,
+          "P_BL_A_to_BL_VHDI": 1.2,
+          "P_BL_VHDI_to_BL_AAI": 3.95
+        },
+        {
+          "temperature": 280,
+          "P_BL_A_to_BL_VHDI": null,
+          "P_BL_VHDI_to_BL_AAI": null
+        },
+        {
+          "temperature": 300,
+          "P_BL_A_to_BL_VHDI": null,
+          "P_BL_VHDI_to_BL_AAI": null
+        }
+      ],
+      "tolerance": 0.3,
+      "fields": [
+        "P_BL_A_to_BL_VHDI",
+        "P_BL_VHDI_to_BL_AAI"
+      ]
+    },
+    {
+      "id": "superheating_numeric",
+      "output_file": "superheating_limit_melting.csv",
+      "kind": "numeric",
+      "weight": 0.35,
+      "gold": [
+        {
+          "lateral_pressure": 1.0,
+          "T_melt_BL_VHDI": 310,
+          "T_melt_BL_AAI": 330
+        },
+        {
+          "lateral_pressure": 2.0,
+          "T_melt_BL_VHDI": 322,
+          "T_melt_BL_AAI": 342
+        },
+        {
+          "lateral_pressure": 3.0,
+          "T_melt_BL_VHDI": 335,
+          "T_melt_BL_AAI": 355
+        },
+        {
+          "lateral_pressure": 4.0,
+          "T_melt_BL_VHDI": 320,
+          "T_melt_BL_AAI": 368
+        }
+      ],
+      "tolerance": 15,
+      "fields": [
+        "T_melt_BL_VHDI",
+        "T_melt_BL_AAI"
+      ]
+    },
+    {
+      "id": "structural_trends",
+      "output_file": "",
+      "kind": "structural",
+      "weight": 0.2,
+      "trend_checks": [
+        "monotonic_Tmelt_AAI",
+        "local_max_Tmelt_VHDI"
+      ]
+    }
+  ]
+}

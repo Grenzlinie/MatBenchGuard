@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT calculations are computationally expensive and cannot feasibly be rerun in the verifier; we compare the agent's reported E2g frequencies and Grüneisen parameter to the paper's HSE06-calculated values with appropriate tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "E2g_frequencies.csv": "reference_match",
+    "Gruneisen_parameter.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for E2g frequencies and Grüneisen parameter from the paper's HSE06 calculations.",
+      "source_provenance": "Paper's reported HSE06 E2g frequencies: 1L=1360.6, 2L=1357.6, 3L=1357.4, bulk=1356.8 cm⁻¹ (Fig. 2d bottom inset); Grüneisen parameter γ=0.64 (Fig. 3e).",
+      "generation_method": "Extracted directly from the paper's reported numbers.",
+      "why_not_fabricated": "These are the actual paper-reported numerical results for the specific task; they are the reference target for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "E2g_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "frequency_cm1"
+          ],
+          "units": {
+            "frequency_cm1": "cm⁻¹"
+          }
+        },
+        "description": "Computed E2g phonon frequencies for monolayer, bilayer, trilayer, and bulk BN. The checker compares each frequency against hidden paper-reported HSE06 reference values and verifies that the frequency range across layers is small."
+      },
+      {
+        "file": "Gruneisen_parameter.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {
+            "first_line": "float"
+          },
+          "units": {
+            "first_line": "dimensionless"
+          }
+        },
+        "description": "Grüneisen parameter for the LO/TO mode at the Γ point, compared to the paper-reported value within a tolerance."
+      }
+    ],
+    "notes": "Reproduction targets only the DFT calculations; experimental Raman and AFM measurements are omitted. The original code (VASP) is proprietary; the task is rescoped to open-source alternatives (Quantum ESPRESSO + Phonopy). The checker compares the computed frequencies and Grüneisen parameter to hidden reference values from the paper."
+  },
+  "steps": [
+    {
+      "id": "step_output_freq",
+      "output_file": "E2g_frequencies.csv",
+      "kind": "reference_match",
+      "weight": 0.6,
+      "target_policy": "reference_match",
+      "gold_frequencies": {
+        "1L": 1360.6,
+        "2L": 1357.6,
+        "3L": 1357.4,
+        "bulk": 1356.8
+      },
+      "tolerance_freq_cm": 15.0,
+      "max_min_range_threshold_cm": 10.0
+    },
+    {
+      "id": "step_output_gamma",
+      "output_file": "Gruneisen_parameter.txt",
+      "kind": "exact_match",
+      "weight": 0.4,
+      "target_policy": "exact_match",
+      "gold_gruneisen": 0.64,
+      "tolerance_gruneisen": 0.1
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes formation and binding energies from agent's total energies, checks numerical ranges against paper-reported values with tolerances, and verifies charge and separation stability trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference formation energies for isolated vacancy (3.52 eV) and interstitial (3.44 eV), FP formation range 5.95-6.70 eV, binding range 0.26-1.01 eV, with ±0.3 eV tolerances.",
+      "source_provenance": "Paper text: Section III-B reports 3.52 eV and 3.44 eV for V and I formation energies; FP formation energies 5.95-6.70 eV, binding 0.26-1.01 eV.",
+      "generation_method": "Extracted directly from the paper sentences.",
+      "why_not_fabricated": "Values are explicitly stated in the paper."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reference_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "charge_state",
+            "total_energy_eV",
+            "formation_energy_eV"
+          ],
+          "units": {
+            "total_energy_eV": "eV",
+            "formation_energy_eV": "eV"
+          }
+        },
+        "description": "Reference formation energies for the perfect bulk, isolated vacancy, and isolated tetrahedral interstitial computed from the DFT total energies. The formation energy for perfect_bulk is defined as 0 eV."
+      },
+      {
+        "file": "FP_results_table.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "config_id",
+            "separation_A",
+            "charge_state",
+            "stability",
+            "total_energy_eV",
+            "formation_energy_eV",
+            "binding_energy_eV"
+          ],
+          "units": {
+            "separation_A": "angstrom",
+            "total_energy_eV": "eV",
+            "formation_energy_eV": "eV",
+            "binding_energy_eV": "eV"
+          }
+        },
+        "description": "Formation energies, binding energies, and stability classifications for each of the nine Frenkel-pair configurations in three charge states (+2, 0, -2). The stability flags indicate whether the FP remained mechanically stable after DFT relaxation or spontaneously recombined."
+      }
+    ],
+    "notes": "The checker will recompute formation and binding energies from the agent's submitted total energies and perfect_bulk reference. It will verify that formation energies of the isolated vacancy/interstitial are within a tolerance of expected values, that FP formation energies fall in a reasonable range, and that the submitted data follow physically expected patterns for Frenkel pairs in Si. The stability flags are also checked for consistency."
+  },
+  "steps": [
+    {
+      "id": "ref_energies",
+      "output_file": "reference_energies.csv",
+      "weight": 0.2,
+      "kind": "numeric",
+      "fields": {
+        "V_formation": {
+          "gold": 3.52,
+          "tolerance": 0.3
+        },
+        "I_formation": {
+          "gold": 3.44,
+          "tolerance": 0.3
+        },
+        "bulk_formation": {
+          "gold": 0.0,
+          "tolerance": 0.01
+        }
+      }
+    },
+    {
+      "id": "fp_results",
+      "output_file": "FP_results_table.csv",
+      "weight": 0.8,
+      "kind": "recompute_metric",
+      "cfg": {
+        "formation_range": [
+          5.65,
+          7.0
+        ],
+        "binding_range": [
+          0.0,
+          1.4
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step1",
+    "title": "Equilibrium LMTO calculation",
+    "role": "process",
+    "action": "Set up and run a self-consistent TB-LMTO-ASA calculation for Y2Br2C2 using the equilibrium crystal structure (space group C2/m, a=6.953 Å, b=3.764 Å, c=9.938 Å, β=99.98°; atomic positions: Y (0.4040,0,0.1485), Br (0.7901,0,0.3333), C (0.0861,0,0.0361)). Store the self-consistent potential and eigenvalues for downstream use.",
+    "output_file": "",
+    "evidence": "equilibrium_scf.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The equilibrium LMTO calculation provides the reference electronic structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Total density of states (DOS)",
+    "role": "scored",
+    "action": "From the equilibrium calculation, compute the total density of states and save it as dos.csv with energy (eV) relative to Fermi level (EF=0).",
+    "output_file": "dos.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total DOS for Y2Br2C2; energy in eV, DOS in states/eV per formula unit. Energy range: -15 to +5 eV.",
+    "output_schema": "columns: energy (eV), total_DOS (states/eV per formula unit)"
+  },
+  {
+    "id": "step3",
+    "title": "Band structure and saddle point",
+    "role": "scored",
+    "action": "Compute the band structure along the path Γ(0,0,0)–A(0,0,1/2)–M(0,1/2,1/2)–Z(0,1/2,0)–Γ using the equilibrium calculation. Save all bands within -3 to +3 eV of EF as band_structure.csv, with a consistent band index and k-point labels. Use a dense k-mesh to resolve the saddle point.",
+    "output_file": "band_structure.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Band structure along high-symmetry path to identify the saddle point in the C2-π* band.",
+    "output_schema": "columns: kpoint_label (string, e.g., 'Gamma','A','M','Z'), band_index (int), energy (eV). Include all bands within -3 to +3 eV of EF. Use at least 50 k-point segments across the whole path."
+  },
+  {
+    "id": "step4",
+    "title": "Frozen-phonon band shifts",
+    "role": "scored",
+    "action": "Using the same LMTO setup, perform two distorted geometry calculations: (a) elongation: set C-C distance to 130.5 pm by displacing the C atoms along the bond; (b) rotation: rotate the C2 unit by 3° about the (010) axis into the ab-plane. For each distortion, recompute the self-consistent band structure and determine the energy of the band with predominant C2-π* character at the Gamma point. Also retrieve the equilibrium reference energy of the same band at Gamma from step1. Compute the energy shift (distorted minus equilibrium) for each case and save as frozen_phonon_shifts.csv.",
+    "output_file": "frozen_phonon_shifts.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Energy shifts of the C2-π* band at Gamma for elongation and rotation distortions relative to equilibrium.",
+    "output_schema": "columns: distortion (string: 'elongation' or 'rotation'), band_name (string, e.g., 'pi*_band'), energy_shift (eV). Positive shift means the band moves upward."
+  }
+]

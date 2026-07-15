@@ -1,0 +1,54 @@
+[
+  {
+    "id": "compute_smm_params",
+    "title": "Compute SMM harmonic and anharmonic parameters",
+    "role": "process",
+    "action": "From the universal binding-energy relation pair potential parameters for Fe-Fe, Al-Al, Fe-Al (given) and the B2 crystal structure, compute the SMM harmonic parameter k, anharmonic coefficients γ1, γ2, and equilibrium interaction energy U0 for each sublattice (Fe and Al). Use the coordination shells and neighbor distances of the B2 lattice. Save the computed parameters to a JSON file.",
+    "output_file": "",
+    "evidence": "smm_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute the SMM parameters required for all subsequent calculations. This step is a necessary intermediate; it is not scored directly.",
+    "output_schema": ""
+  },
+  {
+    "id": "solve_eos",
+    "title": "Solve SMM equation-of-state for nearest-neighbor distance",
+    "role": "process",
+    "action": "Form the SMM equation-of-state using the parameters from step 1. Numerically solve for the nearest-neighbor distance r1 as a function of temperature T and pressure P on a grid covering T=300 K and pressures 0, 2, 4, 6, 8, 10 GPa. Compute the lattice parameter a = 2/√3 * r1. Save the solved r1 and a values to a CSV file.",
+    "output_file": "",
+    "evidence": "solved_r1.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Obtain the lattice spacing at the required temperature and pressure conditions. This is a required intermediate for all thermo-mechanical property calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_ambient",
+    "title": "Compute ambient-condition thermo-mechanical properties",
+    "role": "scored",
+    "action": "Using the solved r1 at T=300 K and P=0 GPa from step 2, compute the lattice constant (Å), isothermal bulk modulus (GPa), Young's modulus (GPa), shear modulus (GPa), and specific heat at constant pressure (J/(mol·K)) via the SMM formulas. Write the results to ambient_properties.csv.",
+    "output_file": "ambient_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Output the key ambient-pressure properties for B2 FeAl at 300 K. The values are compared against reference data to verify the SMM implementation.",
+    "output_schema": "CSV with columns: property (string), value (float). Valid property names: lattice_constant_A, bulk_modulus_GPa, young_modulus_GPa, shear_modulus_GPa, specific_heat_CP_J_per_mol_K."
+  },
+  {
+    "id": "compute_pressure_series",
+    "title": "Compute pressure-dependent bulk modulus and specific heat",
+    "role": "scored",
+    "action": "Using the solved r1 at T=300 K for pressures 0, 2, 4, 6, 8, 10 GPa from step 2, compute the isothermal bulk modulus (GPa) and specific heat at constant pressure (J/(mol·K)) via the same SMM formulas. Write the results to pressure_dependence_KT_CP.csv.",
+    "output_file": "pressure_dependence_KT_CP.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Output the pressure variation of bulk modulus and specific heat. The linear trend of bulk modulus and the decrease of specific heat are the main pressure effects claimed.",
+    "output_schema": "CSV with columns: pressure_GPa (float), bulk_modulus_Kt_GPa (float), specific_heat_CP_J_per_mol_K (float). One row per pressure in [0,2,4,6,8,10]."
+  }
+]

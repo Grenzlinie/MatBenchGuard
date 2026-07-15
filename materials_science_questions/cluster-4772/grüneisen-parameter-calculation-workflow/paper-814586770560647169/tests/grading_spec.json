@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Thermal expansion coefficient is recomputed from submitted mode Grüneisen parameters and lattice constants, compared against paper-reported value with generous tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mode_gruneisen.csv": "structural_audit",
+    "thermal_expansion.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference value for thermal expansion coefficient",
+      "source_provenance": "paper (Phys. Rev. B 92, 134112) states: 'calculated value (DFT) of α=15.6×10⁻⁶ K⁻¹'",
+      "generation_method": "extracted from paper text",
+      "why_not_fabricated": "directly from the paper's reported DFT result"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mode_gruneisen.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode_index",
+            "frequency_cm1",
+            "gamma",
+            "degeneracy"
+          ],
+          "units": {
+            "frequency_cm1": "cm⁻¹",
+            "gamma": "dimensionless"
+          }
+        },
+        "description": "Table of all zone-center optical phonon modes with frequencies, Grüneisen parameters, symmetry labels, and degeneracies. The checker verifies structural properties: correct number of modes (at least 30), presence of at least two negative gamma values, and physically plausible values."
+      },
+      {
+        "file": "thermal_expansion.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "relaxed_lattice_parameters",
+            "bulk_modulus_B0",
+            "thermal_expansion_coefficient_300K"
+          ],
+          "items": {
+            "relaxed_lattice_parameters": {
+              "a": "float (Å)",
+              "c": "float (Å)"
+            },
+            "bulk_modulus_B0": "float (GPa)",
+            "thermal_expansion_coefficient_300K": "float (K⁻¹)"
+          }
+        },
+        "description": "Contains the relaxed lattice parameters, bulk modulus, and computed volumetric thermal expansion coefficient at 300 K. The checker recomputes the thermal expansion coefficient from the submitted mode_gruneisen.csv and compares the result to the hidden paper-reported value using a tolerance that absorbs toolchain differences."
+      }
+    ],
+    "notes": "All DFT calculations use the PBE functional. The thermal expansion coefficient is re-derived from the agent-provided mode Grüneisen parameters and lattice parameters within the verifier sandbox, ensuring that the mode table cannot be fabricated without running the actual phonon calculations."
+  },
+  "steps": [
+    {
+      "id": "step_mode_csv",
+      "output_file": "mode_gruneisen.csv",
+      "kind": "structural_audit",
+      "weight": 0.4,
+      "params": {
+        "required_columns": [
+          "mode_index",
+          "frequency_cm1",
+          "gamma",
+          "degeneracy"
+        ],
+        "min_rows": 30,
+        "min_negative_gamma": 2,
+        "max_frequency": 10000
+      }
+    },
+    {
+      "id": "step_thermal_expansion",
+      "output_file": "thermal_expansion.json",
+      "kind": "recompute_metric",
+      "weight": 0.6,
+      "params": {
+        "target_alpha": 1.56e-05,
+        "rel_tol": 0.5,
+        "temperature_K": 300,
+        "R": 8.314462618,
+        "h": 6.62607015e-34,
+        "c_light": 299792458.0,
+        "kB": 1.380649e-23,
+        "N_A": 6.02214076e+23
+      }
+    }
+  ]
+}

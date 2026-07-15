@@ -1,0 +1,180 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "DFT recompute infeasible in checker; compare agent's reported band gaps/effective masses to paper-reported values with tolerances, plus structural audit on phonon softening and trends.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "band_gap_pristine",
+            "band_gap_1pct",
+            "band_gap_2pct",
+            "band_gap_3pct",
+            "effective_mass_pristine",
+            "effective_mass_1pct",
+            "effective_mass_2pct",
+            "effective_mass_3pct",
+            "phonon_softening_description"
+          ],
+          "properties": {
+            "band_gap_pristine": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "band_gap_1pct": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "band_gap_2pct": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "band_gap_3pct": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "effective_mass_pristine": {
+              "type": "number",
+              "unit": "m_e"
+            },
+            "effective_mass_1pct": {
+              "type": "number",
+              "unit": "m_e"
+            },
+            "effective_mass_2pct": {
+              "type": "number",
+              "unit": "m_e"
+            },
+            "effective_mass_3pct": {
+              "type": "number",
+              "unit": "m_e"
+            },
+            "phonon_softening_description": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Scored artifact containing DFT-computed band gaps, effective masses, and a description of acoustic phonon softening for pristine PbSe and Cu2Se-doped PbSe."
+      }
+    ],
+    "notes": "Band gaps and effective masses are compared against paper-reported values with appropriate tolerances to account for functional/pseudopotential differences. The phonon softening description is checked for structural keywords indicating softening of acoustic modes near M and R points in doped case relative to pristine."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported band gaps and effective masses from DFT calculations",
+      "source_provenance": "Paper Figure 5 and accompanying text: pristine band gap 0.17 eV, 1% 0.20 eV, 2% 0.23 eV, 3% 0.22 eV; effective masses pristine 0.109, 1% 0.111, 2% 0.123, 3% 1.023 m_e.",
+      "generation_method": "directly extracted from the paper's DFT results",
+      "why_not_fabricated": "values are the actual computed results reported in the original study, not invented"
+    }
+  ],
+  "steps": [
+    {
+      "id": "check_band_gaps",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "comparison": "exact_match",
+      "target": {
+        "band_gap_pristine": 0.17,
+        "band_gap_1pct": 0.2,
+        "band_gap_2pct": 0.23,
+        "band_gap_3pct": 0.22
+      },
+      "tolerance_abs": 0.05,
+      "fields": [
+        "band_gap_pristine",
+        "band_gap_1pct",
+        "band_gap_2pct",
+        "band_gap_3pct"
+      ]
+    },
+    {
+      "id": "check_effective_masses",
+      "output_file": "results.json",
+      "weight": 0.3,
+      "kind": "numeric",
+      "comparison": "exact_match",
+      "target": {
+        "effective_mass_pristine": 0.109,
+        "effective_mass_1pct": 0.111,
+        "effective_mass_2pct": 0.123,
+        "effective_mass_3pct": 1.023
+      },
+      "tolerance_relative": {
+        "effective_mass_pristine": 0.2,
+        "effective_mass_1pct": 0.2,
+        "effective_mass_2pct": 0.2,
+        "effective_mass_3pct": 0.5
+      },
+      "fields": [
+        "effective_mass_pristine",
+        "effective_mass_1pct",
+        "effective_mass_2pct",
+        "effective_mass_3pct"
+      ]
+    },
+    {
+      "id": "check_phonon_softening",
+      "output_file": "results.json",
+      "weight": 0.2,
+      "kind": "structural",
+      "keywords": [
+        "soften",
+        "acoustic",
+        "la",
+        "ta",
+        "m",
+        "r"
+      ],
+      "field": "phonon_softening_description"
+    },
+    {
+      "id": "check_bandgap_trend",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "structural",
+      "trend": [
+        {
+          "relation": "increase",
+          "from_field": "band_gap_pristine",
+          "to_field": "band_gap_1pct"
+        },
+        {
+          "relation": "increase",
+          "from_field": "band_gap_pristine",
+          "to_field": "band_gap_2pct"
+        },
+        {
+          "relation": "increase",
+          "from_field": "band_gap_pristine",
+          "to_field": "band_gap_3pct"
+        }
+      ]
+    },
+    {
+      "id": "check_effmass_trend",
+      "output_file": "results.json",
+      "weight": 0.1,
+      "kind": "structural",
+      "trend": [
+        {
+          "relation": "increase",
+          "from_field": "effective_mass_pristine",
+          "to_field": "effective_mass_3pct"
+        },
+        {
+          "relation": "increase",
+          "from_field": "effective_mass_2pct",
+          "to_field": "effective_mass_3pct"
+        }
+      ]
+    }
+  ]
+}

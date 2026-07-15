@@ -1,0 +1,54 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker extracts main peak energy from the agent's raw spectrum CSV; a genuine DFT-LDA run is required to produce a physically correct peak location.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "optical_conductivity_spectrum.csv": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental main peak energy for interband optical conductivity of hcp Mg",
+      "source_provenance": "Mathewson & Myers, J. Phys. F 3, 623 (1973), cited as Ref. 13 in the paper.",
+      "generation_method": "Hardcoded constant from the literature.",
+      "why_not_fabricated": "The value is the experimentally measured peak position; needed to score the computed DFT-LDA spectrum against the real experimental result."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optical_conductivity_spectrum.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "sigma"
+          ],
+          "units": {
+            "energy": "eV",
+            "sigma": "arbitrary"
+          }
+        },
+        "description": "Interband optical conductivity spectrum of hcp Mg computed from DFT-LDA. The hidden checker extracts the energy at maximum sigma and compares it to a confidential experimental gold standard, rewarding proximity below a defined tolerance."
+      }
+    ],
+    "notes": "The checked quantity is the main peak energy (eV) derived from this spectrum. The agent is not required to download experimental data."
+  },
+  "steps": [
+    {
+      "id": "02_output_spectrum",
+      "output_file": "optical_conductivity_spectrum.csv",
+      "kind": "recompute_peak",
+      "description": "Extract energy at maximum sigma and compare to hidden experimental peak energy.",
+      "weight": 1.0,
+      "reference": 0.68,
+      "tolerance_abs": 0.3,
+      "max_deviation": 0.6,
+      "unit": "eV",
+      "target_policy": "threshold_or_better"
+    }
+  ]
+}

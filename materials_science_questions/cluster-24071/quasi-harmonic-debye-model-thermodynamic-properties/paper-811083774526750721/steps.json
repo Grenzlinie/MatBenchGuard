@@ -1,0 +1,54 @@
+[
+  {
+    "id": "s1",
+    "title": "Melt-quench AIMD simulation and structure relaxation",
+    "role": "scored",
+    "action": "Using Quantum ESPRESSO with an LDA PAW pseudopotential for carbon, perform constant-volume ab initio molecular dynamics for a system of 120 carbon atoms at a target mass density of 1.50 g/cm³. Start from random coordinates, heat to 8000 K, equilibrate, melt-quench to 300 K over 15 ps, and finally perform conjugate-gradient relaxation. Output the fully relaxed atomic structure.",
+    "output_file": "step_01_structure.xyz",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Relaxed atomistic structure in XYZ format. The checker will recompute mean coordination number and sp/sp²/sp³ fractions using a bond cutoff and compare to hidden paper values for model c120_15ps.",
+    "output_schema": "XYZ format text: first line = number of atoms N; second line = a comment string (e.g., cell vectors); next N lines each contain symbol 'C' followed by three space-separated Cartesian coordinates in Angstrom."
+  },
+  {
+    "id": "s2",
+    "title": "Vibrational eigenfrequency calculation",
+    "role": "scored",
+    "action": "Using the relaxed structure from step_01, perform single-point force calculations with Quantum ESPRESSO for each atom displaced by ±0.015 Å along x, y, and z directions to construct the force constant matrix. Diagonalize the matrix to obtain vibrational eigenfrequencies. Output the non-zero frequencies.",
+    "output_file": "step_02_eigenfrequencies.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "List of non-zero vibrational eigenfrequencies in cm⁻¹. The checker will Gaussian broaden these to compute VDOS and harmonic specific heat Cv(T) and verify that Cv(300 K) approaches the Dulong-Petit limit while checking VDOS shape characteristics.",
+    "output_schema": "One eigenfrequency per line, in cm⁻¹, as a floating-point number. Sorted ascending. First three zero-frequency translation modes may be omitted; total lines = 3N-3 where N is the number of atoms."
+  },
+  {
+    "id": "s3",
+    "title": "Radial distribution function computation",
+    "role": "scored",
+    "action": "From the relaxed atomic structure in step_01, compute the radial distribution function g(r) up to at least 6 Å with fine spacing. Output the g(r) data.",
+    "output_file": "step_03_rdf_data.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Radial distribution function data. The checker will locate the first and second peaks and verify their positions against hidden paper values.",
+    "output_schema": "Two comma-separated columns: r (Angstrom) and g(r) (dimensionless). No header row. At least 300 rows covering r from 0 to 6 Å."
+  },
+  {
+    "id": "s4",
+    "title": "Electronic density of states calculation",
+    "role": "scored",
+    "action": "Perform a single-point electronic-structure calculation on the relaxed structure from step_01 to obtain the total and p-orbital projected density of states. Align the energy scale to the Fermi level, and output the data covering at least the range -10 eV to +10 eV.",
+    "output_file": "step_04_edos_data.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Electronic density of states data. The checker will inspect the total and p-projected DOS near the Fermi level for a pseudogap and p-orbital dominance, consistent with paper expectations.",
+    "output_schema": "Three comma-separated columns: energy (eV, relative to Fermi level), total DOS (arbitrary normalized), p-orbital projected DOS (same normalization). No header or header optional. At least 200 rows covering -10 to +10 eV."
+  }
+]

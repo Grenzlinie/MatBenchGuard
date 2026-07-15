@@ -1,0 +1,81 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Exchange parameters are recomputed from the agent's total energy table; orbital moment is compared to the paper value with a tolerance. This is a genuine recompute from the raw DFT energies.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_energies.csv": "metric_recompute",
+    "ir_orbital_moment.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden paper reference values for exchange parameters and Ir orbital moment.",
+      "source_provenance": "Paper Table I and text: J_Ni-Ir = -7.4 meV, J'_Ir-Ir (artificial) = 10.5 meV, J'_Ir-Ir (real) = 9.4 meV, J'_Ni-Ni = 2.4 meV, J''_Ir-Ir = 2.2 meV. Ir orbital moment ≈ 0.07 μB.",
+      "generation_method": "Extracted directly from the paper's reported values.",
+      "why_not_fabricated": "These are the actual paper-reported quantities required for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system",
+            "magnetic_state",
+            "total_energy_ev"
+          ],
+          "units": {
+            "total_energy_ev": "eV"
+          }
+        },
+        "description": "LSDA+U total energies per formula unit for the specified systems and collinear magnetic states. The checker recomputes the exchange coupling parameters (J_Ni-Ir, J'_Ir-Ir, J'_Ni-Ni, J''_Ir-Ir) from these energy differences and compares them to hidden paper values."
+      },
+      {
+        "file": "ir_orbital_moment.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ir_orbital_moment": "number"
+          },
+          "units": {
+            "ir_orbital_moment": "μ_B"
+          }
+        },
+        "description": "Ir orbital magnetic moment from a self-consistent LSDA+U+SOC calculation for Sr2NiIrO6. The checker compares the value to the paper-reported orbital moment (~0.07 μB) within a suitable tolerance."
+      }
+    ],
+    "notes": "The total_energies.csv table must include entries for every required system/magnetic-state pair; missing entries will cause the exchange-parameter recomputation to fail. The ir_orbital_moment.json value must be a single float. Intermediate evidence files (structure_inputs.json, artificial_models.txt, lsda_bandwidth.json, lsda_u_outputs.txt, soc_projection.json) are not scored but must be produced to confirm the pipeline was executed."
+  },
+  "checks": [
+    {
+      "id": "exchange_couplings",
+      "output_file": "total_energies.csv",
+      "weight": 0.6,
+      "type": "recompute",
+      "description": "Recompute J_Ni-Ir, J'_Ir-Ir (artificial and real), J'_Ni-Ni, and J''_Ir-Ir from total energy differences. Compare each to hidden paper values within ±2 meV tolerance.",
+      "gold_J_NiIr": -7.4,
+      "gold_J_IrIr_artificial": 10.5,
+      "gold_J_IrIr_real": 9.4,
+      "gold_J_NiNi": 2.4,
+      "gold_J_IrIr_3NN": 2.2,
+      "tolerance": 2.0
+    },
+    {
+      "id": "orbital_moment",
+      "output_file": "ir_orbital_moment.json",
+      "weight": 0.4,
+      "type": "numeric",
+      "description": "Compare Ir orbital moment to paper value 0.07 μB with tolerance ±0.02 μB.",
+      "target": 0.07,
+      "tolerance": 0.02
+    }
+  ]
+}

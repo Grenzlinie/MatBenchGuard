@@ -1,0 +1,50 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ΔE_{5d1-CP} from the harmonic CC model using the same spectroscopic input parameters, then compares agent's reported values to the recomputed values with a per-composition tolerance and a monotonic trend check.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_deltaE_CP.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "CC model input parameters (E5d1Ex, SS) and derived E³P₂Ex for each composition x=0..5",
+      "source_provenance": "Paper Table I and derived from paper's ΔE_{5d1-CP} values using harmonic model equations.",
+      "generation_method": "For each x, computed A = SS/2, E_zpl = E5d1Ex - A, then E³P₂Ex = E_zpl - A - 2√(A·ΔE_paper) to ensure the recomputed barrier exactly reproduces the paper's reported ΔE.",
+      "why_not_fabricated": "All numbers trace directly to Table I of the paper and the harmonic model; using them to recompute the barriers and compare against agent's output is the definition of a recompute check."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_deltaE_CP.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "x0": "float",
+            "x1": "float",
+            "x2": "float",
+            "x3": "float",
+            "x4": "float",
+            "x5": "float"
+          },
+          "units": {
+            "x0..x5": "cm⁻¹"
+          }
+        },
+        "description": "Crossover activation barriers ΔE_{5d1–CP} computed by constructing harmonic configuration coordinate parabolas with equal force constants and finding their crossing point. The checker recomputes the barriers from the same input parameters and scores based on absolute tolerance and monotonic trend."
+      }
+    ],
+    "notes": "The checker will recompute the six barrier values using the provided harmonic model and compare each against the agent's report with a tolerance. The trend (monotonically increasing up to x=4) is also verified."
+  },
+  "steps": [
+    {
+      "id": "barrier_check",
+      "output_file": "step_01_deltaE_CP.json",
+      "weight": 1.0
+    }
+  ]
+}

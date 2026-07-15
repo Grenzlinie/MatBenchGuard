@@ -1,0 +1,78 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Checker cannot re-run DFT to compute total-energy curve; scores structural properties (local maximum at 90°, basin flatness) derived from the submitted curve. Superconductivity check recomputes Tc from submitted λ and ω_log for consistency, with tolerances against paper-reported values.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "energy_curve.csv": "structural_audit",
+    "superconductivity.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Superconductivity gold values (λ=7.0, ω_log=1406 K, Tc=327 K) used in checker scorers; derived from the paper's Fig.5 and text (Tc reaches 327 K at 1150 GPa for Cs-IV, with λ and ω_log consistent with the plot).",
+      "source_provenance": "Paper Fig.5 and main text, specified pressure 1150 GPa.",
+      "generation_method": "Extracted from the paper's reported maximum Tc and approximate λ and ω_log read from the published figure.",
+      "why_not_fabricated": "Values are the actual paper-reported quantities for the exact conditions (Cs-IV at 1150 GPa) that the task targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta_deg",
+            "total_energy_Ry"
+          ],
+          "units": {
+            "theta_deg": "degrees",
+            "total_energy_Ry": "Rydberg per primitive cell (4 atoms)"
+          }
+        },
+        "description": "Table of shear angle θ (degrees) and the corresponding total electronic energy (Rydberg) for the Cs‑IV structure at a fixed volume of 7.14 a.u.³/proton. Theta should range from 80° to 100° inclusive."
+      },
+      {
+        "file": "superconductivity.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pressure_GPa": "number",
+            "lambda": "number",
+            "omega_log_K": "number",
+            "Tc_K": "number"
+          },
+          "units": {
+            "pressure_GPa": "GPa",
+            "omega_log_K": "K",
+            "Tc_K": "K"
+          }
+        },
+        "description": "Superconductivity parameters for the Cs‑IV structure at 1150 GPa: the electron‑phonon coupling constant λ, logarithmic‑averaged phonon frequency ω_log, and the Allen‑Dynes superconducting transition temperature Tc."
+      }
+    ],
+    "notes": "The energy curve must be computed for a sufficient number of θ points covering the range 80°–100° to faithfully capture the energy landscape. The superconductivity JSON must include the four listed keys; the units are as declared."
+  },
+  "steps": [
+    {
+      "id": "energy_curve_shape",
+      "output_file": "energy_curve.csv",
+      "weight": 0.5,
+      "kind": "custom",
+      "description": "Scores the total-energy curve for structural properties: local maximum at θ=90° and flatness of the energy basin between 87° and 93°."
+    },
+    {
+      "id": "superconductivity_params",
+      "output_file": "superconductivity.json",
+      "weight": 0.5,
+      "kind": "custom",
+      "description": "Checks physical consistency (recomputes Tc from λ and ω_log) and compares λ, ω_log, Tc to paper-reported values within generous tolerances."
+    }
+  ]
+}

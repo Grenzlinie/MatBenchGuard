@@ -1,0 +1,170 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "VRH mechanical and acoustic properties are recomputed from elastic constants; elastic constant trend against experiment is verified structurally (T1 recompute for derived properties, structural for elastic trend).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "elastic_constants.csv": "reference_match",
+    "mechanical_properties.csv": "reference_match",
+    "acoustic_properties.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "C11",
+            "C22",
+            "C33",
+            "C12",
+            "C13",
+            "C23",
+            "C44",
+            "C55",
+            "C66",
+            "C15",
+            "C25",
+            "C35",
+            "C46"
+          ],
+          "units": {
+            "C11": "GPa",
+            "C22": "GPa",
+            "C33": "GPa",
+            "C12": "GPa",
+            "C13": "GPa",
+            "C23": "GPa",
+            "C44": "GPa",
+            "C55": "GPa",
+            "C66": "GPa",
+            "C15": "GPa",
+            "C25": "GPa",
+            "C35": "GPa",
+            "C46": "GPa"
+          }
+        },
+        "description": "Elastic constants for LDA, PBE, and PL/2 for naphthalene P2_1/a."
+      },
+      {
+        "file": "mechanical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "B",
+            "G",
+            "E",
+            "mu",
+            "H"
+          ],
+          "units": {
+            "B": "GPa",
+            "G": "GPa",
+            "E": "GPa",
+            "mu": "dimensionless",
+            "H": "GPa"
+          }
+        },
+        "description": "Polycrystalline bulk, shear, Young's moduli, Poisson ratio, and Vickers hardness from VRH averaging."
+      },
+      {
+        "file": "acoustic_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "functional",
+            "v_s",
+            "v_p",
+            "v_avg",
+            "Theta_D",
+            "gamma_a"
+          ],
+          "units": {
+            "v_s": "m/s",
+            "v_p": "m/s",
+            "v_avg": "m/s",
+            "Theta_D": "K",
+            "gamma_a": "dimensionless"
+          }
+        },
+        "description": "Sound velocities, Debye temperature, and acoustic Grüneisen parameter."
+      }
+    ],
+    "notes": "The PL/2 values are compared to the paper’s PL/2 results and to experimental references. The hidden checker verifies that the PL/2 elastic constants are within tolerance of the paper-reported values and that PL/2 absolute errors relative to experiment are lower than those for LDA and PBE."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "experimental elastic constants and bulk modulus for naphthalene P2_1/a",
+      "source_provenance": "paper Table 2 Exp[12] and text mentioning B=7.9 GPa from powder diffraction",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "These are the paper's own reported experimental references."
+    }
+  ],
+  "experimental_refs": {
+    "elastic": {
+      "C11": 9.8,
+      "C22": 10.88,
+      "C33": 16.27,
+      "C12": 6.76,
+      "C13": 4.79,
+      "C23": 4.8,
+      "C44": 3.35,
+      "C55": 2.51,
+      "C66": 4.22,
+      "C15": 0.17,
+      "C25": 0.96,
+      "C35": -3.59,
+      "C46": 0.7
+    },
+    "B": 7.9
+  },
+  "checks": [
+    {
+      "id": "elastic_shape",
+      "output_file": "elastic_constants.csv",
+      "kind": "shape_check",
+      "weight": 0.05
+    },
+    {
+      "id": "mechanical_consistency",
+      "output_file": "mechanical_properties.csv",
+      "kind": "recompute_vrh_mechanical",
+      "weight": 0.3,
+      "tolerance_rel": 1e-05
+    },
+    {
+      "id": "acoustic_consistency",
+      "output_file": "acoustic_properties.csv",
+      "kind": "recompute_vrh_acoustic",
+      "weight": 0.1,
+      "tolerance_rel": 1e-05
+    },
+    {
+      "id": "elastic_trend",
+      "output_file": "elastic_constants.csv",
+      "kind": "elastic_trend",
+      "weight": 0.35,
+      "min_better_count": 10,
+      "eps": 0.01
+    },
+    {
+      "id": "bulk_trend",
+      "output_file": "mechanical_properties.csv",
+      "kind": "bulk_trend",
+      "weight": 0.2,
+      "eps": 0.01
+    }
+  ]
+}

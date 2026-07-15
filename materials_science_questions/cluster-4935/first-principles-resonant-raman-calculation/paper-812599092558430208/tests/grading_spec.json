@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The bound-state eigenvalue is a deterministic root of a publicly specified equation; the spectra are deterministic outputs of well-defined self-energy formulas, both fully recomputable by the hidden checker from the agent's submitted artifacts.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for bound-state eigenvalue and spectral shapes are recomputed in the checker from the public model parameters (no separate file).",
+      "source_provenance": "Paper equations (22a,22b,53,54,55,58,59) and parameters (r=15%, ω₁₀=Δ/10, γ=Δ/100, ω₂₀ values).",
+      "generation_method": "Numerical integration (scipy.quad) of self-energy, root-finding for bound state, and evaluation of Rayleigh cross-section on a fine detuning grid; checker includes all logic inline.",
+      "why_not_fabricated": "Values are deterministic outputs of the published physical model; no external labels or random holdout needed."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bound_state_result.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "pbg_bound_state_exists": "boolean",
+            "pbg_eigenvalue": "float or null",
+            "fdm_bound_state_exists": "boolean",
+            "fdm_eigenvalue": "float or null"
+          }
+        },
+        "description": "Existence and eigenvalue of the photon‑atom bound state for PBG and FDM. The eigenvalue is a deterministic number; checking uses an exact match within tolerance."
+      },
+      {
+        "file": "rayleigh_spectrum_pbg.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega_minus_omega20",
+            "omega21",
+            "sigma_R"
+          ]
+        },
+        "description": "Rayleigh scattering cross‑section for PBG at four ω21 values. The hidden reference spectrum is recomputed from the same formulas; the agent's spectrum must match within a relative error threshold."
+      },
+      {
+        "file": "rayleigh_spectrum_fdm.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "omega_minus_omega20",
+            "omega21",
+            "sigma_R"
+          ]
+        },
+        "description": "Rayleigh scattering cross‑section for FDM at four ω21 values. The hidden reference spectrum is recomputed from the same formulas; the agent's spectrum must match within a relative error threshold."
+      }
+    ],
+    "notes": "The bound-state result is a fixed deterministic quantity (the energy ε_d), checked within a tolerance. The spectra are arrays; the verifier recomputes the reference from the same public parameters and formulas, then compares via relative L2 norm in the relevant detuning window. The PBG spectrum is expected to exhibit doublet/triplet splitting when ω21 is near the band edge, while the FDM spectrum should show a single peak and no splitting."
+  },
+  "steps": [
+    {
+      "id": "bound_state_result",
+      "output_file": "bound_state_result.json",
+      "output_contract_key": "bound_state_result.json",
+      "weight": 0.3,
+      "target_policy": "exact_match",
+      "scoring_method": "bound_state_existence_and_eigenvalue",
+      "tolerances": {
+        "pbg_eigenvalue_abs_tol": 0.01
+      },
+      "note": "Check PBG bound state exists with eigenvalue ≈1.02, FDM bound state does not exist."
+    },
+    {
+      "id": "rayleigh_spectrum_pbg",
+      "output_file": "rayleigh_spectrum_pbg.csv",
+      "output_contract_key": "rayleigh_spectrum_pbg.csv",
+      "weight": 0.35,
+      "target_policy": "threshold_or_better",
+      "scoring_method": "rayleigh_spectrum_compare",
+      "tolerances": {
+        "relative_L2_tol": 0.15
+      },
+      "note": "Recompute reference PBG spectrum and compare after optimal scale factor; average over four ω₂₁ values."
+    },
+    {
+      "id": "rayleigh_spectrum_fdm",
+      "output_file": "rayleigh_spectrum_fdm.csv",
+      "output_contract_key": "rayleigh_spectrum_fdm.csv",
+      "weight": 0.35,
+      "target_policy": "threshold_or_better",
+      "scoring_method": "rayleigh_spectrum_compare",
+      "tolerances": {
+        "relative_L2_tol": 0.15
+      },
+      "note": "Recompute reference FDM spectrum and compare; average over four ω₂₁ values."
+    }
+  ]
+}

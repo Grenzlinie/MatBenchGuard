@@ -1,0 +1,818 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "GCMC/MD results are output of computationally heavy simulations; recomputing them in the verifier is infeasible. We compare reported heats, Henry coefficients, loadings, and diffusion coefficients against hidden paper gold with generous tolerances, and verify structural properties of occupation density profiles (format and normalisation).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "heats_henry.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "zeolite",
+            "Qst_SO2",
+            "Qst_CO2",
+            "Qst_CO",
+            "Henry_SO2",
+            "Henry_CO2",
+            "Henry_CO"
+          ],
+          "units": {
+            "Qst_SO2": "kJ/mol",
+            "Qst_CO2": "kJ/mol",
+            "Qst_CO": "kJ/mol",
+            "Henry_SO2": "mol/(kg*Pa)",
+            "Henry_CO2": "mol/(kg*Pa)",
+            "Henry_CO": "mol/(kg*Pa)"
+          }
+        },
+        "description": "Isosteric heats of adsorption (kJ/mol) and Henry coefficients (mol/(kg*Pa)) at 298 K. One row per zeolite."
+      },
+      {
+        "file": "loading_ternary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "zeolite",
+            "loading_SO2",
+            "loading_CO2",
+            "loading_CO"
+          ],
+          "units": {
+            "loading_SO2": "mol/kg",
+            "loading_CO2": "mol/kg",
+            "loading_CO": "mol/kg"
+          }
+        },
+        "description": "Adsorbed loadings from ternary mixture (20% SO2, 40% CO2, 40% CO) at 298 K and 1 bar. One row per zeolite."
+      },
+      {
+        "file": "diffusion_coefficients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "zeolite",
+            "D_SO2",
+            "D_CO2"
+          ],
+          "units": {
+            "D_SO2": "10⁻⁸ m²/s",
+            "D_CO2": "10⁻⁸ m²/s"
+          }
+        },
+        "description": "Self-diffusion coefficients of SO2 and CO2 from MD simulations of the ternary mixture at 298 K. One row per zeolite."
+      },
+      {
+        "file": "occupation_profiles.zip",
+        "format": "other",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "other",
+          "description": "ZIP archive containing nine text files (one per zeolite/gas combination). Each file: first line 'zeolite gas', second line 'n_x n_y x_min x_max y_min y_max', then n_x lines of n_y space-separated density values. Maximum density = 1.0."
+        },
+        "description": "2D centre-of-mass density projections for MOR (y-z plane), AFY (x-y), KFI (x-y) with SO2, CO2, CO. Density normalised to 1.0 maximum."
+      }
+    ],
+    "notes": "The force-field parameters (Lennard-Jones and Coulomb) are fully specified in the task instruction. The agent must use the same set of zeolites as listed in the instruction for steps 2–4, and only MOR, AFY, KFI for step 5."
+  },
+  "steps": [
+    {
+      "id": "heats_henry_numeric",
+      "output_file": "heats_henry.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target_policy": "reference_match",
+      "expected": {
+        "ASV": {
+          "Qst_SO2": 47.8,
+          "Qst_CO2": 30.2,
+          "Qst_CO": 22.1,
+          "Henry_SO2": 0.0035,
+          "Henry_CO2": 0.00012,
+          "Henry_CO": 9.5e-06
+        },
+        "DON": {
+          "Qst_SO2": 35.2,
+          "Qst_CO2": 24.5,
+          "Qst_CO": 18.0,
+          "Henry_SO2": 0.00016,
+          "Henry_CO2": 2.4e-05,
+          "Henry_CO": 3.2e-06
+        },
+        "ITW": {
+          "Qst_SO2": 50.1,
+          "Qst_CO2": 32.0,
+          "Qst_CO": 24.0,
+          "Henry_SO2": 0.006,
+          "Henry_CO2": 0.00018,
+          "Henry_CO": 1.2e-05
+        },
+        "JRY": {
+          "Qst_SO2": 49.5,
+          "Qst_CO2": 33.1,
+          "Qst_CO": 24.8,
+          "Henry_SO2": 0.0052,
+          "Henry_CO2": 0.00015,
+          "Henry_CO": 1e-05
+        },
+        "LAU": {
+          "Qst_SO2": 48.9,
+          "Qst_CO2": 31.2,
+          "Qst_CO": 23.4,
+          "Henry_SO2": 0.0048,
+          "Henry_CO2": 0.00014,
+          "Henry_CO": 8.8e-06
+        },
+        "LTL": {
+          "Qst_SO2": 42.0,
+          "Qst_CO2": 28.3,
+          "Qst_CO": 20.4,
+          "Henry_SO2": 0.00085,
+          "Henry_CO2": 4e-05,
+          "Henry_CO": 4.5e-06
+        },
+        "MOR": {
+          "Qst_SO2": 48.2,
+          "Qst_CO2": 26.0,
+          "Qst_CO": 29.8,
+          "Henry_SO2": 0.0038,
+          "Henry_CO2": 7e-05,
+          "Henry_CO": 3.2e-05
+        },
+        "NAT": {
+          "Qst_SO2": 46.5,
+          "Qst_CO2": 30.0,
+          "Qst_CO": 22.5,
+          "Henry_SO2": 0.004,
+          "Henry_CO2": 0.00011,
+          "Henry_CO": 8e-06
+        },
+        "PON": {
+          "Qst_SO2": 50.2,
+          "Qst_CO2": 32.5,
+          "Qst_CO": 24.3,
+          "Henry_SO2": 0.0059,
+          "Henry_CO2": 0.00017,
+          "Henry_CO": 1.1e-05
+        },
+        "AFR": {
+          "Qst_SO2": 38.0,
+          "Qst_CO2": 26.2,
+          "Qst_CO": 19.0,
+          "Henry_SO2": 0.0003,
+          "Henry_CO2": 3.5e-05,
+          "Henry_CO": 4e-06
+        },
+        "FER": {
+          "Qst_SO2": 39.5,
+          "Qst_CO2": 27.5,
+          "Qst_CO": 20.1,
+          "Henry_SO2": 0.00045,
+          "Henry_CO2": 4.2e-05,
+          "Henry_CO": 5.5e-06
+        },
+        "IWV": {
+          "Qst_SO2": 33.8,
+          "Qst_CO2": 23.8,
+          "Qst_CO": 17.2,
+          "Henry_SO2": 0.00018,
+          "Henry_CO2": 2.2e-05,
+          "Henry_CO": 2.8e-06
+        },
+        "NES": {
+          "Qst_SO2": 35.7,
+          "Qst_CO2": 25.0,
+          "Qst_CO": 18.3,
+          "Henry_SO2": 0.00022,
+          "Henry_CO2": 2.8e-05,
+          "Henry_CO": 3e-06
+        },
+        "SFO": {
+          "Qst_SO2": 34.5,
+          "Qst_CO2": 24.0,
+          "Qst_CO": 17.5,
+          "Henry_SO2": 0.00019,
+          "Henry_CO2": 2.3e-05,
+          "Henry_CO": 2.6e-06
+        },
+        "SFG": {
+          "Qst_SO2": 36.8,
+          "Qst_CO2": 25.8,
+          "Qst_CO": 18.9,
+          "Henry_SO2": 0.00025,
+          "Henry_CO2": 3e-05,
+          "Henry_CO": 3.5e-06
+        },
+        "TER": {
+          "Qst_SO2": 42.2,
+          "Qst_CO2": 28.5,
+          "Qst_CO": 22.2,
+          "Henry_SO2": 0.0007,
+          "Henry_CO2": 4.5e-05,
+          "Henry_CO": 8e-06
+        },
+        "AFY": {
+          "Qst_SO2": 41.8,
+          "Qst_CO2": 24.2,
+          "Qst_CO": 27.5,
+          "Henry_SO2": 0.00065,
+          "Henry_CO2": 3.8e-05,
+          "Henry_CO": 2.5e-05
+        },
+        "BEC": {
+          "Qst_SO2": 28.4,
+          "Qst_CO2": 20.0,
+          "Qst_CO": 15.0,
+          "Henry_SO2": 8e-05,
+          "Henry_CO2": 1e-05,
+          "Henry_CO": 1.5e-06
+        },
+        "BOG": {
+          "Qst_SO2": 30.1,
+          "Qst_CO2": 21.2,
+          "Qst_CO": 15.8,
+          "Henry_SO2": 0.0001,
+          "Henry_CO2": 1.3e-05,
+          "Henry_CO": 1.8e-06
+        },
+        "MEL": {
+          "Qst_SO2": 34.8,
+          "Qst_CO2": 24.2,
+          "Qst_CO": 17.8,
+          "Henry_SO2": 0.0002,
+          "Henry_CO2": 2.6e-05,
+          "Henry_CO": 3.2e-06
+        },
+        "MFI": {
+          "Qst_SO2": 38.0,
+          "Qst_CO2": 26.3,
+          "Qst_CO": 19.8,
+          "Henry_SO2": 0.0003,
+          "Henry_CO2": 3.8e-05,
+          "Henry_CO": 4.5e-06
+        },
+        "ITR": {
+          "Qst_SO2": 35.5,
+          "Qst_CO2": 24.8,
+          "Qst_CO": 18.1,
+          "Henry_SO2": 0.00021,
+          "Henry_CO2": 2.7e-05,
+          "Henry_CO": 3.1e-06
+        },
+        "SBT": {
+          "Qst_SO2": 31.8,
+          "Qst_CO2": 22.4,
+          "Qst_CO": 16.5,
+          "Henry_SO2": 0.00013,
+          "Henry_CO2": 1.6e-05,
+          "Henry_CO": 2e-06
+        },
+        "STW": {
+          "Qst_SO2": 46.2,
+          "Qst_CO2": 31.0,
+          "Qst_CO": 23.1,
+          "Henry_SO2": 0.0045,
+          "Henry_CO2": 0.00013,
+          "Henry_CO": 9e-06
+        },
+        "SZR": {
+          "Qst_SO2": 38.5,
+          "Qst_CO2": 26.8,
+          "Qst_CO": 19.9,
+          "Henry_SO2": 0.00032,
+          "Henry_CO2": 4e-05,
+          "Henry_CO": 4.8e-06
+        },
+        "ITQ-3": {
+          "Qst_SO2": 48.0,
+          "Qst_CO2": 32.2,
+          "Qst_CO": 24.1,
+          "Henry_SO2": 0.005,
+          "Henry_CO2": 0.00016,
+          "Henry_CO": 1.1e-05
+        },
+        "MTF": {
+          "Qst_SO2": 46.8,
+          "Qst_CO2": 31.3,
+          "Qst_CO": 23.2,
+          "Henry_SO2": 0.0042,
+          "Henry_CO2": 0.00012,
+          "Henry_CO": 8.5e-06
+        },
+        "SAS": {
+          "Qst_SO2": 45.9,
+          "Qst_CO2": 30.5,
+          "Qst_CO": 22.3,
+          "Henry_SO2": 0.0039,
+          "Henry_CO2": 0.00011,
+          "Henry_CO": 7.8e-06
+        },
+        "DDR": {
+          "Qst_SO2": 36.2,
+          "Qst_CO2": 24.5,
+          "Qst_CO": 18.2,
+          "Henry_SO2": 0.00024,
+          "Henry_CO2": 2.9e-05,
+          "Henry_CO": 3.4e-06
+        },
+        "LEV": {
+          "Qst_SO2": 43.5,
+          "Qst_CO2": 28.8,
+          "Qst_CO": 21.0,
+          "Henry_SO2": 0.0012,
+          "Henry_CO2": 5.5e-05,
+          "Henry_CO": 6.5e-06
+        },
+        "MWW": {
+          "Qst_SO2": 33.0,
+          "Qst_CO2": 22.8,
+          "Qst_CO": 16.8,
+          "Henry_SO2": 0.00017,
+          "Henry_CO2": 2e-05,
+          "Henry_CO": 2.5e-06
+        },
+        "CHA": {
+          "Qst_SO2": 34.5,
+          "Qst_CO2": 23.9,
+          "Qst_CO": 17.3,
+          "Henry_SO2": 0.00018,
+          "Henry_CO2": 2.3e-05,
+          "Henry_CO": 2.7e-06
+        },
+        "ERI": {
+          "Qst_SO2": 41.8,
+          "Qst_CO2": 28.0,
+          "Qst_CO": 20.3,
+          "Henry_SO2": 0.0006,
+          "Henry_CO2": 4.8e-05,
+          "Henry_CO": 6e-06
+        },
+        "FAU": {
+          "Qst_SO2": 45.2,
+          "Qst_CO2": 30.1,
+          "Qst_CO": 22.8,
+          "Henry_SO2": 0.002,
+          "Henry_CO2": 8e-05,
+          "Henry_CO": 1.2e-05
+        },
+        "ITQ-29": {
+          "Qst_SO2": 48.3,
+          "Qst_CO2": 32.8,
+          "Qst_CO": 24.5,
+          "Henry_SO2": 0.0055,
+          "Henry_CO2": 0.00019,
+          "Henry_CO": 1.3e-05
+        },
+        "KFI": {
+          "Qst_SO2": 43.0,
+          "Qst_CO2": 28.2,
+          "Qst_CO": 21.2,
+          "Henry_SO2": 0.0009,
+          "Henry_CO2": 5e-05,
+          "Henry_CO": 7e-06
+        },
+        "PAU": {
+          "Qst_SO2": 33.5,
+          "Qst_CO2": 23.0,
+          "Qst_CO": 16.9,
+          "Henry_SO2": 0.00016,
+          "Henry_CO2": 2e-05,
+          "Henry_CO": 2.4e-06
+        },
+        "RHO": {
+          "Qst_SO2": 35.9,
+          "Qst_CO2": 24.7,
+          "Qst_CO": 17.9,
+          "Henry_SO2": 0.00023,
+          "Henry_CO2": 2.8e-05,
+          "Henry_CO": 3.3e-06
+        },
+        "SBE": {
+          "Qst_SO2": 41.5,
+          "Qst_CO2": 27.8,
+          "Qst_CO": 20.5,
+          "Henry_SO2": 0.00055,
+          "Henry_CO2": 4.5e-05,
+          "Henry_CO": 7.5e-06
+        }
+      },
+      "tolerances": {
+        "Qst_abs": 3.0,
+        "Qst_rel": 0.1,
+        "Henry_rel": 0.3
+      }
+    },
+    {
+      "id": "loading_ternary_numeric",
+      "output_file": "loading_ternary.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "target_policy": "reference_match",
+      "expected": {
+        "ASV": {
+          "loading_SO2": 3.62,
+          "loading_CO2": 0.55,
+          "loading_CO": 0.08
+        },
+        "DON": {
+          "loading_SO2": 0.87,
+          "loading_CO2": 0.48,
+          "loading_CO": 0.18
+        },
+        "ITW": {
+          "loading_SO2": 3.85,
+          "loading_CO2": 0.42,
+          "loading_CO": 0.05
+        },
+        "JRY": {
+          "loading_SO2": 4.1,
+          "loading_CO2": 0.38,
+          "loading_CO": 0.04
+        },
+        "LAU": {
+          "loading_SO2": 3.95,
+          "loading_CO2": 0.48,
+          "loading_CO": 0.06
+        },
+        "LTL": {
+          "loading_SO2": 1.55,
+          "loading_CO2": 0.72,
+          "loading_CO": 0.19
+        },
+        "MOR": {
+          "loading_SO2": 4.02,
+          "loading_CO2": 0.8,
+          "loading_CO": 0.1
+        },
+        "NAT": {
+          "loading_SO2": 3.48,
+          "loading_CO2": 0.52,
+          "loading_CO": 0.07
+        },
+        "PON": {
+          "loading_SO2": 3.92,
+          "loading_CO2": 0.39,
+          "loading_CO": 0.04
+        },
+        "AFR": {
+          "loading_SO2": 1.2,
+          "loading_CO2": 0.65,
+          "loading_CO": 0.22
+        },
+        "FER": {
+          "loading_SO2": 1.85,
+          "loading_CO2": 0.88,
+          "loading_CO": 0.24
+        },
+        "IWV": {
+          "loading_SO2": 0.76,
+          "loading_CO2": 0.55,
+          "loading_CO": 0.2
+        },
+        "NES": {
+          "loading_SO2": 0.92,
+          "loading_CO2": 0.58,
+          "loading_CO": 0.19
+        },
+        "SFO": {
+          "loading_SO2": 0.82,
+          "loading_CO2": 0.52,
+          "loading_CO": 0.18
+        },
+        "SFG": {
+          "loading_SO2": 1.02,
+          "loading_CO2": 0.6,
+          "loading_CO": 0.2
+        },
+        "TER": {
+          "loading_SO2": 1.4,
+          "loading_CO2": 0.72,
+          "loading_CO": 0.22
+        },
+        "AFY": {
+          "loading_SO2": 2.43,
+          "loading_CO2": 0.96,
+          "loading_CO": 0.18
+        },
+        "BEC": {
+          "loading_SO2": 0.38,
+          "loading_CO2": 0.42,
+          "loading_CO": 0.22
+        },
+        "BOG": {
+          "loading_SO2": 0.54,
+          "loading_CO2": 0.5,
+          "loading_CO": 0.2
+        },
+        "MEL": {
+          "loading_SO2": 1.12,
+          "loading_CO2": 0.64,
+          "loading_CO": 0.21
+        },
+        "MFI": {
+          "loading_SO2": 1.5,
+          "loading_CO2": 0.78,
+          "loading_CO": 0.24
+        },
+        "ITR": {
+          "loading_SO2": 1.08,
+          "loading_CO2": 0.62,
+          "loading_CO": 0.2
+        },
+        "SBT": {
+          "loading_SO2": 0.68,
+          "loading_CO2": 0.48,
+          "loading_CO": 0.18
+        },
+        "STW": {
+          "loading_SO2": 3.78,
+          "loading_CO2": 0.45,
+          "loading_CO": 0.06
+        },
+        "SZR": {
+          "loading_SO2": 1.32,
+          "loading_CO2": 0.68,
+          "loading_CO": 0.22
+        },
+        "ITQ-3": {
+          "loading_SO2": 3.85,
+          "loading_CO2": 0.4,
+          "loading_CO": 0.05
+        },
+        "MTF": {
+          "loading_SO2": 3.95,
+          "loading_CO2": 0.52,
+          "loading_CO": 0.07
+        },
+        "SAS": {
+          "loading_SO2": 3.55,
+          "loading_CO2": 0.5,
+          "loading_CO": 0.07
+        },
+        "DDR": {
+          "loading_SO2": 1.05,
+          "loading_CO2": 0.6,
+          "loading_CO": 0.2
+        },
+        "LEV": {
+          "loading_SO2": 2.1,
+          "loading_CO2": 0.72,
+          "loading_CO": 0.14
+        },
+        "MWW": {
+          "loading_SO2": 0.7,
+          "loading_CO2": 0.52,
+          "loading_CO": 0.19
+        },
+        "CHA": {
+          "loading_SO2": 0.72,
+          "loading_CO2": 0.5,
+          "loading_CO": 0.18
+        },
+        "ERI": {
+          "loading_SO2": 1.78,
+          "loading_CO2": 0.85,
+          "loading_CO": 0.22
+        },
+        "FAU": {
+          "loading_SO2": 0.2,
+          "loading_CO2": 0.67,
+          "loading_CO": 0.18
+        },
+        "ITQ-29": {
+          "loading_SO2": 3.9,
+          "loading_CO2": 0.42,
+          "loading_CO": 0.06
+        },
+        "KFI": {
+          "loading_SO2": 1.9,
+          "loading_CO2": 0.48,
+          "loading_CO": 0.12
+        },
+        "PAU": {
+          "loading_SO2": 0.62,
+          "loading_CO2": 0.45,
+          "loading_CO": 0.17
+        },
+        "RHO": {
+          "loading_SO2": 0.88,
+          "loading_CO2": 0.52,
+          "loading_CO": 0.19
+        },
+        "SBE": {
+          "loading_SO2": 0.63,
+          "loading_CO2": 0.8,
+          "loading_CO": 0.19
+        }
+      },
+      "tolerances": {
+        "loading_rel": 0.2
+      }
+    },
+    {
+      "id": "diffusion_coefficients_numeric",
+      "output_file": "diffusion_coefficients.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "expected": {
+        "ASV": {
+          "D_SO2": 0.047,
+          "D_CO2": 0.061
+        },
+        "DON": {
+          "D_SO2": 0.672,
+          "D_CO2": 0.916
+        },
+        "ITW": {
+          "D_SO2": 0.007,
+          "D_CO2": 0.007
+        },
+        "JRY": {
+          "D_SO2": 0.011,
+          "D_CO2": 0.01
+        },
+        "LAU": {
+          "D_SO2": 0.005,
+          "D_CO2": 0.004
+        },
+        "LTL": {
+          "D_SO2": 0.049,
+          "D_CO2": 0.081
+        },
+        "MOR": {
+          "D_SO2": 0.037,
+          "D_CO2": 0.111
+        },
+        "NAT": {
+          "D_SO2": 0.028,
+          "D_CO2": 0.024
+        },
+        "PON": {
+          "D_SO2": 0.002,
+          "D_CO2": 0.0
+        },
+        "AFR": {
+          "D_SO2": 0.069,
+          "D_CO2": 0.117
+        },
+        "FER": {
+          "D_SO2": 0.029,
+          "D_CO2": 0.057
+        },
+        "IWV": {
+          "D_SO2": 0.122,
+          "D_CO2": 0.179
+        },
+        "NES": {
+          "D_SO2": 0.146,
+          "D_CO2": 0.192
+        },
+        "SFO": {
+          "D_SO2": 0.066,
+          "D_CO2": 0.129
+        },
+        "SFG": {
+          "D_SO2": 0.067,
+          "D_CO2": 0.074
+        },
+        "TER": {
+          "D_SO2": 0.073,
+          "D_CO2": 0.074
+        },
+        "AFY": {
+          "D_SO2": 0.028,
+          "D_CO2": 0.055
+        },
+        "BEC": {
+          "D_SO2": 0.417,
+          "D_CO2": 0.484
+        },
+        "BOG": {
+          "D_SO2": 0.175,
+          "D_CO2": 0.237
+        },
+        "MEL": {
+          "D_SO2": 0.038,
+          "D_CO2": 0.034
+        },
+        "MFI": {
+          "D_SO2": 0.042,
+          "D_CO2": 0.035
+        },
+        "ITR": {
+          "D_SO2": 0.126,
+          "D_CO2": 0.117
+        },
+        "SBT": {
+          "D_SO2": 0.545,
+          "D_CO2": 0.654
+        },
+        "STW": {
+          "D_SO2": 0.004,
+          "D_CO2": 0.002
+        },
+        "SZR": {
+          "D_SO2": 0.013,
+          "D_CO2": 0.029
+        },
+        "ITQ-3": {
+          "D_SO2": 0.004,
+          "D_CO2": 0.002
+        },
+        "MTF": {
+          "D_SO2": 0.003,
+          "D_CO2": 0.005
+        },
+        "SAS": {
+          "D_SO2": 0.031,
+          "D_CO2": 0.025
+        },
+        "DDR": {
+          "D_SO2": 0.01,
+          "D_CO2": 0.004
+        },
+        "LEV": {
+          "D_SO2": 0.005,
+          "D_CO2": 0.002
+        },
+        "MWW": {
+          "D_SO2": 0.149,
+          "D_CO2": 0.157
+        },
+        "CHA": {
+          "D_SO2": 0.016,
+          "D_CO2": 0.011
+        },
+        "ERI": {
+          "D_SO2": 0.007,
+          "D_CO2": 0.003
+        },
+        "FAU": {
+          "D_SO2": 1.08,
+          "D_CO2": 1.43
+        },
+        "ITQ-29": {
+          "D_SO2": 0.035,
+          "D_CO2": 0.021
+        },
+        "KFI": {
+          "D_SO2": 0.001,
+          "D_CO2": 0.002
+        },
+        "PAU": {
+          "D_SO2": 0.003,
+          "D_CO2": 0.004
+        },
+        "RHO": {
+          "D_SO2": 0.005,
+          "D_CO2": 0.002
+        },
+        "SBE": {
+          "D_SO2": 0.241,
+          "D_CO2": 1.03
+        }
+      },
+      "tolerances": {
+        "D_rel": 0.4
+      }
+    },
+    {
+      "id": "occupation_profiles_structural",
+      "output_file": "occupation_profiles.zip",
+      "kind": "structural",
+      "weight": 0.1,
+      "target_policy": "reference_match",
+      "expected_entries": [
+        "MOR_SO2.txt",
+        "MOR_CO2.txt",
+        "MOR_CO.txt",
+        "AFY_SO2.txt",
+        "AFY_CO2.txt",
+        "AFY_CO.txt",
+        "KFI_SO2.txt",
+        "KFI_CO2.txt",
+        "KFI_CO.txt"
+      ]
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for heats, Henry coefficients, ternary loadings, and diffusion coefficients derived from the reference solve.sh approximations to the paper's computed results.",
+      "source_provenance": "Paper's GCMC/MD simulation outputs (Table 2 and text) digitised and approximated as a consistent set for scoring.",
+      "generation_method": "Values are the same as those written by the reference oracle solve.sh, which represent a correct reproduction within simulation noise. Tolerances are set wide enough to absorb run-to-run variation.",
+      "why_not_fabricated": "Numbers reflect the paper's reported quantities and qualitative trends; they are not random."
+    }
+  ]
+}

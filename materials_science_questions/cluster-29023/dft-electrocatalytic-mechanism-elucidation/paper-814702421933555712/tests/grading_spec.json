@@ -1,0 +1,269 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Cannot rerun DFT in checker; result-level compare against paper-reported values with tolerances and trend checks.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for substitution energies, Fukui functions, CO adsorption energies, bond lengths, and trend rules",
+      "source_provenance": "Paper Tables 2 and 3 and associated text (DOI 10.1016/j.apcatb.2014.08.021)",
+      "generation_method": "Direct extraction from the paper",
+      "why_not_fabricated": "Values are the actual reported DFT results, not invented."
+    }
+  ],
+  "steps": [
+    {
+      "id": "substitution_energies",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": {
+        "Mn(1)": -331.5,
+        "Mn(2)": -281.4
+      },
+      "tolerance": 15.0,
+      "unit": "kJ_mol"
+    },
+    {
+      "id": "fukui_functions",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "weight": 0.3,
+      "tolerance": 0.01,
+      "targets": [
+        {
+          "material": "K-OMS-2",
+          "atom": "K",
+          "f_minus": 0.024
+        },
+        {
+          "material": "K-OMS-2",
+          "atom": "Mn(1)",
+          "f_minus": 0.044
+        },
+        {
+          "material": "K-OMS-2",
+          "atom": "Mn(2)",
+          "f_minus": 0.026
+        },
+        {
+          "material": "Nb(1)-K-OMS-2",
+          "atom": "K",
+          "f_minus": 0.024
+        },
+        {
+          "material": "Nb(1)-K-OMS-2",
+          "atom": "Mn(1)",
+          "f_minus": 0.044
+        },
+        {
+          "material": "Nb(1)-K-OMS-2",
+          "atom": "Mn(2)",
+          "f_minus": 0.025
+        },
+        {
+          "material": "Nb(1)-K-OMS-2",
+          "atom": "Nb",
+          "f_minus": 0.044
+        },
+        {
+          "material": "Nb(2)-K-OMS-2",
+          "atom": "K",
+          "f_minus": 0.01
+        },
+        {
+          "material": "Nb(2)-K-OMS-2",
+          "atom": "Mn(1)",
+          "f_minus": 0.047
+        },
+        {
+          "material": "Nb(2)-K-OMS-2",
+          "atom": "Mn(2)",
+          "f_minus": 0.032
+        },
+        {
+          "material": "Nb(2)-K-OMS-2",
+          "atom": "Nb",
+          "f_minus": 0.086
+        }
+      ]
+    },
+    {
+      "id": "co_adsorption_energies",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "weight": 0.25,
+      "tolerance": 15.0,
+      "targets": [
+        {
+          "site": "Mn(1)",
+          "adsorption_energy_kJ_mol": -88.5
+        },
+        {
+          "site": "Mn(2)",
+          "adsorption_energy_kJ_mol": -53.5
+        },
+        {
+          "site": "Nb(1)",
+          "adsorption_energy_kJ_mol": -110.1
+        },
+        {
+          "site": "Nb(2)",
+          "adsorption_energy_kJ_mol": -131.4
+        }
+      ]
+    },
+    {
+      "id": "co_bond_lengths",
+      "output_file": "dft_results.json",
+      "kind": "numeric",
+      "weight": 0.15,
+      "tolerance": 0.05,
+      "targets": [
+        {
+          "site": "Mn(1)",
+          "bond_length_angstrom": 2.04
+        },
+        {
+          "site": "Mn(2)",
+          "bond_length_angstrom": 2.0
+        },
+        {
+          "site": "Nb(1)",
+          "bond_length_angstrom": 2.24
+        },
+        {
+          "site": "Nb(2)",
+          "bond_length_angstrom": 2.21
+        }
+      ]
+    },
+    {
+      "id": "trend_checks",
+      "output_file": "dft_results.json",
+      "kind": "rubric",
+      "weight": 0.1,
+      "checks": [
+        {
+          "description": "In Nb(2)-K-OMS-2, f_minus(Nb) > f_minus(Mn(1))",
+          "type": "inequality"
+        },
+        {
+          "description": "In Nb(2)-K-OMS-2, f_minus(Nb) > f_minus(K)",
+          "type": "inequality"
+        },
+        {
+          "description": "CO adsorption energy on Nb(2) is more negative than on Mn(1)",
+          "type": "inequality"
+        },
+        {
+          "description": "CO adsorption energy on Nb(1) is more negative than on Mn(2)",
+          "type": "inequality"
+        }
+      ]
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "substitution_energies",
+            "fukui_functions",
+            "co_adsorption"
+          ],
+          "substitution_energies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "site",
+                "energy_kJ_mol"
+              ],
+              "properties": {
+                "site": {
+                  "type": "string",
+                  "enum": [
+                    "Mn(1)",
+                    "Mn(2)"
+                  ]
+                },
+                "energy_kJ_mol": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "fukui_functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "material",
+                "atom",
+                "f_minus"
+              ],
+              "properties": {
+                "material": {
+                  "type": "string",
+                  "enum": [
+                    "K-OMS-2",
+                    "Nb(1)-K-OMS-2",
+                    "Nb(2)-K-OMS-2"
+                  ]
+                },
+                "atom": {
+                  "type": "string",
+                  "enum": [
+                    "K",
+                    "Mn(1)",
+                    "Mn(2)",
+                    "Nb"
+                  ]
+                },
+                "f_minus": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "co_adsorption": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "site",
+                "bond_length_angstrom",
+                "adsorption_energy_kJ_mol"
+              ],
+              "properties": {
+                "site": {
+                  "type": "string",
+                  "enum": [
+                    "Mn(1)",
+                    "Mn(2)",
+                    "Nb(1)",
+                    "Nb(2)"
+                  ]
+                },
+                "bond_length_angstrom": {
+                  "type": "number"
+                },
+                "adsorption_energy_kJ_mol": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "This JSON file collects all DFT-computed numerical results needed to verify the paper's claim that Nb substitution is exothermic and creates strong CO adsorption sites."
+      }
+    ],
+    "notes": "Scoring uses threshold-or-better for energies (more negative is better) and reference-match with tolerances for Fukui values and bond lengths. Additionally, monotonic trends (e.g., f⁻(Nb) > f⁻(Mn) in Nb(2)-K-OMS-2, CO adsorption energies more negative on Nb than on Mn) must be satisfied."
+  }
+}

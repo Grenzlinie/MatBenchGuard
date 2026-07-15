@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Paper-reported sound velocities, Debye temperature, and thermal conductivity are fixed outputs of a deterministic calculation. The formula for k_min in the instruction may require implicit inclusion of Avogadro's number; direct comparison against paper gold from Table 4 avoids ambiguity and provides a reliable verification.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "thermal_properties.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for sound velocities, Debye temperature, and minimum thermal conductivity for each compound.",
+      "source_provenance": "Paper Table 4",
+      "generation_method": "Extracted directly from the published Table 4 in Computational Materials Science 54 (2012) 336-344.",
+      "why_not_fabricated": "These are the exact published results; a correct reproduction must produce these numbers (within tolerance). No fabrication."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "compound",
+            "v_l",
+            "v_t",
+            "v_m",
+            "theta_D",
+            "k_min"
+          ],
+          "units": {
+            "v_l": "m/s",
+            "v_t": "m/s",
+            "v_m": "m/s",
+            "theta_D": "K",
+            "k_min": "W/m/K"
+          }
+        },
+        "description": "CSV with computed sound velocities, Debye temperature, and minimum thermal conductivity for each compound. Checker compares theta_D and k_min to hidden reference values within tolerances and verifies the decreasing trend in compound order."
+      }
+    ],
+    "notes": "The input data is extracted from the paper's DFT results; the agent only performs the final property calculation."
+  },
+  "steps": [
+    {
+      "id": "thermal_properties_values",
+      "output_file": "thermal_properties.csv",
+      "weight": 0.85,
+      "kind": "numeric",
+      "description": "Check that all computed quantities match paper Table 4 within per-column absolute tolerances.",
+      "gold": {
+        "ScBRh3": {
+          "v_l": 6149,
+          "v_t": 3315,
+          "v_m": 4366,
+          "theta_D": 535,
+          "k_min": 1.023
+        },
+        "YBRh3": {
+          "v_l": 5865,
+          "v_t": 3157,
+          "v_m": 4159,
+          "theta_D": 496,
+          "k_min": 0.922
+        },
+        "LuBRh3": {
+          "v_l": 5320,
+          "v_t": 2876,
+          "v_m": 3785,
+          "theta_D": 458,
+          "k_min": 0.862
+        },
+        "LaBRh3": {
+          "v_l": 5255,
+          "v_t": 2754,
+          "v_m": 3651,
+          "theta_D": 433,
+          "k_min": 0.848
+        }
+      },
+      "tolerances": {
+        "v_l": 1,
+        "v_t": 1,
+        "v_m": 1,
+        "theta_D": 0.6,
+        "k_min": 0.001
+      }
+    },
+    {
+      "id": "ordering",
+      "output_file": "thermal_properties.csv",
+      "weight": 0.15,
+      "kind": "structural",
+      "description": "Verify that θ_D and k_min strictly decrease in the sequence ScBRh3 → YBRh3 → LuBRh3 → LaBRh3.",
+      "expected_order": [
+        "ScBRh3",
+        "YBRh3",
+        "LuBRh3",
+        "LaBRh3"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Validate the potential against bulk lattice parameters",
+    "role": "process",
+    "action": "Using GULP and the Hart-Bates potential, perform an energy minimization of the R-3m LiCoO2 structure and compute the optimized lattice parameters. Confirm that the error relative to the experimental reference (a=2.815 Å, c=14.05 Å, c/a=4.99) is acceptably small.",
+    "output_file": "",
+    "evidence": "potential_validation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Check that the adopted two-body potential correctly reproduces the bulk LiCoO2 crystal structure before using it for boundary calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Validate bulk Li-ion migration barriers",
+    "role": "process",
+    "action": "Using the validated potential, calculate the Li-ion migration energy barriers in bulk LiCoO2 for the O-O (octahedral-to-octahedral) and O-T-O (octahedral-tetrahedral-octahedral) mechanisms using the Mott-Littleton method in GULP. Verify that the computed barriers are consistent with published DFT reference values (O-O ~0.74 eV, O-T-O ~0.23 eV).",
+    "output_file": "",
+    "evidence": "bulk_migration.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Verify that the empirical potential reproduces known bulk migration barriers before applying it to the grain boundary.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Construct the near-Σ2 twist boundary bicrystal model",
+    "role": "process",
+    "action": "Build an initial bicrystal model (576 atoms) by bisecting the bulk LiCoO2 crystal and rotating one half by 180° about the [44̄01] axis, with the (1̄104) plane as the interface. This creates the near-Σ2 coincident site lattice (CSL) configuration.",
+    "output_file": "",
+    "evidence": "initial_model.gin",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the starting atomistic model of the twin boundary as described in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Find the minimum-energy grain boundary structure via rigid-body translation search",
+    "role": "process",
+    "action": "Systematically translate one crystal relative to the other in increments of about 0.5 Å in two orthogonal directions parallel to the interface. For each translation (at least 200 configurations), perform an energy minimization using GULP with fixed in-plane dimensions and 3D periodic boundary conditions. Identify the lowest-energy symmetrical configuration as the relaxed grain boundary structure.",
+    "output_file": "",
+    "evidence": "gb_minimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Carry out the systematic rigid-body translation search and geometry optimization to obtain the relaxed grain boundary structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Compute grain boundary energy, surface energy, and work of cohesion",
+    "role": "scored",
+    "action": "From the relaxed grain boundary structure, compute the grain boundary excess energy (J/m²). Construct a slab model for the free (1̄104) surface and calculate its energy (J/m²) using the same potential. Combine the two values to obtain the work of cohesion (J/m²). Save the three energies to step_01_boundary_energy.json.",
+    "output_file": "step_01_boundary_energy.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Report the grain boundary excess energy (J/m²), free surface energy (J/m²), and work of cohesion (J/m²) for the near-Σ2 (1̄104)/[44̄01] twist boundary.",
+    "output_schema": "{ \"grain_boundary_energy\": <float, J/m²>, \"surface_energy\": <float, J/m²>, \"work_of_cohesion\": <float, J/m²> }"
+  },
+  {
+    "id": "step_06",
+    "title": "Compute Li ion migration barriers near the grain boundary",
+    "role": "scored",
+    "action": "Using the relaxed grain boundary structure, calculate Li ion migration energy barriers for both the O-O and O-T-O mechanisms at increasing distances from the interface plane. For the O-T-O mechanism, consider both sub-cases where the extra vacancy is on the boundary side or the bulk side. Cover distances of 0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2 nm for trajectories oblique and parallel to the boundary. Save the results to step_02_migration_barriers.csv.",
+    "output_file": "step_02_migration_barriers.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Report activation energies (eV) as a function of distance from the boundary (nm) for each mechanism and vacancy arrangement.",
+    "output_schema": "CSV with columns: distance_from_interface (float, nm), mechanism (string, one of 'O-O' or 'O-T-O_boundary_vac' or 'O-T-O_bulk_vac'), activation_energy (float, eV)."
+  }
+]

@@ -1,0 +1,269 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Derived elastic/average quantities are recomputed from elastic constants and lattice parameter; DFT-produced quantities are compared to paper gold as T0.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_lattice_parameter.txt": "reference_match",
+    "step_02_elastic_constants.json": "reference_match",
+    "step_03_polycrystalline_moduli.json": "metric_recompute",
+    "step_07_derived_properties.json": "metric_recompute",
+    "step_04_tensile_strength.json": "reference_match",
+    "step_05_phonon_frequencies.json": "reference_match",
+    "step_06_thermodynamic_properties.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for lattice parameter, elastic constants, polycrystalline moduli, tensile strength, phonon frequencies, and Dulong-Petit limit",
+      "source_provenance": "Paper Table 1 and Section 3.2 (no-spin data)",
+      "generation_method": "Copied verbatim from the published paper",
+      "why_not_fabricated": "Direct paper-reported values"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_lattice_parameter.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "required": "lattice_parameter_angstrom"
+        },
+        "description": "Equilibrium lattice parameter a₀ (Å) from DFT variable‑cell relaxation."
+      },
+      {
+        "file": "step_02_elastic_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "C11_GPa": "number",
+            "C12_GPa": "number",
+            "C44_GPa": "number"
+          }
+        },
+        "description": "Single‑crystal elastic constants C₁₁, C₁₂, C₄₄ in GPa."
+      },
+      {
+        "file": "step_03_polycrystalline_moduli.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "B_VRH_GPa": "number",
+            "G_VRH_GPa": "number",
+            "E_VRH_GPa": "number",
+            "Poisson_ratio": "number",
+            "G_B_ratio": "number",
+            "E_100_GPa": "number",
+            "E_110_GPa": "number",
+            "E_111_GPa": "number"
+          }
+        },
+        "description": "Voigt‑Reuss‑Hill polycrystalline moduli, brittleness indicators, and directional Young's modulus values along [100], [110], [111]. The checker recomputes all quantities from the submitted elastic constants and verifies consistency."
+      },
+      {
+        "file": "step_07_derived_properties.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Vs_km_s": "number",
+            "Vp_km_s": "number",
+            "Vm_km_s": "number",
+            "Debye_temperature_K": "number",
+            "Hardness_Hv_GPa": "number"
+          }
+        },
+        "description": "Sound velocities, Debye temperature, and Vickers hardness derived from elastic moduli."
+      },
+      {
+        "file": "step_04_tensile_strength.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "direction": "string",
+            "ideal_tensile_strength_GPa": "number",
+            "failure_strain_percent": "number"
+          }
+        },
+        "description": "Ideal tensile strength and strain at failure for the [100] direction from DFT stress‑strain simulation."
+      },
+      {
+        "file": "step_05_phonon_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T1u_DFPT_THz": "number",
+            "T1u_finite_displacement_THz": "number",
+            "T2g_DFPT_THz": "number",
+            "T2g_finite_displacement_THz": "number"
+          }
+        },
+        "description": "Γ‑point optical phonon frequencies (T₁ᵤ and T₂₉) from DFPT and finite‑displacement methods."
+      },
+      {
+        "file": "step_06_thermodynamic_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature_K",
+            "entropy_J_per_mol_K",
+            "heat_capacity_Cv_J_per_mol_K"
+          ],
+          "min_rows": 30
+        },
+        "description": "Lattice entropy and constant‑volume heat capacity vs temperature up to 1500 K. Checked for monotonic increase and approach to the Dulong‑Petit limit."
+      }
+    ],
+    "notes": "All quantities correspond to the cubic fluorite phase of the dihydride. The phonon DOS generated in the process step is required for the phonon frequency and thermodynamic steps. The checker applies appropriate tolerances for DFT code variations and validates internal consistency of polycrystalline moduli and directional Young's modulus values."
+  },
+  "steps": [
+    {
+      "id": "s1",
+      "output_file": "step_01_lattice_parameter.txt",
+      "weight": 0.2,
+      "kind": "numeric",
+      "config": {
+        "gold_a0": 5.03,
+        "tolerance": 0.015,
+        "max_deviation": 0.05
+      }
+    },
+    {
+      "id": "s2",
+      "output_file": "step_02_elastic_constants.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "config": {
+        "gold": {
+          "C11_GPa": 144.87,
+          "C12_GPa": 64.205,
+          "C44_GPa": 76.393
+        },
+        "tolerance": 2.0,
+        "max_deviation": 5.0
+      }
+    },
+    {
+      "id": "s3",
+      "output_file": "step_03_polycrystalline_moduli.json",
+      "weight": 0.1,
+      "kind": "recompute",
+      "config": {
+        "gold": {
+          "B_VRH_GPa": 91.093,
+          "G_VRH_GPa": 59.119,
+          "E_VRH_GPa": 145.813,
+          "Poisson_ratio": 0.233,
+          "G_B_ratio": 0.649
+        },
+        "tolerance": {
+          "B_VRH_GPa": 2.0,
+          "G_VRH_GPa": 1.0,
+          "E_VRH_GPa": 2.0,
+          "Poisson_ratio": 0.01,
+          "G_B_ratio": 0.01
+        },
+        "max_deviation": {
+          "B_VRH_GPa": 4.0,
+          "G_VRH_GPa": 2.0,
+          "E_VRH_GPa": 4.0,
+          "Poisson_ratio": 0.02,
+          "G_B_ratio": 0.02
+        }
+      }
+    },
+    {
+      "id": "s4",
+      "output_file": "step_07_derived_properties.json",
+      "weight": 0.05,
+      "kind": "recompute",
+      "config": {
+        "gold": {
+          "Vs_km_s": 2.53,
+          "Vp_km_s": 4.289,
+          "Vm_km_s": 2.803,
+          "Debye_temperature_K": 379.753,
+          "Hardness_Hv_GPa": 10.116
+        },
+        "tolerance": {
+          "Vs_km_s": 0.1,
+          "Vp_km_s": 0.1,
+          "Vm_km_s": 0.1,
+          "Debye_temperature_K": 5.0,
+          "Hardness_Hv_GPa": 1.0
+        },
+        "max_deviation": {
+          "Vs_km_s": 0.2,
+          "Vp_km_s": 0.2,
+          "Vm_km_s": 0.2,
+          "Debye_temperature_K": 10.0,
+          "Hardness_Hv_GPa": 2.0
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "output_file": "step_04_tensile_strength.json",
+      "weight": 0.2,
+      "kind": "numeric",
+      "config": {
+        "gold": {
+          "strength": 36.9,
+          "strain": 67.3
+        },
+        "tolerance": {
+          "strength": 2.0,
+          "strain": 5.0
+        },
+        "max_deviation": {
+          "strength": 4.0,
+          "strain": 10.0
+        }
+      }
+    },
+    {
+      "id": "s7",
+      "output_file": "step_05_phonon_frequencies.json",
+      "weight": 0.15,
+      "kind": "numeric",
+      "config": {
+        "gold": {
+          "T1u_DFPT_THz": 31.148,
+          "T1u_finite_displacement_THz": 28.52,
+          "T2g_DFPT_THz": 39.106,
+          "T2g_finite_displacement_THz": 32.53
+        },
+        "tolerance": 0.5,
+        "max_deviation": 1.0
+      }
+    },
+    {
+      "id": "s8",
+      "output_file": "step_06_thermodynamic_properties.csv",
+      "weight": 0.1,
+      "kind": "structural",
+      "config": {
+        "min_rows": 30
+      }
+    }
+  ]
+}

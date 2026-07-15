@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All quantities can be recomputed from the provided public constants; the checker recomputes exact gold values and compares to the agent's output with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermodynamic_functions.csv": "reference_match",
+    "consistency_check.json": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_functions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "Phase",
+            "Cp",
+            "H",
+            "S",
+            "Phi"
+          ],
+          "columns": {
+            "T": {
+              "unit": "K",
+              "type": "number"
+            },
+            "Phase": {
+              "type": "string"
+            },
+            "Cp": {
+              "unit": "J/(mol·K)",
+              "type": "number"
+            },
+            "H": {
+              "unit": "J/mol",
+              "type": "number"
+            },
+            "S": {
+              "unit": "J/(mol·K)",
+              "type": "number"
+            },
+            "Phi": {
+              "unit": "J/(mol·K)",
+              "type": "number"
+            }
+          }
+        },
+        "description": "Tabulated thermodynamic functions (heat capacity, enthalpy increment, absolute entropy, reduced Gibbs free energy) of solid Cu2Se from 298.15 K to 1400 K."
+      },
+      {
+        "file": "consistency_check.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "phi_alpha_400",
+            "phi_beta_400",
+            "match"
+          ],
+          "properties": {
+            "phi_alpha_400": {
+              "type": "number",
+              "unit": "J/(mol·K)"
+            },
+            "phi_beta_400": {
+              "type": "number",
+              "unit": "J/(mol·K)"
+            },
+            "match": {
+              "type": "boolean"
+            }
+          }
+        },
+        "description": "Internal consistency check that the reduced Gibbs free energy of the α and β phases are equal at the transition temperature (400 K)."
+      }
+    ],
+    "notes": "All thermodynamic parameters are public constants from the literature and are stated in the task instruction. The hidden reference values are the paper's reported tabulated numbers."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "thermodynamic_functions.csv",
+      "weight": 0.8,
+      "kind": "custom",
+      "description": "Recompute thermodynamic functions from public constants and compare each required row with tolerances."
+    },
+    {
+      "id": "step_02",
+      "output_file": "consistency_check.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "description": "Verify that both Phi values at 400 K match the recomputed gold within 0.1 J/(mol·K) and that match is true."
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All intermediate and final quantities are recomputable from the same public inputs using the published formulas; the checker recomputes lattice constants, densities, phase Debye temperatures, and the effective Debye temperature, then compares the agent's reported values for internal consistency and the recomputed effective Debye temperature to the paper's reported value of 150 K with tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_values.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold_effective_debye_temperature",
+      "source_provenance": "Paper states calculated average Debye temperature θD = 150 K (Fig. 1 and text).",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "This is the paper's reported computational result; the checker verifies that a correctly computed aggregate from the same inputs matches this value."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "phase_compositions",
+            "volume_fractions",
+            "phase_lattice_constants_A",
+            "phase_densities_g_per_cc",
+            "phase_theta_D_K",
+            "theta_D_effective_K"
+          ],
+          "properties": {
+            "phase_compositions": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "volume_fractions": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "phase_lattice_constants_A": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "phase_densities_g_per_cc": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "phase_theta_D_K": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "theta_D_effective_K": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Contains all computed intermediate quantities and the final effective Debye temperature; the checker recomputes theta_D_effective_K from the reported phase densities and Debye temperatures and compares it against the paper's reference value, after first verifying internal consistency of the intermediates."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "compute_effective_debye",
+      "output_file": "computed_values.json",
+      "kind": "recompute",
+      "weight": 1.0,
+      "description": "Recompute all intermediate quantities from public inputs and verify internal consistency of reported lattice constants, densities, phase Debye temperatures, and effective Debye temperature, then compare the recomputed effective Debye temperature to the paper's reported value of 150 K (±5 K).",
+      "targets": {
+        "effective_theta_D_K": {
+          "value": 150,
+          "tolerance": 5
+        }
+      }
+    }
+  ]
+}

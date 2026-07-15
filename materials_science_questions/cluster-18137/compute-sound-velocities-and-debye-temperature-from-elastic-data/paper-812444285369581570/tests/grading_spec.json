@@ -1,0 +1,142 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "We recompute Mössbauer recoilless fractions from the agent's computed Debye temperatures and compare to paper-expected fractions derived from gold temperatures; Debye parameters are compared directly to paper Table 2.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "computed_parameters.csv": "reference_match",
+    "recoilless_fractions.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for Debye frequency tensor components, principal Debye frequencies and temperatures from paper Table 2.",
+      "source_provenance": "Paper Table 2: 'Values of I_t, I_l and I (10^{-41} s^3), Omega_t, Omega_l and Omega (10^{13} s^{-1}) and Theta_t, Theta_l and Theta (K)'.",
+      "generation_method": "Transcribed directly from the published table.",
+      "why_not_fabricated": "These are the exact numbers reported by the paper; they serve as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "computed_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "I_t",
+            "I_l",
+            "I",
+            "Omega_t",
+            "Omega_l",
+            "Omega",
+            "Theta_t",
+            "Theta_l",
+            "Theta"
+          ],
+          "units": {
+            "I_t": "10^{-41} s^3",
+            "I_l": "10^{-41} s^3",
+            "I": "10^{-41} s^3",
+            "Omega_t": "10^13 s^{-1}",
+            "Omega_l": "10^13 s^{-1}",
+            "Omega": "10^13 s^{-1}",
+            "Theta_t": "K",
+            "Theta_l": "K",
+            "Theta": "K"
+          }
+        },
+        "description": "Computed Debye frequency tensor components, principal Debye frequencies, and Debye temperatures for tellurium and antimony."
+      },
+      {
+        "file": "recoilless_fractions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "temperature",
+            "W_t",
+            "W_l",
+            "A"
+          ],
+          "units": {
+            "temperature": "K",
+            "W_t": "dimensionless",
+            "W_l": "dimensionless",
+            "A": "dimensionless"
+          }
+        },
+        "description": "Calculated Mössbauer recoilless fractions W_t and W_l and their ratio A = W_t/W_l for Te (T = 0, 80, 300 K) and Sb (T = 0, 90, 300 K)."
+      }
+    ],
+    "notes": "Numerical values are compared against reference benchmarks from the original study with appropriate tolerances."
+  },
+  "steps": [
+    {
+      "id": "compute_debye_parameters",
+      "output_file": "computed_parameters.csv",
+      "weight": 0.5,
+      "kind": "numeric",
+      "tolerance_rel": 0.005,
+      "gold_rows": [
+        {
+          "material": "Te",
+          "I_t": 14.66,
+          "I_l": 7.816,
+          "I": 12.38,
+          "Omega_t": 1.896,
+          "Omega_l": 2.339,
+          "Omega": 2.007,
+          "Theta_t": 144.8,
+          "Theta_l": 178.7,
+          "Theta": 153.3
+        },
+        {
+          "material": "Sb",
+          "I_t": 3.812,
+          "I_l": 5.381,
+          "I": 4.315,
+          "Omega_t": 2.971,
+          "Omega_l": 2.649,
+          "Omega": 2.847,
+          "Theta_t": 226.9,
+          "Theta_l": 202.3,
+          "Theta": 21.46
+        }
+      ]
+    },
+    {
+      "id": "compute_recoilless_fractions",
+      "output_file": "recoilless_fractions.csv",
+      "weight": 0.5,
+      "kind": "recompute_metric",
+      "tolerance_abs": 0.02,
+      "params": {
+        "k_B_eV_per_K": 8.617333262e-05,
+        "materials": {
+          "Te": {
+            "R_eV": 0.00544,
+            "temps_K": [
+              0,
+              80,
+              300
+            ]
+          },
+          "Sb": {
+            "R_eV": 0.00672,
+            "temps_K": [
+              0,
+              90,
+              300
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

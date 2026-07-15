@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_force_constants",
+    "title": "Compute real-space interatomic force constants of virtual crystal",
+    "role": "process",
+    "action": "Run density-functional linear-response calculation (DFPT) for the virtual crystal (zinc-blende structure with cation pseudopotential equal to the arithmetic average of Ga and Al pseudopotentials) to obtain dynamical matrices D(q) on a q-point grid, Born effective charges, and the static dielectric constant. Subtract the non-analytic long-wavelength Coulomb contribution from D(q) using the ab-initio effective charges and dielectric constant. Fourier-transform the corrected D(q) to real-space interatomic force constants Φ(R). Save Φ as a NumPy file.",
+    "output_file": "",
+    "evidence": "force_constants.npy",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Produces composition-independent force constants used in the mass approximation; essential for all downstream phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_ideal_phonons",
+    "title": "Compute phonon modes for ideal superlattice",
+    "role": "process",
+    "action": "Construct the supercell for the ideal (GaAs)5(AlAs)1 superlattice (18-atom tetragonal 2D unit cell). Assemble the mass-scaled dynamical matrix using the real-space force constants from step_01 and the physical masses of Ga, Al, As on each site. Diagonalize the dynamical matrix to obtain phonon frequencies and displacement eigenvectors.",
+    "output_file": "",
+    "evidence": "ideal_modes.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Intermediate vibrational eigenmodes of the ideal superlattice, used in step_03 to compute Raman spectrum.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_ideal_raman",
+    "title": "Calculate Raman spectrum for ideal superlattice",
+    "role": "scored",
+    "action": "Using the phonon eigenvectors from step_02, compute the Raman intensity for the z(xy)z backscattering configuration on the (001) face employing a bond-polarizability or equivalent Raman selection rule model. Output a CSV of frequency (cm⁻¹) versus intensity (arbitrary units).",
+    "output_file": "ideal_raman.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raman spectrum of the ideal (GaAs)5(AlAs)1 superlattice.",
+    "output_schema": "Two columns: ‘frequency’ (float, cm⁻¹) and ‘intensity’ (float, arbitrary units). At least 200 frequency points covering the range ~0–500 cm⁻¹."
+  },
+  {
+    "id": "step_04_disorder_modes",
+    "title": "Generate phonon modes for intermixed superlattice (disorder averaging)",
+    "role": "process",
+    "action": "Construct approximately 10 independent random realizations of the intermixed (GaAs)4(Al0.78Ga0.22As)1(Al0.22Ga0.78As)1 superlattice using the same 18-atom tetragonal unit cell. For each realization, assign cation sites randomly according to the target concentrations, build the mass-scaled dynamical matrix using the force constants from step_01, diagonalize, and collect all frequencies and eigenvectors. Save the per-realization mode data.",
+    "output_file": "",
+    "evidence": "intermixed_modes_collection.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Raw vibrational data for the intermixed case over multiple realizations, used in step_05 to obtain disorder-averaged Raman spectrum.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_intermixed_raman",
+    "title": "Calculate averaged Raman spectrum for intermixed superlattice",
+    "role": "scored",
+    "action": "For each disorder realization from step_04, compute the Raman intensity using the same configuration and method as step_03. Average the spectra point-wise over all realizations. Output the averaged spectrum as a CSV.",
+    "output_file": "intermixed_raman.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Disorder-averaged Raman spectrum of the intermixed superlattice. This is load-bearing because the correct spectral shape and peak positions can only emerge from the full pipeline (DFPT force constants, mass approximation, disorder averaging).",
+    "output_schema": "Same as ideal_raman.csv: columns ‘frequency’ (cm⁻¹) and ‘intensity’ (a.u.)."
+  },
+  {
+    "id": "step_06_peak_positions",
+    "title": "Extract AlAs-like LO peak positions",
+    "role": "scored",
+    "action": "From ideal_raman.csv, locate the highest peak in the AlAs-like frequency range (350–410 cm⁻¹) as the ideal main peak. From intermixed_raman.csv, locate the highest peak in the same range as the intermixed main peak, and also identify the most prominent additional peak on the lower-frequency side of the main peak (if any) as the secondary peak. Write the results to peak_positions.json.",
+    "output_file": "peak_positions.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Extracted peak frequencies summarizing the key disorder-induced spectral changes. The checker validates relative order and shift magnitudes.",
+    "output_schema": "JSON object with keys: ‘ideal_main_peak’ (float, cm⁻¹), ‘intermixed_main_peak’ (float, cm⁻¹), ‘intermixed_secondary_peak’ (float or null if not found)."
+  }
+]

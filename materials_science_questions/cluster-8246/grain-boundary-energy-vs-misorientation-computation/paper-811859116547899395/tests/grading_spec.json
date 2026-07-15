@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 recompute from the agent's aggregated CSVs and JSON is feasible: melting confirmation (S_centre, energy) can be read and checked; density profiles can be compared; comparison metrics can be cross-validated against the underlying CSVs. No external hidden labels are required.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "melting_confirmation.csv": "metric_recompute",
+    "density_profile_heating_300K.csv": "structural_audit",
+    "density_profile_quenching_300K.csv": "structural_audit",
+    "comparison_metrics.json": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "melting_confirmation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature",
+            "S_centre",
+            "energy_per_atom"
+          ],
+          "units": {
+            "temperature": "K",
+            "S_centre": "dimensionless",
+            "energy_per_atom": "eV/atom"
+          }
+        },
+        "description": "Table of centre static structure factor and internal energy per atom in the GB region versus temperature, used to confirm the interface melting transition."
+      },
+      {
+        "file": "density_profile_heating_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Y_position",
+            "density"
+          ],
+          "units": {
+            "Y_position": "a0",
+            "density": "atoms/a0^3"
+          }
+        },
+        "description": "Atom density profile along Y from the heating simulation at 300 K."
+      },
+      {
+        "file": "density_profile_quenching_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Y_position",
+            "density"
+          ],
+          "units": {
+            "Y_position": "a0",
+            "density": "atoms/a0^3"
+          }
+        },
+        "description": "Atom density profile along Y from the quenching simulation at 300 K."
+      },
+      {
+        "file": "comparison_metrics.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "heating_peak_density": "float (atoms/a0^3)",
+            "quenching_peak_density": "float (atoms/a0^3)",
+            "peak_density_difference": "float (atoms/a0^3)"
+          }
+        },
+        "description": "Key metrics comparing the central GB density peaks between heating and quenching at 300 K."
+      }
+    ],
+    "notes": "The checker will validate that the structure factor drops near zero and the internal energy jumps near 1088 K from the melting_confirmation.csv, and that the quenching peak density is lower than the heating peak at 300 K. The comparison_metrics.json values must be consistent with the corresponding density CSVs."
+  },
+  "steps": [
+    {
+      "id": "step_melting_confirmation",
+      "output_file": "melting_confirmation.csv",
+      "kind": "recompute_metric",
+      "weight": 0.3,
+      "description": "Confirm interface melting: S_centre < 0.05 at 1100 K and energy jump between 1000 K and 1100 K.",
+      "S_threshold_1100K": 0.05,
+      "energy_jump_min": 0.001,
+      "required_temperatures": [
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900,
+        1000,
+        1100,
+        1200
+      ]
+    },
+    {
+      "id": "step_density_heating_300K",
+      "output_file": "density_profile_heating_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Ensure the heating density profile has a central peak above a minimal threshold, confirming a crystalline GB structure.",
+      "min_central_peak": 0.05
+    },
+    {
+      "id": "step_density_quenching_300K",
+      "output_file": "density_profile_quenching_300K.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Verify that the quenching density profile has a central peak and that its magnitude is strictly lower than the heating central peak."
+    },
+    {
+      "id": "step_comparison_metrics",
+      "output_file": "comparison_metrics.json",
+      "kind": "reference_match",
+      "weight": 0.4,
+      "description": "Cross-check the reported peak densities and difference against the actual CSVs; ensure internal consistency and positive difference.",
+      "max_peak_tolerance": 0.001
+    }
+  ]
+}

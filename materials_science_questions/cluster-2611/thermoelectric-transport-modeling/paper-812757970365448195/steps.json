@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step-01",
+    "title": "Construct nanowire atomic models",
+    "role": "process",
+    "action": "Generate atomic coordinates for ZnO nanowire D in both wurtzite (W) and hexagonal (H) phases using the specified diameters and supercell lengths (H phase: D = 1.754 nm, L = 0.820 nm; W phase: D = 1.400 nm, L = 1.060 nm). The wire is oriented along [0001] with hexagonal cross-section enclosed by (10-10) facets, and Zn surface atoms passivated with hydrogen.",
+    "output_file": "",
+    "evidence": "nanowire_structures.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Atomic models for subsequent DFT calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-02",
+    "title": "DFT geometry optimization and band structure",
+    "role": "process",
+    "action": "Perform DFT geometry optimization and electronic band structure calculation for both W and H nanowire models using an open-source DFT package (e.g., Quantum ESPRESSO) with PBE-GGA functional. Compute band energies along the wire axis on a 1×1×16 k-point grid.",
+    "output_file": "",
+    "evidence": "dft_calculation_summary.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Relaxed geometries, band structures E(k_z), and density of states D(E).",
+    "output_schema": ""
+  },
+  {
+    "id": "step-03",
+    "title": "Extract electron effective mass",
+    "role": "process",
+    "action": "From the lowest conduction band of each phase, compute the electron effective mass m* along the wire axis using the curvature at the Γ point: m* = ħ² (∂²E/∂k_z²)⁻¹.",
+    "output_file": "",
+    "evidence": "effective_mass.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Effective mass values for W and H phases, used in transport integrals.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-04",
+    "title": "Calibrate carrier-concentration-dependent relaxation time",
+    "role": "process",
+    "action": "Fit a baseline relaxation time τ₀ by matching the computed electrical conductivity (using 1D BTE with the DFT density of states and m*) to the experimental data point from Noriega et al. (σ=384.6 (Ω·cm)⁻¹ at n=8.8×10¹⁹ cm⁻³, T=300 K). Then derive a carrier‑concentration‑dependent relaxation time τ(n) using the empirical mobility–concentration relation for ZnO thin films from Ellmer & Mietus (2008).",
+    "output_file": "",
+    "evidence": "tau_calibration.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calibrated τ(n) function used in the transport simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-05",
+    "title": "Compute thermoelectric properties at 300 K vs carrier concentration",
+    "role": "scored",
+    "action": "Implement the 1D Boltzmann transport equations using the DFT band structure, the calibrated τ(n), and the rigid-band approximation. Compute electrical conductivity σ, Seebeck coefficient S, electronic thermal conductivity κ_e, power factor P = S²σ, and figure of merit ZT (using fixed phonon thermal conductivities κ_ph_W = 8.3 W/m·K, κ_ph_H = 10.1 W/m·K) for wire D in both W and H phases as functions of carrier concentration n (log-spaced range 1×10¹⁷ to 1×10²⁰ cm⁻³) at T = 300 K.",
+    "output_file": "thermoelectric_properties_wireD_300K.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Thermoelectric transport properties of ZnO nanowire D at 300 K for a sweep of carrier concentrations, covering both W and H phases.",
+    "output_schema": "CSV with columns: carrier_concentration (float, cm^-3), phase (string, 'W' or 'H'), electrical_conductivity (float, S/m), seebeck_coefficient (float, uV/K), power_factor (float, uW/mK^2), ZT (float). At least 15 log-spaced carrier concentration points per phase."
+  },
+  {
+    "id": "step-06",
+    "title": "Compute ZT ratio vs temperature at optimal doping",
+    "role": "scored",
+    "action": "Using the same BTE framework and the optimal carrier concentrations (n_H = 6.5×10¹⁸ cm⁻³, n_W = 7.1×10¹⁸ cm⁻³), compute ZT for both H and W phases at temperatures T = 200, 300, 400, 500, 600, 700, 800, 900, 1000 K. Output the ZT values and the ratio ZT_H / ZT_W.",
+    "output_file": "ZT_ratio_temperature.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "ZT values for H and W phases and their ratio as a function of temperature, at the doping levels that give maximum ZT at room temperature.",
+    "output_schema": "CSV with columns: temperature (float, K), ZT_H (float), ZT_W (float), ratio (float). Rows for temperatures: 200, 300, 400, 500, 600, 700, 800, 900, 1000 K."
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes exact strain profiles from the same analytic formulas using the same material parameters and the agent's own x-grid; compares element-wise with a tight relative tolerance and checks HO boundary conditions at x=0. No external data or labels needed.",
+  "pass_threshold": 0.85,
+  "target_policies": {
+    "strain_profiles.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Material parameters needed to recompute the reference strain profiles",
+      "source_provenance": "Task specification – the parameter set is explicitly stated in the public instruction.md",
+      "generation_method": "Hardcoded from the public task definition; the same set is used by the agent.",
+      "why_not_fabricated": "These are the exact parameters that define the problem; they are not invented for grading but are part of the required input to the analytic computation."
+    }
+  ],
+  "gold": {
+    "E1": 200000000000.0,
+    "M1": 1e-06,
+    "H1": 20000000000.0,
+    "J1": 1e-06,
+    "E2": 100000000000.0,
+    "M2": 5e-07,
+    "H2": 10000000000.0,
+    "J2": 5e-07,
+    "sigma": 300000000.0,
+    "sigma_y": 250000000.0
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "strain_profiles.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "x",
+            "epsilon_e",
+            "epsilon_p"
+          ],
+          "columns": {
+            "case": "string, one of 'general', 'case1', 'case2', 'case3'",
+            "x": "float, coordinate in meters",
+            "epsilon_e": "float, elastic strain",
+            "epsilon_p": "float, plastic strain"
+          },
+          "units": {}
+        },
+        "description": "Strain profiles for the four cases. The checker recomputes the exact analytic profiles and checks element-wise relative tolerance and HO boundary condition satisfaction."
+      }
+    ],
+    "notes": ""
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "strain_profiles.csv",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "config": {
+        "relative_tolerance": 0.0001,
+        "boundary_tolerance": 0.0001,
+        "boundary_weight": 0.1
+      }
+    }
+  ]
+}

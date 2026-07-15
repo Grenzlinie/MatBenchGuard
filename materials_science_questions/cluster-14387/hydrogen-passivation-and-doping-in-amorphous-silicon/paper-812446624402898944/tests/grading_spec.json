@@ -1,0 +1,90 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The doping energy differences ΔE1, ΔE2, ΔEE for P and B can be recomputed from the agent's provided total energies and compared to the paper's reported values with tolerance; T1 is feasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_energies.csv": "metric_recompute",
+    "doping_energies.csv": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported doping energy differences ΔE1, ΔE2, ΔEE for P and B (Table 1)",
+      "source_provenance": "Table 1 of the source paper",
+      "generation_method": "extracted directly from the paper's Table 1 values",
+      "why_not_fabricated": "These are the published values the paper claims; a faithful reproduction should produce values close to these given the same cluster geometries and CNDO/2 method."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cluster_name",
+            "total_energy_eV"
+          ],
+          "units": {
+            "total_energy_eV": "eV"
+          }
+        },
+        "description": "Total CNDO/2 energies of the six clusters. The checker will recompute doping energy differences from this file and compare against hidden reference values."
+      },
+      {
+        "file": "doping_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "impurity",
+            "ΔE1_eV",
+            "ΔE2_eV",
+            "ΔEE_eV"
+          ],
+          "units": {
+            "ΔE1_eV": "eV",
+            "ΔE2_eV": "eV",
+            "ΔEE_eV": "eV"
+          }
+        },
+        "description": "Derived doping energy differences. The checker will verify internal consistency with total_energies.csv (low weight)."
+      }
+    ],
+    "notes": "All energies in eV. The checker recomputes ΔE1, ΔE2, ΔEE for phosphorus and boron from the provided total energies and compares them against hidden paper reference values with appropriate tolerances. Consistency of doping_energies.csv with total_energies.csv is also checked with lower weight."
+  },
+  "steps": [
+    {
+      "id": "recompute_doping_energies",
+      "output_file": "total_energies.csv",
+      "weight": 0.9,
+      "kind": "recompute_doping",
+      "gold_values": {
+        "P": {
+          "ΔE1": -149.9,
+          "ΔE2": -146.3,
+          "ΔEE": 3.6
+        },
+        "B": {
+          "ΔE1": 44.5,
+          "ΔE2": 49.7,
+          "ΔEE": 5.1
+        }
+      },
+      "tolerance_abs_eV": 0.5,
+      "partial_credit_scale_eV": 1.0
+    },
+    {
+      "id": "consistency_doping_energies",
+      "output_file": "doping_energies.csv",
+      "weight": 0.1,
+      "kind": "consistency_check",
+      "tolerance_rel": 0.001
+    }
+  ]
+}

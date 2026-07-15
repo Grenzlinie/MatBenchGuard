@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute f0 and chi_eff from raw force-velocity CSV via linear regression and compare to paper values with tolerances; detect velocity peaks from CSV; validate shape of output files.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "force_velocity_data.csv": "metric_recompute",
+    "fitted_parameters.json": "reference_match",
+    "velocity_peaks.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Interface area A_i and van der Waals separation h_vdW for computing mu_eff",
+      "source_provenance": "Derived from paper's Eq.(2) using mu_eff=0.27 cP, chi_eff=2.3, assuming typical h_vdW=3.4 Å",
+      "generation_method": "A_i = chi_eff * h_vdW / mu_eff = 2.3 * 3.4 / 0.27 ≈ 28.96",
+      "why_not_fabricated": "Consistent with paper's reported effective viscosity and force-velocity relation, allowing verification of derived property."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "force_velocity_data.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "step",
+            "force_nN",
+            "velocity_A_per_ps"
+          ],
+          "units": {
+            "force_nN": "nN",
+            "velocity_A_per_ps": "Å/ps"
+          }
+        },
+        "description": "Time series of applied force and NT axial velocity, from which the checker recomputes f0 and χeff."
+      },
+      {
+        "file": "fitted_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "f0_nN": "number",
+            "chi_eff_nN_ps_per_A": "number",
+            "mu_eff_cP": "number",
+            "R_squared": "number"
+          },
+          "units": {
+            "f0_nN": "nN",
+            "chi_eff_nN_ps_per_A": "nN·ps/Å",
+            "mu_eff_cP": "cP"
+          }
+        },
+        "description": "Agent-reported fitted parameters; the checker compares these to hidden reference values."
+      },
+      {
+        "file": "velocity_peaks.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "step": "integer",
+            "velocity_A_per_ps": "number"
+          }
+        },
+        "description": "Velocity peaks detected after step 141,000, verifying the discrete acceleration events reported in the paper."
+      }
+    ],
+    "notes": "All output files must be placed in /app/outputs. The checker will recompute f0 and χeff from force_velocity_data.csv and compare against paper values within tolerances. The velocity peaks will be checked for correct timing and minimum magnitude."
+  },
+  "steps": [
+    {
+      "id": "shape_csv",
+      "output_file": "force_velocity_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Validate CSV shape: required columns, non-empty rows."
+    },
+    {
+      "id": "shape_fitted_params",
+      "output_file": "fitted_parameters.json",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Check fitted_parameters.json exists and contains required keys."
+    },
+    {
+      "id": "shape_velocity_peaks",
+      "output_file": "velocity_peaks.json",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Check velocity_peaks.json is a non-empty array of objects with step and velocity_A_per_ps."
+    },
+    {
+      "id": "recompute_f0_chi_mu",
+      "output_file": "force_velocity_data.csv",
+      "kind": "recompute_metric",
+      "weight": 0.7,
+      "description": "Recompute f0, χeff from force-velocity CSV via linear regression; compute μeff using hidden A_i and h_vdW; score each within tolerance.",
+      "f0_target_nN": 0.17,
+      "f0_tolerance_nN": 0.03,
+      "chi_target_nN_ps_per_A": 2.3,
+      "chi_tolerance": 0.3,
+      "mu_target_cP": 0.27,
+      "mu_tolerance_cP": 0.05,
+      "h_vdW_A": 3.4,
+      "A_i_A2": 28.96
+    },
+    {
+      "id": "velocity_peaks_from_csv",
+      "output_file": "force_velocity_data.csv",
+      "kind": "structural_audit",
+      "weight": 0.15,
+      "description": "Detect velocity peaks after step 141000 in CSV; require at least 2 peaks with velocity > 0.5 Å/ps.",
+      "min_peaks": 2,
+      "min_velocity": 0.5
+    }
+  ]
+}

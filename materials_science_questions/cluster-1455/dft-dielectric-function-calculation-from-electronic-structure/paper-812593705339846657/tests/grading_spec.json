@@ -1,0 +1,189 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Static dielectric constants and first peak energy are recomputed from the submitted spectral arrays; structural checks verify peak/minimum presence and absorption edge; string-based checks for band gap type and assignment keywords.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "reproduction_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_type": "string",
+            "band_gap_value": "number (eV)",
+            "static_dielectric_constants": "object with fields xx, yy, zz, average (number, dimensionless)",
+            "first_peak_energy": "number (eV)",
+            "first_peak_assignment": "string",
+            "epsilon2_xx": "list of [energy (eV), value] pairs",
+            "epsilon2_yy": "list of [energy (eV), value] pairs",
+            "epsilon2_zz": "list of [energy (eV), value] pairs",
+            "epsilon1_xx": "list of [energy (eV), value] pairs",
+            "epsilon1_yy": "list of [energy (eV), value] pairs",
+            "epsilon1_zz": "list of [energy (eV), value] pairs",
+            "reflectivity_xx": "list of [energy (eV), value] pairs (dimensionless)",
+            "reflectivity_yy": "list of [energy (eV), value] pairs",
+            "reflectivity_zz": "list of [energy (eV), value] pairs",
+            "absorption_xx": "list of [energy (eV), value] pairs (cm⁻¹)",
+            "absorption_yy": "list of [energy (eV), value] pairs",
+            "absorption_zz": "list of [energy (eV), value] pairs",
+            "eels_xx": "list of [energy (eV), value] pairs (arbitrary units)",
+            "eels_yy": "list of [energy (eV), value] pairs",
+            "eels_zz": "list of [energy (eV), value] pairs"
+          },
+          "items": {}
+        },
+        "description": "Full set of computed optical spectra and derived scalar quantities; the checker verifies band‑gap type/nature, numerical values of gap, static dielectric constants, first‑peak energy and assignment, spectral shape features (peak locations, minima, absorption edge, anisotropy), and cross‑consistency between arrays."
+      }
+    ],
+    "notes": "All spectra and derived quantities must be obtained from the DFT+SOC ground‑state calculation of step 1 using the provided crystal structure. The hidden checker compares against paper‑reported reference values with domain‑appropriate tolerances."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for band gap, static dielectric constants, first peak energy, and keywords for the microscopic transition assignment",
+      "source_provenance": "Paper-reported values from the source paper",
+      "generation_method": "Direct extraction from the paper text",
+      "why_not_fabricated": "Values are the paper's own numbers for these quantities; they are the benchmark to reproduce"
+    }
+  ],
+  "steps": [
+    {
+      "id": "band_gap_type_check",
+      "output_file": "reproduction_results.json",
+      "kind": "exact_string",
+      "weight": 0.06,
+      "field": "band_gap_type",
+      "target": "indirect"
+    },
+    {
+      "id": "band_gap_value_check",
+      "output_file": "reproduction_results.json",
+      "kind": "numeric_tolerance",
+      "weight": 0.12,
+      "field": "band_gap_value",
+      "target": 1.37,
+      "tolerance_abs": 0.2,
+      "decay_zone": 0.3
+    },
+    {
+      "id": "static_dielectric_recompute",
+      "output_file": "reproduction_results.json",
+      "kind": "custom",
+      "weight": 0.18,
+      "config": {
+        "epsilon1_keys": [
+          "epsilon1_xx",
+          "epsilon1_yy",
+          "epsilon1_zz"
+        ],
+        "targets": {
+          "xx": 8.83,
+          "yy": 9.79,
+          "zz": 9.01
+        },
+        "tolerance_abs": 0.3,
+        "decay_zone": 0.5
+      }
+    },
+    {
+      "id": "first_peak_energy_recompute",
+      "output_file": "reproduction_results.json",
+      "kind": "custom",
+      "weight": 0.18,
+      "config": {
+        "epsilon2_keys": [
+          "epsilon2_xx",
+          "epsilon2_yy",
+          "epsilon2_zz"
+        ],
+        "energy_range": [
+          2.0,
+          3.0
+        ],
+        "target_energy": 2.56,
+        "tolerance_abs": 0.3,
+        "decay_zone": 0.3
+      }
+    },
+    {
+      "id": "first_peak_assignment_check",
+      "output_file": "reproduction_results.json",
+      "kind": "contains_keywords",
+      "weight": 0.12,
+      "field": "first_peak_assignment",
+      "keywords": [
+        "Sn(2a)",
+        "Sn(4i)"
+      ],
+      "require_all": true
+    },
+    {
+      "id": "epsilon2_peak_shape",
+      "output_file": "reproduction_results.json",
+      "kind": "spectral_feature",
+      "weight": 0.08,
+      "config": {
+        "epsilon2_keys": [
+          "epsilon2_xx",
+          "epsilon2_yy",
+          "epsilon2_zz"
+        ],
+        "energy_range": [
+          2.0,
+          3.0
+        ],
+        "feature": "local_maximum"
+      }
+    },
+    {
+      "id": "reflectivity_min_shape",
+      "output_file": "reproduction_results.json",
+      "kind": "spectral_feature",
+      "weight": 0.08,
+      "config": {
+        "reflectivity_keys": [
+          "reflectivity_xx",
+          "reflectivity_yy",
+          "reflectivity_zz"
+        ],
+        "energy_range": [
+          6.0,
+          8.0
+        ],
+        "feature": "local_minimum"
+      }
+    },
+    {
+      "id": "absorption_edge_check",
+      "output_file": "reproduction_results.json",
+      "kind": "custom",
+      "weight": 0.08,
+      "config": {
+        "absorption_keys": [
+          "absorption_xx",
+          "absorption_yy",
+          "absorption_zz"
+        ],
+        "energy_low": 2.35,
+        "energy_high": 3.0
+      }
+    },
+    {
+      "id": "anisotropy_check",
+      "output_file": "reproduction_results.json",
+      "kind": "custom",
+      "weight": 0.1,
+      "config": {
+        "epsilon1_keys": [
+          "epsilon1_xx",
+          "epsilon1_yy",
+          "epsilon1_zz"
+        ],
+        "ratio_threshold": 1.05
+      }
+    }
+  ]
+}

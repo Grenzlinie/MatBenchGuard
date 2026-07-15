@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T0 result-level compare: the quantities are fixed physical/chemical values; the agent recomputes them with a different implementation and the checker compares the submitted values to paper-reported hidden golds using tolerances appropriate for the toolchain difference.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for ΔG1, H31···H71 distance, and 13C chemical shift of C9",
+      "source_provenance": "Paper Tables 1, 3, and 4 for BNO at the specified computational levels",
+      "generation_method": "Extracted directly from the paper (Table 3: ΔG1 = 0.89 kcal/mol; Table 1: H31···H71 = 1.951 Å; Table 4: chemical shift C9 = 227.6 ppm)",
+      "why_not_fabricated": "These are the paper's own reported results for the exact compound, conformer, and levels the agent is instructed to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "delta_G1_BNO": "number (kcal/mol)",
+            "H31_H71_distance_BNO_CC": "number (Å)",
+            "chemical_shift_C9_BNO_CC": "number (ppm)"
+          }
+        },
+        "description": "Three key numerical quantities reproduced from the paper's BNO calculations: the free energy difference between BC and CC conformers, the H31…H71 distance in the CC conformer, and the isotropic 13C chemical shift of C9."
+      }
+    ],
+    "notes": "The solving agent must use an open-source quantum chemistry package (e.g., Psi4). The BB conformer is built and optimized but its results are not scored; it is included to follow the full computational protocol of the paper."
+  },
+  "steps": [
+    {
+      "id": "step_04_deltaG1_BNO",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "delta_G1_BNO",
+      "target": 0.89,
+      "tolerance": 0.2,
+      "weight": 0.34,
+      "unit": "kcal/mol",
+      "description": "Free energy difference ΔG1 = G(BC) - G(CC) for BNO at 298.15 K, B3LYP/6-311+G(d)."
+    },
+    {
+      "id": "step_04_H31_H71_distance_BNO_CC",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "H31_H71_distance_BNO_CC",
+      "target": 1.951,
+      "tolerance": 0.03,
+      "weight": 0.33,
+      "unit": "Å",
+      "description": "Distance between endo hydrogens H31 and H71 in the CC conformer of BNO, B3LYP/6-311+G(d)."
+    },
+    {
+      "id": "step_04_chemical_shift_C9_BNO_CC",
+      "output_file": "results.json",
+      "kind": "numeric",
+      "field": "chemical_shift_C9_BNO_CC",
+      "target": 227.6,
+      "tolerance": 3.0,
+      "weight": 0.33,
+      "unit": "ppm",
+      "description": "Isotropic 13C chemical shift of the carbonyl carbon C9 in the CC conformer of BNO, GIAO B3LYP/6-311+G(2d,2p)//B3LYP/6-311+G(d)."
+    }
+  ]
+}

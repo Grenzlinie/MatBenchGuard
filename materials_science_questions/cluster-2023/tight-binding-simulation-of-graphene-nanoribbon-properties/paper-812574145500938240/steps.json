@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_geom_opt",
+    "title": "Geometry optimization of GNR supercells",
+    "role": "process",
+    "action": "Build atomic structures for armchair GNR width N=7 with three edge passivation configurations: H on both edges, Os on one edge (H on the other), Os on both edges. Include 10 Å vacuum in X and Y. Perform DFT geometry relaxation using GGA-PBE, DZP basis, 150 Ry mesh cutoff, 1x1x100 k-points.",
+    "output_file": "",
+    "evidence": "geom_optimization.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "This step relaxes the atomic positions of the three supercells needed for electronic structure and transport.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_bandstructure",
+    "title": "DFT electronic structure calculation",
+    "role": "process",
+    "action": "Using the optimized geometries, compute the electronic band structure and density of states (DOS) with the same DFT parameters. Identify the bandgap and metallic/semiconducting nature.",
+    "output_file": "",
+    "evidence": "bands_dos.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces band structure and DOS data needed to extract bandgaps and metallicity; the results are later written to results.json.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_negf_transmission",
+    "title": "NEGF transport calculation for both-edge Os-passivated AGNR",
+    "role": "scored",
+    "action": "Set up a two-probe transport model for the both-edge Os-passivated AGNR. Compute the energy-resolved transmission spectrum from -1 eV to +1 eV relative to Fermi level using NEGF (TranSIESTA/TBtrans) at zero bias. Save to transmission_both_edge_Os.csv.",
+    "output_file": "transmission_both_edge_Os.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "The transmission CSV provides the raw data from which the number of conduction channels at the Fermi level is determined.",
+    "output_schema": "CSV with columns 'energy_eV' (float, energy relative to Fermi level) and 'transmission' (float, dimensionless)."
+  },
+  {
+    "id": "step_04_results_json",
+    "title": "Compile scored electronic and transport properties",
+    "role": "scored",
+    "action": "From the DFT band structure, determine the bandgap of H-passivated AGNR (eV) and whether one-edge and both-edge Os-passivated configurations are metallic (bandgap < 0.1 eV). From the transmission CSV, extract the number of conduction channels as the transmission value at energy = 0 eV. Write these results to results.json.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Aggregates the main verifiable electronic and transport properties, load-bearing because it requires genuine DFT+NEGF execution.",
+    "output_schema": "JSON object with keys: 'H_passivated_bandgap_eV' (float), 'one_edge_Os_metallic' (boolean), 'both_edge_Os_metallic' (boolean), 'both_edge_Os_conduction_channels' (int)."
+  }
+]

@@ -1,0 +1,205 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "All headline quantities can be recomputed from submitted raw artifacts: structural properties table is checked for correct trend and specific values; transition pressure is compared to paper; piezoelectric coefficient matched; phonon frequencies checked for softening behavior.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for structural properties at key pressures, expected transition pressure, piezoelectric coefficient, and phonon frequencies",
+      "source_provenance": "Derived from Fig.2 and Fig.3 of the paper, supplemented by text descriptions.",
+      "generation_method": "Extracted from paper's reported ranges: c/a ~1.55-1.60 at low P, ~1.25 at high P; u ~0.375 low, ~0.50 high; transition pressure ~12 GPa; e33 ~2 C/m²; phonon softening near 12 GPa with A1(TO) frequency approaching zero.",
+      "why_not_fabricated": "These values are the paper's published quantitative findings and serve as the reproduction gold standard."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_structural_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "c_over_a",
+            "u_ScN",
+            "u_GaN",
+            "volume_per4atoms_Bohr3"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "c_over_a": "dimensionless",
+            "u_ScN": "dimensionless",
+            "u_GaN": "dimensionless",
+            "volume_per4atoms_Bohr3": "Bohr^3"
+          }
+        },
+        "description": "Structural parameters (axial ratio, internal u parameters, volume per 4 atoms) of the 1×1 GaN/ScN superlattice as a function of hydrostatic pressure."
+      },
+      {
+        "file": "step_02_transition_pressure.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single float value representing the transition pressure in GPa."
+        },
+        "description": "The pressure at which the isostructural phase transition occurs in 1×1 GaN/ScN, determined from enthalpy crossing or inflection point analysis."
+      },
+      {
+        "file": "step_03_piezoelectric_e33.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single float value representing the e33 piezoelectric coefficient in C/m²."
+        },
+        "description": "Piezoelectric coefficient e33 of the 1×1 GaN/ScN superlattice at ambient pressure (~0 GPa)."
+      },
+      {
+        "file": "step_04_phonon_frequency.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "A1_TO_frequency_cm-1"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "A1_TO_frequency_cm-1": "cm^{-1}"
+          }
+        },
+        "description": "Zone-center A1(TO) phonon frequency of the 1×1 GaN/ScN superlattice at several pressures near the transition, showing soft-mode behavior."
+      }
+    ],
+    "notes": "All scored outputs must be derived from the DFT/DFPT calculations. The structural properties table must show a continuous structural transition with axial ratio and internal parameters changing as pressure increases. The transition pressure should be determined from the structural data (e.g., inflection point or equation-of-state analysis). The phonon frequency should soften to a minimum near the transition. The piezoelectric coefficient should be reported at ambient pressure."
+  },
+  "steps": [
+    {
+      "id": "step_01_structural",
+      "output_file": "step_01_structural_properties.csv",
+      "kind": "recomputed_structural",
+      "weight": 0.5,
+      "target_policy": "reference_match",
+      "params": {
+        "required_columns": [
+          "pressure_GPa",
+          "c_over_a",
+          "u_ScN",
+          "u_GaN",
+          "volume_per4atoms_Bohr3"
+        ],
+        "check_pressures": [
+          0.0,
+          10.0,
+          12.0,
+          14.0,
+          20.0
+        ],
+        "tolerances": {
+          "c_over_a": 0.05,
+          "u_ScN": 0.02,
+          "u_GaN": 0.02,
+          "volume_per4atoms_Bohr3": 5.0
+        },
+        "references": {
+          "0.0": {
+            "c_over_a": 1.55,
+            "u_ScN": 0.375,
+            "u_GaN": 0.375,
+            "volume_per4atoms_Bohr3": 315.0
+          },
+          "10.0": {
+            "c_over_a": 1.45,
+            "u_ScN": 0.4,
+            "u_GaN": 0.4,
+            "volume_per4atoms_Bohr3": 308.0
+          },
+          "12.0": {
+            "c_over_a": 1.38,
+            "u_ScN": 0.43,
+            "u_GaN": 0.43,
+            "volume_per4atoms_Bohr3": 306.0
+          },
+          "14.0": {
+            "c_over_a": 1.28,
+            "u_ScN": 0.47,
+            "u_GaN": 0.47,
+            "volume_per4atoms_Bohr3": 303.0
+          },
+          "20.0": {
+            "c_over_a": 1.25,
+            "u_ScN": 0.5,
+            "u_GaN": 0.5,
+            "volume_per4atoms_Bohr3": 300.0
+          }
+        },
+        "monotonicity": {
+          "c_over_a": "non-increasing",
+          "u_ScN": "non-decreasing",
+          "u_GaN": "non-decreasing"
+        }
+      }
+    },
+    {
+      "id": "step_02_transition",
+      "output_file": "step_02_transition_pressure.txt",
+      "kind": "reference_value",
+      "weight": 0.15,
+      "target_policy": "reference_match",
+      "params": {
+        "reference": 12.0,
+        "tolerance": 2.0
+      }
+    },
+    {
+      "id": "step_03_piezoelectric",
+      "output_file": "step_03_piezoelectric_e33.txt",
+      "kind": "reference_value",
+      "weight": 0.15,
+      "target_policy": "reference_match",
+      "params": {
+        "reference": 2.0,
+        "tolerance": 0.5
+      }
+    },
+    {
+      "id": "step_04_phonon",
+      "output_file": "step_04_phonon_frequency.csv",
+      "kind": "recomputed_phonon",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "params": {
+        "required_columns": [
+          "pressure_GPa",
+          "A1_TO_frequency_cm-1"
+        ],
+        "check_pressures": [
+          8.0,
+          10.0,
+          11.0,
+          12.0,
+          14.0
+        ],
+        "tolerances": {
+          "A1_TO_frequency_cm-1": 50.0
+        },
+        "references": {
+          "8.0": 200.0,
+          "10.0": 120.0,
+          "11.0": 80.0,
+          "12.0": 20.0,
+          "14.0": 60.0
+        },
+        "softening_required": true,
+        "minimum_near_transition_pressure": 12.0
+      }
+    }
+  ]
+}

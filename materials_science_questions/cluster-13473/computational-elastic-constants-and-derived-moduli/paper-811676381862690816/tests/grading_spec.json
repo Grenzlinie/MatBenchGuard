@@ -1,0 +1,106 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing elastic moduli from raw simulation data is infeasible within the verifier; scoring relies on comparing reported results to paper-derived formulas and enforcing required trends (structural checks).",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "percolation_threshold.csv": "exact_match",
+    "simulation_results.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "percolation_threshold.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "p_c"
+          ],
+          "units": {
+            "p_c": "dimensionless"
+          }
+        },
+        "description": "The estimated critical matrix area fraction (percolation threshold) for the system of overlapping circular holes."
+      },
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "set_id",
+            "p",
+            "E_over_E0",
+            "sigma"
+          ],
+          "units": {
+            "p": "dimensionless",
+            "E_over_E0": "dimensionless",
+            "sigma": "dimensionless"
+          }
+        },
+        "description": "Averaged Young's modulus ratio and Poisson ratio vs matrix area fraction for three spring-constant sets, as computed from the triangular spring network simulations."
+      }
+    ],
+    "notes": "The checker will compare simulation_results.csv entries against a hidden reference derived from the paper's interpolation formula and expected trends. The percolation threshold is compared to the paper-reported value within a tolerance."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Parameters for E/E0 interpolation formula Eq.12 and percolation threshold tolerance.",
+      "source_provenance": "Paper Eqs. (12) with m=3.4, p_l=2/3, p_c=0.34; percolation threshold from paper text p_c=0.34 +/- 0.03.",
+      "generation_method": "Directly extracted from the paper.",
+      "why_not_fabricated": "These are the exact parameter values reported in the paper; they are used to define the expected curve for Young's modulus ratio, which the simulation should approximately reproduce."
+    }
+  ],
+  "steps": [
+    {
+      "id": "percolation_threshold_check",
+      "output_file": "percolation_threshold.csv",
+      "weight": 0.2,
+      "kind": "numeric",
+      "target": 0.34,
+      "tolerance_abs": 0.05,
+      "target_policy": "exact_match"
+    },
+    {
+      "id": "simulation_E_over_E0",
+      "output_file": "simulation_results.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "params": {
+        "p_l": 0.6666666667,
+        "p_c": 0.34,
+        "m": 3.4,
+        "rel_tol_good": 0.15,
+        "rel_tol_bad": 0.3,
+        "high_p_unity_tol": 0.02
+      }
+    },
+    {
+      "id": "simulation_sigma",
+      "output_file": "simulation_results.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "params": {
+        "sigma_o": {
+          "111": 0.3333333333,
+          "114": 0.5,
+          "167": 0.6057
+        },
+        "const_tol": 0.05,
+        "low_p_tol": 0.1,
+        "high_p_tol": 0.02,
+        "set_ids": [
+          "111",
+          "114",
+          "167"
+        ]
+      }
+    }
+  ]
+}

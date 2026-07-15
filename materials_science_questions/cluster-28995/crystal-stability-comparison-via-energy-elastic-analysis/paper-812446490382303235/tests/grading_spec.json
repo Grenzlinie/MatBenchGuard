@@ -1,0 +1,72 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full recompute of tight‑binding energies is infeasible in the verifier sandbox; scoring uses a result‑level compare of the reported ΔE values against the paper's gold with ±10 meV tolerance plus a structural ordering check.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energy_differences.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "neighbor",
+            "delta_E_meV"
+          ],
+          "units": {
+            "delta_E_meV": "meV"
+          }
+        },
+        "description": "The four pair-energy differences for hydrogen atoms at tetrahedral interstitial sites in bcc iron, computed as ΔE(T3,T_i) for i=1..4."
+      }
+    ],
+    "notes": "The checker will compare the reported values to the paper-reported reference values with an absolute tolerance and verify the relative ordering ΔE(1) > ΔE(2) > ΔE(4) > ΔE(3)=0."
+  },
+  "steps": [
+    {
+      "id": "s3_differences",
+      "output_file": "energy_differences.csv",
+      "weight": 0.8,
+      "kind": "numeric_reference",
+      "parameters": {
+        "neighbor_targets": {
+          "1": 555,
+          "2": 289,
+          "3": 0,
+          "4": 245
+        },
+        "absolute_tolerance": 10
+      },
+      "description": "Check each neighbor's delta_E_meV is within ±10 meV of the paper's reported values."
+    },
+    {
+      "id": "s3_ordering",
+      "output_file": "energy_differences.csv",
+      "weight": 0.2,
+      "kind": "structural_ordering",
+      "parameters": {
+        "rules": [
+          [
+            "1",
+            ">",
+            "2"
+          ],
+          [
+            "2",
+            ">",
+            "4"
+          ],
+          [
+            "4",
+            ">",
+            "3"
+          ]
+        ]
+      },
+      "description": "Verify relative ordering ΔE(1) > ΔE(2) > ΔE(4) > ΔE(3)."
+    }
+  ]
+}

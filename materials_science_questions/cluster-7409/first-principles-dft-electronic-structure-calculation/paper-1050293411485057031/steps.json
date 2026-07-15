@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Construct supercells and relax structures",
+    "role": "process",
+    "action": "Build 2×2×2 supercells of SrNb1-xTixO3 for x=0, 0.25, 0.5 by substituting Nb with Ti in the SrNbO3 perovskite structure, then relax atomic positions and lattice parameters using PBE functional and PAW pseudopotentials until forces < 1e-3 eV/Å and total energy convergence 1e-6 eV.",
+    "output_file": "",
+    "evidence": "relaxation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Geometry optimization to obtain equilibrium structures needed for subsequent electronic structure calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Compute electronic structure, band unfolding and pDOS",
+    "role": "process",
+    "action": "For each relaxed supercell, compute Kohn-Sham band structure on a high-symmetry k-path (e.g., Γ–X–M–Γ–R–X–M) using PBE functional and PAW pseudopotentials. Perform band unfolding to the primitive cell (using fold2Bloch or similar). Compute projected density of states (pDOS) with O 2p, Nb 3d, and Ti 3d components. Save intermediate files for subsequent extraction steps.",
+    "output_file": "",
+    "evidence": "band_unfolded_x0.csv, band_unfolded_x0.25.csv, band_unfolded_x0.5.csv, pdos_total.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw intermediate outputs required for extraction of electronic properties and for structural checks.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02b",
+    "title": "Compute optical spectra",
+    "role": "process",
+    "action": "For each relaxed supercell, compute the frequency-dependent complex dielectric function on an energy grid covering 0–10 eV using the PBE functional and PAW pseudopotentials. Save the real and imaginary parts for each composition as evidence.",
+    "output_file": "",
+    "evidence": "dielectric_real_x0.csv, dielectric_imag_x0.csv, dielectric_real_x0.25.csv, dielectric_imag_x0.25.csv, dielectric_real_x0.5.csv, dielectric_imag_x0.5.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Raw optical spectra required for extraction of plasma frequency and assessment of reflectivity edge shift.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Extract electronic and optical parameters",
+    "role": "scored",
+    "action": "From the computed band structure, pDOS, and dielectric functions, determine for each composition x=0, 0.25, 0.5: the conduction-band minimum (CBM) energy relative to the Fermi level (E_F=0), the k-point coordinates of the valence-band maximum (VBM) and CBM, the nature of the fundamental gap (indirect or direct), the dominant orbital characters of VBM and CBM, and the plasma frequency (energy where the real part of the dielectric function crosses zero from positive to negative). Write these results to summary.json exactly as per the output contract.",
+    "output_file": "summary.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON array with extracted electronic and optical parameters that quantify the Fermi-level shift, indirect gap character, orbital assignments, and plasma frequency shift.",
+    "output_schema": "Array of objects. Each object: { composition: string, cbm_energy: number (eV, float), vbm_kpoint: [number, number, number], cbm_kpoint: [number, number, number], gap_type: string, vbm_orbital: string, cbm_orbital: string, plasma_frequency: number (eV, float) }"
+  }
+]

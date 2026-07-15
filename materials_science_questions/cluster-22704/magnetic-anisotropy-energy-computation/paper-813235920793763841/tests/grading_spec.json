@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The agent submits only the final consolidated numbers (mas_results.json); no raw total energies or wavefunctions are required. T0 comparison against the paper-reported gold is the natural and appropriate scoring method. Tolerance accounts for expected DFT code differences.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mae_results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for magnetic moment, MAE, and easy axis for each of the four TM@B systems.",
+      "source_provenance": "Extracted from Table I of the paper (DOI:10.1063/1.4798478). Fe@B: moment=1 μB, MAE=1.19 meV; Mn@B: moment=2 μB, MAE=-0.63 meV; Sc@B: moment=0 μB (nonmagnetic); Co@B: moment=0 μB (nonmagnetic). Easy axes follow the sign rule: positive MAE → in-plane, negative → out-of-plane, zero moment → none.",
+      "generation_method": "Directly transcribed from the published table.",
+      "why_not_fabricated": "These are the paper's own reported numbers, traceable to Table I. They are consistent with the reference solve.sh output."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mae_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system",
+              "magnetic_moment_muB",
+              "MAE_meV",
+              "easy_axis"
+            ],
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "magnetic_moment_muB": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "MAE_meV": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "easy_axis": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "description": "Consolidated results of magnetic moment, MAE, and easy axis for Fe@B, Mn@B, Sc@B, Co@B."
+      }
+    ],
+    "notes": "The hidden checker compares the reported values against paper-reported references with appropriate tolerances. For nonmagnetic systems (Sc@B, Co@B) the expectation is magnetic_moment_muB=0, MAE_meV=null, easy_axis='none'."
+  },
+  "steps": [
+    {
+      "id": "step_mae_results",
+      "output_file": "mae_results.json",
+      "weight": 1.0,
+      "kind": "numeric",
+      "target": null,
+      "systems": [
+        "Fe@B",
+        "Mn@B",
+        "Sc@B",
+        "Co@B"
+      ],
+      "gold": [
+        {
+          "system": "Fe@B",
+          "magnetic_moment_muB": 1,
+          "MAE_meV": 1.19,
+          "easy_axis": "in-plane"
+        },
+        {
+          "system": "Mn@B",
+          "magnetic_moment_muB": 2,
+          "MAE_meV": -0.63,
+          "easy_axis": "out-of-plane"
+        },
+        {
+          "system": "Sc@B",
+          "magnetic_moment_muB": 0,
+          "MAE_meV": null,
+          "easy_axis": "none"
+        },
+        {
+          "system": "Co@B",
+          "magnetic_moment_muB": 0,
+          "MAE_meV": null,
+          "easy_axis": "none"
+        }
+      ]
+    }
+  ]
+}

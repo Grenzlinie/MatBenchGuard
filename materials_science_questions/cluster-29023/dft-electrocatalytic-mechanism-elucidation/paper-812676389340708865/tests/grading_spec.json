@@ -1,0 +1,112 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "DFT binding energies are computed by the agent using any open-source code; we compare to paper's exact reported values with tolerances and enforce relative ordering. Recomputing from raw DFT outputs is infeasible in the checker sandbox.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "bulk_lattice_constant.json": "reference_match",
+    "binding_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for bulk lattice constant and binding energies",
+      "source_provenance": "Paper DOI: 10.1016/j.jhazmat.2020.122358, Fig. 8 and text.",
+      "generation_method": "Direct transcription of reported numbers.",
+      "why_not_fabricated": "Values are the paper's own experimental DFT results; they are the ground truth for this reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "bulk_lattice_constant.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a_angstrom": "float (angstrom)"
+          }
+        },
+        "description": "Optimized lattice constant of Co3O4 bulk, used to build slab models and as a checkpoint for DFT correctness."
+      },
+      {
+        "file": "binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "NH3_110": "float (eV)",
+            "NH3_111": "float",
+            "NH3_100": "float",
+            "NH2_110": "float",
+            "NH_110": "float",
+            "N_110": "float"
+          }
+        },
+        "description": "Binding energies of NH3 on Co3O4 {110}, {111}, {100} and of NH2, NH, N on {110} facet."
+      }
+    ],
+    "notes": "The checker compares the submitted values to hidden reference values with tolerances and verifies relative trends (stronger binding on {110} > {111} > {100} for NH3, and increasingly stronger binding for deeper fragments on {110})."
+  },
+  "steps": [
+    {
+      "id": "bulk_lattice_constant",
+      "output_file": "bulk_lattice_constant.json",
+      "weight": 0.2,
+      "target_policy": "reference_match",
+      "kind": "numeric",
+      "field": "a_angstrom",
+      "reference": 8.09,
+      "tol_full": 0.005,
+      "tol_max": 0.02
+    },
+    {
+      "id": "binding_energies",
+      "output_file": "binding_energies.json",
+      "weight": 0.8,
+      "target_policy": "reference_match",
+      "kind": "binding_energies",
+      "targets": {
+        "NH3_110": -1.774,
+        "NH3_111": -1.638,
+        "NH3_100": -1.354,
+        "NH2_110": -2.85,
+        "NH_110": -3.56,
+        "N_110": -4.669
+      },
+      "tolerance_full": 0.15,
+      "tolerance_partial": 0.3,
+      "trend_checks": {
+        "facet_ordering": [
+          [
+            "NH3_110",
+            "NH3_111"
+          ],
+          [
+            "NH3_111",
+            "NH3_100"
+          ]
+        ],
+        "fragment_ordering": [
+          [
+            "NH3_110",
+            "NH2_110"
+          ],
+          [
+            "NH2_110",
+            "NH_110"
+          ],
+          [
+            "NH_110",
+            "N_110"
+          ]
+        ]
+      },
+      "value_weight": 0.7,
+      "trend_weight": 0.3
+    }
+  ]
+}

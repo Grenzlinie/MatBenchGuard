@@ -1,0 +1,51 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recompute from raw MD trajectories is infeasible because the agent does not output trajectories; the goal is to verify structural trends (monotonicity and independence) in the final pair fraction CSV.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "pair_fractions_300K.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Cooling rate order and structural trend criteria derived from the paper’s claims.",
+      "source_provenance": "Paper’s cooling‑rate dependence description (Fig. 2 and accompanying text).",
+      "generation_method": "Manually encoded from the approved verification plan.",
+      "why_not_fabricated": "The criteria (monotonic decrease/increase, near‑constancy) are the paper’s reported qualitative trends, not arbitrary thresholds."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pair_fractions_300K.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cooling_rate",
+            "T",
+            "pair_index",
+            "fraction"
+          ],
+          "units": {
+            "T": "K",
+            "fraction": "percentage (0-100)"
+          }
+        },
+        "description": "Relative percentages of five pair types for six cooling rates at 300 K. Used to verify monotonic trends (1551 decreases with cooling rate, 1422 increases) and independence (1541,1431,1421 show no systematic trend)."
+      }
+    ],
+    "notes": "The checker will verify structural relationships (ordering, trend monotonicity, and independence) rather than exact numerical match. Small non-monotonic jumps due to numerical noise are allowed."
+  },
+  "steps": [
+    {
+      "id": "verify_trends",
+      "output_file": "pair_fractions_300K.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "description": "Verify structural trends: 1551 decreases, 1422 increases, 1541/1431/1421 are independent of cooling rate."
+    }
+  ]
+}

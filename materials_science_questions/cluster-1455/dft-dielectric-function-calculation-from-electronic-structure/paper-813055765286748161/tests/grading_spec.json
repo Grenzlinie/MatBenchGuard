@@ -1,0 +1,105 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Cannot recompute DFT energies but verify structural properties (atom counts, all-positive frequencies, absorption peak location).",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "optimized_geometry.xyz": "structural_audit",
+    "harmonic_frequencies.csv": "exact_match",
+    "tddft_absorption.csv": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_geometry.xyz",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "XYZ format: first line number of atoms (88), second line comment, then element_symbol x y z in Angstroms. The geometry must exhibit C1 symmetry and correspond to a local minimum (no imaginary frequencies)."
+        },
+        "description": "Optimized ground‑state geometry of PTCDI‑C8."
+      },
+      {
+        "file": "harmonic_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_cm-1"
+          ],
+          "units": {
+            "frequency_cm-1": "cm⁻¹"
+          },
+          "description": "All 258 harmonic vibrational frequencies in ascending order. The first few frequencies will be compared against hidden reference values within a tolerance."
+        },
+        "description": "Harmonic vibrational frequencies of PTCDI‑C8."
+      },
+      {
+        "file": "tddft_absorption.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "wavelength_nm",
+            "oscillator_strength"
+          ],
+          "units": {
+            "wavelength_nm": "nm",
+            "oscillator_strength": "dimensionless"
+          },
+          "description": "All TD‑DFT excited states sorted by ascending wavelength. The wavelength with maximum oscillator strength will be compared against a hidden reference value within a tolerance."
+        },
+        "description": "TD‑DFT UV‑vis absorption spectrum of PTCDI‑C8."
+      }
+    ],
+    "notes": "The hidden checker will verify: 1) geometry – atom count, C1 symmetry, and absence of imaginary frequencies; 2) frequencies – all values positive, and the first few within ±1.0 cm⁻¹ of the paper's reported values; 3) absorption – the wavelength with maximum oscillator strength within ±5 nm of the paper's gold. The agent must run the full DFT workflow and produce these artifacts."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference frequencies and absorption peak from paper",
+      "source_provenance": "Paper reported values: first three frequencies 11.06, 11.48, 15.23 cm-1; B3LYP absorption max 538.07 nm",
+      "generation_method": "Values taken directly from paper text and tables",
+      "why_not_fabricated": "These are the paper's own reported numbers"
+    }
+  ],
+  "steps": [
+    {
+      "id": "geom_check",
+      "output_file": "optimized_geometry.xyz",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "expected_counts": {
+        "O": 4,
+        "N": 2,
+        "C": 50,
+        "H": 32
+      }
+    },
+    {
+      "id": "freq_check",
+      "output_file": "harmonic_frequencies.csv",
+      "weight": 0.5,
+      "kind": "rubric",
+      "gold_freqs": [
+        11.06,
+        11.48,
+        15.23
+      ],
+      "freq_tol": 1.0
+    },
+    {
+      "id": "tddft_check",
+      "output_file": "tddft_absorption.csv",
+      "weight": 0.4,
+      "kind": "rubric",
+      "gold_max_wavelength": 538.07,
+      "wl_tol": 5.0
+    }
+  ]
+}

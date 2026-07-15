@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_1",
+    "title": "Reference chemical potentials",
+    "role": "process",
+    "action": "Perform DFT total-energy calculations for an O2 molecule, bulk vanadium, and bulk phosphorus, arsenic, and bismuth. Extract total energies and derive chemical potentials mu_O, mu_V, mu_P, mu_As, mu_Bi following the paper's definitions (mu_O = E(O2)/2, mu_V and mu_M from bulk energies per atom).",
+    "output_file": "",
+    "evidence": "chemical_potentials.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference energies used to derive chemical potentials for formation energy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_2",
+    "title": "Supercell geometry optimization and total energies",
+    "role": "process",
+    "action": "Build 2x2x2 supercells for monoclinic VO2 and 2x2x4 primitive-cell supercells for rutile VO2 (both 96 atoms). Create all doped configurations: M@i, M@V, M@O for each M = P, As, Bi. Relax atomic positions and lattice parameters using spin-unpolarized DFT with PBE+U (U=3.5 eV on V d), a plane-wave cutoff of 600 eV, and a 4x4x4 k-point mesh. Record total energy of each relaxed system.",
+    "output_file": "",
+    "evidence": "total_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Geometries and total energies for all pure and doped supercells in both phases.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_3",
+    "title": "Band gap calculation (M1 phase)",
+    "role": "process",
+    "action": "For each relaxed monoclinic (M1) supercell (pure VO2 and all M-doped systems), compute band structure and extract the band gap Eg2 (energy between highest occupied and lowest unoccupied states, ignoring in-gap defect states). Use non-spin-polarized DFT with the same functional settings.",
+    "output_file": "",
+    "evidence": "band_gaps_raw.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Band gap values Eg2 for M1 phase of each system.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_4",
+    "title": "Formation energy analysis",
+    "role": "scored",
+    "action": "From the total energies (step 2) and chemical potentials (step 1), compute defect formation energies under O-rich and V-rich growth conditions, and formation Helmholtz free energies. Collect all values into a single JSON file.",
+    "output_file": "formation_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON array of objects with system, phase, total_energy, formation_helmholtz, formation_O_rich, formation_V_rich.",
+    "output_schema": "Each object: system (string, e.g. 'P@O'), phase (string, 'R' or 'M1'), total_energy (float, eV), formation_helmholtz (float, eV), formation_O_rich (float or null for pure), formation_V_rich (float or null for pure)."
+  },
+  {
+    "id": "step_5",
+    "title": "Properties (Eg2 and Tc)",
+    "role": "scored",
+    "action": "Combine Eg2 values from step 3 with total energies from step 2 for the M1 phase. Compute phase transition temperature Tc for each doped M1 system using Tc = 340 K * (DeltaH / DeltaH0) where DeltaH is approximated by total-energy difference between R and M1 phases. Include the pure M1 reference (Tc = 340 K, Eg2 from step 3).",
+    "output_file": "properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON array of objects with system, Eg2, Tc for M1-phase doped systems and pure VO2.",
+    "output_schema": "Each object: system (string), Eg2 (float, eV), Tc (float, K). Only doped M1 systems and pure M1 reference."
+  }
+]

@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Full DFT recompute is infeasible in verifier; compare agent's reported numeric adsorption energies and distances to paper-reported reference values within tolerances (result-level compare).",
+  "pass_threshold": 0.8,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "reference gold values for all adsorption energies and distances from Table 1 of the paper",
+      "source_provenance": "paper: Table 1. Adsorption energies and distances for NO, N2O, NO2, NH3 on Mg‑adsorbed C3B and pristine C3B, plus Mg adsorption energy (-3.20 eV) and pristine C3B band gap (0.66 eV).",
+      "generation_method": "direct transcription from published Table 1 and paper text (Mg adsorption energy -3.20 eV from Section 3.1, band gap 0.66 eV from Section 3.1).",
+      "why_not_fabricated": "values are the paper's own reported numbers, used as reference for reproduction verification; they are the target the agent must match within tolerance."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "adsorption_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Mg_adsorption_energy": "number (eV)",
+            "pristine_C3B_band_gap": "number (eV)",
+            "gas_adsorptions": "array of objects each containing molecule (string), configuration (string), E_ad (number eV), distance (number Angstrom)",
+            "pristine_gas_adsorptions": "array of objects each containing molecule (string), E_ad (number eV)"
+          }
+        },
+        "description": "Compilation of all computed DFT adsorption energies and distances. The checker compares each numeric value to the corresponding paper-reported value using hidden tolerances."
+      }
+    ],
+    "notes": "Each adsorption and distance value is compared against a hidden reference with predefined tolerances. The exact tolerance values are not disclosed to the agent."
+  },
+  "steps": [
+    {
+      "id": "check_adsorption_results",
+      "output_file": "adsorption_results.json",
+      "kind": "json_field",
+      "weight": 1.0,
+      "target_policy": "reference_match",
+      "rules": [
+        {
+          "field": "Mg_adsorption_energy",
+          "reference": -3.2,
+          "tolerance": 0.1,
+          "unit": "eV"
+        },
+        {
+          "field": "pristine_C3B_band_gap",
+          "reference": 0.66,
+          "tolerance": 0.05,
+          "unit": "eV"
+        }
+      ],
+      "gas_adsorptions_check": {
+        "reference": [
+          {
+            "molecule": "NO",
+            "configuration": "N-end",
+            "E_ad": -1.11,
+            "distance": 2.17
+          },
+          {
+            "molecule": "NO",
+            "configuration": "O-end",
+            "E_ad": -1.02,
+            "distance": 2.2
+          },
+          {
+            "molecule": "N2O",
+            "configuration": "N-end",
+            "E_ad": -1.1,
+            "distance": 2.18
+          },
+          {
+            "molecule": "NO2",
+            "configuration": "O-end",
+            "E_ad": -1.62,
+            "distance": 2.15
+          },
+          {
+            "molecule": "NO2",
+            "configuration": "N-end",
+            "E_ad": -1.35,
+            "distance": 2.21
+          },
+          {
+            "molecule": "NH3",
+            "configuration": "N-end",
+            "E_ad": -1.15,
+            "distance": 2.16
+          }
+        ],
+        "tolerance_E_ad": 0.1,
+        "tolerance_distance": 0.05
+      },
+      "pristine_gas_adsorptions_check": {
+        "reference": [
+          {
+            "molecule": "NO",
+            "E_ad": -0.31
+          },
+          {
+            "molecule": "N2O",
+            "E_ad": -0.32
+          },
+          {
+            "molecule": "NO2",
+            "E_ad": -0.34
+          },
+          {
+            "molecule": "NH3",
+            "E_ad": -0.72
+          }
+        ],
+        "tolerance_E_ad": 0.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,591 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Relative energies are recomputed from absolute energies in energies.json and compared to paper Table 1 values; trends are verified.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "reactants",
+            "TS",
+            "products"
+          ],
+          "properties": {
+            "reactants": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "n",
+                  "metal",
+                  "spin_state",
+                  "method",
+                  "species",
+                  "absolute_energy_Hartree",
+                  "relative_energy_kcal_mol"
+                ],
+                "properties": {
+                  "n": {
+                    "type": "integer"
+                  },
+                  "metal": {
+                    "type": "string"
+                  },
+                  "spin_state": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "species": {
+                    "type": "string"
+                  },
+                  "absolute_energy_Hartree": {
+                    "type": "number"
+                  },
+                  "relative_energy_kcal_mol": {
+                    "type": "number"
+                  },
+                  "relative_energy_ZPE_corrected": {
+                    "type": "number",
+                    "optional": true
+                  }
+                }
+              }
+            },
+            "TS": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "n",
+                  "metal",
+                  "spin_state",
+                  "method",
+                  "species",
+                  "absolute_energy_Hartree",
+                  "relative_energy_kcal_mol"
+                ],
+                "properties": {
+                  "n": {
+                    "type": "integer"
+                  },
+                  "metal": {
+                    "type": "string"
+                  },
+                  "spin_state": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "species": {
+                    "type": "string"
+                  },
+                  "absolute_energy_Hartree": {
+                    "type": "number"
+                  },
+                  "relative_energy_kcal_mol": {
+                    "type": "number"
+                  },
+                  "relative_energy_ZPE_corrected": {
+                    "type": "number",
+                    "optional": true
+                  }
+                }
+              }
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "n",
+                  "metal",
+                  "spin_state",
+                  "method",
+                  "species",
+                  "absolute_energy_Hartree",
+                  "relative_energy_kcal_mol"
+                ],
+                "properties": {
+                  "n": {
+                    "type": "integer"
+                  },
+                  "metal": {
+                    "type": "string"
+                  },
+                  "spin_state": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "species": {
+                    "type": "string"
+                  },
+                  "absolute_energy_Hartree": {
+                    "type": "number"
+                  },
+                  "relative_energy_kcal_mol": {
+                    "type": "number"
+                  },
+                  "relative_energy_ZPE_corrected": {
+                    "type": "number",
+                    "optional": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Relative energies (kcal/mol) of all stationary points for the H2 addition reaction, computed with B3LYP and PBE functionals. The hidden checker compares these values to reference data from the paper."
+      }
+    ],
+    "notes": "Checker compares the reported relative energies and the implied singlet-triplet gaps and barrier trends to hidden reference values from Table 1 of the paper, using tolerances that accommodate method/implementation differences. The output contract requires fields for both uncorrected and ZPE-corrected energies."
+  },
+  "target_policies": {
+    "energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold reference relative energies (kcal/mol) from Table 1",
+      "source_provenance": "Paper Table 1 (Inorganic Chemistry 2007, 46, 2709-2715)",
+      "generation_method": "Extracted exactly from Table 1 values for each entry",
+      "why_not_fabricated": "Values are the paper's reported numbers; they are used as comparison targets for recomputed energies."
+    }
+  ],
+  "steps": [
+    {
+      "id": "file_structure",
+      "output_file": "energies.json",
+      "kind": "file_structure",
+      "weight": 0.05,
+      "description": "Validate that energies.json exists and has required keys with non-empty arrays"
+    },
+    {
+      "id": "b3lyp_relative_energies_recompute",
+      "output_file": "energies.json",
+      "kind": "recompute_metric",
+      "metric": "relative_energy_kcal_mol",
+      "weight": 0.5,
+      "description": "For every B3LYP entry, recompute uncorrected relative energy from absolute energies and compare to paper gold; also compare ZPE-corrected where provided"
+    },
+    {
+      "id": "pbe_reactants_relative_energies",
+      "output_file": "energies.json",
+      "kind": "recompute_metric",
+      "metric": "relative_energy_kcal_mol",
+      "weight": 0.1,
+      "description": "For PBE n=0 reactants, recompute uncorrected relative energy from absolute energies and compare to paper gold"
+    },
+    {
+      "id": "st_gap_trends",
+      "output_file": "energies.json",
+      "kind": "trend",
+      "weight": 0.15,
+      "description": "Verify Ti triplet ground state (S-T gap > 15 kcal/mol) and Zr/Hf singlet ground state (small gap)"
+    },
+    {
+      "id": "barrier_trends",
+      "output_file": "energies.json",
+      "kind": "trend",
+      "weight": 0.15,
+      "description": "Verify that singlet activation barriers follow Ti > Zr ≈ Hf for each ligand set"
+    },
+    {
+      "id": "pbe_st_gap_ti",
+      "output_file": "energies.json",
+      "kind": "trend",
+      "weight": 0.05,
+      "description": "Verify PBE singlet-triplet gap for Ti n=0 is positive and <= 10 kcal/mol"
+    }
+  ],
+  "gold_values": [
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": -24.1,
+      "rel_energy_zpe_corrected": -23.5
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.5,
+      "rel_energy_zpe_corrected": 0.8
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 10.3,
+      "rel_energy_zpe_corrected": 10.5
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": -20.9,
+      "rel_energy_zpe_corrected": -20.8
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": -0.3,
+      "rel_energy_zpe_corrected": -0.7
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": 0.0
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "reactant",
+      "rel_energy_uncorrected": 7.7,
+      "rel_energy_zpe_corrected": 7.8
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 23.6,
+      "rel_energy_zpe_corrected": 26.7
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 13.2,
+      "rel_energy_zpe_corrected": 15.8
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 18.8,
+      "rel_energy_zpe_corrected": 21.4
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 18.7,
+      "rel_energy_zpe_corrected": 21.2
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 17.7,
+      "rel_energy_zpe_corrected": 20.3
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 23.4,
+      "rel_energy_zpe_corrected": 26.2
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 16.0,
+      "rel_energy_zpe_corrected": 18.7
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": -0.4,
+      "rel_energy_zpe_corrected": 2.0
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 18.0,
+      "rel_energy_zpe_corrected": 19.6
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 22.2,
+      "rel_energy_zpe_corrected": 23.9
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 17.1,
+      "rel_energy_zpe_corrected": 19.0
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "TS",
+      "rel_energy_uncorrected": 26.4,
+      "rel_energy_zpe_corrected": 29.0
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -12.6,
+      "rel_energy_zpe_corrected": -6.4
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -15.4,
+      "rel_energy_zpe_corrected": -10.1
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -13.1,
+      "rel_energy_zpe_corrected": -6.9
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": 3.6,
+      "rel_energy_zpe_corrected": 9.0
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -14.2,
+      "rel_energy_zpe_corrected": -7.8
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -2.8,
+      "rel_energy_zpe_corrected": 2.5
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -17.5,
+      "rel_energy_zpe_corrected": -11.5
+    },
+    {
+      "n": 4,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -22.0,
+      "rel_energy_zpe_corrected": -17.3
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -11.4,
+      "rel_energy_zpe_corrected": -6.2
+    },
+    {
+      "n": 4,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": 0.1,
+      "rel_energy_zpe_corrected": 4.5
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": -15.3,
+      "rel_energy_zpe_corrected": -9.3
+    },
+    {
+      "n": 4,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "B3LYP",
+      "species": "product",
+      "rel_energy_uncorrected": 1.9,
+      "rel_energy_zpe_corrected": 8.1
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "singlet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": null
+    },
+    {
+      "n": 0,
+      "metal": "Ti",
+      "spin_state": "triplet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": -3.1,
+      "rel_energy_zpe_corrected": null
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "singlet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": null
+    },
+    {
+      "n": 0,
+      "metal": "Zr",
+      "spin_state": "triplet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": 6.1,
+      "rel_energy_zpe_corrected": null
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "singlet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": 0.0,
+      "rel_energy_zpe_corrected": null
+    },
+    {
+      "n": 0,
+      "metal": "Hf",
+      "spin_state": "triplet",
+      "method": "PBE",
+      "species": "reactant",
+      "rel_energy_uncorrected": 11.6,
+      "rel_energy_zpe_corrected": null
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_degraded_properties",
+    "title": "Compute age-dependent degraded concrete properties",
+    "role": "scored",
+    "action": "Implement the empirical degradation model using the AAR strain time-fit relation, AAR damage factor, mechanical porosity via damage function, total porosity, un-degraded modulus from compressive strength, degraded modulus polynomial, and tensile strength scaling. Use a 28-day compressive strength of 36.3 MPa and initial modulus constant 32660 MPa. Compute the degraded elastic modulus E_m and tensile strength f_t at ages 1, 25, 50, 75, and 100 years.",
+    "output_file": "degraded_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Table of age-dependent degraded elastic modulus and tensile strength of concrete.",
+    "output_schema": "Columns: age (years), E_m (MPa), f_t (MPa). One row per age: 1, 25, 50, 75, 100."
+  },
+  {
+    "id": "step_02_seismic_simulation",
+    "title": "Run seismic finite-element simulations for Koyna dam-reservoir system",
+    "role": "process",
+    "action": "Build a 2D plane-strain finite-element model of the Koyna gravity dam and reservoir using Lagrangian displacement formulation for the dam and Eulerian pressure formulation for the reservoir. Implement a non-reflecting boundary condition at the reservoir far end (truncation length 0.5 times water depth) and sediment absorption via an equivalent reflection coefficient that varies with age (sedimentation rate 0.3 m/year). For each of the two ages (1 and 75 years), assemble the coupled dam-reservoir system matrices using the corresponding degraded concrete properties from Step 1 (E, Poisson's ratio 0.235, density 2415.82 kg/m³) and the reflection coefficient. Perform linear time-history analysis with Newmark's average acceleration method under the four scaled ground motions (NF1, FF1, NF2, FF2) with PGA 0.24g. Save the time histories of relative horizontal crest displacement, major principal stress at the heel, minor principal stress at the neck, and hydrodynamic pressure for each case.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Simulation step that produces the raw stress/displacement histories from which peak responses are extracted.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_peak_responses",
+    "title": "Extract peak seismic response quantities",
+    "role": "scored",
+    "action": "From the time-history outputs of Step 2, determine the maximum absolute relative horizontal crest displacement, maximum major principal stress at the heel (tensile), maximum minor principal stress at the neck (compressive), and maximum hydrodynamic pressure for each ground motion and age (1 year, 75 years). Compile the results into the output file.",
+    "output_file": "response_summary.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Summary of peak seismic responses for all simulation cases.",
+    "output_schema": "Columns: earthquake (Northridge or Imperial Valley), motion_type (NF or FF), age (years), max_crest_displacement (m), max_major_principal_stress_heel (MPa), max_minor_principal_stress_neck (MPa), max_hydrodynamic_pressure (MPa). One row per case (8 rows): NF1 age1, NF1 age75, FF1 age1, FF1 age75, NF2 age1, NF2 age75, FF2 age1, FF2 age75."
+  }
+]

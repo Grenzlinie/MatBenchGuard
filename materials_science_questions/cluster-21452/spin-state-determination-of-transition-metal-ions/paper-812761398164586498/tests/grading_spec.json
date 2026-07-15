@@ -1,0 +1,239 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Relative energies recomputed from agent's raw total energies and compared to paper gold; exchange parameters compared to paper gold with tolerances and sign checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "relative_energies.json": "reference_match",
+    "exchange_parameters.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper gold electromer energies and exchange coupling constants",
+      "source_provenance": "Russian Journal of Coordination Chemistry (2019), Tables 1,2,4",
+      "generation_method": "transcribed directly from the paper's published tables",
+      "why_not_fabricated": "values are exactly what the paper reports; the reference solve.sh produces these same numbers, guaranteeing the oracle scores full reward"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "relative_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "complex",
+              "electromer",
+              "S",
+              "E_au",
+              "dE_kcal",
+              "S2"
+            ],
+            "properties": {
+              "complex": {
+                "type": "string"
+              },
+              "electromer": {
+                "type": "string"
+              },
+              "S": {
+                "type": "number"
+              },
+              "E_au": {
+                "type": "number"
+              },
+              "dE_kcal": {
+                "type": "number"
+              },
+              "S2": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "A list of all computed electromers (complexes I(n=0,2), II(n=1), III(n=2), IV(n=1)) with total energies, relative energies, spin states, and S² expectations. The checker compares the agent's computed relative energies to the paper-reported reference values with an appropriate tolerance."
+      },
+      {
+        "file": "exchange_parameters.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Object mapping electromer keys (e.g., 'I_n0_LS_LS') to an object of J parameters (J12, J13, J14, J23, J24, J34). Values in cm⁻¹. The checker compares the agent's computed J parameters to the paper-reported reference values with an appropriate tolerance."
+      }
+    ],
+    "notes": "The agent must re-implement the DFT calculations using an open-source tool (ORCA) and the same functional/basis set. All molecular geometries are constructed from the paper's description; no pre-built coordinates are provided. The hidden gold consists of the paper's reported relative energies and J parameters from Tables 1,2,4. Scoring tolerances account for implementation spread."
+  },
+  "steps": [
+    {
+      "id": "step_relative_energies",
+      "output_file": "relative_energies.json",
+      "weight": 0.6,
+      "kind": "custom",
+      "tolerance_kcal": 2.0,
+      "hartree_to_kcal": 627.50947,
+      "gold": {
+        "I_n0": {
+          "ground_energy": -6377.080699,
+          "electromers": {
+            "LS_LS": {
+              "dE_kcal": 0.0,
+              "S": 2
+            },
+            "LS_HS": {
+              "dE_kcal": 5.9,
+              "S": 3
+            },
+            "HS_HS": {
+              "dE_kcal": 11.8,
+              "S": 4
+            },
+            "LS_LS_cat": {
+              "dE_kcal": 18.0,
+              "S": 0
+            }
+          }
+        },
+        "I_n2": {
+          "ground_energy": -6991.796253,
+          "electromers": {
+            "LS_LS": {
+              "dE_kcal": 0.0,
+              "S": 3
+            },
+            "LS_HS": {
+              "dE_kcal": 6.0,
+              "S": 4
+            },
+            "HS_HS": {
+              "dE_kcal": 11.9,
+              "S": 5
+            }
+          }
+        },
+        "II_n1": {
+          "ground_energy": -6606.928851,
+          "electromers": {
+            "LS_LS": {
+              "dE_kcal": 0.0,
+              "S": 3
+            },
+            "LS_HS": {
+              "dE_kcal": 5.9,
+              "S": 4
+            },
+            "HS_HS": {
+              "dE_kcal": 11.8,
+              "S": 5
+            }
+          }
+        },
+        "III_n2": {
+          "ground_energy": -4304.242415,
+          "electromers": {
+            "LS": {
+              "dE_kcal": 0.0,
+              "S": 2
+            },
+            "HS": {
+              "dE_kcal": 6.3,
+              "S": 3
+            }
+          }
+        },
+        "IV_n1": {
+          "ground_energy": -3919.375659,
+          "electromers": {
+            "LS": {
+              "dE_kcal": 0.0,
+              "S": 2
+            },
+            "HS": {
+              "dE_kcal": 6.2,
+              "S": 3
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "step_exchange_parameters",
+      "output_file": "exchange_parameters.json",
+      "weight": 0.4,
+      "kind": "custom",
+      "tolerance_ferro": 100.0,
+      "tolerance_antiferro": 50.0,
+      "gold_j": {
+        "I_n0_LS_LS": {
+          "J12": 535,
+          "J13": 1,
+          "J14": 9,
+          "J23": -17,
+          "J24": 1,
+          "J34": 535
+        },
+        "I_n0_LS_HS": {
+          "J12": 570,
+          "J13": 47,
+          "J14": 15,
+          "J23": -49,
+          "J24": -10,
+          "J34": -92
+        },
+        "I_n0_HS_HS": {
+          "J12": -78,
+          "J13": 1,
+          "J14": 4,
+          "J23": -53,
+          "J24": 1,
+          "J34": -78
+        },
+        "III_n2_LS": {
+          "J12": 426,
+          "J13": -81,
+          "J14": 556,
+          "J23": -503,
+          "J24": 82,
+          "J34": -1694
+        },
+        "III_n2_HS": {
+          "J12": -183,
+          "J13": -160,
+          "J14": 49,
+          "J23": -785,
+          "J24": -241,
+          "J34": -1832
+        },
+        "IV_n1_LS": {
+          "J12": 610,
+          "J13": -123,
+          "J14": -123,
+          "J23": -388,
+          "J24": -388,
+          "J34": -1277
+        },
+        "IV_n1_HS": {
+          "J12": -154,
+          "J13": 23,
+          "J14": 23,
+          "J23": -544,
+          "J24": -544,
+          "J34": -1207
+        }
+      }
+    }
+  ]
+}

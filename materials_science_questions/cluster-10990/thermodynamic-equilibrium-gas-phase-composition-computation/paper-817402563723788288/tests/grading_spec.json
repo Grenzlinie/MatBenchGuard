@@ -1,0 +1,134 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Both outputs are deterministic quantities that can be recomputed from the paper's analytical formulas and coefficients embedded as hidden reference.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "thermodynamic_composition.csv": "metric_recompute",
+    "droplet_diameter.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference partial pressures and droplet diameter gold value",
+      "source_provenance": "Arrhenius coefficients from Table 2 of the paper; droplet formula Eq. 11 with constants from the paper's text.",
+      "generation_method": "Coefficients and droplet parameters are transcribed from the paper and used to compute expected values inline within the checker.",
+      "why_not_fabricated": "All coefficients and parameters are the paper's published values, faithfully reproduced. No invented data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "thermodynamic_composition.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "p_B_atm",
+            "p_N_atm",
+            "p_BN_atm",
+            "p_B2N_atm",
+            "p_N2_atm",
+            "p_N3_atm",
+            "p_B2_atm",
+            "p_B3_atm"
+          ],
+          "units": {
+            "Temperature_K": "K",
+            "p_B_atm": "atm",
+            "p_N_atm": "atm",
+            "p_BN_atm": "atm",
+            "p_B2N_atm": "atm",
+            "p_N2_atm": "atm",
+            "p_N3_atm": "atm",
+            "p_B2_atm": "atm",
+            "p_B3_atm": "atm"
+          }
+        },
+        "description": "Equilibrium partial pressures of B, N, BN, B₂N, N₂, N₃, B₂, and B₃ at 7 temperatures (2000–5000 K) for a B-N mixture at 1 atm. The checker will recompute relative errors against a hidden reference and check monotonic trends."
+      },
+      {
+        "file": "droplet_diameter.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "required": {
+            "line": "numeric"
+          }
+        },
+        "description": "Boron droplet diameter in nanometers computed for the ICP reactor conditions. The checker compares this value to the paper-reported gold within a tolerance."
+      }
+    ],
+    "notes": "The task covers the paper's main thermodynamic composition and droplet size predictions using analytically derived formulas. No process steps are needed because the coefficients are provided directly in the instruction; the agent solely computes the scored outputs."
+  },
+  "reference": {
+    "pressure_coefficients": {
+      "B": [
+        515000,
+        58800
+      ],
+      "N": [
+        3600,
+        58100
+      ],
+      "BN": [
+        359000,
+        65000
+      ],
+      "B2N": [
+        535000,
+        40700
+      ],
+      "N3": [
+        0.0029,
+        51700
+      ],
+      "B2": [
+        1962000,
+        81900
+      ],
+      "B3": [
+        238000,
+        74100
+      ]
+    },
+    "temperatures": [
+      2000,
+      2500,
+      3000,
+      3500,
+      4000,
+      4500,
+      5000
+    ],
+    "droplet_params": {
+      "r0": 1.2e-10,
+      "n0": 3e+22,
+      "T_nucl": 3200.0,
+      "T_end": 2800.0,
+      "cooling_rate": 60000.0,
+      "m_B": 1.79e-26,
+      "k": 1.380649e-23
+    }
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "thermodynamic_composition.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "description": "Check partial pressures CSV against expected values computed from paper coefficients."
+    },
+    {
+      "id": "step_02",
+      "output_file": "droplet_diameter.txt",
+      "weight": 0.6,
+      "kind": "exact_match",
+      "description": "Check droplet diameter value against recomputed gold with absolute tolerance."
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_geo_opt",
+    "title": "Geometry optimization of Sr2IrO4",
+    "role": "process",
+    "action": "Optimize the unit cell and internal coordinates of Sr2IrO4 using DFT (PBE, OpenMX) with a force convergence criterion of 0.01 eV/Å.",
+    "output_file": "",
+    "evidence": "sr2iro4_opt.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Geometry optimization for the pure Sr2IrO4 structure (x=0). Required before DFT+U+SOC calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_model_calc",
+    "title": "Model calculation of ⟨L·S⟩ vs 10Dq",
+    "role": "scored",
+    "action": "For a d^5 configuration in an octahedral crystal field, construct the full d-orbital Hamiltonian including SOC, diagonalize it as a function of the crystal-field splitting 10Dq (ranging from 0 to 5 eV, at least 10 evenly spaced points), compute ⟨L·S⟩ using the full J-basis (t2g+eg) and the restricted jeff-basis (t2g only), and output the results.",
+    "output_file": "step_01_model_LS.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Model calculation demonstrating the difference between full J-basis and jeff-basis for spin-orbit coupling.",
+    "output_schema": "columns: 10Dq (eV), LS_J (dimensionless), LS_jeff (dimensionless); one row per 10Dq value (at least 10 points evenly spaced 0–5 eV)."
+  },
+  {
+    "id": "step_dft_sr2iro4",
+    "title": "DFT+U+SOC for Sr2IrO4 (x=0)",
+    "role": "process",
+    "action": "Using the optimized structure from the geometry optimization step, perform a DFT+U+SOC calculation with OpenMX: PBE functional, U_eff = 2.0 eV, fully relativistic pseudopotentials, non-collinear SOC, 300 Ry energy cutoff, 5×5×2 k-mesh. This yields Kohn-Sham eigenstates and band energies.",
+    "output_file": "",
+    "evidence": "sr2iro4_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "DFT+U+SOC calculation for pure Sr2IrO4 to obtain electronic structure for subsequent analysis.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_dft_mgiro6",
+    "title": "DFT+U+SOC for Sr2MgIrO6",
+    "role": "process",
+    "action": "Using the experimental lattice parameter a=3.958 Å and the standard double perovskite structure (antiferromagnetic order in a 20-atom cell), perform a DFT+U+SOC calculation with OpenMX: PBE functional, U_eff = 2.0 eV, fully relativistic pseudopotentials, non-collinear SOC, 300 Ry energy cutoff, 9×9×7 k-mesh.",
+    "output_file": "",
+    "evidence": "sr2mgiro6_calc.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "DFT+U+SOC calculation for Sr2MgIrO6 to obtain electronic structure.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_analysis_results",
+    "title": "Compute ⟨L·S⟩, n_h, and branching ratio",
+    "role": "scored",
+    "action": "For each of the two DFT+U+SOC calculations (Sr2IrO4 and Sr2MgIrO6), project the Kohn-Sham states onto J=5/2 and J=3/2 basis states for Ir-5d orbitals, sum over occupied states to obtain ⟨L·S⟩, count the number of d holes n_h via Mulliken population analysis, and compute the branching ratio as (2 - r)/(1 + r) with r = ⟨L·S⟩/n_h. Save the results in a single JSON file with keys identifying the compounds.",
+    "output_file": "step_02_material_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final computed spin-orbit coupling expectation value, d-hole count, and branching ratio for the two target iridates.",
+    "output_schema": "Object with keys 'Sr2IrO4_x=0' and 'Sr2MgIrO6'. Each value is an object with numeric fields: LS (float), n_h (float), branching_ratio (float)."
+  }
+]

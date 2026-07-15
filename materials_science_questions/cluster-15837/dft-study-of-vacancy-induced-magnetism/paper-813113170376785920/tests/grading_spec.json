@@ -1,0 +1,297 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing DFT is infeasible; we verify structural trends (lattice constant ordering, non-magnetic), shape of results (nulls for metallic system), and compare each numerical property against paper-reported reference values with tolerances. T3 subsumes these checks.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ISW_NT": "object — properties for isolated (7,7) SiC nanotube",
+            "BSW_NT": "object — properties for tetragonal bundle",
+            "ISW_NTC": "object — properties for isolated tube with C line vacancy",
+            "ISW_NTSi": "object — properties for isolated tube with Si line vacancy"
+          },
+          "items": {
+            "lattice_constants": {
+              "a": "float (Å)",
+              "b": "float (Å)",
+              "c": "float (Å)"
+            },
+            "tubular_diameter": "float (Å)",
+            "radial_buckling": "float (Å)",
+            "symmetry_number": "int",
+            "bulk_modulus": {
+              "a": "float or null (kbar; null for isolated tubes)",
+              "b": "float or null (kbar; null for isolated tubes)",
+              "c": "float (kbar)"
+            },
+            "band_gap": {
+              "value": "float or null (eV; null for metallic systems)",
+              "transition": "string or null (e.g. '0.65 π/c → 0.95 π/c, Γ → Z'; null for metallic)"
+            },
+            "effective_mass": {
+              "CB": "float (m₀)",
+              "VB": "float or null (m₀; null for metallic systems)"
+            },
+            "velocity_z": {
+              "CB": "float (m/s)",
+              "VB": "float or null (m/s; null for metallic systems)"
+            },
+            "charge_density": {
+              "s_C": "float (e)",
+              "s_Si": "float (e)",
+              "p_C": "float (e)",
+              "p_Si": "float (e)",
+              "total": "float (e)"
+            },
+            "total_magnetization": "float (μB)"
+          }
+        },
+        "description": "Complete structural and electronic properties for all four SiC nanotube configurations. Each top-level key corresponds to one configuration and contains all computed quantities. Numeric values are JSON numbers; undefined entries use JSON null."
+      }
+    ],
+    "notes": "The verifier compares each numerical property against hidden reference values with appropriate per-quantity tolerances. Structural trends across configurations (e.g. ordering of axial lattice constants) are also checked. The metallic Si-vacancy system (ISW_NTSi) should report band_gap.value=null and band_gap.transition=null, with effective_mass.VB=null and velocity_z.VB=null. All systems are nonmagnetic; total_magnetization should be approximately zero."
+  },
+  "steps": [
+    {
+      "id": "check_lattice_constants",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.15,
+      "config": {
+        "reference": {
+          "ISW_NT": {
+            "a": 30.0,
+            "b": 30.0,
+            "c": 3.073
+          },
+          "BSW_NT": {
+            "a": 14.738,
+            "b": 14.738,
+            "c": 3.0737
+          },
+          "ISW_NTC": {
+            "a": 30.0,
+            "b": 30.0,
+            "c": 3.063
+          },
+          "ISW_NTSi": {
+            "a": 30.0,
+            "b": 30.0,
+            "c": 3.052
+          }
+        },
+        "tolerance": {
+          "a": 0.5,
+          "b": 0.5,
+          "c": 0.02
+        }
+      }
+    },
+    {
+      "id": "check_bulk_modulus",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.1,
+      "config": {
+        "reference": {
+          "ISW_NT": {
+            "a": null,
+            "b": null,
+            "c": 824
+          },
+          "BSW_NT": {
+            "a": 872,
+            "b": 872,
+            "c": 3398
+          },
+          "ISW_NTC": {
+            "a": null,
+            "b": null,
+            "c": 768
+          },
+          "ISW_NTSi": {
+            "a": null,
+            "b": null,
+            "c": 781
+          }
+        },
+        "tolerance_relative": 0.15
+      }
+    },
+    {
+      "id": "check_diameter_buckling",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.1,
+      "config": {
+        "reference": {
+          "ISW_NT": {
+            "tubular_diameter": 11.84,
+            "radial_buckling": 0.0
+          },
+          "BSW_NT": {
+            "tubular_diameter": 11.887,
+            "radial_buckling": 0.0322
+          },
+          "ISW_NTC": {
+            "tubular_diameter": 11.516,
+            "radial_buckling": 0.0395
+          },
+          "ISW_NTSi": {
+            "tubular_diameter": 11.166,
+            "radial_buckling": 0.0458
+          }
+        },
+        "tolerance": {
+          "tubular_diameter": 0.1,
+          "radial_buckling": 0.01
+        }
+      }
+    },
+    {
+      "id": "check_band_gap",
+      "output_file": "results.json",
+      "kind": "band_gap_check",
+      "weight": 0.15,
+      "config": {
+        "reference": {
+          "ISW_NT": {
+            "value": 2.312,
+            "transition": "0.65 π/c → 0.95 π/c, Γ → Z"
+          },
+          "BSW_NT": {
+            "value": 1.503,
+            "transition": "0.68 π/c → 0.92 π/c, Γ → Z"
+          },
+          "ISW_NTC": {
+            "value": 0.979,
+            "transition": "0.45 π/c → 0.60 π/c, Γ → Z"
+          },
+          "ISW_NTSi": {
+            "value": null,
+            "transition": null
+          }
+        },
+        "tolerance": {
+          "value": 0.15
+        }
+      }
+    },
+    {
+      "id": "check_effective_mass_velocity",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.15,
+      "config": {
+        "reference_effective_mass": {
+          "ISW_NT": {
+            "CB": 0.0044,
+            "VB": 0.004
+          },
+          "BSW_NT": {
+            "CB": 0.0103,
+            "VB": 0.0026
+          },
+          "ISW_NTC": {
+            "CB": 0.0128,
+            "VB": 0.0038
+          },
+          "ISW_NTSi": {
+            "CB": 0.1272,
+            "VB": null
+          }
+        },
+        "reference_velocity": {
+          "ISW_NT": {
+            "CB": 154320.0,
+            "VB": 35610.0
+          },
+          "BSW_NT": {
+            "CB": 48240.0,
+            "VB": 51950.0
+          },
+          "ISW_NTC": {
+            "CB": 167000.0,
+            "VB": 170710.0
+          },
+          "ISW_NTSi": {
+            "CB": 174420.0,
+            "VB": null
+          }
+        },
+        "tolerance_relative": 0.15
+      }
+    },
+    {
+      "id": "check_charge_density",
+      "output_file": "results.json",
+      "kind": "numeric_compare",
+      "weight": 0.1,
+      "config": {
+        "reference": {
+          "ISW_NT": {
+            "s_C": 1.13106,
+            "s_Si": 0.82861,
+            "p_C": 3.93299,
+            "p_Si": 1.9994,
+            "total": 7.89206
+          },
+          "BSW_NT": {
+            "s_C": 1.13084,
+            "s_Si": 0.82321,
+            "p_C": 3.94195,
+            "p_Si": 1.99932,
+            "total": 7.89533
+          },
+          "ISW_NTC": {
+            "s_C": 1.135685,
+            "s_Si": 0.8892,
+            "p_C": 3.915462,
+            "p_Si": 2.03075,
+            "total": 7.9711
+          },
+          "ISW_NTSi": {
+            "s_C": 1.125979,
+            "s_Si": 0.87654,
+            "p_C": 3.8268,
+            "p_Si": 1.9876,
+            "total": 7.81691
+          }
+        },
+        "tolerance": 0.01
+      }
+    },
+    {
+      "id": "check_magnetization_trends",
+      "output_file": "results.json",
+      "kind": "structural",
+      "weight": 0.15,
+      "config": {}
+    },
+    {
+      "id": "check_symmetry",
+      "output_file": "results.json",
+      "kind": "exact",
+      "weight": 0.1,
+      "config": {
+        "expected_symmetry_number": 2
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference values for all structural and electronic properties",
+      "source_provenance": "Paper Tables 1, 2, 3; the same numbers written by the reference solve.sh",
+      "generation_method": "Extracted directly from the paper's published tables",
+      "why_not_fabricated": "These are the paper's actual reported results for the (7,7) SiC nanotube systems, used as the ground truth for scoring."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "cluster_id": 17121,
+  "paper_id": "814601300699250688",
+  "paper_ids": [
+    "814601300699250688"
+  ],
+  "n_instances": 1,
+  "verify_mode": "coding",
+  "task_mode": "single_instance",
+  "metric_type": "paper2arm",
+  "difficulty": {
+    "compute_cost": 5,
+    "conceptual": 2,
+    "execution": 3,
+    "composite": 3.25,
+    "level": "medium",
+    "rationale": {
+      "conceptual": "The paper applies standard classical MD methods (Lennard-Jones potentials, SPC/E water model, NVT ensemble, v-rescale thermostat, PME electrostatics) using established force fields from Heinz et al. The analysis techniques (geometric H-bond criterion, density profiles to define monolayers, cylindrical droplet contact angle calculation) are all well-documented, textbook-level methods. The scientific insight about crystal-face matching is conceptual, not algorithmic. No novel methods, custom derivations, or research-grade algorithms are required.",
+      "execution": "The reproduction requires a multi-stage pipeline: (1) constructing metal slabs for 8 metals × 3 crystal faces with correct crystallographic orientations, (2) solvating each with SPC/E water, (3) running 24 separate NVT MD simulations of 8 ns each with proper GROMACS parameters, (4) computing water density profiles along z and identifying first monolayer boundaries, (5) counting within-monolayer and monolayer-second-layer H-bonds per water molecule using geometric criteria, and (6) computing contact angles for droplet-forming surfaces. This is 4-6 interconnected stages with dependencies (simulations must complete before analysis) and systematic parameter management across 24 systems. The solve.sh bypasses all simulation by hardcoding values, confirming the real pipeline is non-trivial."
+    },
+    "reasoning": "Standard classical MD using established force fields and GROMACS. The method is well-known (SPC/E water, LJ metals, NVT with v-rescale, PME). The analysis (H-bond counting with geometric criterion, density profiles, cylindrical droplet contact angle) uses textbook techniques. The main challenge is the engineering breadth: 24 metal/face systems must be built, simulated, and analyzed systematically. The conceptual demands are modest, while the pipeline orchestration is moderate (system preparation → 24 simulations → multiple analysis steps → JSON output). Resources are light: small nanoscale slabs with a few thousand atoms; CPU-class MD with minimal memory and no external data.",
+    "compute_estimate": {
+      "runtime_sec": 172800,
+      "needs_gpu": false,
+      "gpu_count": 0,
+      "gpu_kind": "",
+      "est_memory_gb": 4.0,
+      "est_data_gb": 0.0,
+      "reasoning": "Each system is a nanoscale slab (~1000 metal atoms + ~4000 water molecules, ~13K atoms total). Classical MD at this scale runs adequately on CPU; no deep learning or large-scale training. Memory per simulation is under 1 GB. All inputs (metal coordinates, water configurations) are generated from scratch; no external datasets are downloaded. The 2015 paper itself used CPU clusters, but a few modern CPU cores suffice for these small systems."
+    }
+  },
+  "discipline": "molecular dynamics",
+  "prompt_version": ""
+}

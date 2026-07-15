@@ -1,0 +1,70 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The verifier cannot re-run the DFPT calculation; it directly compares the agent's reported phonon frequencies to the paper's experimental values, scoring via MAE with tolerance and monotonic decay.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "calculated_raman_frequencies.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Experimental Raman mode frequencies from the paper (Table 1) for Ag¹–Ag⁹ and Bg¹–Bg⁷",
+      "source_provenance": "Paper Table 1, experimental column for A_g and B_g modes",
+      "generation_method": "Manually extracted from the paper",
+      "why_not_fabricated": "These are the actual reported experimental values; they are used as the hidden gold for comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "calculated_raman_frequencies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "ag_modes": "array of 9 objects",
+            "bg_modes": "array of 9 objects"
+          },
+          "items": {
+            "label": "string",
+            "frequency": "number"
+          },
+          "units": {
+            "frequency": "cm⁻¹"
+          },
+          "description": "Both arrays must contain 9 entries each. Each entry has a 'label' (string, e.g. 'A_g^1', 'B_g^1') and a 'frequency' (float, the calculated Γ‑point phonon energy in cm⁻¹). All 18 entries must be present."
+        },
+        "description": "The agent's computed Raman‑active phonon frequencies. The hidden checker extracts the 16 experimentally observed modes and computes the mean absolute error (MAE) against hidden experimental values."
+      }
+    ],
+    "notes": "Only the zero‑temperature DFPT calculation is scored. Temperature‑dependent anharmonic fitting is excluded per the task scope. The agent must install Quantum ESPRESSO and obtain pseudopotentials; the DFPT run may be computationally intensive but is feasible."
+  },
+  "steps": [
+    {
+      "id": "step01_dfpt",
+      "output_file": "calculated_raman_frequencies.json",
+      "kind": "numeric",
+      "weight": 1.0,
+      "reference_frequencies": {
+        "ag1": 63.8,
+        "ag2": 93.7,
+        "ag3": 102.5,
+        "ag4": 136.5,
+        "ag5": 153.9,
+        "ag6": 168.0,
+        "ag7": 221.2,
+        "ag8": 239.6,
+        "ag9": 256.6,
+        "bg1": 80.9,
+        "bg2": 91.1,
+        "bg3": 109.7,
+        "bg4": 134.4,
+        "bg5": 179.6,
+        "bg6": 187.3,
+        "bg7": 217.6
+      }
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT and MD results are method-dependent, so absolute numbers may vary; ordering trends are robust across reasonable implementations and are the paper's central claim for this computational component.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "binding_and_dipole.json": "structural_audit",
+    "water_states.json": "structural_audit"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_and_dipole.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "binding_energies",
+            "dipole_moments"
+          ],
+          "properties": {
+            "binding_energies": {
+              "type": "object",
+              "required": [
+                "SO4_near_N",
+                "H2O_near_N",
+                "Zn_near_neg",
+                "H2O_near_neg"
+              ],
+              "properties": {
+                "SO4_near_N": {
+                  "type": "object",
+                  "required": [
+                    "DMAPS",
+                    "MPC",
+                    "CBMA"
+                  ],
+                  "additionalProperties": false
+                },
+                "H2O_near_N": {
+                  "type": "object",
+                  "required": [
+                    "DMAPS",
+                    "MPC",
+                    "CBMA"
+                  ],
+                  "additionalProperties": false
+                },
+                "Zn_near_neg": {
+                  "type": "object",
+                  "required": [
+                    "DMAPS",
+                    "MPC",
+                    "CBMA"
+                  ],
+                  "additionalProperties": false
+                },
+                "H2O_near_neg": {
+                  "type": "object",
+                  "required": [
+                    "DMAPS",
+                    "MPC",
+                    "CBMA"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "dipole_moments": {
+              "type": "object",
+              "required": [
+                "DMAPS",
+                "MPC",
+                "CBMA"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "units": {
+            "binding_energies": "eV",
+            "dipole_moments": "Debye"
+          }
+        },
+        "description": "Binding energies (eV) for four specific monomer interactions and molecular dipole moments (Debye) for DMAPS, MPC, CBMA. The checker will verify the relative ordering of binding energies and that dipole moments satisfy DMAPS > MPC > CBMA."
+      },
+      {
+        "file": "water_states.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "free_H2O",
+            "Zn_coordinated_H2O",
+            "polymer_fixed_H2O"
+          ],
+          "properties": {
+            "free_H2O": {
+              "type": "object",
+              "required": [
+                "PDMAPS",
+                "PMPC",
+                "PCBMA"
+              ],
+              "additionalProperties": false
+            },
+            "Zn_coordinated_H2O": {
+              "type": "object",
+              "required": [
+                "PDMAPS",
+                "PMPC",
+                "PCBMA"
+              ],
+              "additionalProperties": false
+            },
+            "polymer_fixed_H2O": {
+              "type": "object",
+              "required": [
+                "PDMAPS",
+                "PMPC",
+                "PCBMA"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "units": {
+            "free_H2O": "percent",
+            "Zn_coordinated_H2O": "percent",
+            "polymer_fixed_H2O": "percent"
+          }
+        },
+        "description": "Percentage of water molecules in free, Zn²⁺-coordinated, and polymer-fixed states for three gel electrolytes (PDMAPS, PMPC, PCBMA). The checker will verify that free water is lowest for PDMAPS and polymer-fixed water is highest for PDMAPS."
+      }
+    ],
+    "notes": "The task reproduces only the computational component of the paper; wet-lab experiments are excluded. The solving agent must use the provided SMILES strings as starting points for DFT and build polymer models for MD. Trends are scored, not exact numerical reproduction."
+  },
+  "steps": [
+    {
+      "id": "step_binding_and_dipole",
+      "output_file": "binding_and_dipole.json",
+      "kind": "structural",
+      "weight": 0.5,
+      "description": "Verify binding energy internal ordering (SO4 < H2O near N, H2O near neg < Zn), cross-monomer ordering (DMAPS < MPC < CBMA for each interaction), and dipole moment order (DMAPS > MPC > CBMA). Partial credit proportional to number of correct sub-conditions."
+    },
+    {
+      "id": "step_water_states",
+      "output_file": "water_states.json",
+      "kind": "structural",
+      "weight": 0.5,
+      "description": "Verify free_H2O: PDMAPS < PMPC and PDMAPS < PCBMA; polymer_fixed_H2O: PDMAPS > PMPC and PDMAPS > PCBMA. Partial credit proportional to number of correct sub-conditions."
+    }
+  ]
+}

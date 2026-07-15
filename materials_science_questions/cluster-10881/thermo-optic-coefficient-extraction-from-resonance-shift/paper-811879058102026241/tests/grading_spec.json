@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Effective indices compared to paper gold (T0); field profile uses structural audit (T3) as a full recompute from raw matrices is infeasible given the output contract.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold effective indices of three cladding modes for the given geometry.",
+      "source_provenance": "Paper text: 'Their effective indices n_eff are calculated to be 1.44380171, 1.44351011, and 1.44258249'",
+      "generation_method": "Extracted from paper section 2 numerical example.",
+      "why_not_fabricated": "These are the paper's reported quantitative results and serve as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_indices.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "mode",
+            "n_eff",
+            "n_eff_coreless",
+            "delta_n_eff"
+          ],
+          "units": {
+            "n_eff": "dimensionless (effective index)",
+            "n_eff_coreless": "dimensionless (effective index)",
+            "delta_n_eff": "dimensionless (difference)"
+          }
+        },
+        "description": "Effective indices of the three cladding modes (dual-core model), the corresponding coreless fiber effective indices, and their signed difference delta_n_eff = n_eff - n_eff_coreless, at λ=1.550 µm for the given fiber parameters."
+      },
+      {
+        "file": "field_profile_LP03prime.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_um",
+            "amplitude_theta0",
+            "amplitude_theta_pi"
+          ],
+          "units": {
+            "r_um": "µm",
+            "amplitude_theta0": "normalized field amplitude",
+            "amplitude_theta_pi": "normalized field amplitude"
+          }
+        },
+        "description": "Normalized radial field profile of the LP03′ mode along θ=0 and θ=π, demonstrating the azimuthally asymmetric intensity distribution."
+      }
+    ],
+    "notes": "The task reproduces the effective indices (dual-core and coreless) and the field profile for the given geometry, demonstrating the difference between the two models as highlighted in the paper."
+  },
+  "steps": [
+    {
+      "id": "step_02",
+      "output_file": "effective_indices.csv",
+      "weight": 0.7,
+      "kind": "result-level compare",
+      "gold": {
+        "LP03'": 1.44380171,
+        "LP04'": 1.44351011,
+        "LP06'": 1.44258249
+      },
+      "tolerance": 2e-07
+    },
+    {
+      "id": "step_03",
+      "output_file": "field_profile_LP03prime.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "checks": [
+        {
+          "name": "max_offset",
+          "description": "Maximum of amplitude_theta0 occurs at r > 0 (offset from fiber axis).",
+          "threshold_r": 0.1
+        },
+        {
+          "name": "local_max_in_core2",
+          "description": "There is a local maximum of amplitude_theta0 in the secondary core region (29-36 µm).",
+          "r_min": 29.0,
+          "r_max": 36.0
+        },
+        {
+          "name": "azimuthal_asymmetry",
+          "description": "amplitude_theta0 and amplitude_theta_pi differ significantly (max absolute difference > 0.2).",
+          "min_diff": 0.2
+        }
+      ]
+    }
+  ],
+  "target_policies": {
+    "effective_indices.csv": "exact_match",
+    "field_profile_LP03prime.csv": "structural_audit"
+  }
+}

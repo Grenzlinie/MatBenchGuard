@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01",
+    "title": "Nuclear spin geometry computation",
+    "role": "process",
+    "action": "Define cylindrical detector geometry (radius R = 100 nm and 50 nm, free layer thickness w = 3 nm, barrier thickness d = 0.5 nm). Generate random ²⁵Mg nuclear spin positions (10% abundance, MgO lattice constant 4.212 Å) within the barrier, and numerically integrate the detector-averaged field formula over the free-layer volume to obtain the geometry tensor components Ξ_ab(i) for each nuclear spin and compute the sum of squares sum_{i,b} Ξ_ab(i)^2 for a = x (the in-plane noise component). Save to nuclear_geometry.npz.",
+    "output_file": "",
+    "evidence": "/app/outputs/nuclear_geometry.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Computes geometric coupling between each nuclear spin and the detector-averaged field; needed by later scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Static nuclear noise variance",
+    "role": "scored",
+    "action": "Using the nuclear spin geometry data from step_01 and the known spin parameters (g* = 0.342, I = 5/2, μ_N), compute the standard deviation σ_Bx of the in-plane field component via the formula σ_Bx² = (g*μ_N)² I(I+1) · sum_Xi2 for R=100 nm and R=50 nm. Output the results as CSV.",
+    "output_file": "/app/outputs/sigma_Bx_results.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Total integrated noise amplitude for two device radii. Checker recomputes σ_Bx from sum_Xi2 using the known formula and compares to agent's σ_Bx within 1% tolerance.",
+    "output_schema": "R (nm):float, sigma_Bx (T):float, sum_Xi2 (nm^-4):float"
+  },
+  {
+    "id": "step_03",
+    "title": "Nuclear spin noise spectrum",
+    "role": "scored",
+    "action": "Using the per-spin geometry tensors from step_01, compute the frequency-dependent noise spectral density S_x(f) for nuclear spins under a uniform external field B_ext = 0.1 T. For each spin, evaluate the spin correlation function in the frequency domain using the quantum statistical average over the I=5/2 eigenstates: ⟨m_b m_b'⟩[ω] = (1/(2I+1)) Σ_{n,n'} ⟨n|m_b|n'⟩⟨n'|m_b'|n⟩ L(ω - ω_{nn'}), where L is a Lorentzian with width 2π/T1 (T1=10 ms) and ω_{nn'} = (n - n') g* μ_N B_ext / ħ. Then compute the squared spectral density S_x(ω)^2 = Σ_{i,b,b'} Ξ_{xb}(i) Ξ_{xb'}(i) ⟨m_b m_b'⟩[ω], and output S_x(ω) = sqrt(S_x(ω)^2) as a two-column CSV (frequency in Hz, S_x in T/√Hz) covering 0.1–100 MHz.",
+    "output_file": "/app/outputs/nuclear_spectrum.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Nuclear spin noise spectrum. Checker integrates S_x² dω and verifies the result equals σ_Bx²/3 (from the geometry) within 10%, and that the spectrum peaks near ~0.5 MHz.",
+    "output_schema": "frequency_Hz:float, S_x (T/sqrt(Hz)):float"
+  },
+  {
+    "id": "step_04",
+    "title": "Vacancy spin geometry computation",
+    "role": "process",
+    "action": "Generate random Mg vacancy positions in the barrier (using a nominal volume concentration of 10¹⁹ cm⁻³ for the given device dimensions) and compute the geometry tensors Ξ_ab(i) for each vacancy via numerical integration, analogous to step_01. Save to vacancy_geometry.npz.",
+    "output_file": "",
+    "evidence": "/app/outputs/vacancy_geometry.npz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Geometric coupling for Mg vacancies, required for the vacancy noise spectrum.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Vacancy spin noise spectrum",
+    "role": "scored",
+    "action": "Using the geometry data from step_04 and vacancy spin properties (S=1, magnetic moment 1.9 μ_B, g≈2), compute the noise spectral density S_x(f) for Mg vacancies under an external field B_ext = 0.1 T with a linear gradient of 1 mT/nm along z. For each vacancy, determine its Larmor frequency from the local field: ω_L(z_i) = g μ_B (B_ext + (dB/dz) z_i) / ħ. Evaluate the spin correlation function for S=1 analogous to the nuclear case: ⟨m_b m_b'⟩[ω] = (1/3) Σ_{n,n'=-1,0,1} ⟨n|m_b|n'⟩⟨n'|m_b'|n⟩ L(ω - ω_{nn'}) with Lorentzian width 2π/T1 (T1=5 μs) and ω_{nn'} = (n - n') ω_L(z_i). Sum contributions to obtain S_x(ω)^2 = Σ_{i,b,b'} Ξ_{xb}(i) Ξ_{xb'}(i) ⟨m_b m_b'⟩[ω], and output S_x(ω) = sqrt(S_x(ω)^2) as a two-column CSV covering 1–10 GHz.",
+    "output_file": "/app/outputs/vacancy_spectrum.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Vacancy spin noise spectrum. Checker integrates S_x² and compares with variance from vacancy geometry within 10%, and verifies multiple peaks in GHz range.",
+    "output_schema": "frequency_Hz:float, S_x (T/sqrt(Hz)):float"
+  }
+]

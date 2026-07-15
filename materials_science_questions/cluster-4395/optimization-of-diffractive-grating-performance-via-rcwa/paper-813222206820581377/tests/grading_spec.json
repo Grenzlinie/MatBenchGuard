@@ -1,0 +1,60 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "T1 feasible: the checker recomputes the minimum transmittance from the agent's raw CSV and compares to the paper's 90% threshold; also performs a structural comparison of frustum vs pyramid.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "transmittance_curve.csv": "threshold_or_better"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "transmittance_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "frequency_THz",
+            "transmittance_frustum",
+            "transmittance_pyramid"
+          ],
+          "columns": {
+            "frequency_THz": {
+              "type": "float",
+              "units": "THz"
+            },
+            "transmittance_frustum": {
+              "type": "float"
+            },
+            "transmittance_pyramid": {
+              "type": "float"
+            }
+          }
+        },
+        "description": "Power transmittance curves. The checker will verify that the minimum transmittance_frustum over 0.5–5 THz meets the efficiency threshold (threshold_or_better) and that transmittance_frustum > transmittance_pyramid at all sampled frequencies (structural)."
+      }
+    ],
+    "notes": "The RCWA simulation uses constant GaP refractive index n=3.34. The scored check combines a threshold (min transmittance >= 0.9) and a structural comparison (frustum outperforms pyramid)."
+  },
+  "steps": [
+    {
+      "id": "frustum_minimum_transmittance",
+      "output_file": "transmittance_curve.csv",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target": 0.9,
+      "tolerance_abs": 0.0,
+      "metric": "min_transmittance_frustum",
+      "description": "Minimum transmittance_frustum over 0.5-5 THz must be >= 0.9"
+    },
+    {
+      "id": "frustum_vs_pyramid",
+      "output_file": "transmittance_curve.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "description": "transmittance_frustum > transmittance_pyramid at all sampled frequencies in 0.5-5 THz"
+    }
+  ]
+}

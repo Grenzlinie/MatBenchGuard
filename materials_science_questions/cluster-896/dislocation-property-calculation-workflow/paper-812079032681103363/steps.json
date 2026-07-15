@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1_dft_elastic",
+    "title": "DFT total‑energy calculations for elastic constants",
+    "role": "process",
+    "action": "Perform DFT total‑energy calculations (LDA functional, plane‑wave basis, Quantum ESPRESSO) on GaAs using six Lagrangian strain tensors (variants A–F) at multiple strain values. Collect energy‑vs‑strain data for each strain type.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates the energy‑strain datasets required to extract second‑ and third‑order elastic constants.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2_elastic_constants",
+    "title": "Extract elastic constants",
+    "role": "scored",
+    "action": "Fit third‑order polynomials to the energy‑strain data from Step 1 and derive the SOECs and TOECs using the cubic‑symmetry relations. Write the equilibrium lattice constant a0 (Å) and all elastic constants (C11, C12, C44, C111, C112, C123, C144, C155, C456, in GPa) to the output file.",
+    "output_file": "elastic_constants.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the computed equilibrium lattice constant and second‑ and third‑order elastic constants of GaAs.",
+    "output_schema": "JSON object with numeric keys: a0 (float, Å), C11, C12, C44, C111, C112, C123, C144, C155, C456 (all float, GPa)."
+  },
+  {
+    "id": "step3_dft_gsfe",
+    "title": "DFT slab calculations of generalized stacking fault energy",
+    "role": "process",
+    "action": "Perform DFT slab calculations for the {111} glide set of GaAs using a slab of 12 atomic layers and 15 Å vacuum. Apply rigid shifts of the upper slab along (1/2)⟨112⟩. Compute energies for each shift without relaxation (unrelaxed) and with relaxation of atoms in the ⟨111⟩ direction (relaxed). Collect GSFE data (energy vs. displacement).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the GSFE curves for both relaxed and unrelaxed geometries, needed to fit the restoring force.",
+    "output_schema": ""
+  },
+  {
+    "id": "step4_gsfe_fit",
+    "title": "Fit GSFE and extract parameters",
+    "role": "scored",
+    "action": "Fit the computed GSFE data from Step 3 to the functional form γ(u)=γ cos²(π u / b) * (1 + Δ₁ cos²(π u / b) + Δ₂ cos⁴(π u / b)) for both relaxed and unrelaxed cases. Write the fitting parameters to the output file.",
+    "output_file": "gsfe_fit_params.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the fitted parameters of the GSFE restoring force for relaxed and unrelaxed cases.",
+    "output_schema": "JSON object with keys: relaxed → {gamma, Delta1, Delta2}, nonrelaxed → {gamma, Delta1, Delta2}. All values dimensionless."
+  },
+  {
+    "id": "step5_dislocation",
+    "title": "Solve improved Peierls‑Nabarro equation for 30° partial dislocation",
+    "role": "scored",
+    "action": "Using the elastic constants from Step 2 and GSFE parameters from Step 4, solve the improved Peierls‑Nabarro integro‑differential equation (including the discrete correction term β) for a 30° partial dislocation via the Wang truncation method. Compute the core half‑widths (ξ, ξ₀) and Peierls stresses (σ_P, σ_P⁰) for both relaxed and unrelaxed GSFE, and write the results to the output file.",
+    "output_file": "dislocation_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the computed dislocation core half‑widths and Peierls stresses for the 30° partial in GaAs.",
+    "output_schema": "JSON object with keys: relaxed_xi0 (float, units of b), relaxed_xi (float, units of b), relaxed_sigmaP0 (float, GPa), relaxed_sigmaP (float, GPa), nonrelaxed_xi (float, units of b), nonrelaxed_sigmaP (float, GPa)."
+  }
+]

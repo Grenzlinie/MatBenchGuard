@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Scoring the agent's reported relative errors against the paper's values for these systems because the full GCMC pipeline is too computationally expensive to rerun in the verifier, making T1 and T2 infeasible.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "iast_vs_simulation_errors.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "system_id",
+            "component_A",
+            "component_B",
+            "MOF_ID",
+            "relative_error_loading_A",
+            "relative_error_loading_B",
+            "relative_error_selectivity"
+          ],
+          "columns": {
+            "system_id": {
+              "type": "string",
+              "allowed": [
+                "pair_1_3",
+                "pair_1_4",
+                "pair_4_6",
+                "pair_4_7"
+              ],
+              "description": "Formed as 'pair_<ID_A>_<ID_B>' using the molecule IDs from Step 1. For the required mixtures: pair_1_3 (3-butenal/tert-butanol), pair_1_4 (3-butenal/4-methyl-1-hexene), pair_4_6 (4-methyl-1-hexene/2,2-dimethylpentane), pair_4_7 (4-methyl-1-hexene/2,4-dimethylpentane)."
+            },
+            "component_A": {
+              "type": "string"
+            },
+            "component_B": {
+              "type": "string"
+            },
+            "MOF_ID": {
+              "type": "string"
+            },
+            "relative_error_loading_A": {
+              "type": "number",
+              "units": "dimensionless"
+            },
+            "relative_error_loading_B": {
+              "type": "number",
+              "units": "dimensionless"
+            },
+            "relative_error_selectivity": {
+              "type": "number",
+              "units": "dimensionless"
+            }
+          }
+        },
+        "description": "Relative errors between IAST predictions and direct GCMC simulations for the four test binary systems. The hidden checker compares each reported error to a gold reference derived from the paper's reported simulation data, using per-column tolerances."
+      }
+    ],
+    "notes": "Only the four specified binary pairs in MOF QATHOK are required. The hidden reference corresponds to the paper's reported relative errors for these exact systems. The agent must re-produce the full GCMC pipeline; pre-computed isotherm data is not provided."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold relative errors for each binary mixture system in MOF QATHOK at specified conditions",
+      "source_provenance": "Paper Figure 1c and Supporting Information listing for QATHOK binary mixtures",
+      "generation_method": "Extracted from the paper's reported IAST vs GCMC relative errors for the exact four systems used in the minimal reproduction task",
+      "why_not_fabricated": "Values are the paper's own reported numbers for these exact systems, ensuring the reference oracle reaches full reward when using those values."
+    }
+  ],
+  "steps": [
+    {
+      "id": "iast_errors",
+      "output_file": "iast_vs_simulation_errors.csv",
+      "kind": "custom",
+      "weight": 1.0,
+      "tolerances": {
+        "loading": 0.2,
+        "selectivity": 0.5
+      },
+      "gold": [
+        {
+          "system_id": "pair_1_3",
+          "relative_error_loading_A": 0.59,
+          "relative_error_loading_B": 0.1,
+          "relative_error_selectivity": 0.45
+        },
+        {
+          "system_id": "pair_1_4",
+          "relative_error_loading_A": 0.12,
+          "relative_error_loading_B": 0.08,
+          "relative_error_selectivity": 0.35
+        },
+        {
+          "system_id": "pair_4_6",
+          "relative_error_loading_A": 0.1,
+          "relative_error_loading_B": 0.07,
+          "relative_error_selectivity": 0.3
+        },
+        {
+          "system_id": "pair_4_7",
+          "relative_error_loading_A": 0.09,
+          "relative_error_loading_B": 0.11,
+          "relative_error_selectivity": 0.25
+        }
+      ]
+    }
+  ]
+}

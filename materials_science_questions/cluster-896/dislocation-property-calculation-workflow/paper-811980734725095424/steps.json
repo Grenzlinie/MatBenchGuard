@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_param_fit",
+    "title": "Fit tight-binding model parameters",
+    "role": "process",
+    "action": "Using the analytical formulas for cohesive energy, bulk modulus, and C44 with second-nearest neighbors, fit the electronic parameter β₀ and repulsive potential parameters (C₀, p or n) for α‑Fe, W, and Nb to the experimental values. Use Born-Mayer repulsion for Fe and power-law repulsion for W and Nb with qr₀=3.",
+    "output_file": "",
+    "evidence": "fitted_parameters.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fitted model parameters that will be used in the atomistic relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_relaxation",
+    "title": "Run screw dislocation relaxation simulations",
+    "role": "process",
+    "action": "For each metal (Fe, W, Nb) and each shear orientation (χ=0°, -30°, 30°), construct a cylindrical crystallite of 102 ⟨111⟩ atomic rows with periodic boundary conditions along the dislocation line. Introduce an (a/2)⟨111⟩ screw dislocation using isotropic linear elasticity, apply homogeneous shear stress, and relax atomic positions (z-component only) iteratively until the energy change per iteration falls below convergence. For each metal, also relax at zero stress.",
+    "output_file": "",
+    "evidence": "relaxation_data.npz",
+    "load_bearing": false,
+    "file_format": "npy",
+    "purpose": "scored",
+    "description": "Raw relaxation outputs used to extract Peierls stresses and core energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_peierls",
+    "title": "Extract Peierls stresses",
+    "role": "scored",
+    "action": "From the relaxation outputs of step 2, determine the Peierls stress τ_p/μ for each metal and orientation as the minimum applied shear stress at which the dislocation moves to the next low-energy position. Write τ_p/μ values for χ=0°, -30°, and 30° to /app/outputs/peierls_stresses.json.",
+    "output_file": "peierls_stresses.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Computed dimensionless Peierls stresses for Fe, W, Nb at three shear orientations.",
+    "output_schema": "JSON object with keys 'Fe', 'Nb', 'W'. Each value is an object with keys 'chi0', 'chi_neg30', 'chi_pos30' mapping to floats (τ_p/μ)."
+  },
+  {
+    "id": "step_04_core_energy",
+    "title": "Extract zero-stress core energies",
+    "role": "scored",
+    "action": "From the zero-stress relaxation outputs of step 2, extract the dislocation core energy per 102 atomic rows of length b (in eV) for each metal. Write the values to /app/outputs/core_energies.json.",
+    "output_file": "core_energies.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Zero-stress dislocation core energy (eV) for Fe, Nb, W.",
+    "output_schema": "JSON object with keys 'Fe', 'Nb', 'W' mapping to floats (eV)."
+  }
+]

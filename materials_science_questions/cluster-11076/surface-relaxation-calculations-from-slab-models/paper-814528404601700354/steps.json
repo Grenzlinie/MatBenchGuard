@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_geometry",
+    "title": "Construct fcc and bcc cluster geometries and compute surface quantities",
+    "role": "process",
+    "action": "Build fcc and bcc clusters using a shell-by-shell addition method up to at least N=20000 atoms. For each cluster size, compute per-atom effective coordination numbers Z_i = Z_i^1 + a * Z_i^2 (where Z_i^1, Z_i^2 are nearest- and next-nearest neighbor counts, a_fcc=0.08, a_bcc=0.4). Identify surface atoms as those with Z_i < 10. Record the total atom count N, the number of surface atoms N_s, and the sum over surface atoms of ((Z_i/Z_b)^0.5 - 1) with Z_b=12 for fcc and Z_b=8 for bcc. This produces the geometry data needed for the RHS curve.",
+    "output_file": "",
+    "evidence": "geometry_summary.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Constructs the atomic positions and coordination numbers for a range of cluster sizes, providing the foundation for all later property calculations. This step is required because the paper's structural stability criterion depends on the specific geometric sums over surface atoms.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_rhs_curve",
+    "title": "Compute the universal RHS curve of structural stability",
+    "role": "scored",
+    "action": "For each cluster size N (from 10 to 20000, fine grid), compute the right-hand side of Eq. (2.7): S(N) = (1/N) * [ Σ_{fcc surface} ((Z_i/Z_b)^0.5 - 1) - Σ_{bcc surface} ((Z_i/Z_b)^0.5 - 1) ]. Use the geometry data from step_geometry. Output a CSV file with columns N and S.",
+    "output_file": "step_01_rhs_curve.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "This is the key geometry-dependent quantity that, when compared with material-specific constants, determines the critical cluster size. The checker recomputes this curve to verify its correctness.",
+    "output_schema": "CSV with header: N (integer cluster size), S (float, the computed RHS value). One row per cluster size."
+  },
+  {
+    "id": "step_critical_sizes",
+    "title": "Determine critical cluster sizes for bcc metals",
+    "role": "scored",
+    "action": "Using the RHS curve from step_rhs_curve and the material constants C = (E_coh,b(bcc) - E_coh,b(fcc))/E_coh,b obtained from the cited references (Pettifor 1970 and Hultgren 1973), find the intersection where S(N) crosses C for each metal (V, Cr, Nb, Mo, Ta, W). Output a JSON object mapping each metal symbol to the determined integer N_crit.",
+    "output_file": "step_02_critical_sizes.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "The final headline result: the predicted critical sizes at which clusters transition from fcc-like to bulk bcc structure. The checker will verify these against the paper's reported values and also check internal consistency with the submitted RHS curve.",
+    "output_schema": "JSON object with keys \"V\", \"Cr\", \"Nb\", \"Mo\", \"Ta\", \"W\" and integer values for N_crit."
+  }
+]

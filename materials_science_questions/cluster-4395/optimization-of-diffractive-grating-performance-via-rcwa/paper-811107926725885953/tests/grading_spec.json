@@ -1,0 +1,185 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Peak efficiency and center wavelength are recomputed from submitted spectra; design parameters compared to paper gold with tolerances (T0 acceptable). Full recompute from agent's raw artifacts possible for spectra.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_design_parameters.csv": "reference_match",
+    "step_02_efficiency_spectra.csv": "metric_recompute",
+    "step_03_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for grating design parameters (period, fill-factor) and simulation peak efficiencies / center wavelengths, extracted from paper figures and text.",
+      "source_provenance": "Paper text and figures: Fig.4(a,b) and Section IV for TE values; Fig.7(a,b) and associated text for TM values; analytical period/ff explicitly stated in the paper.",
+      "generation_method": "Directly transcribed from the published paper.",
+      "why_not_fabricated": "These are the exact numbers the paper reports as its simulation/analytical results; they are the authoritative reproduction targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_design_parameters.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polarization",
+            "wavelength_um",
+            "period_nm",
+            "fill_factor"
+          ]
+        },
+        "description": "Analytically computed optimal grating period and fill-factor for TE and TM polarizations at 1.55 and 1.31 μm. The checker compares these to hidden paper gold values with tolerances."
+      },
+      {
+        "file": "step_02_efficiency_spectra.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "polarization",
+            "wavelength_nm",
+            "coupling_efficiency"
+          ]
+        },
+        "description": "RCWA-simulated coupling efficiency as a function of wavelength for the four designs. The checker recomputes peak efficiency and center wavelength from these spectra and compares them to paper simulation values (threshold_or_better for efficiency, ±20 nm for center wavelength)."
+      },
+      {
+        "file": "step_03_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required_keys": [
+            "TE_1550",
+            "TE_1310",
+            "TM_1550",
+            "TM_1310"
+          ],
+          "value_schema": {
+            "type": "object",
+            "required_fields": [
+              "peak_efficiency",
+              "center_wavelength_nm"
+            ],
+            "field_types": {
+              "peak_efficiency": "float",
+              "center_wavelength_nm": "float"
+            }
+          }
+        },
+        "description": "The agent's extracted peak efficiency and center wavelength for each design. The checker cross-checks consistency with step_02 and verifies structural correctness."
+      }
+    ],
+    "notes": "The analytical design uses the pre-existing wavelength shift factors Δλ̅_TE = 36 nm and Δλ̅_TM = 72 nm; the agent does not need to re-derive these. The RCWA simulation is a faithful substitute for the BPM used in the paper. The experimental fabrication and characterization are out of scope."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_design_parameters.csv",
+      "weight": 0.4,
+      "kind": "numeric",
+      "description": "Compare submitted design parameters (period, fill-factor) against paper gold values with tolerances.",
+      "gold": {
+        "configs": [
+          {
+            "polarization": "TE",
+            "wavelength_um": 1.55,
+            "period_nm": 610,
+            "fill_factor": 57.0,
+            "period_tol_nm": 5,
+            "fill_factor_tol": 3.0
+          },
+          {
+            "polarization": "TE",
+            "wavelength_um": 1.31,
+            "period_nm": 485,
+            "fill_factor": 58.5,
+            "period_tol_nm": 5,
+            "fill_factor_tol": 3.0
+          },
+          {
+            "polarization": "TM",
+            "wavelength_um": 1.55,
+            "period_nm": 900,
+            "fill_factor": 57.1,
+            "period_tol_nm": 5,
+            "fill_factor_tol": 3.0
+          },
+          {
+            "polarization": "TM",
+            "wavelength_um": 1.31,
+            "period_nm": 656,
+            "fill_factor": 57.2,
+            "period_tol_nm": 5,
+            "fill_factor_tol": 3.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_efficiency_spectra.csv",
+      "weight": 0.4,
+      "kind": "recompute_metric",
+      "description": "Recompute peak efficiency and center wavelength from spectra; compare to paper simulation values (monotonic efficiency, center within ±20 nm).",
+      "gold": {
+        "configs": [
+          {
+            "polarization": "TE",
+            "wavelength_range": [
+              1400,
+              1700
+            ],
+            "operational_wavelength_nm": 1550,
+            "paper_peak_efficiency": 0.57,
+            "center_tolerance_nm": 20
+          },
+          {
+            "polarization": "TE",
+            "wavelength_range": [
+              1200,
+              1400
+            ],
+            "operational_wavelength_nm": 1310,
+            "paper_peak_efficiency": 0.6,
+            "center_tolerance_nm": 20
+          },
+          {
+            "polarization": "TM",
+            "wavelength_range": [
+              1400,
+              1700
+            ],
+            "operational_wavelength_nm": 1550,
+            "paper_peak_efficiency": 0.5,
+            "center_tolerance_nm": 20
+          },
+          {
+            "polarization": "TM",
+            "wavelength_range": [
+              1200,
+              1400
+            ],
+            "operational_wavelength_nm": 1310,
+            "paper_peak_efficiency": 0.59,
+            "center_tolerance_nm": 20
+          }
+        ]
+      }
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_results.json",
+      "weight": 0.2,
+      "kind": "json_field",
+      "description": "Verify structural consistency: JSON keys exist and match recomputed peaks from step_02 within tight tolerance."
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Clean metal surface geometry optimization",
+    "role": "process",
+    "action": "Build a 4-layer slab model of Cu(111) and Ni(111) with 9×9 surface periodicity (carbon coverage Θ=0.074 ML). Relax the atomic positions using DFT (PBE functional, PAW pseudopotentials, plane-wave cutoff 500 eV) to obtain reference total energies.",
+    "output_file": "",
+    "evidence": "clean_surface_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Optimize clean slabs and save the total energies as an evidence file for later formation energy calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Adsorbed cluster relaxations",
+    "role": "process",
+    "action": "Build and relax DFT models for all required clusters on both surfaces: (a) pure carbon C6 chain on Cu(111) and Ni(111); (b) C6H6 ring and chain configurations on Cu(111) and Ni(111); (c) two separated C6H5 ring clusters on Cu(111) as reactant for coalescence. Keep slab settings consistent with step 01. Relax geometries until forces <0.02 eV/Å. Collect total energies.",
+    "output_file": "",
+    "evidence": "cluster_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Relax adsorbed clusters and save total energies as an evidence file.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Formation energy analysis",
+    "role": "scored",
+    "action": "Using the clean surface energies and cluster energies from previous steps, compute formation energies per carbon atom via E_f = E_a - E_metal - n*μ_C - m*μ_H, where n=6, μ_C is the energy per atom in graphene (computed separately via DFT), and μ_H takes values -1.6 eV (low) and -0.6 eV (high). For each combination (surface, cluster, μ_H), write a row with formation energy and structure type (ring/chain).",
+    "output_file": "formation_energies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file with formation energies per carbon atom for C6 and C6H6 clusters on Cu(111) and Ni(111) at low and high hydrogen chemical potentials. Each row also reports whether the cluster is hydrogenated and its chain/ring structure.",
+    "output_schema": "required_columns: [surface, cluster, is_hydrogenated, mu_H, formation_energy_per_C, structure_type]; unit for formation_energy_per_C: eV/atom"
+  },
+  {
+    "id": "step_04",
+    "title": "Structural preference determination",
+    "role": "scored",
+    "action": "From the formation energies of C6H6 on each surface at μ_H = -0.6 eV, determine which structure (ring or chain) has lower formation energy. Write one row per surface indicating the lower-energy structure.",
+    "output_file": "structural_preference.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV with two rows indicating the thermodynamically preferred structure (ring or chain) for C6H6 on Cu(111) and Ni(111) at high hydrogen chemical potential.",
+    "output_schema": "required_columns: [surface, lower_energy_structure]; lower_energy_structure must be 'ring' or 'chain'"
+  },
+  {
+    "id": "step_05",
+    "title": "CI-NEB coalescence barrier calculation",
+    "role": "process",
+    "action": "Using the climbing-image nudged elastic band (CI-NEB) method, find the minimum energy path between two separated C6H5 rings (reactant) and the coalesced C12H10 product on Cu(111). Use the same slab settings. Determine the transition state energy and compute the energy barrier.",
+    "output_file": "",
+    "evidence": "neb_profile.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Compute the NEB energy profile and save it as an evidence file.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Coalescence barrier reporting",
+    "role": "scored",
+    "action": "Extract the energy barrier (activation energy) from the NEB energy profile of step 05 as the difference between the transition state energy and the reactant energy. Write a single numeric value in eV.",
+    "output_file": "coalescence_barrier.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "A plain text file containing the coalescence barrier height for two C6H5 rings to merge on Cu(111) in eV.",
+    "output_schema": "type: text; single numeric value (positive float) in eV"
+  }
+]

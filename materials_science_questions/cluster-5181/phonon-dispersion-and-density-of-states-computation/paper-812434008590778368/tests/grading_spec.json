@@ -1,0 +1,87 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes ω² and T from the provided k-points using the BCC dynamical matrix and Cardan's solution; T1 is feasible and preferred.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "dynamical matrix and Cardan's solution formulas (no stored gold values)",
+      "source_provenance": "paper equations for BCC lattice and Cardan's method",
+      "generation_method": "implementing standard algebraic formulas from paper",
+      "why_not_fabricated": "The hidden gold is derived deterministically from the public problem setup and formulas; no invented data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dispersion_100.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "omega2_1",
+            "omega2_2",
+            "omega2_3",
+            "T"
+          ],
+          "column_types": {
+            "kx": "float",
+            "omega2_1": "float",
+            "omega2_2": "float",
+            "omega2_3": "float",
+            "T": "float"
+          }
+        },
+        "description": "Squared phonon frequencies ω² and degeneracy parameter T along the [100] direction. The checker will recompute ω² and T from the provided kx values, verify that omega2_2 ≈ omega2_3 and T ≈ 0 (transverse branches degenerate), and compare all ω² values within a relative tolerance."
+      },
+      {
+        "file": "dispersion_nonsym.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "kx",
+            "ky",
+            "kz",
+            "omega2_1",
+            "omega2_2",
+            "omega2_3",
+            "T"
+          ],
+          "column_types": {
+            "kx": "float",
+            "ky": "float",
+            "kz": "float",
+            "omega2_1": "float",
+            "omega2_2": "float",
+            "omega2_3": "float",
+            "T": "float"
+          }
+        },
+        "description": "Squared phonon frequencies ω² and degeneracy parameter T along the non-symmetry direction [1,0.1,0.2]. The checker will recompute ω² and T from the provided (kx,ky,kz) values, verify that all ω² are positive, omega2_1 > omega2_2 > omega2_3, and T < 0, and compare all ω² values within tolerance."
+      }
+    ],
+    "notes": "The checker independently implements the same BCC dynamical matrix (force constant ratio 0.8, lattice constant a=1) and Cardan's solution. It reads the agent's CSV, extracts the k-points, recomputes ω² and T, then checks agreement. No external data is required; the checker's hidden gold is its own recomputation."
+  },
+  "steps": [
+    {
+      "id": "step02_dispersion_100",
+      "output_file": "dispersion_100.csv",
+      "kind": "recompute_omega2",
+      "weight": 0.5,
+      "tolerance_relative": 1e-06
+    },
+    {
+      "id": "step03_dispersion_nonsym",
+      "output_file": "dispersion_nonsym.csv",
+      "kind": "recompute_omega2",
+      "weight": 0.5,
+      "tolerance_relative": 1e-06
+    }
+  ]
+}

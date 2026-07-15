@@ -1,0 +1,79 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Capacity fade compared to gold within tolerance; concentration gradient checked structurally because full recomputation of 1D model in checker is infeasible.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "concentration_gradients.csv": "structural_audit",
+    "capacity_fade.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold discharge capacities for 2C and 4C cycles from paper Figure 9b",
+      "source_provenance": "Paper's Figure 9b reported values for 10 um particles at 2C and 4C.",
+      "generation_method": "Extracted from paper's reported capacities (2C cycle5 ~2.4 Ah, 4C cycle5 ~2.0 Ah) and reference solve.sh output.",
+      "why_not_fabricated": "Values are the paper-reported quantities."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "concentration_gradients.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "particle_radius_um",
+            "C_rate",
+            "surface_concentration_gradient_mol_m3"
+          ],
+          "units": {
+            "particle_radius_um": "micrometers",
+            "C_rate": "dimensionless (1/h)",
+            "surface_concentration_gradient_mol_m3": "mol/m^3"
+          }
+        },
+        "description": "Surface concentration gradient computed by 1D radial diffusion model with ROM. The checker will compare these values to hidden reference benchmarks using a predefined tolerance."
+      },
+      {
+        "file": "capacity_fade.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "cycle_number",
+            "C_rate",
+            "discharge_capacity_Ah"
+          ],
+          "units": {
+            "cycle_number": "integer",
+            "C_rate": "dimensionless (1/h)",
+            "discharge_capacity_Ah": "Ah"
+          }
+        },
+        "description": "Discharge capacity over cycles for 2C and 4C from the full 1D electrode model with ROM. The checker will compare these values to hidden reference capacities using a predefined tolerance."
+      }
+    ],
+    "notes": "No gold values or tolerances are disclosed. The hidden checker recomputes a deviation metric from the agent's submitted tables against the paper's reported 2D benchmark gradients and Figure 9b capacity values."
+  },
+  "steps": [
+    {
+      "id": "conc_gradients",
+      "output_file": "concentration_gradients.csv",
+      "kind": "structural_audit",
+      "weight": 0.3
+    },
+    {
+      "id": "cap_fade",
+      "output_file": "capacity_fade.csv",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "tolerance_rel": 0.2,
+      "target": "inline_gold"
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Full recompute of Stoner enhancements from raw DFT intermediate artifacts is infeasible in the verifier sandbox; the paper’s published LSDA results serve as the hidden gold. The primary check compares the agent’s reported S(q) and χ(0) to the paper’s numbers using MARE (threshold‑or‑better style, monotonic). A secondary low‑weight structural check verifies the ordering of S(q) across q for each compound (T3).",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported Stoner enhancement factors S(q) and static uniform susceptibility χ(0) values",
+      "source_provenance": "Table 1 of the source paper (S(q) for UPt₃ and CeAl₃) and the 'Results' section (χ(0) values: UPt₃ 3.34 ×10⁻⁴ emu/mol, CeAl₃ 0.95 ×10⁻⁴ emu/mol).",
+      "generation_method": "Extracted directly from the published text and table.",
+      "why_not_fabricated": "These are the exact numerical results reported by the authors and constitute the reproduction target; no fabricated data is introduced."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "UPt3_S_q0": "number",
+            "UPt3_S_q_pi2c": "number",
+            "UPt3_S_q_pic": "number",
+            "UPt3_S_q_2pic": "number",
+            "CeAl3_S_q0": "number",
+            "CeAl3_S_q_pi2c": "number",
+            "CeAl3_S_q_pic": "number",
+            "CeAl3_S_q_2pic": "number",
+            "UPt3_chi0": "number",
+            "CeAl3_chi0": "number"
+          },
+          "units": {
+            "UPt3_chi0": "10⁻⁴ emu/mol",
+            "CeAl3_chi0": "10⁻⁴ emu/mol"
+          },
+          "additionalProperties": false
+        },
+        "description": "The computed Stoner enhancement factors S(q) for UPt₃ and CeAl₃ at the four wavevectors, and the static uniform susceptibility χ(0) for both compounds. The hidden checker compares the values to the paper's reported numbers using mean absolute relative error (MARE); full credit is awarded if MARE ≤ 20%, linearly decreasing to 0 at MARE = 50%. The ordering of S(q) across q is also checked as a light structural audit."
+      }
+    ],
+    "notes": "The agent must perform all computational steps; the final JSON file is the only scored artifact. Differences in pseudopotential, k‑point mesh, and basis set will cause a natural spread in the computed values, which is absorbed by the tolerant scoring."
+  },
+  "steps": [
+    {
+      "id": "mare_check",
+      "output_file": "step_01_results.json",
+      "weight": 0.8,
+      "kind": "custom",
+      "paper_values": {
+        "UPt3_S_q0": 4.6,
+        "UPt3_S_q_pi2c": 1.9,
+        "UPt3_S_q_pic": 3.1,
+        "UPt3_S_q_2pic": 3.0,
+        "CeAl3_S_q0": 2.9,
+        "CeAl3_S_q_pi2c": 5.1,
+        "CeAl3_S_q_pic": 6.3,
+        "CeAl3_S_q_2pic": 3.1,
+        "UPt3_chi0": 3.34,
+        "CeAl3_chi0": 0.95
+      },
+      "mare_full_credit_threshold": 0.2,
+      "mare_zero_credit_threshold": 0.5
+    },
+    {
+      "id": "ordering_check",
+      "output_file": "step_01_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "expected_orders": {
+        "UPt3": [
+          {
+            "greater": "UPt3_S_q0",
+            "less": "UPt3_S_q_pic"
+          },
+          {
+            "greater": "UPt3_S_q0",
+            "less": "UPt3_S_q_2pic"
+          },
+          {
+            "greater": "UPt3_S_q0",
+            "less": "UPt3_S_q_pi2c"
+          },
+          {
+            "greater": "UPt3_S_q_pic",
+            "less": "UPt3_S_q_2pic"
+          },
+          {
+            "greater": "UPt3_S_q_pic",
+            "less": "UPt3_S_q_pi2c"
+          },
+          {
+            "greater": "UPt3_S_q_2pic",
+            "less": "UPt3_S_q_pi2c"
+          }
+        ],
+        "CeAl3": [
+          {
+            "greater": "CeAl3_S_q_pic",
+            "less": "CeAl3_S_q_pi2c"
+          },
+          {
+            "greater": "CeAl3_S_q_pic",
+            "less": "CeAl3_S_q_2pic"
+          },
+          {
+            "greater": "CeAl3_S_q_pic",
+            "less": "CeAl3_S_q0"
+          },
+          {
+            "greater": "CeAl3_S_q_pi2c",
+            "less": "CeAl3_S_q_2pic"
+          },
+          {
+            "greater": "CeAl3_S_q_pi2c",
+            "less": "CeAl3_S_q0"
+          },
+          {
+            "greater": "CeAl3_S_q_2pic",
+            "less": "CeAl3_S_q0"
+          }
+        ]
+      }
+    }
+  ]
+}

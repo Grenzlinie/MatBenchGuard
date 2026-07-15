@@ -1,0 +1,97 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Recomputing MAE from raw DFT energies is infeasible without running DFT; structural trends (relaxation effect, field monotonicity, easy-axis orientation) are verified, with bonus for absolute MAE values within ±1 meV of paper reference.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "magnetic_anisotropy_results.json": "structural_audit"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "magnetic_anisotropy_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "system",
+              "geometry_state",
+              "electric_field",
+              "MAE",
+              "easy_theta",
+              "easy_phi"
+            ],
+            "properties": {
+              "system": {
+                "type": "string",
+                "enum": [
+                  "pure_Co",
+                  "Co_Pt"
+                ]
+              },
+              "geometry_state": {
+                "type": "string",
+                "enum": [
+                  "unrelaxed",
+                  "relaxed"
+                ]
+              },
+              "electric_field": {
+                "type": "number",
+                "description": "Applied electric field in V/Å; 0 for zero-field."
+              },
+              "MAE": {
+                "type": "number",
+                "description": "Magnetic anisotropy energy in meV."
+              },
+              "easy_theta": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 90,
+                "description": "Polar angle of easy axis in degrees."
+              },
+              "easy_phi": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360,
+                "description": "Azimuthal angle of easy axis in degrees."
+              }
+            }
+          }
+        },
+        "description": "Magnetic anisotropy energy and easy-axis orientation for pure Co and Co-Pt chains on Pt(111) under different geometries and external electric fields."
+      }
+    ],
+    "notes": "The verifier performs a T3 structural audit: it checks that relaxed MAE > unrelaxed MAE for both chain types (by at least 0.1 meV), that the MAE for the pure Co chain under electric field increases monotonically as the field becomes more negative (at most one deviation allowed), and that the easy-axis orientation is qualitatively correct (out-of-plane for the relaxed systems)."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold MAE values for absolute comparison bonus",
+      "source_provenance": "paper Table I: reported MAE values for each system/geometry",
+      "generation_method": "direct transcription from paper Table I",
+      "why_not_fabricated": "Values are the actual published numbers from the paper; used only as a tolerance reference for bonus scoring, not the primary structural check."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step06",
+      "output_file": "magnetic_anisotropy_results.json",
+      "weight": 1.0,
+      "kind": "rubric",
+      "gold_mae": {
+        "pure_Co|unrelaxed|0.0": 2.2,
+        "pure_Co|relaxed|0.0": 2.8,
+        "pure_Co|relaxed|-1.0": 3.0,
+        "pure_Co|relaxed|-0.5": 2.9,
+        "pure_Co|relaxed|0.5": 2.4,
+        "pure_Co|relaxed|1.0": 1.8,
+        "Co_Pt|unrelaxed|0.0": 2.0,
+        "Co_Pt|relaxed|0.0": 4.3
+      }
+    }
+  ]
+}

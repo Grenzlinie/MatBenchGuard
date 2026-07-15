@@ -1,0 +1,71 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes bond distances from submitted XYZ coordinates. For DFT, structural check of bidentate chemisorption; for QM/MM, recomputed H-bond distance compared to paper-reported 2.07 Å within tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "dft_adsorption_geometry.json": "structural_audit",
+    "qmmm_hbond_distance.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Target hydrogen bond distance for QM/MM check",
+      "source_provenance": "Paper Figure 1c explicitly states O···HO distance = 2.07 Å.",
+      "generation_method": "Directly taken from paper's reported value.",
+      "why_not_fabricated": "This is the paper's own numerical result for the QM/MM hydrogen bond geometry."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "dft_adsorption_geometry.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "al_oxygen_distance_1": "float (Å)",
+            "al_oxygen_distance_2": "float (Å)",
+            "coordinates_xyz": "string"
+          }
+        },
+        "description": "Optimized adsorption geometry on Al(022) showing bidentate Al–O bonds; checker compares Al–O distances to a hidden reference value within tolerance."
+      },
+      {
+        "file": "qmmm_hbond_distance.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "o_ho_distance": "float (Å)",
+            "coordinates_xyz": "string"
+          }
+        },
+        "description": "QM/MM optimized geometry on Al(OH)3(001) with the shortest O···HO hydrogen bond distance; checker compares the distance to a hidden reference value within tolerance."
+      }
+    ],
+    "notes": "The checker will recompute distances from the provided coordinates to verify the reported values. The target policy 'exact_match' is used because the bond distances are physical quantities whose correct values are determined by the computational procedure; a tolerance window is applied to absorb differences between open-source toolchains and the original calculation."
+  },
+  "steps": [
+    {
+      "id": "step_dft_validation",
+      "output_file": "dft_adsorption_geometry.json",
+      "kind": "structural",
+      "weight": 0.3,
+      "description": "Verify exactly two Al-O bonds from OPA PO3 oxygens to surface Al atoms, with distances in chemisorption range 1.8-2.2 Å."
+    },
+    {
+      "id": "step_qmmm_hbond",
+      "output_file": "qmmm_hbond_distance.json",
+      "kind": "numeric",
+      "weight": 0.7,
+      "target_field": "o_ho_distance",
+      "target_value": 2.07,
+      "tolerance_abs": 0.1,
+      "description": "Recomputed shortest O···HO distance from coordinates must match paper-reported 2.07 Å within 0.1 Å."
+    }
+  ]
+}

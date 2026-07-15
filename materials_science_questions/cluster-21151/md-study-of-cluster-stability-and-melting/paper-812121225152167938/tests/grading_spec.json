@@ -1,0 +1,95 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute energies and radial distribution shapes cannot be re-derived without re-running the full simulation; therefore structural checks (peak location conditions, melting signature) with thresholds from the paper's figures are used.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "caloric_curve.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature (K)",
+            "avg_potential_energy (kcal/mol)"
+          ],
+          "units": {
+            "temperature (K)": "K",
+            "avg_potential_energy (kcal/mol)": "kcal/mol"
+          }
+        },
+        "description": "The caloric curve (average potential energy vs temperature) for Na+(H2O)20. The hidden checker will verify the presence of a steep energy increase (melting transition) within an expected temperature window."
+      },
+      {
+        "file": "ion_radial_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "temperature (K)",
+            "radius (Angstrom)",
+            "ion_density (arbitrary units)"
+          ],
+          "units": {
+            "temperature (K)": "K",
+            "radius (Angstrom)": "Å",
+            "ion_density (arbitrary units)": "arbitrary units"
+          }
+        },
+        "description": "Ion radial distribution function at low and high temperatures. The checker will verify that the distribution peaks at a larger radius at 150 K and a smaller radius at 350 K, consistent with a transition from surface to interior solvation."
+      }
+    ],
+    "notes": ""
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for caloric curve melting detection (temperature range and energy increase)",
+      "source_provenance": "Derived from the paper's Figure 4: the heat capacity peak and sigmoidal increase shown around 235 K with energy difference between solid and liquid states of ~45 kcal/mol.",
+      "generation_method": "Read from the paper's figure description and text; temperature window widened to 200-260 K to allow stochastic variation; minimum energy increase set to 30 kcal/mol to be conservative.",
+      "why_not_fabricated": "Directly based on the paper's reported observation of a melting transition with a sigmoidal energy increase near 235 K."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Thresholds for ion radial distribution peak positions at 150 K (surface) and 350 K (interior)",
+      "source_provenance": "Derived from paper's Figure 3 and associated text: at 150 K the Na+ peak appears at ~4.0 Å, while at 350 K it shifts to near the center (~1.8 Å).",
+      "generation_method": "Set thresholds >3.5 Å for low T and <2.5 Å for high T based on the reported peak positions and qualitative description.",
+      "why_not_fabricated": "Directly based on the paper's reported structural transition from surface to interior solvation."
+    }
+  ],
+  "steps": [
+    {
+      "id": "caloric_structural",
+      "output_file": "caloric_curve.csv",
+      "weight": 0.5,
+      "target": {
+        "melting_temp_range": [
+          200,
+          260
+        ],
+        "energy_increase_min": 30.0
+      },
+      "tolerance": {},
+      "kind": "structural",
+      "description": "Check caloric curve for presence of melting transition: temperature of maximum energy slope in 200-260 K and total energy increase > 30 kcal/mol."
+    },
+    {
+      "id": "radial_structural",
+      "output_file": "ion_radial_distribution.csv",
+      "weight": 0.5,
+      "target": {
+        "low_T": 150.0,
+        "low_peak_radius_min": 3.5,
+        "high_T": 350.0,
+        "high_peak_radius_max": 2.5
+      },
+      "tolerance": {},
+      "kind": "structural",
+      "description": "Check that Na+ radial distribution peak at 150 K is at radius > 3.5 Angstrom (surface) and at 350 K is at radius < 2.5 Angstrom (interior)."
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker recomputes ΔW from the agent's reported input parameters (Eq.16) and verifies each row's value matches within 1e-12/1e-8 tolerance; also checks monotonic trends per the paper.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "delta_W_results.csv": "reference_match"
+  },
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "delta_W_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "misfit_parameter",
+            "Burgers_vector_n",
+            "film_thickness_nm",
+            "angle_deg",
+            "delta_W_J"
+          ],
+          "units": {
+            "misfit_parameter": "dimensionless",
+            "Burgers_vector_n": "integer",
+            "film_thickness_nm": "nm",
+            "angle_deg": "degrees",
+            "delta_W_J": "J"
+          }
+        },
+        "description": "Computed energy difference ΔW for each parameter combination listed in the task. The hidden checker will compare each value to a digitized reference from the paper and verify monotonic trends (ΔW decreases with f, increases with B for small f, decreases with H in the favorable range, and exhibits a minimum in α)."
+      }
+    ],
+    "notes": "The task is pure computation using only the public material constants and the analytical expression. No external data or files are required. The agent must implement the formula in code (Python with numpy/scipy is appropriate). All parameter sweeps are explicit. The hidden gold values are approximate digitizations from the paper's figures; tolerances absorb implementation differences."
+  },
+  "steps": [
+    {
+      "id": "deltaW_value_check",
+      "output_file": "delta_W_results.csv",
+      "weight": 0.6,
+      "kind": "numeric_recompute",
+      "tolerance": {
+        "abs": 1e-12,
+        "rel": 1e-08
+      },
+      "description": "Recompute delta_W_J from input parameters and compare with reported values."
+    },
+    {
+      "id": "deltaW_trend_check",
+      "output_file": "delta_W_results.csv",
+      "weight": 0.4,
+      "kind": "structural_trends",
+      "trends": [
+        "monotonic_decrease_deltaW_with_f_for_each_B",
+        "monotonic_increase_deltaW_with_B_at_small_f",
+        "monotonic_decrease_deltaW_with_H_at_f0.004",
+        "minimum_in_alpha_not_at_endpoints"
+      ],
+      "description": "Verify expected monotonic and structural trends."
+    }
+  ]
+}

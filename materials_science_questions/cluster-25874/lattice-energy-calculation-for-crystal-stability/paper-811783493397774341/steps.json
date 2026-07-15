@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_build_structures",
+    "title": "Prepare crystal structure input files",
+    "role": "process",
+    "action": "Retrieve the published crystal structures of α- and β-SrNCN from a public crystallographic database (CSD/ICSD) using the provided accession numbers. Convert them to input files suitable for periodic DFT (e.g., PWscf input).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Build the initial geometry models for the two polymorphs. This step uses publicly available crystallographic data (space group, lattice parameters, atomic positions) that were deposited with the original publication. The agent must produce DFT input files (e.g., .in files for Quantum ESPRESSO) ready for relaxation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_run_dft",
+    "title": "DFT geometry optimization and total energy calculation",
+    "role": "process",
+    "action": "For each polymorph, perform a periodic DFT geometry relaxation and a subsequent total energy calculation using an open-source code (Quantum ESPRESSO). Retain the optimized structure and the final total energy.",
+    "output_file": "",
+    "evidence": "dft_output_logs",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Carry out a standard DFT relaxation to obtain the relaxed lattice parameters and atomic positions, then compute the total energy. The agent chooses appropriate pseudopotentials, exchange-correlation functional (e.g., PBE), k-point mesh, and energy cutoff following standard practices for solids. The energy must be obtained for the final relaxed unit cell.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_densities",
+    "title": "Compute and report densities",
+    "role": "scored",
+    "action": "From the relaxed unit cell volumes and formula units per cell, compute the density of each polymorph in g/cm³. Output a JSON file with the densities, volumes, and formula-unit counts.",
+    "output_file": "densities.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Calculate the density using the masses of Sr, N, C, and N (from cyanamide) and the relaxed unit cell volume. The JSON must contain the fields specified in the output contract. Determine which phase is denser based on the computed volumes.",
+    "output_schema": "{\n  \"alpha_SrNCN\": {\n    \"density_g_per_cm3\": float,\n    \"unit_cell_volume_A3\": float,\n    \"formula_units_per_cell\": int\n  },\n  \"beta_SrNCN\": {\n    \"density_g_per_cm3\": float,\n    \"unit_cell_volume_A3\": float,\n    \"formula_units_per_cell\": int\n  }\n}"
+  },
+  {
+    "id": "step_lattice_energies",
+    "title": "Compute and report lattice energies",
+    "role": "scored",
+    "action": "Extract the total energy per formula unit (in eV and Ry) for each polymorph from the DFT output, compute the energy difference, and report in lattice_energies.json. Explicitly state which polymorph is more stable.",
+    "output_file": "lattice_energies.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Divide the DFT total energy of the unit cell by the number of formula units to obtain the energy per formula unit. Convert to eV and Ry if needed. Compute the difference beta minus alpha. Because the beta phase is thermochemically more stable, its energy per formula unit must be lower (more negative) than that of the alpha phase. The JSON must follow the output contract.",
+    "output_schema": "{\n  \"alpha_SrNCN\": {\n    \"total_energy_per_fu_eV\": float,\n    \"total_energy_per_fu_Ry\": float\n  },\n  \"beta_SrNCN\": {\n    \"total_energy_per_fu_eV\": float,\n    \"total_energy_per_fu_Ry\": float\n  },\n  \"energy_difference_beta_minus_alpha_eV_per_fu\": float,\n  \"more_stable_polymorph\": \"alpha or beta\"\n}"
+  }
+]

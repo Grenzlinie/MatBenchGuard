@@ -1,0 +1,154 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Pure CO2 isotherms and mixture data are only available as figures in the paper; exact numerical gold cannot be reconstructed without digitising. Structural trends (monotonicity, saturation bounds, peak location) are robust and prevent fabricating values without running the simulation. A numeric check on the zero‑loading Qst uses the paper’s stated value.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_pure_co2_isotherms.csv": "structural_audit",
+    "step_02_pure_co2_qst.csv": "threshold_or_better",
+    "step_03_mixture_isotherms.csv": "structural_audit",
+    "step_04_md_diffusion.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper‑reported saturation loading range and zero‑loading isosteric heat value for CO2 on silicalite.",
+      "source_provenance": "Paper text: saturation 3.4–3.7 mmol/g; zero‑loading Qst ≈ 23.5 kJ/mol.",
+      "generation_method": "Extracted from the conclusion and discussion sections of the paper.",
+      "why_not_fabricated": "These numbers are directly quoted from the paper and are used as reference bounds/targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_pure_co2_isotherms.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "P",
+            "n_abs",
+            "n_ex"
+          ],
+          "units": {
+            "T": "K",
+            "P": "MPa",
+            "n_abs": "mmol g−1",
+            "n_ex": "mmol g−1"
+          }
+        },
+        "description": "Pure CO₂ absolute and excess adsorption isotherms. One row per simulated (T,P) point (3 temperatures × ~10 pressures)."
+      },
+      {
+        "file": "step_02_pure_co2_qst.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "n_abs",
+            "Qst"
+          ],
+          "units": {
+            "n_abs": "mmol g−1",
+            "Qst": "kJ mol−1"
+          }
+        },
+        "description": "Isosteric heat of adsorption as a function of CO₂ absolute loading. At least 10 rows spanning the loading range."
+      },
+      {
+        "file": "step_03_mixture_isotherms.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T",
+            "P",
+            "n_benzene",
+            "n_CO2"
+          ],
+          "units": {
+            "T": "K",
+            "P": "MPa",
+            "n_benzene": "mmol g−1",
+            "n_CO2": "mmol g−1"
+          }
+        },
+        "description": "Benzene/CO₂ mixture adsorption isotherms at bulk benzene mole fraction 0.001. One row per simulated (T,P) point (2 temperatures × ≥5 pressures)."
+      },
+      {
+        "file": "step_04_md_diffusion.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "P",
+            "D_CO2"
+          ],
+          "units": {
+            "P": "MPa",
+            "D_CO2": "m2 s−1"
+          }
+        },
+        "description": "CO₂ self‑diffusion coefficients in the benzene/CO₂ mixture at 328.2 K. One row for each of the five simulated pressures (e.g. 3, 5, 9, 12, 15 MPa)."
+      }
+    ],
+    "notes": "All scored files are compared to hidden gold values or structural checks. The binary interaction parameter fitting and P-R EOS calculations are included as process steps; their correctness is enforced through the load‑bearing mixture isotherm check."
+  },
+  "steps": [
+    {
+      "id": "step_pure_isotherms",
+      "output_file": "step_01_pure_co2_isotherms.csv",
+      "kind": "structural",
+      "weight": 0.35,
+      "params": {
+        "sat_n_abs_min": 3.2,
+        "sat_n_abs_max": 3.9,
+        "excess_peak_p_min": 3.5,
+        "excess_peak_p_max": 6.0,
+        "temp_order_check": true
+      }
+    },
+    {
+      "id": "step_pure_qst",
+      "output_file": "step_02_pure_co2_qst.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "params": {
+        "target_zero_qst": 23.5,
+        "tolerance_abs": 3.0,
+        "qst_trend_check": true
+      }
+    },
+    {
+      "id": "step_mixture_isotherms",
+      "output_file": "step_03_mixture_isotherms.csv",
+      "kind": "structural",
+      "weight": 0.3,
+      "params": {
+        "benzene_decreasing": true,
+        "co2_increasing": true,
+        "positive_values": true
+      }
+    },
+    {
+      "id": "step_md_diffusion",
+      "output_file": "step_04_md_diffusion.csv",
+      "kind": "structural",
+      "weight": 0.15,
+      "params": {
+        "d_min": 1e-10,
+        "d_max": 1e-08,
+        "d_increasing": true,
+        "reference_pure_d": 1e-08
+      }
+    }
+  ]
+}

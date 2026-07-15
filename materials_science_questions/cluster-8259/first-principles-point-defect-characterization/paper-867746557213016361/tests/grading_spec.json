@@ -1,0 +1,137 @@
+{
+  "scoring_tier": "result_level_compare",
+  "scoring_justification": "Full recompute of QM/MM DFT calculations is infeasible in the verifier sandbox; scoring the agent's reported values against paper-reported gold with tolerances is the strongest feasible tier.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_MgGa_formation_energy.txt": "reference_match",
+    "step_02_VN_crossing.txt": "reference_match",
+    "step_03_VN_vertical_IE.txt": "reference_match",
+    "step_04_MgGa_PL_transitions.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for formation energies, crossing point, ionisation energies, and PL transitions derived from the paper's reported results",
+      "source_provenance": "Paper 'Determination of the nitrogen vacancy as a shallow compensating center in GaN doped with divalent metals', DOI 10.48550/arXiv.1412.1694, text and Table I.",
+      "generation_method": "Transcribed exactly from the paper: Mg_Ga formation energy 0.783 eV (N-rich), V_N crossing 1.835 eV, V_N vertical IE 44 meV, Mg PL transitions 3.272/3.228/3.471/3.196 eV.",
+      "why_not_fabricated": "Values are directly quoted from the paper's quantitative results used to support the main claims, not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_MgGa_formation_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing the formation energy in eV, formatted as '<value> eV'."
+        },
+        "description": "Formation energy of neutral Mg_Ga (axial hole configuration) under N-rich conditions, compared against a hidden reference value within tolerance."
+      },
+      {
+        "file": "step_02_VN_crossing.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing the Fermi energy crossing point in eV above VBM, formatted as '<value> eV'."
+        },
+        "description": "Fermi energy at which V_N^+ and V_N^3+ formation energies cross, compared against a hidden reference value within tolerance."
+      },
+      {
+        "file": "step_03_VN_vertical_IE.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "A single line containing the vertical ionisation energy in meV, formatted as '<value> meV'."
+        },
+        "description": "Vertical ionisation energy of V_N^0 relative to CBM, compared against a hidden reference value within tolerance."
+      },
+      {
+        "file": "step_04_MgGa_PL_transitions.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "format": "csv",
+          "required_columns": [
+            "configuration",
+            "final_state",
+            "energy_eV"
+          ],
+          "column_types": {
+            "configuration": "string (basal-plane or axial)",
+            "final_state": "string (singlet or triplet)",
+            "energy_eV": "float (vertical IE in eV)"
+          },
+          "minimum_rows": 2
+        },
+        "description": "CSV containing vertical ionisation energies for at least the two key PL transitions (basal-plane/singlet and axial/singlet). Each row is compared against a hidden reference value within tolerance."
+      }
+    ],
+    "notes": "All scored outputs are evaluated by result-level compare (T0) against paper-reported values with tolerances: formation energies ±0.1 eV, ionisation energies ±0.05 eV. The reward is monotonic in closeness; meeting or exceeding precision earns full credit."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "step_01_MgGa_formation_energy.txt",
+      "kind": "numeric_tolerance",
+      "weight": 0.25,
+      "target": 0.783,
+      "tolerance": 0.1,
+      "unit": "eV",
+      "description": "Formation energy of Mg_Ga^0 (axial hole) under N-rich conditions"
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_VN_crossing.txt",
+      "kind": "numeric_tolerance",
+      "weight": 0.25,
+      "target": 1.835,
+      "tolerance": 0.1,
+      "unit": "eV",
+      "description": "Fermi energy crossing point of V_N^+ and V_N^3+ formation energies"
+    },
+    {
+      "id": "step_03",
+      "output_file": "step_03_VN_vertical_IE.txt",
+      "kind": "numeric_tolerance",
+      "weight": 0.25,
+      "target": 44.0,
+      "tolerance": 5.0,
+      "unit": "meV",
+      "description": "Shallow donor vertical ionisation energy of V_N^0 relative to CBM"
+    },
+    {
+      "id": "step_04",
+      "output_file": "step_04_MgGa_PL_transitions.csv",
+      "kind": "csv_row_match",
+      "weight": 0.25,
+      "gold_rows": {
+        "basal-plane_singlet": 3.272,
+        "basal-plane_triplet": 3.228,
+        "axial_singlet": 3.471,
+        "axial_triplet": 3.196
+      },
+      "required_rows": [
+        {
+          "configuration": "basal-plane",
+          "final_state": "singlet"
+        },
+        {
+          "configuration": "axial",
+          "final_state": "singlet"
+        }
+      ],
+      "tolerance": 0.05,
+      "unit": "eV",
+      "description": "Mg_Ga PL transitions (vertical ionisation energies)"
+    }
+  ]
+}

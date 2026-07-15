@@ -1,0 +1,109 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "Direct recomputation of DFT energies is infeasible in the verifier; comparing reported values to paper gold with tolerances is the strongest feasible verification.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for adsorption energies, coadsorption energy, and energy barriers for the catalytic CO oxidation on TMPc sheets as reported in the paper.",
+      "source_provenance": "Paper: Li & Sun, The superior catalytic CO oxidation capacity of a Cr-phthalocyanine porous sheet, Sci. Rep. 4, 4098 (2014). Adsorption energies extracted from Figure 2; coadsorption energy from text; energy barriers from Figures 4 and 5.",
+      "generation_method": "Digitized from paper figures and confirmed with text statements.",
+      "why_not_fabricated": "These values are the actual published data from the original DFT study, used as reference for reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Eads_CO_CrPc": "float",
+            "Eads_O2_CrPc": "float",
+            "Eads_CO_MnPc": "float",
+            "Eads_O2_MnPc": "float",
+            "Eads_CO_FePc": "float",
+            "Eads_O2_FePc": "float",
+            "E_coad_CrPc": "float",
+            "Ea_LH_TS1": "float",
+            "Ea_LH_TS2": "float",
+            "Ea_ER_TS": "float"
+          }
+        },
+        "description": "JSON file containing computed adsorption energies (Eads), coadsorption energy (E_coad), and energy barriers (Ea) for CO oxidation on 2D TMPc sheets. All values are in eV."
+      }
+    ],
+    "notes": "The values are compared against paper-reported references with tolerances of 0.15 eV for adsorption/coadsorption energies and 0.10 eV for energy barriers. The coadsorption energy for CrPc must be negative."
+  },
+  "steps": [
+    {
+      "id": "step_results",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "result_compare",
+      "sub_checks": [
+        {
+          "field": "Eads_CO_CrPc",
+          "gold": -1.1,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "Eads_O2_CrPc",
+          "gold": -2.3,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "Eads_CO_MnPc",
+          "gold": -1.6,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "Eads_O2_MnPc",
+          "gold": -1.8,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "Eads_CO_FePc",
+          "gold": -2.1,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "Eads_O2_FePc",
+          "gold": -1.2,
+          "tol": 0.15,
+          "weight": 0.08
+        },
+        {
+          "field": "E_coad_CrPc",
+          "gold": -0.16,
+          "tol": 0.15,
+          "weight": 0.15,
+          "negative_required": true
+        },
+        {
+          "field": "max_barrier",
+          "gold": 0.55,
+          "tol": 0.1,
+          "weight": 0.25,
+          "compute_from": [
+            "Ea_LH_TS1",
+            "Ea_LH_TS2",
+            "Ea_ER_TS"
+          ]
+        }
+      ],
+      "description": "Compare each energy value to paper gold with tolerance; extra weight on coadsorption energy and on the highest barrier."
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The headline quantities (band gap, birefringence, SHG coefficients, dipole moments) are scalar DFT results; the agent reports them directly in JSON files. A full recompute from raw DFT outputs is not feasible in the lightweight verifier sandbox. Comparison against paper-reported reference values with tolerances appropriate for method variations is the strongest feasible tier.",
+  "pass_threshold": 0.5,
+  "target_policies": {
+    "band_gap.json": "reference_match",
+    "birefringence.json": "reference_match",
+    "shg_coefficients.json": "reference_match",
+    "dipole_moments.json": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gap.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "band_gap_eV": "number",
+            "is_direct": "boolean",
+            "method": "string"
+          }
+        },
+        "description": "Direct band gap of the crystal computed with GGA-PBE, compared to a hidden reference value."
+      },
+      {
+        "file": "birefringence.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "birefringence_546nm": "number",
+            "birefringence_1064nm": "number"
+          }
+        },
+        "description": "Birefringence at 546.1 nm and 1064 nm, compared to hidden reference values."
+      },
+      {
+        "file": "shg_coefficients.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "d31_pm_per_V": "number",
+            "d33_pm_per_V": "number"
+          }
+        },
+        "description": "Independent NLO tensor components d31 and d33 at 1064 nm, compared to hidden reference values."
+      },
+      {
+        "file": "dipole_moments.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_PO4_dipole_z_D": "number",
+            "total_ScO4F2_dipole_z_D": "number"
+          }
+        },
+        "description": "Total unit-cell dipole moments (z-component) of the [PO4]3- groups and [ScO4F2] polyhedra, compared to hidden reference values."
+      }
+    ],
+    "notes": "All scored quantities are derived from first-principles DFT using the same functional (PBE) and pseudopotential type as described. The hidden reference values are the corresponding DFT results reported in the original study; the checker compares within predefined tolerances appropriate for DFT method variations."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for band gap, birefringence, SHG coefficients, and dipole moments.",
+      "source_provenance": "Paper: 'The band structures ... exhibited direct band gaps of 4.492 eV.'; 'The birefringence ... was also calculated to be 0.0750 at 546.1 nm and 0.0630 at 1064 nm based on DFT calculation.'; 'The calculated NLO coefficients ... d31 and d33, were 0.18 and 0.24 pm V^{-1} at a wavelength of 1064 nm.'; Table 4 lists total PO4 dipole 6.044 D and total ScO4F2 dipole 3.632 D.",
+      "generation_method": "Extracted directly from the paper's reported DFT results.",
+      "why_not_fabricated": "These are the actual DFT-derived values the paper claims; embedded inline for self-contained checking without network fetch."
+    }
+  ],
+  "steps": [
+    {
+      "id": "band_gap",
+      "output_file": "band_gap.json",
+      "weight": 0.2,
+      "kind": "scalar_comparison",
+      "numeric_field": "band_gap_eV",
+      "gold": 4.492,
+      "tol": 0.2,
+      "check_direct": true
+    },
+    {
+      "id": "birefringence",
+      "output_file": "birefringence.json",
+      "weight": 0.3,
+      "kind": "scalar_comparison",
+      "fields": [
+        {
+          "field": "birefringence_546nm",
+          "gold": 0.075,
+          "tol": 0.01
+        },
+        {
+          "field": "birefringence_1064nm",
+          "gold": 0.063,
+          "tol": 0.01
+        }
+      ]
+    },
+    {
+      "id": "shg_coefficients",
+      "output_file": "shg_coefficients.json",
+      "weight": 0.3,
+      "kind": "scalar_comparison",
+      "fields": [
+        {
+          "field": "d31_pm_per_V",
+          "gold": 0.18,
+          "tol": 0.05
+        },
+        {
+          "field": "d33_pm_per_V",
+          "gold": 0.24,
+          "tol": 0.05
+        }
+      ]
+    },
+    {
+      "id": "dipole_moments",
+      "output_file": "dipole_moments.json",
+      "weight": 0.2,
+      "kind": "scalar_comparison",
+      "fields": [
+        {
+          "field": "total_PO4_dipole_z_D",
+          "gold": 6.044,
+          "tol": 0.5
+        },
+        {
+          "field": "total_ScO4F2_dipole_z_D",
+          "gold": 3.632,
+          "tol": 0.5
+        }
+      ]
+    }
+  ]
+}

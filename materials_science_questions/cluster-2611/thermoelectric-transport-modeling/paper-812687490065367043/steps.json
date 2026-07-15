@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step01_prepare_cell",
+    "title": "Prepare triclinic input cell",
+    "role": "process",
+    "action": "Obtain the monoclinic crystal structure of CsBi4Te6 from a public database and transform it into the reduced triclinic cell (44 atoms) using the unit vectors A' = (A-B)/2, B' = (A+B)/2, C' = C. Generate Quantum ESPRESSO input files.",
+    "output_file": "",
+    "evidence": "triclinic_scf.in",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Structure preparation and input file generation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_dft_no_soc",
+    "title": "DFT scalar-relativistic without SOC",
+    "role": "process",
+    "action": "Perform a self-consistent DFT calculation using Quantum ESPRESSO with GGA-PBE, scalar-relativistic pseudopotentials, and adequate k-point sampling. Run to convergence.",
+    "output_file": "",
+    "evidence": "scf_no_soc.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Base DFT run without spin-orbit coupling.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_dft_soc",
+    "title": "DFT with spin-orbit coupling",
+    "role": "process",
+    "action": "Perform a self-consistent DFT calculation using Quantum ESPRESSO with fully relativistic (spin-orbit) pseudopotentials for Cs, Bi, Te, using the same triclinic cell. Include spin-orbit coupling in the Hamiltonian.",
+    "output_file": "",
+    "evidence": "scf_soc.out",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "SOC run that yields the spin-orbit-coupled band gap.",
+    "output_schema": ""
+  },
+  {
+    "id": "step04_band_gaps",
+    "title": "Extract band gaps",
+    "role": "scored",
+    "action": "From the SCF outputs of steps 2 and 3, compute the fundamental band gap (smallest energy difference between valence band maximum and conduction band minimum). Write the values into a JSON file.",
+    "output_file": "band_gap.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored band gaps. Contains two keys: band_gap_without_soc and band_gap_with_soc (both in eV).",
+    "output_schema": "JSON object: { \"band_gap_without_soc\": float, \"band_gap_with_soc\": float }"
+  },
+  {
+    "id": "step05_effective_masses",
+    "title": "Effective mass computation",
+    "role": "scored",
+    "action": "Using the SOC band structure near the valence band maximum, compute the effective mass tensor, diagonalize it, and extract the three principal effective masses (in units of electron mass) and the angles to the reference axes (X needle, Y Bi-Bi bonds, Z Cs layers). Write a CSV file.",
+    "output_file": "effective_masses.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Principal effective masses and orientations of the valence band maximum.",
+    "output_schema": "CSV with columns: direction (string: X (needle), Y (Bi-Bi bonds), Z (Cs layers)), effective_mass (float, in m_e), angle (float, degrees). Three rows."
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "id": "step_01_geom_energy",
+    "title": "DFT geometry optimization and single-point energy calculations",
+    "role": "process",
+    "action": "Build molecular models for all species involved: 4-X-bicyclo[2.2.2]octanyl-Z-Y (X = H, CH3, F, OH, NH2, SH, CN, NO2; Z = CH2, NH, O, SiH2, PH, S; Y = H, F, Li), Me3C-Z-Y reference molecules, X-bicyclooctane, bicyclooctane, bicyclooctanyl-Z-Y parent molecules, and X-bicyclooctanyl-Z• radicals. Perform geometry optimizations and frequency calculations at B3LYP/6-31+G(d) level, then single-point energy calculations at B3LYP/6-311++G(2df,p) level. Collect total energies, zero-point energies, and thermal corrections to obtain enthalpies at 298 K.",
+    "output_file": "",
+    "evidence": "step_01_energies.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute all required total energies and enthalpy corrections for later BDE and isodesmic reaction calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_ref_bde",
+    "title": "Reference high‑level BDEs for calibration trimethyl analogs",
+    "role": "process",
+    "action": "Compute high-accuracy bond dissociation energies for all Me3C-Z-Y systems (Z=CH2, NH, O, SiH2, PH, S; Y=H, F, Li) using a suitable composite quantum chemistry method (e.g., G3B3 or, as an open-source alternative, a focal-point approach such as DLPNO‑CCSD(T)/CBS). These will serve as the absolute reference for calibrating the DFT BDEs.",
+    "output_file": "",
+    "evidence": "step_02_ref_bde.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Obtain accurate reference BDEs to later calibrate the DFT method’s systematic error.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_calibrate_parent_bde",
+    "title": "Calibrate absolute BDEs for parent bicyclo[2.2.2]octanyl systems",
+    "role": "process",
+    "action": "Using the B3LYP enthalpies from step_01 and the reference BDEs from step_02, compute B3LYP BDEs for Me3C-Z-Y and bicyclo[2.2.2]octanyl-Z-Y. Apply the calibration equation BDE_calc = BDE_ref + (BDE_B3LYP_bicyclo - BDE_B3LYP_Me3C) to obtain recommended absolute Z-Y BDEs for the parent (X=H) bicyclo systems.",
+    "output_file": "",
+    "evidence": "step_03_parent_bde.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produce high-quality absolute Z-Y BDEs for the unsubstituted bicyclooctane systems.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_rho_bde",
+    "title": "Substituent ΔBDE and Hammett ρ for Z-Y BDEs",
+    "role": "process",
+    "action": "For each X-substituted bicyclooctanyl-Z-Y system, compute ΔBDE relative to X=H using the B3LYP BDEs. Perform linear regression of ΔBDE against the substituent inductive/field F constants for each Z–Y combination (18 pairs total). Record the resulting Hammett reaction constants ρ_BDE, their correlation coefficients, and the underlying ΔBDE values.",
+    "output_file": "",
+    "evidence": "step_04_rho_bde.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Obtain the Hammett ρ values for all Z-Y bond dissociation reactions.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_me_re_partition",
+    "title": "Molecule and radical effect partitioning (ME/RE) and their ρ values",
+    "role": "process",
+    "action": "Construct the isodesmic reactions that separate the total substituent effect into molecule effect (ME) and radical effect (RE). Using the B3LYP enthalpies of the relevant species, compute ME and RE for every substituent. Then regress ME and RE against the F constants to obtain ρ_ME and ρ_RE for each Z-Y and Z• case.",
+    "output_file": "",
+    "evidence": "step_05_me_re_rho.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Decompose the total substituent effect into parent and radical contributions and quantify their Hammett behaviour.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06_phi_computation",
+    "title": "Electrostatic descriptor Φ computation",
+    "role": "process",
+    "action": "For each Z-Y bond and the corresponding Z• radical, build an H‑capped moiety (H‑Z‑Y or H‑Z•) with the geometry taken from the optimized bicyclo system. Perform a single‑point B3LYP/6-311++G(2df,p) calculation to obtain CHelpG atomic charges. Compute the electrostatic descriptor Φ using the Coulomb interaction formula with a dipole of length 1.10 Å placed at the substituent position. The dipole is composed of point charges +Q and –Q; Φ represents the interaction energy per unit charge. Save the resulting Φ values.",
+    "output_file": "",
+    "evidence": "step_06_phi.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Compute the electrostatic field quantities that drive the predictive model.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_07_final_scored",
+    "title": "Aggregate all computed and predicted results (scored artifact)",
+    "role": "scored",
+    "action": "Collect the computed ρ values for Z-Y BDEs from step_04, the ρ_ME and ρ_RE values and their corresponding Φ values from steps_05 and 06. Perform a linear regression of all ρ_ME and ρ_RE values against Φ to obtain the unified model parameters (slope, intercept, and correlation coefficient r). Use the derived slope to predict ρ(BDE) for each Z-Y bond as ρ_pred = -slope × (Φ_Z-Y − Φ_Z•). Compute the correlation coefficient r² between the predicted ρ_pred and the originally computed ρ (from step_04). Write all results into the output JSON file.",
+    "output_file": "step_07_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final scored artifact containing all computed and predicted reaction constants, the electrostatic model parameters, and the prediction correlation. The hidden checker will compare the computed ρ values, predicted ρ values, model slope, intercept, correlation r, and overall prediction r² against the paper’s reported values with appropriate tolerances.",
+    "output_schema": "JSON object with fields: 'overall_r_squared_pred_vs_computed' (float), 'rho_vs_phi_fit_slope' (float, kJ/mol per Φ unit), 'rho_vs_phi_fit_intercept' (float, kJ/mol), 'rho_vs_phi_fit_r' (float), 'z_y_rho' (array of objects, each with keys: 'z' (string, e.g. 'CH2'), 'y' (string, e.g. 'H'), 'computed_rho' (float, kJ/mol), 'predicted_rho' (float, kJ/mol))."
+  }
+]

@@ -1,0 +1,274 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level compare with tolerances; the checker recomputes the fraction of fields within tolerance from the agent's raw artifacts, not self-reported metrics.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference values for ZnSnP2 lattice constants, Born effective charges, zone-center phonon frequencies, and dielectric constants from the paper's Tables 1, 2, 4, and 5.",
+      "source_provenance": "Paper (Tables 1, 2, 4, 5) of the hidden source paper.",
+      "generation_method": "Directly taken from the paper's reported numbers; no synthesis or random generation.",
+      "why_not_fabricated": "These are the exact published results the task aims to reproduce."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "optimized_structure.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "a",
+            "c",
+            "u"
+          ],
+          "properties": {
+            "a": {
+              "type": "number"
+            },
+            "c": {
+              "type": "number"
+            },
+            "u": {
+              "type": "number"
+            }
+          }
+        },
+        "description": "Relaxed lattice constants a (Å), c (Å), and internal parameter u."
+      },
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "born_effective_charges",
+            "phonon_frequencies",
+            "dielectric_tensors"
+          ],
+          "properties": {
+            "born_effective_charges": {
+              "type": "object",
+              "description": "Born effective charge tensors for Zn, Sn, and P; each tensor is a 3x3 matrix or a dictionary of its components."
+            },
+            "phonon_frequencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "mode_label": {
+                    "type": "string"
+                  },
+                  "symmetries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "activity": {
+                    "type": "string"
+                  },
+                  "frequencies": {
+                    "type": "object",
+                    "properties": {
+                      "lo": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "lo",
+                      "to"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode_label",
+                  "frequencies"
+                ]
+              }
+            },
+            "dielectric_tensors": {
+              "type": "object",
+              "properties": {
+                "epsilon_inf_perp": {
+                  "type": "number"
+                },
+                "epsilon_inf_par": {
+                  "type": "number"
+                },
+                "epsilon0_perp": {
+                  "type": "number"
+                },
+                "epsilon0_par": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "epsilon_inf_perp",
+                "epsilon_inf_par",
+                "epsilon0_perp",
+                "epsilon0_par"
+              ]
+            }
+          }
+        },
+        "description": "Computed Born effective charges, zone-center phonon frequencies (with LO/TO splittings for IR-active modes), and static/high-frequency dielectric constants."
+      }
+    ],
+    "notes": "The agent must write both JSON files to /app/outputs. The hidden checker will compare the submitted numerical values to the paper's reported values with appropriate tolerances. Partial credit is awarded proportionally to the fraction of fields that pass within tolerance."
+  },
+  "steps": [
+    {
+      "id": "optimized_structure",
+      "output_file": "optimized_structure.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "target_policy": "exact_match",
+      "reference": {
+        "a": 5.622,
+        "c": 11.233,
+        "u": 0.231
+      },
+      "tolerances": {
+        "a": 0.02,
+        "c": 0.02,
+        "u": 0.01
+      }
+    },
+    {
+      "id": "results",
+      "output_file": "results.json",
+      "kind": "rubric",
+      "weight": 0.8,
+      "target_policy": "exact_match",
+      "tolerances": {
+        "born_diagonal": 0.1,
+        "phonon_frequency": 5.0,
+        "dielectric": 0.5
+      },
+      "reference": {
+        "born_effective_charges": {
+          "Zn": {
+            "diagonal": [
+              1.76,
+              1.76,
+              1.73
+            ]
+          },
+          "Sn": {
+            "diagonal": [
+              2.5,
+              2.5,
+              2.64
+            ]
+          },
+          "P1": {
+            "diagonal": [
+              -1.99,
+              -2.27,
+              -2.18
+            ]
+          },
+          "P2": {
+            "diagonal": [
+              -2.27,
+              -1.99,
+              -2.18
+            ]
+          }
+        },
+        "phonon_frequencies": [
+          {
+            "mode_label": "A1",
+            "lo": 313,
+            "to": 313
+          },
+          {
+            "mode_label": "A2",
+            "lo": 311,
+            "to": 311
+          },
+          {
+            "mode_label": "A2",
+            "lo": 345,
+            "to": 345
+          },
+          {
+            "mode_label": "B1",
+            "lo": 105,
+            "to": 105
+          },
+          {
+            "mode_label": "B1",
+            "lo": 207,
+            "to": 207
+          },
+          {
+            "mode_label": "B1",
+            "lo": 362,
+            "to": 362
+          },
+          {
+            "mode_label": "B2",
+            "lo": 101,
+            "to": 100
+          },
+          {
+            "mode_label": "B2",
+            "lo": 330,
+            "to": 328
+          },
+          {
+            "mode_label": "B2",
+            "lo": 365,
+            "to": 364
+          },
+          {
+            "mode_label": "E",
+            "lo": 82,
+            "to": 82
+          },
+          {
+            "mode_label": "E",
+            "lo": 115,
+            "to": 115
+          },
+          {
+            "mode_label": "E",
+            "lo": 180,
+            "to": 180
+          },
+          {
+            "mode_label": "E",
+            "lo": 328,
+            "to": 325
+          },
+          {
+            "mode_label": "E",
+            "lo": 340,
+            "to": 335
+          },
+          {
+            "mode_label": "E",
+            "lo": 353,
+            "to": 343
+          }
+        ],
+        "dielectric_tensors": {
+          "epsilon_inf_perp": 11.91,
+          "epsilon_inf_par": 12.01,
+          "epsilon0_perp": 13.74,
+          "epsilon0_par": 13.86
+        }
+      }
+    }
+  ]
+}

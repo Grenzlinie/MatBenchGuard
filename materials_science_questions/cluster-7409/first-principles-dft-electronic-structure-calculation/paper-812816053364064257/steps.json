@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01_relax",
+    "title": "Geometry optimization of rutile TiO2",
+    "role": "process",
+    "action": "Use Quantum ESPRESSO pw.x with vc-relax to optimize the tetragonal lattice parameters a, c, and internal coordinate u starting from experimental values (a=4.593 Å, c=2.959 Å, u=0.305) for both PBE-GGA and PW-LDA functionals.",
+    "output_file": "",
+    "evidence": "relax_output.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain equilibrium lattice constants for subsequent calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_scf",
+    "title": "Self-consistent field ground-state calculation",
+    "role": "process",
+    "action": "For each optimized structure (PBE-GGA and PW-LDA), run a self-consistent field calculation using pw.x to obtain the ground-state charge density and Kohn-Sham eigenvalues.",
+    "output_file": "",
+    "evidence": "scf_output.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the wavefunction and density needed for band structure and optical properties.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_bandgap",
+    "title": "Band structure and band gap",
+    "role": "scored",
+    "action": "Using the ground-state wavefunction, perform a non-self-consistent band structure calculation along a k-path covering the Γ-point to obtain the eigenvalues. Identify the valence band maximum and conduction band minimum at Γ and compute the direct band gap for each functional. Output the results.",
+    "output_file": "step_01_band_gap.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Reports the direct band gap and nature for both functionals.",
+    "output_schema": "Columns: functional (string), band_gap_eV (float), gap_nature (string). Two rows: pbe-GGA and pw-LDA."
+  },
+  {
+    "id": "step_04_dielectric_func",
+    "title": "Frequency-dependent dielectric function calculation",
+    "role": "process",
+    "action": "Using the ground-state wavefunction, calculate the complex dielectric function ε(ω) via the random-phase approximation as implemented in Quantum ESPRESSO's epsilon.x or equivalent post-processing tool. Compute ε1(ω) and ε2(ω) for ordinary (xx, yy) and extraordinary (zz) polarizations over a photon energy range up to 15 eV.",
+    "output_file": "",
+    "evidence": "dielectric_data.txt",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the raw dielectric spectra required to extract high-frequency constants and refractive index.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_dielectric_constants",
+    "title": "High-frequency dielectric constant extraction",
+    "role": "scored",
+    "action": "From the real part ε1(ω) at high photon energy (near 15 eV) determine the electronic dielectric constant ε∞ for ordinary (ε11=ε22) and extraordinary (ε33) directions for each functional. Output the values.",
+    "output_file": "step_02_dielectric_constants.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "High-frequency dielectric constants for both functionals and polarization directions.",
+    "output_schema": "Columns: functional (string), direction (string: ordinary or extraordinary), epsilon_infinity (float). Four rows: pbe-GGA ordinary, pbe-GGA extraordinary, pw-LDA ordinary, pw-LDA extraordinary."
+  },
+  {
+    "id": "step_06_birefringence",
+    "title": "Refractive index and birefringence calculation",
+    "role": "scored",
+    "action": "Using the dielectric function, compute the refractive index n(ω) via the Maxwell relation n = (1/√2)√(√(ε1²+ε2²)+ε1) for ordinary and extraordinary directions. Extract the refractive indices at 633 nm (1.96 eV) and compute the birefringence Δn = n_e − n_o. Output the birefringence.",
+    "output_file": "step_03_birefringence.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Optical birefringence at 633 nm for each functional.",
+    "output_schema": "Columns: functional (string), birefringence_633nm (float). Two rows: pbe-GGA and pw-LDA."
+  }
+]

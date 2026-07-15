@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "DFT force constant calculation",
+    "role": "process",
+    "action": "Compute second- and third-order force constants for GaN (wurtzite) and 4H-SiC using density functional theory (e.g., Quantum ESPRESSO) with the LDA functional and a plane-wave basis, extracting harmonic and anharmonic force constants via Phonopy and Thirdorder. Use converged supercell sizes and interaction range consistent with the method.",
+    "output_file": "",
+    "evidence": "force_constants.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces force constant files needed for subsequent phonon property calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Phonon property calculation",
+    "role": "process",
+    "action": "Using almaBTE and the force constants from step_01, compute phonon dispersions, group velocities, and three-phonon relaxation times for GaN and SiC at 300 K. Use a dense q-point mesh and the RTA solver to obtain the spectral inputs for later steps.",
+    "output_file": "",
+    "evidence": "phonon_properties.hdf5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generates phonon spectral data (frequencies, velocities, relaxation times) required for defect scattering rates and Monte Carlo simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Bulk lattice thermal conductivity validation",
+    "role": "scored",
+    "action": "From the phonon properties of step_02, compute the lattice thermal conductivity of bulk GaN and SiC at 300 K using almaBTE's RTA solver. Save the results as a JSON object with keys 'GaN' and 'SiC' (values in W/mK).",
+    "output_file": "bulk_thermal_conductivity.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON object containing the computed bulk lattice thermal conductivity of GaN and SiC at 300 K, used to validate the accuracy of the obtained phonon properties.",
+    "output_schema": "{\"type\": \"object\", \"required\": [\"GaN\", \"SiC\"], \"properties\": {\"GaN\": {\"type\": \"number\", \"unit\": \"W/mK\"}, \"SiC\": {\"type\": \"number\", \"unit\": \"W/mK\"}}}"
+  },
+  {
+    "id": "step_04",
+    "title": "Defect scattering rates",
+    "role": "process",
+    "action": "For each defect location (defects in GaN only, defects in SiC only) and for each target relative defect concentration (1e-8, 1e-6, 1e-4, 0.01, 0.03, 0.05), compute the point-defect scattering relaxation time using the mass-difference model (Klemens formula) with vacancy parameters, and combine it with the three-phonon relaxation times from step_02 via Matthiessen's rule to obtain the total spectral scattering rate.",
+    "output_file": "",
+    "evidence": "defect_rates.hdf5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces total phonon scattering rates including phonon-defect scattering for all defect configurations needed in the Monte Carlo simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Monte Carlo simulation of GaN/SiC heterostructure",
+    "role": "process",
+    "action": "For the defect-free case and each defect configuration from step_04, run the variance-reduced Monte Carlo solver to simulate phonon transport in a GaN/SiC heterostructure. Use the simulation domain dimensions and boundary conditions consistent with the model: fixed-temperature boundaries at top (303 K) and bottom (297 K), periodic lateral boundaries, equilibrium temperature 300 K, and spectral interface transmission rule. Record steady-state heat flux and temperature drop at the interface.",
+    "output_file": "",
+    "evidence": "mc_simulation_output.hdf5",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Executes Monte Carlo simulations for all defect scenarios, producing spatial temperature and heat flux data needed to compute interfacial thermal conductance.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Extract interfacial thermal conductance (ITC)",
+    "role": "scored",
+    "action": "From the simulation outputs of step_05, compute the interfacial thermal conductance ITC = Q / ΔT for each defect configuration (defect-free and each concentration in GaN and in SiC). Save the results as a CSV file with columns: defect_concentration (float), defect_location (string: 'GaN', 'SiC', or 'none'), heat_flux (float, W/m²), temperature_drop (float, K), itc (float, W/m²K). Include rows for defect-free (concentration 0, location 'none') and for all simulated defect concentrations in both locations.",
+    "output_file": "itc_vs_defect_concentration.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "CSV file containing interfacial thermal conductance (ITC) values for all simulated defect scenarios. The trend of ITC vs defect location/concentration is the main reproduction target.",
+    "output_schema": "{\"type\": \"table\", \"required_columns\": [\"defect_concentration\", \"defect_location\", \"heat_flux\", \"temperature_drop\", \"itc\"], \"columns\": {\"defect_concentration\": \"float (dimensionless relative concentration)\", \"defect_location\": \"string: 'GaN', 'SiC', or 'none'\", \"heat_flux\": \"float (W/m²)\", \"temperature_drop\": \"float (K)\", \"itc\": \"float (W/m²K)\"}}"
+  }
+]

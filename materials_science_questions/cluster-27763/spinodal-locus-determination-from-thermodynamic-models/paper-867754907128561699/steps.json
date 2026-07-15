@@ -1,0 +1,80 @@
+[
+  {
+    "id": "flat_interface",
+    "title": "Simulate flat interface and compute surface tension",
+    "role": "process",
+    "action": "Implement the two-phase fluid model with van der Waals equation of state and Korteweg interfacial stresses using a MacCormack predictor-corrector numerical scheme on a 64×64 grid. Set Reynolds number 2.0, Weber number 1.0, and reduced temperature θ′=0.85. Initialize a planar liquid–gas interface and run until the density profile reaches equilibrium. Save the final equilibrium density profile as flat_density_profile.npy. Compute the surface tension coefficient α using the formula α = λ ∫ (dρ/dy)² dy from the density profile, and write it to surface_tension_coefficient.csv.",
+    "output_file": "",
+    "evidence": "flat_density_profile.npy, surface_tension_coefficient.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Simulates flat interface to obtain equilibrium density profile and surface tension coefficient.",
+    "output_schema": ""
+  },
+  {
+    "id": "equilibrium_densities",
+    "title": "Extract equilibrium liquid and gas densities",
+    "role": "scored",
+    "action": "From the flat_density_profile.npy, identify the liquid and gas phase densities (e.g., average density in the two bulk regions). Write a single row to equilibrium_densities.csv with columns: reduced_temperature, liquid_density, gas_density.",
+    "output_file": "equilibrium_densities.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium densities of coexisting phases at θ′=0.85.",
+    "output_schema": "CSV with columns: reduced_temperature, liquid_density, gas_density. One row for θ′=0.85."
+  },
+  {
+    "id": "laplace_verification",
+    "title": "Verify Laplace's law",
+    "role": "scored",
+    "action": "Using the surface_tension_coefficient.csv value, simulate equilibrium drops of several radii (e.g., 8, 16, 32, 64 grid cells) on a 256×256 grid with Re=2.0, We=1.0. Measure inside and outside pressures, compute Δp = inside - outside, and α/R. Write results to laplace_verification.csv with columns: drop_radius, inside_pressure, outside_pressure, surface_tension_coefficient.",
+    "output_file": "laplace_verification.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Verification of Laplace's law: pressure difference linear with α/R.",
+    "output_schema": "CSV with columns: drop_radius, inside_pressure, outside_pressure, surface_tension_coefficient. One row per drop."
+  },
+  {
+    "id": "spinodal_sim",
+    "title": "Run spinodal decomposition simulation",
+    "role": "process",
+    "action": "Initialize a 512×512 grid with average density 1.06344ρc plus random noise of amplitude 0.2ρc (fixed random seed). Quench to θ′=0.85. Run isothermal simulation with periodic boundaries for at least 500 dimensionless time units. Save density fields at times 25, 50, 250, 500 as density_t0025.npy, density_t0050.npy, density_t0250.npy, density_t0500.npy.",
+    "output_file": "",
+    "evidence": "density_t0025.npy, density_t0050.npy, density_t0250.npy, density_t0500.npy",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Spinodal decomposition simulation producing density field snapshots.",
+    "output_schema": ""
+  },
+  {
+    "id": "domain_growth",
+    "title": "Compute domain sizes from spinodal snapshots",
+    "role": "scored",
+    "action": "For each snapshot, compute the circularly-averaged two-point correlation function, find the first zero crossing as average domain size D(t) in grid cells. Write domain_growth.csv with columns: time, domain_size. Include times 25, 50, 250, 500 and any additional saved times.",
+    "output_file": "domain_growth.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Time evolution of average domain size from spinodal decomposition.",
+    "output_schema": "CSV with columns: time, domain_size. Domain size in grid cells."
+  },
+  {
+    "id": "growth_exponent",
+    "title": "Fit power law and extract exponent",
+    "role": "scored",
+    "action": "From domain_growth.csv, select points where domain_size between 20 and 128 grid cells. Fit D = A t^n, output the exponent n as a single floating-point number to growth_exponent.txt.",
+    "output_file": "growth_exponent.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Domain growth exponent from late-stage spinodal decomposition.",
+    "output_schema": "A single floating-point number."
+  }
+]

@@ -1,0 +1,245 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "The agent reports fitted LDM coefficients; direct recomputation from raw (D,epsilon) data is not available. Fragmentation analysis validates energy balance and pattern from the agent's own reported totals and fragment size distribution.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_01_linear_fit_and_LDM.json": "reference_match",
+    "step_02_fragmentation_data.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold LDM coefficients and linear fit parameters from paper Tables I and II",
+      "source_provenance": "Paper: Tables I and II, values as reported",
+      "generation_method": "Extracted from paper figures/tables",
+      "why_not_fabricated": "Directly from the published paper; the reference solve.sh hardcodes these values to match the paper."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Fragmentation energy balance thresholds and fragment pattern criteria",
+      "source_provenance": "Paper: Table III, Fig. 5",
+      "generation_method": "Derived from paper's energy values and qualitative description of fragment patterns",
+      "why_not_fabricated": "Based on paper's reported data and descriptions."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_linear_fit_and_LDM.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "potential_s": {
+              "type": "object",
+              "required": {
+                "n55": {
+                  "type": "object",
+                  "required": {
+                    "A": "number",
+                    "B": "number",
+                    "epsilon_C": "number"
+                  }
+                },
+                "n135": {
+                  "type": "object",
+                  "required": {
+                    "A": "number",
+                    "B": "number",
+                    "epsilon_C": "number"
+                  }
+                },
+                "a_c": "number",
+                "a_v": "number",
+                "a_s": "number",
+                "a_v0": "number",
+                "a_s0": "number"
+              }
+            },
+            "potential_l": {
+              "type": "object",
+              "required": {
+                "n55": {
+                  "type": "object",
+                  "required": {
+                    "A": "number",
+                    "B": "number",
+                    "epsilon_C": "number"
+                  }
+                },
+                "n135": {
+                  "type": "object",
+                  "required": {
+                    "A": "number",
+                    "B": "number",
+                    "epsilon_C": "number"
+                  }
+                },
+                "a_c": "number",
+                "a_v": "number",
+                "a_s": "number",
+                "a_v0": "number",
+                "a_s0": "number"
+              }
+            }
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "A": "eV",
+            "B": "eV/eV",
+            "epsilon_C": "eV",
+            "a_c": "eV",
+            "a_v": "eV",
+            "a_s": "eV",
+            "a_v0": "dimensionless (a_v / D)",
+            "a_s0": "dimensionless (a_s / D)"
+          }
+        },
+        "description": "Fitted liquid-drop model coefficients and linear scaling parameters for the short-range (s) and long-range (ℓ) potential classes."
+      },
+      {
+        "file": "step_02_fragmentation_data.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "fission": {
+              "type": "object",
+              "required": {
+                "n_k": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "total_KE": "number",
+                "total_IN": "number",
+                "n_epsilon": "number"
+              }
+            },
+            "coulomb_explosion": {
+              "type": "object",
+              "required": {
+                "n_k": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "total_KE": "number",
+                "total_IN": "number",
+                "n_epsilon": "number"
+              }
+            }
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {
+            "total_KE": "eV",
+            "total_IN": "eV",
+            "n_epsilon": "eV",
+            "n_k": "[k, n_k] pair"
+          }
+        },
+        "description": "Fragment size histograms and kinetic/internal energy totals for a representative fission case (ℓ potential, n=55, D=6.5 eV, T=3000 K) and a Coulomb explosion case (s potential, n=55, D=4.2 eV, T=500 K)."
+      }
+    ],
+    "notes": "The checker compares the agent's reported LDM parameters and linear fit coefficients to the paper's Table I/II values using relative tolerances (≤5% for energies, ≤10% for coefficients). For fragmentation data, it verifies the qualitative pattern (fission: large clusters dominate; Coulomb explosion: many small fragments) and checks energy balance |(ΣE_KIN+ΣE_IN) − n·ε|/(n·ε) ≤ 0.02."
+  },
+  "steps": [
+    {
+      "id": "step_01_ldm_fit",
+      "output_file": "step_01_linear_fit_and_LDM.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "tolerances": {
+        "A_rel": 0.05,
+        "B_rel": 0.1,
+        "epsilon_C_rel": 0.05,
+        "a_c_rel": 0.1,
+        "a_v_rel": 0.1,
+        "a_s_rel": 0.1,
+        "a_v0_rel": 0.15,
+        "a_s0_rel": 0.15
+      },
+      "expected": {
+        "potential_s": {
+          "n55": {
+            "A": 67.0,
+            "B": -3.79,
+            "epsilon_C": 68.1
+          },
+          "n135": {
+            "A": 128.0,
+            "B": -4.56,
+            "epsilon_C": 128.3
+          },
+          "a_c": 4.8,
+          "a_v": -80.0,
+          "a_s": 132.0,
+          "a_v0": -6.9,
+          "a_s0": 11.5
+        },
+        "potential_l": {
+          "n55": {
+            "A": 119.0,
+            "B": -11.3,
+            "epsilon_C": 128.0
+          },
+          "n135": {
+            "A": 278.0,
+            "B": -21.5,
+            "epsilon_C": 279.1
+          },
+          "a_c": 10.8,
+          "a_v": -600.0,
+          "a_s": 1900.0,
+          "a_v0": -50.0,
+          "a_s0": 148.0
+        }
+      }
+    },
+    {
+      "id": "step_02_fragmentation_analysis",
+      "output_file": "step_02_fragmentation_data.json",
+      "weight": 0.5,
+      "kind": "structural_consistency",
+      "energy_balance_tol": 0.02,
+      "fission_pattern": {
+        "min_large_fragment_size": 20,
+        "max_total_fragments": 10,
+        "max_monomers": 5
+      },
+      "coulomb_pattern": {
+        "min_monomers": 20,
+        "max_large_fragment_size": 5,
+        "max_total_fragments_large": 0
+      }
+    }
+  ]
+}

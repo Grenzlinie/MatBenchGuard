@@ -1,0 +1,41 @@
+[
+  {
+    "id": "build_model",
+    "title": "Generate initial a-Si:H model",
+    "role": "process",
+    "action": "Use a melt-quench molecular dynamics procedure (with a tight-binding potential or DFT) to create a 60-atom a-Si:H cell containing exclusively monohydride (Si-H) groups, with hydrogen content around 10 at.%.",
+    "output_file": "",
+    "evidence": "initial_cell.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The agent must generate a realistic amorphous silicon cell that serves as the input for all subsequent H-flip defect calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "defect_data",
+    "title": "Compute H-flip defect energies, effective charges, and volume changes",
+    "role": "scored",
+    "action": "For every monohydride H atom in the cell: (a) relax the normal tetrahedral geometry; (b) construct and relax the flipped geometry (H moved to backplane of Si); (c) compute the energy difference ΔE = E_flipped − E_normal; (d) compute the dynamic effective charge e_d* for the Si-H stretch mode in both configurations by finite differences of the dipole moment vs bond length; (e) compute the induced volume change; (f) compute the average bond angle on the Si host site. Write all results to h_flip_defect_data.csv.",
+    "output_file": "h_flip_defect_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Tabulated per-site H-flip properties including energy difference, effective charges, volume expansion, and bond angle.",
+    "output_schema": "Columns: H_site_id (string), delta_E_eV (float), e_d_star_original (float), e_d_star_defect (float), volume_change_percent (float), avg_bond_angle_deg (float). At least 6 H sites."
+  },
+  {
+    "id": "barrier",
+    "title": "Compute H-flip energy barrier for one site",
+    "role": "scored",
+    "action": "Select one representative H site from the cell and compute the energy barrier between its normal and flipped configurations using the nudged elastic band (NEB) method along a simple arc path passing through the Si-Si back bond. Record the barrier value and method in energy_barrier.json.",
+    "output_file": "energy_barrier.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Energy barrier estimate for a single H-flip transition.",
+    "output_schema": "JSON object with keys: site_id (string), barrier_eV (float), method (string)."
+  }
+]

@@ -1,0 +1,152 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Metallicity, orbital occupation patterns, and spatial extent are recomputed from the raw DOS curves and numeric/text artifacts; no self-reported metric is trusted.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold value for n-type spatial extent",
+      "source_provenance": "paper text: 'for the n-type IF the 2DEG extends 7.8 Å perpendicular to the IF plane (completely on the STO side)'",
+      "generation_method": "extracted from paper",
+      "why_not_fabricated": "paper-reported experimental/computational result; the checker compares the agent's computed value to this reference with tolerance"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected vacancy effects textual patterns",
+      "source_provenance": "paper text describing O vacancy effects on n-type and p-type interfaces (metallicity, orbital character changes)",
+      "generation_method": "derived from the paper's results: n-type 25/50% remain metallic with Ti 3d carriers; p-type 25% metallic O 2p; p-type 50% metallic Ti 3d",
+      "why_not_fabricated": "these patterns are the paper's explicit findings on O deficiency; the checker verifies the agent's summary matches them"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ntype_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "dos": "arbitrary units"
+          }
+        },
+        "description": "Total DOS for the n-type interface; checker will verify finite DOS at Fermi level (metallicity)."
+      },
+      {
+        "file": "ntype_pdos_ti.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "d_xy",
+            "d_xz_yz",
+            "d_3z2_r2",
+            "d_x2_y2"
+          ],
+          "units": {
+            "energy": "eV",
+            "d_xy": "arbitrary units",
+            "d_xz_yz": "arbitrary units",
+            "d_3z2_r2": "arbitrary units",
+            "d_x2_y2": "arbitrary units"
+          }
+        },
+        "description": "Orbitally resolved Ti 3d PDOS; checker will confirm d_xy and d_xz,yz are occupied at EF while d_3z2-r2 and d_x2-y2 are empty, and d_xy occupation is larger."
+      },
+      {
+        "file": "ptype_dos.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy",
+            "total_dos",
+            "O_2p_dos",
+            "Ti_3d_dos"
+          ],
+          "units": {
+            "energy": "eV",
+            "total_dos": "arbitrary units",
+            "O_2p_dos": "arbitrary units",
+            "Ti_3d_dos": "arbitrary units"
+          }
+        },
+        "description": "Total and partial DOS for the p-type interface; checker will verify metallicity and O 2p dominance at EF with negligible Ti 3d."
+      },
+      {
+        "file": "n_type_spatial_extent.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "text",
+          "description": "Single float number (Ångströms)."
+        },
+        "description": "Spatial extent of the n-type 2DEG on the STO side; checker compares to the paper-reported value within a tolerance."
+      },
+      {
+        "file": "vacancy_effects.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "Free text with labels for n-type 25%, n-type 50%, p-type 25%, p-type 50%."
+        },
+        "description": "Textual summary of vacancy effects; checker verifies that all cases are metallic, n-type Ti 3d increased, p-type 25% O 2p-dominated, p-type 50% Ti 3d-dominated."
+      }
+    ],
+    "notes": ""
+  },
+  "checks": [
+    {
+      "id": "s3_ntype_dos",
+      "output_file": "ntype_dos.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "params": {}
+    },
+    {
+      "id": "s4_ntype_pdos",
+      "output_file": "ntype_pdos_ti.csv",
+      "kind": "numeric",
+      "weight": 0.3,
+      "params": {}
+    },
+    {
+      "id": "s5_ptype_dos",
+      "output_file": "ptype_dos.csv",
+      "kind": "numeric",
+      "weight": 0.2,
+      "params": {}
+    },
+    {
+      "id": "s6_spatial",
+      "output_file": "n_type_spatial_extent.txt",
+      "kind": "numeric",
+      "weight": 0.15,
+      "params": {
+        "reference": 7.8,
+        "tolerance_pct": 20
+      }
+    },
+    {
+      "id": "s7_vacancy",
+      "output_file": "vacancy_effects.txt",
+      "kind": "rubric",
+      "weight": 0.15,
+      "params": {}
+    }
+  ]
+}

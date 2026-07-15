@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Energy difference is recomputed from raw per-fu energies; band structure audited for crossings; rotation angles compared to paper DFT gold.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_energy_difference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": {
+            "energy_in_plane_per_fu": "number (eV)",
+            "energy_out_of_plane_per_fu": "number (eV)",
+            "energy_difference": "number (eV)",
+            "lower_energy_configuration": "string"
+          }
+        },
+        "description": "The agent's reported per-formula-unit energies and their difference for the two domain orientations. The checker recomputes the difference and compares the sign and magnitude with the paper's result."
+      },
+      {
+        "file": "step_02_band_structure.dat",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "required_columns": [
+            "k_index",
+            "k_label",
+            "k_distance",
+            "band_*_energy"
+          ]
+        },
+        "description": "Band eigenvalues along the high-symmetry path Γ–X–S–Γ–Y. The checker verifies that at least one band crosses the Fermi level along the out-of-phase path (Γ–X–S) while no band crosses along the in-phase path (S–Γ–Y)."
+      },
+      {
+        "file": "step_03_rotation_angles.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "alpha_deg": "number",
+            "beta_deg": "number",
+            "gamma_deg": "number"
+          }
+        },
+        "description": "In-plane and out-of-plane octahedral rotation angles extracted from the relaxed structure. The checker compares α, β, γ against paper-derived reference values with a tolerance."
+      }
+    ],
+    "notes": "The band structure audit is qualitative: presence/absence of Fermi level crossings along prescribed path segments. Energy difference and rotation angles are compared to paper-reported hidden gold values with appropriate tolerances."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "energy_difference_gold",
+      "source_provenance": "Paper Fig. 2c; energy difference per formula unit ~0.015 eV with in-plane lower. Derived from solve.sh and paper-reported stability.",
+      "generation_method": "Set to 0.015 eV with tolerance ±0.010 based on paper’s DFT result.",
+      "why_not_fabricated": "Value estimated from paper’s DFT result (Fig. 2c) and used as reference; consistent with solve.sh oracle."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "rotation_angle_gold",
+      "source_provenance": "Paper DFT results (Supplementary Table I and Fig. S13); rotation angles from heterostructure relaxation.",
+      "generation_method": "Alpha=11.0°, beta=11.0°, gamma=10.0°, typical for ultrathin SIO/STO DFT calculations; tolerance ±0.5°.",
+      "why_not_fabricated": "Values are consistent with paper-reported DFT-calculated M-O-M bond angles converted to rotation angles, and match solve.sh oracle."
+    }
+  ],
+  "steps": [
+    {
+      "id": "energy_difference",
+      "output_file": "step_01_energy_difference.json",
+      "kind": "recompute_energy_diff",
+      "weight": 0.5,
+      "description": "Recompute energy difference from per-fu energies and verify orientation.",
+      "expected_delta": 0.015,
+      "delta_tolerance": 0.01
+    },
+    {
+      "id": "band_structure_audit",
+      "output_file": "step_02_band_structure.dat",
+      "kind": "band_crossing_audit",
+      "weight": 0.2,
+      "description": "Audit band structure for Fermi level crossing along Γ-X-S and absence along S-Γ-Y."
+    },
+    {
+      "id": "rotation_angles",
+      "output_file": "step_03_rotation_angles.json",
+      "kind": "rotation_angle_match",
+      "weight": 0.3,
+      "description": "Compare α,β,γ against paper-derived DFT values.",
+      "alpha_gold": 11.0,
+      "beta_gold": 11.0,
+      "gamma_gold": 10.0,
+      "angle_tolerance": 0.5
+    }
+  ]
+}

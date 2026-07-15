@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01",
+    "title": "Build initial molecular models",
+    "role": "process",
+    "action": "Construct initial geometries for CaO, the tar model compound radicals (benzene, toluene, phenol) with one or two hydrogen atoms removed, and all adsorption product complexes corresponding to the studied pathways (including C–O–Ca, C–Ca–O, and aromatic C–C–Ca–O formations). Save the initial geometries in XYZ format.",
+    "output_file": "",
+    "evidence": "initial_geometries.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "DFT geometry optimization and frequency calculation",
+    "role": "process",
+    "action": "For each molecular species from step_01, perform geometry optimization and vibrational frequency calculation at the B3LYP/6-31G(d,p) level, at 750 °C and 1.01 × 10⁵ Pa. Save optimized geometries, electronic energies, zero‑point energies, and enthalpy (H) for all species.",
+    "output_file": "",
+    "evidence": "optimized_geometries.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Compute enthalpy changes and identify favorable adsorption pathways",
+    "role": "scored",
+    "action": "From the computed enthalpies of step_02, calculate ΔH = H(product) − H(CaO) − H(radical) for every studied adsorption pathway. Determine the most thermodynamically favorable pathways (most exothermic) for each tar model compound and dehydrogenation state (one and two H removed). Produce a JSON file documenting each pathway's ΔH and whether it is among the preferred pathways.",
+    "output_file": "enthalpy_changes.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON mapping each tar model compound to an array of pathway objects with enthalpy changes and a flag indicating whether the pathway is among the most favorable ones.",
+    "output_schema": "A JSON object with top-level keys 'benzene', 'toluene', 'phenol'. Each value is an array of objects with fields: 'nH_removed' (integer 1 or 2), 'pathway' (string label), 'delta_H_kJmol' (float, kJ/mol), and 'most_favorable' (boolean)."
+  },
+  {
+    "id": "step_04",
+    "title": "Mulliken population analysis and C–C bond weakening quantification",
+    "role": "scored",
+    "action": "For the favorable pathways identified from step_03 (as described in the paper: preferred pathways per compound), extract Mulliken bond population matrices from the optimized wavefunctions of the adsorption products and the free radicals. For each pathway, compute the minimum C–C Mulliken population before and after adsorption, and the percent reduction defined as (before − after)/before × 100. Write all data to a JSON file.",
+    "output_file": "mulliken_tables.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "JSON reporting minimum C–C Mulliken populations before/after adsorption and percent reductions for all favorable pathways of benzene, toluene, and phenol.",
+    "output_schema": "A JSON object with top-level keys 'benzene', 'toluene', 'phenol'. Each value is an array of objects (covering only the favorable pathways) with fields: 'pathway' (string), 'nH_removed' (integer 1 or 2), 'min_mulliken_before' (float), 'min_mulliken_after' (float), 'percent_reduction' (float)."
+  }
+]

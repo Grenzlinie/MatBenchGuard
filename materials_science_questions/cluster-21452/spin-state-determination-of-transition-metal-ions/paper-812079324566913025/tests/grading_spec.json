@@ -1,0 +1,93 @@
+{
+  "scoring_tier": "result-level compare (T0)",
+  "scoring_justification": "The task produces DFT-calculated exchange constants and ab initio D parameters, which are compared to the paper's reported theoretical values with generous 50% relative tolerance. Full recompute of DFT is infeasible in the checker, so result-level compare is used.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold J1..J4 and |D_Co| values for comparison",
+      "source_provenance": "Paper Table 2 (DFT row for Ni) and discussion text (Co ab initio values)",
+      "generation_method": "copied directly from the published paper",
+      "why_not_fabricated": "These are the exact theoretical values reported in the paper's Table 2 and text; they constitute the ground truth for this computational reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "ni_j_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "J1": "number",
+            "J2": "number",
+            "J3": "number",
+            "J4": "number"
+          },
+          "units": {
+            "J1": "cm-1",
+            "J2": "cm-1",
+            "J3": "cm-1",
+            "J4": "cm-1"
+          }
+        },
+        "description": "Exchange coupling constants (cm⁻¹). Must have correct signs (J2 negative) and order-of-magnitude agreement with the paper's DFT values."
+      },
+      {
+        "file": "co_d_values.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "|D_Co_ring|": "number",
+            "|D_Co_central|": "number"
+          },
+          "units": {
+            "|D_Co_ring|": "cm-1",
+            "|D_Co_central|": "cm-1"
+          }
+        },
+        "description": "Magnitudes of single-ion axial anisotropy (cm⁻¹). Order of magnitude should match the paper's ab initio results."
+      }
+    ],
+    "notes": "This task reproduces the theoretical calculations only (DFT exchange couplings and ab initio anisotropy) as reported in the paper. Experimental magnetic data fitting is not required. The agent must install a suitable quantum chemistry package (e.g., ORCA) and may require substantial computational resources."
+  },
+  "checks": [
+    {
+      "id": "step_2",
+      "output_file": "ni_j_values.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "description": "Compare J1–J4 against paper DFT values",
+      "target_policy": "reference_match",
+      "gold": {
+        "J1": 0.11,
+        "J2": -9.89,
+        "J3": 3.18,
+        "J4": 0.23
+      },
+      "relative_tolerance": 0.5,
+      "sign_requirements": {
+        "J2": "negative"
+      }
+    },
+    {
+      "id": "step_3",
+      "output_file": "co_d_values.json",
+      "weight": 0.5,
+      "kind": "reference_match",
+      "description": "Compare |D_Co_ring| and |D_Co_central| against paper ab initio values",
+      "target_policy": "reference_match",
+      "gold": {
+        "|D_Co_ring|": 87.0,
+        "|D_Co_central|": 82.0
+      },
+      "relative_tolerance": 0.5,
+      "sign_requirements": {}
+    }
+  ]
+}

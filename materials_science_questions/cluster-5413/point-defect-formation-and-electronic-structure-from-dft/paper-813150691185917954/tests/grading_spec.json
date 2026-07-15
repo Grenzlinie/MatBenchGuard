@@ -1,0 +1,62 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The interaction energy can be recomputed from the agent's total energies; the paper's reference value is used as a hidden gold threshold, and the recomputed value is scored against it with threshold_or_better policy (more negative is better).",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": {
+            "total_energy_perfect": "float (eV)",
+            "total_energy_Gd_Hf": "float (eV)",
+            "total_energy_V_O4": "float (eV)",
+            "total_energy_complex": "float (eV)",
+            "interaction_energy_E_int": "float (eV)"
+          },
+          "units": {
+            "total_energy_perfect": "eV",
+            "total_energy_Gd_Hf": "eV",
+            "total_energy_V_O4": "eV",
+            "total_energy_complex": "eV",
+            "interaction_energy_E_int": "eV"
+          }
+        },
+        "description": "Agent's computed total energies and the interaction energy between Gd_Hf and V_O. The hidden checker recomputes E_int from the four total energies, verifies that it is negative, and compares it to an expected range consistent with the paper's result."
+      }
+    ],
+    "notes": "The checker performs a recompute: it reads the total energies, recomputes E_int = total_energy_complex + total_energy_perfect - total_energy_Gd_Hf - total_energy_V_O4, and scores the sign and magnitude against a hidden gold value. An E_int more negative than the paper's (stronger attraction) is accepted as equal or better."
+  },
+  "steps": [
+    {
+      "id": "interaction_energy_e_int",
+      "output_file": "results.json",
+      "kind": "recompute_metric",
+      "weight": 1.0,
+      "target_policy": "threshold_or_better",
+      "target_E_int": -1.2,
+      "tolerance": 0.2,
+      "description": "Recompute interaction energy from total energies and compare to paper gold; more negative (stronger attraction) gets full credit.",
+      "required_keys": [
+        "total_energy_perfect",
+        "total_energy_Gd_Hf",
+        "total_energy_V_O4",
+        "total_energy_complex",
+        "interaction_energy_E_int"
+      ]
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold value for interaction energy E_int between Gd_Hf and V_O (nearest-neighbor complex)",
+      "source_provenance": "Paper Fig. 3(b) interaction energy vs distance; nearest-neighbor point estimated as -1.2 eV (the most negative value, indicating strong attraction).",
+      "generation_method": "Extracted from the paper's plot; the value -1.2 eV represents the strongest binding configuration discussed in the text.",
+      "why_not_fabricated": "This is a reasonable estimate of the paper's reported interaction energy for the nearest-neighbor complex, consistent with the conclusion of strong attractive interaction; the reference solution uses this as the scoring threshold."
+    }
+  ]
+}

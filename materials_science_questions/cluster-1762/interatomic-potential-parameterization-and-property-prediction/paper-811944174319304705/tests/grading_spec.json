@@ -1,0 +1,84 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recompute from raw artifacts infeasible because the verifier sandbox cannot run the full GULP lattice-dynamics and free-energy mapping workflow. Compare the agent's reported values to the paper's reported values with tolerances that allow legitimate toolchain differences.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold lattice energy difference ΔE = 0.024 eV per formula unit",
+      "source_provenance": "Paper text: 'the difference in the lattice energy between the two phases was predicted to be 0.024 eV per VO2 formula unit'",
+      "generation_method": "Extracted directly from the paper's reported result",
+      "why_not_fabricated": "Value is the paper's own published number; it is used as a reference for comparison, not fabricated synthetic data."
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold critical temperature Tc = 300 K",
+      "source_provenance": "Paper text: 'we predict a critical phase temperature of approximately 300 K' and 'Tc=300 K compared to 340 K observed'",
+      "generation_method": "Extracted from the paper's reported result",
+      "why_not_fabricated": "Value is the paper's own published number; it is used as a reference for comparison, not fabricated synthetic data."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_energy_minimum_difference.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_E_eV_per_fu"
+          ],
+          "properties": {
+            "delta_E_eV_per_fu": {
+              "type": "number",
+              "description": "Lattice energy difference per VO2 formula unit (eV)"
+            }
+          }
+        },
+        "description": "The lattice energy difference between the R and M1 phases, per formula unit."
+      },
+      {
+        "file": "free_energy_difference.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature_K",
+            "Delta_F_eV"
+          ],
+          "row_count": "at least 10"
+        },
+        "description": "Free energy difference ΔF(T) between the M1 and R phases at several temperatures. The checker interpolates to find the temperature where ΔF ≈ 0 (Tc)."
+      }
+    ],
+    "notes": "The agent must run GULP for phonon calculations and many energy minimisations. All required inputs are public or provided inline. The scored artifacts are the lattice energy difference (JSON) and the free energy difference curve (CSV). The checker compares the ΔE value to the paper's gold and extracts Tc from the CSV to compare with the gold Tc."
+  },
+  "steps": [
+    {
+      "id": "step_map_e_latt",
+      "output_file": "lattice_energy_minimum_difference.json",
+      "weight": 0.5,
+      "kind": "numeric",
+      "params": {
+        "gold": 0.024,
+        "tolerance": 0.01
+      }
+    },
+    {
+      "id": "step_free_energy_tc",
+      "output_file": "free_energy_difference.csv",
+      "weight": 0.5,
+      "kind": "free_energy_tc",
+      "params": {
+        "Tc_gold": 300,
+        "Tc_tolerance_strict": 30,
+        "Tc_decay_range": 200,
+        "monotonic_penalty": 0.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing from raw DFT artifacts is infeasible in the verifier; result-level comparison with paper-reported values with tolerances is the strongest feasible tier. Directional metrics not applicable as values are fixed physical properties.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "cubic_instabilities.json": "exact_match",
+    "rhombohedral_instability.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Store hidden gold values from paper reported results",
+      "source_provenance": "Paper's reported numbers: T1u imaginary frequency 13.92i cm⁻¹ (Fig.1 text), single T1u energy lowering 0.083 meV, coupled 0.105 meV; T2g energy lowering 7.014 meV, rotation angle 3.2°; rhombohedral delta 0.1525, frequency minimum 10i cm⁻¹, direction [100].",
+      "generation_method": "Copied directly from paper description.",
+      "why_not_fabricated": "Values are directly from the paper's reported computational results."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cubic_instabilities.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "T1u": {
+              "imaginary_frequency_cm-1": "number (positive float; magnitude of imaginary frequency in cm⁻¹)",
+              "single_lowering_meV": "number (energy lowering in meV)",
+              "coupled_lowering_meV": "number (energy lowering in meV)"
+            },
+            "T2g": {
+              "single_lowering_meV": "number (energy lowering in meV)",
+              "rotation_angle_deg": "number (octahedra rotation angle in degrees)"
+            }
+          }
+        },
+        "description": "Key cubic instability quantities: T1u imaginary frequency, energy lowerings from freezing single and coupled T1u displacements, and T2g energy lowering with rotation angle. The hidden checker compares these against the paper-reported values with tolerance."
+      },
+      {
+        "file": "rhombohedral_instability.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "direction": "array of three numbers (the instability direction vector, e.g., [1,0,0])",
+            "delta": "number (reduced coordinate δ of the wavevector minimum)",
+            "imaginary_frequency_cm-1": "number (positive float; magnitude of imaginary frequency at minimum in cm⁻¹)"
+          }
+        },
+        "description": "Key rhombohedral instability quantities: direction vector, modulation wavevector δ, and the associated imaginary frequency. The hidden checker compares these against the paper-reported values with tolerance."
+      }
+    ],
+    "notes": "This is a compute-driven reproduction task. The hidden checker performs a result-level comparison (T0) of the submitted values against the paper’s reported results, using appropriate tolerances to absorb implementation differences. Both artifacts must be valid JSON with the exact keys and number types described."
+  },
+  "steps": [
+    {
+      "id": "cubic_scored",
+      "output_file": "cubic_instabilities.json",
+      "weight": 0.6,
+      "kind": "json_field",
+      "fields": [
+        {
+          "field_path": "T1u.imaginary_frequency_cm-1",
+          "gold": 13.92,
+          "tolerance": 2.0,
+          "sub_weight": 0.25,
+          "description": "T1u imaginary frequency magnitude (cm⁻¹)"
+        },
+        {
+          "field_path": "T1u.single_lowering_meV",
+          "gold": 0.083,
+          "tolerance": 0.01,
+          "sub_weight": 0.15,
+          "description": "T1u single-component energy lowering (meV)"
+        },
+        {
+          "field_path": "T1u.coupled_lowering_meV",
+          "gold": 0.105,
+          "tolerance": 0.01,
+          "sub_weight": 0.1,
+          "description": "T1u coupled energy lowering (meV)"
+        },
+        {
+          "field_path": "T2g.single_lowering_meV",
+          "gold": 7.014,
+          "tolerance": 0.1,
+          "sub_weight": 0.3,
+          "description": "T2g single-component energy lowering (meV)"
+        },
+        {
+          "field_path": "T2g.rotation_angle_deg",
+          "gold": 3.2,
+          "tolerance": 0.5,
+          "sub_weight": 0.2,
+          "description": "T2g octahedra rotation angle (degrees)"
+        }
+      ]
+    },
+    {
+      "id": "rhombo_scored",
+      "output_file": "rhombohedral_instability.json",
+      "weight": 0.4,
+      "kind": "json_field",
+      "fields": [
+        {
+          "field_path": "direction",
+          "gold": [
+            1,
+            0,
+            0
+          ],
+          "tolerance": 0.01,
+          "sub_weight": 0.3,
+          "description": "Direction vector, should be [1,0,0]"
+        },
+        {
+          "field_path": "delta",
+          "gold": 0.1525,
+          "tolerance": 0.01,
+          "sub_weight": 0.4,
+          "description": "Wavevector delta"
+        },
+        {
+          "field_path": "imaginary_frequency_cm-1",
+          "gold": 10.0,
+          "tolerance": 2.0,
+          "sub_weight": 0.3,
+          "description": "Imaginary frequency magnitude at minimum (cm⁻¹)"
+        }
+      ]
+    }
+  ]
+}

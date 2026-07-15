@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_airss_generation",
+    "title": "Generate defect-containing structures",
+    "role": "process",
+    "action": "Generate hydrated wadsleyite candidate structures for semihydrous (1.65 wt% H₂O) and fully hydrous (3.3 wt% H₂O) compositions using the AIRSS protocol: start from anhydrous unit cell, create Mg vacancies by removing selected Mg²⁺ cations, add charge-balancing H⁺ (two per Mg vacancy) randomly within a 3.0 Å radius of the vacancy while keeping other atoms fixed, enforce minimum interatomic separation of 0.75 Å. Produce ensembles of several hundred candidates per composition.",
+    "output_file": "",
+    "evidence": "airss_structures.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "AIRSS random structure generation step that produces initial candidate structures.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_low_accuracy_dft",
+    "title": "Low-accuracy DFT geometry optimization",
+    "role": "process",
+    "action": "Perform plane-wave DFT geometry optimization on all AIRSS-generated structures using a GGA functional (e.g., PBE), moderate planewave cutoff and coarse k-point mesh (~0.1 2π/Å). Relax atomic positions only; output total energies.",
+    "output_file": "",
+    "evidence": "low_opt_energies.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Initial DFT optimization to obtain approximate enthalpies for candidate ranking.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_kmeans_clustering",
+    "title": "k-means clustering and structure selection",
+    "role": "process",
+    "action": "Compute structural descriptors (genes) for each relaxed structure: relative enthalpy, Mg vacancy type, type of protonated oxygen, and relative orientation of OH bond vectors. Cluster the candidate ensembles with k-means algorithm and select a diverse, low-enthalpy subset of representative structures (~50–100 per composition).",
+    "output_file": "",
+    "evidence": "selected_structure_indices.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Clustering step to reduce the large ensemble to a tractable set of distinct low-enthalpy candidates.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_high_accuracy_dft_nmr",
+    "title": "High-accuracy DFT optimization and GIPAW NMR calculation",
+    "role": "process",
+    "action": "Re-optimize the selected structures using a more accurate protocol: GGA+dispersion correction, higher planewave cutoff (≥60 Ry), denser k-point mesh (spacing ~0.04 2π/Å), relaxation of atomic positions and unit cell vectors. After optimization, compute absolute shielding tensors via the GIPAW method, convert isotropic shielding to ¹H isotropic chemical shift (δ_iso) using a suitable reference. For each structure, store total enthalpy and list of all ¹H δ_iso values.",
+    "output_file": "",
+    "evidence": "high_accuracy_results.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Final high-quality optimization and NMR prediction yielding properties needed to identify and characterize the motifs.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_compile_motifs",
+    "title": "Compile motif properties",
+    "role": "scored",
+    "action": "From the high-accuracy results, identify the structures corresponding to the key protonation motifs and compile a JSON file. Semihydrous motif A: ground-state structure with a single Mg3 vacancy and two O1–H hydroxyls. Fully hydrous motif G: lowest-enthalpy structure with two isolated Mg3 vacancies separated by ~7.1 Å. Motif H: structure with two Mg3 vacancies separated by ~2.9 Å along the y lattice vector. Motif I: structure with two Mg3 vacancies separated by ~2.9 Å along the x lattice vector. Motif J: structure with edge-sharing Mg1 and Mg3 vacancies at ~2.9 Å. For each motif, report the relative enthalpy ΔH (eV) with respect to the most stable structure of that hydration level, and a list of all ¹H isotropic chemical shifts (ppm).",
+    "output_file": "motif_properties.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing the relative enthalpies and ¹H chemical shifts of the five low-enthalpy protonation motifs.",
+    "output_schema": "JSON object with keys \"A\", \"G\", \"H\", \"I\", \"J\". Each value is an object: { \"delta_H_eV\": float, \"H1_chemical_shifts_ppm\": [float, ...] }"
+  }
+]

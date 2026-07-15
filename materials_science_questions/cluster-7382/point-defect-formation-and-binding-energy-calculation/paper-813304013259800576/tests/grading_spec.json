@@ -1,0 +1,239 @@
+{
+  "scoring_tier": "reference_match",
+  "scoring_justification": "Result-level comparison to paper-reported values with tolerances; recomputing the heavy DFT+RPA pipeline in the verifier is infeasible, and the agent's raw artifacts are the final quantities.",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "step_01_atomization_energies.json": "reference_match",
+    "step_02_hBN_interlayer.csv": "reference_match",
+    "step_03_defect_energies.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden reference gold values for atomization energies, hBN interlayer properties, and defect formation/migration energies from the paper's Table I, Figure 2, and Table II.",
+      "source_provenance": "Paper: Phys. Rev. Lett. 108, 256403 (2012). Table I atomization energies; Figure 2 extracted d0 and C33; Table II defect energies.",
+      "generation_method": "Direct transcription from the paper's reported values, cross-checked with the reference solve.sh output to ensure consistency.",
+      "why_not_fabricated": "Values are the published results of the paper, which is the target of reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_01_atomization_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "crystal": {
+                "type": "string"
+              },
+              "rc": {
+                "type": "number"
+              },
+              "E_atomization_RPA": {
+                "type": "number",
+                "unit": "eV/atom"
+              }
+            },
+            "required": [
+              "crystal",
+              "rc",
+              "E_atomization_RPA"
+            ]
+          }
+        },
+        "description": "Atomization energies of Al, Si, β-SiC, diamond, w-AlN, c-BN for cutoff radii 0.5, 1.0, 2.0 bohr and the full-RPA limit."
+      },
+      {
+        "file": "step_02_hBN_interlayer.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r_c",
+            "d_0",
+            "C_33"
+          ],
+          "units": {
+            "r_c": "bohr",
+            "d_0": "bohr",
+            "C_33": "GPa"
+          }
+        },
+        "description": "Equilibrium interlayer spacing d_0 and elastic constant C_33 of hexagonal BN for cutoff radii 1.0, 2.0, 4.0 bohr and the full-RPA limit."
+      },
+      {
+        "file": "step_03_defect_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "supercell_size": {
+                "type": "integer"
+              },
+              "defect": {
+                "type": "string",
+                "enum": [
+                  "Si_split⟨110⟩",
+                  "Si_hex",
+                  "V_Si"
+                ]
+              },
+              "formation_energy": {
+                "type": "number",
+                "unit": "eV"
+              },
+              "migration_barrier": {
+                "type": "number",
+                "unit": "eV",
+                "optional": true
+              }
+            },
+            "required": [
+              "supercell_size",
+              "defect",
+              "formation_energy"
+            ]
+          }
+        },
+        "description": "Formation energies of silicon self-interstitial (split and hex) and vacancy in 16-, 64-, and 216-atom supercells, and migration barriers for interstitials and vacancy in the 64-atom cell."
+      }
+    ],
+    "notes": "All values correspond to the range-separated RPA scheme with a cutoff radius of 1.0 bohr (or full RPA where indicated). The checker compares against paper-reported reference values using appropriate tolerances; directional scoring ensures that meeting or beating the reference earns full credit, with credit decreasing only for worse performance."
+  },
+  "steps": [
+    {
+      "id": "s02_atomization",
+      "output_file": "step_01_atomization_energies.json",
+      "weight": 0.25,
+      "kind": "rubric_numeric",
+      "description": "Atomization energies within tolerance of paper values.",
+      "config": {
+        "tolerances": {
+          "E_atomization_RPA": 0.02
+        },
+        "gold": {
+          "Al": {
+            "2.0": 3.45,
+            "1.0": 3.53,
+            "0.5": 3.5,
+            "0.0": 3.44
+          },
+          "Si": {
+            "2.0": 4.56,
+            "1.0": 4.6,
+            "0.5": 4.64,
+            "0.0": 4.63
+          },
+          "β-SiC": {
+            "2.0": 6.01,
+            "1.0": 6.08,
+            "0.5": 6.11,
+            "0.0": 6.12
+          },
+          "Diamond": {
+            "2.0": 7.11,
+            "1.0": 7.27,
+            "0.5": 7.34,
+            "0.0": 7.27
+          },
+          "w-AlN": {
+            "2.0": 4.96,
+            "1.0": 4.92,
+            "0.5": 5.52,
+            "0.0": 5.65
+          },
+          "c-BN": {
+            "2.0": 5.9,
+            "1.0": 5.84,
+            "0.5": 6.29,
+            "0.0": 6.28
+          }
+        }
+      }
+    },
+    {
+      "id": "s04_hbn_interlayer",
+      "output_file": "step_02_hBN_interlayer.csv",
+      "weight": 0.25,
+      "kind": "rubric_numeric",
+      "config": {
+        "tolerances": {
+          "d_0": 0.1,
+          "C_33": 1.0
+        },
+        "gold": [
+          {
+            "r_c": 0.0,
+            "d_0": 6.29,
+            "C_33": 36.0
+          },
+          {
+            "r_c": 1.0,
+            "d_0": 6.3,
+            "C_33": 35.0
+          },
+          {
+            "r_c": 2.0,
+            "d_0": 6.33,
+            "C_33": 33.0
+          },
+          {
+            "r_c": 4.0,
+            "d_0": 6.57,
+            "C_33": 21.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "s06_defect_energies",
+      "output_file": "step_03_defect_energies.json",
+      "weight": 0.5,
+      "kind": "rubric_numeric",
+      "config": {
+        "tolerance": 0.1,
+        "gold": [
+          {
+            "supercell_size": 16,
+            "defect": "Si_split⟨110⟩",
+            "formation_energy": 5.06
+          },
+          {
+            "supercell_size": 64,
+            "defect": "Si_split⟨110⟩",
+            "formation_energy": 4.49,
+            "migration_barrier": 0.77
+          },
+          {
+            "supercell_size": 64,
+            "defect": "Si_hex",
+            "formation_energy": 4.74,
+            "migration_barrier": 1.01
+          },
+          {
+            "supercell_size": 64,
+            "defect": "V_Si",
+            "formation_energy": 4.24,
+            "migration_barrier": 0.83
+          },
+          {
+            "supercell_size": 216,
+            "defect": "V_Si",
+            "formation_energy": 4.33
+          }
+        ]
+      }
+    }
+  ]
+}

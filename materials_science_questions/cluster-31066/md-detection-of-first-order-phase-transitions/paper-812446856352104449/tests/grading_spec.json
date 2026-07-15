@@ -1,0 +1,88 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The checker cannot re-run the numerical mean-field solution; instead it compares the agent's output to the paper's analytic phase boundary expression (Eq.10) and the reported critical point coordinates with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Analytic phase boundary function and critical point reference values",
+      "source_provenance": "Paper Eq. (10) and text stating (α/nμ)_cr ≈ 0.03, (βnμ)_cr ≈ 1.185",
+      "generation_method": "Directly from the paper's analytic expression and reported approximate coordinates",
+      "why_not_fabricated": "Values are the paper's own published result, authoritative for the reproduction task."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "phase_boundary.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha_over_nmu",
+            "beta_nmu"
+          ],
+          "units": {
+            "alpha_over_nmu": "dimensionless",
+            "beta_nmu": "dimensionless"
+          }
+        },
+        "description": "Points on the first-order liquid-liquid phase transition line. The checker compares the reported βnmu values against a theoretical reference curve."
+      },
+      {
+        "file": "critical_point.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "alpha_over_nmu",
+            "beta_nmu"
+          ],
+          "units": {
+            "alpha_over_nmu": "dimensionless",
+            "beta_nmu": "dimensionless"
+          }
+        },
+        "description": "The coordinates of the critical point terminating the first-order line. The checker compares these values to the expected critical point coordinates."
+      }
+    ],
+    "notes": "Both outputs are evaluated by comparison to the correct theoretical values, allowing small deviations due to implementation differences."
+  },
+  "steps": [
+    {
+      "id": "step_phase_boundary",
+      "output_file": "phase_boundary.csv",
+      "kind": "reference_curve",
+      "weight": 0.7,
+      "x_column": "alpha_over_nmu",
+      "y_column": "beta_nmu",
+      "reference_type": "analytic",
+      "reference_expression": "C1 / (x - C0)",
+      "constants": {
+        "C0": -0.12269958847736626,
+        "C1": 1.8530742406936525
+      },
+      "tolerance_abs": 0.02,
+      "score_method": "fraction_within_tolerance"
+    },
+    {
+      "id": "step_critical_point",
+      "output_file": "critical_point.csv",
+      "kind": "exact_match",
+      "weight": 0.3,
+      "columns": [
+        "alpha_over_nmu",
+        "beta_nmu"
+      ],
+      "target": [
+        0.03,
+        1.185
+      ],
+      "tolerance_abs": 0.005
+    }
+  ]
+}

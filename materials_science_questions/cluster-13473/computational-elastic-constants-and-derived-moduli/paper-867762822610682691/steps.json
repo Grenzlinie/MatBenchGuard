@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_compute_bulk_modulus",
+    "title": "Compute isotropic Young's modulus from EAM elastic constants",
+    "role": "process",
+    "action": "Using the single-crystal elastic constants C11=183 GPa, C12=159 GPa, C44=45 GPa of the Au EAM potential, compute the isotropic polycrystalline Young's modulus Y_bulk via Kröner's formulation and write the result to a JSON file.",
+    "output_file": "",
+    "evidence": "bulk_modulus.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Derive the reference bulk modulus needed for the Gibson-Ashby estimate.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_generate_microstructure",
+    "title": "Generate nanoporous gold microstructure via spinodal decomposition",
+    "role": "process",
+    "action": "Create an atomistic NPG network by simulating spinodal decomposition on an FCC lattice (144×144×144 spacings) using a Metropolis Monte Carlo algorithm with an Ising-type Hamiltonian. Remove one component to obtain a network with solid fraction ~0.30. Save the initial atomic configuration (LAMMPS data file) and record the solid fraction.",
+    "output_file": "",
+    "evidence": "initial_npg.lammps",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Generate the starting structure for both MD and FEM simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_run_md_simulation",
+    "title": "Run MD compression simulation with load/unload and extract Y_eff",
+    "role": "process",
+    "action": "Using LAMMPS with the Au EAM potential, relax the initial configuration (energy minimization + thermal relaxation at 300 K). Perform uniaxial compression at 300 K, strain rate 1e8 /s, with interspersed load/unload segments. From the stress-strain data, compute the secant modulus during an unloading segment as the effective Young's modulus (Y_eff^MD) and write the stress-strain curve.",
+    "output_file": "",
+    "evidence": "md_stress_strain.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Obtain the atomistic effective stiffness.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_run_fem_simulation",
+    "title": "Run linear-elastic FEM simulation to obtain effective Young's modulus",
+    "role": "process",
+    "action": "Reconstruct the surface of the relaxed MD initial structure using an alpha-shape algorithm. Smooth the surface, generate a volumetric mesh, and perform a linear-elastic finite element analysis with the same orthotropic elastic constants from the EAM potential. Apply periodic boundary conditions and compute the macroscopic response at 0.02 compressive strain to obtain Y_eff^FEM. Write the result to a text file.",
+    "output_file": "",
+    "evidence": "fem_y_eff.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the continuum effective stiffness.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_compile_results",
+    "title": "Compile and report all effective Young's moduli and solid fraction",
+    "role": "scored",
+    "action": "Read Y_bulk from bulk_modulus.json, Y_eff^MD from md_stress_strain.csv (extracted secant modulus), Y_eff^FEM from fem_y_eff.txt, and the solid fraction φ from the generation step. Compute the Gibson-Ashby prediction: Y_eff^GA = Y_bulk * φ². Write a single JSON file with keys: md_y_eff_GPa, fem_y_eff_GPa, ga_y_eff_GPa, solid_fraction.",
+    "output_file": "simulation_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final compilation of the three effective Young's moduli and the solid fraction.",
+    "output_schema": "JSON object with numeric fields: md_y_eff_GPa (float), fem_y_eff_GPa (float), ga_y_eff_GPa (float), solid_fraction (float)."
+  }
+]

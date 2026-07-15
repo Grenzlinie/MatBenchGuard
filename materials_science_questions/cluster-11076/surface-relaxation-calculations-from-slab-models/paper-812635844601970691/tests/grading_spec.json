@@ -1,0 +1,125 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Checker fits 6th-order polynomial to total energy vs spacing_change from the agent's CSV, recomputes equilibrium spacing change and work function, and compares against paper-reported values with tolerances reflecting LDA plane-wave toolchain spread.",
+  "pass_threshold": 0.5,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference equilibrium spacing changes and work function.",
+      "source_provenance": "Paper Table I and text: Al(001) relaxation -1±2%, work function 4.42±0.04 eV; Al(110) relaxation -11%. Converted to absolute spacing changes using interlayer distances based on typical LDA Al lattice constant a0 = 4.00 Å (7.559 a.u.): d001 = a0/2 = 3.7795 a.u., d110 = a0/(2√2) = 2.672 a.u.",
+      "generation_method": "Multiplied relaxation percentages by bulk interlayer spacing to obtain spacing_change at equilibrium. Work function taken directly from paper Table I bottom row.",
+      "why_not_fabricated": "Values are directly derived from the paper's reported results; the conversion uses a commonly used LDA lattice constant that is consistent with the paper's own computational approach."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "al001_relaxation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "spacing_change",
+            "total_energy",
+            "work_function",
+            "force_direct",
+            "force_from_derivative"
+          ],
+          "units": {
+            "spacing_change": "a.u.",
+            "total_energy": "hartree",
+            "work_function": "eV",
+            "force_direct": "hartree/bohr",
+            "force_from_derivative": "hartree/bohr"
+          }
+        },
+        "description": "Raw DFT data for Al(001) surface at various interlayer spacings. Checker will fit energy curve to obtain relaxation and work function."
+      },
+      {
+        "file": "al110_relaxation.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "spacing_change",
+            "total_energy",
+            "force"
+          ],
+          "units": {
+            "spacing_change": "a.u.",
+            "total_energy": "hartree",
+            "force": "hartree/bohr"
+          }
+        },
+        "description": "Raw DFT data for Al(110) surface at various interlayer spacings. Checker will fit energy curve to obtain relaxation."
+      },
+      {
+        "file": "results_summary.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "al001_relaxation_percent": "float",
+            "al001_work_function_eV": "float",
+            "al110_relaxation_percent": "float"
+          }
+        },
+        "description": "Agent's self-reported relaxation percentages and work function. Checker will validate consistency with its own recomputed values from the CSVs."
+      }
+    ],
+    "notes": "The primary scoring is based on recomputed relaxation percentages and work function from the CSV files; the summary JSON is a secondary consistency check. Tolerances and exact gold values are hidden."
+  },
+  "steps": [
+    {
+      "id": "al001_equilibrium",
+      "output_file": "al001_relaxation.csv",
+      "kind": "numeric",
+      "weight": 0.4,
+      "target": {
+        "d_eq": -0.0378,
+        "d_tol_abs": 0.076,
+        "work_function": 4.42,
+        "wf_tol_abs": 0.04
+      }
+    },
+    {
+      "id": "al110_equilibrium",
+      "output_file": "al110_relaxation.csv",
+      "kind": "numeric",
+      "weight": 0.35,
+      "target": {
+        "d_eq": -0.294,
+        "d_tol_abs": 0.08
+      }
+    },
+    {
+      "id": "al001_force",
+      "output_file": "al001_relaxation.csv",
+      "kind": "numeric",
+      "weight": 0.05,
+      "target": {
+        "force_diff_max": 0.002
+      }
+    },
+    {
+      "id": "results_validation",
+      "output_file": "results_summary.json",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target": {
+        "al001_relaxation_pct": -1.0,
+        "al001_relaxation_tol": 2.0,
+        "al001_work_function_eV": 4.42,
+        "al001_work_function_tol": 0.04,
+        "al110_relaxation_pct": -11.0,
+        "al110_relaxation_tol": 3.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step_01",
+    "title": "Geometry optimization",
+    "role": "process",
+    "action": "Perform DFT geometry optimization for α-Zr, γ-ZrH, δ-ZrH1.5, and ε-ZrH2 using Quantum ESPRESSO with PW91 GGA PAW pseudopotentials. Relax cell parameters and atomic positions until convergence.",
+    "output_file": "",
+    "evidence": "geometry_optimization.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain zero-temperature equilibrium lattice parameters and ground-state energies.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Elastic constants and polycrystalline moduli",
+    "role": "scored",
+    "action": "For each optimized phase, apply the strain combinations appropriate for its crystal symmetry and fit the energy-volume relations to extract independent elastic constants. Compute isotropic polycrystalline moduli (Young's modulus E, bulk modulus B, shear modulus G) via Voigt–Reuss–Hill averaging. Output the lattice parameters, elastic constants, and VRH moduli.",
+    "output_file": "step_02_elastic_properties.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Single-crystal elastic constants and VRH polycrystalline moduli for α-Zr, γ-ZrH, δ-ZrH1.5, ε-ZrH2.",
+    "output_schema": "JSON object with key 'phases': array of objects, each with keys: name (string), a (float, Å), c (float, Å), C11..C66 (float, GPa; C66 for tetragonal phases, omit for α-Zr), E (float, GPa), B (float, GPa), G (float, GPa)."
+  },
+  {
+    "id": "step_03",
+    "title": "H₂ molecule reference",
+    "role": "process",
+    "action": "Compute the ground-state energy, equilibrium bond length, and harmonic vibrational frequency of the H₂ molecule using the same DFT settings (isolated molecule in a large cell).",
+    "output_file": "",
+    "evidence": "h2_reference.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Reference for enthalpy of formation calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04",
+    "title": "Phonon dispersion and PHDOS",
+    "role": "process",
+    "action": "For each relaxed phase, compute phonon dispersion and phonon density of states using density functional perturbation theory.",
+    "output_file": "",
+    "evidence": "phonon_calculations.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain vibrational contributions to free energy.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05",
+    "title": "Electronic DOS",
+    "role": "process",
+    "action": "For each relaxed phase, compute the electronic density of states using a tetrahedron-based method with a dense k‑point grid.",
+    "output_file": "",
+    "evidence": "electronic_dos.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Obtain electronic contributions to free energy and electronic heat capacity.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_06",
+    "title": "Quasi-harmonic thermodynamic properties",
+    "role": "scored",
+    "action": "Using the ground-state energies, phonon DOS, electronic DOS, and H₂ reference, compute the vibrational and electronic contributions to the Helmholtz free energy via the quasi-harmonic approximation. Derive entropy, heat capacity, and enthalpy as functions of temperature (0–1000 K). Compute enthalpy of formation, Debye temperature, and electronic heat capacity constant. Output the temperature-dependent quantities and derived constants.",
+    "output_file": "step_03_thermodynamic_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Temperature-dependent thermodynamic quantities and derived constants for α-Zr, γ-ZrH, δ-ZrH1.5, ε-ZrH2.",
+    "output_schema": "JSON object with key 'phases': array of objects, each with keys: name (string), entropy (array of 11 floats at T=0,100,…,1000 K, J/(mol·K)), heat_capacity (array of 11 floats, J/(mol·K)), enthalpy (array of 11 floats, kJ/mol), enthalpy_of_formation (float, kJ/mol), Debye_temperature (float, K), electronic_heat_constant (float, mJ/(mol·K²))."
+  }
+]

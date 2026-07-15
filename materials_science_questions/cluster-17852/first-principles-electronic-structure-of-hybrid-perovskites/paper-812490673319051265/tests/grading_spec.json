@@ -1,0 +1,103 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Agent submits only final computed values; recompute from raw DFT total energies is infeasible without those intermediates. Compare to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "formation_energies_at_charge_neutrality.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Pb_rich": {
+              "type": "object",
+              "required": {
+                "E_F0": "number (eV)",
+                "defects": "array of objects with keys 'defect' (string) and 'formation_energy' (number, eV)"
+              }
+            },
+            "Br_rich": {
+              "type": "object",
+              "required": {
+                "E_F0": "number (eV)",
+                "defects": "array of objects with keys 'defect' (string) and 'formation_energy' (number, eV)"
+              }
+            }
+          }
+        },
+        "description": "Formation energies of the dominant defects at the charge-neutrality Fermi level under Pb-rich and Br-rich conditions, computed from HSE+SOC total energies and Freysoldt correction."
+      },
+      {
+        "file": "defect_transition_levels.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "Br_i_(-/+)": "number (eV)",
+            "H_i_(-/+)": "number (eV)",
+            "H_Br_(0/+)": "number (eV)"
+          }
+        },
+        "description": "Thermodynamic charge-state transition levels for the deep-level defects Br interstitial, H interstitial, and H on Br site, referenced to the valence band maximum."
+      }
+    ],
+    "notes": "The hidden checker compares the submitted values to a hidden reference set (paper-reported results) with tolerances and checks internal consistency: transition levels must be consistent with the submitted formation energies at E_F=0 within a tolerance."
+  },
+  "gold": {
+    "formation_energies_at_charge_neutrality.json": {
+      "Pb_rich": {
+        "E_F0": 1.66,
+        "defects": {
+          "H_Br^0": 0.71,
+          "H_i^+": 0.87,
+          "H_Pb^-": 0.97
+        }
+      },
+      "Br_rich": {
+        "E_F0": 0.37,
+        "defects": {
+          "Br_i^-": 0.98,
+          "H_Pb^-": 0.89
+        }
+      }
+    },
+    "defect_transition_levels.json": {
+      "Br_i_(-/+)": 0.34,
+      "H_i_(-/+)": 1.8,
+      "H_Br_(0/+)": 0.27
+    }
+  },
+  "tolerances": {
+    "formation_energy": 0.1,
+    "E_F0": 0.05,
+    "transition_level": 0.05
+  },
+  "steps": [
+    {
+      "id": "formation_energies",
+      "output_file": "formation_energies_at_charge_neutrality.json",
+      "kind": "rubric",
+      "weight": 0.6
+    },
+    {
+      "id": "transition_levels",
+      "output_file": "defect_transition_levels.json",
+      "kind": "rubric",
+      "weight": 0.4
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference gold values for formation energies and transition levels",
+      "source_provenance": "Paper-reported values extracted from main text and figures (e.g., Pb‑rich E_F0=1.66 eV, Br-rich E_F0=0.37 eV, defect formation energies and transition levels from Fig. 1 & 2 and surrounding discussion).",
+      "generation_method": "Direct extraction from the published paper (J. Mater. Chem. A, 2021, 9, ...).",
+      "why_not_fabricated": "Values are verbatim from the paper; no alteration."
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "scoring_tier": "result-level_compare",
+  "scoring_justification": "Full recompute from raw DFT data is infeasible in the verifier sandbox; we compare the agent's reported band gaps and integrated PDOS to the paper's hidden gold with tolerances.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for band gaps and integrated PDOS from the paper.",
+      "source_provenance": "Paper: abstract and text. Band gaps: PBE-GGA for I 3.34 eV (indirect), II 1.10 eV (direct); mBJ I 3.56 eV (indirect), II 1.61 eV (direct). Integrated PDOS per atom from -6 eV to E_F: I Pb1 3.8, Pb2 7.8, Pb3 9.2, O1 6.0, O2 9.0, O3 12.0, O4 14.5, O5 16.0, C1 6.0, B1 1.8, H1 0.6; II Pb1 1.8, Pb2 3.9, Pb3 2.3, O2 8.0, O3 13.5, O4 11.0, O5 12.5, C1 2.4, B1 1.2, H1 0.3.",
+      "generation_method": "Extracted directly from the paper's reported values.",
+      "why_not_fabricated": "These are the paper's actual published numbers; not invented."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "band_gaps.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "I": {
+              "PBE-GGA": {
+                "gap_eV": "number",
+                "type": "string (\"indirect\" or \"direct\")"
+              },
+              "mBJ_proxy": {
+                "gap_eV": "number",
+                "type": "string (\"indirect\" or \"direct\")"
+              }
+            },
+            "II": {
+              "PBE-GGA": {
+                "gap_eV": "number",
+                "type": "string (\"indirect\" or \"direct\")"
+              },
+              "mBJ_proxy": {
+                "gap_eV": "number",
+                "type": "string (\"indirect\" or \"direct\")"
+              }
+            }
+          }
+        },
+        "description": "Band gap values (in eV) and gap types for pristine I and defective II, computed with PBE-GGA and a hybrid functional (replacing mBJ)."
+      },
+      {
+        "file": "integrated_pdos.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "I": {
+              "Pb1": "number",
+              "Pb2": "number",
+              "Pb3": "number",
+              "O1": "number",
+              "O2": "number",
+              "O3": "number",
+              "O4": "number",
+              "O5": "number",
+              "C1": "number",
+              "B1": "number",
+              "H1": "number"
+            },
+            "II": {
+              "Pb1": "number",
+              "Pb2": "number",
+              "Pb3": "number",
+              "O2": "number",
+              "O3": "number",
+              "O4": "number",
+              "O5": "number",
+              "C1": "number",
+              "B1": "number",
+              "H1": "number"
+            }
+          }
+        },
+        "description": "Integrated number of electrons (dimensionless) per atom from -6 eV to the Fermi level, for pristine I and defective II, obtained from hybrid-functional PDOS."
+      }
+    ],
+    "notes": "The checker compares the reported values to the paper's results with tolerances appropriate for a different code (Quantum ESPRESSO vs WIEN2k) and a different hybrid functional (HSE06 vs mBJ)."
+  },
+  "steps": [
+    {
+      "id": "band_gaps",
+      "output_file": "band_gaps.json",
+      "kind": "custom",
+      "weight": 0.7,
+      "description": "Compare band gaps and types to paper gold with tolerances.",
+      "gold": {
+        "I": {
+          "PBE-GGA": {
+            "gap_eV": 3.34,
+            "type": "indirect",
+            "gap_tol": 0.15
+          },
+          "mBJ_proxy": {
+            "gap_eV": 3.56,
+            "type": "indirect",
+            "gap_tol": 0.5
+          }
+        },
+        "II": {
+          "PBE-GGA": {
+            "gap_eV": 1.1,
+            "type": "direct",
+            "gap_tol": 0.15
+          },
+          "mBJ_proxy": {
+            "gap_eV": 1.61,
+            "type": "direct",
+            "gap_tol": 0.5
+          }
+        }
+      }
+    },
+    {
+      "id": "integrated_pdos",
+      "output_file": "integrated_pdos.json",
+      "kind": "custom",
+      "weight": 0.3,
+      "description": "Compare integrated PDOS per atom to paper gold within 20% relative tolerance.",
+      "gold": {
+        "I": {
+          "Pb1": 3.8,
+          "Pb2": 7.8,
+          "Pb3": 9.2,
+          "O1": 6.0,
+          "O2": 9.0,
+          "O3": 12.0,
+          "O4": 14.5,
+          "O5": 16.0,
+          "C1": 6.0,
+          "B1": 1.8,
+          "H1": 0.6
+        },
+        "II": {
+          "Pb1": 1.8,
+          "Pb2": 3.9,
+          "Pb3": 2.3,
+          "O2": 8.0,
+          "O3": 13.5,
+          "O4": 11.0,
+          "O5": 12.5,
+          "C1": 2.4,
+          "B1": 1.2,
+          "H1": 0.3
+        }
+      },
+      "tolerance": 0.2
+    }
+  ]
+}

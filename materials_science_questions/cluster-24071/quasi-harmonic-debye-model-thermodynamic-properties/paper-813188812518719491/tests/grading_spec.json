@@ -1,0 +1,102 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The main scored artifacts are final computed aggregates; no raw intermediate (E(V), volume vs T) is required by the output contract. Thus recomputation from agent artifact is infeasible; scoring compares the reported values to the paper's reported numbers with appropriate tolerances, with structural checks for the temperature scan.",
+  "pass_threshold": 0.6,
+  "steps": [
+    {
+      "id": "check_poisson",
+      "output_file": "poisson_ratio.json",
+      "weight": 0.2,
+      "kind": "poisson_consistency",
+      "targets": {
+        "nu": 0.2704,
+        "B_H": 323.3,
+        "G_H": 175.3,
+        "tolerance_nu": 0.005,
+        "tolerance_moduli": 15.0
+      }
+    },
+    {
+      "id": "check_alpha_avg",
+      "output_file": "alpha_V_avg.txt",
+      "weight": 0.6,
+      "kind": "numeric_close",
+      "target": 24.86,
+      "tolerance": 2.0
+    },
+    {
+      "id": "check_thermal",
+      "output_file": "thermal_properties.csv",
+      "weight": 0.2,
+      "kind": "thermal_structural",
+      "target_temperatures": [
+        300,
+        500,
+        1000,
+        1500,
+        2000
+      ],
+      "dulong_petit": 74.85
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "poisson_ratio.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "nu": "number",
+            "B_H": "number (GPa)",
+            "G_H": "number (GPa)"
+          }
+        },
+        "description": "Poisson ratio ν and the Hill-averaged bulk and shear moduli."
+      },
+      {
+        "file": "alpha_V_avg.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "single float value (×10⁻⁶ K⁻¹)"
+        },
+        "description": "Average volumetric thermal expansion coefficient over 298–473 K at 0 GPa."
+      },
+      {
+        "file": "thermal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "alpha(10⁻⁶ K⁻¹)",
+            "C_V(J/mol-K)"
+          ],
+          "units": {
+            "T(K)": "K",
+            "alpha(10⁻⁶ K⁻¹)": "10⁻⁶ K⁻¹",
+            "C_V(J/mol-K)": "J/(mol·K)"
+          }
+        },
+        "description": "Temperature-dependent thermal expansion and heat capacity at zero pressure; checked for monotonic alpha(T) and C_V approaching Dulong-Petit limit."
+      }
+    ],
+    "notes": "Reproduces the computational pipeline (DFT + quasi-harmonic Debye model) from the paper. Scored artifacts include Poisson ratio, average volumetric expansion coefficient, and temperature scan. Process steps force genuine DFT and Debye simulations, not self-reported numbers."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for Poisson ratio, average thermal expansion coefficient, and physical constants",
+      "source_provenance": "Paper-reported values from Table 2 (Poisson ratio, B_H, G_H), Table 3 (α_V average), and standard Dulong-Petit limit. Temperature scan structural checks are based on the paper's Fig. 7/Fig. 8 trends.",
+      "generation_method": "Direct extraction from the paper's numerical results; Dulong-Petit = 9*N_A*k_B ≈ 74.85 J/mol-K.",
+      "why_not_fabricated": "All values match the paper's published data and physical limits; they are the reference used in the original work."
+    }
+  ]
+}

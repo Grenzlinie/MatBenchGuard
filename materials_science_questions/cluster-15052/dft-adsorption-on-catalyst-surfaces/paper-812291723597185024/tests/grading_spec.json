@@ -1,0 +1,107 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Binding energies are the direct output of the EH calculation; no recomputable intermediate exists, so match to hidden paper gold with tolerances + trend ordering.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Embedded gold binding energies and tolerances from paper tables/text.",
+      "source_provenance": "From Tables I, III, V and in-plane text of the paper",
+      "generation_method": "Extracted directly from the paper's reported values: K perfect 6.40, O2 end-on 0.245, O2 K1 6.35, O2 defect end-on 4.10, side-on 4.64, K rim 6.80 (6.40+0.4).",
+      "why_not_fabricated": "Values are the published results of the paper's EH calculations, used as verification targets."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "binding_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "configuration",
+            "binding_energy_eV"
+          ],
+          "units": {
+            "binding_energy_eV": "eV"
+          },
+          "description": "Each row identifies a configuration and its computed binding energy in eV."
+        },
+        "description": "Computed binding energies for the specified adsorption configurations on graphite; used to verify the paper's reported energies and the relative ordering K1 > defect > perfect surface."
+      }
+    ],
+    "notes": "Configurations are identified by strings: K_perfect_Csite, O2_perfect_Aendon_135, O2_K1_sideon, O2_defect_inplane_endon, O2_defect_inplane_sideon, K_defect_rim. The hidden checker compares each value to the paper's gold with tolerances and checks the ordering trend."
+  },
+  "steps": [
+    {
+      "id": "K_perfect_Csite",
+      "output_file": "binding_energies.csv",
+      "weight": 0.2,
+      "configuration": "K_perfect_Csite",
+      "target": 6.4,
+      "tolerance": 0.5
+    },
+    {
+      "id": "O2_perfect_Aendon_135",
+      "output_file": "binding_energies.csv",
+      "weight": 0.2,
+      "configuration": "O2_perfect_Aendon_135",
+      "target": 0.245,
+      "tolerance": 0.5
+    },
+    {
+      "id": "O2_K1_sideon",
+      "output_file": "binding_energies.csv",
+      "weight": 0.2,
+      "configuration": "O2_K1_sideon",
+      "target": 6.35,
+      "tolerance": 0.5
+    },
+    {
+      "id": "O2_defect_inplane_endon",
+      "output_file": "binding_energies.csv",
+      "weight": 0.1,
+      "configuration": "O2_defect_inplane_endon",
+      "target": 4.1,
+      "tolerance": 1.0
+    },
+    {
+      "id": "O2_defect_inplane_sideon",
+      "output_file": "binding_energies.csv",
+      "weight": 0.1,
+      "configuration": "O2_defect_inplane_sideon",
+      "target": 4.64,
+      "tolerance": 1.0
+    },
+    {
+      "id": "K_defect_rim",
+      "output_file": "binding_energies.csv",
+      "weight": 0.1,
+      "configuration": "K_defect_rim",
+      "target": 6.8,
+      "tolerance": 0.5
+    },
+    {
+      "id": "trend_o2_ordering",
+      "output_file": "binding_energies.csv",
+      "weight": 0.05,
+      "trend_type": "strict_ordering",
+      "configurations": [
+        "O2_K1_sideon",
+        "O2_defect_inplane_sideon",
+        "O2_perfect_Aendon_135"
+      ]
+    },
+    {
+      "id": "trend_K_defect_enhancement",
+      "output_file": "binding_energies.csv",
+      "weight": 0.05,
+      "trend_type": "difference_min",
+      "config1": "K_defect_rim",
+      "config2": "K_perfect_Csite",
+      "min_difference": 0.2
+    }
+  ]
+}

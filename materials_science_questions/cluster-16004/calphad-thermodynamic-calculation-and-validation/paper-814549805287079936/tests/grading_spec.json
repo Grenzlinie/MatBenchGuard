@@ -1,0 +1,65 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "DFT code differs; recompute from raw artifacts would require re-running ATAT pipeline, which is heavy and code‑dependent. Order‑of‑magnitude range and sign/trend are independently verifiable.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "pure_apb_energy.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "text",
+          "description": "A single floating-point number representing the APB energy in mJ/m²."
+        },
+        "description": "APB energy of pure Ni3Al evaluated from the cluster expansion without Monte Carlo."
+      },
+      {
+        "file": "dopant_apb_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "concentration",
+            "temperature",
+            "APB_energy",
+            "delta_APB_energy"
+          ],
+          "units": {
+            "concentration": "at%",
+            "temperature": "K",
+            "APB_energy": "mJ/m^2",
+            "delta_APB_energy": "mJ/m^2"
+          }
+        },
+        "description": "Mean APB energy and the enhancement due to 1% Ti at 400 K and 1600 K, derived from Monte Carlo sampling."
+      }
+    ],
+    "notes": "Scoring is structural: the pure APB energy must be within a reasonable range for Ni3Al, and the dopant file must show a positive APB energy enhancement that decreases with temperature. Exact numeric agreement with the paper is not required because the DFT code (Quantum ESPRESSO) differs from the original VASP."
+  },
+  "steps": [
+    {
+      "id": "check_pure_apb",
+      "output_file": "pure_apb_energy.txt",
+      "kind": "numeric",
+      "weight": 0.2,
+      "target_policy": "structural_audit",
+      "check_range": [
+        200,
+        400
+      ]
+    },
+    {
+      "id": "check_dopant_apb",
+      "output_file": "dopant_apb_energies.csv",
+      "kind": "rubric",
+      "weight": 0.8,
+      "target_policy": "structural_audit",
+      "rubric": "Verify CSV structure, required columns, positive APB_energy and delta_APB_energy, and that delta_APB_energy at 400 K > at 1600 K."
+    }
+  ]
+}

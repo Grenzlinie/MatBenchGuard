@@ -1,0 +1,101 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Recomputing from raw DFT logs/Bader analysis is infeasible in the verifier sandbox; scoring compares agent-reported numeric results against paper gold with tolerances.",
+  "pass_threshold": 0.6,
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "delta_E_ad_kJ_per_mol",
+            "delta_E_a_TS1_kJ_per_mol",
+            "delta_E_neff_kJ_per_mol",
+            "bader_charges_TS1",
+            "spin_S2_TS1"
+          ],
+          "properties": {
+            "delta_E_ad_kJ_per_mol": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "delta_E_a_TS1_kJ_per_mol": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "delta_E_neff_kJ_per_mol": {
+              "type": "number",
+              "unit": "kJ/mol"
+            },
+            "bader_charges_TS1": {
+              "type": "object",
+              "properties": {
+                "H": {
+                  "type": "number",
+                  "unit": "e"
+                },
+                "O": {
+                  "type": "number",
+                  "unit": "e"
+                },
+                "CH3": {
+                  "type": "number",
+                  "unit": "e"
+                },
+                "Al": {
+                  "type": "number",
+                  "unit": "e"
+                }
+              }
+            },
+            "spin_S2_TS1": {
+              "type": "number",
+              "unit": "unitless"
+            }
+          }
+        },
+        "description": "Aggregated DFT results for the methane physisorption, dissociative adsorption, and electronic structure at the transition state on the defective γ-Al₂O₃(100) surface. The values are compared to the paper's reported reference with absolute tolerances."
+      }
+    ],
+    "notes": "Task scope covers the rate-limiting step of CH₄ activation at an oxygen vacancy: slab construction, DFT/CI-NEB calculations, and extraction of energetics and Bader charges. The agent must run the full compute workflow; no pre-made structures or intermediate results are provided. The verifier compares the numeric fields in results.json against the paper's values using absolute tolerances."
+  },
+  "steps": [
+    {
+      "id": "step_03",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "kind": "result_compare",
+      "description": "Compares each numeric field in results.json to the paper's reported gold within absolute tolerances.",
+      "gold": {
+        "delta_E_ad_kJ_per_mol": -20,
+        "delta_E_a_TS1_kJ_per_mol": 140,
+        "delta_E_neff_kJ_per_mol": 120,
+        "bader_charges_TS1": {
+          "H": 0.66,
+          "O": -1.49,
+          "CH3": -0.65,
+          "Al": 2.35
+        },
+        "spin_S2_TS1": 0.023
+      },
+      "tolerances": {
+        "energy_kJ_per_mol": 5.0,
+        "charge_e": 0.05,
+        "spin_S2": 0.01
+      }
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for result comparison",
+      "source_provenance": "Paper Fig. 4 and Fig. 5, text",
+      "generation_method": "Extracted from paper",
+      "why_not_fabricated": "These are the exact reported computational results from the paper."
+    }
+  ]
+}

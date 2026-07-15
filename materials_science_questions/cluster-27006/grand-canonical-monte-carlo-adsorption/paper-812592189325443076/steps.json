@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step_01_generate_target",
+    "title": "Generate TARGET carbon structure via MD",
+    "role": "process",
+    "action": "Build an initial carbon plate configuration in a periodic cubic simulation cell using the specified target density, mean rings per plate, and standard deviation. Perform NVT molecular dynamics at 300 K with Lennard-Jones interactions (C-C parameters provided). Equilibrate and collect the carbon-carbon radial distribution function g_target(r). Save the g(r) data for downstream RMC.",
+    "output_file": "",
+    "evidence": "target_gr.csv",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the target g(r) that drives the subsequent RMC refinement.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_rmc_refine",
+    "title": "RMC refinement to produce MODEL structure",
+    "role": "process",
+    "action": "Create an independent initial carbon structure with a different density and fixed plate ring count. Run reverse Monte Carlo cycles (alternating configurational and ring moves, with density-regulation plate moves) using the target g(r) as reference and the chi-square acceptance criterion. Continue until convergence. Save the final MODEL atomistic configuration.",
+    "output_file": "",
+    "evidence": "model_structure.xyz",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Creates the MODEL carbon structure whose properties and isotherm are scored.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_structural_properties",
+    "title": "Characterize MODEL structural properties",
+    "role": "scored",
+    "action": "From the MODEL structure, compute density (g/cm³), average number of rings per plate, standard deviation of ring count, number of carbons per plate, porosity using a nitrogen probe (reentrant surface definition with given Lennard-Jones parameters), and geometric accessible surface area (m²/g) using the accessible surface definition. Write the results as a single‑row CSV with the columns specified in the contract.",
+    "output_file": "model_structural_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Structural characterisation of the RMC‑derived MODEL carbon.",
+    "output_schema": "CSV with header row and one data row. Columns: density_g_per_cm3,avg_rings_per_plate,std_dev_rings,carbons_per_plate,porosity,surface_area_m2_per_g. All values are numeric."
+  },
+  {
+    "id": "step_04_gcmc_isotherm",
+    "title": "Compute N2 adsorption isotherm on MODEL via GCMC",
+    "role": "scored",
+    "action": "Perform Grand Canonical Monte Carlo simulations of nitrogen (spherical Lennard-Jones model, parameters provided) adsorbed in the MODEL carbon structure at 77 K. Relate chemical potential to absolute pressure using a virial expansion truncated at the second virial coefficient (B value provided). Run at a series of pressures up to at least 0.133 bar. Convert average loading to cm³ (STP) per gram of carbon. Output a CSV with columns pressure_bar and loading_cm3stp_per_g, covering the full pressure range with enough points to resolve the isotherm shape.",
+    "output_file": "model_isotherm.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Simulated nitrogen adsorption isotherm at 77 K for the MODEL carbon.",
+    "output_schema": "CSV with header row and multiple data rows. Columns: pressure_bar,loading_cm3stp_per_g. Pressures should cover 0 to at least 0.133 bar. All values are numeric."
+  }
+]

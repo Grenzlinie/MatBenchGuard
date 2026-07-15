@@ -1,0 +1,41 @@
+[
+  {
+    "id": "data_extraction",
+    "title": "Collect experimental tensile strength data and input parameters",
+    "role": "process",
+    "action": "Obtain the five cited papers and extract for each of the five samples: CNT diameter d, CNT length L, matrix tensile strength σ_m, and the experimental composite tensile strength σ_c as a function of CNT volume fraction φ_f. Save the extracted data in a machine‑readable file (e.g., JSON) for use by subsequent steps.",
+    "output_file": "",
+    "evidence": "extracted_data.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Gather experimental tensile strength vs volume fraction curves and fixed input parameters from the literature sources.",
+    "output_schema": "A JSON file containing arrays of experimental points per sample (φ_f, σ_c) and the fixed parameters d, L, σ_m."
+  },
+  {
+    "id": "fit_t_and_b",
+    "title": "Compute Pukanszky B parameter and fit interphase thickness t",
+    "role": "process",
+    "action": "Using the extracted experimental data, for each sample compute the Pukanszky B parameter using the formula B = ln(σ_c/σ_m * (1+2.5 φ_f)/(1-φ_f)) / φ_f. Then fit the interphase thickness t by numerically minimizing the squared error between the experimental σ_c values and the model prediction σ_c = σ_m * [ (B-2.04)*(1+2t/d)*φ_f + 1 - (1+2t/d)^2*φ_f ], where d is CNT diameter. Save the resulting t (nm) and B values together with optimization logs.",
+    "output_file": "",
+    "evidence": "fitting_results.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Fit interphase thickness t and compute the Pukanszky B parameter for all five samples.",
+    "output_schema": "A JSON file containing per sample the fitted t (nm) and B, plus convergence metrics."
+  },
+  {
+    "id": "compute_params",
+    "title": "Calculate interfacial shear strength, interphase strength, and critical length",
+    "role": "scored",
+    "action": "From the fitted t and B, calculate interfacial shear strength τ = σ_m (B - 2.04) / (η_o α), where α = L/d, interphase strength σ_i = σ_m * exp( B / (1 + 2t/d) ), and critical length L_c = (η_o σ_f L) / (2 σ_m (B - 2.04)), with CNT strength σ_f = 37 GPa and orientation factor η_o = 1/5. Ensure units: t in nm, σ_m and τ in MPa, σ_i in MPa, L_c in µm. Compile the results for all five samples (sample_no, t_nm, B, tau_MPa, sigma_i_MPa, Lc_um) into a single CSV file.",
+    "output_file": "computed_table.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Produce the final table of computed interfacial parameters for the five samples.",
+    "output_schema": "CSV with header: sample_no, t_nm, B, tau_MPa, sigma_i_MPa, Lc_um. One data row per sample (1–5), all values numeric."
+  }
+]

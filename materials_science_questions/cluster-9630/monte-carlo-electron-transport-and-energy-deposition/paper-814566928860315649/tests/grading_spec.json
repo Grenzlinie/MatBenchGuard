@@ -1,0 +1,99 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "RMS shape is recomputed from CSV (structural); optimal pitch is compared to paper gold with tolerance (exact_match).",
+  "pass_threshold": 1.0,
+  "target_policies": {
+    "electron_analysis.csv": "structural_audit",
+    "proton_analysis.csv": "structural_audit",
+    "optimal_pitches.txt": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported optimal strip pitches: D2=1.5 mm, D1=5.0 mm (Table I).",
+      "source_provenance": "Table I, paper: Simulation and Optimization for Space Low Energy Charged Particle Detector, 2015 RADECS.",
+      "generation_method": "Direct extraction from paper's optimized detector characters table.",
+      "why_not_fabricated": "The values are explicitly listed in the paper as the result of the simulation optimization; they serve as the reproduction target."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electron_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strip_pitch_mm",
+            "rms_energy_MeV",
+            "energy_resolution_pct"
+          ]
+        },
+        "description": "RMS energy error and energy resolution for D2 strip pitches. The RMS should decrease then increase, showing a minimum."
+      },
+      {
+        "file": "proton_analysis.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "strip_pitch_mm",
+            "rms_energy_MeV",
+            "energy_resolution_pct"
+          ]
+        },
+        "description": "RMS energy error and energy resolution for D1 strip pitches. The RMS should decrease then increase, showing a minimum."
+      },
+      {
+        "file": "optimal_pitches.txt",
+        "format": "txt",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "text",
+          "description": "Two lines: D2_optimal_pitch_mm=<value> and D1_optimal_pitch_mm=<value>."
+        },
+        "description": "Optimal strip pitches that minimize RMS energy error for electrons (D2) and protons (D1)."
+      }
+    ],
+    "notes": "The electron and proton analysis CSVs are verified by structural audit (RMS curve shape). The optimal pitches are the primary scored artifact; they are compared to the paper's reported values with a tolerance hidden from the agent."
+  },
+  "steps": [
+    {
+      "id": "electron_shape_check",
+      "output_file": "electron_analysis.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Check that electron RMS energy error exhibits a minimum (decrease then increase) as strip pitch increases."
+    },
+    {
+      "id": "proton_shape_check",
+      "output_file": "proton_analysis.csv",
+      "kind": "structural_audit",
+      "weight": 0.05,
+      "description": "Check that proton RMS energy error exhibits a minimum (decrease then increase) as strip pitch increases."
+    },
+    {
+      "id": "electron_opt_pitch",
+      "output_file": "optimal_pitches.txt",
+      "kind": "numeric_compare",
+      "weight": 0.45,
+      "target": 1.5,
+      "tolerance": 0.2,
+      "metric": "D2_optimal_pitch_mm"
+    },
+    {
+      "id": "proton_opt_pitch",
+      "output_file": "optimal_pitches.txt",
+      "kind": "numeric_compare",
+      "weight": 0.45,
+      "target": 5.0,
+      "tolerance": 0.5,
+      "metric": "D1_optimal_pitch_mm"
+    }
+  ]
+}

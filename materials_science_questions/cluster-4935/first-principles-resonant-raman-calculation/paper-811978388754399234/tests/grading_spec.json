@@ -1,0 +1,195 @@
+{
+  "scoring_tier": "result_compare",
+  "scoring_justification": "Recomputing the full nonlinear least-squares crystal-field fit in the verifier sandbox is infeasible due to computational cost and numerical sensitivity; scoring compares the agent's reported best-fit parameters to the paper's published values with generous tolerances (T0 fallback).",
+  "pass_threshold": 0.7,
+  "target_policies": {
+    "cf_analysis_results.json": "threshold_or_better"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference crystal-field parameters Bkq, Raman intensity ratio R, and magnetic susceptibility constant alpha for YbAG and YbGG.",
+      "source_provenance": "Directly transcribed from Table 1 (Bkq and R) and Section 4 text (alpha) of the source paper.",
+      "generation_method": "Manual extraction from the paper's final best-fit results.",
+      "why_not_fabricated": "These are the actual published gold-standard values, verifiable against the paper PDF provided in the task context."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "cf_analysis_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "YbAG": {
+              "type": "object",
+              "properties": {
+                "Bkq": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 9,
+                  "maxItems": 9
+                },
+                "R": {
+                  "type": "number"
+                },
+                "alpha": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "Bkq",
+                "R",
+                "alpha"
+              ]
+            },
+            "YbGG": {
+              "type": "object",
+              "properties": {
+                "Bkq": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 9,
+                  "maxItems": 9
+                },
+                "R": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "alpha": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "Bkq",
+                "R",
+                "alpha"
+              ]
+            },
+            "reassignment_validated": {
+              "type": "boolean"
+            },
+            "reassignment_reasoning": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "YbAG",
+            "YbGG",
+            "reassignment_validated",
+            "reassignment_reasoning"
+          ]
+        },
+        "description": "Aggregated crystal-field parameters, Raman intensity ratio, magnetic susceptibility constant, and the reassignment verdict with reasoning. All values are compared to reference thresholds from the paper's results."
+      }
+    ],
+    "notes": "The Bkq parameters are in cm⁻¹. Scoring uses threshold-based comparison with tolerances derived from the paper's reported values and expected numerical accuracy."
+  },
+  "steps": [
+    {
+      "id": "check_ybag_bkq",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "params": {
+        "path": "YbAG.Bkq",
+        "target": [
+          -248.0,
+          372.0,
+          -1668.0,
+          290.0,
+          715.0,
+          743.0,
+          -560.0,
+          920.0,
+          -303.0
+        ],
+        "tol_k2": 150,
+        "tol_k4": 300,
+        "tol_k6": 500
+      }
+    },
+    {
+      "id": "check_ybgg_bkq",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.25,
+      "kind": "numeric",
+      "params": {
+        "path": "YbGG.Bkq",
+        "target": [
+          -88.0,
+          185.0,
+          -1444.0,
+          331.0,
+          688.0,
+          795.0,
+          -507.0,
+          1057.0,
+          -271.0
+        ],
+        "tol_k2": 150,
+        "tol_k4": 300,
+        "tol_k6": 500
+      }
+    },
+    {
+      "id": "check_ybag_R",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "params": {
+        "path": "YbAG.R",
+        "target": 2.21,
+        "tol": 0.6
+      }
+    },
+    {
+      "id": "check_ybag_alpha",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "params": {
+        "path": "YbAG.alpha",
+        "target": 0.00336,
+        "tol": 0.001
+      }
+    },
+    {
+      "id": "check_ybgg_alpha",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.1,
+      "kind": "numeric",
+      "params": {
+        "path": "YbGG.alpha",
+        "target": 0.00356,
+        "tol": 0.001
+      }
+    },
+    {
+      "id": "check_reassignment",
+      "output_file": "cf_analysis_results.json",
+      "weight": 0.2,
+      "kind": "structural",
+      "params": {
+        "validated_key": "reassignment_validated",
+        "reasoning_key": "reassignment_reasoning",
+        "expected_valid": true,
+        "reasoning_keywords": [
+          "10903",
+          "electronic",
+          "10680",
+          "better"
+        ]
+      }
+    }
+  ]
+}

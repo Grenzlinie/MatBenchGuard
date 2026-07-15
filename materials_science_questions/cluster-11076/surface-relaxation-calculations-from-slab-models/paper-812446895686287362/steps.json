@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_slab",
+    "title": "Generate slab models",
+    "role": "process",
+    "action": "Construct diamond slab supercells for the (100), (110), and (111) planes with atom counts 64, 96, and 128 respectively. Determine the equilibrium lattice constants for the Tersoff and Brenner potentials. Compute the exposed surface area A for each orientation.",
+    "output_file": "",
+    "evidence": "slab_info.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Generate the periodic slab models and record cell dimensions, atom counts, and surface areas.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_unrelaxed",
+    "title": "Compute unrelaxed surface energies",
+    "role": "process",
+    "action": "For each surface and potential, run MD with fixed atomic positions (bulk-like distances) at 100 K. Use a time step of 0.5e-17 s, equilibration for 10,000 steps with temperature rescaling for the first 5,000 steps. Average the total energy over the last 1,000-step windows to obtain stable mean energies for the slab (E_s) and the bulk (E_b). Calculate unrelaxed gamma = (E_s - E_b) / A.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Run fixed-atom MD to obtain unrelaxed energies for all three surfaces and both potentials.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_relaxed",
+    "title": "Compute relaxed surface energies",
+    "role": "process",
+    "action": "Starting from the unrelaxed slab configurations, allow all atoms to move and equilibrate under MD at 100 K with the same protocol. Average the final total energies to obtain relaxed E_s and E_b. Compute relaxed gamma.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Run equilibrated MD to obtain relaxed energies for all three surfaces and both potentials.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_04_interlayer",
+    "title": "Analyze multilayer relaxation",
+    "role": "process",
+    "action": "From the relaxed slab trajectories, extract the interlayer spacings (delta12, delta23, delta34) parallel to the surface for each orientation and potential. Compare with the unrelaxed spacings and compute the percentage changes.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Extract interlayer distances and compute relaxation percentages.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_05_results",
+    "title": "Output final results",
+    "role": "scored",
+    "action": "Write a JSON file containing all computed surface energies and interlayer relaxation data for the Tersoff and Brenner potentials, covering the (100), (110), and (111) surfaces.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing all surface energies (unrelaxed and relaxed) and interlayer spacings (before/after relaxation) with percentage changes, as reported in the paper's Tables 1 and 2.",
+    "output_schema": "JSON object with top-level keys 'tersoff' and 'brenner'. Each value is an object with keys '(100)', '(110)', '(111)'. Each surface entry contains the following numeric fields: unrelaxed_gamma (float, erg/cm^2), relaxed_gamma (float, erg/cm^2), delta12_before (float, Å), delta12_after (float, Å), delta23_before (float, Å), delta23_after (float, Å), delta34_before (float, Å), delta34_after (float, Å), percent_change_delta12 (float, %), percent_change_delta23 (float, %), percent_change_delta34 (float, %)."
+  }
+]

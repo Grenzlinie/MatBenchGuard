@@ -1,0 +1,126 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "The paper reports only final mechanical property values from MD simulations; recomputing those properties would require re-running the full simulation which is infeasible for the verifier. The agent is expected to run the simulations and extract properties; the checker compares the reported table to the paper's published values within tolerance.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "mechanical_properties.csv": "reference_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "mechanical_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "structure",
+            "Young_modulus_GPa_nm",
+            "yield_stress_GPa",
+            "yield_strain",
+            "failure_mechanism"
+          ],
+          "units": {
+            "Young_modulus_GPa_nm": "GPa·nm",
+            "yield_stress_GPa": "GPa",
+            "yield_strain": "dimensionless"
+          }
+        },
+        "description": "Mechanical properties and failure classification from MD tensile tests."
+      }
+    ],
+    "notes": "Yield strain is not required for scoring but is included for completeness. The hidden checker compares Young's modulus and yield stress against reference values with a tolerance, and failure_mechanism against known labels."
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold mechanical properties (Young's modulus, yield stress) and failure mechanism labels for S1-S5 from paper Table 1, plus approximate values for graphene and h-BN consistent with typical ReaxFF simulations.",
+      "source_provenance": "S1-S5 values: paper Table 1 (doi:10.1016/j.spmi.2017.08.019). Graphene/h-BN: approximate values derived from typical literature (e.g., graphene 1 TPa × 0.34 nm = 340 GPa·nm) and failure mechanism from paper text.",
+      "generation_method": "Extracted from the paper's published Table 1 for S1-S5; graphene/h-BN based on known properties and the reference solve.sh. Values match the reference oracle submission.",
+      "why_not_fabricated": "Numbers come directly from the peer-reviewed paper (Table 1) or are physically reasonable approximations for the comparison materials, not arbitrary."
+    }
+  ],
+  "steps": [
+    {
+      "id": "mech_props",
+      "output_file": "mechanical_properties.csv",
+      "kind": "rubric",
+      "weight": 1.0,
+      "tolerance_modulus": 0.15,
+      "tolerance_stress": 0.15,
+      "gold_values": {
+        "S1_armchair": {
+          "E": 375,
+          "YS": 49.54,
+          "mechanism": "nanopore"
+        },
+        "S1_zigzag": {
+          "E": 155,
+          "YS": 32.63,
+          "mechanism": "nanopore"
+        },
+        "S2_armchair": {
+          "E": 203,
+          "YS": 13.75,
+          "mechanism": "cracking"
+        },
+        "S2_zigzag": {
+          "E": 193,
+          "YS": 24.17,
+          "mechanism": "nanopore"
+        },
+        "S3_armchair": {
+          "E": 212,
+          "YS": 16.13,
+          "mechanism": "cracking"
+        },
+        "S3_zigzag": {
+          "E": 191,
+          "YS": 21.02,
+          "mechanism": "nanopore"
+        },
+        "S4_armchair": {
+          "E": 159,
+          "YS": 23.75,
+          "mechanism": "nanopore"
+        },
+        "S4_zigzag": {
+          "E": 145,
+          "YS": 11.7,
+          "mechanism": "cracking"
+        },
+        "S5_armchair": {
+          "E": 226,
+          "YS": 25.07,
+          "mechanism": "cracking"
+        },
+        "S5_zigzag": {
+          "E": 186,
+          "YS": 25.12,
+          "mechanism": "nanopore"
+        },
+        "graphene_armchair": {
+          "E": 340,
+          "YS": 100,
+          "mechanism": "cleavage"
+        },
+        "graphene_zigzag": {
+          "E": 340,
+          "YS": 100,
+          "mechanism": "cleavage"
+        },
+        "h-BN_armchair": {
+          "E": 270,
+          "YS": 70,
+          "mechanism": "cleavage"
+        },
+        "h-BN_zigzag": {
+          "E": 270,
+          "YS": 70,
+          "mechanism": "cleavage"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Only the final compilation JSON is scored; raw artefacts (stress–strain CSV, FEM output file) are not in the output contract, so T1 recompute is infeasible. Structural relationships (ordering, threshold) and a derived consistency check (ga vs φ) are used.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.json": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Inline reference values: Y_bulk=78 GPa, ordering thresholds, and ranges.",
+      "source_provenance": "Paper reported Y_bulk=78 GPa (from EAM constants via Kröner), effective moduli (md=0.38, fem=1.06, ga=7.4, φ=0.308) – sections 2.2, 3 and Fig. 3.",
+      "generation_method": "Directly taken from the paper’s text for the initial configuration; used only to set hidden structural thresholds.",
+      "why_not_fabricated": "These are the paper’s published numbers for exactly the same quantities being verified. They define the allowed relationships and ranges that a correct reproduction must satisfy."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": {
+            "md_y_eff_GPa": "number",
+            "fem_y_eff_GPa": "number",
+            "ga_y_eff_GPa": "number",
+            "solid_fraction": "number"
+          },
+          "units": {
+            "md_y_eff_GPa": "GPa",
+            "fem_y_eff_GPa": "GPa",
+            "ga_y_eff_GPa": "GPa",
+            "solid_fraction": "dimensionless"
+          }
+        },
+        "description": "Compiled effective Young's moduli and solid fraction for the initial nanoporous gold configuration. The checker uses structural_audit to verify relative ordering and threshold ranges without requiring exact reproduction of paper-specific values."
+      }
+    ],
+    "notes": "Checker verifies relative ordering: md_y_eff_GPa < fem_y_eff_GPa, both are substantially smaller than ga_y_eff_GPa, and solid_fraction falls in a plausible range. The exact numeric thresholds are hidden; the policy ensures the paper's claim is correctly captured."
+  },
+  "steps": [
+    {
+      "id": "check_solid_frac",
+      "output_file": "simulation_results.json",
+      "weight": 0.1,
+      "kind": "custom",
+      "check_type": "range",
+      "field": "solid_fraction",
+      "min": 0.25,
+      "max": 0.35
+    },
+    {
+      "id": "check_md_lt_fem",
+      "output_file": "simulation_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "check_type": "order",
+      "field_a": "md_y_eff_GPa",
+      "field_b": "fem_y_eff_GPa",
+      "relation": "lt"
+    },
+    {
+      "id": "check_md_lt_ga_frac",
+      "output_file": "simulation_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "check_type": "scaled_order",
+      "field_small": "md_y_eff_GPa",
+      "field_big": "ga_y_eff_GPa",
+      "factor": 0.25
+    },
+    {
+      "id": "check_fem_lt_ga_frac",
+      "output_file": "simulation_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "check_type": "scaled_order",
+      "field_small": "fem_y_eff_GPa",
+      "field_big": "ga_y_eff_GPa",
+      "factor": 0.25
+    },
+    {
+      "id": "check_ga_self_consistency",
+      "output_file": "simulation_results.json",
+      "weight": 0.2,
+      "kind": "custom",
+      "check_type": "ga_vs_phi",
+      "tolerance": 0.5
+    },
+    {
+      "id": "check_ga_range",
+      "output_file": "simulation_results.json",
+      "weight": 0.1,
+      "kind": "custom",
+      "check_type": "range",
+      "field": "ga_y_eff_GPa",
+      "min": 5.0,
+      "max": 10.0
+    }
+  ]
+}

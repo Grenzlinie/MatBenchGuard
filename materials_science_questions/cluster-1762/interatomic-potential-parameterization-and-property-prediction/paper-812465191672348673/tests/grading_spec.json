@@ -1,0 +1,169 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Recomputing thermal conductivity from raw MD trajectories is computationally prohibitive; we compare reported aggregate quantities to paper gold with tolerances and check relative ordering trends.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for lattice constants and bulk modulus",
+      "source_provenance": "Paper Table 2: a=3.06e-10 m, c=4.90e-10 m, B=2.08e11 N/m^2",
+      "generation_method": "Direct read from paper Table 2",
+      "why_not_fabricated": "These are the paper's own published validation results for the fitted potential"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for wurtzite thermal conductivity at 282 K and 1130 K",
+      "source_provenance": "Paper Table 3: λ(282 K)=697 W/mK, λ(1130 K)=34.2 W/mK",
+      "generation_method": "Direct read from paper Table 3",
+      "why_not_fabricated": "Paper's reported MD thermal conductivity values"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for Al vacancy thermal conductivity near 300 K",
+      "source_provenance": "Paper Table 4: Al vacancy, T=298 K, λ=8.3 W/mK",
+      "generation_method": "Direct read from paper Table 4",
+      "why_not_fabricated": "Paper's reported defective crystal thermal conductivity"
+    },
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold for zincblende thermal conductivity at 268 K",
+      "source_provenance": "Paper Table 5: λ(268 K)=142 W/mK",
+      "generation_method": "Direct read from paper Table 5",
+      "why_not_fabricated": "Paper's reported zincblende phase thermal conductivity"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "lattice_constants.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "a": "float (Angstrom)",
+            "c": "float (Angstrom)",
+            "bulk_modulus": "float (N/m^2)"
+          }
+        },
+        "description": "Equilibrium lattice parameters and bulk modulus of wurtzite AlN. The values will be compared to reference data with a tolerance appropriate for code differences."
+      },
+      {
+        "file": "thermal_conductivity_wurtzite.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature",
+            "Lambda_c"
+          ],
+          "units": {
+            "Temperature": "K",
+            "Lambda_c": "W/mK"
+          }
+        },
+        "description": "Thermal conductivity of perfect wurtzite AlN at 282 K and 1130 K. The checker compares each value to hidden reference data within a relative tolerance."
+      },
+      {
+        "file": "thermal_conductivity_vacancy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Defect",
+            "Temperature",
+            "Lambda_c"
+          ],
+          "units": {
+            "Temperature": "K",
+            "Lambda_c": "W/mK"
+          }
+        },
+        "description": "Thermal conductivity of wurtzite AlN with an Al vacancy at a temperature near 300 K. The checker compares the conductivity to a hidden reference value."
+      },
+      {
+        "file": "thermal_conductivity_zincblende.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Temperature",
+            "Lambda_c"
+          ],
+          "units": {
+            "Temperature": "K",
+            "Lambda_c": "W/mK"
+          }
+        },
+        "description": "Thermal conductivity of zincblende AlN at 268 K. The checker compares the value to a hidden reference."
+      }
+    ],
+    "notes": "Agent must reproduce the full interatomic potential fitting pipeline from ab initio MO data; no pre-fitted potential is provided. Scoring includes both numerical comparison of the submitted quantities and additional hidden checks on relative ordering (e.g., zincblende conductivity < wurtzite, and conductivity with Al vacancy < perfect wurtzite)."
+  },
+  "steps": [
+    {
+      "id": "lattice_constants",
+      "output_file": "lattice_constants.json",
+      "weight": 0.2,
+      "kind": "numeric_field_comparison",
+      "gold": {
+        "a": 3.06,
+        "c": 4.9,
+        "bulk_modulus": 208000000000.0
+      },
+      "tolerances": {
+        "a": 0.05,
+        "c": 0.05,
+        "bulk_modulus": 0.1
+      }
+    },
+    {
+      "id": "wurtzite_thermal",
+      "output_file": "thermal_conductivity_wurtzite.csv",
+      "weight": 0.3,
+      "kind": "csv_value_comparison",
+      "gold": {
+        "282.0": 697.0,
+        "1130.0": 34.2
+      },
+      "tolerance": 0.3
+    },
+    {
+      "id": "vacancy_thermal",
+      "output_file": "thermal_conductivity_vacancy.csv",
+      "weight": 0.2,
+      "kind": "csv_value_comparison",
+      "gold": {
+        "Al_298.0": 8.3
+      },
+      "tolerance": 0.3,
+      "temp_range": [
+        290,
+        310
+      ]
+    },
+    {
+      "id": "zincblende_thermal",
+      "output_file": "thermal_conductivity_zincblende.csv",
+      "weight": 0.2,
+      "kind": "csv_value_comparison",
+      "gold": {
+        "268.0": 142.0
+      },
+      "tolerance": 0.3
+    },
+    {
+      "id": "ordering",
+      "output_file": "",
+      "weight": 0.1,
+      "kind": "structural_ordering"
+    }
+  ]
+}

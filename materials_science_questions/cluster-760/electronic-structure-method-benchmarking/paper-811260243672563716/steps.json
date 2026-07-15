@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_1",
+    "title": "Gas-phase DFT calculations and identification of stable solvatocomplexes",
+    "role": "process",
+    "action": "Perform geometry optimization and harmonic frequency calculations at B3LYP/6-31+G(2d) level (or equivalent with an open-source code) for all species: Li+, BOB-, EC, [Li+BOB-] ion pair, [Li(EC)n]+ (n=1..5), [BOB(EC)#]- (#=A..D), [Li+(EC)mBOB-] (m=1,2). Compute standard thermodynamic potentials (ΔE, ΔU°, ΔH°, ΔS°, ΔG°) for each gas-phase complex formation reaction at T=298.15 K. Based on gas-phase ΔG° of formation, identify the most stable cation solvatocomplex ([Li(EC)4]+), anion solvatocomplex ([BOB(EC)C]-), and ion-pair solvatocomplex ([Li+(EC)2BOB-]). Save the raw thermodynamic data and the identity of the selected complexes to an evidence file.",
+    "output_file": "",
+    "evidence": "gas_phase_gibbs.csv",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Gas-phase DFT calculations and thermodynamic analysis for all relevant species, and identification of the most stable solvatocomplexes.",
+    "output_schema": "Table with columns: complex (string identifier of the formation reaction), delta_E_kJ_per_mol, delta_U298_kJ_per_mol, delta_H298_kJ_per_mol, delta_S298_J_per_mol_K, delta_G298_kJ_per_mol. Also includes a designated section listing the selected stable complexes ([Li(EC)4]+, [BOB(EC)C]-, [Li+(EC)2BOB-])."
+  },
+  {
+    "id": "step_2",
+    "title": "Continuum solvation IPCM calculations",
+    "role": "process",
+    "action": "Using the gas-phase optimized geometries from step 1, perform IPCM single-point energy calculations with dielectric constant ε=51.0 (the EC:DMC 7:3 mixture) on the following species: Li+, BOB-, [Li+BOB-], [Li(EC)4]+, [Li+(EC)2BOB-], and EC. Apply standard-state corrections to compute solvation Gibbs free energies as described in the method (IPCM contour 0.0002 e Bohr^-3). Save the computed solvation energies (ΔsolvH, ΔsolvS, ΔsolvG) for each species to an evidence file.",
+    "output_file": "",
+    "evidence": "solvation_energies.json",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "IPCM continuum solvation energies for the key species.",
+    "output_schema": "Object with species identifiers as keys; each value is an object with numeric fields: delta_solv_H_kJ_per_mol, delta_solv_S_J_per_mol_K, delta_solv_G_kJ_per_mol."
+  },
+  {
+    "id": "step_3",
+    "title": "Ion association thermodynamics from thermodynamic cycle",
+    "role": "scored",
+    "action": "Combine the gas-phase ion-pair formation thermodynamics (from step 1) and the solvation data (from step 2) to compute, via the thermodynamic cycle described in the reference method, the standard Gibbs free energy change of ion association for the three solvation models: ΔassG° (AI, continuum-only), ΔassG° (AII, discrete-only), and ΔassG° (AIII, mixed discrete-continuum). Also compute the gas-phase ion-pair formation Δass(g)G°. Output the four values in a JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Final standard Gibbs free energies of ion association for the three solvation models and gas-phase reference.",
+    "output_schema": "Object with four numeric fields: delta_ass_G_AI_kJ_per_mol, delta_ass_G_AII_kJ_per_mol, delta_ass_G_AIII_kJ_per_mol, delta_ass_g_G_kJ_per_mol. Each value is a floating-point number in units kJ/mol."
+  }
+]

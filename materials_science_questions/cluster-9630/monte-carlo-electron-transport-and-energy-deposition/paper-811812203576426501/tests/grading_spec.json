@@ -1,0 +1,82 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The radial profile's peak and FWHM, and the angular distribution's integrated collection efficiency can be recomputed directly from the agent's raw CSV artifacts without trusting any self-reported number.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "radial_profile.csv": "reference_match",
+    "angular_distribution.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "hidden gold values for peak radius, FWHM, and ηC from the paper's reported numbers and analytic reconstruction.",
+      "source_provenance": "paper Fig.9 and Eq.7",
+      "generation_method": "paper-reported peak=18 μm, FWHM=13.5 μm; ηC=56.9% from integration of angular distribution. Reference solve.sh generates analytic data consistent with these values.",
+      "why_not_fabricated": "These are the paper's actual published numbers, verified against the paper text and figures."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "radial_profile.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "r0_um",
+            "Jprime_A"
+          ],
+          "units": {
+            "r0_um": "µm",
+            "Jprime_A": "arbitrary"
+          }
+        },
+        "description": "Radial distribution of relative detectable Auger electron intensity J'_A(r0). The checker will locate the peak and compute the FWHM to compare with hidden reference values."
+      },
+      {
+        "file": "angular_distribution.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "theta_deg",
+            "I_theta"
+          ],
+          "units": {
+            "theta_deg": "degrees",
+            "I_theta": "arbitrary"
+          }
+        },
+        "description": "Angular intensity distribution I(θ) of outgoing Auger electrons at the edge of the electric field. The checker will integrate this distribution to compute the collection efficiency ηC and compare with a hidden reference."
+      }
+    ],
+    "notes": "The incident beam profile J_S(r0) is provided as a Gaussian with FWHM=15.5 µm; field emission simulation is not required. The exact geometry and parameters for the tip, shield, and sample are given in the instruction. The scored outputs are the radial profile and angular distribution; ηC is derived by the checker from the angular distribution. All intermediate process outputs must be produced by the agent; they are not provided as resources."
+  },
+  "steps": [
+    {
+      "id": "radial_profile_check",
+      "output_file": "radial_profile.csv",
+      "weight": 0.6,
+      "peak_radius_gold": 18.0,
+      "peak_radius_tol": 1.0,
+      "fwhm_gold": 13.5,
+      "fwhm_tol": 2.0,
+      "annulus_min_radius": 5.0
+    },
+    {
+      "id": "angular_distribution_check",
+      "output_file": "angular_distribution.csv",
+      "weight": 0.4,
+      "eta_gold": 0.569,
+      "eta_tol": 0.05,
+      "analyzer_angle_deg": 2.2,
+      "max_angle_deg": 90.0,
+      "angular_concentration_threshold_deg": 10.0,
+      "angular_concentration_frac_min": 0.5
+    }
+  ]
+}

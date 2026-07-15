@@ -1,0 +1,67 @@
+[
+  {
+    "id": "construct_systems",
+    "title": "Build molecular systems",
+    "role": "process",
+    "action": "Construct the following simulation systems using the CHARMM27 force field and TIP3P water: (1) a single (6,6) SWCNT (length ~36.9 Å, diameter 8.20 Å) embedded in a POPC lipid bilayer, solvated with ~1337 water molecules forming two ~10 Å reservoirs on each side, periodic box ~34.84×34×66.29 Å³; (2) a periodic array of four (6,6) SWCNTs with 15 Å center-to-center separation in a POPC membrane (~3045 water molecules, box ~45.75×60.32×66.68 Å³); (3) the same array with 25 Å separation (~4327 water molecules, box ~63.10×59.99×66.27 Å³). CNT atoms are neutral sp² carbon (CHARMM type CA); CNT axis aligned with z-direction. Generate topology and coordinate files suitable for the chosen MD engine.",
+    "output_file": "",
+    "evidence": "system_build.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Evidence of system construction.",
+    "output_schema": ""
+  },
+  {
+    "id": "run_md_simulations",
+    "title": "Equilibration and production MD simulations",
+    "role": "process",
+    "action": "For each constructed system, perform NPT equilibration (1 ns at 300 K, 1 atm with fixed CNT, then gradually release harmonic constraints on lipids and CNT over 0.4 ns). Then run 50-ns NVT production at 300 K using Langevin dynamics (damping 1 ps⁻¹). For the single tube, run one simulation with zero electric field and one with a static electric field of 0.0065 V/Å along +z. For each array separation (15 Å, 25 Å), run only zero-field simulations. Use Particle Mesh Ewald (12 Å real-space cutoff), 12 Å van der Waals cutoff with switching from 10 Å, 2 fs time step with SHAKE on bonds to hydrogen. Save atomic trajectories at sufficient frequency for subsequent analysis (e.g., every 1 ps).",
+    "output_file": "",
+    "evidence": "md_simulation.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Evidence of simulation completion.",
+    "output_schema": ""
+  },
+  {
+    "id": "compute_permeation",
+    "title": "Calculate steady-state permeation rates and transport coefficients",
+    "role": "scored",
+    "action": "From the production trajectories, compute the net water permeation rate j_d (molecules/ns) through the CNT(s) using a colour-diffusion counting method, the axial intra-pore diffusion coefficient D_p from the Einstein relation on the axial mean squared displacement of water molecules inside the CNT, the hopping rate k using k = 2 D_p / a² with a = 0.26 nm, the osmotic permeability p_f by integrating the axial collective-velocity total correlation function, and the diffusive permeability p_d = j_d / c_H2O with c_H2O = 33.5 nm⁻³. Report results for the four conditions: single tube zero field, single tube static field, array 15 Å zero field, array 25 Å zero field.",
+    "output_file": "permeation_rates.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Computed water permeation and transport properties for each system and field condition.",
+    "output_schema": "Columns: system (string, one of 'single', 'array15', 'array25'), field (string, one of 'none' or 'static'), j_d (float, ns⁻¹), p_d (float, nm³ ns⁻¹), D_p (float, nm² ns⁻¹), k (float, ns⁻¹), p_f (float, nm³ ns⁻¹)."
+  },
+  {
+    "id": "compute_dipole_distribution",
+    "title": "Calculate dipole orientation distribution",
+    "role": "scored",
+    "action": "For the single-tube trajectories (zero field and static field), compute the probability distribution of cos(α), where α is the angle between the water dipole vector and the +z axis (CNT axis). Bin cos(α) into equal-width intervals between -1 and 1 (approximately 0.1 width) and normalise to unit area.",
+    "output_file": "dipole_distribution.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Histogram of cos(α) for single-tube water molecules under zero and static electric fields.",
+    "output_schema": "Columns: system (string, 'single'), field (string, 'none' or 'static'), cos_alpha_low (float, lower bin edge), cos_alpha_high (float, upper bin edge), probability (float, normalised count)."
+  },
+  {
+    "id": "compute_effective_viscosity",
+    "title": "Calculate effective viscosity for 15 Å array",
+    "role": "scored",
+    "action": "From the 15 Å array zero-field trajectory, track hexamer groups of six water molecules initially nearest the center of each CNT. Compute the effective viscosity η from the Einstein relation using the long-time slope of the mean square displacement of the off-diagonal stress component P_zz, as defined in the protocol. Report the result.",
+    "output_file": "effective_viscosity.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Effective viscosity of water in the 15 Å-spaced CNT array.",
+    "output_schema": "Columns: array_separation (string, '15'), eta (float, N·s·m⁻²)."
+  }
+]

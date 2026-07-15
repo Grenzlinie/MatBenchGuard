@@ -1,0 +1,198 @@
+{
+  "scoring_tier": "T0",
+  "scoring_justification": "The agent produces only the final stress table, not raw simulation traces; recomputing tau_a from raw artifacts is infeasible. Comparison against digitized gold curves with tolerance is appropriate.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "simulation_results.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Reference tau_a(d) curves for n=5,10,15,20 digitized from Figure 10",
+      "source_provenance": "paper Figure 10",
+      "generation_method": "Manual digitization of the published graph; values approximate but reflect reported trends and magnitudes",
+      "why_not_fabricated": "The values are based on the paper's reported simulation results; approximate digitization reproduces the plotted curves, not arbitrary numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "simulation_results.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "d_nm",
+            "n",
+            "tau_a_MPa"
+          ],
+          "units": {
+            "d_nm": "nm",
+            "n": "dimensionless",
+            "tau_a_MPa": "MPa"
+          }
+        },
+        "description": "The computed critical applied resolved shear stress τ_a for two symmetric dislocation pile-ups to cross over, as a function of glide-plane separation d and number of dislocations per pile-up n. Each row is a (d, n) condition. Two additional structural requirements (monotonicity of τ_a with d for fixed n, and existence of a steep rise at small d) are also checked."
+      }
+    ],
+    "notes": "The parameter-estimation stage that derived τ_f=300 MPa from experimental data is intentionally omitted; the task directly uses the reported τ_f. The scoring combines per-point numerical agreement with hidden reference values (digitized from Figure 10) and structural checks (monotonic decrease of τ_a with increasing d for each n, and high τ_a for d ≤ 30 nm)."
+  },
+  "steps": [
+    {
+      "id": "struct_val",
+      "output_file": "simulation_results.csv",
+      "kind": "structural_audit",
+      "weight": 0.3,
+      "monotonic_decreasing": true,
+      "threshold_d_max": 30,
+      "threshold_tau_min": 100
+    },
+    {
+      "id": "val_acc",
+      "output_file": "simulation_results.csv",
+      "kind": "reference_match",
+      "weight": 0.7,
+      "gold_curves": {
+        "5": [
+          [
+            10,
+            400
+          ],
+          [
+            20,
+            250
+          ],
+          [
+            30,
+            180
+          ],
+          [
+            50,
+            140
+          ],
+          [
+            100,
+            110
+          ],
+          [
+            200,
+            90
+          ],
+          [
+            300,
+            80
+          ],
+          [
+            500,
+            70
+          ]
+        ],
+        "10": [
+          [
+            10,
+            300
+          ],
+          [
+            20,
+            190
+          ],
+          [
+            30,
+            140
+          ],
+          [
+            50,
+            110
+          ],
+          [
+            100,
+            90
+          ],
+          [
+            200,
+            80
+          ],
+          [
+            300,
+            75
+          ],
+          [
+            500,
+            68
+          ]
+        ],
+        "15": [
+          [
+            10,
+            250
+          ],
+          [
+            20,
+            160
+          ],
+          [
+            30,
+            120
+          ],
+          [
+            50,
+            95
+          ],
+          [
+            100,
+            80
+          ],
+          [
+            200,
+            72
+          ],
+          [
+            300,
+            68
+          ],
+          [
+            500,
+            62
+          ]
+        ],
+        "20": [
+          [
+            10,
+            220
+          ],
+          [
+            20,
+            140
+          ],
+          [
+            30,
+            105
+          ],
+          [
+            50,
+            85
+          ],
+          [
+            100,
+            72
+          ],
+          [
+            200,
+            65
+          ],
+          [
+            300,
+            62
+          ],
+          [
+            500,
+            58
+          ]
+        ]
+      },
+      "relative_tolerance": 0.4
+    }
+  ]
+}

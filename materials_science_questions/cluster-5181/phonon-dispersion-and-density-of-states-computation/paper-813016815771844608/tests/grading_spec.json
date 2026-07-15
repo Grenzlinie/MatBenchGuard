@@ -1,0 +1,86 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "Absolute effective bond orders and phonon frequencies are strongly method-dependent; the paper's headline claim is the sign of pressure-induced changes (donor/acceptor assignment and blue-shift). Therefore scoring verifies monotonic trends between 0 and 1.0 GPa.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "effective_bond_orders.csv": "structural_audit",
+    "phonon_frequencies.csv": "structural_audit"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "expected sign of effective bond order change and phonon blue-shift",
+      "source_provenance": "paper Figure 5 and Figure 3(b); donor/acceptor identification from pressure‑dependent effective bond orders, and blue shift of phonon frequencies.",
+      "generation_method": "paper-reported trends: C‑H and N‑O bond orders decrease, N‑N bond orders increase, C‑N bond order nearly constant; all phonon frequencies increase with pressure.",
+      "why_not_fabricated": "trends are directly from the paper's quantitative analysis and figures."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "effective_bond_orders.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "bond_label",
+            "effective_bond_order"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "effective_bond_order": "dimensionless"
+          }
+        },
+        "description": "Table of effective bond orders for selected C–H, C–N, N–N, and N–O bonds at three hydrostatic pressures. Monotonic trends will be scored."
+      },
+      {
+        "file": "phonon_frequencies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "pressure_GPa",
+            "mode_index",
+            "frequency_cm1"
+          ],
+          "units": {
+            "pressure_GPa": "GPa",
+            "frequency_cm1": "cm^-1"
+          }
+        },
+        "description": "Table of zone‑centre phonon frequencies at three hydrostatic pressures. The blue‑shift trend will be scored."
+      }
+    ],
+    "notes": "The scored quantities are monotonic trends, not exact absolute values. The hidden checker compares the sign of changes (slope) against the paper's reported trends."
+  },
+  "steps": [
+    {
+      "id": "step_03_bond_orders",
+      "output_file": "effective_bond_orders.csv",
+      "weight": 0.6,
+      "kind": "custom",
+      "description": "Verify that C‑H and N‑O effective bond orders decrease from 0 to 1.0 GPa, N‑N bond orders increase, and C‑N remains nearly constant.",
+      "config": {
+        "delta_noise_epsilon": 0.001,
+        "cn_max_abs_delta": 0.005,
+        "min_modes": 500
+      }
+    },
+    {
+      "id": "step_04_phonon",
+      "output_file": "phonon_frequencies.csv",
+      "weight": 0.4,
+      "kind": "custom",
+      "description": "Verify that every zone‑centre phonon frequency at 1.0 GPa is greater than at 0 GPa (blue shift).",
+      "config": {
+        "freq_noise_epsilon": 0.01,
+        "min_modes": 500
+      }
+    }
+  ]
+}
