@@ -240,7 +240,7 @@ def main() -> int:
         "--paper-mode", choices=["no_paper"], default="no_paper"
     )
     parser.add_argument(
-        "--execution-level", choices=["E1"], default="E1"
+        "--execution-level", choices=["E1", "E2"], default="E1"
     )
     arguments = parser.parse_args()
     try:

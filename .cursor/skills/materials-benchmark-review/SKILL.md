@@ -38,13 +38,43 @@ The runner:
 1. maps and parses Harbor file roles without traversing `solution/`;
 2. records input hashes for public and privileged review files;
 3. performs a materials relevance prescreen and cross-file static checks;
-4. executes synthetic submissions against the real checker in isolation;
-5. synthesizes an initial verdict and fixed report;
-6. validates the candidate, preserves the prior bundle, and publishes
+4. probes materials resources with bounded retries and a private-network deny
+   boundary;
+5. executes synthetic submissions against the real checker in isolation;
+6. synthesizes an initial verdict and fixed report;
+7. validates the candidate, preserves the prior bundle, and publishes
    `benchmark_audit/` with rollback on replacement failure.
 
 Read [references/no-paper-e1.md](references/no-paper-e1.md) before interpreting
 the result.
+
+## Review materials resources
+
+Read
+[references/materials-resource-policy.md](references/materials-resource-policy.md).
+Every E1 review probes declared resources and records L0–L6, role, category,
+identity, reachability, failure class, and whether E2 is recommended.
+
+Use E2 only after reviewing the generated risk evidence. Write a smoke plan and
+Python script outside the 题包, then run:
+
+```bash
+python scripts/run_review.py <Harbor题包目录> \
+  --paper-mode no_paper \
+  --execution-level E2 \
+  --e2-smoke-plan <e2-smoke-plan.json>
+```
+
+The plan contains `schema_version`, the adjacent script filename,
+`verifies_resources`, and `timeout_sec`. The runner executes it in Python
+isolated mode on a solution-free package copy. The script must write
+`e2_smoke_result.json` with the resource IDs it actually exercised. Audit-host
+smoke evidence never claims L6 or scientific reproduction; a failed or
+unsubstantiated smoke triggers an execution Hard gate.
+
+Private, loopback, link-local, and credential-bearing resource URLs are blocked
+by default. `--allow-private-network` exists only for controlled fixtures or
+explicitly isolated test networks.
 
 ## Completion
 
@@ -53,10 +83,18 @@ This slice is complete only when:
 - the command exits successfully;
 - `benchmark_audit/` contains every required JSON, JSONL, Markdown, log, and
   manifest artifact;
-- the report says `paper_mode: no_paper` and `execution_level: E1`;
+- the report says `paper_mode: no_paper` and records the selected E1 or E2;
 - paper consistency is `NOT_ASSESSED`;
 - every checker probe records its observed reward and exit status, or the audit
   is `NOT_ASSESSABLE`;
+- every declared resource records a role, material category, required and
+  verified level, identity state, reachability status, and failure class;
+- any resource below its required level produces a structured finding rather
+  than only an E2 recommendation;
+- critical permanent, authorization, license, or identity failures produce
+  structured Hard-gate findings, while transient failures remain distinct;
+- E2 records `SMOKE_RUN` and `scientific_reproduction: false`; audit-host smoke
+  leaves `environment_verified: false`;
 - a supplied known-valid public output executes; rejection produces
   `KNOWN_VALID_OUTPUT_REJECTED` and prevents `PASS`;
 - any malformed or adversarial output at or above the threshold produces a
@@ -64,5 +102,5 @@ This slice is complete only when:
 - the checker executes in a copied runtime that contains no `solution/`, and
   static and dynamic evidence both record that boundary.
 
-Do not infer paper fidelity, scientific reproduction, resource reachability, or
-task-family-specific robustness from this E1 slice.
+Do not infer paper fidelity, scientific reproduction, Harbor-environment L6,
+or task-family-specific robustness from this slice.

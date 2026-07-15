@@ -167,6 +167,28 @@ def gate_status(
     return "PASS"
 
 
+def execution_findings(
+    execution_evidence: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if (
+        execution_evidence.get("claim") == "SMOKE_RUN"
+        and execution_evidence.get("status") == "FAIL"
+    ):
+        return [
+            {
+                "severity": "FATAL",
+                "code": "E2_SMOKE_FAILED",
+                "message": execution_evidence.get(
+                    "reason", "The E2 smoke failed."
+                ),
+                "test_type": "E2_SMOKE",
+                "evidence": execution_evidence,
+                "affected_files": [],
+            }
+        ]
+    return []
+
+
 def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
@@ -182,7 +204,15 @@ def markdown_summary(report: dict[str, Any]) -> str:
         f"- {gate['gate_id']}: {gate['status']}"
         for gate in report["gate_results"]
     )
-    if report["checker_tests"]:
+    execution = report["execution_evidence"]
+    if execution["claim"] == "SMOKE_RUN":
+        checker_assessment = (
+            "The real checker executed before the E2 smoke."
+        )
+        execution_assessment = (
+            f"Status: E2_SMOKE\nReason: {execution['reason']}"
+        )
+    elif report["checker_tests"]:
         checker_assessment = (
             "The real checker executed in a solution-free runtime."
         )
@@ -199,6 +229,14 @@ def markdown_summary(report: dict[str, Any]) -> str:
             "Status: E0_ONLY\n"
             "Reason: E1 was skipped after an E0 FATAL gate."
         )
+    resource_lines = (
+        "\n".join(
+            f"- {item['resource_id']}: {item['status']} "
+            f"({item['verified_level']}/{item['required_level']})"
+            for item in report["resources"]
+        )
+        or "No resources were declared."
+    )
     return f"""# Materials Benchmark Audit Report
 
 ## 1. Audit Summary
@@ -242,8 +280,7 @@ Reason: This slice checks declared outputs and grading references.
 
 ## 8. Resource Reachability
 
-Status: NOT_ASSESSED
-Reason: Resource reachability is outside the first no-paper E1 slice.
+{resource_lines}
 
 ## 9. Instruction and Task Design
 
@@ -302,13 +339,33 @@ def synthesize_report(
     temp_dir: Path,
     static_result: dict[str, Any],
     checker_result: dict[str, Any],
+    resource_result: dict[str, Any] | None = None,
+    execution_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    resource_result = resource_result or {
+        "status": "NOT_ASSESSED",
+        "resources": [],
+        "findings": [],
+        "limitations": [],
+    }
+    execution_evidence = execution_evidence or {
+        "status": "NOT_ASSESSED",
+        "claim": "E1_CHECKER_ONLY",
+        "scientific_reproduction": False,
+        "reason": "Scientific workflow execution was not assessed.",
+    }
     sources = [
         (item, "E0", "PACKAGE_STATIC")
         for item in static_result["issues"]
     ] + [
         (item, "E1", "CHECKER_ROBUSTNESS")
         for item in checker_result["findings"]
+    ] + [
+        (item, "RESOURCE", "RESOURCE_USABILITY")
+        for item in resource_result["findings"]
+    ] + [
+        (item, "E2", "EXECUTION_FEASIBILITY")
+        for item in execution_findings(execution_evidence)
     ]
     findings = [
         normalized_finding(
@@ -342,6 +399,8 @@ def synthesize_report(
         "status": "NOT_ASSESSED",
         "reason": "No-paper mode does not assess paper fidelity.",
     }
+    report["resources"] = resource_result["resources"]
+    report["execution_evidence"] = execution_evidence
     e0_status = gate_status(findings, "E0")
     e1_status = (
         gate_status(findings, "E1")
@@ -360,6 +419,22 @@ def synthesize_report(
             ),
         },
         {"gate_id": "CHECKER_ROBUSTNESS", "status": e1_status},
+        {
+            "gate_id": "RESOURCE_USABILITY",
+            "status": (
+                "NOT_ASSESSED"
+                if resource_result["status"] == "NOT_ASSESSED"
+                else gate_status(findings, "RESOURCE")
+            ),
+        },
+        {
+            "gate_id": "EXECUTION_FEASIBILITY",
+            "status": (
+                gate_status(findings, "E2")
+                if execution_evidence["claim"] == "SMOKE_RUN"
+                else "NOT_ASSESSED"
+            ),
+        },
         {"gate_id": "PAPER_CONSISTENCY", "status": "NOT_ASSESSED"},
     ]
     report["dimension_scores"] = [
@@ -389,7 +464,12 @@ def synthesize_report(
         ),
         "files_not_reviewed": ["paper/paper.md", "solution/**"],
         "tests_executed": [
-            item["test_type"] for item in checker_result["tests"]
+            *[item["test_type"] for item in checker_result["tests"]],
+            *(
+                ["E2_SMOKE"]
+                if execution_evidence["claim"] == "SMOKE_RUN"
+                else []
+            ),
         ],
         "tests_skipped": [
             *(
@@ -397,14 +477,18 @@ def synthesize_report(
                 if not checker_result["tests"]
                 else []
             ),
-            "resource reachability",
             "paper fidelity",
-            "scientific workflow execution",
+            *(
+                ["scientific workflow execution"]
+                if execution_evidence["claim"] != "SMOKE_RUN"
+                else []
+            ),
             "task-family-specific metamorphic tests",
         ],
         "limitations": [
             *static_result["limitations"],
             *checker_result["limitations"],
+            *resource_result["limitations"],
         ],
         "assumptions": [
             "known-valid output, when supplied, is independently justified"
