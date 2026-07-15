@@ -289,11 +289,12 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
                 gates["CHECKER_ROBUSTNESS"], "NOT_ASSESSED"
             )
             dimensions = {
-                item["dimension"]: item["score"]
+                item["dimension"]: item
                 for item in report["dimension_scores"]
             }
+            self.assertIsNone(dimensions["checker_validity"]["score"])
             self.assertEqual(
-                dimensions["checker_robustness"], "NOT_ASSESSED"
+                dimensions["checker_validity"]["status"], "NOT_ASSESSED"
             )
             markdown = (audit_dir / "audit_report.md").read_text(
                 encoding="utf-8"

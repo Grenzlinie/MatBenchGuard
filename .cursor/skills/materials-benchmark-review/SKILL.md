@@ -114,6 +114,27 @@ Private, loopback, link-local, and credential-bearing resource URLs are blocked
 by default. `--allow-private-network` exists only for controlled fixtures or
 explicitly isolated test networks.
 
+## Interpret disposition
+
+The report weights materials admission, the core scientific contract, resource
+availability, task answerability, checker validity, and paper consistency when
+applicable. A FATAL finding or applicable critical dimension below `0.50`
+overrides the weighted total.
+
+Every authoritative bundle includes `disposition.json` and
+`corpus_index_entry.json`:
+
+- `PASS` at `0.80` or above routes to `PUBLISH_CANDIDATE`;
+- `CONDITIONAL` at `0.60`–`0.79`, or with a repairable HIGH, routes to
+  `REPAIR_QUEUE`;
+- `REJECT` below `0.60` or after a Hard gate routes non-destructively to
+  `QUARANTINE`;
+- missing critical evidence routes `NOT_ASSESSABLE` to `EVIDENCE_PENDING`.
+
+Routing is declarative: Review preserves all core 题包 roles and writes only the
+audit bundle. A corpus operator may consume the index to update collection
+membership without deleting the original or its evidence.
+
 ## Completion
 
 This slice is complete only when:
@@ -121,6 +142,8 @@ This slice is complete only when:
 - the command exits successfully;
 - `benchmark_audit/` contains every required JSON, JSONL, Markdown, log, and
   manifest artifact;
+- weighted dimensions, disposition, finding summary, taxonomy, paper mode, and
+  execution level agree across the report and corpus index;
 - the report records the selected paper mode and execution level;
 - no-paper consistency is `NOT_ASSESSED`; paper-grounded consistency records
   a reproduction type, all five dimensions, and evidence or

@@ -36,11 +36,28 @@ ANSWER_TYPES = {
 REQUIRED_AUDIT_FILES = {
     "audit_report.md",
     "audit_report.json",
+    "corpus_index_entry.json",
+    "disposition.json",
     "findings.jsonl",
     "resource_checks.json",
     "checker_tests.json",
     "audit_manifest.json",
     "logs/audit.log",
+}
+DIMENSION_WEIGHTS = {
+    "materials_admission": 0.15,
+    "core_scientific_contract": 0.20,
+    "resource_availability": 0.15,
+    "task_answerability": 0.15,
+    "checker_validity": 0.25,
+    "paper_consistency": 0.10,
+}
+CRITICAL_DIMENSIONS = set(DIMENSION_WEIGHTS)
+ROUTES = {
+    "PASS": "PUBLISH_CANDIDATE",
+    "CONDITIONAL": "REPAIR_QUEUE",
+    "REJECT": "QUARANTINE",
+    "NOT_ASSESSABLE": "EVIDENCE_PENDING",
 }
 REQUIRED_HEADINGS = [
     "# Materials Benchmark Audit Report",
@@ -123,43 +140,251 @@ def normalized_finding(
     }
 
 
-def classify_verdict(
-    findings: list[dict[str, Any]],
-    usable_reward_count: int,
-    checker_test_count: int,
-    paper_status: str = "NOT_ASSESSED",
-) -> tuple[str, float | None, str]:
+def severity_score(findings: list[dict[str, Any]]) -> float:
     maximum = max(
         (SEVERITY_RANK[item["severity"]] for item in findings), default=0
     )
     if maximum >= SEVERITY_RANK["FATAL"]:
+        return 0.0
+    if maximum >= SEVERITY_RANK["HIGH"]:
+        return 0.4
+    if maximum >= SEVERITY_RANK["MEDIUM"]:
+        return 0.7
+    if maximum >= SEVERITY_RANK["LOW"]:
+        return 0.9
+    return 1.0
+
+
+def dimension_record(
+    dimension: str,
+    score: float | None,
+    evidence: list[str],
+    *,
+    applicable: bool = True,
+) -> dict[str, Any]:
+    if not applicable:
+        status = "NOT_ASSESSED"
+    elif score is None:
+        status = "NOT_ASSESSABLE"
+    elif score < 0.5:
+        status = "FAIL"
+    elif score < 0.8:
+        status = "WARNING"
+    else:
+        status = "PASS"
+    return {
+        "dimension": dimension,
+        "weight": DIMENSION_WEIGHTS[dimension],
+        "critical": dimension in CRITICAL_DIMENSIONS,
+        "applicable": applicable,
+        "score": score,
+        "status": status,
+        "evidence": evidence,
+    }
+
+
+def weighted_dimensions(
+    static_result: dict[str, Any],
+    checker_result: dict[str, Any],
+    resource_result: dict[str, Any],
+    findings: list[dict[str, Any]],
+    paper_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    by_category: dict[str, list[dict[str, Any]]] = {}
+    for item in findings:
+        by_category.setdefault(item["category"], []).append(item)
+    materials_scores = {
+        "MAT_CORE": 1.0,
+        "MAT_METHOD": 0.9,
+        "MAT_WRAPPER": 0.6,
+        "AMBIGUOUS": 0.4,
+        "NON_MAT": 0.0,
+    }
+    materials_class = static_result["materials_prescreen"]["classification"]
+    checker_executed = bool(checker_result["tests"])
+    checker_usable = (
+        checker_executed
+        and checker_result["usable_reward_count"]
+        == len(checker_result["tests"])
+    )
+    checker_findings = by_category.get("CHECKER_ROBUSTNESS", [])
+    static_findings = by_category.get("PACKAGE_STATIC", [])
+    resource_findings = by_category.get("RESOURCE_USABILITY", [])
+    task_findings = [
+        item
+        for item in [*static_findings, *checker_findings]
+        if item["title"]
+        in {
+            "KNOWN_VALID_OUTPUT_REJECTED",
+            "MISSING_FILE",
+            "OUTPUT_SET_MISMATCH",
+            "INVALID_GRADING_SPEC_SCHEMA",
+        }
+    ]
+    if not checker_executed:
+        checker_score: float | None = None
+        contract_score: float | None = severity_score(static_findings)
+        task_score: float | None = severity_score(task_findings)
+    elif not checker_usable:
+        checker_score = None
+        contract_score = None
+        task_score = None
+    else:
+        checker_score = severity_score(checker_findings)
+        contract_score = severity_score(
+            [*static_findings, *checker_findings]
+        )
+        task_score = severity_score(task_findings)
+
+    resource_score: float | None
+    if resource_result["status"] == "NOT_ASSESSED":
+        resource_score = None
+    else:
+        resource_severity = max(
+            (
+                SEVERITY_RANK[item["severity"]]
+                for item in resource_findings
+            ),
+            default=0,
+        )
+        resource_score = (
+            0.0
+            if resource_severity >= SEVERITY_RANK["FATAL"]
+            else 0.5
+            if resource_severity >= SEVERITY_RANK["HIGH"]
+            else 0.7
+            if resource_severity >= SEVERITY_RANK["MEDIUM"]
+            else 0.9
+            if resource_severity >= SEVERITY_RANK["LOW"]
+            else 1.0
+        )
+
+    paper_status = paper_result["status"]
+    paper_applicable = paper_status != "NOT_ASSESSED"
+    paper_score = {
+        "PASS": 1.0,
+        "WARNING": 0.7,
+        "FAIL": 0.0,
+        "NOT_ASSESSABLE": None,
+        "NOT_ASSESSED": None,
+    }[paper_status]
+    return [
+        dimension_record(
+            "materials_admission",
+            materials_scores[materials_class],
+            [f"materials_class={materials_class}"],
+        ),
+        dimension_record(
+            "core_scientific_contract",
+            contract_score,
+            [item["finding_id"] for item in [*static_findings, *checker_findings]],
+        ),
+        dimension_record(
+            "resource_availability",
+            resource_score,
+            [item["finding_id"] for item in resource_findings],
+        ),
+        dimension_record(
+            "task_answerability",
+            task_score,
+            [item["finding_id"] for item in task_findings],
+        ),
+        dimension_record(
+            "checker_validity",
+            checker_score,
+            [item["finding_id"] for item in checker_findings],
+            applicable=checker_executed,
+        ),
+        dimension_record(
+            "paper_consistency",
+            paper_score,
+            [f"paper_status={paper_status}"],
+            applicable=paper_applicable,
+        ),
+    ]
+
+
+def weighted_verdict(
+    findings: list[dict[str, Any]],
+    dimensions: list[dict[str, Any]],
+) -> tuple[str, float | None, bool, str, list[str]]:
+    fatal = any(item["severity"] == "FATAL" for item in findings)
+    failed_critical = [
+        item["dimension"]
+        for item in dimensions
+        if item["applicable"]
+        and item["critical"]
+        and item["score"] is not None
+        and item["score"] < 0.5
+    ]
+    evidence_gaps = [
+        item["dimension"]
+        for item in dimensions
+        if item["applicable"] and item["critical"] and item["score"] is None
+    ]
+    applicable = [
+        item
+        for item in dimensions
+        if item["applicable"] and item["score"] is not None
+    ]
+    weight = sum(item["weight"] for item in applicable)
+    total = (
+        round(
+            sum(item["score"] * item["weight"] for item in applicable)
+            / weight,
+            6,
+        )
+        if weight
+        else None
+    )
+    if fatal:
         return (
             "REJECT",
-            0.0,
-            "A FATAL audit finding triggered a Hard gate.",
+            total,
+            True,
+            "A FATAL finding triggered a Hard gate.",
+            evidence_gaps,
         )
-    if usable_reward_count != checker_test_count:
+    if failed_critical:
+        return (
+            "REJECT",
+            total,
+            True,
+            "Critical dimensions below 0.50 triggered a Hard gate: "
+            + ", ".join(failed_critical),
+            evidence_gaps,
+        )
+    if evidence_gaps:
         return (
             "NOT_ASSESSABLE",
             None,
-            "At least one checker probe lacks usable finite numeric E1 evidence.",
+            False,
+            "Critical evidence is unavailable: " + ", ".join(evidence_gaps),
+            evidence_gaps,
         )
-    if paper_status == "NOT_ASSESSABLE":
+    if total is None or total < 0.60:
         return (
-            "NOT_ASSESSABLE",
-            None,
-            "Essential paper-grounded evidence is unavailable.",
+            "REJECT",
+            total,
+            False,
+            "The weighted score is below 0.60.",
+            evidence_gaps,
         )
-    if maximum >= SEVERITY_RANK["MEDIUM"]:
+    unresolved_high = any(item["severity"] == "HIGH" for item in findings)
+    if total < 0.80 or unresolved_high:
         return (
             "CONDITIONAL",
-            0.7,
-            "Repairable findings remain at the selected evidence depth.",
+            total,
+            False,
+            "The weighted score is below 0.80 or a repairable HIGH remains.",
+            evidence_gaps,
         )
     return (
         "PASS",
-        0.9,
-        "No blocking finding was detected at the selected evidence depth.",
+        total,
+        False,
+        "All critical dimensions pass and the weighted score is at least 0.80.",
+        evidence_gaps,
     )
 
 
@@ -280,6 +505,11 @@ def markdown_summary(report: dict[str, Any]) -> str:
         f"- {gate['gate_id']}: {gate['status']}"
         for gate in report["gate_results"]
     )
+    dimension_lines = "\n".join(
+        f"- {item['dimension']}: {item['status']} "
+        f"(score={item['score']}, weight={item['weight']})"
+        for item in report["dimension_scores"]
+    )
     execution = report["execution_evidence"]
     if execution["claim"] == "SMOKE_RUN":
         checker_assessment = (
@@ -364,6 +594,7 @@ def markdown_summary(report: dict[str, Any]) -> str:
 - Materials class: {summary['materials_class']}
 - Answer type: {summary['answer_type']}
 - Final verdict: {summary['final_verdict']}
+- Disposition: {summary['disposition']}
 - Weighted score: {summary['total_score']}
 - Core reason: {summary['core_reason']}
 
@@ -428,7 +659,7 @@ Solution content was not inspected or copied into the checker runtime.
 
 ## 15. Dimension Scores
 
-Initial slice only; complete weighted dimensions are implemented later.
+{dimension_lines}
 
 ## 16. Findings
 
@@ -450,6 +681,80 @@ This audit covers {scope_mode} behavior only.
 
 The fixed bundle was synthesized, validated, and published with rollback.
 """
+
+
+def write_disposition_artifacts(
+    root: Path,
+    temp_dir: Path,
+    report: dict[str, Any],
+    evidence_gaps: list[str],
+) -> None:
+    summary = report["summary"]
+    route = summary["disposition"]
+    disposition = {
+        "schema_version": "0.1",
+        "audit_id": report["audit_id"],
+        "verdict": summary["final_verdict"],
+        "route": route,
+        "publishable": route == "PUBLISH_CANDIDATE",
+        "non_destructive": True,
+        "original_preserved": True,
+        "core_package_roles_mutated": False,
+        "evidence_bundle": "benchmark_audit",
+        "evidence_gaps": evidence_gaps,
+        "reason": summary["core_reason"],
+    }
+    manifest_data: dict[str, Any] = {}
+    try:
+        raw_manifest = read_json(root / "manifest.json")
+        if isinstance(raw_manifest, dict):
+            manifest_data = raw_manifest
+    except (OSError, ValueError, json.JSONDecodeError):
+        pass
+    severities = {
+        severity: sum(
+            item["severity"] == severity for item in report["findings"]
+        )
+        for severity in ("FATAL", "HIGH", "MEDIUM", "LOW")
+    }
+    categories: dict[str, int] = {}
+    for item in report["findings"]:
+        category = item["category"]
+        categories[category] = categories.get(category, 0) + 1
+    index_entry = {
+        "schema_version": "0.1",
+        "audit_id": report["audit_id"],
+        "benchmark": {
+            "name": root.name,
+            "root": str(root),
+            "cluster_id": manifest_data.get("cluster_id"),
+            "paper_id": manifest_data.get("paper_id"),
+        },
+        "final_verdict": summary["final_verdict"],
+        "total_score": summary["total_score"],
+        "hard_gate_triggered": summary["hard_gate_triggered"],
+        "route": route,
+        "publishable": disposition["publishable"],
+        "paper_mode": report["configuration"]["paper_mode"],
+        "execution_level": report["configuration"]["execution_level"],
+        "taxonomy_labels": report["taxonomy_labels"],
+        "finding_summary": {
+            "total": len(report["findings"]),
+            "by_severity": severities,
+            "by_category": dict(sorted(categories.items())),
+            "codes": [item["title"] for item in report["findings"]],
+        },
+        "dimension_scores": report["dimension_scores"],
+        "evidence_gaps": evidence_gaps,
+    }
+    (temp_dir / "disposition.json").write_text(
+        json.dumps(disposition, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (temp_dir / "corpus_index_entry.json").write_text(
+        json.dumps(index_entry, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def synthesize_report(
@@ -500,12 +805,18 @@ def synthesize_report(
         agent_assessment,
         skip_reason=paper_skip_reason,
     )
-    verdict, score, reason = classify_verdict(
+    dimensions = weighted_dimensions(
+        static_result,
+        checker_result,
+        resource_result,
         findings,
-        checker_result["usable_reward_count"],
-        len(checker_result["tests"]),
-        paper_result["status"],
+        paper_result,
     )
+    verdict, score, hard_gate, reason, evidence_gaps = weighted_verdict(
+        findings,
+        dimensions,
+    )
+    disposition = ROUTES[verdict]
     report = read_json(temp_dir / "audit_report.json")
     report["summary"] = {
         "materials_class": static_result["materials_prescreen"][
@@ -514,9 +825,8 @@ def synthesize_report(
         "answer_type": answer_type_for(root),
         "final_verdict": verdict,
         "total_score": score,
-        "hard_gate_triggered": any(
-            item["severity"] == "FATAL" for item in findings
-        ),
+        "hard_gate_triggered": hard_gate,
+        "disposition": disposition,
         "core_reason": reason,
     }
     report["materials_qualification"] = {
@@ -590,22 +900,7 @@ def synthesize_report(
             ),
         },
     ]
-    report["dimension_scores"] = [
-        {
-            "dimension": "package_integrity",
-            "score": 1.0 if e0_status == "PASS" else 0.5,
-        },
-        {
-            "dimension": "checker_robustness",
-            "score": (
-                "NOT_ASSESSED"
-                if e1_status == "NOT_ASSESSED"
-                else 1.0
-                if e1_status == "PASS"
-                else 0.0
-            ),
-        },
-    ]
+    report["dimension_scores"] = dimensions
     report["checker_tests"] = checker_result["tests"]
     report["findings"] = findings
     report["required_fixes"] = [
@@ -687,6 +982,12 @@ def synthesize_report(
         ),
         encoding="utf-8",
     )
+    write_disposition_artifacts(
+        root,
+        temp_dir,
+        report,
+        evidence_gaps,
+    )
     return report
 
 
@@ -712,6 +1013,8 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     checker = read_json(temp_dir / "checker_tests.json")
     read_json(temp_dir / "resource_checks.json")
     read_json(temp_dir / "audit_manifest.json")
+    disposition = read_json(temp_dir / "disposition.json")
+    index_entry = read_json(temp_dir / "corpus_index_entry.json")
     markdown = (temp_dir / "audit_report.md").read_text(encoding="utf-8")
     findings = [
         json.loads(line)
@@ -733,6 +1036,17 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         raise ValueError("invalid materials class")
     if summary["answer_type"] not in ANSWER_TYPES:
         raise ValueError("invalid answer type")
+    expected_route = ROUTES[summary["final_verdict"]]
+    if summary.get("disposition") != expected_route:
+        raise ValueError("summary disposition does not match verdict")
+    if disposition.get("route") != expected_route:
+        raise ValueError("disposition artifact does not match verdict")
+    if index_entry.get("route") != expected_route:
+        raise ValueError("corpus index route does not match verdict")
+    if bool(index_entry.get("publishable")) != (
+        summary["final_verdict"] == "PASS"
+    ):
+        raise ValueError("corpus publishable flag does not match verdict")
     if checker.get("solution_content_inspected") is not False:
         raise ValueError("checker evidence crossed the solution boundary")
     if report["scope"].get("solution_content_inspected") is not False:
