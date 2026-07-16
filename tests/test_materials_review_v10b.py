@@ -211,7 +211,7 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
             self.assertIsInstance(attack["provenance"], dict)
             self.assertFalse(attack["provenance"].get("oracle_used", True))
 
-    def test_process_only_structure_and_model_do_not_activate_attacks(self) -> None:
+    def test_process_only_step_does_not_change_task_attack_statuses(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
@@ -221,33 +221,109 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
 - Role: scored_output
 - Action: Compute the crystal energy.
 - Output file: `/app/outputs/result.json`
-
-### Step 2: Save process diagnostics
-- Role: process_evidence
-- Action: Save a full crystal structure and complete predictive model trace.
-- Evidence: `/app/outputs/process_structure.cif`
-- Evidence: `/app/outputs/process_model.json`
 """,
                 encoding="utf-8",
             )
+            specification_path = package / "tests/grading_spec.json"
             specification = json.loads(
-                (package / "tests/grading_spec.json").read_text(encoding="utf-8")
+                specification_path.read_text(encoding="utf-8")
             )
-            applicability = dynamic_checker_probe.task_family_applicability(
-                package, specification
+            specification["output_contract"]["outputs"][0]["description"] += (
+                " The scored output includes a full crystal structure model."
             )
-            contract_map = audit_package.instruction_contract_map(
-                (package / "instruction.md").read_text(encoding="utf-8")
+            specification_path.write_text(
+                json.dumps(specification), encoding="utf-8"
+            )
+            without_process = dynamic_checker_probe.dynamic_checker_probe(
+                package, Path(temporary) / "without-process.json"
+            )
+            instruction = package / "instruction.md"
+            instruction.write_text(
+                instruction.read_text(encoding="utf-8")
+                + """
+
+### Step 2: Save process diagnostics
+- Role: process_evidence
+- Action: Save the intermediate audit log.
+- Evidence: `/app/outputs/process.log`
+""",
+                encoding="utf-8",
+            )
+            with_process = dynamic_checker_probe.dynamic_checker_probe(
+                package, Path(temporary) / "with-process.json"
             )
 
-        self.assertFalse(applicability["duplicate_structure"]["applicable"])
-        self.assertFalse(applicability["missing_core_model"]["applicable"])
+        without_statuses = {
+            name: value["status"]
+            for name, value in without_process["probe_coverage"]["negative"][
+                "subcoverage"
+            ]["task_family_attacks"].items()
+        }
+        with_statuses = {
+            name: value["status"]
+            for name, value in with_process["probe_coverage"]["negative"][
+                "subcoverage"
+            ]["task_family_attacks"].items()
+        }
+        self.assertEqual(with_statuses, without_statuses)
+        self.assertEqual(with_statuses["duplicate_structure"], "ASSESSED")
+        self.assertEqual(with_statuses["missing_core_model"], "ASSESSED")
+
+    def test_process_label_cannot_downgrade_load_bearing_core_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "instruction.md").write_text(
+                """
+### Step 1: Build the complete predictive model
+- Role: process
+- Action: Return the complete predictive model.
+- Evidence: `/app/outputs/predictive_model.bin`
+
+### Step 2: Return the full crystal structure
+- Role: process_evidence
+- Action: Return the full crystal structure.
+- Evidence: `/app/outputs/crystal_structure.cif`
+
+### Step 3: Save the audit log
+- Role: process
+- Action: Save an intermediate audit log.
+- Evidence: `/app/outputs/process.log`
+""",
+                encoding="utf-8",
+            )
+            static = audit_package.static_audit(
+                package, Path(temporary) / "static.json"
+            )
+
+        contract_map = static["contract_map"]
         self.assertEqual(
             contract_map["process_evidence"],
-            ["process_model.json", "process_structure.cif"],
+            ["process.log"],
         )
-        self.assertNotIn("process_model.json", contract_map["core_outputs"])
-        self.assertNotIn("process_structure.cif", contract_map["core_outputs"])
+        self.assertEqual(
+            contract_map["core_outputs"],
+            ["crystal_structure.cif", "predictive_model.bin"],
+        )
+        self.assertEqual(
+            [
+                requirement["classification"]
+                for requirement in contract_map["requirements"]
+            ],
+            ["UNCLASSIFIED", "UNCLASSIFIED", "PROCESS_ONLY"],
+        )
+        finding_codes = {item["code"] for item in static["issues"]}
+        self.assertIn("CONTRADICTORY_OUTPUT_ROLE", finding_codes)
+        severe = [
+            item
+            for item in static["issues"]
+            if item["code"] == "CHECKER_CORE_TASK_UNASSESSED"
+        ]
+        self.assertTrue(all(item["severity"] == "FATAL" for item in severe))
+        messages = " ".join(item["message"] for item in severe)
+        self.assertIn("predictive_model.bin", messages)
+        self.assertIn("crystal_structure.cif", messages)
+        self.assertNotIn("process.log", messages)
 
     def test_missing_harbor_verifier_entrypoint_skips_direct_probes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

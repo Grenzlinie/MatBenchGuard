@@ -1588,6 +1588,7 @@ def synthesize_report(
             "load_bearing_outputs": [],
             "core_outputs": [],
             "unclassified_outputs": [],
+            "role_conflicts": [],
             "checker_analysis": {},
         },
     )))
@@ -2259,6 +2260,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or not isinstance(contract_map.get("scored_outputs"), list)
         or not isinstance(contract_map.get("load_bearing_outputs"), list)
         or not isinstance(contract_map.get("core_outputs"), list)
+        or not isinstance(contract_map.get("role_conflicts"), list)
         or not isinstance(contract_map.get("checker_analysis"), dict)
     ):
         raise ValueError("invalid instruction-to-checker contract map")

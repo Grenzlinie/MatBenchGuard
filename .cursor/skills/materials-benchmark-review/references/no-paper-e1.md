@@ -30,15 +30,20 @@ These are the only top-level classes. Task-family materials attacks are named
 cases and subcoverage within negative/discrimination, with explicit status and
 provenance.
 
+Task-family applicability is the stable union of core scientific requirements,
+classified core output names, and grading-spec scored outputs. Filter
+process-only requirement text; never use it to suppress grading-spec outputs.
+
 An Oracle pass proves only that a positive checker path exists. It does not
 prove scientific correctness or Gold provenance.
 
 Process artifacts are recorded only in the contract map. They are never
 checker targets, dynamic probes, deductions, gates, or anti-hacking traces.
-Explicitly core/scored/final complete models, structures, trajectories,
-prediction fields, and meshes are core outputs; uncertain roles stay
-`UNCLASSIFIED`, while explicit process-only roles cannot activate attacks or
-findings. An ignored core output is a severe checker-core finding.
+Complete/full models, structures, trajectories, prediction fields, and meshes
+remain core outputs when mislabeled process. Escalate the contradictory role
+as `UNCLASSIFIED` without removing core checker analysis. Only non-load-bearing
+logs and intermediate audit artifacts are process-only. An ignored core output
+is a severe checker-core finding.
 
 ## Escalate to paper
 

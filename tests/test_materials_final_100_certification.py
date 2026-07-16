@@ -209,6 +209,7 @@ def write_evidence_pass_batch(batch: Path) -> None:
         "scored_outputs": ["result.json"],
         "load_bearing_outputs": ["result.json"],
         "core_outputs": ["result.json"],
+        "role_conflicts": [],
         "checker_analysis": {
             "outputs": [
                 {

@@ -51,10 +51,10 @@ The mapping has three output roles:
 
 Process artifacts remain contract-map-only: never checker targets, weighted
 components, deductions, gates, probes, or anti-hacking traces. Complete/full
-models, structures, trajectories, fields, and meshes are core when declared
-core/scored/final or when no explicit role contradicts that classification.
-Process-only takes precedence; uncertainty remains `UNCLASSIFIED`. Ignored or
-existence-only core output is severe `CHECKER_CORE_TASK_UNASSESSED`.
+models, structures, trajectories, fields, and meshes are core
+even when mislabeled process. Record the contradiction as `UNCLASSIFIED`, but
+retain core checker analysis. Only non-load-bearing logs/intermediates are
+process-only. Ignored core output is severe `CHECKER_CORE_TASK_UNASSESSED`.
 
 For every `scored_output`, record whether the checker:
 

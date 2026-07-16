@@ -70,11 +70,10 @@ workflow requirement:
 `instruction requirement → Agent work → core output → checker read → checker
 score`.
 
-An explicitly process/intermediate/diagnostic output is process-only even when
-nearby prose mentions a model or structure. Complete/full models, structures,
-trajectories, prediction fields, and meshes are core only when explicitly
-core/scored/final or when no explicit role contradicts the conservative
-classification. Uncertain roles remain `UNCLASSIFIED`. Process artifacts are contract-map-only:
+Complete/full models, structures, trajectories, prediction fields, and meshes
+remain core despite a contradictory process annotation; escalate the role as
+`UNCLASSIFIED` while retaining core checker analysis. Only non-load-bearing
+audit/log/intermediate outputs are process-only. Process artifacts are contract-map-only:
 they are never checker targets, weighted components, deductions, gates, or
 dynamic probes. Do not emit `PROCESS_EVIDENCE_NOT_VERIFIED` or run an
 anti-hacking trace.

@@ -43,12 +43,12 @@ absence from `output_contract`, lack of checker reads, or lack of validation
 cannot affect score, gate, route, or verdict. Do not run an anti-hacking trace
 or emit `PROCESS_EVIDENCE_NOT_VERIFIED`.
 
-A complete/full model, structure, trajectory, prediction field, or mesh is a
-core output when explicitly core/scored/final or when no explicit role
-contradicts that conservative classification. Explicit process-only roles
-cannot activate checker findings or probes; uncertain roles remain
-`UNCLASSIFIED`. Ignoring a classified core output or checking only file
-existence is `CHECKER_CORE_TASK_UNASSESSED`.
+A complete/full model, structure, trajectory, prediction field, or mesh stays
+core even when a process annotation contradicts its scientific semantics.
+Record that contradiction as `UNCLASSIFIED` while retaining core checker
+analysis. Only non-load-bearing audit/log/intermediate artifacts are
+process-only. Ignoring a core output or checking only file existence is
+`CHECKER_CORE_TASK_UNASSESSED`.
 
 ## Checker runtime
 

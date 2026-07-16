@@ -601,27 +601,43 @@ def task_family_applicability(
         encoding="utf-8", errors="replace"
     )
     contract_map = instruction_contract_map(instruction)
-    core_outputs = set(contract_map.get("core_outputs", []))
     core_requirements = [
         requirement
         for requirement in contract_map.get("requirements", [])
-        if requirement.get("classification") == "CORE_OUTPUT"
+        if any(
+            declaration.get("role_classification") == "CORE_OUTPUT"
+            for declaration in requirement.get("evidence", [])
+        )
     ]
-    output_contracts = [
+    grading_outputs = [
         output
         for output in (
             (specification.get("output_contract", {}) or {}).get("outputs", [])
             or []
         )
-        if (
-            basename(output.get("file")) in core_outputs
-            or not contract_map.get("requirements")
+        if not str(output.get("purpose") or "").lower().startswith(
+            ("process", "intermediate", "diagnostic")
         )
     ]
+    grading_outputs.extend(
+        {
+            "file": basename(step.get("output_file")),
+            "step_id": step.get("id"),
+            "weight": step.get("weight"),
+        }
+        for step in grading_steps(specification)
+        if basename(step.get("output_file"))
+        and step.get("weight", 1) != 0
+    )
     context = (
         json.dumps(core_requirements, ensure_ascii=False)
         + "\n"
-        + json.dumps(output_contracts, ensure_ascii=False)
+        + json.dumps(
+            sorted(contract_map.get("core_outputs", [])),
+            ensure_ascii=False,
+        )
+        + "\n"
+        + json.dumps(grading_outputs, ensure_ascii=False)
     ).lower()
     specialized = {
         "element_or_phase_error": (

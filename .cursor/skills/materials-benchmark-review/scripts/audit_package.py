@@ -102,6 +102,7 @@ LOAD_BEARING_ARTIFACTS = (
     "crystal structure",
     "mesh",
     "model",
+    "prediction artifact",
     "prediction field",
     "predictive field",
     "structure",
@@ -138,6 +139,8 @@ def has_term(text: str, term: str) -> bool:
 def _classify_declaration_role(
     requirement: dict[str, Any], declaration: dict[str, Any]
 ) -> str:
+    if _is_load_bearing_artifact(requirement, declaration):
+        return "CORE_OUTPUT"
     role = re.sub(
         r"[\s-]+",
         "_",
@@ -159,21 +162,7 @@ def _classify_declaration_role(
         return "PROCESS_ONLY"
     if declaration.get("kind") == "scored_output":
         return "CORE_OUTPUT"
-    context = " ".join(
-        str(requirement.get(key) or "")
-        for key in ("title", "agent_work")
-    )
-    context += " " + str(declaration.get("quote") or "")
-    lowered = context.lower()
-    complete_artifact = any(
-        re.search(
-            rf"\b(?:complete|full)\b(?:\s+[a-z0-9_-]+){{0,4}}\s+"
-            rf"{re.escape(artifact)}\b",
-            lowered,
-        )
-        for artifact in LOAD_BEARING_ARTIFACTS
-    )
-    return "CORE_OUTPUT" if complete_artifact else "UNCLASSIFIED"
+    return "UNCLASSIFIED"
 
 
 def _is_load_bearing_artifact(
@@ -185,7 +174,35 @@ def _is_load_bearing_artifact(
     )
     context += " " + str(declaration.get("quote") or "")
     lowered = context.lower()
-    return any(artifact in lowered for artifact in LOAD_BEARING_ARTIFACTS)
+    return any(
+        re.search(
+            rf"\b(?:complete|full|load-bearing)\b"
+            rf"(?:\s+[a-z0-9_-]+){{0,4}}\s+{re.escape(artifact)}\b",
+            lowered,
+        )
+        for artifact in LOAD_BEARING_ARTIFACTS
+    )
+
+
+def _has_process_annotation(
+    requirement: dict[str, Any], declaration: dict[str, Any]
+) -> bool:
+    role = re.sub(
+        r"[\s-]+",
+        "_",
+        str(requirement.get("role") or "").strip().lower(),
+    )
+    core_role = any(
+        role == name or role.startswith(name + "_")
+        for name in CORE_ROLE_NAMES
+    )
+    process_role = any(
+        role == name or role.startswith(name + "_")
+        for name in PROCESS_ROLE_NAMES
+    )
+    return process_role or (
+        not core_role and declaration.get("kind") == "process_evidence"
+    )
 
 
 def materials_prescreen(text: str) -> dict[str, Any]:
@@ -322,27 +339,58 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
     process_evidence: list[str] = []
     scored_outputs: list[str] = []
     load_bearing_outputs: list[str] = []
+    role_conflicts: list[dict[str, Any]] = []
     for requirement in requirements:
         declaration_roles: list[str] = []
+        requirement_conflict = False
         for declaration in requirement["evidence"]:
             output_name = declaration["file"]
+            load_bearing = _is_load_bearing_artifact(
+                requirement, declaration
+            )
             role_classification = _classify_declaration_role(
                 requirement, declaration
             )
             declaration["role_classification"] = role_classification
+            if load_bearing and _has_process_annotation(
+                requirement, declaration
+            ):
+                requirement_conflict = True
+                declaration["annotation_conflict"] = (
+                    "PROCESS_ANNOTATION_CONTRADICTS_CORE_SEMANTICS"
+                )
+                role_conflicts.append(
+                    {
+                        "file": output_name,
+                        "line": declaration["line"],
+                        "quote": declaration["quote"],
+                        "declared_role": requirement.get("role"),
+                        "resolved_role": "CORE_OUTPUT",
+                        "semantic_context": {
+                            "title": requirement.get("title"),
+                            "agent_work": requirement.get("agent_work"),
+                        },
+                    }
+                )
             declaration_roles.append(role_classification)
             if role_classification == "CORE_OUTPUT":
                 _append_unique(scored_outputs, output_name)
-                if _is_load_bearing_artifact(requirement, declaration):
+                if load_bearing:
                     _append_unique(load_bearing_outputs, output_name)
             elif role_classification == "PROCESS_ONLY":
                 _append_unique(process_evidence, output_name)
-        requirement["classification"] = (
-            declaration_roles[0]
-            if declaration_roles
-            and all(item == declaration_roles[0] for item in declaration_roles)
-            else "UNCLASSIFIED"
-        )
+        if requirement_conflict:
+            requirement["classification"] = "UNCLASSIFIED"
+        else:
+            requirement["classification"] = (
+                declaration_roles[0]
+                if declaration_roles
+                and all(
+                    item == declaration_roles[0]
+                    for item in declaration_roles
+                )
+                else "UNCLASSIFIED"
+            )
     unclassified = [
         name
         for name in all_outputs
@@ -360,6 +408,7 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
             set(scored_outputs) | set(load_bearing_outputs)
         ),
         "unclassified_outputs": sorted(unclassified),
+        "role_conflicts": role_conflicts,
     }
 
 
@@ -1294,6 +1343,21 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         role_values.get("tests/grading_spec.json", {}), issues
     )
     contract_map = instruction_contract_map(instruction)
+    if contract_map["role_conflicts"]:
+        add_issue(
+            issues,
+            "HIGH",
+            "CONTRADICTORY_OUTPUT_ROLE",
+            "process annotations contradict load-bearing core-output semantics: "
+            + ", ".join(
+                sorted(
+                    conflict["file"]
+                    for conflict in contract_map["role_conflicts"]
+                )
+            ),
+            {"role_conflicts": contract_map["role_conflicts"]},
+            ["instruction.md"],
+        )
     qualification = materials_prescreen(instruction)
     if qualification["classification"] in {"NON_MAT", "AMBIGUOUS"}:
         add_issue(
