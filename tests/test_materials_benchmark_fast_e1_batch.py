@@ -383,7 +383,11 @@ class FastE1BatchTests(unittest.TestCase):
             self.assertFalse(index["solution_content_inspected"])
             self.assertEqual(index["counts"]["screened"], 1)
             self.assertEqual(
-                index["records"][0]["state"], "E1_USABLE_CANDIDATE"
+                index["records"][0]["state"], "E1_EXCLUDED"
+            )
+            self.assertIn(
+                "PAPER_GROUNDED_STAGE_REQUIRED",
+                index["records"][0]["exclusion_reasons"],
             )
             self.assertEqual(
                 manifest["manifest_role"], "AUTHORITATIVE_SAMPLE_IDENTITY"
@@ -810,6 +814,18 @@ class FastE1BatchTests(unittest.TestCase):
             self.assertEqual(
                 record["paper_grounded_status"],
                 report["paper_consistency"]["status"],
+            )
+            self.assertEqual(
+                report["audit_binding"]["parent_audit_id"],
+                record["evidence"]["stage_binding"]["no_paper_audit_id"],
+            )
+            self.assertEqual(
+                record["evidence"]["stage_binding"]["paper_grounded_audit_id"],
+                report["audit_id"],
+            )
+            self.assertEqual(
+                record["evidence"]["stage_binding"]["status"],
+                "PAPER_GROUNDED_BOUND_TO_NO_PAPER",
             )
 
     def test_resume_does_not_review_completed_package_again(self) -> None:

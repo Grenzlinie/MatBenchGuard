@@ -6,13 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
 sys.dont_write_bytecode = True
 
 from audit_package import static_audit
-from dynamic_checker_probe import dynamic_checker_probe
+from dynamic_checker_probe import TASK_FAMILY_ATTACKS, dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
     AUTHORITATIVE_EXECUTION_LEVEL,
@@ -243,38 +244,9 @@ def validate_taxonomy_evidence(
     return normalized
 
 
-def validate_agent_assessment(
-    root: Path, path: Path, paper_mode: str
-) -> dict[str, Any]:
-    resolved_path = path.expanduser().resolve()
-    if resolved_path.is_relative_to(root.resolve()):
-        raise ValueError(
-            "agent assessment must be outside the Harbor 题包"
-        )
-    if not resolved_path.is_file():
-        raise FileNotFoundError(
-            f"agent assessment is missing: {resolved_path}"
-        )
-    assessment = read_json(resolved_path)
-    if not isinstance(assessment, dict):
-        raise ValueError("agent assessment must be an object")
-    taxonomy = read_json(
-        skill_root() / "references/materials-taxonomy.json"
-    )
-    normalized_taxonomy = validate_taxonomy_labels(
-        assessment.get("taxonomy"), taxonomy
-    )
-    normalized: dict[str, Any] = {
-        "schema_version": "0.1",
-        "taxonomy": normalized_taxonomy,
-        "taxonomy_evidence": validate_taxonomy_evidence(
-            root,
-            assessment.get("taxonomy_evidence"),
-            normalized_taxonomy,
-        ),
-        "taxonomy_source": taxonomy["source"],
-    }
-    qualification = assessment.get("materials_qualification")
+def validate_materials_qualification(
+    root: Path, qualification: Any
+) -> dict[str, Any] | None:
     if qualification is not None:
         if not isinstance(qualification, dict):
             raise ValueError("materials_qualification must be an object")
@@ -326,12 +298,51 @@ def validate_agent_assessment(
                 "materials_qualification is missing evidence for: "
                 + ", ".join(missing_axes)
             )
-        normalized["materials_qualification"] = {
+        return {
             "classification": classification,
             "rationale": rationale,
             "evidence": normalized_evidence,
             "authoritative": True,
         }
+    return None
+
+
+def validate_agent_assessment(
+    root: Path, path: Path, paper_mode: str
+) -> dict[str, Any]:
+    resolved_path = path.expanduser().resolve()
+    if resolved_path.is_relative_to(root.resolve()):
+        raise ValueError(
+            "agent assessment must be outside the Harbor 题包"
+        )
+    if not resolved_path.is_file():
+        raise FileNotFoundError(
+            f"agent assessment is missing: {resolved_path}"
+        )
+    assessment = read_json(resolved_path)
+    if not isinstance(assessment, dict):
+        raise ValueError("agent assessment must be an object")
+    taxonomy = read_json(
+        skill_root() / "references/materials-taxonomy.json"
+    )
+    normalized_taxonomy = validate_taxonomy_labels(
+        assessment.get("taxonomy"), taxonomy
+    )
+    normalized: dict[str, Any] = {
+        "schema_version": "0.1",
+        "taxonomy": normalized_taxonomy,
+        "taxonomy_evidence": validate_taxonomy_evidence(
+            root,
+            assessment.get("taxonomy_evidence"),
+            normalized_taxonomy,
+        ),
+        "taxonomy_source": taxonomy["source"],
+    }
+    qualification = validate_materials_qualification(
+        root, assessment.get("materials_qualification")
+    )
+    if qualification is not None:
+        normalized["materials_qualification"] = qualification
     if paper_mode == "no_paper":
         adjudication = assessment.get("paper_trigger_adjudication")
         if not isinstance(adjudication, list) or {
@@ -594,6 +605,12 @@ def checker_skipped_by_static_gate(
         "tests": [],
         "findings": [],
         "usable_reward_count": 0,
+        "runtime_provenance": {
+            "status": "NOT_ASSESSABLE",
+            "entrypoint": "tests/test.sh",
+            "reason": reason,
+            "cases_executed": 0,
+        },
         "probe_coverage": {
             probe_class: {
                 "status": (
@@ -624,7 +641,7 @@ def checker_skipped_by_static_gate(
                 **(
                     {
                         "files": {},
-                            "instrumentation": "NONE",
+                        "instrumentation": "NONE",
                     }
                     if probe_class == "process_evidence"
                     else {}
@@ -636,12 +653,26 @@ def checker_skipped_by_static_gate(
                 "discrimination",
                 "equivalence",
                 "component_isolation",
-                "process_evidence",
             )
         },
         "limitations": [
             "E1 checker probes were skipped because the checker contract was not runnable."
         ],
+    }
+    result["probe_coverage"]["negative"]["subcoverage"] = {
+        "task_family_attacks": {
+            attack: {
+                "status": "NOT_ASSESSABLE",
+                "reason": reason,
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                    "cases": [],
+                    "modes": [],
+                },
+            }
+            for attack in TASK_FAMILY_ATTACKS
+        }
     }
     output.write_text(
         json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -676,6 +707,39 @@ def resources_skipped_by_static_gate(
     return result
 
 
+def pre_paper_hard_gate_codes(
+    static_result: dict[str, Any],
+    resource_result: dict[str, Any],
+    materials_qualification: dict[str, Any] | None,
+) -> list[str]:
+    codes = {
+        issue.get("code")
+        for issue in static_result.get("issues", [])
+        if issue.get("code")
+        in {
+            "UNRECOVERABLE_TASK_DEFINITION",
+            "CHECKER_CORE_TASK_UNASSESSED",
+        }
+    }
+    codes.update(
+        finding.get("code")
+        for finding in resource_result.get("findings", [])
+        if finding.get("code") == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+    )
+    if (
+        materials_qualification is not None
+        and materials_qualification.get("classification") == "NON_MAT"
+    ):
+        codes.add("NON_MATERIALS_TASK")
+    ordered = (
+        "NON_MATERIALS_TASK",
+        "UNRECOVERABLE_TASK_DEFINITION",
+        "CHECKER_CORE_TASK_UNASSESSED",
+        "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+    )
+    return [code for code in ordered if code in codes]
+
+
 def run_review(
     input_path: Path,
     known_valid_output: Path | None,
@@ -696,6 +760,53 @@ def run_review(
             "E2/E3/E4 execution plans are not part of the authoritative E1 workflow"
         )
     root = locate_root(input_path)
+    if paper_mode == "auto":
+        paper_mode = "no_paper"
+        if agent_assessment_path is not None:
+            candidate = read_json(
+                agent_assessment_path.expanduser().resolve()
+            )
+            if (
+                isinstance(candidate, dict)
+                and isinstance(candidate.get("dimensions"), dict)
+                and candidate.get("paper_triggers")
+            ):
+                paper_mode = "paper_grounded"
+    preflight_hard_gate_codes: list[str] = []
+    preflight_qualification: dict[str, Any] | None = None
+    if paper_mode == "paper_grounded":
+        with tempfile.TemporaryDirectory(
+            prefix="materials_no_paper_preflight_"
+        ) as temporary:
+            preflight_dir = Path(temporary)
+            preflight_static = static_audit(
+                root, preflight_dir / "audit_static.json"
+            )
+            preflight_resources = probe_resources(
+                root,
+                preflight_dir / "resource_checks.json",
+                timeout=resource_timeout,
+                allow_private_network=allow_private_network,
+            )
+        preflight_hard_gate_codes = pre_paper_hard_gate_codes(
+            preflight_static, preflight_resources, None
+        )
+        if agent_assessment_path is not None and not preflight_hard_gate_codes:
+            raw_assessment = read_json(
+                agent_assessment_path.expanduser().resolve()
+            )
+            if not isinstance(raw_assessment, dict):
+                raise ValueError("agent assessment must be an object")
+            preflight_qualification = validate_materials_qualification(
+                root, raw_assessment.get("materials_qualification")
+            )
+            preflight_hard_gate_codes = pre_paper_hard_gate_codes(
+                preflight_static,
+                preflight_resources,
+                preflight_qualification,
+            )
+        if preflight_hard_gate_codes:
+            paper_mode = "no_paper"
     context = prepare_workspace(root, paper_mode, execution_level)
     temp_dir = Path(context["audit_temp_dir"])
     static_result = static_audit(
@@ -722,7 +833,9 @@ def run_review(
             root,
             temp_dir / "checker_tests.json",
             reason=(
-                "REQUIRED_CHECKER_MISSING_OR_UNPARSEABLE"
+                "HARBOR_VERIFIER_ENTRYPOINT_MISSING"
+                if static_result["parse_status"].get("tests/test.sh") != "ok"
+                else "REQUIRED_CHECKER_MISSING_OR_UNPARSEABLE"
                 if not checker_ready
                 else "STATIC_FATAL_GATE"
             ),
@@ -754,10 +867,46 @@ def run_review(
     }
     agent_assessment: dict[str, Any] | None = None
     paper_skip_reason: str | None = None
-    if paper_mode == "paper_grounded" and static_fatal:
+    hard_gate_codes = pre_paper_hard_gate_codes(
+        static_result, resource_result, preflight_qualification
+    )
+    if (
+        agent_assessment_path is not None
+        and preflight_qualification is None
+        and not preflight_hard_gate_codes
+        and not (paper_mode == "paper_grounded" and hard_gate_codes)
+    ):
+        raw_assessment = read_json(agent_assessment_path.expanduser().resolve())
+        if not isinstance(raw_assessment, dict):
+            raise ValueError("agent assessment must be an object")
+        preflight_qualification = validate_materials_qualification(
+            root, raw_assessment.get("materials_qualification")
+        )
+        hard_gate_codes = pre_paper_hard_gate_codes(
+            static_result, resource_result, preflight_qualification
+        )
+    if preflight_hard_gate_codes or (
+        paper_mode == "paper_grounded" and hard_gate_codes
+    ):
+        if preflight_qualification is not None:
+            agent_assessment = {
+                "materials_qualification": preflight_qualification,
+                "taxonomy": {
+                    "computation_task": [],
+                    "research_domain": [],
+                    "material_system": {
+                        "primary": None,
+                        "secondary": [],
+                    },
+                },
+                "taxonomy_source": None,
+                "taxonomy_evidence": [],
+            }
         paper_skip_reason = (
             "Paper-grounded review was skipped because the no-paper E1 "
-            "stage triggered an unrecoverable Hard gate."
+            "stage triggered a Hard Gate: "
+            + ", ".join(hard_gate_codes)
+            + "."
         )
     elif agent_assessment_path is not None:
         agent_assessment = validate_agent_assessment(
@@ -796,8 +945,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("input", help="Harbor 题包 directory")
     parser.add_argument(
         "--paper-mode",
-        choices=["no_paper", "paper_grounded"],
-        default="no_paper",
+        choices=["auto", "no_paper", "paper_grounded"],
+        default="auto",
     )
     parser.add_argument(
         "--execution-level",

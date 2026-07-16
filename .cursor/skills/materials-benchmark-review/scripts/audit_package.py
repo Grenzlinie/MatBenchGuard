@@ -83,6 +83,31 @@ MATERIAL_TERMS = {
         "dispersion curve",
     ),
 }
+CORE_ROLE_NAMES = {
+    "core",
+    "core_output",
+    "final",
+    "final_output",
+    "scored",
+    "scored_output",
+}
+PROCESS_ROLE_NAMES = {
+    "diagnostic",
+    "intermediate",
+    "process",
+    "process_artifact",
+    "process_evidence",
+}
+LOAD_BEARING_ARTIFACTS = (
+    "crystal structure",
+    "mesh",
+    "model",
+    "prediction artifact",
+    "prediction field",
+    "predictive field",
+    "structure",
+    "trajectory",
+)
 
 
 def read_json(path: Path) -> Any:
@@ -108,6 +133,75 @@ def has_term(text: str, term: str) -> bool:
             r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", text
         )
         is not None
+    )
+
+
+def _classify_declaration_role(
+    requirement: dict[str, Any], declaration: dict[str, Any]
+) -> str:
+    if _is_load_bearing_artifact(requirement, declaration):
+        return "CORE_OUTPUT"
+    role = re.sub(
+        r"[\s-]+",
+        "_",
+        str(requirement.get("role") or "").strip().lower(),
+    )
+    if any(
+        role == name or role.startswith(name + "_")
+        for name in PROCESS_ROLE_NAMES
+    ):
+        return "PROCESS_ONLY"
+    if any(
+        role == name or role.startswith(name + "_")
+        for name in CORE_ROLE_NAMES
+    ):
+        return "CORE_OUTPUT"
+    if role:
+        return "UNCLASSIFIED"
+    if declaration.get("kind") == "process_evidence":
+        return "PROCESS_ONLY"
+    if declaration.get("kind") == "scored_output":
+        return "CORE_OUTPUT"
+    return "UNCLASSIFIED"
+
+
+def _is_load_bearing_artifact(
+    requirement: dict[str, Any], declaration: dict[str, Any]
+) -> bool:
+    context = " ".join(
+        str(requirement.get(key) or "")
+        for key in ("title", "agent_work")
+    )
+    context += " " + str(declaration.get("quote") or "")
+    lowered = context.lower()
+    return any(
+        re.search(
+            rf"\b(?:complete|full|load-bearing)\b"
+            rf"(?:\s+[a-z0-9_-]+){{0,4}}\s+{re.escape(artifact)}\b",
+            lowered,
+        )
+        for artifact in LOAD_BEARING_ARTIFACTS
+    )
+
+
+def _has_process_annotation(
+    requirement: dict[str, Any], declaration: dict[str, Any]
+) -> bool:
+    role = re.sub(
+        r"[\s-]+",
+        "_",
+        str(requirement.get("role") or "").strip().lower(),
+    )
+    core_role = any(
+        role == name or role.startswith(name + "_")
+        for name in CORE_ROLE_NAMES
+    )
+    process_role = any(
+        role == name or role.startswith(name + "_")
+        for name in PROCESS_ROLE_NAMES
+    )
+    return process_role or (
+        not core_role and declaration.get("kind") == "process_evidence"
     )
 
 
@@ -192,6 +286,7 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
                 "agent_work": None,
                 "declared_outputs": [],
                 "evidence": [],
+                "classification": "UNCLASSIFIED",
             }
             continue
         if re.match(r"^#{1,6}\s+", line):
@@ -243,29 +338,77 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
     ]
     process_evidence: list[str] = []
     scored_outputs: list[str] = []
+    load_bearing_outputs: list[str] = []
+    role_conflicts: list[dict[str, Any]] = []
     for requirement in requirements:
-        role = str(requirement.get("role") or "").lower()
+        declaration_roles: list[str] = []
+        requirement_conflict = False
         for declaration in requirement["evidence"]:
             output_name = declaration["file"]
-            if role.startswith("process") or declaration["kind"] == (
-                "process_evidence"
+            load_bearing = _is_load_bearing_artifact(
+                requirement, declaration
+            )
+            role_classification = _classify_declaration_role(
+                requirement, declaration
+            )
+            declaration["role_classification"] = role_classification
+            if load_bearing and _has_process_annotation(
+                requirement, declaration
             ):
-                _append_unique(process_evidence, output_name)
-            elif role.startswith("scored") or declaration["kind"] == (
-                "scored_output"
-            ):
+                requirement_conflict = True
+                declaration["annotation_conflict"] = (
+                    "PROCESS_ANNOTATION_CONTRADICTS_CORE_SEMANTICS"
+                )
+                role_conflicts.append(
+                    {
+                        "file": output_name,
+                        "line": declaration["line"],
+                        "quote": declaration["quote"],
+                        "declared_role": requirement.get("role"),
+                        "resolved_role": "CORE_OUTPUT",
+                        "semantic_context": {
+                            "title": requirement.get("title"),
+                            "agent_work": requirement.get("agent_work"),
+                        },
+                    }
+                )
+            declaration_roles.append(role_classification)
+            if role_classification == "CORE_OUTPUT":
                 _append_unique(scored_outputs, output_name)
+                if load_bearing:
+                    _append_unique(load_bearing_outputs, output_name)
+            elif role_classification == "PROCESS_ONLY":
+                _append_unique(process_evidence, output_name)
+        if requirement_conflict:
+            requirement["classification"] = "UNCLASSIFIED"
+        else:
+            requirement["classification"] = (
+                declaration_roles[0]
+                if declaration_roles
+                and all(
+                    item == declaration_roles[0]
+                    for item in declaration_roles
+                )
+                else "UNCLASSIFIED"
+            )
     unclassified = [
         name
         for name in all_outputs
-        if name not in process_evidence and name not in scored_outputs
+        if name not in process_evidence
+        and name not in scored_outputs
+        and name not in load_bearing_outputs
     ]
     return {
         "requirements": requirements,
         "instruction_outputs": sorted(all_outputs),
         "process_evidence": sorted(process_evidence),
         "scored_outputs": sorted(scored_outputs),
+        "load_bearing_outputs": sorted(load_bearing_outputs),
+        "core_outputs": sorted(
+            set(scored_outputs) | set(load_bearing_outputs)
+        ),
         "unclassified_outputs": sorted(unclassified),
+        "role_conflicts": role_conflicts,
     }
 
 
@@ -590,6 +733,14 @@ def checker_contract_analysis(
         )
 
     grading_steps = specification.get("steps", []) or []
+    process_outputs = set(contract_map.get("process_evidence", []))
+    core_outputs = set(contract_map.get("core_outputs", []))
+    grading_steps = [
+        step
+        for step in grading_steps
+        if basename(step.get("output_file")) not in process_outputs
+        or basename(step.get("output_file")) in core_outputs
+    ]
     scorer_registry_present = scorer_registry_declared
     grading_by_file = {
         basename(step.get("output_file")): step
@@ -721,6 +872,57 @@ def checker_contract_analysis(
             }
         )
 
+    semantic_validation: dict[str, str] = {}
+    for output in outputs:
+        output_name = output["file"]
+        if output_name not in core_outputs:
+            continue
+        read_status = output["checker_reads"]
+        if not analysis_available or parse_error is not None:
+            status = "UNKNOWN_CHECKER_UNAVAILABLE"
+        elif not grading_steps and not contract_items:
+            status = "UNKNOWN_GRADING_CONTRACT_UNAVAILABLE"
+        elif read_status == "STATIC_FILENAME_REFERENCE_ONLY":
+            existence_pattern = re.compile(
+                rf"(?:exists|isfile|stat|access)[^\n]*"
+                rf"{re.escape(output_name)}|"
+                rf"{re.escape(output_name)}[^\n]*"
+                rf"(?:exists|isfile|stat|access)",
+                re.IGNORECASE,
+            )
+            status = (
+                "EXISTENCE_ONLY"
+                if existence_pattern.search(checker_source)
+                else "STATIC_INDIRECT_REFERENCE_CANDIDATE"
+            )
+        elif read_status in {
+            "STATIC_GENERIC_LOADER_CANDIDATE",
+            "STATIC_EXPLICIT_READ_CANDIDATE",
+        }:
+            status = "STATIC_CONTENT_READ_CANDIDATE"
+        elif read_status == "UNKNOWN_NOT_ESTABLISHED":
+            status = "NOT_REFERENCED"
+        elif read_status == "UNKNOWN_CHECKER_MISSING":
+            status = "NOT_REFERENCED"
+        else:
+            status = "REFERENCE_ONLY"
+        semantic_validation[output_name] = status
+        output["semantic_validation"] = status
+        if status in {"NOT_REFERENCED", "EXISTENCE_ONLY"}:
+            add_issue(
+                issues,
+                "FATAL",
+                "CHECKER_CORE_TASK_UNASSESSED",
+                "load-bearing core output is ignored or only checked for "
+                f"existence: {output_name}",
+                {
+                    "output": output_name,
+                    "semantic_validation": status,
+                    "role": "core_output",
+                },
+                ["instruction.md", "tests/checker.py", "tests/grading_spec.json"],
+            )
+
     missing_bindings = [
         str(step.get("id") or basename(step.get("output_file")))
         for step in grading_steps
@@ -760,6 +962,7 @@ def checker_contract_analysis(
         "outputs": outputs,
         "scorer_bindings": scorer_bindings,
         "scorer_status": function_status,
+        "semantic_validation": semantic_validation,
         "all_scoring_items_source_bound": bool(
             analysis_available
             and parse_error is None
@@ -968,7 +1171,12 @@ def cross_file_checks(
     }
     contract_map = contract_map or instruction_contract_map(instruction)
     process_evidence = set(contract_map["process_evidence"])
-    instruction_outputs = set(contract_map["instruction_outputs"]) - process_evidence
+    core_outputs = set(contract_map.get("core_outputs", []))
+    instruction_outputs = (
+        set(contract_map["instruction_outputs"])
+        - process_evidence
+        - core_outputs
+    )
     checker_outputs = {
         item.get("file"): item
         for item in (
@@ -977,28 +1185,10 @@ def cross_file_checks(
             else []
         )
     }
-    process_evidence_status: dict[str, str] = {}
-    for name in sorted(process_evidence):
-        read_status = checker_outputs.get(name, {}).get(
-            "checker_reads", "UNKNOWN_NOT_ESTABLISHED"
-        )
-        if read_status in {
-            "STATIC_GENERIC_LOADER_CANDIDATE",
-            "STATIC_EXPLICIT_READ_CANDIDATE",
-        }:
-            status = "CANDIDATE_READ_NOT_RUNTIME_PROVEN"
-        elif read_status == "STATIC_FILENAME_REFERENCE_ONLY":
-            status = "STATIC_REFERENCE_ONLY"
-        elif read_status in {
-            "DYNAMIC_NOT_VERIFIED",
-            "PROVEN_NOT_READ",
-        }:
-            status = "NOT_VERIFIED"
-        else:
-            status = "UNKNOWN"
-        process_evidence_status[name] = status
-    unverified_process_evidence: set[str] = set()
-    for name in sorted(step_outputs - contract_outputs):
+    process_evidence_status = {
+        name: "CONTRACT_MAP_ONLY" for name in sorted(process_evidence)
+    }
+    for name in sorted(step_outputs - contract_outputs - process_evidence):
         add_issue(
             issues,
             "HIGH",
@@ -1006,7 +1196,7 @@ def cross_file_checks(
             f"workflow output is absent from output contract: {name}",
             affected_files=["steps.json", "tests/grading_spec.json"],
         )
-    for name in sorted(contract_outputs - grading_outputs):
+    for name in sorted(contract_outputs - grading_outputs - process_evidence):
         add_issue(
             issues,
             "HIGH",
@@ -1014,7 +1204,7 @@ def cross_file_checks(
             f"contract output is not referenced by grading steps: {name}",
             affected_files=["tests/grading_spec.json"],
         )
-    for name in sorted(step_evidence - contract_outputs):
+    for name in sorted(step_evidence - contract_outputs - process_evidence):
         add_issue(
             issues,
             "HIGH",
@@ -1037,7 +1227,7 @@ def cross_file_checks(
         "step_evidence": sorted(step_evidence),
         "process_evidence": sorted(process_evidence),
         "process_evidence_status": process_evidence_status,
-        "unverified_process_evidence": sorted(unverified_process_evidence),
+        "unverified_process_evidence": [],
         "contract_outputs": sorted(contract_outputs),
         "grading_outputs": sorted(grading_outputs),
         "instruction_outputs": sorted(contract_map["instruction_outputs"]),
@@ -1051,11 +1241,21 @@ def cross_file_checks(
 
 
 def grading_checks(
-    specification: dict[str, Any], issues: list[dict[str, Any]]
+    specification: dict[str, Any],
+    issues: list[dict[str, Any]],
+    contract_map: dict[str, Any] | None = None,
 ) -> None:
     grading_steps = (
         specification.get("steps", specification.get("checks", [])) or []
     )
+    process_evidence = set((contract_map or {}).get("process_evidence", []))
+    core_outputs = set((contract_map or {}).get("core_outputs", []))
+    grading_steps = [
+        step
+        for step in grading_steps
+        if basename(step.get("output_file")) not in process_evidence
+        or basename(step.get("output_file")) in core_outputs
+    ]
     weights: list[float] = []
     for step in grading_steps:
         try:
@@ -1113,6 +1313,41 @@ def grading_checks(
         )
 
 
+def gold_provenance_analysis(
+    specification: dict[str, Any],
+    checker_source: str,
+    contract_map: dict[str, Any],
+) -> dict[str, Any]:
+    outputs = sorted(
+        {
+            basename(item.get("file"))
+            for item in (
+                (specification.get("output_contract", {}) or {}).get(
+                    "outputs", []
+                )
+                or []
+            )
+            if basename(item.get("file"))
+        }
+        | set(contract_map.get("core_outputs", []))
+    )
+    return {
+        "status": "NOT_ASSESSABLE",
+        "mode": "no_paper",
+        "reason": (
+            "No independent Gold source is available within the no-paper "
+            "instruction/tests evidence boundary."
+        ),
+        "outputs": outputs,
+        "oracle_used": False,
+        "provenance": {
+            "source_kind": "NONE",
+            "independent": False,
+            "checker_source_inspected": bool(checker_source),
+        },
+    }
+
+
 def static_audit(root: Path, output: Path) -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
     role_values, parse_status = parse_roles(root, issues)
@@ -1121,6 +1356,21 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         role_values.get("tests/grading_spec.json", {}), issues
     )
     contract_map = instruction_contract_map(instruction)
+    if contract_map["role_conflicts"]:
+        add_issue(
+            issues,
+            "HIGH",
+            "CONTRADICTORY_OUTPUT_ROLE",
+            "process annotations contradict load-bearing core-output semantics: "
+            + ", ".join(
+                sorted(
+                    conflict["file"]
+                    for conflict in contract_map["role_conflicts"]
+                )
+            ),
+            {"role_conflicts": contract_map["role_conflicts"]},
+            ["instruction.md"],
+        )
     qualification = materials_prescreen(instruction)
     if qualification["classification"] in {"NON_MAT", "AMBIGUOUS"}:
         add_issue(
@@ -1148,8 +1398,16 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         issues,
         contract_map,
     )
+    gold_provenance = gold_provenance_analysis(
+        specification if isinstance(specification, dict) else {},
+        str(role_values.get("tests/checker.py", "")),
+        contract_map,
+    )
+    contract_map["gold_provenance"] = gold_provenance
     grading_checks(
-        specification if isinstance(specification, dict) else {}, issues
+        specification if isinstance(specification, dict) else {},
+        issues,
+        contract_map,
     )
     maximum = max(
         (SEVERITY_RANK[item["severity"]] for item in issues), default=0
@@ -1167,6 +1425,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "solution_content_inspected": False,
         "parse_status": parse_status,
         "materials_prescreen": qualification,
+        "gold_provenance": gold_provenance,
         "cross_file_sets": cross_file_sets,
         "contract_map": {
             **contract_map,
@@ -1181,7 +1440,6 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             "materials classification is lexical evidence for Agent adjudication",
             "resource reachability is not tested in this slice",
             "paper fidelity is not tested in no-paper mode",
-            "task-family-specific attacks are implemented in later slices",
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)

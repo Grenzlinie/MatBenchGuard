@@ -762,6 +762,7 @@ def validate_fresh_audit(
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
     authenticate_audit_bundle(root, report, manifest, disposition)
+    report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
     route = disposition.get("route") or report.get("summary", {}).get("disposition")

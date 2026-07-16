@@ -53,6 +53,44 @@ FORBIDDEN_FIXTURE_PARTS = {
     "benchmark_audit_history",
     ".benchmark_audit_tmp",
 }
+TASK_FAMILY_CASES = {
+    "materials_constant_or_all_zero": "constant_or_all_zero",
+    "materials_all_positive": "all_positive_or_negative",
+    "materials_all_negative": "all_positive_or_negative",
+    "materials_conflicting_records": "conflicting_or_irrelevant_records",
+    "materials_threshold_boundary": "threshold_boundary",
+    "materials_unit_error": "unit_error",
+    "materials_element_phase_error": "element_or_phase_error",
+    "materials_coordinate_lattice_error": "coordinate_or_lattice_error",
+    "materials_duplicate_structure": "duplicate_structure",
+    "materials_wrong_objective_endpoint": "wrong_objective_or_endpoint",
+    "materials_missing_core_model": "missing_core_model",
+}
+TASK_FAMILY_MODES = {
+    "materials_constant_or_all_zero": "constant_zero",
+    "materials_all_positive": "all_positive",
+    "materials_all_negative": "all_negative",
+    "materials_conflicting_records": "conflict",
+    "materials_threshold_boundary": "threshold",
+    "materials_unit_error": "unit_error",
+    "materials_element_phase_error": "element_phase_error",
+    "materials_coordinate_lattice_error": "coordinate_lattice_error",
+    "materials_duplicate_structure": "duplicate_structure",
+    "materials_wrong_objective_endpoint": "wrong_endpoint",
+    "materials_missing_core_model": "missing_core_model",
+}
+TASK_FAMILY_ATTACKS = (
+    "constant_or_all_zero",
+    "all_positive_or_negative",
+    "conflicting_or_irrelevant_records",
+    "threshold_boundary",
+    "unit_error",
+    "element_or_phase_error",
+    "coordinate_or_lattice_error",
+    "duplicate_structure",
+    "wrong_objective_or_endpoint",
+    "missing_core_model",
+)
 
 
 def configured_timeout(name: str, default: float) -> float:
@@ -93,6 +131,23 @@ def table_value(column: str, mode: str) -> Any:
         return "nan"
     if mode == "random":
         return random.uniform(-1000, 1000)
+    if mode in {"all_positive", "unit_error"}:
+        return 1000.0 if mode == "unit_error" else 1.0
+    if mode == "all_negative":
+        return -1.0
+    if mode in {
+        "constant_zero",
+        "conflict",
+        "threshold",
+        "element_phase_error",
+        "coordinate_lattice_error",
+        "wrong_endpoint",
+    }:
+        if normalized in {"element", "species", "phase", "material"}:
+            return "wrong_phase"
+        if normalized in {"x", "y", "z", "a", "b", "c", "lattice"}:
+            return 999.0
+        return 0.0
     return 0
 
 
@@ -106,6 +161,8 @@ def write_synthetic_outputs(
     for output in outputs:
         filename = basename(output.get("file"))
         if not filename:
+            continue
+        if mode == "missing_core_model":
             continue
         path = output_dir / filename
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -125,6 +182,18 @@ def write_synthetic_outputs(
                     if mode == "nonfinite"
                     else random.uniform(-1000, 1000)
                     if mode == "random"
+                    else table_value(field, mode)
+                    if mode
+                    in {
+                        "constant_zero",
+                        "all_positive",
+                        "all_negative",
+                        "threshold",
+                        "unit_error",
+                        "element_phase_error",
+                        "coordinate_lattice_error",
+                        "wrong_endpoint",
+                    }
                     else (step or {}).get("target_value", 0)
                 )
                 for field in fields
@@ -140,15 +209,43 @@ def write_synthetic_outputs(
             ]
             delimiter = "\t" if output_format == "tsv" else ","
             rows: list[dict[str, Any]] = []
-            if mode in {"random", "minimal", "nonfinite", "duplicate"}:
+            if mode in {
+                "random",
+                "minimal",
+                "nonfinite",
+                "duplicate",
+                "constant_zero",
+                "all_positive",
+                "all_negative",
+                "conflict",
+                "threshold",
+                "unit_error",
+                "element_phase_error",
+                "coordinate_lattice_error",
+                "duplicate_structure",
+                "wrong_endpoint",
+            }:
                 rows = [
                     {
                         column: table_value(column, mode)
                         for column in columns
                     }
                 ]
-                if mode == "duplicate":
+                if mode in {"duplicate", "duplicate_structure"}:
                     rows *= 2
+                elif mode == "conflict" and rows:
+                    conflicting = dict(rows[0])
+                    candidate = next(
+                        (
+                            column
+                            for column in reversed(columns)
+                            if isinstance(conflicting.get(column), (int, float))
+                        ),
+                        None,
+                    )
+                    if candidate is not None:
+                        conflicting[candidate] = 1.0
+                    rows.append(conflicting)
             with path.open("w", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(
                     handle, fieldnames=columns, delimiter=delimiter
@@ -520,6 +617,149 @@ def probe_assessment_flags(
             for case in equivalence_cases
         ),
     }
+
+
+def task_family_attack_coverage(
+    results: list[dict[str, Any]],
+    pass_threshold: float,
+    applicability: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    by_case = {result["case"]: result for result in results}
+    coverage: dict[str, Any] = {}
+    for attack in TASK_FAMILY_ATTACKS:
+        applicability_entry = applicability[attack]
+        if not applicability_entry["applicable"]:
+            coverage[attack] = {
+                "status": "NOT_APPLICABLE",
+                "reason": applicability_entry["reason"],
+                "provenance": {
+                    "source_kind": "INSTRUCTION_CONTRACT_CLASSIFICATION",
+                    "oracle_used": False,
+                    "cases": [],
+                    "modes": [],
+                },
+            }
+            continue
+        cases = [
+            case
+            for case, declared_attack in TASK_FAMILY_CASES.items()
+            if declared_attack == attack
+        ]
+        attack_results = [by_case[case] for case in cases if case in by_case]
+        provenance = {
+            "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
+            "oracle_used": False,
+            "cases": cases,
+            "modes": [TASK_FAMILY_MODES[case] for case in cases],
+        }
+        if len(attack_results) != len(cases):
+            coverage[attack] = {
+                "status": "NOT_ASSESSABLE",
+                "reason": "task-family attack was not executed",
+                "provenance": provenance,
+            }
+            continue
+        if all(usable_probe_result(result) for result in attack_results):
+            coverage[attack] = {
+                "status": "ASSESSED",
+                "reason": (
+                    "checker returned a usable result for the declared "
+                    "materials attack"
+                ),
+                "provenance": {
+                    **provenance,
+                    "rewards": {
+                        result["case"]: result.get("reward")
+                        for result in attack_results
+                    },
+                    "pass_threshold": pass_threshold,
+                },
+            }
+        else:
+            coverage[attack] = {
+                "status": "NOT_ASSESSABLE",
+                "reason": "checker result was not usable",
+                "provenance": provenance,
+            }
+    return coverage
+
+
+def task_family_applicability(
+    root: Path, specification: dict[str, Any]
+) -> dict[str, dict[str, Any]]:
+    instruction = (root / "instruction.md").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    contract_map = instruction_contract_map(instruction)
+    core_requirements = [
+        requirement
+        for requirement in contract_map.get("requirements", [])
+        if any(
+            declaration.get("role_classification") == "CORE_OUTPUT"
+            for declaration in requirement.get("evidence", [])
+        )
+    ]
+    grading_outputs = [
+        output
+        for output in (
+            (specification.get("output_contract", {}) or {}).get("outputs", [])
+            or []
+        )
+        if not str(output.get("purpose") or "").lower().startswith(
+            ("process", "intermediate", "diagnostic")
+        )
+    ]
+    grading_outputs.extend(
+        {
+            "file": basename(step.get("output_file")),
+            "step_id": step.get("id"),
+            "weight": step.get("weight"),
+        }
+        for step in grading_steps(specification)
+        if basename(step.get("output_file"))
+        and step.get("weight", 1) != 0
+    )
+    context = (
+        json.dumps(core_requirements, ensure_ascii=False)
+        + "\n"
+        + json.dumps(
+            sorted(contract_map.get("core_outputs", [])),
+            ensure_ascii=False,
+        )
+        + "\n"
+        + json.dumps(grading_outputs, ensure_ascii=False)
+    ).lower()
+    specialized = {
+        "element_or_phase_error": (
+            ("element", "species", "phase", "composition"),
+            "the public contract has no element, species, phase, or composition field",
+        ),
+        "coordinate_or_lattice_error": (
+            ("coordinate", "lattice", "geometry", "position", "cif", "poscar"),
+            "the public contract has no coordinate, lattice, or structure field",
+        ),
+        "duplicate_structure": (
+            ("structure", "geometry", "cif", "poscar"),
+            "the public contract does not submit structures",
+        ),
+        "missing_core_model": (
+            ("model", "structure", "trajectory", "prediction field"),
+            "the public contract does not submit a load-bearing model artifact",
+        ),
+    }
+    applicability: dict[str, dict[str, Any]] = {}
+    for attack in TASK_FAMILY_ATTACKS:
+        if attack not in specialized:
+            applicability[attack] = {"applicable": True, "reason": None}
+            continue
+        terms, reason = specialized[attack]
+        applicability[attack] = {
+            "applicable": any(term in context for term in terms),
+            "reason": (
+                None if any(term in context for term in terms) else reason
+            ),
+        }
+    return applicability
 
 
 def retain_one_known_valid_row(
@@ -936,7 +1176,7 @@ def run_checker_case(
         outputs_dir = base / "app" / "outputs"
         logs_dir = base / "logs" / "verifier"
         copy_public_package(root, package_dir)
-        tests_dir.mkdir(parents=True)
+        shutil.copytree(root / "tests", tests_dir)
         outputs_dir.mkdir(parents=True)
         logs_dir.mkdir(parents=True)
         specification_path = tests_dir / "grading_spec.json"
@@ -1091,6 +1331,8 @@ def run_checker_case(
             ).exists(),
             "isolated_component": isolated_component,
             "fixture_source_kind": fixture_source_kind,
+            "runtime_outputs_dir": str(outputs_dir),
+            "runtime_entrypoint": "tests/test.sh",
         }
 
 
@@ -1319,8 +1561,10 @@ def evaluate_results(
             continue
         assert isinstance(reward, float)
         if (
-            case in NEGATIVE_PROBE_CASES
-            and negative_class_usable
+            (
+                (case in NEGATIVE_PROBE_CASES and negative_class_usable)
+                or case in TASK_FAMILY_CASES
+            )
             and reward >= pass_threshold
         ):
             findings.append(
@@ -1486,6 +1730,7 @@ def dynamic_checker_probe(
         else None
     )
     random.seed(17)
+    attack_applicability = task_family_applicability(root, specification)
     oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
         root, specification
     )
@@ -1505,6 +1750,19 @@ def dynamic_checker_probe(
         ("minimal_gold_shape", "minimal", None, None, None),
         ("duplicate_gold_rows", "duplicate", None, None, None),
         ("nonfinite_values", "nonfinite", None, None, None),
+        *(
+            (
+                case_name,
+                mode,
+                None,
+                None,
+                "SCHEMA_SHAPED_SYNTHETIC_ATTACK",
+            )
+            for case_name, mode in TASK_FAMILY_MODES.items()
+            if attack_applicability[TASK_FAMILY_CASES[case_name]][
+                "applicable"
+            ]
+        ),
     ]
     if oracle_output is not None:
         cases.append(
@@ -1622,20 +1880,11 @@ def dynamic_checker_probe(
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
-    process_coverage = {
-        "status": "NOT_APPLICABLE",
-        "reason": (
-            "process evidence is not a dynamic fixture or checker-probe target"
-        ),
-        "files": {},
-        "instrumentation": "NONE",
-        "provenance": {
-            "source_kind": "NONE",
-            "oracle_used": False,
-        },
-    }
     isolation_coverage = component_isolation_coverage(
         isolation_plan, isolation_not_run_reason, results
+    )
+    task_attacks = task_family_attack_coverage(
+        results, pass_threshold, attack_applicability
     )
     if known_valid_output is None:
         findings.append(
@@ -1687,6 +1936,15 @@ def dynamic_checker_probe(
     }
     expected.update(
         {
+            case_name: (
+                "task-family materials attack does not receive a passing "
+                "reward without semantic validation"
+            )
+            for case_name in TASK_FAMILY_CASES
+        }
+    )
+    expected.update(
+        {
             result["case"]: (
                 "a submission retaining only the named scoring component "
                 "stays below the pass threshold"
@@ -1714,6 +1972,8 @@ def dynamic_checker_probe(
         probe_class = (
             "component_isolation"
             if result["case"].startswith("component_isolation__")
+            else "negative"
+            if result["case"] in TASK_FAMILY_CASES
             else probe_classes.get(result["case"], "negative")
         )
         tests.append(
@@ -1822,6 +2082,9 @@ def dynamic_checker_probe(
                     "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
                     "oracle_used": False,
                 },
+                "subcoverage": {
+                    "task_family_attacks": task_attacks,
+                },
             },
             "discrimination": {
                 "status": (
@@ -1898,7 +2161,12 @@ def dynamic_checker_probe(
             "component_isolation": {
                 **isolation_coverage,
             },
-            "process_evidence": process_coverage,
+        },
+        "runtime_provenance": {
+            "status": "ASSESSED",
+            "entrypoint": "tests/test.sh",
+            "execution_mode": "ISOLATED_REBASED_HARBOR_VERIFIER",
+            "cases_executed": len(results),
         },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",

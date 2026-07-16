@@ -415,6 +415,15 @@ def prepare_workspace(
             "authoritative materials review is E1-only; "
             f"received execution level {execution_level!r}"
         )
+    parent_audit_id: str | None = None
+    previous_manifest = root / "benchmark_audit/audit_manifest.json"
+    if paper_mode == "paper_grounded" and previous_manifest.is_file():
+        previous = json.loads(
+            previous_manifest.read_text(encoding="utf-8")
+        )
+        candidate = previous.get("audit_id")
+        if isinstance(candidate, str) and candidate:
+            parent_audit_id = candidate
     temp_dir = root / ".benchmark_audit_tmp"
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
@@ -465,8 +474,12 @@ def prepare_workspace(
     manifest = {
         "schema_version": "0.1",
         "audit_id": audit_id,
-        "parent_audit_id": None,
-        "review_type": "INITIAL_AUDIT",
+        "parent_audit_id": parent_audit_id,
+        "review_type": (
+            "PAPER_GROUNDED_REAUDIT"
+            if parent_audit_id is not None
+            else "INITIAL_AUDIT"
+        ),
         "generated_at": started_at,
         "completed_at": None,
         "auditor_version": "materials-benchmark-review/0.1",

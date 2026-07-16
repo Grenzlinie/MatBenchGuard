@@ -675,6 +675,17 @@ logs.mkdir(parents=True, exist_ok=True)
                 },
             )
             self.assertEqual(
+                report["gold_provenance"]["mode"], "paper_grounded"
+            )
+            self.assertFalse(report["gold_provenance"]["oracle_used"])
+            self.assertTrue(
+                report["gold_provenance"]["provenance"]["evidence"]
+            )
+            self.assertIsNotNone(
+                report["audit_binding"]["implementation_hash"]
+            )
+            self.assertTrue(report["audit_binding"]["source_hashes"])
+            self.assertEqual(
                 report["taxonomy_labels"],
                 assessment()["taxonomy"],
             )

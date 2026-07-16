@@ -42,6 +42,10 @@ Instruction requirement
 ```
 
 The mapping has three output roles:
+- `CORE_OUTPUT` — an explicitly core/scored/final output, or a conservatively
+  recognized complete/full model, structure, trajectory, field, or mesh;
+- `PROCESS_ONLY` — an explicitly process/intermediate/diagnostic artifact;
+- `UNCLASSIFIED` — an uncertain declaration that needs human adjudication.
 
 - `scored_output` — a final submission that contributes to a rubric component;
 - `process_evidence` — an intermediate artifact used to verify the workflow or
@@ -51,9 +55,13 @@ The mapping has three output roles:
 An instruction may legitimately list process evidence separately from final
 submission files. A process artifact missing from the scoring contract is not
 `INSTRUCTION_ONLY_OUTPUT` and must not reduce instruction answerability merely
-because it has no score weight. Process evidence is not a dynamic fixture or
-checker-probe target: exclude process files from positive, discrimination, and
-equivalence inputs and record this class as `NOT_APPLICABLE`.
+because it has no score weight. Process artifacts remain contract-map-only:
+exclude them from all five probe classes and never treat them as weighted
+components, deductions, gates, or anti-hacking traces. Complete/full models,
+structures, trajectories, fields, and meshes remain core even when mislabeled
+process; record the contradiction as `UNCLASSIFIED` while retaining core
+checker analysis. Only non-load-bearing logs/intermediates are process-only.
+Ignored core output is severe `CHECKER_CORE_TASK_UNASSESSED`.
 
 For every `scored_output`, record whether the checker:
 
@@ -71,12 +79,12 @@ and can never imply that all scoring items are runtime-bound.
 Every parsed workflow requirement receives a chain row even when it declares no
 recognized output; use an unclassified output and unknown read/score states.
 
-## Checker anti-hacking audit
+## Checker and Gold audit
+
 The checker audit must combine static contract mapping with isolated dynamic
 probes. Inspect for:
 
 - core outputs that are never read;
-- intermediate evidence that is declared but never verified;
 - file-existence or schema-only checks that ignore the scientific result;
 - small hard-coded targets that bypass prediction/model outputs;
 - ignored model files, predictions, or load-bearing logs;
@@ -111,6 +119,12 @@ Multiple affected files or output names are evidence locations, not automatic
 additional deductions.
 
 ## Trigger paper review
+
+No-paper E1 is a fail-fast stage. A package that reaches a confirmed Hard Gate
+stops without reading paper. Other materials packages normally route to a
+paper-grounded E1 whose report binds the prior audit ID, source hashes, and
+Review implementation hash. E1 never claims that the scientific workflow ran.
+
 Read `paper/` only for these four triggers:
 
 1. `SCIENTIFIC_CONFLICT` — instruction, tests, and Oracle behavior conflict;
@@ -132,7 +146,7 @@ allowed unless instruction fixes them or the checker secretly depends on them.
 Write any taxonomy or triggered paper assessment outside the package, then run:
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
-  --paper-mode no_paper \
+  --paper-mode auto \
   --execution-level E1 \
   --agent-assessment <assessment.json> --attestation-output <external.json>
 ```
@@ -168,14 +182,19 @@ Every E1 run records coverage for these probe classes:
   worse outputs must not score better;
 - equivalence — scientifically equivalent ordering or serialization must not
   change reward, using the same independent public fixture;
-- component isolation — independently sourced one-component submissions;
-- process evidence — classification only; never a dynamic fixture/checker case.
+- component isolation — independently sourced one-component submissions.
 
 Execute checker cases through `tests/test.sh` and label runtime provenance as
 `Harbor-equivalent`, `audit-host-copy`, or `not-assessable`. The audit-host
 copy is not Harbor-equivalent. Missing host dependencies, dependencies supplied
 by `environment/Dockerfile`, and verifier-time dependency installation are
 runtime limitations, not package defects.
+
+These are exactly the five top-level classes. Task-family attacks are named
+negative/discrimination cases and nested subcoverage, never a sixth class.
+Each has explicit status/provenance. E1 executes `tests/test.sh`; if unavailable,
+direct probes are forbidden and runtime is `NOT_ASSESSABLE`. Review and repair
+re-audit are fixed at E1, with no E2 publication path.
 
 ## Direct inputs
 Read [references/materials-resource-policy.md](references/materials-resource-policy.md).

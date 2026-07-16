@@ -135,8 +135,14 @@ class MaterialsCheckerScientificProbeTests(unittest.TestCase):
             )
             self.assertFalse(audit["solution_content_inspected"])
             self.assertEqual(
-                {item["probe_class"] for item in audit["tests"]},
-                {"negative", "discrimination", "equivalence"},
+                set(audit["probe_coverage"]),
+                {
+                    "positive",
+                    "negative",
+                    "discrimination",
+                    "equivalence",
+                    "component_isolation",
+                },
             )
 
     def test_equivalent_representation_defect_is_repairable(self) -> None:

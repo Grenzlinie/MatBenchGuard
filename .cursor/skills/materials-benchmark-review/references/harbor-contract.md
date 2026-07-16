@@ -38,8 +38,10 @@ runtime-proven effective weights.
 
 The chain covers every parsed workflow requirement. A requirement with no
 recognized output still appears with `unclassified` output role and explicit
-unknown read/score states. Static process-evidence references remain candidates;
-they do not prove either verification or non-verification.
+unknown read/score states. Process artifacts remain contract-map-only: their
+absence from `output_contract`, lack of checker reads, or lack of validation
+cannot affect score, gate, route, or verdict. Do not run an anti-hacking trace
+or emit `PROCESS_EVIDENCE_NOT_VERIFIED`.
 
 Process evidence is not a dynamic fixture or checker target. Never copy it from
 a known-valid fixture, transform it for discrimination/equivalence, or create a
@@ -65,6 +67,12 @@ dependency supplied by `environment/Dockerfile`, or a dependency installed by
 `tests/test.sh` is not a package defect. If the audit host cannot execute the
 verifier for one of those reasons, record `not-assessable`; do not emit checker
 crash/alignment findings from that host limitation.
+Process artifacts are contract-map-only and are not a top-level probe class.
+Complete/full models, structures, trajectories, prediction fields, and meshes
+remain core even when mislabeled process; record the contradiction as
+`UNCLASSIFIED` while retaining core checker analysis. Only non-load-bearing
+logs/intermediates are process-only. Ignoring a core output or checking only
+file existence is `CHECKER_CORE_TASK_UNASSESSED`.
 
 If `solution/solve.sh` exists, the complete solution role is first copied into
 a separate disposable workspace. It receives `OUTPUT_DIR`; generated

@@ -429,7 +429,7 @@ logs.mkdir(parents=True, exist_ok=True)
                 before, hashlib.sha256(instruction.read_bytes()).hexdigest()
             )
 
-    def test_missing_checker_evidence_routes_to_evidence_pending(self) -> None:
+    def test_checker_that_ignores_core_output_routes_to_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
@@ -443,14 +443,17 @@ logs.mkdir(parents=True, exist_ok=True)
             self.assertEqual(completed.returncode, 0)
             report, index = read_bundle(package)
             self.assertEqual(
-                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+                report["summary"]["final_verdict"], "REJECT"
             )
             self.assertEqual(
-                report["summary"]["disposition"], "EVIDENCE_PENDING"
+                report["summary"]["disposition"], "QUARANTINE"
             )
-            self.assertEqual(index["route"], "EVIDENCE_PENDING")
+            self.assertEqual(index["route"], "QUARANTINE")
             self.assertFalse(index["publishable"])
-            self.assertTrue(index["evidence_gaps"])
+            self.assertIn(
+                "CHECKER_CORE_TASK_UNASSESSED",
+                {item["title"] for item in report["findings"]},
+            )
 
     def test_findings_publish_exact_locations_and_actionable_repairs(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

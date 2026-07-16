@@ -7,6 +7,11 @@ Read paper only after at least one confirmed trigger:
 - `GOLD_PROVENANCE_UNCERTAIN`;
 - `EXPLICIT_REPRODUCTION_CLAIM`.
 
+Bind the paper-grounded report to the preceding no-paper audit ID, all source
+hashes, and the Review implementation hash. Paper-grounded E1 checks fidelity
+and expected checker behavior; it does not claim that the scientific workflow
+was executed.
+
 ## Reproduction type
 
 - `EXACT_REPRODUCTION`: instruction explicitly fixes the paper system,
