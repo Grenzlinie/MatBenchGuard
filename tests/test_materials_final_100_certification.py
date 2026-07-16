@@ -13,8 +13,10 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CERTIFIER = (
     REPO_ROOT
-    / "review_artifacts"
-    / "materials_fast_e1_100"
+    / ".cursor"
+    / "skills"
+    / "materials-benchmark-review"
+    / "scripts"
     / "certify_final_100.py"
 )
 REVIEW_SKILL_ROOT = (
@@ -423,6 +425,348 @@ def write_evidence_pass_batch(batch: Path) -> None:
     cli_evidence["snapshot_hash"] = canonical_hash(cli_evidence)
     record["evidence"]["cli_evidence"] = cli_evidence
     index_path.write_text(json.dumps(index), encoding="utf-8")
+    upgrade_synthetic_certification_fixture(batch)
+
+
+def upgrade_synthetic_certification_fixture(batch: Path) -> None:
+    """Create all certifier inputs inside the test-owned temp directory."""
+    index_path = batch / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    record = index["records"][0]
+    identity = record["evidence"]["source_binding"]["cli_audit_identity"]
+    report_path = batch / identity["report_path"]
+    manifest_path = batch / identity["manifest_path"]
+    checker_path = report_path.with_name("checker_tests.json")
+    disposition_path = report_path.with_name("disposition.json")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    checker = json.loads(checker_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    canonical = {
+        "review_verdict": "PASS",
+        "publishability": "PUBLISH_CANDIDATE",
+        "repair_decision": "NOT_REQUIRED",
+        "repair_status": "NOT_APPLICABLE",
+    }
+    report.update(canonical)
+    report["configuration"] = {
+        "paper_mode": "no_paper",
+        "execution_level": "E1",
+    }
+    report["summary"].update(canonical)
+    report["summary"].update(
+        {
+            "final_verdict": "PASS",
+            "disposition": "PUBLISH_CANDIDATE",
+            "scoring_version": "materials-review-scoring/1.0",
+            "total_score": 97,
+            "hard_gate_triggered": False,
+        }
+    )
+    report["evidence_contract"] = {
+        "version": "materials-evidence-contract/1.0",
+        "fail_closed": True,
+        "gaps": [],
+    }
+    report["scope"] = {
+        "solution_content_inspected": False,
+        "solution_oracle_executed": True,
+    }
+    report["audit_binding"] = {
+        "parent_audit_id": None,
+        "source_hashes": {},
+        "implementation_hash": None,
+    }
+    report["source_bindings"] = {
+        "fixture_hashes": {},
+        "assessment_hashes": {},
+        "core_contract_digest": "sha256:" + "1" * 64,
+    }
+    report["gold_provenance"] = {
+        "status": "ASSESSED",
+        "mode": "no_paper",
+        "oracle_used": False,
+        "provenance": {"source_kind": "INDEPENDENT_PUBLIC_FIXTURE"},
+    }
+    report["qa_axes"] = {
+        axis: {
+            "status": "PASS",
+            "evidence": [{"fact": f"{axis} assessed"}],
+        }
+        for axis in (
+            "factual_accuracy",
+            "answer_leakage",
+            "instruction_completeness",
+            "checker_instruction_consistency",
+        )
+    }
+    report["dimension_scores"] = [
+        {
+            "dimension": name,
+            "max_points": maximum,
+            "points_earned": (
+                12 if name == "robustness_discrimination" else maximum
+            ),
+            "normalized_score": round(
+                (12 if name == "robustness_discrimination" else maximum)
+                / maximum,
+                6,
+            ),
+            "status": "PASS",
+            "evidence": [{"fact": f"{name} assessed"}],
+        }
+        for name, maximum in (
+            ("scientific_validity", 35),
+            ("instruction_answerability", 20),
+            ("checker_gold_alignment", 25),
+            ("robustness_discrimination", 15),
+            ("solution_completeness", 5),
+        )
+    ]
+    report["hard_gates"] = [
+        {
+            "code": code,
+            "status": "PASS",
+            "evidence": [{"fact": "gate assessed"}],
+            "affected_locations": [
+                {"file": "instruction.md", "line": 1, "quote": "crystal"}
+            ],
+        }
+        for code in (
+            "NON_MATERIALS_TASK",
+            "SCIENTIFIC_TARGET_INVALID",
+            "CHECKER_CORE_TASK_UNASSESSED",
+            "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+        )
+    ]
+    report["paper_trigger_adjudication"] = [
+        {
+            "trigger": trigger,
+            "status": "NOT_TRIGGERED",
+            "evidence": [{"package_file": "instruction.md", "package_quote": "crystal"}],
+        }
+        for trigger in (
+            "SCIENTIFIC_CONFLICT",
+            "NECESSARY_INFORMATION_MISSING",
+            "GOLD_PROVENANCE_UNCERTAIN",
+            "EXPLICIT_REPRODUCTION_CLAIM",
+        )
+    ]
+    checker["solution_content_inspected"] = False
+    checker["solution_oracle"]["scientific_evidence"] = False
+    checker["probe_coverage"]["positive"]["provenance"].update(
+        {"oracle_used": True}
+    )
+    checker["probe_coverage"]["negative"]["provenance"]["oracle_used"] = False
+    checker["probe_coverage"]["discrimination"]["provenance"]["oracle_used"] = False
+    checker["probe_coverage"]["equivalence"]["provenance"]["oracle_used"] = False
+    checker["probe_coverage"]["component_isolation"]["provenance"][
+        "oracle_used"
+    ] = False
+    source = batch.parent / "source" / record["source_relative_path"]
+    (source / "tests").mkdir(parents=True, exist_ok=True)
+    (source / "instruction.md").write_text(
+        "Compute the crystal result.\n", encoding="utf-8"
+    )
+    (source / "tests/checker.py").write_text(
+        "print('checker')\n", encoding="utf-8"
+    )
+    (source / "tests/grading_spec.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+    (source / "tests/test.sh").write_text(
+        "exit 0\n", encoding="utf-8"
+    )
+    source_hashes = {
+        relative: file_hash(source / relative)
+        for relative in (
+            "instruction.md",
+            "tests/checker.py",
+            "tests/grading_spec.json",
+            "tests/test.sh",
+        )
+    }
+    manifest.update(
+        {
+            **canonical,
+            "execution_level": "E1",
+            "parent_audit_id": None,
+            "input_hashes": source_hashes,
+            "review_implementation": review_implementation(),
+            "output_hashes": {},
+        }
+    )
+    report["audit_binding"] = {
+        "parent_audit_id": None,
+        "source_hashes": source_hashes,
+        "implementation_hash": manifest["review_implementation"][
+            "aggregate_hash"
+        ],
+    }
+    report["source_bindings"]["core_contract_digest"] = "sha256:" + "1" * 64
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    checker_path.write_text(json.dumps(checker), encoding="utf-8")
+    disposition_path.write_text(
+        json.dumps(
+            {
+                **canonical,
+                "audit_id": report["audit_id"],
+                "route": "PUBLISH_CANDIDATE",
+                "verdict": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest["output_hashes"] = {
+        "audit_report.json": file_hash(report_path),
+        "checker_tests.json": file_hash(checker_path),
+        "disposition.json": file_hash(disposition_path),
+    }
+    manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    record.update(canonical)
+    record["selection_rank"] = 0
+    record["evidence"]["source_binding"]["source_path"] = str(source)
+    record["evidence"]["source_binding"]["source_role_hashes"] = source_hashes
+    record["evidence"]["cli_evidence"].update(
+        {
+            "stage_binding": {
+                "status": "NO_PAPER_ONLY",
+                "no_paper_audit_id": None,
+                "paper_grounded_audit_id": None,
+            },
+            "review_implementation": manifest["review_implementation"],
+            "audit_bundle_hash": manifest["bundle_hash"],
+            "report_hash": file_hash(report_path),
+            "manifest_hash": file_hash(manifest_path),
+            "checker_tests_hash": file_hash(checker_path),
+        }
+    )
+    record["evidence"]["cli_evidence"]["snapshot_hash"] = canonical_hash(
+        {
+            key: value
+            for key, value in record["evidence"]["cli_evidence"].items()
+            if key != "snapshot_hash"
+        }
+    )
+    index.update(
+        {
+            "schema_version": "materials-final-100-index/1.0",
+            "selection_policy": {
+                "ordering": "deterministic_selected_prefix"
+            },
+        }
+    )
+    index["records"] = [record]
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+
+def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
+    upgrade_synthetic_certification_fixture(batch)
+    index_path = batch / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    record = index["records"][0]
+    identity = record["evidence"]["source_binding"]["cli_audit_identity"]
+    report_path = batch / identity["report_path"]
+    manifest_path = batch / identity["manifest_path"]
+    disposition_path = report_path.with_name("disposition.json")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    disposition = json.loads(disposition_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    canonical = {
+        "review_verdict": "PASS",
+        "publishability": "PUBLISH_CANDIDATE",
+        "repair_decision": "AUTO_FIX",
+        "repair_status": "PUBLISHED",
+    }
+    report.update(canonical)
+    report["summary"].update(canonical)
+    disposition.update(canonical)
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    disposition_path.write_text(json.dumps(disposition), encoding="utf-8")
+    manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
+    manifest["output_hashes"]["disposition.json"] = file_hash(disposition_path)
+    manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    repair_dir = batch / "repair-bundle"
+    repair_dir.mkdir()
+    json_files = {
+        "repair_plan.json": canonical,
+        "changes.json": [{"file": "instruction.md", "operation": "replace_text"}],
+        "unresolved.json": [],
+        "regression_results.json": [{"status": "PASS", "name": "test.sh"}],
+        "re_audit_comparison.json": {"verdict": "PASS"},
+        "patch.json": {"atomic_publish": True},
+        "evidence.json": [{"source": "synthetic-independent-evidence"}],
+    }
+    for name, value in json_files.items():
+        (repair_dir / name).write_text(json.dumps(value), encoding="utf-8")
+    (repair_dir / "repair.log").write_text(
+        "INFO decision=AUTO_FIX status=PUBLISHED\n", encoding="utf-8"
+    )
+    bundle_hashes = {
+        name: file_hash(repair_dir / name)
+        for name in (
+            "repair_plan.json",
+            "changes.json",
+            "unresolved.json",
+            "regression_results.json",
+            "re_audit_comparison.json",
+            "patch.json",
+            "evidence.json",
+            "repair.log",
+        )
+    }
+    history = {
+        **canonical,
+        "bundle_complete": True,
+        "bundle_files": [
+            "repair_plan.json",
+            "changes.json",
+            "unresolved.json",
+            "regression_results.json",
+            "re_audit_comparison.json",
+            "patch.json",
+            "evidence.json",
+            "repair.log",
+            "history.json",
+        ],
+        "bundle_hashes": bundle_hashes,
+        "bundle_digest": canonical_hash(bundle_hashes),
+    }
+    (repair_dir / "history.json").write_text(
+        json.dumps(history), encoding="utf-8"
+    )
+    repair_manifest = {
+        **canonical,
+        "source_audit_id": identity["audit_id"],
+        "repair_id": "synthetic-repair",
+    }
+    repair_manifest_path = batch / "repair-manifest.json"
+    repair_manifest_path.write_text(
+        json.dumps(repair_manifest), encoding="utf-8"
+    )
+    record.update(canonical)
+    record["evidence"]["repair_binding"] = {
+        "repair_manifest_path": repair_manifest_path.relative_to(batch).as_posix(),
+        "bundle_path": repair_dir.relative_to(batch).as_posix(),
+        "reaudit_report_path": report_path.relative_to(batch).as_posix(),
+    }
+    record["evidence"]["cli_evidence"].update(
+        {
+            "audit_bundle_hash": manifest["bundle_hash"],
+            "report_hash": file_hash(report_path),
+            "manifest_hash": file_hash(manifest_path),
+        }
+    )
+    record["evidence"]["cli_evidence"]["snapshot_hash"] = canonical_hash(
+        {
+            key: value
+            for key, value in record["evidence"]["cli_evidence"].items()
+            if key != "snapshot_hash"
+        }
+    )
+    index["records"] = [record]
+    index_path.write_text(json.dumps(index), encoding="utf-8")
 
 
 def refresh_evidence_bindings(batch: Path) -> None:
@@ -438,6 +782,7 @@ def refresh_evidence_bindings(batch: Path) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
     manifest["output_hashes"]["checker_tests.json"] = file_hash(checker_path)
+    manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     cli_evidence = record["evidence"]["cli_evidence"]
     cli_evidence["probe_coverage"] = checker.get("probe_coverage", {})
@@ -447,6 +792,7 @@ def refresh_evidence_bindings(batch: Path) -> None:
     cli_evidence["report_hash"] = file_hash(report_path)
     cli_evidence["manifest_hash"] = file_hash(manifest_path)
     cli_evidence["checker_tests_hash"] = file_hash(checker_path)
+    cli_evidence["audit_bundle_hash"] = manifest["bundle_hash"]
     cli_evidence["snapshot_hash"] = canonical_hash(
         {
             key: value
@@ -491,12 +837,78 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             self.assertEqual(certified["certified_count"], 1)
             self.assertTrue(certified["all_evidence_contracts_valid"])
             self.assertEqual(
+                certified["schema_version"], "materials-final-100-index/1.0"
+            )
+            self.assertEqual(
+                certified["selection_policy"],
+                {
+                    "ordering": "deterministic_selected_prefix",
+                    "selected_prefix": 1,
+                    "first_n_deterministic": True,
+                },
+            )
+            self.assertEqual(
+                {
+                    key: certified["packages"][0][key]
+                    for key in (
+                        "review_verdict",
+                        "publishability",
+                        "repair_decision",
+                        "repair_status",
+                    )
+                },
+                {
+                    "review_verdict": "PASS",
+                    "publishability": "PUBLISH_CANDIDATE",
+                    "repair_decision": "NOT_REQUIRED",
+                    "repair_status": "NOT_APPLICABLE",
+                },
+            )
+            self.assertEqual(
                 certified["packages"][0]["review_implementation_hash"],
                 review_implementation()["aggregate_hash"],
             )
             self.assertEqual(
                 certified["legacy_v8_role"],
                 "IDENTITY_ORDER_SOURCE_BINDING_BASELINE_ONLY",
+            )
+
+    def test_certifier_accepts_repaired_pass_with_bound_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            batch = base / "batch"
+            output = base / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_repaired_fixture(batch)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(CERTIFIER),
+                    "--batch",
+                    str(batch),
+                    "--output",
+                    str(output),
+                    "--expected-count",
+                    "1",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            certified = json.loads(
+                (output / "final_100_pass_index.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                certified["packages"][0]["repair_decision"], "AUTO_FIX"
+            )
+            self.assertEqual(
+                certified["packages"][0]["repair_status"], "PUBLISHED"
             )
 
     def test_certifier_rejects_legacy_pass_without_evidence_contract(

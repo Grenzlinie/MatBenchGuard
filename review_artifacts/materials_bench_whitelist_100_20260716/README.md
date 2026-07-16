@@ -1,6 +1,6 @@
-# materials_bench_whitelist_100
+# materials_bench_whitelist_100（历史 v9 快照）
 
-来自材料科学 Harbor 题包审查全集：v9 evidence-bound E1 审查覆盖确定性全局排序的第 1–395 名，共得到 105 道可用 `PASS`；本包按 global rank 升序选取前 **100 道唯一 PASS 题包**。
+这是不可重新认证的历史 v9 快照，不代表当前 v10 认证结果。它来自材料科学 Harbor 题包审查全集：v9 evidence-bound E1 审查覆盖确定性全局排序的第 1–395 名，共得到 105 道可用 `PASS`；本包按 global rank 升序选取前 **100 道唯一 PASS 题包**。
 
 ## 目录结构
 
@@ -44,7 +44,8 @@ README.md
 - 证据边界：核心科学契约来自 `instruction.md`、`tests/` 与受限 Oracle；`paper/` 仅在触发条件成立时用于消歧和溯源
 - 选择规则：在第 1–395 名的审查全集中，按 global rank 升序选择前 100 个唯一 `PASS`
 - 截止位置：global rank 384
-- 权威认证来源：`final_100_pass_v9_evidence_bound_20260716`
+- 历史认证语义：`final_100_pass_v9_evidence_bound_20260716`
+- 未来 v10 认证必须使用 Review skill 中持久化的 `materials-final-100-index/1.0` certifier；不得把本目录或生成的 `review_artifacts/materials_fast_e1_100` 当作 certifier 源代码。
 
 ## 使用
 

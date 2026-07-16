@@ -17,6 +17,16 @@ from typing import Any, Iterable
 
 sys.dont_write_bytecode = True
 
+_REVIEW_SCRIPTS = (
+    Path(__file__).resolve().parents[2]
+    / "materials-benchmark-review"
+    / "scripts"
+)
+if str(_REVIEW_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_REVIEW_SCRIPTS))
+
+from canonical_status import REPAIR_STATUSES, canonical_fields  # noqa: E402
+
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
 REPAIR_CLASSES = {"AUTO_FIX", "ASSISTED_FIX"}
 AUTHORITATIVE_EXECUTION_LEVEL = "E1"
@@ -144,6 +154,13 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return "sha256:" + digest.hexdigest()
+
+
+def canonical_json_hash(value: Any) -> str:
+    payload = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
 def sha256_path(path: Path) -> str:
@@ -1793,6 +1810,7 @@ def rebase_audit_paths(candidate: Path, final_root: Path) -> None:
                 and path.name not in {"audit_manifest.json", "audit_context.json"}
             )
         )
+        manifest["bundle_hash"] = canonical_json_hash(manifest["output_hashes"])
         write_json(manifest_path, manifest)
 
 
@@ -1865,6 +1883,15 @@ def validate_fixed_bundle(directory: Path) -> None:
         or history.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
     ):
         raise ValueError("fixed repair history.json does not attest completeness")
+    expected_hashes = {
+        name: sha256_file(directory / name)
+        for name in REPAIR_BUNDLE_FILES
+        if name != "history.json"
+    }
+    if history.get("bundle_hashes") != expected_hashes:
+        raise ValueError("fixed repair bundle hashes are stale or incomplete")
+    if history.get("bundle_digest") != canonical_json_hash(expected_hashes):
+        raise ValueError("fixed repair bundle digest is stale")
 
 
 def write_history_bundle(
@@ -1880,8 +1907,20 @@ def write_history_bundle(
     attempt_number: int,
     status: str,
     decision: str,
+    review_verdict: str,
+    publishability: str,
 ) -> None:
-    write_json(destination / "repair_plan.json", plan)
+    repair_status = (
+        status if status in REPAIR_STATUSES else "ABANDONED"
+    )
+    canonical = canonical_fields(
+        review_verdict,
+        publishability=publishability,
+        repair_decision=decision,
+        repair_status=repair_status,
+    )
+    bundle_plan = {**plan, **canonical}
+    write_json(destination / "repair_plan.json", bundle_plan)
     write_json(destination / "changes.json", changes)
     write_json(destination / "unresolved.json", unresolved)
     write_json(destination / "regression_results.json", regressions)
@@ -1902,15 +1941,23 @@ def write_history_bundle(
         f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}\n",
         encoding="utf-8",
     )
+    bundle_hashes = {
+        name: sha256_file(destination / name)
+        for name in REPAIR_BUNDLE_FILES
+        if name != "history.json"
+    }
     write_json(
         destination / "history.json",
         {
+            **canonical,
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "status": status,
             "decision": decision,
             "bundle_files": list(REPAIR_BUNDLE_FILES),
             "bundle_complete": True,
+            "bundle_hashes": bundle_hashes,
+            "bundle_digest": canonical_json_hash(bundle_hashes),
         },
     )
     validate_fixed_bundle(destination)
@@ -1939,9 +1986,31 @@ def record_control_stop(
         attempt_number=0,
         status=stop.status,
         decision="ABANDON",
+        review_verdict=report.get(
+            "review_verdict", report.get("summary", {}).get("final_verdict")
+        ),
+        publishability=report.get(
+            "publishability",
+            report.get("summary", {}).get(
+                "disposition", "EVIDENCE_PENDING"
+            ),
+        ),
     )
     manifest = {
         "schema_version": "0.1",
+        **canonical_fields(
+            report.get(
+                "review_verdict", report.get("summary", {}).get("final_verdict")
+            ),
+            publishability=report.get(
+                "publishability",
+                report.get("summary", {}).get(
+                    "disposition", "EVIDENCE_PENDING"
+                ),
+            ),
+            repair_decision="ABANDON",
+            repair_status="ABANDONED",
+        ),
         "repair_id": repair_id,
         "root_cause": root_cause,
         "attempt_number": 0,
@@ -1958,6 +2027,15 @@ def record_control_stop(
     return {
         "status": stop.status,
         "decision": "ABANDON",
+        **{
+            key: manifest[key]
+            for key in (
+                "review_verdict",
+                "publishability",
+                "repair_decision",
+                "repair_status",
+            )
+        },
         "root_cause": root_cause,
         "history_root": str(history_root),
         "history_dir": str(destination),
@@ -1985,9 +2063,16 @@ def write_repair_reports(
     history_dir: Path,
 ) -> None:
     report_dir = candidate / "benchmark_repair"
+    canonical = canonical_fields(
+        manifest["review_verdict"],
+        publishability=manifest["publishability"],
+        repair_decision=manifest["repair_decision"],
+        repair_status=manifest["repair_status"],
+    )
+    manifest.update(canonical)
     write_json(report_dir / "repair_manifest.json", manifest)
     write_json(report_dir / "repair_report.json", manifest)
-    write_json(report_dir / "repair_plan.json", plan)
+    write_json(report_dir / "repair_plan.json", {**plan, **canonical})
     write_json(report_dir / "changes.json", manifest.get("changes", []))
     write_json(report_dir / "unresolved.json", manifest.get("unresolved", []))
     write_json(
@@ -2010,6 +2095,7 @@ def write_repair_reports(
     write_json(
         report_dir / "history.json",
         {
+            **canonical,
             "root_cause": manifest.get("root_cause"),
             "attempt_number": manifest.get("attempt_number"),
             "history_dir": str(history_dir),
@@ -2048,6 +2134,15 @@ def write_repair_reports(
         ),
         encoding="utf-8",
     )
+    bundle_hashes = {
+        name: sha256_file(report_dir / name)
+        for name in REPAIR_BUNDLE_FILES
+        if name != "history.json"
+    }
+    history = read_json(report_dir / "history.json")
+    history["bundle_hashes"] = bundle_hashes
+    history["bundle_digest"] = canonical_json_hash(bundle_hashes)
+    write_json(report_dir / "history.json", history)
     validate_fixed_bundle(report_dir)
 
 
@@ -2084,6 +2179,20 @@ def repair(
         return {
             "status": "ABANDONED",
             "decision": "ABANDON",
+            **canonical_fields(
+                report.get(
+                    "review_verdict",
+                    report.get("summary", {}).get("final_verdict"),
+                ),
+                publishability=report.get(
+                    "publishability",
+                    report.get("summary", {}).get(
+                        "disposition", "EVIDENCE_PENDING"
+                    ),
+                ),
+                repair_decision="ABANDON",
+                repair_status="ABANDONED",
+            ),
             "root_cause": root_cause,
             "history_root": str(history_root_for(root)),
             "attempts": len(prior),
@@ -2128,8 +2237,23 @@ def repair(
         if package_identity(candidate, directory_name=root.name) != identity:
             raise ValueError("repair changed the Harbor package identity")
         paper_mode, execution_level = report_configuration(reaudit)
+        repair_canonical = canonical_fields(
+            reaudit.get(
+                "review_verdict",
+                reaudit.get("summary", {}).get("final_verdict"),
+            ),
+            publishability=reaudit.get(
+                "publishability",
+                reaudit.get("summary", {}).get(
+                    "disposition", "EVIDENCE_PENDING"
+                ),
+            ),
+            repair_decision=plan["repair_class"],
+            repair_status="PUBLISHED",
+        )
         repair_manifest = {
             "schema_version": "0.1",
+            **repair_canonical,
             "repair_id": repair_id,
             "status": "PUBLISHED",
             "decision": plan["repair_class"],
@@ -2186,6 +2310,8 @@ def repair(
             attempt_number=attempt_number,
             status="PUBLISHED",
             decision=plan["repair_class"],
+            review_verdict=repair_canonical["review_verdict"],
+            publishability=repair_canonical["publishability"],
         )
         attempt_manifest = {
             "schema_version": "0.1",
@@ -2195,6 +2321,7 @@ def repair(
             "max_attempts": 2,
             "status": "PUBLISHED",
             "decision": plan["repair_class"],
+            **repair_canonical,
             "audit_id": report["audit_id"],
             "finding_id": plan["finding_id"],
             "repair_class": plan["repair_class"],
@@ -2216,6 +2343,7 @@ def repair(
             "repair_id": repair_id,
             "status": "PUBLISHED",
             "decision": plan["repair_class"],
+            **repair_canonical,
             "benchmark_root": str(root),
             "history_dir": str(history),
             "history_root": str(history_root_for(root)),
@@ -2226,6 +2354,20 @@ def repair(
     except Exception as exc:  # noqa: BLE001
         status = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
         decision = plan["repair_class"] if status == "ROLLED_BACK" else "ABANDON"
+        failed_canonical = canonical_fields(
+            report.get(
+                "review_verdict",
+                report.get("summary", {}).get("final_verdict"),
+            ),
+            publishability=report.get(
+                "publishability",
+                report.get("summary", {}).get(
+                    "disposition", "EVIDENCE_PENDING"
+                ),
+            ),
+            repair_decision=decision,
+            repair_status=status,
+        )
         history.mkdir(parents=True, exist_ok=True)
         if snapshot.exists():
             snapshot.rename(history / "snapshot")
@@ -2245,6 +2387,8 @@ def repair(
             attempt_number=attempt_number,
             status=status,
             decision=decision,
+            review_verdict=failed_canonical["review_verdict"],
+            publishability=failed_canonical["publishability"],
         )
         attempt_manifest = {
             "schema_version": "0.1",
@@ -2254,6 +2398,7 @@ def repair(
             "max_attempts": 2,
             "status": status,
             "decision": decision,
+            **failed_canonical,
             "audit_id": report["audit_id"],
             "finding_id": plan["finding_id"],
             "repair_class": plan["repair_class"],

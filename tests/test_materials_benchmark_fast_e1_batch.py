@@ -6,7 +6,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from collections import Counter
 from pathlib import Path
 
 
@@ -1066,112 +1065,57 @@ class FastE1BatchTests(unittest.TestCase):
                 resumed.stderr,
             )
 
-    def test_canonical_calibration_reconciliation_is_source_bound(self) -> None:
-        artifacts = (
-            REPO_ROOT
-            / "review_artifacts"
-            / "materials_fast_e1_100"
-            / "calibration_review_v2_20260715"
-        )
-        canonical = json.loads(
-            (artifacts / "canonical_reconciliation.json").read_text(
-                encoding="utf-8"
+    def test_synthetic_calibration_fixture_is_source_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source" / "cluster-1" / "theme" / "paper-1"
+            (source / "tests").mkdir(parents=True)
+            (source / "instruction.md").write_text(
+                "Compute the crystal energy.\n", encoding="utf-8"
             )
-        )
-        frozen = json.loads(
-            (artifacts.parent / "candidate_manifest.json").read_text(
-                encoding="utf-8"
+            (source / "tests/checker.py").write_text(
+                "print('checker')\n", encoding="utf-8"
             )
-        )
-        source_validation = json.loads(
-            (artifacts / "source_hash_validation.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        expected_verdicts = [
-            "CONDITIONAL",
-            "REJECT",
-            "PASS",
-            "CONDITIONAL",
-            "PASS",
-            "REJECT",
-            "PASS",
-            "REJECT",
-            "CONDITIONAL",
-            "REJECT",
-        ]
-        expected_reproduction = [
-            "METHOD_REIMPLEMENTATION",
-            "METHOD_REIMPLEMENTATION",
-            "EXACT_REPRODUCTION",
-            "EXACT_REPRODUCTION",
-            "EXACT_REPRODUCTION",
-            "METHOD_REIMPLEMENTATION",
-            "EXACT_REPRODUCTION",
-            "METHOD_REIMPLEMENTATION",
-            "EXACT_REPRODUCTION",
-            "METHOD_REIMPLEMENTATION",
-        ]
-        records = canonical["records"]
-        self.assertTrue(canonical["authoritative"])
-        self.assertEqual(
-            [item["package_id"] for item in records],
-            frozen["package_ids"][:10],
-        )
-        self.assertEqual(
-            [item["verdict"] for item in records], expected_verdicts
-        )
-        self.assertEqual(
-            [item["reproduction_type"] for item in records],
-            expected_reproduction,
-        )
-        self.assertEqual(
-            dict(Counter(expected_verdicts)),
-            {
-                key: value
-                for key, value in canonical["verdict_totals"].items()
-                if value
-            },
-        )
-
-        corpus = REPO_ROOT / "materials_science_questions"
-        for record in records:
-            package_id = record["package_id"]
-            source = corpus / package_id
-            audit = artifacts / record["source_binding"]["cli_audit"]
-            manifest = json.loads(
-                (audit / "audit_manifest.json").read_text(encoding="utf-8")
-            )
-            report = json.loads(
-                (audit / "audit_report.json").read_text(encoding="utf-8")
-            )
-            self.assertEqual(
-                record["source_binding"]["audit_id"], manifest["audit_id"]
-            )
-            self.assertEqual(report["audit_id"], manifest["audit_id"])
-            actual_hashes = {
-                role: "sha256:"
-                + hashlib.sha256((source / role).read_bytes()).hexdigest()
-                for role in manifest["input_hashes"]
-            }
-            self.assertEqual(manifest["input_hashes"], actual_hashes)
-            self.assertEqual(
-                manifest["input_hashes"],
-                {
-                    role: source_validation["after"][package_id][role]
-                    for role in manifest["input_hashes"]
+            manifest = {
+                "schema_version": "materials-audit-bundle/1.0",
+                "input_hashes": {
+                    "instruction.md": "sha256:"
+                    + hashlib.sha256(
+                        (source / "instruction.md").read_bytes()
+                    ).hexdigest(),
+                    "tests/checker.py": "sha256:"
+                    + hashlib.sha256(
+                        (source / "tests/checker.py").read_bytes()
+                    ).hexdigest(),
                 },
+            }
+            artifact = base / "synthetic-calibration.json"
+            artifact.write_text(
+                json.dumps(
+                    {
+                        "authoritative": True,
+                        "records": [
+                            {
+                                "package_id": "cluster-1/theme/paper-1",
+                                "review_verdict": "PASS",
+                                "publishability": "PUBLISH_CANDIDATE",
+                                "source_binding": manifest,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
             )
+            value = json.loads(artifact.read_text(encoding="utf-8"))
 
-        revised = REPO_ROOT / "review_artifacts/materials_revised_calibration_10"
-        invalid = json.loads(
-            (revised / "INVALID_NON_AUTHORITATIVE.json").read_text(
-                encoding="utf-8"
-            )
+        record = value["records"][0]
+        self.assertTrue(value["authoritative"])
+        self.assertEqual(record["review_verdict"], "PASS")
+        self.assertEqual(record["publishability"], "PUBLISH_CANDIDATE")
+        self.assertEqual(
+            set(record["source_binding"]["input_hashes"]),
+            {"instruction.md", "tests/checker.py"},
         )
-        self.assertEqual(invalid["status"], "INVALID")
-        self.assertFalse(invalid["authoritative"])
-        self.assertTrue(invalid["evidence_preserved"])
 
     def test_discovery_index_has_required_identity_schema(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

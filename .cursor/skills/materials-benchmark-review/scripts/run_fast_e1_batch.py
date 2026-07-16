@@ -22,6 +22,7 @@ from prepare_audit_output import (
     collect_input_hashes,
     collect_review_implementation_hashes,
 )
+from canonical_status import canonical_fields
 
 
 SCHEMA_VERSION = "materials-fast-e1-index/0.2"
@@ -392,8 +393,9 @@ def source_binding(
     identity: dict[str, Any],
     source_role_hashes: dict[str, str],
     cli_audit_identity: dict[str, Any] | None = None,
+    source_path: Path | None = None,
 ) -> dict[str, Any]:
-    return {
+    binding = {
         "package_id": identity["package_id"],
         "source_relative_path": identity["source_relative_path"],
         "source_role_hashes": source_role_hashes,
@@ -411,6 +413,9 @@ def source_binding(
             "manifest_path": None,
         },
     }
+    if source_path is not None:
+        binding["source_path"] = str(source_path)
+    return binding
 
 
 def validate_record_source_binding(
@@ -539,6 +544,41 @@ def validate_record_source_binding(
                     errors.append(
                         "persisted CLI report identity or source hashes differ"
                     )
+                if (
+                    not isinstance(persisted_manifest.get("bundle_hash"), str)
+                    or persisted_manifest.get("bundle_hash")
+                    != canonical_json_hash(
+                        persisted_manifest.get("output_hashes")
+                    )
+                ):
+                    errors.append("persisted CLI audit bundle hash is absent or stale")
+                canonical = canonical_fields(
+                    persisted_report.get("summary", {}).get("final_verdict"),
+                    publishability=persisted_report.get("summary", {}).get(
+                        "disposition"
+                    ),
+                )
+                if any(record.get(key) != value for key, value in canonical.items()):
+                    errors.append("persisted CLI canonical fields are inconsistent")
+                assessment_hashes = persisted_manifest.get(
+                    "assessment_hashes", {}
+                )
+                if assessment_hashes:
+                    assessment_paths = evidence.get("assessment_paths")
+                    if (
+                        not isinstance(assessment_paths, dict)
+                        or set(assessment_paths) != set(assessment_hashes)
+                    ):
+                        errors.append(
+                            "persisted assessment paths are absent or incomplete"
+                        )
+                    else:
+                        for name, expected in assessment_hashes.items():
+                            path = output_dir / assessment_paths[name]
+                            if not path.is_file() or file_hash(path) != expected:
+                                errors.append(
+                                    f"persisted assessment bytes are stale: {name}"
+                                )
             except (OSError, ValueError, json.JSONDecodeError):
                 errors.append("persisted CLI report or manifest is unavailable")
         cli_evidence = evidence.get("cli_evidence")
@@ -594,6 +634,8 @@ def validate_record_source_binding(
                     and cli_evidence.get("review_implementation")
                     == persisted_manifest.get("review_implementation")
                     == collect_review_implementation_hashes()
+                    and cli_evidence.get("assessment_paths")
+                    == evidence.get("assessment_paths", {})
                 )
                 if not evidence_matches:
                     errors.append(
@@ -698,6 +740,7 @@ def review_one(
     base = {
         **identity,
         "schema_version": SCHEMA_VERSION,
+        **canonical_fields("NOT_ASSESSABLE"),
         "paper_grounded_status": "NOT_ASSESSED",
         "scientifically_confirmed": False,
         "solution_content_inspected": False,
@@ -796,6 +839,40 @@ def review_one(
         audit_manifest = json.loads(
             (audit / "audit_manifest.json").read_text(encoding="utf-8")
         )
+        assessment_paths: dict[str, str] = {}
+        assessment_hashes = audit_manifest.get("assessment_hashes", {})
+        if assessment_hashes:
+            if assessment_path is None:
+                raise ValueError("CLI assessment source is absent")
+            assessment_source = (
+                no_paper_assessment
+                if paper_mode == "no_paper"
+                else assessment_path
+            )
+            if assessment_source is None or not assessment_source.is_file():
+                raise ValueError("CLI assessment bytes are absent")
+            assessment_relative = (
+                Path("cli_reports")
+                / package_id
+                / "external"
+                / "agent_assessment.json"
+            )
+            assessment_destination = output_dir / assessment_relative
+            assessment_destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(assessment_source, assessment_destination)
+            if set(assessment_hashes) != {"agent_assessment"} or (
+                file_hash(assessment_destination)
+                != assessment_hashes["agent_assessment"]
+            ):
+                raise ValueError("CLI assessment bytes are stale")
+            assessment_paths["agent_assessment"] = assessment_relative.as_posix()
+        bundle_hash = audit_manifest.get("bundle_hash")
+        if not isinstance(bundle_hash, str):
+            raise ValueError("CLI audit bundle hash is absent")
+        if bundle_hash != canonical_json_hash(
+            audit_manifest.get("output_hashes")
+        ):
+            raise ValueError("CLI audit bundle hash is stale")
         review_implementation = audit_manifest.get("review_implementation")
         if review_implementation != collect_review_implementation_hashes():
             raise ValueError(
@@ -839,9 +916,11 @@ def review_one(
             Path("cli_reports") / package_id / "checker_tests.json"
         )
         (output_dir / report_relative).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(audit / "audit_report.json", output_dir / report_relative)
-        shutil.copy2(audit / "audit_manifest.json", output_dir / manifest_relative)
-        shutil.copy2(audit / "checker_tests.json", output_dir / checker_relative)
+        shutil.copytree(
+            audit,
+            output_dir / report_relative.parent,
+            dirs_exist_ok=True,
+        )
         cli_evidence = {
             "contract_version": report.get("evidence_contract", {}).get(
                 "version"
@@ -895,6 +974,8 @@ def review_one(
             "report_hash": file_hash(output_dir / report_relative),
             "manifest_hash": file_hash(output_dir / manifest_relative),
             "checker_tests_hash": file_hash(output_dir / checker_relative),
+            "audit_bundle_hash": bundle_hash,
+            "assessment_paths": assessment_paths,
         }
         cli_evidence["snapshot_hash"] = canonical_json_hash(cli_evidence)
         cli_identity = {
@@ -911,6 +992,10 @@ def review_one(
         }
         return {
             **base,
+            **canonical_fields(
+                report["summary"]["final_verdict"],
+                publishability=report["summary"]["disposition"],
+            ),
             "paper_grounded_status": report.get(
                 "paper_consistency", {}
             ).get("status", "NOT_ASSESSED"),
@@ -952,7 +1037,9 @@ def review_one(
                     identity,
                     source_hashes,
                     cli_identity,
+                    source,
                 ),
+                "assessment_paths": assessment_paths,
                 "taxonomy_assessment_hash": assessment_hash,
                 "review_paper_mode": paper_mode,
             },

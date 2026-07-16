@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -18,6 +19,7 @@ from prepare_audit_output import (
     collect_review_implementation_hashes,
     sha256_file,
 )
+from canonical_status import canonical_fields
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -61,6 +63,13 @@ QA_EVIDENCE_SEMANTICS = {
     "FAIL": "supports_failure",
     "NOT_ASSESSABLE": "supports_limitation",
 }
+
+
+def canonical_json_hash(value: Any) -> str:
+    payload = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
 DIMENSION_MAX_POINTS = {
     "scientific_validity": 35,
     "instruction_answerability": 20,
@@ -1652,6 +1661,10 @@ def write_disposition_artifacts(
     disposition = {
         "schema_version": "1.0",
         "audit_id": report["audit_id"],
+        **canonical_fields(
+            summary["final_verdict"],
+            publishability=summary["disposition"],
+        ),
         "scoring_version": summary["scoring_version"],
         "verdict": summary["final_verdict"],
         "total_score": summary["total_score"],
@@ -1686,6 +1699,10 @@ def write_disposition_artifacts(
     index_entry = {
         "schema_version": "1.0",
         "audit_id": report["audit_id"],
+        **canonical_fields(
+            summary["final_verdict"],
+            publishability=summary["disposition"],
+        ),
         "benchmark": {
             "name": root.name,
             "root": str(root),
@@ -1928,6 +1945,12 @@ def synthesize_report(
         "route": audit_route,
         "core_reason": reason,
     }
+    canonical = canonical_fields(
+        verdict,
+        publishability=disposition,
+    )
+    report.update(canonical)
+    report["summary"].update(canonical)
     report["materials_qualification"] = {
         "axes": static_result["materials_prescreen"]["axes_present"],
         "prescreen": static_result["materials_prescreen"],
@@ -2161,6 +2184,10 @@ def synthesize_report(
         json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     audit_manifest = read_json(temp_dir / "audit_manifest.json")
+    audit_manifest.update(canonical)
+    audit_manifest["execution_level"] = report["configuration"][
+        "execution_level"
+    ]
     audit_manifest["solution_oracle_executed"] = checker_result[
         "solution_oracle"
     ].get("executed", False)
@@ -2764,6 +2791,25 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(f"missing or out-of-order heading: {heading}")
         last_position = position
     summary = report["summary"]
+    try:
+        canonical = canonical_fields(
+            summary["final_verdict"],
+            publishability=summary.get("disposition"),
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "report verdict is inconsistent with canonical routing"
+        ) from exc
+    if any(report.get(key) != value for key, value in canonical.items()):
+        raise ValueError("audit canonical fields are missing or inconsistent")
+    if any(summary.get(key) != value for key, value in canonical.items()):
+        raise ValueError("summary canonical fields are missing or inconsistent")
+    if any(disposition.get(key) != value for key, value in canonical.items()):
+        raise ValueError("disposition canonical fields are missing or inconsistent")
+    if any(index_entry.get(key) != value for key, value in canonical.items()):
+        raise ValueError("index canonical fields are missing or inconsistent")
+    if any(manifest.get(key) != value for key, value in canonical.items()):
+        raise ValueError("manifest canonical fields are missing or inconsistent")
     validate_qa_axes(report.get("qa_axes"))
     configuration = report.get("configuration", {})
     if configuration.get("execution_level") != "E1":
@@ -3103,6 +3149,7 @@ def finalize_audit(root: Path) -> dict[str, Any]:
             and path.name not in {"audit_manifest.json", "audit_context.json"}
         )
     )
+    manifest["bundle_hash"] = canonical_json_hash(manifest["output_hashes"])
     (temp_dir / "audit_manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )

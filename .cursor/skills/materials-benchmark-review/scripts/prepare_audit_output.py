@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
+from canonical_status import canonical_fields
+
 
 REQUIRED_ROLES = {
     "task.toml": "toml",
@@ -473,6 +475,7 @@ def prepare_workspace(
     )
     manifest = {
         "schema_version": "0.1",
+        "bundle_schema_version": "materials-audit-bundle/1.0",
         "audit_id": audit_id,
         "parent_audit_id": parent_audit_id,
         "review_type": (
@@ -484,6 +487,8 @@ def prepare_workspace(
         "completed_at": None,
         "auditor_version": "materials-benchmark-review/0.1",
         "benchmark_root": str(root),
+        **canonical_fields("NOT_ASSESSABLE"),
+        "execution_level": execution_level,
         # Paper roles are deliberately added only after the no-paper gate
         # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
@@ -492,6 +497,7 @@ def prepare_workspace(
         "fixture_hashes": {},
         "assessment_hashes": {},
         "output_hashes": {},
+        "bundle_hash": None,
         "resolved_findings": [],
         "new_findings": [],
         "solution_content_inspected": False,
