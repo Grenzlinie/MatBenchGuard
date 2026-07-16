@@ -17,11 +17,13 @@ from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
     AUTHORITATIVE_EXECUTION_LEVEL,
     QUALITY_EVIDENCE_ROLES,
+    bind_external_evidence,
     locate_root,
     prepare_workspace,
     record_paper_input_hashes,
     skill_root,
     validate_paper_boundary,
+    write_audit_attestation,
 )
 from probe_resources import probe_resources
 
@@ -770,6 +772,11 @@ def run_review(
             "paper_grounded mode requires --agent-assessment after the "
             "no-paper gate passes"
         )
+    external_bindings = bind_external_evidence(
+        temp_dir,
+        known_valid_output,
+        agent_assessment_path if agent_assessment is not None else None,
+    )
     synthesize_report(
         root,
         temp_dir,
@@ -779,6 +786,7 @@ def run_review(
         execution_evidence=execution_evidence,
         agent_assessment=agent_assessment,
         paper_skip_reason=paper_skip_reason,
+        external_bindings=external_bindings,
     )
     return finalize_audit(root)
 
@@ -822,6 +830,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent-assessment",
         help="Agent-authored paper fidelity and taxonomy assessment JSON",
     )
+    parser.add_argument(
+        "--attestation-output",
+        help="new immutable source-audit attestation path outside the Harbor 题包",
+    )
     return parser
 
 
@@ -850,6 +862,11 @@ def main() -> int:
             ),
             allow_private_network=arguments.allow_private_network,
         )
+        if arguments.attestation_output:
+            result["audit_attestation"] = write_audit_attestation(
+                Path(result["benchmark_root"]),
+                Path(arguments.attestation_output),
+            )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001

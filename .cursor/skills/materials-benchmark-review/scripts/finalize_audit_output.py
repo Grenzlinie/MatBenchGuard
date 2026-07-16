@@ -1725,6 +1725,7 @@ def synthesize_report(
     execution_evidence: dict[str, Any] | None = None,
     agent_assessment: dict[str, Any] | None = None,
     paper_skip_reason: str | None = None,
+    external_bindings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resource_result = resource_result or {
         "status": "NOT_ASSESSED",
@@ -1917,6 +1918,11 @@ def synthesize_report(
         "version": "materials-evidence-contract/1.0",
         "fail_closed": True,
         "gaps": contract_gaps,
+    }
+    report["source_bindings"] = external_bindings or {
+        "fixture_hashes": {},
+        "assessment_hashes": {},
+        "core_contract_digest": None,
     }
     report["resources"] = resource_result["resources"]
     report["execution_evidence"] = execution_evidence
@@ -2643,6 +2649,18 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         "review_implementation"
     ) != collect_review_implementation_hashes():
         raise ValueError("audit Review implementation hashes are stale")
+    source_bindings = report.get("source_bindings")
+    if not isinstance(source_bindings, dict):
+        raise ValueError("audit lacks source evidence bindings")
+    if (
+        source_bindings.get("fixture_hashes")
+        != manifest.get("fixture_hashes", {})
+        or source_bindings.get("assessment_hashes")
+        != manifest.get("assessment_hashes", {})
+        or source_bindings.get("core_contract_digest")
+        != manifest.get("core_contract_digest")
+    ):
+        raise ValueError("audit source bindings differ from its manifest")
     last_position = -1
     for heading in REQUIRED_HEADINGS:
         position = markdown.find(heading)

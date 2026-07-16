@@ -8,9 +8,11 @@ from typing import Any
 
 from tests.test_materials_safe_repair import (
     initial_repair_context,
+    repair_module,
     run_repair,
     safe_plan,
     sha256_file,
+    write_audit_attestation,
     write_plan,
 )
 
@@ -25,7 +27,13 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
         {
             "id": "paper-method",
             "source": "paper/paper.md",
-            "quote": "evidence-backed quantity",
+            "quote": "The exact public replacement is paper-supported quantity.",
+            "kind": "scientific_method",
+            "precision": {
+                "kind": "scientific_method",
+                "claim": "paper-supported quantity",
+                "replacement": "paper-supported quantity",
+            },
         }
     ]
     value["operations"] = [
@@ -40,6 +48,9 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
     ]
     value["regression_tests"] = [
         {
+            "id": "instruction-correction",
+            "finding_id": finding_id,
+            "causal_operation_ids": ["correct-instruction"],
             "type": "text_contains",
             "file": "instruction.md",
             "expected": "paper-supported quantity",
@@ -55,7 +66,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -87,7 +98,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -107,7 +118,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -125,7 +136,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             secret = "hidden_answer = 7.314159265"
             (package / "solution/answer.py").write_text(
@@ -136,10 +147,15 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             manifest["input_hashes"]["solution/answer.py"] = sha256_file(
                 package / "solution/answer.py"
             )
+            manifest["core_contract_digest"] = repair_module().core_contract_digest(
+                package
+            )
             write_plan(audit_manifest, manifest)
+            write_audit_attestation(package)
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
             value["operations"][0]["new"] = secret
+            value["regression_tests"][0]["expected"] = secret
             write_plan(plan, value)
 
             completed = run_repair(package, plan, runner)
@@ -157,7 +173,7 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             plan = workspace / "assisted-plan.json"
             value = assisted_plan(report["audit_id"], finding_id)
@@ -173,6 +189,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             ]
             value["regression_tests"] = [
                 {
+                    "id": "threshold",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["lower-threshold"],
                     "type": "json_path_equals",
                     "file": "tests/grading_spec.json",
                     "path": ["pass_threshold"],
@@ -196,16 +215,21 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(
-                workspace
+                workspace, paper_mode="paper_grounded"
             )
             plan = workspace / "failing-plan.json"
             value = safe_plan(report["audit_id"], finding_id)
-            value["regression_tests"][0] = {
-                "type": "text_contains",
-                "file": "solution/solve.sh",
-                "expected": "not written by the operation",
-            }
-            value["regression_tests"] = value["regression_tests"][:1]
+            value["regression_tests"] = [
+                value["regression_tests"][0],
+                {
+                    "id": "forced-failure",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["restore-solve"],
+                    "type": "command",
+                    "command": ["sh", "solution/solve.sh"],
+                    "expected_returncode": 1,
+                },
+            ]
             write_plan(plan, value)
             instruction_before = sha256_file(package / "instruction.md")
 

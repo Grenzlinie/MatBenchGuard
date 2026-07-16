@@ -44,13 +44,8 @@ AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 HASH_NAMES = {
     *QUALITY_EVIDENCE_ROLES,
 }
-REVIEW_IMPLEMENTATION_FILES = (
-    "scripts/prepare_audit_output.py",
-    "scripts/audit_package.py",
-    "scripts/dynamic_checker_probe.py",
-    "scripts/finalize_audit_output.py",
-    "scripts/run_review.py",
-    "scripts/run_fast_e1_batch.py",
+REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
+    "references/review-implementation-files.json"
 )
 
 
@@ -72,6 +67,104 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return "sha256:" + digest.hexdigest()
+
+
+def sha256_path(path: Path) -> str:
+    if path.is_symlink():
+        raise ValueError(f"external evidence may not be a symbolic link: {path}")
+    if path.is_file():
+        return sha256_file(path)
+    if not path.is_dir():
+        raise FileNotFoundError(path)
+    entries = []
+    for child in sorted(path.rglob("*")):
+        if child.is_symlink():
+            raise ValueError(
+                f"external evidence may not contain symbolic links: {child}"
+            )
+        if child.is_file():
+            entries.append(
+                (child.relative_to(path).as_posix(), sha256_file(child))
+            )
+    payload = json.dumps(
+        entries, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def core_contract_snapshot(root: Path) -> dict[str, Any]:
+    paths: list[Path] = []
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        paths.append(instruction)
+    for role in ("tests", "solution"):
+        directory = root / role
+        if directory.is_symlink():
+            raise ValueError(f"core contract role may not be a symlink: {role}")
+        if directory.is_dir():
+            for path in sorted(directory.rglob("*")):
+                if path.is_symlink():
+                    raise ValueError(
+                        f"core contract surface may not be a symlink: {path}"
+                    )
+                if path.is_file():
+                    paths.append(path)
+    return {
+        "schema_version": "materials-core-contract/1.0",
+        "surface_hashes": {
+            path.relative_to(root).as_posix(): sha256_file(path)
+            for path in sorted(paths)
+        },
+    }
+
+
+def core_contract_digest(root: Path) -> str:
+    payload = json.dumps(
+        core_contract_snapshot(root),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def bind_external_evidence(
+    temp_dir: Path,
+    known_valid_output: Path | None,
+    agent_assessment: Path | None,
+) -> dict[str, dict[str, str]]:
+    manifest_path = temp_dir / "audit_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    root = Path(manifest["benchmark_root"]).resolve()
+    fixture_hashes: dict[str, str] = {}
+    assessment_hashes: dict[str, str] = {}
+    if known_valid_output is not None:
+        resolved = known_valid_output.expanduser().resolve()
+        if resolved.is_relative_to(root):
+            raise ValueError("known-valid output must remain outside the Harbor 题包")
+        fixture_hashes["known_valid_output"] = sha256_path(
+            resolved
+        )
+    if agent_assessment is not None:
+        resolved = agent_assessment.expanduser().resolve()
+        if resolved.is_relative_to(root):
+            raise ValueError("agent assessment must remain outside the Harbor 题包")
+        assessment_hashes["agent_assessment"] = sha256_path(
+            resolved
+        )
+    manifest["fixture_hashes"] = fixture_hashes
+    manifest["assessment_hashes"] = assessment_hashes
+    manifest["core_contract_digest"] = core_contract_digest(
+        Path(manifest["benchmark_root"])
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return {
+        "fixture_hashes": fixture_hashes,
+        "assessment_hashes": assessment_hashes,
+        "core_contract_digest": manifest["core_contract_digest"],
+    }
 
 
 def iter_public_files(root: Path) -> Iterable[Path]:
@@ -170,10 +263,47 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
-def collect_review_implementation_hashes() -> dict[str, Any]:
+def review_implementation_files(root: Path | None = None) -> tuple[str, ...]:
+    root = root or skill_root()
+    manifest_path = root / REVIEW_IMPLEMENTATION_FILES_MANIFEST
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema_version")
+        != "materials-review-implementation-files/1.0"
+        or not isinstance(manifest.get("files"), list)
+    ):
+        raise ValueError("Review implementation file manifest is invalid")
+    files = manifest["files"]
+    if (
+        not files
+        or files != sorted(set(files))
+        or REVIEW_IMPLEMENTATION_FILES_MANIFEST not in files
+        or not all(isinstance(item, str) and item for item in files)
+    ):
+        raise ValueError("Review implementation file list is not canonical")
+    for relative in files:
+        relative_path = Path(relative)
+        path = root / relative_path
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+            or not path.is_file()
+            or path.is_symlink()
+        ):
+            raise ValueError(
+                f"Review implementation dependency is unsafe: {relative}"
+            )
+    return tuple(files)
+
+
+def collect_review_implementation_hashes(
+    root: Path | None = None,
+) -> dict[str, Any]:
+    root = root or skill_root()
     files = {
-        relative: sha256_file(skill_root() / relative)
-        for relative in REVIEW_IMPLEMENTATION_FILES
+        relative: sha256_file(root / relative)
+        for relative in review_implementation_files(root)
     }
     payload = json.dumps(
         files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -184,6 +314,55 @@ def collect_review_implementation_hashes() -> dict[str, Any]:
         "files": files,
         "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
     }
+
+
+def audit_attestation_payload(audit_dir: Path) -> dict[str, Any]:
+    manifest_path = audit_dir / "audit_manifest.json"
+    report_path = audit_dir / "audit_report.json"
+    disposition_path = audit_dir / "disposition.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    return {
+        "audit_id": manifest["audit_id"],
+        "manifest_hash": sha256_file(manifest_path),
+        "report_hash": sha256_file(report_path),
+        "disposition_hash": sha256_file(disposition_path),
+        "fixture_hashes": manifest.get("fixture_hashes", {}),
+        "assessment_hashes": manifest.get("assessment_hashes", {}),
+    }
+
+
+def write_audit_attestation(
+    benchmark_root: Path, output_path: Path
+) -> dict[str, Any]:
+    benchmark_root = benchmark_root.expanduser().resolve()
+    output_path = output_path.expanduser().resolve()
+    if output_path.is_relative_to(benchmark_root):
+        raise ValueError("audit attestation must remain outside the Harbor 题包")
+    if output_path.exists() or output_path.is_symlink():
+        raise FileExistsError(
+            "audit attestation output is immutable and must not already exist"
+        )
+    payload = audit_attestation_payload(benchmark_root / "benchmark_audit")
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    attestation = {
+        "schema_version": "materials-audit-attestation/1.0",
+        **payload,
+        "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with output_path.open("x", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps(attestation, indent=2, ensure_ascii=False) + "\n"
+            )
+    except FileExistsError as exc:
+        raise FileExistsError(
+            "audit attestation output is immutable and must not already exist"
+        ) from exc
+    output_path.chmod(0o444)
+    return attestation
 
 
 def validate_paper_boundary(root: Path) -> None:
@@ -296,6 +475,9 @@ def prepare_workspace(
         # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
         "review_implementation": collect_review_implementation_hashes(),
+        "core_contract_digest": core_contract_digest(root),
+        "fixture_hashes": {},
+        "assessment_hashes": {},
         "output_hashes": {},
         "resolved_findings": [],
         "new_findings": [],

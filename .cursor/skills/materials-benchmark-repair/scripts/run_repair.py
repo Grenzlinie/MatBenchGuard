@@ -17,7 +17,8 @@ from typing import Any, Iterable
 
 sys.dont_write_bytecode = True
 
-REPAIR_CLASSES = {"SAFE_AUTO_FIX", "ASSISTED_FIX"}
+DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
+REPAIR_CLASSES = {"AUTO_FIX", "ASSISTED_FIX"}
 AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 OPERATION_TYPES = {"write_file", "replace_text", "text_replace", "json_set", "delete_file"}
 REGRESSION_TYPES = {
@@ -35,6 +36,84 @@ GENERATED_TOP_LEVEL = {
     "benchmark_repair",
     ".benchmark_audit_tmp",
     ".benchmark_repair_tmp",
+}
+EVIDENCE_SOURCE_PREFIX = "benchmark_audit:"
+METADATA_ROOTS = {
+    "manifest.json",
+    "resources.json",
+    "steps.json",
+    "task.toml",
+    "environment",
+}
+REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
+CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
+REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
+    "references/review-implementation-files.json"
+)
+REPAIR_BUNDLE_FILES = (
+    "repair_plan.json",
+    "changes.json",
+    "unresolved.json",
+    "regression_results.json",
+    "re_audit_comparison.json",
+    "patch.json",
+    "evidence.json",
+    "repair.log",
+    "history.json",
+)
+PRECISION_RULES = {
+    "json_key": ("key", "type", "required", "unit", "value"),
+    "csv_column": (
+        "column",
+        "type",
+        "required",
+        "unit",
+        "value",
+        "replacement",
+    ),
+    "npy_array": (
+        "shape",
+        "dtype",
+        "axis_semantics",
+        "unit",
+        "required",
+        "value",
+        "replacement",
+    ),
+    "gold": (
+        "field",
+        "value",
+        "type",
+        "unit",
+        "required",
+        "source_or_derivation",
+    ),
+    "tolerance": (
+        "field",
+        "value",
+        "type",
+        "unit",
+        "required",
+        "error_basis",
+        "direction",
+        "mode",
+    ),
+    "scoring_contract": (
+        "field",
+        "value",
+        "type",
+        "unit",
+        "required",
+        "scoring_contract",
+        "mathematical_proof",
+    ),
+    "scientific_method": ("claim", "replacement"),
+    "exception_guard": (
+        "stack_trace",
+        "existing_reading_code",
+        "replacement",
+    ),
+    "harbor_path": ("official_contract", "existing_path_code", "replacement"),
 }
 
 
@@ -67,6 +146,113 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + digest.hexdigest()
 
 
+def sha256_path(path: Path) -> str:
+    """Hash an external file or directory without following symlink entries."""
+    if path.is_symlink():
+        raise ValueError(f"external evidence may not be a symbolic link: {path}")
+    if path.is_file():
+        return sha256_file(path)
+    if not path.is_dir():
+        raise FileNotFoundError(path)
+    entries: list[tuple[str, str]] = []
+    for child in sorted(path.rglob("*")):
+        if child.is_symlink():
+            raise ValueError(
+                f"external evidence may not contain symbolic links: {child}"
+            )
+        if child.is_file():
+            entries.append((child.relative_to(path).as_posix(), sha256_file(child)))
+    payload = json.dumps(
+        entries, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def review_skill_root() -> Path:
+    return (
+        Path(__file__).resolve().parents[2] / "materials-benchmark-review"
+    )
+
+
+def collect_review_implementation_hashes() -> dict[str, Any]:
+    root = review_skill_root()
+    manifest_path = root / REVIEW_IMPLEMENTATION_FILES_MANIFEST
+    manifest = read_json(manifest_path)
+    files_list = manifest.get("files") if isinstance(manifest, dict) else None
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema_version")
+        != "materials-review-implementation-files/1.0"
+        or not isinstance(files_list, list)
+        or files_list != sorted(set(files_list))
+        or REVIEW_IMPLEMENTATION_FILES_MANIFEST not in files_list
+        or not all(isinstance(item, str) and item for item in files_list)
+    ):
+        raise ValueError("Review implementation file manifest is invalid")
+    files: dict[str, str] = {}
+    for relative in files_list:
+        relative_path = Path(relative)
+        path = root / relative_path
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+            or not path.is_file()
+            or path.is_symlink()
+        ):
+            raise ValueError(f"current Review implementation is missing: {relative}")
+        files[relative] = sha256_file(path)
+    payload = json.dumps(
+        files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return {
+        "schema_version": "materials-review-implementation/1.0",
+        "root": ".cursor/skills/materials-benchmark-review",
+        "files": files,
+        "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def contract_surface_hashes(root: Path) -> dict[str, str]:
+    paths: list[Path] = []
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        paths.append(instruction)
+    for role in ("tests", "solution"):
+        directory = root / role
+        if directory.is_symlink():
+            raise ValueError(f"core contract role may not be a symlink: {role}")
+        if directory.is_dir():
+            for path in sorted(directory.rglob("*")):
+                if path.is_symlink():
+                    raise ValueError(
+                        f"core contract surface may not be a symlink: {path}"
+                    )
+                if path.is_file():
+                    paths.append(path)
+    return {
+        path.relative_to(root).as_posix(): sha256_file(path)
+        for path in sorted(paths)
+    }
+
+
+def core_contract_snapshot(root: Path) -> dict[str, Any]:
+    """Freeze every instruction/tests/solution path and byte hash."""
+    return {
+        "schema_version": CORE_CONTRACT_SCHEMA,
+        "surface_hashes": contract_surface_hashes(root),
+    }
+
+
+def core_contract_digest(root: Path) -> str:
+    payload = json.dumps(
+        core_contract_snapshot(root),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
 def timestamp() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -81,6 +267,8 @@ def unique_id(prefix: str) -> str:
 def validated_relative(relative: Any, *, context: str) -> Path:
     if not isinstance(relative, str) or not relative.strip():
         raise ValueError(f"{context} must be a non-empty relative path")
+    if "://" in relative or relative.startswith(("file:", "http:", "https:")):
+        raise ValueError(f"{context} may not be a URL")
     path = Path(relative)
     if path.is_absolute() or ".." in path.parts or path.as_posix().startswith("/"):
         raise ValueError(f"{context} escapes the Harbor 题包")
@@ -117,7 +305,47 @@ def package_path(root: Path, relative: Any, *, context: str) -> tuple[Path, Path
         current = current / part
         if current.exists() and current.is_symlink():
             raise ValueError(f"{context} may not traverse a symbolic link")
-    return root / relative_path, relative_path
+    path = root / relative_path
+    if path.exists() and not path.resolve().is_relative_to(root.resolve()):
+        raise ValueError(f"{context} escapes the Harbor 题包")
+    return path, relative_path
+
+
+def regression_semantically_asserts(
+    operation: dict[str, Any],
+    specification: dict[str, Any],
+) -> bool:
+    operation_file = Path(str(operation.get("file", ""))).as_posix()
+    regression_file = Path(str(specification.get("file", ""))).as_posix()
+    if operation_file != regression_file:
+        return False
+    operation_type = operation.get("type")
+    regression_type = specification.get("type")
+    if operation_type == "write_file":
+        return (
+            regression_type == "text_contains"
+            and specification.get("expected") == operation.get("content")
+        )
+    if operation_type in {"replace_text", "text_replace"}:
+        replacement = operation.get("new")
+        if replacement:
+            return (
+                regression_type == "text_contains"
+                and specification.get("expected") == replacement
+            )
+        return (
+            regression_type == "text_not_contains"
+            and specification.get("expected") == operation.get("old")
+        )
+    if operation_type == "json_set":
+        return (
+            regression_type == "json_path_equals"
+            and specification.get("path") == operation.get("path")
+            and specification.get("expected") == operation.get("value")
+        )
+    if operation_type == "delete_file":
+        return regression_type == "file_absent"
+    return False
 
 
 def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
@@ -127,10 +355,17 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
     if not resolved.is_file():
         raise FileNotFoundError(f"repair plan is missing: {resolved}")
     plan = read_json(resolved)
+    if isinstance(plan, dict) and "repair_class" not in plan:
+        if plan.get("decision") in DECISIONS:
+            plan["repair_class"] = plan["decision"]
     if not isinstance(plan, dict) or plan.get("schema_version") != "0.1":
         raise ValueError("repair plan must use schema_version 0.1")
-    if plan.get("repair_class") not in REPAIR_CLASSES:
-        raise ValueError("repair_class must be SAFE_AUTO_FIX or ASSISTED_FIX")
+    if "source_audit" not in plan and isinstance(plan.get("audit_binding"), dict):
+        plan["source_audit"] = plan["audit_binding"]
+    if plan.get("repair_class") not in DECISIONS:
+        raise ValueError(
+            "repair_class must be AUTO_FIX, ASSISTED_FIX, or ABANDON"
+        )
     if not isinstance(plan.get("justification"), str) or not plan[
         "justification"
     ].strip():
@@ -141,11 +376,18 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
         raise ValueError("repair plan requires finding_id")
     operations = plan.get("operations")
     regressions = plan.get("regression_tests")
-    if not isinstance(operations, list) or not operations:
+    if not isinstance(operations, list):
+        raise ValueError("repair plan operations must be a list")
+    if not isinstance(regressions, list):
+        raise ValueError("repair plan regression_tests must be a list")
+    if plan.get("repair_class") != "ABANDON" and not operations:
         raise ValueError("repair plan requires at least one operation")
-    if not isinstance(regressions, list) or not regressions:
+    if plan.get("repair_class") != "ABANDON" and not regressions:
         raise ValueError("repair plan requires regression tests")
+    if plan.get("repair_class") == "ABANDON" and (operations or regressions):
+        raise ValueError("ABANDON plans require operations=[] and regression_tests=[]")
     operation_ids: set[str] = set()
+    operations_by_id: dict[str, dict[str, Any]] = {}
     for operation in operations:
         if not isinstance(operation, dict):
             raise ValueError("every repair operation must be an object")
@@ -155,26 +397,371 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
         if operation_id in operation_ids:
             raise ValueError(f"duplicate repair operation id: {operation_id}")
         operation_ids.add(operation_id)
+        operations_by_id[operation_id] = operation
         if operation.get("type") not in OPERATION_TYPES:
             raise ValueError(f"unsupported repair operation: {operation.get('type')}")
         repair_target(root, operation.get("file"))
-    for specification in regressions:
+    causally_covered: set[str] = set()
+    semantically_covered: set[str] = set()
+    for index, specification in enumerate(regressions, start=1):
         if not isinstance(specification, dict):
             raise ValueError("every regression test must be an object")
         if specification.get("type") not in REGRESSION_TYPES:
             raise ValueError(
                 f"unsupported regression test type: {specification.get('type')}"
             )
+        if plan.get("repair_class") == "ABANDON":
+            raise ValueError("ABANDON plans may not carry regressions")
+        if not isinstance(specification.get("id"), str) or not specification["id"]:
+            raise ValueError(f"regression test {index} requires a stable id")
+        if specification.get("finding_id") != plan["finding_id"]:
+            raise ValueError(
+                f"regression test {index} must bind the target finding"
+            )
+        causal = specification.get("causal_operation_ids")
+        if not isinstance(causal, list) or not causal:
+            raise ValueError(
+                f"regression test {index} requires causal_operation_ids"
+            )
+        if not all(
+            isinstance(item, str) and item in operation_ids for item in causal
+        ):
+            raise ValueError(
+                f"regression test {index} links an unknown causal operation"
+            )
+        causally_covered.update(causal)
+        if len(causal) == 1 and regression_semantically_asserts(
+            operations_by_id[causal[0]], specification
+        ):
+            semantically_covered.add(causal[0])
+        if specification["type"] == "command":
+            observed_paths = {
+                Path(item).as_posix()
+                for item in specification.get("command", [])
+                if isinstance(item, str)
+            }
+        else:
+            observed_paths = {Path(str(specification.get("file", ""))).as_posix()}
+        mismatched = [
+            operation_id
+            for operation_id in causal
+            if Path(str(operations_by_id[operation_id].get("file", ""))).as_posix()
+            not in observed_paths
+        ]
+        if mismatched:
+            raise ValueError(
+                f"regression test {index} does not observe causal operation "
+                f"targets: {mismatched}"
+            )
+        if specification.get("expected_before", False) is not False:
+            raise ValueError("regressions must fail before the repair")
+        if specification.get("expected_after", True) is not True:
+            raise ValueError("regressions must pass after the repair")
+    if plan.get("repair_class") != "ABANDON" and causally_covered != operation_ids:
+        uncovered = sorted(operation_ids - causally_covered)
+        raise ValueError(
+            f"every operation requires causal regression coverage: {uncovered}"
+        )
+    if (
+        plan.get("repair_class") != "ABANDON"
+        and semantically_covered != operation_ids
+    ):
+        uncovered = sorted(operation_ids - semantically_covered)
+        raise ValueError(
+            "every operation requires its own exact semantic regression "
+            f"assertion: {uncovered}"
+        )
     return plan
 
 
+def external_binding_hashes(
+    root: Path, plan: dict[str, Any], authoritative_manifest: dict[str, Any]
+) -> tuple[dict[str, str], dict[str, str]]:
+    fixture_hashes: dict[str, str] = {}
+    assessment_hashes: dict[str, str] = {}
+    for key, target in (
+        ("known_valid_output", fixture_hashes),
+        ("agent_assessment", assessment_hashes),
+    ):
+        raw = plan.get(key)
+        if raw is None:
+            continue
+        external = Path(str(raw)).expanduser()
+        resolved = external.resolve()
+        if resolved.is_relative_to(root.resolve()):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"{key} must remain outside the Harbor 题包",
+            )
+        try:
+            target[key] = sha256_path(resolved)
+        except (OSError, ValueError) as exc:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE", f"{key} is not valid external evidence: {exc}"
+            ) from exc
+
+    def normalize(value: Any, field: str) -> dict[str, str]:
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"authoritative audit {field} must be a hash mapping",
+            )
+        normalized: dict[str, str] = {}
+        for name, raw_hash in value.items():
+            if isinstance(raw_hash, dict):
+                raw_hash = raw_hash.get("hash")
+            if not isinstance(name, str) or not isinstance(raw_hash, str):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    f"authoritative audit {field} contains an invalid hash",
+                )
+            normalized[name] = raw_hash
+        return normalized
+
+    expected_fixtures = normalize(
+        authoritative_manifest.get("fixture_hashes"), "fixture_hashes"
+    )
+    expected_assessments = normalize(
+        authoritative_manifest.get("assessment_hashes"), "assessment_hashes"
+    )
+    if expected_fixtures != fixture_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit fixture hashes do not bind the supplied fixture",
+        )
+    if expected_assessments != assessment_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit assessment hashes do not bind the supplied "
+            "assessment",
+        )
+    return fixture_hashes, assessment_hashes
+
+
+def authenticate_audit_bundle(
+    root: Path,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+    disposition: dict[str, Any],
+) -> None:
+    audit = root / "benchmark_audit"
+    audit_id = manifest.get("audit_id")
+    if (
+        not isinstance(audit_id, str)
+        or report.get("audit_id") != audit_id
+        or disposition.get("audit_id", audit_id) != audit_id
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit identities are inconsistent",
+        )
+    output_hashes = manifest.get("output_hashes")
+    if not isinstance(output_hashes, dict) or not output_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit lacks authenticated output hashes",
+        )
+    required = {"audit_report.json", "disposition.json"}
+    if not required.issubset(output_hashes):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit output hashes omit required reports",
+        )
+    for relative, expected in output_hashes.items():
+        try:
+            path, relative_path = package_path(
+                audit, relative, context="audit output path"
+            )
+        except (TypeError, ValueError) as exc:
+            raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
+        if relative_path.name in {"audit_manifest.json", "audit_context.json"}:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "audit output hashes may not self-authenticate manifest/context",
+            )
+        if (
+            not isinstance(expected, str)
+            or not path.is_file()
+            or sha256_file(path) != expected
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"authoritative audit output is tampered or stale: {relative}",
+            )
+    try:
+        current_implementation = collect_review_implementation_hashes()
+    except (OSError, ValueError) as exc:
+        raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
+    if manifest.get("review_implementation") != current_implementation:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit was produced by a stale Review implementation",
+        )
+
+
+def validate_audit_attestation(
+    root: Path,
+    audit: Path,
+    attestation_path: Path,
+) -> dict[str, Any]:
+    supplied = attestation_path.expanduser()
+    if supplied.is_symlink():
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source-audit attestation may not be a symbolic link",
+        )
+    resolved = supplied.resolve()
+    if resolved.is_relative_to(root.resolve()) or not resolved.is_file():
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source-audit attestation must be an external regular file",
+        )
+    if resolved.stat().st_mode & 0o222:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source-audit attestation must be immutable/read-only",
+        )
+    try:
+        attestation = read_json(resolved)
+        manifest = read_json(audit / "audit_manifest.json")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"source-audit attestation is unreadable: {exc}",
+        ) from exc
+    if not isinstance(attestation, dict) or not isinstance(manifest, dict):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source-audit attestation and manifest must be objects",
+        )
+    try:
+        payload = {
+            "audit_id": manifest.get("audit_id"),
+            "manifest_hash": sha256_file(audit / "audit_manifest.json"),
+            "report_hash": sha256_file(audit / "audit_report.json"),
+            "disposition_hash": sha256_file(audit / "disposition.json"),
+            "fixture_hashes": manifest.get("fixture_hashes", {}),
+            "assessment_hashes": manifest.get("assessment_hashes", {}),
+        }
+    except OSError as exc:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"source-audit attestation target is incomplete: {exc}",
+        ) from exc
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    expected = {
+        "schema_version": "materials-audit-attestation/1.0",
+        **payload,
+        "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+    }
+    if attestation != expected:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source-audit attestation does not bind the authoritative bytes",
+        )
+    return attestation
+
+
+def validate_source_audit_binding(
+    root: Path,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+    finding: dict[str, Any],
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    source_audit = plan.get("source_audit")
+    if not isinstance(source_audit, dict):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "Repair requires a complete source-audit binding.",
+        )
+    expected_audit_id = report.get("audit_id")
+    if (
+        source_audit.get("audit_id") != expected_audit_id
+        or source_audit.get("audit_id") != manifest.get("audit_id")
+        or source_audit.get("finding_id") != plan.get("finding_id")
+        or source_audit.get("finding_id") != finding.get("finding_id")
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source audit identity is not bound to the authoritative audit",
+        )
+    if finding.get("status") != "OPEN":
+        raise PolicyStop(
+            "ABANDON",
+            "The selected finding is not OPEN and cannot be repaired.",
+        )
+    if source_audit.get("finding_status") != "OPEN":
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source audit must explicitly bind an OPEN finding",
+        )
+    input_hashes = manifest.get("input_hashes")
+    if not isinstance(input_hashes, dict) or not input_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit lacks complete package input hashes",
+        )
+    bound_input_hashes = source_audit.get("input_hashes")
+    if bound_input_hashes is None:
+        bound_input_hashes = source_audit.get("package_hashes")
+    if bound_input_hashes is None:
+        bound_input_hashes = source_audit.get("source_hashes")
+    if bound_input_hashes != input_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source audit package hashes differ from the authoritative audit",
+        )
+    configuration = report.get("configuration")
+    if not isinstance(configuration, dict):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE", "authoritative audit lacks configuration"
+        )
+    if (
+        source_audit.get("paper_mode", source_audit.get("paper_review_mode"))
+        != configuration.get("paper_mode")
+        or source_audit.get(
+            "execution_level", source_audit.get("evidence_depth")
+        )
+        != REQUIRED_AUDIT_EXECUTION_LEVEL
+        or configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "Repair source audit and re-audit must be fixed at E1 depth",
+        )
+    digest = core_contract_digest(root)
+    bound_digest = source_audit.get("core_contract_digest")
+    if bound_digest is None and isinstance(source_audit.get("core_contract"), dict):
+        bound_digest = source_audit["core_contract"].get("digest")
+    if (
+        plan.get("core_contract_digest") != digest
+        or bound_digest != digest
+        or manifest.get("core_contract_digest") != digest
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "frozen core-contract digest is stale or incomplete",
+        )
+    external_binding_hashes(root, plan, manifest)
+    return source_audit
+
+
 def validate_fresh_audit(
-    root: Path, plan: dict[str, Any]
+    root: Path,
+    plan: dict[str, Any],
+    attestation_path: Path,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     audit = root / "benchmark_audit"
+    validate_audit_attestation(root, audit, attestation_path)
     report = read_json(audit / "audit_report.json")
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
+    authenticate_audit_bundle(root, report, manifest, disposition)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
     route = disposition.get("route") or report.get("summary", {}).get("disposition")
@@ -198,12 +785,21 @@ def validate_fresh_audit(
             raise ValueError("audit manifest hashes a generated report path")
         if not source.is_file() or sha256_file(source) != expected:
             raise ValueError(f"stale audit: input changed since review: {relative}")
-    return report, manifest, findings[plan["finding_id"]]
+    finding = findings[plan["finding_id"]]
+    if plan.get("repair_class") != "ABANDON":
+        validate_source_audit_binding(root, report, manifest, finding, plan)
+    elif finding.get("status") != "OPEN":
+        raise PolicyStop(
+            "ABANDON",
+            "The selected finding is not OPEN and cannot be repaired.",
+        )
+    return report, manifest, finding
 
 
 def evidence_index(
     root: Path,
     report: dict[str, Any],
+    manifest: dict[str, Any],
     plan: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
     raw = plan.get("evidence")
@@ -228,24 +824,94 @@ def evidence_index(
             raise PolicyStop(
                 "BLOCKED_EVIDENCE", f"Duplicate evidence id: {evidence_id}"
             )
-        source_path = Path(source)
-        if not source_path.is_absolute() and ".." not in source_path.parts:
-            local = root / source_path
-            if local.is_file() and quote not in local.read_text(
-                encoding="utf-8", errors="replace"
+        if "://" in source or source.startswith(("file:", "http:", "https:")):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "Evidence sources must be local package files.",
+            )
+        if source.startswith(EVIDENCE_SOURCE_PREFIX):
+            if source != f"{EVIDENCE_SOURCE_PREFIX}{plan['finding_id']}":
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "Audit evidence must bind the selected finding.",
+                )
+            local = root / "benchmark_audit/audit_report.json"
+            source_category = "audit_finding"
+        else:
+            try:
+                local, relative = package_path(
+                    root, source, context="evidence source"
+                )
+            except (TypeError, ValueError) as exc:
+                raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
+            top = relative.parts[0] if relative.parts else ""
+            if top == "solution":
+                source_category = "solution_oracle"
+            elif top == "paper":
+                source_category = "paper"
+            elif top == "tests":
+                source_category = "checker_contract"
+            elif relative.as_posix() == "instruction.md":
+                source_category = "public_instruction"
+            elif top in METADATA_ROOTS:
+                source_category = "metadata"
+            else:
+                source_category = "unsupported"
+        if not local.is_file():
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE", f"Evidence source does not exist: {source}"
+            )
+        if local.is_symlink() or not local.resolve().is_relative_to(root.resolve()):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"Evidence source escapes the Harbor 题包: {source}",
+            )
+        text = local.read_text(encoding="utf-8", errors="replace")
+        if quote not in text:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"Evidence quote is absent from {source}.",
+            )
+        supplied_hash = next(
+            (
+                item.get(name)
+                for name in ("source_hash", "sha256", "hash")
+                if item.get(name) is not None
+            ),
+            None,
+        )
+        actual_hash = sha256_file(local)
+        if source_category == "paper":
+            configuration = report.get("configuration", {})
+            input_hashes = manifest.get("input_hashes", {})
+            if configuration.get("paper_mode") != "paper_grounded":
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "paper evidence requires a paper-grounded source audit",
+                )
+            if (
+                not isinstance(input_hashes, dict)
+                or input_hashes.get(relative.as_posix()) != actual_hash
             ):
                 raise PolicyStop(
                     "BLOCKED_EVIDENCE",
-                    f"Evidence quote is absent from {source}.",
+                    "paper evidence is absent from authoritative input hashes",
                 )
-        if source.startswith("benchmark_audit:"):
-            finding_text = json.dumps(report.get("findings", []), ensure_ascii=False)
-            if quote not in finding_text:
-                raise PolicyStop(
-                    "BLOCKED_EVIDENCE",
-                    "Audit-finding evidence quote is not in the authoritative report.",
-                )
-        indexed[evidence_id] = item
+        if supplied_hash != actual_hash:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"Evidence hash does not match {source}.",
+            )
+        normalized = dict(item)
+        declared_category = item.get("source_category")
+        if declared_category is not None and declared_category != source_category:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"Evidence source category is false for {source}.",
+            )
+        normalized["source_category"] = source_category
+        normalized["source_hash"] = actual_hash
+        indexed[evidence_id] = normalized
     return indexed
 
 
@@ -265,6 +931,303 @@ def linked_evidence(
             f"Operation {operation.get('id')} links unknown evidence.",
         )
     return [evidence[item] for item in evidence_ids]
+
+
+def precision_kind_for(operation: dict[str, Any]) -> str | None:
+    relative = Path(str(operation.get("file", ""))).as_posix()
+    if operation.get("type") == "json_set":
+        tokens = operation.get("path")
+        final = str(tokens[-1]).lower() if isinstance(tokens, list) and tokens else ""
+        if "threshold" in final or "weight" in final:
+            return "scoring_contract"
+        if "tolerance" in final or "error" in final:
+            return "tolerance"
+        if any(term in final for term in ("gold", "target", "reference")):
+            return "gold"
+        return "json_key"
+    if relative.lower().endswith(".json") and operation.get("type") in {
+        "replace_text",
+        "text_replace",
+        "write_file",
+    }:
+        return "json_key"
+    if relative.lower().endswith(".csv"):
+        return "csv_column"
+    if relative.lower().endswith(".npy"):
+        return "npy_array"
+    if relative == "instruction.md":
+        return "scientific_method"
+    if relative.startswith("tests/"):
+        patch = proposed_text(operation)
+        if any(token in patch for token in ("try:", "except ", "except:")):
+            return "exception_guard"
+        return "harbor_path"
+    if relative.startswith("solution/"):
+        return None
+    return "harbor_path"
+
+
+def json_type_name(value: Any) -> str:
+    return (
+        "boolean"
+        if isinstance(value, bool)
+        else "number"
+        if isinstance(value, (int, float))
+        else "string"
+        if isinstance(value, str)
+        else "array"
+        if isinstance(value, list)
+        else "object"
+        if isinstance(value, dict)
+        else "null"
+    )
+
+
+def normalized_precision(item: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    precision = item.get("precision")
+    if not isinstance(precision, dict):
+        precision = {}
+    precision = dict(precision)
+    for canonical, aliases in {
+        "required": ("requiredness",),
+        "unit": ("units",),
+        "axis_semantics": ("axes", "axis"),
+        "source_or_derivation": ("derivation", "source"),
+        "error_basis": ("basis",),
+        "mode": ("abs_rel", "absolute_or_relative"),
+        "stack_trace": ("stack", "traceback"),
+        "existing_reading_code": ("reading_code",),
+    }.items():
+        if canonical not in precision:
+            for alias in aliases:
+                if alias in precision:
+                    precision[canonical] = precision[alias]
+                    break
+    return precision.get("kind") or item.get("kind"), precision
+
+
+def quote_supports_precision(
+    item: dict[str, Any],
+    precision: dict[str, Any],
+    fields: tuple[str, ...],
+) -> bool:
+    quote = str(item.get("quote", "")).casefold()
+    for field in fields:
+        value = precision.get(field)
+        if value is None or value == "":
+            continue
+        if field == "required" and isinstance(value, bool):
+            token = "required" if value else "optional"
+        elif isinstance(value, bool):
+            token = str(value).lower()
+        else:
+            token = str(value).casefold()
+        if token not in quote:
+            return False
+    return True
+
+
+def validate_precision_matrix(
+    operation: dict[str, Any],
+    linked: list[dict[str, Any]],
+    repair_class: str,
+) -> None:
+    expected = precision_kind_for(operation)
+    if expected is None:
+        return
+    if repair_class == "AUTO_FIX" and Path(str(operation["file"])).as_posix() != (
+        "instruction.md"
+    ):
+        # Deterministic AUTO_FIX operations use a Harbor contract/finding rather
+        # than inventing scientific precision.  Core targets are rejected below.
+        return
+    valid: list[dict[str, Any]] = []
+    valid_items: list[dict[str, Any]] = []
+    for item in linked:
+        kind, precision = normalized_precision(item)
+        if kind != expected:
+            continue
+        valid.append(precision)
+        valid_items.append(item)
+    if not valid:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"Evidence precision does not match {expected} for "
+            f"{operation.get('file')}.",
+        )
+    required = PRECISION_RULES[expected]
+    if not all(
+        all(
+            field in precision
+            and precision[field] is not None
+            and precision[field] != ""
+            for field in required
+        )
+        for precision in valid
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{expected} evidence lacks the required typed precision fields.",
+        )
+    if not all(
+        quote_supports_precision(item, precision, required)
+        for item, precision in zip(valid_items, valid)
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{expected} quote does not substantively support the exact "
+            "field/type/unit/requiredness/value.",
+        )
+    if expected in {
+        "csv_column",
+        "npy_array",
+        "scientific_method",
+        "exception_guard",
+        "harbor_path",
+    } and any(
+        precision.get("replacement") != proposed_text(operation)
+        for precision in valid
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{expected} evidence does not match the exact operation patch.",
+        )
+    if expected == "json_key":
+        operation_path = operation.get("path")
+        operation_key = None
+        operation_value: Any = None
+        if isinstance(operation_path, list) and operation_path:
+            operation_key = str(operation_path[-1])
+            operation_value = operation.get("value")
+        elif operation.get("type") in {
+            "replace_text",
+            "text_replace",
+            "write_file",
+        }:
+            try:
+                if operation.get("type") == "write_file":
+                    old_document = {}
+                    new_document = json.loads(operation.get("content", ""))
+                else:
+                    old_document = json.loads(operation.get("old", ""))
+                    new_document = json.loads(operation.get("new", ""))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON text operation must contain complete valid JSON values.",
+                )
+            if not isinstance(old_document, dict) or not isinstance(new_document, dict):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON text operation requires object-level typed evidence.",
+                )
+            changed_keys = {
+                key
+                for key in set(old_document) | set(new_document)
+                if old_document.get(key) != new_document.get(key)
+            }
+            evidenced_keys = {str(precision.get("key")) for precision in valid}
+            if changed_keys != evidenced_keys:
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON replacement evidence must cover every changed field.",
+                )
+            for precision in valid:
+                key = str(precision["key"])
+                if precision.get("value") != new_document.get(key):
+                    raise PolicyStop(
+                        "BLOCKED_EVIDENCE",
+                        "JSON evidence value differs from the replacement value.",
+                    )
+                if (
+                    str(precision.get("type")).casefold()
+                    != json_type_name(new_document.get(key))
+                ):
+                    raise PolicyStop(
+                        "BLOCKED_EVIDENCE",
+                        "JSON evidence type differs from the replacement value type.",
+                    )
+        if any(
+            precision.get("key") != operation_key
+            for precision in valid
+            if operation_key is not None
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "JSON evidence key does not match the operation path.",
+            )
+        if operation_key is not None and any(
+            precision.get("value") != operation_value for precision in valid
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "JSON evidence value differs from the operation value.",
+            )
+        expected_value = (
+            operation_value
+            if operation_key is not None
+            else None
+        )
+        if operation_key is not None:
+            if any(
+                str(precision.get("type")).casefold()
+                != json_type_name(expected_value)
+                for precision in valid
+            ):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON evidence type differs from the operation value type.",
+                )
+    if expected in {"tolerance", "scoring_contract"}:
+        tokens = operation.get("path")
+        operation_field = (
+            str(tokens[-1]) if isinstance(tokens, list) and tokens else None
+        )
+        if operation_field is None or any(
+            precision.get("field") != operation_field
+            or precision.get("value") != operation.get("value")
+            or str(precision.get("type")).casefold()
+            != json_type_name(operation.get("value"))
+            for precision in valid
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"{expected} evidence does not match the exact field and value.",
+            )
+    if expected == "gold":
+        tokens = operation.get("path")
+        operation_field = (
+            str(tokens[-1]) if isinstance(tokens, list) and tokens else None
+        )
+        if operation_field is None or any(
+            precision.get("field") != operation_field
+            or precision.get("value") != operation.get("value")
+            or str(precision.get("type")).casefold()
+            != json_type_name(operation.get("value"))
+            for precision in valid
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "Gold evidence does not match the exact field and value.",
+            )
+    method_items = [
+        item
+        for item in linked
+        if (
+            (item.get("precision") or {}).get("kind") == expected
+            if isinstance(item.get("precision"), dict)
+            else item.get("kind") == expected
+        )
+        or item.get("kind") == expected
+    ]
+    if expected == "scientific_method" and any(
+        item.get("source_category") not in {"public_instruction", "paper"}
+        for item in method_items
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "Scientific method evidence must be a local instruction/paper quote.",
+        )
 
 
 def proposed_text(operation: dict[str, Any]) -> str:
@@ -297,6 +1260,7 @@ def solution_fragments(root: Path) -> set[str]:
 def validate_policy(
     root: Path,
     report: dict[str, Any],
+    manifest: dict[str, Any],
     plan: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
     if plan.get("core_science_change") is not False:
@@ -305,10 +1269,20 @@ def validate_policy(
             "Plan must declare core_science_change=false; Repair may not "
             "redefine the Harbor package's core science.",
         )
-    evidence = evidence_index(root, report, plan)
+    evidence = evidence_index(root, report, manifest, plan)
     hidden_fragments = solution_fragments(root)
+    target_roles: set[str] = set()
     for operation in plan["operations"]:
         _, relative = repair_target(root, operation["file"])
+        target_roles.add(
+            "solution"
+            if relative.parts and relative.parts[0] == "solution"
+            else "instruction"
+            if relative.as_posix() == "instruction.md"
+            else "tests"
+            if relative.parts and relative.parts[0] == "tests"
+            else "other"
+        )
         if relative.parts[0] != "solution":
             continue
         hidden_fragments.update(
@@ -316,9 +1290,59 @@ def validate_policy(
             for line in proposed_text(operation).splitlines()
             if len(line.strip()) >= 12
         )
+    if plan["repair_class"] == "AUTO_FIX" and target_roles & {
+        "instruction",
+        "tests",
+    }:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "AUTO_FIX may not change the frozen core scientific contract.",
+        )
+    if "solution" in target_roles and target_roles & {"instruction", "tests"}:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "A repair may not rewrite checker/instruction and solution "
+            "protocols together.",
+        )
     for operation in plan["operations"]:
         linked = linked_evidence(operation, evidence)
         _, relative = repair_target(root, operation["file"])
+        if relative.parts and relative.parts[0] != "solution" and any(
+            item.get("source_category") == "solution_oracle" for item in linked
+        ):
+            raise PolicyStop(
+                "POLICY_VIOLATION",
+                "Oracle/solution content cannot support public or checker "
+                "contract changes.",
+            )
+        if relative.as_posix() == "instruction.md":
+            addition = proposed_text(operation)
+            if any(fragment in addition for fragment in hidden_fragments):
+                raise PolicyStop(
+                    "POLICY_VIOLATION",
+                    "Repair would leak hidden solution content into instruction.md.",
+                )
+        validate_precision_matrix(operation, linked, plan["repair_class"])
+        expected_precision = precision_kind_for(operation)
+        allowed_categories = (
+            {"public_instruction", "paper"}
+            if expected_precision == "scientific_method"
+            else {
+                "audit_finding",
+                "public_instruction",
+                "checker_contract",
+                "paper",
+            }
+        )
+        if any(
+            item.get("source_category") not in allowed_categories
+            for item in linked
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "Evidence source role cannot support this scientific/schema/"
+                "scoring change.",
+            )
         if relative.as_posix() == "instruction.md":
             if any(
                 Path(str(item["source"])).parts[:1] == ("solution",)
@@ -327,12 +1351,6 @@ def validate_policy(
                 raise PolicyStop(
                     "POLICY_VIOLATION",
                     "Solution content cannot be evidence for public instruction.",
-                )
-            addition = proposed_text(operation)
-            if any(fragment in addition for fragment in hidden_fragments):
-                raise PolicyStop(
-                    "POLICY_VIOLATION",
-                    "Repair would leak hidden solution content into instruction.md.",
                 )
     return evidence
 
@@ -597,6 +1615,7 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
 def run_equal_depth_review(
     candidate: Path,
     report: dict[str, Any],
+    source_manifest: dict[str, Any],
     plan: dict[str, Any],
 ) -> dict[str, Any]:
     runner = (
@@ -606,6 +1625,9 @@ def run_equal_depth_review(
     if not runner.is_file():
         raise FileNotFoundError(f"Review runner is missing: {runner}")
     paper_mode, execution_level = report_configuration(report)
+    if execution_level != REQUIRED_AUDIT_EXECUTION_LEVEL:
+        raise ValueError("Repair equal-depth re-audit is fixed at E1")
+    external_binding_hashes(candidate, plan, source_manifest)
     command = [
         sys.executable,
         str(runner),
@@ -659,7 +1681,8 @@ def validate_reaudit(
     candidate: Path,
     reaudit: dict[str, Any],
     source_finding: dict[str, Any],
-) -> None:
+    source_report: dict[str, Any],
+) -> dict[str, Any]:
     summary = reaudit.get("summary", {})
     disposition_path = candidate / "benchmark_audit/disposition.json"
     disposition = read_json(disposition_path) if disposition_path.is_file() else {}
@@ -674,6 +1697,46 @@ def validate_reaudit(
         if isinstance(item, dict)
     ):
         raise ValueError("target finding remains open after re-audit")
+    configuration = reaudit.get("configuration", {})
+    manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+    manifest = read_json(manifest_path) if manifest_path.is_file() else {}
+    if configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL:
+        raise ValueError("re-audit execution level is not E1")
+    manifest_hashes = manifest.get("input_hashes")
+    current_hashes = (
+        {
+            relative: sha256_file(candidate / relative)
+            for relative in manifest_hashes
+            if (candidate / relative).is_file()
+        }
+        if isinstance(manifest_hashes, dict)
+        else {}
+    )
+    if manifest_hashes != current_hashes:
+        raise ValueError("re-audit package hashes are not bound to the candidate")
+    return {
+        "source_finding": {
+            "finding_id": source_finding.get("finding_id"),
+            "status": source_finding.get("status", "OPEN"),
+        },
+        "target_resolved": True,
+        "source_configuration": {
+            "paper_mode": source_report.get("configuration", {}).get("paper_mode"),
+            "execution_level": source_report.get("configuration", {}).get(
+                "execution_level"
+            ),
+        },
+        "reaudit_configuration": {
+            "paper_mode": configuration.get("paper_mode"),
+            "execution_level": configuration.get("execution_level"),
+        },
+        "reaudit_audit_id": reaudit.get("audit_id"),
+        "reaudit_finding_ids": [
+            item.get("finding_id")
+            for item in reaudit.get("findings", [])
+            if isinstance(item, dict)
+        ],
+    }
 
 
 def replace_paths(value: Any, old: str, new: str) -> Any:
@@ -753,8 +1816,98 @@ def prior_failed_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
             and isinstance(value.get("attempt_number"), int)
             and value["attempt_number"] > 0
         ):
+            validate_fixed_bundle(path.parent)
             attempts.append(value)
     return sorted(attempts, key=lambda item: item["attempt_number"])
+
+
+def validate_fixed_bundle(directory: Path) -> None:
+    missing = [
+        name
+        for name in REPAIR_BUNDLE_FILES
+        if not (directory / name).is_file() or (directory / name).is_symlink()
+    ]
+    if missing:
+        raise ValueError(f"incomplete fixed repair bundle: {missing}")
+    values: dict[str, Any] = {}
+    for name in REPAIR_BUNDLE_FILES:
+        if name.endswith(".json"):
+            try:
+                values[name] = read_json(directory / name)
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(f"invalid fixed repair bundle file: {name}") from exc
+    expected_types = {
+        "repair_plan.json": dict,
+        "changes.json": list,
+        "unresolved.json": list,
+        "regression_results.json": list,
+        "re_audit_comparison.json": dict,
+        "patch.json": dict,
+        "evidence.json": list,
+        "history.json": dict,
+    }
+    invalid_types = [
+        name
+        for name, expected in expected_types.items()
+        if not isinstance(values.get(name), expected)
+    ]
+    if invalid_types:
+        raise ValueError(f"fixed repair bundle has invalid types: {invalid_types}")
+    history = values["history.json"]
+    if (
+        history.get("bundle_complete") is not True
+        or history.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
+    ):
+        raise ValueError("fixed repair history.json does not attest completeness")
+
+
+def write_history_bundle(
+    destination: Path,
+    *,
+    plan: dict[str, Any],
+    changes: Any,
+    unresolved: Any,
+    regressions: Any,
+    comparison: Any,
+    evidence: Any,
+    root_cause: str,
+    attempt_number: int,
+    status: str,
+    decision: str,
+) -> None:
+    write_json(destination / "repair_plan.json", plan)
+    write_json(destination / "changes.json", changes)
+    write_json(destination / "unresolved.json", unresolved)
+    write_json(destination / "regression_results.json", regressions)
+    write_json(destination / "re_audit_comparison.json", comparison)
+    write_json(
+        destination / "patch.json",
+        {
+            "schema_version": "0.1",
+            "files": changes,
+            "atomic_publish": status == "PUBLISHED",
+        },
+    )
+    write_json(
+        destination / "evidence.json",
+        list(evidence.values()) if isinstance(evidence, dict) else evidence,
+    )
+    (destination / "repair.log").write_text(
+        f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}\n",
+        encoding="utf-8",
+    )
+    write_json(
+        destination / "history.json",
+        {
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "status": status,
+            "decision": decision,
+            "bundle_files": list(REPAIR_BUNDLE_FILES),
+            "bundle_complete": True,
+        },
+    )
+    validate_fixed_bundle(destination)
 
 
 def record_control_stop(
@@ -768,13 +1921,26 @@ def record_control_stop(
     history_root = history_root_for(root)
     destination = history_root / repair_id
     destination.mkdir(parents=True)
-    write_json(destination / "repair_plan.json", plan)
+    write_history_bundle(
+        destination,
+        plan=plan,
+        changes=[],
+        unresolved=[{"finding_id": plan.get("finding_id"), "reason": stop.reason}],
+        regressions=[],
+        comparison={},
+        evidence=plan.get("evidence", []),
+        root_cause=root_cause,
+        attempt_number=0,
+        status=stop.status,
+        decision="ABANDON",
+    )
     manifest = {
         "schema_version": "0.1",
         "repair_id": repair_id,
         "root_cause": root_cause,
         "attempt_number": 0,
         "status": stop.status,
+        "decision": "ABANDON",
         "audit_id": report["audit_id"],
         "finding_id": plan["finding_id"],
         "repair_class": plan["repair_class"],
@@ -785,6 +1951,7 @@ def record_control_stop(
     write_json(destination / "attempt_manifest.json", manifest)
     return {
         "status": stop.status,
+        "decision": "ABANDON",
         "root_cause": root_cause,
         "history_root": str(history_root),
         "history_dir": str(destination),
@@ -808,16 +1975,62 @@ def package_identity(
 def write_repair_reports(
     candidate: Path,
     manifest: dict[str, Any],
+    plan: dict[str, Any],
+    history_dir: Path,
 ) -> None:
     report_dir = candidate / "benchmark_repair"
     write_json(report_dir / "repair_manifest.json", manifest)
     write_json(report_dir / "repair_report.json", manifest)
+    write_json(report_dir / "repair_plan.json", plan)
+    write_json(report_dir / "changes.json", manifest.get("changes", []))
+    write_json(report_dir / "unresolved.json", manifest.get("unresolved", []))
+    write_json(
+        report_dir / "regression_results.json",
+        manifest.get("regression_tests", []),
+    )
+    write_json(
+        report_dir / "re_audit_comparison.json",
+        manifest.get("re_audit_comparison", {}),
+    )
+    write_json(
+        report_dir / "patch.json",
+        {
+            "schema_version": "0.1",
+            "files": manifest.get("changes", []),
+            "atomic_publish": manifest.get("atomic_publish", False),
+        },
+    )
+    write_json(report_dir / "evidence.json", manifest.get("evidence", []))
+    write_json(
+        report_dir / "history.json",
+        {
+            "root_cause": manifest.get("root_cause"),
+            "attempt_number": manifest.get("attempt_number"),
+            "history_dir": str(history_dir),
+            "snapshot_preserved": True,
+            "bundle_files": list(REPAIR_BUNDLE_FILES),
+            "bundle_complete": True,
+        },
+    )
+    report_dir.joinpath("repair.log").write_text(
+        "\n".join(
+            [
+                f"{timestamp()}\tINFO\trepair decision={manifest['decision']}",
+                f"{timestamp()}\tINFO\tstatus={manifest['status']}",
+                f"{timestamp()}\tINFO\toperations={len(manifest.get('changes', []))}",
+                f"{timestamp()}\tINFO\tregressions={len(manifest.get('regression_tests', []))}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     report_dir.joinpath("repair_report.md").write_text(
         "\n".join(
             [
                 "# Materials Benchmark Repair",
                 "",
                 f"- Repair ID: {manifest['repair_id']}",
+                f"- Decision: {manifest['decision']}",
                 f"- Status: {manifest['status']}",
                 f"- Repair class: {manifest['repair_class']}",
                 f"- Source audit: {manifest['source_audit_id']}",
@@ -829,28 +2042,49 @@ def write_repair_reports(
         ),
         encoding="utf-8",
     )
+    validate_fixed_bundle(report_dir)
 
 
-def repair(root: Path, plan_path: Path) -> dict[str, Any]:
+def repair(
+    root: Path,
+    plan_path: Path,
+    attestation_path: Path,
+) -> dict[str, Any]:
     root = root.expanduser().resolve()
     if not root.is_dir() or not (root / "instruction.md").is_file() or not (
         root / "tests"
     ).is_dir():
         raise ValueError("input must be a Harbor 题包 with instruction.md and tests/")
     plan = validate_external_plan(root, plan_path)
-    report, audit_manifest, finding = validate_fresh_audit(root, plan)
+    try:
+        report, audit_manifest, finding = validate_fresh_audit(
+            root, plan, attestation_path
+        )
+    except PolicyStop as stop:
+        report = read_json(root / "benchmark_audit/audit_report.json")
+        root_cause = root_cause_id(report, plan)
+        return record_control_stop(root, report, plan, root_cause, stop)
     root_cause = root_cause_id(report, plan)
+    if plan.get("repair_class") == "ABANDON":
+        return record_control_stop(
+            root,
+            report,
+            plan,
+            root_cause,
+            PolicyStop("ABANDON", plan["justification"]),
+        )
     prior = prior_failed_attempts(root, root_cause)
     if len(prior) >= 2 or any(item["status"] == "ABANDONED" for item in prior):
         return {
             "status": "ABANDONED",
+            "decision": "ABANDON",
             "root_cause": root_cause,
             "history_root": str(history_root_for(root)),
             "attempts": len(prior),
             "reason": "Two failed attempts exhausted the root-cause limit.",
         }
     try:
-        evidence = validate_policy(root, report, plan)
+        evidence = validate_policy(root, report, audit_manifest, plan)
     except PolicyStop as stop:
         return record_control_stop(root, report, plan, root_cause, stop)
 
@@ -876,11 +2110,14 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
         ]
         operation_files = {item["file"] for item in changes}
         assert_mutation_boundary(snapshot, candidate, operation_files)
+        candidate_digest = core_contract_digest(candidate)
         run_regressions(
             candidate, plan["regression_tests"], "after", regression_tests
         )
-        reaudit = run_equal_depth_review(candidate, report, plan)
-        validate_reaudit(candidate, reaudit, finding)
+        reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
+        re_audit_comparison = validate_reaudit(
+            candidate, reaudit, finding, report
+        )
         assert_mutation_boundary(snapshot, candidate, operation_files)
         if package_identity(candidate, directory_name=root.name) != identity:
             raise ValueError("repair changed the Harbor package identity")
@@ -889,6 +2126,7 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "schema_version": "0.1",
             "repair_id": repair_id,
             "status": "PUBLISHED",
+            "decision": plan["repair_class"],
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "max_attempts": 2,
@@ -898,10 +2136,23 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "package_identity": identity,
             "source_audit_id": report["audit_id"],
             "source_audit_input_hashes": audit_manifest["input_hashes"],
+            "source_audit_review_implementation": audit_manifest[
+                "review_implementation"
+            ],
+            "source_audit_fixture_hashes": audit_manifest.get(
+                "fixture_hashes", {}
+            ),
+            "source_audit_assessment_hashes": audit_manifest.get(
+                "assessment_hashes", {}
+            ),
+            "core_contract_digest_before": plan["core_contract_digest"],
+            "core_contract_digest_after": candidate_digest,
             "justification": plan["justification"],
             "evidence": list(evidence.values()),
             "changes": changes,
             "regression_tests": regression_tests,
+            "unresolved": [],
+            "re_audit_comparison": re_audit_comparison,
             "reaudit": {
                 "audit_id": reaudit["audit_id"],
                 "paper_mode": paper_mode,
@@ -912,12 +2163,24 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "atomic_publish": True,
             "published_at": timestamp(),
         }
-        write_repair_reports(candidate, repair_manifest)
+        write_repair_reports(candidate, repair_manifest, plan, history)
         rebase_audit_paths(candidate, root)
 
         history.mkdir(parents=True)
         snapshot.rename(history / "snapshot")
-        write_json(history / "repair_plan.json", plan)
+        write_history_bundle(
+            history,
+            plan=plan,
+            changes=changes,
+            unresolved=[],
+            regressions=regression_tests,
+            comparison=re_audit_comparison,
+            evidence=evidence,
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            status="PUBLISHED",
+            decision=plan["repair_class"],
+        )
         attempt_manifest = {
             "schema_version": "0.1",
             "repair_id": repair_id,
@@ -925,6 +2188,7 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "attempt_number": attempt_number,
             "max_attempts": 2,
             "status": "PUBLISHED",
+            "decision": plan["repair_class"],
             "audit_id": report["audit_id"],
             "finding_id": plan["finding_id"],
             "repair_class": plan["repair_class"],
@@ -945,6 +2209,7 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
         return {
             "repair_id": repair_id,
             "status": "PUBLISHED",
+            "decision": plan["repair_class"],
             "benchmark_root": str(root),
             "history_dir": str(history),
             "history_root": str(history_root_for(root)),
@@ -954,12 +2219,27 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
         }
     except Exception as exc:  # noqa: BLE001
         status = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
+        decision = plan["repair_class"] if status == "ROLLED_BACK" else "ABANDON"
         history.mkdir(parents=True, exist_ok=True)
         if snapshot.exists():
             snapshot.rename(history / "snapshot")
         if candidate.exists():
             candidate.rename(history / "candidate")
-        write_json(history / "repair_plan.json", plan)
+        write_history_bundle(
+            history,
+            plan=plan,
+            changes=changes if "changes" in locals() else [],
+            unresolved=[{"finding_id": plan["finding_id"], "reason": str(exc)}],
+            regressions=regression_tests if "regression_tests" in locals() else [],
+            comparison=(
+                re_audit_comparison if "re_audit_comparison" in locals() else {}
+            ),
+            evidence=evidence if "evidence" in locals() else [],
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            status=status,
+            decision=decision,
+        )
         attempt_manifest = {
             "schema_version": "0.1",
             "repair_id": repair_id,
@@ -967,6 +2247,7 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             "attempt_number": attempt_number,
             "max_attempts": 2,
             "status": status,
+            "decision": decision,
             "audit_id": report["audit_id"],
             "finding_id": plan["finding_id"],
             "repair_class": plan["repair_class"],
@@ -997,9 +2278,14 @@ def main() -> int:
     )
     parser.add_argument("benchmark_root")
     parser.add_argument("--plan", required=True)
+    parser.add_argument("--audit-attestation", required=True)
     arguments = parser.parse_args()
     try:
-        result = repair(Path(arguments.benchmark_root), Path(arguments.plan))
+        result = repair(
+            Path(arguments.benchmark_root),
+            Path(arguments.plan),
+            Path(arguments.audit_attestation),
+        )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0 if result["status"] == "PUBLISHED" else 3
     except Exception as exc:  # noqa: BLE001
