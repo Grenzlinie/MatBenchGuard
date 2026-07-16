@@ -685,13 +685,35 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
     """Parse URLs from explicit Markdown list/paragraph/section entries."""
     heading_pattern = re.compile(r"^\s*#{1,6}\s+")
     list_pattern = re.compile(r"^(\s*)(?:[-+*]|\d+[.)])\s+")
+    fence_pattern = re.compile(r"^\s*(`{3,}|~{3,})")
+    fenced_lines: set[int] = set()
+    active_fence: tuple[str, int] | None = None
+    instruction_lines = instruction.splitlines()
+    for line_number, line in enumerate(instruction_lines, start=1):
+        marker = fence_pattern.match(line)
+        if active_fence is not None:
+            fenced_lines.add(line_number)
+            if (
+                marker
+                and marker.group(1)[0] == active_fence[0]
+                and len(marker.group(1)) >= active_fence[1]
+            ):
+                active_fence = None
+            continue
+        if marker:
+            fenced_lines.add(line_number)
+            active_fence = (marker.group(1)[0], len(marker.group(1)))
+
     sections: list[
         tuple[tuple[int, str] | None, list[tuple[int, str]]]
     ] = []
     heading: tuple[int, str] | None = None
     body: list[tuple[int, str]] = []
-    for line_number, line in enumerate(instruction.splitlines(), start=1):
-        if heading_pattern.match(line):
+    for line_number, line in enumerate(instruction_lines, start=1):
+        if (
+            line_number not in fenced_lines
+            and heading_pattern.match(line)
+        ):
             if heading is not None or body:
                 sections.append((heading, body))
             heading = (line_number, line)
@@ -701,7 +723,9 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
     if heading is not None or body:
         sections.append((heading, body))
 
-    entries: list[list[tuple[int, str]]] = []
+    entries: list[
+        tuple[tuple[int, str] | None, list[tuple[int, str]]]
+    ] = []
     for section_heading, section_body in sections:
         index = 0
         while index < len(section_body):
@@ -710,7 +734,7 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 index += 1
                 continue
             marker = list_pattern.match(line)
-            entry = [section_heading] if section_heading is not None else []
+            entry: list[tuple[int, str]] = []
             if marker:
                 item_indent = len(marker.group(1))
                 entry.append((line_number, line))
@@ -719,7 +743,10 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                     next_number, next_line = section_body[index]
                     next_marker = list_pattern.match(next_line)
                     next_indent = len(next_line) - len(next_line.lstrip())
-                    if next_marker:
+                    if (
+                        next_marker
+                        and len(next_marker.group(1)) <= item_indent
+                    ):
                         break
                     if next_line.strip() and next_indent <= item_indent:
                         break
@@ -735,35 +762,132 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                         break
                     entry.append((next_number, next_line))
                     index += 1
-            entries.append([item for item in entry if item is not None])
+            entries.append((section_heading, entry))
 
-    resources: list[dict[str, Any]] = []
-    for entry in entries:
-        entry_text = "\n".join(line for _, line in entry)
-        lowered = entry_text.lower()
-        explicitly_direct = (
-            "indispensable direct input" in lowered
-            or (
-                "direct input" in lowered
-                and any(
-                    term in lowered
-                    for term in (
-                        "indispensable",
-                        "required",
-                        "must",
-                        "必要",
-                    )
-                )
+    def semantic_text(entry: list[tuple[int, str]]) -> str:
+        return "\n".join(
+            line
+            for line_number, line in entry
+            if line_number not in fenced_lines
+        ).lower()
+
+    def direct_topic(text: str) -> bool:
+        return bool(
+            re.search(
+                r"\b(?:direct|external|required)?\s*inputs?\b"
+                r"|\binput\s+resources?\b",
+                text,
             )
         )
-        no_equivalent = any(
-            term in lowered
+
+    def indispensable(text: str) -> bool:
+        if re.search(
+            r"\bnot\s+(?:indispensable|required)\b"
+            r"|\b(?:indispensable|required)\s*:\s*(?:no|false)\b",
+            text,
+        ):
+            return False
+        return any(
+            term in text
+            for term in ("indispensable", "required", "must", "必要")
+        )
+
+    def no_scientific_equivalent(text: str) -> bool:
+        return any(
+            term in text
             for term in (
                 "no equivalent",
                 "without equivalent",
                 "no scientifically equivalent",
                 "不可替代",
             )
+        ) or bool(
+            re.search(
+                r"\b(?:scientific\s+)?(?:equivalent|equivalence)"
+                r"(?:\s+source)?\s*:\s*"
+                r"(?:none|no|false|not\s+available)\b",
+                text,
+            )
+        )
+
+    section_scope_starts: dict[int, int] = {}
+    for entry_index, (section_heading, entry) in enumerate(entries):
+        section_key = (
+            section_heading[0] if section_heading is not None else 0
+        )
+        heading_text = (
+            section_heading[1].lower()
+            if section_heading is not None
+            else ""
+        )
+        entry_text = semantic_text(entry)
+        heading_scope = (
+            direct_topic(heading_text)
+            and bool(re.search(r"\b(?:all|every|each)\b", heading_text))
+            and indispensable(heading_text)
+            and no_scientific_equivalent(heading_text)
+        )
+        paragraph_scope = (
+            (direct_topic(heading_text) or direct_topic(entry_text))
+            and bool(re.search(r"\b(?:all|every|each)\b", entry_text))
+            and bool(
+                re.search(
+                    r"\b(?:below|following|listed|in\s+this\s+section"
+                    r"|contained)\b",
+                    entry_text,
+                )
+            )
+            and indispensable(entry_text)
+            and no_scientific_equivalent(entry_text)
+        )
+        if heading_scope:
+            section_scope_starts[section_key] = min(
+                section_scope_starts.get(section_key, entry_index),
+                entry_index,
+            )
+        elif paragraph_scope:
+            section_scope_starts[section_key] = min(
+                section_scope_starts.get(section_key, entry_index + 1),
+                entry_index + 1,
+            )
+
+    resources: list[dict[str, Any]] = []
+    for entry_index, (section_heading, entry) in enumerate(entries):
+        semantic_lines = [
+            (line_number, line)
+            for line_number, line in entry
+            if line_number not in fenced_lines
+        ]
+        entry_text = "\n".join(line for _, line in semantic_lines)
+        lowered = entry_text.lower()
+        heading_text = (
+            section_heading[1].lower()
+            if section_heading is not None
+            else ""
+        )
+        critical = indispensable(lowered)
+        heading_defines_direct_topic = direct_topic(heading_text)
+        section_key = (
+            section_heading[0] if section_heading is not None else 0
+        )
+        section_wide_declaration = entry_index >= section_scope_starts.get(
+            section_key, len(entries)
+        )
+        optional_entry = bool(
+            re.search(r"\b(?:optional|recommended)\b", lowered)
+        )
+        explicitly_direct = (
+            "indispensable direct input" in lowered
+            or (
+                "direct input" in lowered
+                and critical
+            )
+            or (heading_defines_direct_topic and critical)
+            or section_wide_declaration
+        )
+        no_equivalent = (
+            no_scientific_equivalent(lowered)
+            or section_wide_declaration
         )
         software_only = (
             any(
@@ -785,7 +909,11 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 )
             )
         )
-        if not (explicitly_direct and no_equivalent) or software_only:
+        if (
+            not (explicitly_direct and no_equivalent)
+            or optional_entry
+            or software_only
+        ):
             continue
         checksum_match = re.search(
             r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
@@ -797,7 +925,7 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
             or "solving agent has no license authorization" in lowered
         )
         position = 0
-        for line_number, line in entry:
+        for line_number, line in semantic_lines:
             for url in re.findall(r"https?://[^\s)\]}>]+", line):
                 position += 1
                 access = (

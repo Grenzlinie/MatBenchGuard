@@ -494,16 +494,88 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 "instruction.md",
             )
 
-    def test_neighboring_url_does_not_inherit_direct_input_flags(self) -> None:
+    def test_separate_sibling_bullet_does_not_inherit_flags(self) -> None:
         instruction = (
-            "### Inputs\n"
+            "### Direct inputs\n"
             "- The indispensable direct input has no equivalent source.\n"
-            "- Documentation is available at "
-            "https://example.invalid/unrelated-guide.html\n"
+            "- Locator: https://example.invalid/unrelated.csv\n"
         )
 
         self.assertEqual(
             resource_probe.instruction_direct_inputs(instruction), []
+        )
+
+    def test_heading_does_not_make_optional_sibling_required(self) -> None:
+        instruction = (
+            "### Indispensable direct inputs with no equivalent\n"
+            "- Optional background: "
+            "https://example.invalid/background.html\n"
+            "- The required dataset is an indispensable direct input with "
+            "no equivalent: "
+            "[download](https://example.invalid/required.csv)\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            [item["access"]["url"] for item in resources],
+            ["https://example.invalid/required.csv"],
+        )
+
+    def test_nested_metadata_forms_one_direct_input_declaration(self) -> None:
+        instruction = (
+            "### Direct inputs\n"
+            "- Dataset metadata:\n"
+            "  - Criticality: indispensable and required\n"
+            "  - Scientific equivalence: no equivalent source\n"
+            "  - Locator: "
+            "[download](https://example.invalid/nested-required.csv)\n"
+            "  - Non-normative example:\n"
+            "    ```text\n"
+            "    https://example.invalid/example-only.csv\n"
+            "    ```\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            [item["access"]["url"] for item in resources],
+            ["https://example.invalid/nested-required.csv"],
+        )
+
+    def test_explicit_section_wide_declaration_applies_to_items(self) -> None:
+        instruction = (
+            "### Direct input resources\n"
+            "All resources listed below are indispensable and have no "
+            "equivalent source.\n\n"
+            "- Dataset A: "
+            "[download](https://example.invalid/required-a.csv)\n"
+            "- Dataset B: https://example.invalid/required-b.csv\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            [item["access"]["url"] for item in resources],
+            [
+                "https://example.invalid/required-a.csv",
+                "https://example.invalid/required-b.csv",
+            ],
+        )
+
+        heading_wide = (
+            "### Every direct input in this section is indispensable and "
+            "has no equivalent\n"
+            "- Dataset C: https://example.invalid/required-c.csv\n"
+        )
+        self.assertEqual(
+            [
+                item["access"]["url"]
+                for item in resource_probe.instruction_direct_inputs(
+                    heading_wide
+                )
+            ],
+            ["https://example.invalid/required-c.csv"],
         )
 
     def test_package_local_known_valid_fixture_is_rejected(self) -> None:
