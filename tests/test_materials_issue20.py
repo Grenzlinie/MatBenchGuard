@@ -538,6 +538,107 @@ class MaterialsIssue20Tests(unittest.TestCase):
             ["https://example.invalid/data.csv"],
         )
 
+    def test_optional_docs_metadata_does_not_attach_to_dataset(self) -> None:
+        docs_checksum = "b" * 64
+        instruction = (
+            "### Direct inputs\n"
+            "Dataset: indispensable, no equivalent source, "
+            "[download](https://example.invalid/data.csv); "
+            "Docs: optional "
+            "[guide](https://example.invalid/guide.html), "
+            f"SHA-256: {docs_checksum}, and license authorization is not "
+            "provided to the solving agent, Identity: docs-v2.\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            resources[0]["access"],
+            {
+                "method": "url",
+                "url": "https://example.invalid/data.csv",
+            },
+        )
+
+    def test_dataset_scoped_checksum_and_license_are_retained(self) -> None:
+        dataset_checksum = "a" * 64
+        instruction = (
+            "### Resources\n"
+            "- Dataset:\n"
+            "  - Criticality: indispensable\n"
+            "  - Equivalence: none\n"
+            "  - Locator: https://example.invalid/licensed-data.csv\n"
+            f"  - SHA-256: {dataset_checksum}\n"
+            "  - Identity: dataset-v1\n"
+            "  - License authorization is not provided to the solving "
+            "agent.\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(len(resources), 1)
+        self.assertEqual(
+            resources[0]["access"],
+            {
+                "method": "license",
+                "url": "https://example.invalid/licensed-data.csv",
+                "checksum": f"sha256:{dataset_checksum}",
+                "expected_identity": "dataset-v1",
+                "license": "instruction-declared-license",
+                "authorization_provided": False,
+            },
+        )
+
+    def test_dataset_scoped_auth_metadata_is_retained(self) -> None:
+        instruction = (
+            "### Resources\n"
+            "- Dataset:\n"
+            "  - Criticality: indispensable\n"
+            "  - Equivalence: none\n"
+            "  - Locator: https://example.invalid/private-data.csv\n"
+            "  - Auth: required\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+        report, findings = resource_probe.probe_item(
+            Path("."),
+            resources[0],
+            timeout=1,
+            allow_private_network=False,
+        )
+
+        self.assertEqual(resources[0]["access"]["method"], "auth")
+        self.assertEqual(report["status"], "REQUIRES_AUTH")
+        self.assertIn(
+            "RESOURCE_REQUIRES_AUTH",
+            {item["code"] for item in findings},
+        )
+
+    def test_reversed_urls_keep_metadata_with_their_clause(self) -> None:
+        dataset_checksum = "a" * 64
+        docs_checksum = "b" * 64
+        instruction = (
+            "### Direct inputs\n"
+            "Docs: optional https://example.invalid/guide.html, "
+            f"SHA-256: {docs_checksum}, license authorization is not "
+            "provided to the solving agent; "
+            "Dataset: indispensable, no equivalent, "
+            "https://example.invalid/data.csv, "
+            f"SHA-256: {dataset_checksum}.\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            resources[0]["access"],
+            {
+                "method": "url",
+                "url": "https://example.invalid/data.csv",
+                "checksum": f"sha256:{dataset_checksum}",
+            },
+        )
+
     def test_optional_first_and_required_multi_link_clause(self) -> None:
         instruction = (
             "### Direct inputs\n"
@@ -587,6 +688,8 @@ class MaterialsIssue20Tests(unittest.TestCase):
             self.assertNotEqual(direct_gate["status"], "FAIL")
 
     def test_nested_metadata_forms_one_direct_input_declaration(self) -> None:
+        dataset_checksum = "a" * 64
+        docs_checksum = "b" * 64
         instruction = (
             "### Resources\n"
             "- Dataset metadata:\n"
@@ -594,10 +697,14 @@ class MaterialsIssue20Tests(unittest.TestCase):
             "  - Scientific equivalence: no equivalent source\n"
             "  - Locator: "
             "[download](https://example.invalid/nested-required.csv)\n"
+            f"  - SHA-256: {dataset_checksum}\n"
             "  - Docs:\n"
             "    - Optional: true\n"
             "    - Locator: "
             "[open](https://example.invalid/nested-guide.html)\n"
+            f"    - SHA-256: {docs_checksum}\n"
+            "    - License authorization is not provided to the solving "
+            "agent.\n"
             "  - Non-normative example:\n"
             "    ```text\n"
             "    https://example.invalid/example-only.csv\n"
@@ -610,6 +717,11 @@ class MaterialsIssue20Tests(unittest.TestCase):
             [item["access"]["url"] for item in resources],
             ["https://example.invalid/nested-required.csv"],
         )
+        self.assertEqual(
+            resources[0]["access"]["checksum"],
+            f"sha256:{dataset_checksum}",
+        )
+        self.assertEqual(resources[0]["access"]["method"], "url")
 
     def test_explicit_section_wide_declaration_applies_to_items(self) -> None:
         instruction = (
@@ -646,6 +758,85 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 )
             ],
             ["https://example.invalid/required-c.csv"],
+        )
+
+    def test_explicit_shared_metadata_applies_to_both_urls(self) -> None:
+        shared_checksum = "c" * 64
+        instruction = (
+            "### Resources\n"
+            "- Dataset mirrors: indispensable, no equivalent source. "
+            "Both URLs share "
+            f"SHA-256: {shared_checksum} and license authorization is not "
+            "provided to the solving agent: "
+            "https://example.invalid/mirror-a.csv "
+            "https://example.invalid/mirror-b.csv\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(len(resources), 2)
+        for resource in resources:
+            self.assertEqual(resource["access"]["method"], "license")
+            self.assertEqual(
+                resource["access"]["checksum"],
+                f"sha256:{shared_checksum}",
+            )
+            self.assertFalse(
+                resource["access"]["authorization_provided"]
+            )
+
+    def test_ambiguous_shared_metadata_is_not_assigned(self) -> None:
+        ambiguous_checksum = "d" * 64
+        instruction = (
+            "### Resources\n"
+            "- Dataset mirrors are indispensable and have no equivalent: "
+            "https://example.invalid/ambiguous-a.csv "
+            "https://example.invalid/ambiguous-b.csv. "
+            f"SHA-256: {ambiguous_checksum}. "
+            "Identity: uncertain-artifact. "
+            "License authorization is not provided to the solving agent.\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(len(resources), 2)
+        for resource in resources:
+            access = resource["access"]
+            self.assertEqual(access["method"], "url")
+            self.assertEqual(
+                access["metadata_status"], "NOT_ASSESSABLE"
+            )
+            self.assertNotIn("checksum", access)
+            self.assertNotIn("expected_identity", access)
+            self.assertNotIn("license", access)
+        with mock.patch.object(
+            resource_probe,
+            "probe_url_access",
+            return_value={
+                "verified_level": 4,
+                "status": "AVAILABLE",
+                "identity_match": None,
+                "probe": {},
+            },
+        ):
+            probed = [
+                resource_probe.probe_item(
+                    Path("."),
+                    resource,
+                    timeout=1,
+                    allow_private_network=False,
+                )
+                for resource in resources
+            ]
+        self.assertTrue(
+            all(report["status"] == "AVAILABLE" for report, _ in probed)
+        )
+        self.assertFalse(
+            any(
+                finding["severity"] == "FATAL"
+                for _, findings in probed
+                for finding in findings
+            )
         )
 
     def test_package_local_known_valid_fixture_is_rejected(self) -> None:

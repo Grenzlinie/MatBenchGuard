@@ -551,6 +551,21 @@ def probe_item(
                 "authorization_provided": authorized,
             },
         }
+    elif method == "auth":
+        authorized = access.get("authorization_provided") is True
+        outcome = {
+            "verified_level": 2 if authorized else 0,
+            "status": (
+                "PARTIALLY_AVAILABLE"
+                if authorized
+                else "REQUIRES_AUTH"
+            ),
+            "identity_match": authorized,
+            "probe": {
+                "authentication": "instruction-declared",
+                "authorization_provided": authorized,
+            },
+        }
     else:
         outcome = {
             "verified_level": 0,
@@ -838,10 +853,12 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
     def entity_role(text: str) -> str:
         lowered = text.lower()
         is_docs = docs_clause(lowered)
-        is_resource = data_resource_clause(lowered) or bool(
+        is_resource = bool(
             re.match(
                 r"^\s*(?:the\s+)?(?:required\s+|optional\s+)?"
-                r"(?:resource|input|service)\b",
+                r"(?:dataset|data\s+file|input\s+file"
+                r"|external\s+service|remote\s+service"
+                r"|resource|input|service)\b",
                 lowered,
             )
         )
@@ -942,7 +959,6 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 role = entity_role(segment)
                 if role in {"docs", "resource"} and (
                     branch_roles.get(line_key) != role
-                    or len(segments) > 1
                 ):
                     clause_key = (
                         f"{line_number}:clause:{segment_index}"
@@ -959,6 +975,89 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                     clause_key = line_key
                 clauses.append((line_number, segment, clause_key))
         return clauses, branch_roles, branch_parents
+
+    def scoped_resource_metadata(text: str) -> dict[str, Any]:
+        checksums = {
+            "sha256:" + value.lower()
+            for value in re.findall(
+                r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
+                text,
+                re.IGNORECASE,
+            )
+        }
+        identities = {
+            value
+            for value in re.findall(
+                r"(?:expected\s+)?identity\s*[:=]\s*"
+                r"([A-Za-z0-9_.:/+-]+)",
+                text,
+                re.IGNORECASE,
+            )
+        }
+        license_unavailable = bool(
+            re.search(
+                r"license(?:\s+authorization)?\s+is\s+not\s+provided"
+                r"|no\s+license\s+authorization"
+                r"|license\s*:\s*(?:unavailable|not\s+provided)",
+                text,
+                re.IGNORECASE,
+            )
+        )
+        auth_unavailable = bool(
+            re.search(
+                r"(?:authentication|credentials?|api\s+token|login)"
+                r"(?:\s+authorization)?\s+is\s+not\s+provided"
+                r"|no\s+(?:authentication|credentials?|api\s+token)"
+                r"|auth(?:entication)?\s*:\s*"
+                r"(?:required|unavailable|not\s+provided)",
+                text,
+                re.IGNORECASE,
+            )
+        )
+        license_match = re.search(
+            r"\blicense\s*:\s*([^,;.\n]+)",
+            text,
+            re.IGNORECASE,
+        )
+        license_name = (
+            license_match.group(1).strip()
+            if license_match is not None and not license_unavailable
+            else None
+        )
+        present = bool(
+            checksums
+            or identities
+            or license_unavailable
+            or auth_unavailable
+            or license_name
+        )
+        return {
+            "present": present,
+            "ambiguous": (
+                len(checksums) > 1
+                or len(identities) > 1
+                or (license_unavailable and auth_unavailable)
+            ),
+            "checksum": next(iter(checksums)) if len(checksums) == 1 else None,
+            "identity": (
+                next(iter(identities)) if len(identities) == 1 else None
+            ),
+            "license": license_name,
+            "license_unavailable": license_unavailable,
+            "auth_unavailable": auth_unavailable,
+        }
+
+    def explicitly_shared_metadata(text: str) -> bool:
+        return bool(
+            re.search(
+                r"\b(?:both|all|each)\s+"
+                r"(?:urls?|links?|mirrors?|resources?)\b"
+                r"|\b(?:urls?|links?|mirrors?)\s+share\b"
+                r"|\bsame\s+(?:checksum|identity|license|authorization)\b",
+                text,
+                re.IGNORECASE,
+            )
+        )
 
     section_scope_starts: dict[int, int] = {}
     for entry_index, (section_heading, entry) in enumerate(entries):
@@ -1075,15 +1174,12 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 for key in keys
                 for text in branch_metadata.get(key, [])
             )
-        checksum_match = re.search(
-            r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
-            lowered,
-        )
-        no_agent_license = (
-            "license authorization is not provided to the solving agent"
-            in lowered
-            or "solving agent has no license authorization" in lowered
-        )
+        branch_url_counts: dict[str, int] = {}
+        for _, clause, branch_key in clauses:
+            branch_url_counts[branch_key] = (
+                branch_url_counts.get(branch_key, 0)
+                + len(extract_urls(clause))
+            )
         position = 0
         for line_number, clause, branch_key in clauses:
             clause_urls = extract_urls(clause)
@@ -1141,30 +1237,94 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 or not effective_direct
             ):
                 continue
+            local_metadata = scoped_resource_metadata(clause)
+            shared_metadata = scoped_resource_metadata(shared_text)
+            metadata_ambiguous = (
+                local_metadata["ambiguous"]
+                or shared_metadata["ambiguous"]
+            )
+            assigned_metadata: list[dict[str, Any]] = []
+            if local_metadata["present"]:
+                if len(clause_urls) == 1 or explicitly_shared_metadata(
+                    clause
+                ):
+                    assigned_metadata.append(local_metadata)
+                else:
+                    metadata_ambiguous = True
+            if shared_metadata["present"]:
+                if branch_url_counts.get(branch_key, 0) == 1 or (
+                    explicitly_shared_metadata(shared_text)
+                ):
+                    assigned_metadata.append(shared_metadata)
+                else:
+                    metadata_ambiguous = True
+            checksums = {
+                item["checksum"]
+                for item in assigned_metadata
+                if item["checksum"] is not None
+            }
+            identities = {
+                item["identity"]
+                for item in assigned_metadata
+                if item["identity"] is not None
+            }
+            licenses = {
+                item["license"]
+                for item in assigned_metadata
+                if item["license"] is not None
+            }
+            license_unavailable = any(
+                item["license_unavailable"]
+                for item in assigned_metadata
+            )
+            auth_unavailable = any(
+                item["auth_unavailable"]
+                for item in assigned_metadata
+            )
+            metadata_ambiguous = metadata_ambiguous or (
+                len(checksums) > 1
+                or len(identities) > 1
+                or len(licenses) > 1
+                or (license_unavailable and auth_unavailable)
+            )
             for url in clause_urls:
                 position += 1
-                access = (
-                    {
-                        "method": "license",
-                        "license": "instruction-declared-license",
-                        "url": url,
-                        "authorization_provided": False,
-                    }
-                    if no_agent_license
-                    else {
-                        "method": "url",
-                        "url": url,
-                        **(
-                            {
-                                "checksum": (
-                                    "sha256:" + checksum_match.group(1)
-                                )
-                            }
-                            if checksum_match
-                            else {}
-                        ),
-                    }
-                )
+                access: dict[str, Any] = {
+                    "method": (
+                        "url"
+                        if metadata_ambiguous
+                        else "license"
+                        if license_unavailable
+                        else "auth"
+                        if auth_unavailable
+                        else "url"
+                    ),
+                    "url": url,
+                }
+                if metadata_ambiguous:
+                    access.update(
+                        {
+                            "metadata_status": "NOT_ASSESSABLE",
+                            "metadata_reason": (
+                                "ambiguous per-URL metadata scope"
+                            ),
+                        }
+                    )
+                else:
+                    if checksums:
+                        access["checksum"] = next(iter(checksums))
+                    if identities:
+                        access["expected_identity"] = next(
+                            iter(identities)
+                        )
+                    if licenses or license_unavailable:
+                        access["license"] = (
+                            next(iter(licenses))
+                            if licenses
+                            else "instruction-declared-license"
+                        )
+                    if license_unavailable or auth_unavailable:
+                        access["authorization_provided"] = False
                 resources.append(
                     {
                         "id": (
