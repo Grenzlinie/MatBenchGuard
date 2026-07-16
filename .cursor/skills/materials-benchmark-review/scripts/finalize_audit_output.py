@@ -372,10 +372,17 @@ def normalized_finding(
 ) -> dict[str, Any]:
     source = dict(source)
     source_evidence = source.get("evidence", {})
+    confirmed_direct_input_barriers = {
+        "PERMANENT_UNAVAILABLE",
+        "REQUIRES_AUTH",
+        "REQUIRES_LICENSE",
+        "IDENTITY_MISMATCH",
+    }
     if (
         source.get("code") == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
         and isinstance(source_evidence, dict)
-        and source_evidence.get("status") != "PERMANENT_UNAVAILABLE"
+        and source_evidence.get("status")
+        not in confirmed_direct_input_barriers
     ):
         source["code"] = (
             "INDISPENSABLE_DIRECT_INPUT_"
@@ -731,6 +738,22 @@ def hard_gate_results(
         )
         for item in findings
     )
+    direct_input_temporary_gap = any(
+        item.get("title", "").startswith(
+            "INDISPENSABLE_DIRECT_INPUT_"
+        )
+        and item.get("title")
+        != "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+        and isinstance(item.get("evidence"), dict)
+        and item["evidence"].get("status")
+        in {
+            "TRANSIENT_FAILURE",
+            "RATE_LIMITED",
+            "BLOCKED_PRIVATE_NETWORK",
+            "UNVERIFIED",
+        }
+        for item in findings
+    )
     def non_failure_evidence(
         code: str,
         status: str,
@@ -807,6 +830,12 @@ def hard_gate_results(
             )
             if status == "NOT_ASSESSABLE"
             and code == "CHECKER_CORE_TASK_UNASSESSED"
+            else (
+                "Direct-input availability is not assessable because the "
+                "audit host encountered a temporary access limitation."
+            )
+            if status == "NOT_ASSESSABLE"
+            and code == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
             else observations[code]
         )
         return (
@@ -836,6 +865,9 @@ def hard_gate_results(
                 "checker_gold_alignment" in evidence_gaps
                 or checker_structurally_unavailable
             )
+        ) or (
+            code == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+            and direct_input_temporary_gap
         )
         status = (
             "FAIL"
@@ -1219,8 +1251,10 @@ def derive_qa_axes(
             [
                 {
                     "source": "instruction_contract",
-                    "fact": "Some instruction outputs remain unclassified.",
-                    "outputs": sorted(unclassified),
+                    "fact": (
+                        "Instruction outputs remain unclassified: "
+                        + ", ".join(sorted(unclassified))
+                    ),
                 }
             ],
             base_location,
@@ -1242,6 +1276,7 @@ def derive_qa_axes(
             "NOT_ASSESSABLE",
             [{"source": "instruction_contract", "fact": "No workflow requirements were parsed."}],
             base_location,
+            "Instruction completeness requires at least one parsed workflow requirement.",
         )
 
     consistency_evidence = _qa_evidence(findings, consistency_codes)
@@ -2239,6 +2274,10 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
                 or provenance.get("source_kind")
                 != "INDEPENDENT_PUBLIC_FIXTURE"
                 or not provenance.get("fixture_hashes")
+                or not provenance.get("source_role_hashes")
+                or not str(
+                    provenance.get("fixture_manifest_hash", "")
+                ).startswith("sha256:")
             ):
                 raise ValueError(
                     f"PASS has invalid {probe_class} probe provenance"
@@ -2248,6 +2287,8 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
                 provenance.get("oracle_used") is not False
                 or provenance.get("source_kind") != "NONE"
                 or provenance.get("fixture_hashes") != {}
+                or provenance.get("source_role_hashes", {}) != {}
+                or provenance.get("fixture_manifest_hash") is not None
             ):
                 raise ValueError(
                     f"PASS has dishonest unavailable {probe_class} provenance"
@@ -2426,12 +2467,18 @@ def validate_contract_probe_consistency(
             or provenance.get("source_kind")
             != "INDEPENDENT_PUBLIC_FIXTURE"
             or not provenance.get("fixture_hashes")
+            or not provenance.get("source_role_hashes")
+            or not str(
+                provenance.get("fixture_manifest_hash", "")
+            ).startswith("sha256:")
         ):
             raise ValueError(f"invalid assessed {name} provenance")
         if entry["status"] == "NOT_ASSESSABLE" and (
             provenance.get("oracle_used") is not False
             or provenance.get("source_kind") != "NONE"
             or provenance.get("fixture_hashes", {}) != {}
+            or provenance.get("source_role_hashes", {}) != {}
+            or provenance.get("fixture_manifest_hash") is not None
         ):
             raise ValueError(f"invalid unavailable {name} provenance")
     component_provenance = coverage["component_isolation"].get(
@@ -2535,6 +2582,25 @@ def validate_qa_axes(qa_axes: Any) -> None:
             for item in axis["limitations"]
         ):
             raise ValueError(f"QA axis limitations must be strings: {name}")
+        for evidence in axis["evidence"]:
+            finding_evidence = (
+                isinstance(evidence, dict)
+                and set(evidence) == {"finding_id", "observed_fact"}
+                and isinstance(evidence["finding_id"], str)
+                and bool(evidence["finding_id"].strip())
+                and isinstance(evidence["observed_fact"], str)
+                and bool(evidence["observed_fact"].strip())
+            )
+            source_evidence = (
+                isinstance(evidence, dict)
+                and set(evidence) == {"source", "fact"}
+                and isinstance(evidence["source"], str)
+                and bool(evidence["source"].strip())
+                and isinstance(evidence["fact"], str)
+                and bool(evidence["fact"].strip())
+            )
+            if not (finding_evidence or source_evidence):
+                raise ValueError(f"invalid QA axis evidence item: {name}")
         for location in axis["locations"]:
             if (
                 not isinstance(location, dict)
@@ -2555,6 +2621,29 @@ def validate_qa_axes(qa_axes: Any) -> None:
                 )
             ):
                 raise ValueError(f"invalid QA axis location: {name}")
+        if axis["status"] in {"FAIL", "WARNING"} and (
+            not axis["evidence"] or not axis["locations"]
+        ):
+            raise ValueError(
+                f"{axis['status']} QA axis requires evidence and locations: {name}"
+            )
+        if axis["status"] == "PASS" and (
+            not axis["evidence"] or not axis["locations"]
+        ):
+            raise ValueError(
+                f"PASS QA axis requires evidence and locations: {name}"
+            )
+        if axis["status"] == "NOT_ASSESSABLE":
+            if not axis["limitations"]:
+                raise ValueError(
+                    f"NOT_ASSESSABLE QA axis requires limitations: {name}"
+                )
+            if any(
+                "finding_id" in evidence for evidence in axis["evidence"]
+            ):
+                raise ValueError(
+                    f"NOT_ASSESSABLE QA axis contradicts failure evidence: {name}"
+                )
 
 
 def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:

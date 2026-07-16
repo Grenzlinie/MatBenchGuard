@@ -110,7 +110,63 @@ def write_public_valid_dispersion(output_dir: Path) -> None:
                     )
 
 
+def bind_public_fixture(package: Path, output_dir: Path) -> None:
+    package = package.resolve()
+    output_dir = output_dir.resolve()
+    if output_dir == package or output_dir.is_relative_to(package):
+        return
+    if not output_dir.is_dir():
+        return
+    source_roles = (
+        "instruction.md",
+        "tests/checker.py",
+        "tests/grading_spec.json",
+        "tests/test.sh",
+    )
+    source_hashes = {
+        role: "sha256:"
+        + hashlib.sha256((package / role).read_bytes()).hexdigest()
+        for role in source_roles
+        if (package / role).is_file()
+    }
+    specification = json.loads(
+        (package / "tests/grading_spec.json").read_text(encoding="utf-8")
+    )
+    output_contract = specification.get("output_contract", {})
+    if not isinstance(output_contract, dict):
+        return
+    output_names = {
+        str(item.get("file", "")).replace("\\", "/").split("/")[-1]
+        for item in output_contract.get("outputs", [])
+        if isinstance(item, dict)
+    }
+    output_files = [
+        output_dir / name
+        for name in sorted(output_names)
+        if name and (output_dir / name).is_file()
+    ]
+    fixture_hashes = {
+        path.name: "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(output_files)
+    }
+    (output_dir / "fixture_manifest.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "materials-known-valid-fixture/1.0",
+                "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
+                "public": True,
+                "oracle_used": False,
+                "source_role_hashes": source_hashes,
+                "fixture_hashes": fixture_hashes,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
 def run_review(package: Path, valid_output: Path) -> subprocess.CompletedProcess[str]:
+    bind_public_fixture(package, valid_output)
     return subprocess.run(
         [
             sys.executable,
@@ -933,8 +989,9 @@ _SCORERS = {"a": score_a, "b": score_b}
                 if item["test_type"] == "positive_oracle"
             )
             self.assertEqual(positive["probe_class"], "positive")
-            self.assertGreaterEqual(
-                positive["observed_score"], checker["pass_threshold"]
+            self.assertIsNone(positive["observed_score"])
+            self.assertTrue(
+                positive["evidence"]["positive_mock_accepted"]
             )
             self.assertTrue(checker["solution_oracle"]["used"])
             self.assertFalse(checker["solution_oracle"]["scientific_evidence"])

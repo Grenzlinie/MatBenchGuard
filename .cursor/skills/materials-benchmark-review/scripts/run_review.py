@@ -789,7 +789,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--known-valid-output",
-        help="independently justified public output directory",
+        help=(
+            "external public output directory with source-bound "
+            "fixture_manifest.json"
+        ),
     )
     parser.add_argument(
         "--resource-timeout",

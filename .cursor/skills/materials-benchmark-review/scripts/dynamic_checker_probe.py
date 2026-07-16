@@ -22,7 +22,12 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from audit_package import instruction_contract_map
-from prepare_audit_output import basename, locate_root
+from prepare_audit_output import (
+    QUALITY_EVIDENCE_ROLES,
+    basename,
+    locate_root,
+    sha256_file,
+)
 
 
 ORACLE_VENV_TIMEOUT_SECONDS = 60.0
@@ -39,6 +44,16 @@ NEGATIVE_PROBE_CASES = frozenset(
         "sparse_known_valid",
     }
 )
+FIXTURE_MANIFEST_NAME = "fixture_manifest.json"
+FIXTURE_MANIFEST_SCHEMA = "materials-known-valid-fixture/1.0"
+FORBIDDEN_FIXTURE_PARTS = {
+    "solution",
+    "tests",
+    "paper",
+    "benchmark_audit",
+    "benchmark_audit_history",
+    ".benchmark_audit_tmp",
+}
 
 
 def configured_timeout(name: str, default: float) -> float:
@@ -173,14 +188,94 @@ def write_malformed_outputs(
     return created
 
 
-def reject_solution_fixture(root: Path, source_dir: Path) -> Path:
+def reject_package_fixture(root: Path, source_dir: Path) -> Path:
     source_dir = source_dir.expanduser().resolve()
-    solution_dir = (root / "solution").resolve()
-    if source_dir == solution_dir or source_dir.is_relative_to(solution_dir):
-        raise ValueError("known-valid output cannot come from solution/")
+    root = root.resolve()
+    if source_dir == root or source_dir.is_relative_to(root):
+        raise ValueError(
+            "known-valid fixture must be external to every Harbor package role"
+        )
+    if any(part in FORBIDDEN_FIXTURE_PARTS for part in source_dir.parts):
+        raise ValueError(
+            "known-valid fixture must be external to package and audit roles"
+        )
+    for ancestor in (source_dir, *source_dir.parents):
+        if (
+            (ancestor / "instruction.md").is_file()
+            and (ancestor / "tests").is_dir()
+        ):
+            raise ValueError(
+                "known-valid fixture cannot be nested under another Harbor package"
+            )
     if not source_dir.is_dir():
         raise ValueError(f"known-valid output is not a directory: {source_dir}")
     return source_dir
+
+
+def fixture_hashes(
+    fixture: Path, specification: dict[str, Any]
+) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    outputs = (
+        (specification.get("output_contract", {}) or {}).get("outputs", []) or []
+    )
+    for output in outputs:
+        filename = basename(output.get("file"))
+        path = fixture / filename
+        if (
+            not filename
+            or path.parent != fixture
+            or not path.is_file()
+            or path.is_symlink()
+        ):
+            raise ValueError(
+                "known-valid fixture requires a regular contracted file: "
+                f"{filename}"
+            )
+        hashes[filename] = sha256_file(path)
+    return hashes
+
+
+def validate_known_valid_fixture(
+    root: Path,
+    source_dir: Path,
+    specification: dict[str, Any],
+) -> dict[str, Any]:
+    """Require an external public fixture bound to current quality sources."""
+    fixture = reject_package_fixture(root, source_dir)
+    manifest_path = fixture / FIXTURE_MANIFEST_NAME
+    if not manifest_path.is_file() or manifest_path.is_symlink():
+        raise ValueError(
+            f"known-valid fixture manifest is missing: {FIXTURE_MANIFEST_NAME}"
+        )
+    manifest = read_json(manifest_path)
+    if not isinstance(manifest, dict):
+        raise ValueError("known-valid fixture manifest must be an object")
+    current_source_hashes = {
+        role: sha256_file(root / role)
+        for role in sorted(QUALITY_EVIDENCE_ROLES)
+        if (root / role).is_file()
+    }
+    current_fixture_hashes = fixture_hashes(fixture, specification)
+    if (
+        manifest.get("schema_version") != FIXTURE_MANIFEST_SCHEMA
+        or manifest.get("source_kind") != "INDEPENDENT_PUBLIC_FIXTURE"
+        or manifest.get("public") is not True
+        or manifest.get("oracle_used") is not False
+        or manifest.get("source_role_hashes") != current_source_hashes
+        or manifest.get("fixture_hashes") != current_fixture_hashes
+    ):
+        raise ValueError(
+            "known-valid fixture manifest is not source-bound and immutable"
+        )
+    return {
+        "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
+        "public": True,
+        "oracle_used": False,
+        "fixture_hashes": current_fixture_hashes,
+        "source_role_hashes": current_source_hashes,
+        "fixture_manifest_hash": sha256_file(manifest_path),
+    }
 
 
 def copy_known_valid_outputs(
@@ -189,7 +284,7 @@ def copy_known_valid_outputs(
     output_dir: Path,
     specification: dict[str, Any],
 ) -> list[str]:
-    source_dir = reject_solution_fixture(root, source_dir)
+    source_dir = reject_package_fixture(root, source_dir)
     created: list[str] = []
     outputs = (
         (specification.get("output_contract", {}) or {}).get("outputs", []) or []
@@ -306,7 +401,7 @@ def process_evidence_probe_plan(
         return [], "instruction declares no process-evidence outputs"
     if known_valid_output is None:
         return process_files, "no independent source-bound fixture is available"
-    fixture = reject_solution_fixture(root, known_valid_output)
+    fixture = reject_package_fixture(root, known_valid_output)
     missing = [
         filename
         for filename in process_files
@@ -1090,7 +1185,7 @@ def run_checker_case(
                         (outputs_dir / filename).unlink(missing_ok=True)
                 created = [filename for filename in created if filename == retained]
             if additional_outputs:
-                fixture = reject_solution_fixture(root, known_valid_output)
+                fixture = reject_package_fixture(root, known_valid_output)
                 for filename in additional_outputs:
                     source = (fixture / filename).resolve()
                     if source.parent != fixture or not source.is_file():
@@ -1451,18 +1546,28 @@ def evaluate_results(
                 )
             )
         if result["crashed"]:
+            crash_evidence = (
+                {
+                    "status": "CRASH",
+                    "failure_signature": failure_signature,
+                    "source_binding": source_binding,
+                    "root_cause": runtime_root,
+                }
+                if case == "positive_oracle"
+                else {
+                    "stderr": result["stderr"],
+                    "failure_signature": failure_signature,
+                    "source_binding": source_binding,
+                    "root_cause": runtime_root,
+                }
+            )
             findings.append(
                 finding(
                     "HIGH",
                     "CHECKER_CRASH",
                     f"checker crashed for {case}",
                     case,
-                    {
-                        "stderr": result["stderr"],
-                        "failure_signature": failure_signature,
-                        "source_binding": source_binding,
-                        "root_cause": runtime_root,
-                    },
+                    crash_evidence,
                 )
             )
         reward = result.get("reward")
@@ -1476,6 +1581,22 @@ def evaluate_results(
                     "_breakdown_type": type(breakdown).__name__,
                 }
             )
+            unusable_evidence = (
+                {
+                    "status": "UNUSABLE",
+                    "failure_signature": failure_signature,
+                    "source_binding": source_binding,
+                    "root_cause": runtime_root,
+                }
+                if case == "positive_oracle"
+                else {
+                    "reward": reward,
+                    "breakdown_errors": breakdown_errors,
+                    "failure_signature": failure_signature,
+                    "source_binding": source_binding,
+                    "root_cause": runtime_root,
+                }
+            )
             findings.append(
                 finding(
                     "HIGH",
@@ -1483,13 +1604,7 @@ def evaluate_results(
                     "checker did not emit a usable reward/breakdown result "
                     f"for {case}",
                     case,
-                    {
-                        "reward": reward,
-                        "breakdown_errors": breakdown_errors,
-                        "failure_signature": failure_signature,
-                        "source_binding": source_binding,
-                        "root_cause": runtime_root,
-                    },
+                    unusable_evidence,
                 )
             )
             continue
@@ -1531,10 +1646,7 @@ def evaluate_results(
                     "ORACLE_POSITIVE_MOCK_REJECTED",
                     "isolated solution positive mock does not pass the checker",
                     case,
-                    {
-                        "status": "REJECTED",
-                        "pass_threshold": pass_threshold,
-                    },
+                    {"status": "REJECTED"},
                 )
             )
         if (
@@ -1612,6 +1724,41 @@ def evaluate_results(
     return findings
 
 
+def sanitized_oracle_evidence(
+    result: dict[str, Any], pass_threshold: float
+) -> dict[str, Any]:
+    """Persist Oracle status/provenance without checker-controlled values."""
+    usable = usable_probe_result(result)
+    return {
+        "case": "positive_oracle",
+        "mode": "known_valid",
+        "returncode": result.get("returncode"),
+        "crashed": bool(result.get("crashed")),
+        "runtime_not_assessable": bool(
+            result.get("runtime_not_assessable")
+        ),
+        "runtime_not_assessable_reason": result.get(
+            "runtime_not_assessable_reason"
+        ),
+        "runtime_provenance": result.get("runtime_provenance"),
+        "verifier_entrypoint": result.get("verifier_entrypoint"),
+        "direct_checker_harness": result.get("direct_checker_harness"),
+        "runtime_package_contains_solution": result.get(
+            "runtime_package_contains_solution"
+        ),
+        "fixture_source_kind": "ORACLE_POSITIVE_MOCK",
+        "usable_result": usable,
+        "positive_mock_accepted": bool(
+            usable
+            and isinstance(result.get("reward"), float)
+            and result["reward"] >= pass_threshold
+        ),
+        "contracted_outputs_generated": bool(
+            result.get("created_outputs")
+        ),
+    }
+
+
 def dynamic_checker_probe(
     root: Path, output: Path, known_valid_output: Path | None = None
 ) -> dict[str, Any]:
@@ -1624,6 +1771,11 @@ def dynamic_checker_probe(
         raise ValueError(
             "pass threshold must be a finite number between zero and one"
         )
+    fixture_provenance = (
+        validate_known_valid_fixture(root, known_valid_output, specification)
+        if known_valid_output is not None
+        else None
+    )
     random.seed(17)
     oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
         root, specification
@@ -1767,6 +1919,13 @@ def dynamic_checker_probe(
                 "independent fixture did not establish every checker runtime "
                 "scorer binding"
             )
+        if fixture_provenance is not None:
+            for result in results:
+                if (
+                    result.get("fixture_source_kind")
+                    == "INDEPENDENT_PUBLIC_FIXTURE"
+                ):
+                    result["fixture_provenance"] = fixture_provenance
     finally:
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
@@ -1798,21 +1957,11 @@ def dynamic_checker_probe(
                 },
             )
         )
-    fixture_hashes: dict[str, str] = {}
-    if known_valid_output is not None:
-        fixture_root = reject_solution_fixture(root, known_valid_output)
-        for output_contract in (
-            (specification.get("output_contract", {}) or {}).get(
-                "outputs", []
-            )
-            or []
-        ):
-            filename = basename(output_contract.get("file"))
-            path = fixture_root / filename
-            if filename and path.is_file():
-                fixture_hashes[filename] = (
-                    "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
-                )
+    bound_fixture_hashes = (
+        fixture_provenance["fixture_hashes"]
+        if fixture_provenance is not None
+        else {}
+    )
     expected = {
         "missing_outputs": "score below pass threshold without crashing",
         "empty_valid_shape": "score below pass threshold without crashing",
@@ -1866,6 +2015,7 @@ def dynamic_checker_probe(
     discrimination_assessed = assessment_flags["discrimination"]
     equivalence_assessed = assessment_flags["equivalence"]
     for index, result in enumerate(results, start=1):
+        oracle_case = result["case"] == "positive_oracle"
         probe_class = (
             "component_isolation"
             if result["case"].startswith("component_isolation__")
@@ -1878,7 +2028,9 @@ def dynamic_checker_probe(
                 "probe_class": probe_class,
                 "description": result["case"].replace("_", " "),
                 "expected_behavior": expected[result["case"]],
-                "observed_score": result.get("reward"),
+                "observed_score": (
+                    None if oracle_case else result.get("reward")
+                ),
                 "observed_status": (
                     "CRASH"
                     if result["crashed"]
@@ -1894,7 +2046,11 @@ def dynamic_checker_probe(
                     and item["test_type"] == result["case"]
                     for item in findings
                 ),
-                "evidence": result,
+                "evidence": (
+                    sanitized_oracle_evidence(result, pass_threshold)
+                    if oracle_case
+                    else result
+                ),
             }
         )
     runtime_not_assessable = [
@@ -1990,7 +2146,21 @@ def dynamic_checker_probe(
                         else "NONE"
                     ),
                     "fixture_hashes": (
-                        fixture_hashes if discrimination_assessed else {}
+                        bound_fixture_hashes
+                        if discrimination_assessed
+                        else {}
+                    ),
+                    "fixture_manifest_hash": (
+                        fixture_provenance["fixture_manifest_hash"]
+                        if discrimination_assessed
+                        and fixture_provenance is not None
+                        else None
+                    ),
+                    "source_role_hashes": (
+                        fixture_provenance["source_role_hashes"]
+                        if discrimination_assessed
+                        and fixture_provenance is not None
+                        else {}
                     ),
                     "oracle_used": False,
                 },
@@ -2013,7 +2183,19 @@ def dynamic_checker_probe(
                         else "NONE"
                     ),
                     "fixture_hashes": (
-                        fixture_hashes if equivalence_assessed else {}
+                        bound_fixture_hashes if equivalence_assessed else {}
+                    ),
+                    "fixture_manifest_hash": (
+                        fixture_provenance["fixture_manifest_hash"]
+                        if equivalence_assessed
+                        and fixture_provenance is not None
+                        else None
+                    ),
+                    "source_role_hashes": (
+                        fixture_provenance["source_role_hashes"]
+                        if equivalence_assessed
+                        and fixture_provenance is not None
+                        else {}
                     ),
                     "oracle_used": False,
                 },

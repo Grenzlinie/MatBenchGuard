@@ -298,6 +298,11 @@ def file_hash(path: Path) -> str:
 
 def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
     summary = report.get("summary", {})
+    execution_level = report.get("configuration", {}).get(
+        "execution_level"
+    )
+    if execution_level != "E1":
+        raise ValueError("authoritative CLI snapshot requires execution_level=E1")
     dimensions = report.get("dimension_scores")
     gates = report.get("hard_gates")
     if summary.get("scoring_version") != SCORING_VERSION:
@@ -317,6 +322,7 @@ def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("CLI total must be null when a dimension is unavailable")
     snapshot = {
         "scoring_version": SCORING_VERSION,
+        "execution_level": execution_level,
         "final_verdict": summary.get("final_verdict"),
         "total_score": total,
         "hard_gate_triggered": summary.get("hard_gate_triggered"),
@@ -325,6 +331,33 @@ def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
     }
     snapshot["snapshot_hash"] = canonical_json_hash(snapshot)
     return snapshot
+
+
+def hard_gate_exclusion_reasons(
+    hard_gates: list[dict[str, Any]] | None,
+) -> list[str]:
+    return [
+        f"HARD_GATE_{gate['code']}"
+        for gate in hard_gates or []
+        if gate.get("status") == "FAIL"
+        and isinstance(gate.get("code"), str)
+    ]
+
+
+def validate_authoritative_candidate_state(
+    record: dict[str, Any], scoring: dict[str, Any]
+) -> None:
+    if scoring.get("execution_level") != "E1":
+        raise ValueError("batch candidate scoring is not bound to E1")
+    failed_reasons = hard_gate_exclusion_reasons(
+        scoring.get("hard_gates")
+    )
+    if failed_reasons and record.get("state") != "E1_EXCLUDED":
+        raise ValueError("failed Hard Gate cannot be a usable candidate")
+    if failed_reasons and not set(failed_reasons).issubset(
+        record.get("exclusion_reasons", [])
+    ):
+        raise ValueError("failed Hard Gate is absent from exclusion reasons")
 
 
 def reject_manual_scoring_fields(record: dict[str, Any]) -> None:
@@ -452,6 +485,10 @@ def validate_record_source_binding(
         if not isinstance(scoring, dict):
             errors.append("authoritative CLI scoring snapshot is missing")
         else:
+            try:
+                validate_authoritative_candidate_state(record, scoring)
+            except ValueError as exc:
+                errors.append(str(exc))
             snapshot_hash = scoring.get("snapshot_hash")
             unhashed = {
                 key: value
@@ -568,6 +605,7 @@ def exclusion_reasons(
     checker: dict[str, Any],
     resource_failures: list[str],
     materials_class: str | None = None,
+    hard_gates: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     reasons: list[str] = []
     parse_status = static.get("parse_status", {})
@@ -613,6 +651,7 @@ def exclusion_reasons(
         reasons.append("SOLUTION_BOUNDARY_UNPROVEN")
     if resource_failures:
         reasons.append("CRITICAL_RESOURCE_DECLARATION_FAILURE")
+    reasons.extend(hard_gate_exclusion_reasons(hard_gates))
     return list(dict.fromkeys(reasons))
 
 
@@ -727,6 +766,7 @@ def review_one(
             checker,
             resource_failures,
             materials_class=materials_class,
+            hard_gates=report.get("hard_gates", []),
         )
         checker_evidence = compact_checker_evidence(checker)
         cli_scoring = authoritative_cli_scoring(report)

@@ -156,8 +156,8 @@ python scripts/run_review.py <Harbor题包目录> \
 
 An independently justified non-Oracle output may additionally be supplied with
 `--known-valid-output`. It is used only for discrimination and equivalence
-probes; it is never a positive control and never replaces the isolated Oracle
-positive mock.
+probes and requires an external public `fixture_manifest.json` bound to current
+instruction/tests hashes; it never replaces the isolated Oracle positive mock.
 
 Every no-paper assessment must also adjudicate all four paper triggers
 individually with instruction/tests quotes. A triggered item routes the package

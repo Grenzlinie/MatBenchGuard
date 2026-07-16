@@ -16,7 +16,10 @@ from tests.test_materials_benchmark_review_paper_grounded import (
     no_paper_assessment,
     run_paper_grounded,
 )
-from tests.test_materials_benchmark_review_e1 import write_public_valid_dispersion
+from tests.test_materials_benchmark_review_e1 import (
+    bind_public_fixture,
+    write_public_valid_dispersion,
+)
 
 
 def run_no_paper(package: Path) -> subprocess.CompletedProcess[str]:
@@ -228,6 +231,7 @@ class MaterialsDispositionTests(unittest.TestCase):
             install_passing_oracle(package)
             valid_output = Path(temporary) / "known-valid-output"
             write_public_valid_dispersion(valid_output)
+            bind_public_fixture(package, valid_output)
             assessment_value = assessment()
             assessment_value["materials_qualification"] = (
                 no_paper_assessment()["materials_qualification"]

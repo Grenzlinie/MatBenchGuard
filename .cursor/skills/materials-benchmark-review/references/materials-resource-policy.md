@@ -9,6 +9,12 @@ Probe an external object only when instruction itself makes all of these true:
 2. it is indispensable to construct a valid answer;
 3. no scientifically equivalent source or implementation is allowed.
 
+These declarations may span adjacent Markdown lines in one instruction block;
+the direct-input role, indispensability, no-equivalent statement, and locator
+must all be explicit. Do not infer them from package metadata. A runtime
+software dependency is not a direct data/service input merely because the
+instruction requires that software.
+
 Examples that may qualify: a named private training dataset, an immutable
 experimental file used directly for fitting, or an unavoidable remote service.
 

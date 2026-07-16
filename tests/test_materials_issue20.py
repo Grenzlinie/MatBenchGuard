@@ -4,9 +4,11 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.test_materials_benchmark_review_e1 import (
     SOURCE_PACKAGE,
+    bind_public_fixture,
     copy_source_package,
 )
 
@@ -32,7 +34,9 @@ if str(REPAIR_SCRIPTS) not in __import__("sys").path:
 
 import dynamic_checker_probe  # noqa: E402
 import finalize_audit_output  # noqa: E402
+import probe_resources as resource_probe  # noqa: E402
 import run_review  # noqa: E402
+import run_fast_e1_batch as fast_batch  # noqa: E402
 from run_repair import report_configuration, run_equal_depth_review  # noqa: E402
 
 
@@ -46,6 +50,57 @@ def usable_result(case: str) -> dict[str, object]:
 
 
 class MaterialsIssue20Tests(unittest.TestCase):
+    def test_oracle_checker_values_never_persist(self) -> None:
+        secret = "ORACLE-CHECKER-SECRET-987654321.12345"
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "solution/solve.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "mkdir -p \"${OUTPUT_DIR:-/app/outputs}\"\n"
+                "printf 'direction,mode,k,frequency\\n"
+                "100,L,0,987654321.12345\\n' "
+                "> \"${OUTPUT_DIR:-/app/outputs}/dispersion_curves.csv\"\n",
+                encoding="utf-8",
+            )
+            (package / "tests/checker.py").write_text(
+                "import json\n"
+                "from pathlib import Path\n"
+                "logs = Path('/logs/verifier')\n"
+                "logs.mkdir(parents=True, exist_ok=True)\n"
+                "output = Path('/app/outputs/dispersion_curves.csv')\n"
+                "present = output.is_file()\n"
+                "oracle_case = present and '987654321.12345' in output.read_text()\n"
+                "if oracle_case:\n"
+                "    print(" + repr(secret) + ")\n"
+                "(logs / 'reward.txt').write_text('1.0' if present else '0.0')\n"
+                "(logs / 'breakdown.json').write_text(json.dumps({"
+                "'_errors': {}, **({'secret': "
+                + repr(secret)
+                + "} if oracle_case else {})}))\n",
+                encoding="utf-8",
+            )
+
+            run_review.run_review(package, known_valid_output=None)
+
+            checker_path = package / "benchmark_audit/checker_tests.json"
+            report_path = package / "benchmark_audit/audit_report.json"
+            checker_text = checker_path.read_text(encoding="utf-8")
+            report_text = report_path.read_text(encoding="utf-8")
+            self.assertNotIn(secret, checker_text)
+            self.assertNotIn(secret, report_text)
+            checker = json.loads(checker_text)
+            oracle = next(
+                item
+                for item in checker["tests"]
+                if item["test_type"] == "positive_oracle"
+            )
+            self.assertIsNone(oracle["observed_score"])
+            self.assertNotIn("breakdown", oracle["evidence"])
+            self.assertNotIn("stdout", oracle["evidence"])
+            self.assertNotIn("stderr", oracle["evidence"])
+            self.assertNotIn("reward", oracle["evidence"])
+
     def test_authoritative_review_rejects_non_e1_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
@@ -332,6 +387,263 @@ class MaterialsIssue20Tests(unittest.TestCase):
         self.assertEqual(
             axes["factual_accuracy"]["status"], "NOT_ASSESSABLE"
         )
+
+    def test_confirmed_direct_input_barriers_fail_availability_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "instruction.md").write_text(
+                "Use the fixed indispensable input.", encoding="utf-8"
+            )
+            for status in (
+                "REQUIRES_AUTH",
+                "REQUIRES_LICENSE",
+                "IDENTITY_MISMATCH",
+            ):
+                with self.subTest(status=status):
+                    finding = finalize_audit_output.normalized_finding(
+                        root,
+                        {
+                            "severity": "FATAL",
+                            "code": "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+                            "message": "The solving Agent cannot access the input.",
+                            "affected_files": ["instruction.md"],
+                            "evidence": {"status": status},
+                        },
+                        "FINDING-001",
+                        "RESOURCE",
+                        "RESOURCE_USABILITY",
+                    )
+                    gates = finalize_audit_output.hard_gate_results(
+                        root, [finding], []
+                    )
+                    direct = next(
+                        gate
+                        for gate in gates
+                        if gate["code"]
+                        == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+                    )
+                    self.assertEqual(direct["status"], "FAIL")
+
+    def test_temporary_direct_input_gap_is_not_assessable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "instruction.md").write_text(
+                "Use the fixed indispensable input.", encoding="utf-8"
+            )
+            finding = finalize_audit_output.normalized_finding(
+                root,
+                {
+                    "severity": "HIGH",
+                    "code": "INDISPENSABLE_DIRECT_INPUT_TRANSIENT_FAILURE",
+                    "message": "The audit host had a temporary network failure.",
+                    "affected_files": ["instruction.md"],
+                    "evidence": {"status": "TRANSIENT_FAILURE"},
+                },
+                "FINDING-001",
+                "RESOURCE",
+                "RESOURCE_USABILITY",
+            )
+
+            gates = finalize_audit_output.hard_gate_results(
+                root, [finding], []
+            )
+            direct = next(
+                gate
+                for gate in gates
+                if gate["code"] == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+            )
+            self.assertEqual(direct["status"], "NOT_ASSESSABLE")
+
+    def test_multiline_direct_input_declaration_is_parsed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "instruction.md").write_text(
+                "### Required direct input\n"
+                "- This dataset is indispensable for the requested answer.\n"
+                "- No scientifically equivalent source is allowed.\n"
+                "- Download URL:\n"
+                "  https://example.invalid/fixed-data.csv\n",
+                encoding="utf-8",
+            )
+            output = root / "resources.json"
+            probe_report = {
+                "resource_id": "direct",
+                "verified_level": "L4",
+                "required_level": "L4",
+                "status": "AVAILABLE",
+                "identity_match": True,
+                "probe": {},
+            }
+            with mock.patch.object(
+                resource_probe,
+                "probe_item",
+                return_value=(probe_report, []),
+            ):
+                result = resource_probe.probe_resources(
+                    root, output, timeout=1
+                )
+
+            self.assertEqual(len(result["resources"]), 1)
+            self.assertEqual(
+                result["resources"][0]["declaration_source"],
+                "instruction.md",
+            )
+
+    def test_package_local_known_valid_fixture_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            fake = package / "tests/fake-public-fixture"
+            fake.mkdir()
+            (fake / "dispersion_curves.csv").write_text(
+                "direction,mode,k,frequency\n100,L,0,0\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "external"):
+                dynamic_checker_probe.dynamic_checker_probe(
+                    package,
+                    Path(temporary) / "checker.json",
+                    known_valid_output=fake,
+                )
+
+    def test_external_fixture_requires_source_bound_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            fixture = Path(temporary) / "public-fixture"
+            fixture.mkdir()
+            (fixture / "dispersion_curves.csv").write_text(
+                "direction,mode,k,frequency\n100,L,0,0\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "fixture manifest"):
+                dynamic_checker_probe.dynamic_checker_probe(
+                    package,
+                    Path(temporary) / "checker.json",
+                    known_valid_output=fixture,
+                )
+
+    def test_fixture_manifest_rejects_stale_source_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            fixture = Path(temporary) / "public-fixture"
+            fixture.mkdir()
+            (fixture / "dispersion_curves.csv").write_text(
+                "direction,mode,k,frequency\n100,L,0,0\n",
+                encoding="utf-8",
+            )
+            bind_public_fixture(package, fixture)
+            instruction = package / "instruction.md"
+            instruction.write_text(
+                instruction.read_text(encoding="utf-8")
+                + "\nA source change invalidates the fixture assessment.\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "source-bound"):
+                dynamic_checker_probe.dynamic_checker_probe(
+                    package,
+                    Path(temporary) / "checker.json",
+                    known_valid_output=fixture,
+                )
+
+    def test_batch_snapshot_rejects_non_e1_report(self) -> None:
+        template = json.loads(
+            (
+                REPO_ROOT
+                / ".cursor/skills/materials-benchmark-review/assets"
+                / "audit_report_template.json"
+            ).read_text(encoding="utf-8")
+        )
+        template["configuration"]["execution_level"] = "E2"
+
+        with self.assertRaisesRegex(ValueError, "E1"):
+            fast_batch.authoritative_cli_scoring(template)
+
+    def test_batch_excludes_failed_direct_input_gate(self) -> None:
+        static = {
+            "parse_status": {
+                role: "ok" for role in fast_batch.QUALITY_EVIDENCE_ROLES
+            },
+            "materials_prescreen": {"classification": "MAT_CORE"},
+            "issues": [],
+        }
+        checker = {
+            "tests": [
+                {
+                    "observed_status": "COMPLETED",
+                    "evidence": {
+                        "runtime_package_contains_solution": False
+                    },
+                }
+            ],
+            "usable_reward_count": 1,
+            "findings": [],
+            "solution_content_inspected": False,
+        }
+
+        reasons = fast_batch.exclusion_reasons(
+            static,
+            checker,
+            [],
+            materials_class="MAT_CORE",
+            hard_gates=[
+                {
+                    "code": "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+                    "status": "FAIL",
+                }
+            ],
+        )
+
+        self.assertIn(
+            "HARD_GATE_INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE", reasons
+        )
+        with self.assertRaisesRegex(ValueError, "usable candidate"):
+            fast_batch.validate_authoritative_candidate_state(
+                {
+                    "state": "E1_USABLE_CANDIDATE",
+                    "exclusion_reasons": [],
+                },
+                {
+                    "execution_level": "E1",
+                    "hard_gates": [
+                        {
+                            "code": (
+                                "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+                            ),
+                            "status": "FAIL",
+                        }
+                    ],
+                },
+            )
+
+    def test_semantically_empty_qa_axes_are_rejected(self) -> None:
+        empty_axes = {
+            name: {
+                "status": "PASS",
+                "evidence": [],
+                "locations": [],
+                "limitations": [],
+            }
+            for name in finalize_audit_output.QA_AXIS_NAMES
+        }
+        with self.assertRaisesRegex(ValueError, "evidence"):
+            finalize_audit_output.validate_qa_axes(empty_axes)
+
+        not_assessable = {
+            name: {
+                "status": "NOT_ASSESSABLE",
+                "evidence": [{"finding_id": "FINDING-001", "observed_fact": "fail"}],
+                "locations": [],
+                "limitations": [],
+            }
+            for name in finalize_audit_output.QA_AXIS_NAMES
+        }
+        with self.assertRaisesRegex(ValueError, "NOT_ASSESSABLE"):
+            finalize_audit_output.validate_qa_axes(not_assessable)
 
     def test_answer_leakage_has_its_own_qa_axis(self) -> None:
         axes = finalize_audit_output.derive_qa_axes(

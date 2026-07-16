@@ -681,6 +681,132 @@ def probe_item(
     return report, findings
 
 
+def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
+    """Parse explicit direct-input declarations within Markdown blocks."""
+    blocks: list[list[tuple[int, str]]] = []
+    current: list[tuple[int, str]] = []
+    for line_number, line in enumerate(instruction.splitlines(), start=1):
+        if re.match(r"^\s*#{1,6}\s+", line) and current:
+            blocks.append(current)
+            current = [(line_number, line)]
+        elif line.strip():
+            current.append((line_number, line))
+        elif current:
+            blocks.append(current)
+            current = []
+    if current:
+        blocks.append(current)
+
+    resources: list[dict[str, Any]] = []
+    for block in blocks:
+        position = 0
+        for line_index, (line_number, line) in enumerate(block):
+            for url in re.findall(r"https?://[^\s)\]}>]+", line):
+                context = block[
+                    max(0, line_index - 5) : min(
+                        len(block), line_index + 3
+                    )
+                ]
+                lowered = "\n".join(
+                    context_line for _, context_line in context
+                ).lower()
+                explicitly_direct = (
+                    "indispensable direct input" in lowered
+                    or (
+                        "direct input" in lowered
+                        and any(
+                            term in lowered
+                            for term in (
+                                "indispensable",
+                                "required",
+                                "must",
+                                "必要",
+                            )
+                        )
+                    )
+                )
+                no_equivalent = any(
+                    term in lowered
+                    for term in (
+                        "no equivalent",
+                        "without equivalent",
+                        "no scientifically equivalent",
+                        "不可替代",
+                    )
+                )
+                software_only = (
+                    any(
+                        term in lowered
+                        for term in (
+                            "software package",
+                            "python package",
+                            "library dependency",
+                            "solver executable",
+                        )
+                    )
+                    and not any(
+                        term in lowered
+                        for term in (
+                            "dataset",
+                            "data file",
+                            "input file",
+                            "external service",
+                        )
+                    )
+                )
+                if (
+                    not (explicitly_direct and no_equivalent)
+                    or software_only
+                ):
+                    continue
+                checksum_match = re.search(
+                    r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
+                    lowered,
+                )
+                no_agent_license = (
+                    "license authorization is not provided to the solving agent"
+                    in lowered
+                    or "solving agent has no license authorization" in lowered
+                )
+                position += 1
+                access = (
+                    {
+                        "method": "license",
+                        "license": "instruction-declared-license",
+                        "url": url.rstrip(".,;"),
+                        "authorization_provided": False,
+                    }
+                    if no_agent_license
+                    else {
+                        "method": "url",
+                        "url": url.rstrip(".,;"),
+                        **(
+                            {
+                                "checksum": (
+                                    "sha256:" + checksum_match.group(1)
+                                )
+                            }
+                            if checksum_match
+                            else {}
+                        ),
+                    }
+                )
+                resources.append(
+                    {
+                        "id": (
+                            f"instruction-direct-input-{line_number}-{position}"
+                        ),
+                        "name": "Indispensable direct instruction input",
+                        "type": "file",
+                        "role": "CRITICAL",
+                        "required_level": "L4",
+                        "access": access,
+                        "_instruction_line": line_number,
+                    }
+                )
+    return resources
+
+
 def probe_resources(
     root: Path,
     output: Path,
@@ -693,36 +819,7 @@ def probe_resources(
         if instruction_path.is_file()
         else ""
     )
-    resources: list[dict[str, Any]] = []
-    for line_number, line in enumerate(instruction.splitlines(), start=1):
-        lowered = line.lower()
-        explicitly_indispensable = (
-            "indispensable direct input" in lowered
-            or (
-                "direct input" in lowered
-                and any(term in lowered for term in ("required", "must"))
-            )
-        )
-        no_equivalent = any(
-            term in lowered
-            for term in ("no equivalent", "without equivalent", "不可替代")
-        )
-        if not (explicitly_indispensable and no_equivalent):
-            continue
-        for position, url in enumerate(
-            re.findall(r"https?://[^\s)\]}>]+", line), start=1
-        ):
-            resources.append(
-                {
-                    "id": f"instruction-direct-input-{line_number}-{position}",
-                    "name": "Indispensable direct instruction input",
-                    "type": "file",
-                    "role": "CRITICAL",
-                    "required_level": "L4",
-                    "access": {"method": "url", "url": url.rstrip(".,;")},
-                    "_instruction_line": line_number,
-                }
-            )
+    resources = instruction_direct_inputs(instruction)
     reports: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
     for item in resources:
@@ -739,10 +836,33 @@ def probe_resources(
         report["indispensable"] = True
         for finding_item in item_findings:
             finding_item["affected_files"] = ["instruction.md"]
-            if finding_item["severity"] == "FATAL":
+            if report["status"] in {
+                "REQUIRES_AUTH",
+                "REQUIRES_LICENSE",
+                "PERMANENT_UNAVAILABLE",
+                "IDENTITY_MISMATCH",
+            } and finding_item["code"] in {
+                "COMMERCIAL_LICENSE_UNAVAILABLE",
+                "RESOURCE_REQUIRES_AUTH",
+                "CRITICAL_RESOURCE_UNAVAILABLE",
+                "RESOURCE_IDENTITY_MISMATCH",
+            }:
                 finding_item["code"] = (
                     "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
                 )
+                finding_item["severity"] = "FATAL"
+            elif report["status"] in {
+                "TRANSIENT_FAILURE",
+                "RATE_LIMITED",
+                "BLOCKED_PRIVATE_NETWORK",
+            } and finding_item["code"] in {
+                "RESOURCE_TRANSIENT_FAILURE",
+                "RESOURCE_PRIVATE_NETWORK_BLOCKED",
+            }:
+                finding_item["code"] = (
+                    "INDISPENSABLE_DIRECT_INPUT_" + report["status"]
+                )
+                finding_item["severity"] = "HIGH"
         reports.append(report)
         findings.extend(item_findings)
     e2_recommended = any(
