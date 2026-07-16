@@ -799,12 +799,15 @@ def review_one(
             (audit / "audit_report.json").read_text(encoding="utf-8")
         )
         no_paper_audit_id = no_paper_report["audit_id"]
+        no_paper_audit_snapshot: Path | None = None
         if (
             requested_paper_mode == "paper_grounded"
             and not no_paper_report.get("summary", {}).get(
                 "hard_gate_triggered", False
             )
         ):
+            no_paper_audit_snapshot = workspace / "no-paper-audit"
+            shutil.copytree(audit, no_paper_audit_snapshot)
             for relative in PAPER_SOURCE_ROLES:
                 source_path = source / relative
                 destination = package_copy / relative
@@ -921,6 +924,39 @@ def review_one(
             output_dir / report_relative.parent,
             dirs_exist_ok=True,
         )
+        parent_binding: dict[str, Any] = {}
+        if paper_mode == "paper_grounded":
+            if no_paper_audit_snapshot is None:
+                raise ValueError("paper-grounded audit lacks no-paper parent bytes")
+            parent_report_relative = (
+                report_relative.parent
+                / "parent_no_paper"
+                / "audit_report.json"
+            )
+            parent_manifest_relative = parent_report_relative.with_name(
+                "audit_manifest.json"
+            )
+            parent_report_destination = output_dir / parent_report_relative
+            parent_manifest_destination = output_dir / parent_manifest_relative
+            shutil.copytree(
+                no_paper_audit_snapshot,
+                parent_report_destination.parent,
+                dirs_exist_ok=True,
+            )
+            parent_manifest = json.loads(
+                parent_manifest_destination.read_text(encoding="utf-8")
+            )
+            parent_binding = {
+                "no_paper_package_id": package_id,
+                "no_paper_report_path": parent_report_relative.as_posix(),
+                "no_paper_report_hash": file_hash(parent_report_destination),
+                "no_paper_manifest_path": parent_manifest_relative.as_posix(),
+                "no_paper_manifest_hash": file_hash(parent_manifest_destination),
+                "source_role_hashes": parent_manifest.get("input_hashes"),
+                "review_implementation_hash": parent_manifest.get(
+                    "review_implementation", {}
+                ).get("aggregate_hash"),
+            }
         cli_evidence = {
             "contract_version": report.get("evidence_contract", {}).get(
                 "version"
@@ -953,6 +989,7 @@ def review_one(
                     if paper_mode == "paper_grounded"
                     else None
                 ),
+                **parent_binding,
             },
             "solution_oracle": {
                 key: checker.get("solution_oracle", {}).get(key)
@@ -1154,7 +1191,11 @@ def summarize(
         "candidate_diversity": diversity,
     }
     policy = {
-        "ordering": "cluster_round_robin_then_theme_and_paper_lexicographic",
+        "ordering": "deterministic_selected_prefix",
+        "source_ordering": (
+            "cluster_round_robin_then_theme_and_paper_lexicographic"
+        ),
+        "universe_path": "ordered_universe.json",
         "candidate_tier": EVIDENCE_TIER,
         "candidate_requirements": [
             "all required Harbor roles parse",
@@ -1189,6 +1230,12 @@ def summarize(
         "counts": counts,
         "records": records,
     }
+    candidate_rank = 0
+    for record in records:
+        record["global_rank"] = record["discovery_rank"] + 1
+        if record["state"] == EVIDENCE_TIER:
+            record["selection_rank"] = candidate_rank
+            candidate_rank += 1
     sample_ids = [
         item["package_id"] for item in identity_baseline
     ]
@@ -1359,6 +1406,22 @@ def run_batch(
         ),
         invocation_seconds,
         identity_baseline,
+    )
+    universe = {
+        "schema_version": "materials-final-100-universe/1.0",
+        "records": [
+            {
+                "global_rank": record["global_rank"],
+                "package_id": record["package_id"],
+                "eligible": record["state"] == EVIDENCE_TIER,
+                "review_verdict": record["review_verdict"],
+            }
+            for record in index["records"]
+        ],
+    }
+    write_json(output_dir / "ordered_universe.json", universe)
+    index["selection_policy"]["universe_hash"] = file_hash(
+        output_dir / "ordered_universe.json"
     )
     write_json(output_dir / "index.json", index)
     write_json(output_dir / "candidate_manifest.json", manifest)

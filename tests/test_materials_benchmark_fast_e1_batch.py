@@ -139,6 +139,10 @@ def source_role_hashes(package: Path) -> dict[str, str]:
     }
 
 
+def file_hash(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 class FastE1BatchTests(unittest.TestCase):
     def test_candidate_manifest_contains_sample_identities_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -182,6 +186,27 @@ class FastE1BatchTests(unittest.TestCase):
             self.assertEqual(
                 manifest["package_ids"],
                 ["cluster-1/materials-energy/paper-1"],
+            )
+            index = json.loads(
+                (output / "index.json").read_text(encoding="utf-8")
+            )
+            universe_path = output / index["selection_policy"]["universe_path"]
+            universe = json.loads(universe_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                index["selection_policy"]["ordering"],
+                "deterministic_selected_prefix",
+            )
+            self.assertEqual(
+                index["selection_policy"]["universe_hash"],
+                file_hash(universe_path),
+            )
+            self.assertEqual(
+                universe["records"][0]["global_rank"],
+                index["records"][0]["global_rank"],
+            )
+            self.assertEqual(
+                universe["records"][0]["eligible"],
+                index["records"][0]["state"] == "E1_USABLE_CANDIDATE",
             )
 
     def test_frozen_identity_baseline_blocks_repair_until_all_are_reviewed(
@@ -825,6 +850,27 @@ class FastE1BatchTests(unittest.TestCase):
             self.assertEqual(
                 record["evidence"]["stage_binding"]["status"],
                 "PAPER_GROUNDED_BOUND_TO_NO_PAPER",
+            )
+            stage = record["evidence"]["stage_binding"]
+            parent_report = output / stage["no_paper_report_path"]
+            parent_manifest = output / stage["no_paper_manifest_path"]
+            self.assertTrue(parent_report.is_file())
+            self.assertTrue(parent_manifest.is_file())
+            self.assertEqual(file_hash(parent_report), stage["no_paper_report_hash"])
+            self.assertEqual(
+                file_hash(parent_manifest), stage["no_paper_manifest_hash"]
+            )
+            parent_report_value = json.loads(
+                parent_report.read_text(encoding="utf-8")
+            )
+            parent_manifest_value = json.loads(
+                parent_manifest.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                parent_report_value["audit_id"], stage["no_paper_audit_id"]
+            )
+            self.assertEqual(
+                parent_manifest_value["audit_id"], stage["no_paper_audit_id"]
             )
 
     def test_resume_does_not_review_completed_package_again(self) -> None:

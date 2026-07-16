@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+import math
 import shutil
 import sys
 import tempfile
@@ -21,12 +21,11 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from canonical_status import (  # noqa: E402
-    PUBLISHABILITY_ROUTES,
-    REPAIR_DECISIONS,
-    REPAIR_STATUSES,
-    REVIEW_VERDICTS,
-    canonical_fields,
+    REPAIR_BUNDLE_FILES,
+    require_canonical_fields,
+    validate_repair_bundle_semantics,
 )
+from finalize_audit_output import validate_qa_axes as validate_review_qa_axes
 from prepare_audit_output import (  # noqa: E402
     collect_review_implementation_hashes,
 )
@@ -43,12 +42,6 @@ FIVE_PROBE_CLASSES = (
     "equivalence",
     "component_isolation",
 )
-QA_AXES = (
-    "factual_accuracy",
-    "answer_leakage",
-    "instruction_completeness",
-    "checker_instruction_consistency",
-)
 DIMENSION_MAX_POINTS = {
     "scientific_validity": 35,
     "instruction_answerability": 20,
@@ -62,16 +55,22 @@ HARD_GATES = (
     "CHECKER_CORE_TASK_UNASSESSED",
     "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
 )
-REPAIR_BUNDLE_FILES = (
-    "repair_plan.json",
-    "changes.json",
-    "unresolved.json",
-    "regression_results.json",
-    "re_audit_comparison.json",
-    "patch.json",
-    "evidence.json",
-    "repair.log",
-    "history.json",
+PASS_THRESHOLD = 80
+PROBE_STATUSES = frozenset(
+    {"ASSESSED", "NOT_ASSESSABLE", "NOT_RUN", "NOT_APPLICABLE"}
+)
+ORACLE_FIELDS = frozenset(
+    {
+        "used",
+        "status",
+        "positive_mock_available",
+        "attempted",
+        "setup_attempted",
+        "setup_prepared",
+        "producer_started",
+        "executed",
+        "scientific_evidence",
+    }
 )
 
 
@@ -110,6 +109,27 @@ def path_hash(path: Path) -> str:
     return canonical_json_hash(entries)
 
 
+def reject_symlink_components(path: Path, *, boundary: Path) -> None:
+    absolute = path if path.is_absolute() else Path.cwd() / path
+    resolved = absolute.resolve()
+    resolved_boundary = boundary.resolve()
+    common_parts: list[str] = []
+    for left, right in zip(resolved.parts, resolved_boundary.parts):
+        if left != right:
+            break
+        common_parts.append(left)
+    resolved_common = Path(*common_parts) if common_parts else Path("/")
+    current = absolute
+    while True:
+        if current.is_symlink():
+            raise CertificationError(
+                f"path contains a symlink component: {current}"
+            )
+        if current.resolve() == resolved_common or current.parent == current:
+            break
+        current = current.parent
+
+
 def read_json(path: Path, context: str) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -123,19 +143,19 @@ def resolve_external(
     base: Path,
     context: str,
     must_exist: bool = True,
+    allow_outside: bool = False,
 ) -> Path:
     if not isinstance(raw, str) or not raw.strip():
         raise CertificationError(f"{context} path is absent")
     candidate = Path(raw).expanduser()
-    resolved = (
-        candidate.resolve()
-        if candidate.is_absolute()
-        else (base / candidate).resolve()
-    )
+    unresolved = candidate if candidate.is_absolute() else base / candidate
+    reject_symlink_components(unresolved, boundary=base)
+    resolved = unresolved.resolve()
+    resolved_base = base.resolve()
+    if not allow_outside and not resolved.is_relative_to(resolved_base):
+        raise CertificationError(f"{context} path escapes its bound root")
     if must_exist and not resolved.exists():
         raise CertificationError(f"{context} bytes are absent: {resolved}")
-    if resolved.is_symlink():
-        raise CertificationError(f"{context} may not be a symlink")
     return resolved
 
 
@@ -156,6 +176,7 @@ def verify_hash_map(
         ):
             raise CertificationError(f"{context} hash map is invalid")
         actual_path = root / relative
+        reject_symlink_components(actual_path, boundary=root)
         if not actual_path.is_file() or file_hash(actual_path) != expected:
             raise CertificationError(
                 f"{context} bytes do not match declared hash: {relative}"
@@ -177,8 +198,20 @@ def verify_source_bytes(
         raise CertificationError("source bytes are not bound")
     source_base = source_root or batch
     source = resolve_external(
-        raw_source, base=source_base, context="source", must_exist=True
+        raw_source,
+        base=source_base,
+        context="source",
+        must_exist=True,
+        allow_outside=source_root is None and Path(raw_source).is_absolute(),
     )
+    relative_source = Path(record.get("source_relative_path", ""))
+    if (
+        not relative_source.parts
+        or relative_source.is_absolute()
+        or ".." in relative_source.parts
+        or source.parts[-len(relative_source.parts) :] != relative_source.parts
+    ):
+        raise CertificationError("source path escapes its package identity binding")
     declared = manifest.get("input_hashes")
     verify_hash_map(source, declared, context="source")
     if binding.get("source_role_hashes") != declared:
@@ -241,7 +274,17 @@ def verify_bundle_files(
     if cli_evidence.get("audit_bundle_hash") != declared_bundle_hash:
         raise CertificationError("persisted audit bundle hash is stale")
     for relative, expected in sorted(output_hashes.items()):
+        if not isinstance(relative, str):
+            raise CertificationError("audit bundle hash path is invalid")
+        relative_path = Path(relative)
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+            or not isinstance(expected, str)
+        ):
+            raise CertificationError("audit bundle hash path is invalid")
         path = report_path.parent / relative
+        reject_symlink_components(path, boundary=report_path.parent)
         if not path.is_file() or file_hash(path) != expected:
             raise CertificationError(
                 f"audit bundle bytes do not match declared hash: {relative}"
@@ -272,38 +315,21 @@ def validate_canonical(
     expected_status: str | None = None,
 ) -> dict[str, str]:
     try:
-        fields = canonical_fields(
-            value["review_verdict"],
-            publishability=value["publishability"],
-            repair_decision=value["repair_decision"],
-            repair_status=value["repair_status"],
+        fields = require_canonical_fields(
+            value,
+            expected_repair_decision=expected_decision,
+            expected_repair_status=expected_status,
         )
-    except (KeyError, TypeError, ValueError) as exc:
+    except (TypeError, ValueError) as exc:
         raise CertificationError(f"{context} canonical fields are invalid") from exc
-    if expected_decision is not None and fields["repair_decision"] != expected_decision:
-        raise CertificationError(f"{context} repair decision is inconsistent")
-    if expected_status is not None and fields["repair_status"] != expected_status:
-        raise CertificationError(f"{context} repair status is inconsistent")
     return fields
 
 
 def validate_qa_axes(report: dict[str, Any]) -> None:
-    axes = report.get("qa_axes")
-    if not isinstance(axes, dict) or tuple(axes) != QA_AXES:
-        raise CertificationError("QA axes are missing or not exactly four")
-    for name in QA_AXES:
-        axis = axes[name]
-        if not isinstance(axis, dict) or axis.get("status") not in {
-            "PASS",
-            "WARNING",
-            "FAIL",
-            "NOT_ASSESSABLE",
-        }:
-            raise CertificationError(f"invalid QA axis: {name}")
-        if not isinstance(axis.get("evidence"), list) or not axis["evidence"]:
-            raise CertificationError(f"QA axis evidence is missing: {name}")
-        if axis["status"] == "NOT_ASSESSABLE" and not axis.get("limitations"):
-            raise CertificationError(f"QA axis limitation is missing: {name}")
+    try:
+        validate_review_qa_axes(report.get("qa_axes"))
+    except ValueError as exc:
+        raise CertificationError(f"QA axes are invalid: {exc}") from exc
 
 
 def validate_dimensions(report: dict[str, Any]) -> None:
@@ -325,6 +351,50 @@ def validate_dimensions(report: dict[str, Any]) -> None:
             raise CertificationError(f"invalid weighted dimension score: {name}")
         if not isinstance(item.get("evidence"), list) or not item["evidence"]:
             raise CertificationError(f"weighted dimension evidence is missing: {name}")
+        normalized = item.get("normalized_score")
+        if earned is None or normalized != round(
+            float(earned) / DIMENSION_MAX_POINTS[name], 6
+        ):
+            raise CertificationError(f"weighted dimension normalization is invalid: {name}")
+        expected_status = (
+            "FAIL"
+            if normalized < 0.5
+            else "WARNING"
+            if normalized < 0.8
+            else "PASS"
+        )
+        if item.get("status") != expected_status:
+            raise CertificationError(f"weighted dimension status is invalid: {name}")
+
+
+def validate_score(report: dict[str, Any], cli_scoring: Any) -> None:
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        raise CertificationError("PASS score summary is absent")
+    score = summary.get("total_score")
+    if (
+        isinstance(score, bool)
+        or not isinstance(score, (int, float))
+        or not math.isfinite(float(score))
+        or not PASS_THRESHOLD <= float(score) <= 100
+    ):
+        raise CertificationError("PASS score is absent, out of bounds, or below threshold")
+    dimensions = report.get("dimension_scores")
+    if round(sum(float(item["points_earned"]) for item in dimensions), 2) != score:
+        raise CertificationError("PASS score does not equal weighted dimensions")
+    if (
+        not isinstance(cli_scoring, dict)
+        or cli_scoring.get("total_score") != score
+        or cli_scoring.get("final_verdict") != "PASS"
+        or cli_scoring.get("dimension_scores") != dimensions
+        or cli_scoring.get("hard_gates") != report.get("hard_gates")
+    ):
+        raise CertificationError("persisted PASS scoring snapshot is stale")
+    snapshot = {
+        key: value for key, value in cli_scoring.items() if key != "snapshot_hash"
+    }
+    if cli_scoring.get("snapshot_hash") != canonical_json_hash(snapshot):
+        raise CertificationError("persisted PASS scoring snapshot hash is stale")
 
 
 def validate_hard_gates(report: dict[str, Any]) -> None:
@@ -334,19 +404,32 @@ def validate_hard_gates(report: dict[str, Any]) -> None:
     ] != list(HARD_GATES):
         raise CertificationError("Hard Gates are missing or not exactly four")
     for gate in gates:
-        if gate.get("status") not in {"PASS", "FAIL", "NOT_ASSESSABLE"}:
-            raise CertificationError("Hard Gate status is invalid")
+        if gate.get("status") != "PASS":
+            raise CertificationError("all four Hard Gates must explicitly PASS")
         if not isinstance(gate.get("evidence"), list) or not gate["evidence"]:
             raise CertificationError("Hard Gate evidence is missing")
         if not isinstance(gate.get("affected_locations"), list) or not gate[
             "affected_locations"
         ]:
             raise CertificationError("Hard Gate affected locations are missing")
+        for location in gate["affected_locations"]:
+            if (
+                not isinstance(location, dict)
+                or set(location) != {"file", "line", "quote"}
+                or not isinstance(location["file"], str)
+                or not location["file"].strip()
+                or not isinstance(location["line"], int)
+                or isinstance(location["line"], bool)
+                or location["line"] < 1
+                or not isinstance(location["quote"], str)
+                or not location["quote"].strip()
+            ):
+                raise CertificationError("Hard Gate location evidence is malformed")
 
 
 def validate_probes(checker: dict[str, Any]) -> None:
     coverage = checker.get("probe_coverage")
-    if not isinstance(coverage, dict) or tuple(coverage) != FIVE_PROBE_CLASSES:
+    if not isinstance(coverage, dict) or set(coverage) != set(FIVE_PROBE_CLASSES):
         raise CertificationError("probe provenance is incomplete")
     for name in FIVE_PROBE_CLASSES:
         probe = coverage[name]
@@ -354,18 +437,92 @@ def validate_probes(checker: dict[str, Any]) -> None:
             probe.get("provenance"), dict
         ):
             raise CertificationError(f"probe provenance is incomplete: {name}")
+        status = probe.get("status")
+        if status not in PROBE_STATUSES:
+            raise CertificationError(f"probe status is invalid: {name}")
         provenance = probe["provenance"]
         if name == "positive":
-            if provenance.get("oracle_used") is not True:
+            if (
+                status != "ASSESSED"
+                or provenance.get("oracle_used") is not True
+                or provenance.get("oracle_scientific_evidence") is not False
+                or "ORACLE_POSITIVE_MOCK"
+                not in provenance.get("source_kinds", [])
+            ):
                 raise CertificationError("positive probe is not Oracle-bound")
         elif provenance.get("oracle_used") is not False:
             raise CertificationError(f"non-positive probe crossed Oracle boundary: {name}")
+        if status == "ASSESSED":
+            source = provenance.get("source_kind")
+            sources = provenance.get("source_kinds")
+            if source in {None, "", "NONE"} and not (
+                isinstance(sources, list) and sources
+            ):
+                raise CertificationError(f"assessed probe lacks provenance: {name}")
+        elif not isinstance(probe.get("reason"), str) or not probe["reason"].strip():
+            raise CertificationError(f"unavailable probe lacks reason: {name}")
+        if status != "ASSESSED":
+            for key in ("cases", "source_kinds", "fixture_hashes"):
+                value = provenance.get(key)
+                if isinstance(value, (list, dict)) and value:
+                    raise CertificationError(
+                        f"unavailable probe has contradictory evidence: {name}"
+                    )
+            if provenance.get("source_kind") not in {None, "", "NONE"}:
+                raise CertificationError(
+                    f"unavailable probe has contradictory provenance: {name}"
+                )
 
 
-def validate_boundaries(report: dict[str, Any], checker: dict[str, Any]) -> None:
+def contains_oracle_scientific_evidence(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            lowered = str(key).lower()
+            if (
+                lowered in {"oracle_used", "oracle_scientific_evidence"}
+                and item is True
+            ):
+                return True
+            if "source_kind" in lowered and isinstance(item, str) and "ORACLE" in item:
+                return True
+            if contains_oracle_scientific_evidence(item):
+                return True
+    elif isinstance(value, list):
+        return any(contains_oracle_scientific_evidence(item) for item in value)
+    return False
+
+
+def validate_boundaries(
+    report: dict[str, Any],
+    checker: dict[str, Any],
+    cli_evidence: dict[str, Any],
+) -> None:
     oracle = checker.get("solution_oracle")
-    if not isinstance(oracle, dict) or oracle.get("scientific_evidence") is not False:
+    if (
+        not isinstance(oracle, dict)
+        or set(oracle) != ORACLE_FIELDS
+        or oracle.get("scientific_evidence") is not False
+        or oracle.get("status") not in {"PASS", "NOT_RUN", "FAILED"}
+        or not all(
+            isinstance(oracle.get(name), bool)
+            for name in ORACLE_FIELDS - {"status"}
+        )
+    ):
         raise CertificationError("Oracle scientific evidence boundary is invalid")
+    if oracle["executed"] and not all(
+        oracle[name]
+        for name in (
+            "used",
+            "attempted",
+            "setup_attempted",
+            "setup_prepared",
+            "producer_started",
+            "positive_mock_available",
+        )
+    ):
+        raise CertificationError("Oracle lifecycle is contradictory")
+    if cli_evidence.get("solution_oracle") != oracle:
+        raise CertificationError("persisted Oracle lifecycle is stale")
     if checker.get("solution_content_inspected") is not False:
         raise CertificationError("Oracle content boundary is invalid")
     if report.get("scope", {}).get("solution_content_inspected") is not False:
@@ -373,28 +530,150 @@ def validate_boundaries(report: dict[str, Any], checker: dict[str, Any]) -> None
     gold = report.get("gold_provenance")
     if not isinstance(gold, dict) or gold.get("oracle_used") is not False:
         raise CertificationError("Gold provenance crosses Oracle boundary")
+    for context in (
+        gold,
+        report.get("dimension_scores"),
+        report.get("qa_axes"),
+        {
+            name: probe
+            for name, probe in checker.get("probe_coverage", {}).items()
+            if name != "positive"
+        },
+    ):
+        if contains_oracle_scientific_evidence(context):
+            raise CertificationError(
+                "Oracle cannot supply scientific, Gold, or probe evidence"
+            )
 
 
 def validate_paper_parent(
     report: dict[str, Any],
     manifest: dict[str, Any],
     cli_evidence: dict[str, Any],
+    *,
+    batch: Path,
+    package_id: str,
+    implementation: dict[str, Any],
 ) -> None:
     configuration = report.get("configuration", {})
     mode = configuration.get("paper_mode")
     parent = manifest.get("parent_audit_id")
     binding = report.get("audit_binding", {})
     if mode == "paper_grounded":
+        parent_source_hashes = {
+            name: value
+            for name, value in manifest.get("input_hashes", {}).items()
+            if not name.startswith("paper/")
+        }
         if not isinstance(parent, str) or not parent:
             raise CertificationError("paper parent binding is absent")
         if binding.get("parent_audit_id") != parent:
             raise CertificationError("paper parent binding is stale")
         stage = cli_evidence.get("stage_binding", {})
-        if stage.get("no_paper_audit_id") != parent:
+        if (
+            not isinstance(stage, dict)
+            or stage.get("status") != "PAPER_GROUNDED_BOUND_TO_NO_PAPER"
+            or stage.get("no_paper_audit_id") != parent
+            or stage.get("paper_grounded_audit_id") != report.get("audit_id")
+            or stage.get("no_paper_package_id") != package_id
+            or stage.get("source_role_hashes") != parent_source_hashes
+            or stage.get("review_implementation_hash")
+            != implementation.get("aggregate_hash")
+        ):
             raise CertificationError("paper no-paper parent binding is stale")
+        parent_report_path = resolve_external(
+            stage.get("no_paper_report_path"),
+            base=batch,
+            context="paper parent report",
+        )
+        parent_manifest_path = resolve_external(
+            stage.get("no_paper_manifest_path"),
+            base=batch,
+            context="paper parent manifest",
+        )
+        if (
+            file_hash(parent_report_path) != stage.get("no_paper_report_hash")
+            or file_hash(parent_manifest_path)
+            != stage.get("no_paper_manifest_hash")
+        ):
+            raise CertificationError("paper parent persisted bytes are stale")
+        parent_report = read_json(parent_report_path, "paper parent report")
+        parent_manifest = read_json(parent_manifest_path, "paper parent manifest")
+        parent_output_hashes = parent_manifest.get("output_hashes")
+        if (
+            parent_report.get("audit_id") != parent
+            or parent_manifest.get("audit_id") != parent
+            or parent_manifest.get("parent_audit_id") not in {None, ""}
+            or parent_report.get("configuration", {}).get("paper_mode")
+            != "no_paper"
+            or parent_report.get("configuration", {}).get("execution_level")
+            != EXECUTION_LEVEL
+            or parent_manifest.get("execution_level") != EXECUTION_LEVEL
+            or parent_manifest.get("input_hashes") != parent_source_hashes
+            or parent_manifest.get("review_implementation") != implementation
+            or parent_report.get("audit_binding", {}).get("source_hashes")
+            != parent_source_hashes
+            or parent_report.get("audit_binding", {}).get(
+                "implementation_hash"
+            )
+            != implementation.get("aggregate_hash")
+        ):
+            raise CertificationError("paper parent audit is fabricated or stale")
+        if (
+            not isinstance(parent_output_hashes, dict)
+            or not parent_output_hashes
+            or parent_manifest.get("bundle_hash")
+            != canonical_json_hash(parent_output_hashes)
+        ):
+            raise CertificationError("paper parent audit bundle is fabricated")
+        for relative, expected_hash in parent_output_hashes.items():
+            if (
+                not isinstance(relative, str)
+                or Path(relative).is_absolute()
+                or ".." in Path(relative).parts
+                or not isinstance(expected_hash, str)
+            ):
+                raise CertificationError("paper parent bundle path is invalid")
+            parent_artifact = parent_report_path.parent / relative
+            reject_symlink_components(
+                parent_artifact,
+                boundary=parent_report_path.parent,
+            )
+            if (
+                not parent_artifact.is_file()
+                or file_hash(parent_artifact) != expected_hash
+            ):
+                raise CertificationError("paper parent audit bundle is stale")
+        try:
+            parent_fields = require_canonical_fields(parent_report)
+        except ValueError as exc:
+            raise CertificationError(
+                "paper parent canonical fields are invalid"
+            ) from exc
+        parent_score = parent_report.get("summary", {}).get("total_score")
+        if (
+            parent_fields["review_verdict"] != "PASS"
+            or isinstance(parent_score, bool)
+            or not isinstance(parent_score, (int, float))
+            or not math.isfinite(float(parent_score))
+            or not PASS_THRESHOLD <= float(parent_score) <= 100
+            or parent_report.get("summary", {}).get("final_verdict") != "PASS"
+            or parent_report.get("summary", {}).get("hard_gate_triggered")
+            is not False
+            or not isinstance(parent_report.get("evidence_contract"), dict)
+            or parent_report["evidence_contract"].get("fail_closed") is not True
+            or parent_report["evidence_contract"].get("gaps") != []
+        ):
+            raise CertificationError("paper parent audit evidence is fabricated")
+        validate_qa_axes(parent_report)
+        validate_dimensions(parent_report)
+        validate_hard_gates(parent_report)
     elif mode == "no_paper":
         if parent not in {None, ""}:
             raise CertificationError("no-paper audit has an unexpected parent")
+        stage = cli_evidence.get("stage_binding")
+        if not isinstance(stage, dict) or stage.get("status") != "NO_PAPER_ONLY":
+            raise CertificationError("no-paper stage binding is absent")
     else:
         raise CertificationError("E1 paper mode is invalid")
 
@@ -434,10 +713,31 @@ def validate_repair(
     )
     if not bundle_dir.is_dir():
         raise CertificationError("repair bundle is absent")
-    missing = [name for name in REPAIR_BUNDLE_FILES if not (bundle_dir / name).is_file()]
+    missing = [
+        name
+        for name in REPAIR_BUNDLE_FILES
+        if not (bundle_dir / name).is_file()
+    ]
     if missing:
         raise CertificationError(f"repair bundle is incomplete: {missing}")
-    history = read_json(bundle_dir / "history.json", "repair history")
+    values: dict[str, Any] = {}
+    for name in REPAIR_BUNDLE_FILES:
+        path = bundle_dir / name
+        reject_symlink_components(path, boundary=bundle_dir)
+        if name.endswith(".json"):
+            values[name] = read_json(path, f"repair bundle {name}")
+    repair_log = (bundle_dir / "repair.log").read_text(encoding="utf-8")
+    values["repair.log"] = repair_log
+    try:
+        semantic_fields = validate_repair_bundle_semantics(
+            values,
+            repair_log=repair_log,
+        )
+    except ValueError as exc:
+        raise CertificationError(f"repair bundle semantic schema: {exc}") from exc
+    if semantic_fields != fields:
+        raise CertificationError("repair bundle canonical fields are stale")
+    history = values["history.json"]
     if history.get("bundle_complete") is not True:
         raise CertificationError("repair history does not attest completeness")
     if history.get("bundle_files") != list(REPAIR_BUNDLE_FILES):
@@ -486,6 +786,20 @@ def validate_record(
     identity = evidence.get("source_binding", {}).get("cli_audit_identity", {})
     if identity.get("status") != "VALIDATED":
         raise CertificationError("source audit identity is not validated")
+    source_binding = evidence.get("source_binding", {})
+    package_id = record.get("package_id")
+    source_relative_path = record.get("source_relative_path")
+    if (
+        not isinstance(package_id, str)
+        or not package_id.strip()
+        or not isinstance(source_relative_path, str)
+        or not source_relative_path.strip()
+        or source_binding.get("package_id") != package_id
+        or source_binding.get("source_relative_path") != source_relative_path
+        or identity.get("package_id") != package_id
+        or identity.get("source_relative_path") != source_relative_path
+    ):
+        raise CertificationError("package/source/audit identity binding is stale")
     report_path = resolve_external(
         identity.get("report_path"), base=batch, context="audit report"
     )
@@ -516,7 +830,14 @@ def validate_record(
         raise CertificationError("report verdict is not canonical")
     if report.get("summary", {}).get("disposition") != fields["publishability"]:
         raise CertificationError("report publishability is not canonical")
-    if manifest.get("configuration", {}).get("execution_level", EXECUTION_LEVEL) != EXECUTION_LEVEL:
+    summary = report.get("summary", {})
+    if (
+        summary.get("scoring_version") != SCORING_VERSION
+        or summary.get("final_verdict") != "PASS"
+        or summary.get("hard_gate_triggered") is not False
+    ):
+        raise CertificationError("report does not contain an authoritative PASS")
+    if manifest.get("execution_level") != EXECUTION_LEVEL:
         raise CertificationError("E1 configuration is absent or stale")
     if report.get("configuration", {}).get("execution_level") != EXECUTION_LEVEL:
         raise CertificationError("E1 configuration is absent or stale")
@@ -525,7 +846,6 @@ def validate_record(
         raise CertificationError("stale Review implementation hash")
     if evidence.get("cli_evidence", {}).get("review_implementation") != implementation:
         raise CertificationError("persisted implementation binding is stale")
-    source_binding = evidence.get("source_binding", {})
     if source_binding.get("source_role_hashes") != manifest.get("input_hashes"):
         raise CertificationError("source hashes are absent or stale")
     verify_source_bytes(record, manifest, batch=batch, source_root=source_root)
@@ -533,15 +853,35 @@ def validate_record(
     cli_evidence = evidence.get("cli_evidence")
     if not isinstance(cli_evidence, dict):
         raise CertificationError("persisted CLI evidence is absent")
+    evidence_snapshot = {
+        key: value for key, value in cli_evidence.items() if key != "snapshot_hash"
+    }
+    if cli_evidence.get("snapshot_hash") != canonical_json_hash(evidence_snapshot):
+        raise CertificationError("persisted CLI evidence snapshot is stale")
+    if (
+        report.get("audit_binding", {}).get("source_hashes")
+        != manifest.get("input_hashes")
+        or report.get("audit_binding", {}).get("implementation_hash")
+        != implementation.get("aggregate_hash")
+    ):
+        raise CertificationError("report source/implementation binding is stale")
     bundle_hash = verify_bundle_files(
         batch, report_path, manifest_path, checker_path, manifest, cli_evidence
     )
     validate_qa_axes(report)
     validate_dimensions(report)
     validate_hard_gates(report)
+    validate_score(report, evidence.get("cli_scoring"))
     validate_probes(checker)
-    validate_boundaries(report, checker)
-    validate_paper_parent(report, manifest, cli_evidence)
+    validate_boundaries(report, checker, cli_evidence)
+    validate_paper_parent(
+        report,
+        manifest,
+        cli_evidence,
+        batch=batch,
+        package_id=package_id,
+        implementation=implementation,
+    )
     validate_repair(
         record,
         batch=batch,
@@ -559,10 +899,16 @@ def validate_record(
         "audit_bundle_hash": bundle_hash,
         "review_implementation_hash": implementation["aggregate_hash"],
         "selection_rank": record.get("selection_rank", record.get("discovery_rank")),
+        "global_rank": record.get("global_rank"),
     }
 
 
-def validate_selection(index: dict[str, Any], expected_count: int) -> list[dict[str, Any]]:
+def validate_selection(
+    index: dict[str, Any],
+    *,
+    batch: Path,
+    expected_count: int,
+) -> list[dict[str, Any]]:
     if index.get("schema_version") not in {
         SCHEMA_VERSION,
         "materials-fast-e1-index/0.2",
@@ -579,17 +925,96 @@ def validate_selection(index: dict[str, Any], expected_count: int) -> list[dict[
             "evidence contract or deterministic selection policy is absent"
         )
     ordering = str(policy.get("ordering", ""))
-    if "deterministic" not in ordering and "round_robin" not in ordering:
+    if ordering != "deterministic_selected_prefix":
         raise CertificationError("deterministic first-N selection is absent")
-    selected = records[:expected_count]
-    ranks = [
-        item.get("selection_rank", item.get("discovery_rank"))
-        for item in selected
+    universe_path = resolve_external(
+        policy.get("universe_path"),
+        base=batch,
+        context="ordered universe",
+    )
+    if file_hash(universe_path) != policy.get("universe_hash"):
+        raise CertificationError("ordered universe bytes are stale")
+    universe = read_json(universe_path, "ordered universe")
+    universe_records = universe.get("records") if isinstance(universe, dict) else None
+    if (
+        universe.get("schema_version")
+        != "materials-final-100-universe/1.0"
+        or not isinstance(universe_records, list)
+        or not universe_records
+    ):
+        raise CertificationError("ordered universe schema is invalid")
+    universe_ranks: list[int] = []
+    universe_ids: list[str] = []
+    for item in universe_records:
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("global_rank"), int)
+            or isinstance(item.get("global_rank"), bool)
+            or item["global_rank"] < 1
+            or not isinstance(item.get("package_id"), str)
+            or not item["package_id"].strip()
+            or not isinstance(item.get("eligible"), bool)
+            or item.get("review_verdict")
+            not in {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
+        ):
+            raise CertificationError("ordered universe record is malformed")
+        universe_ranks.append(item["global_rank"])
+        universe_ids.append(item["package_id"])
+    if any(
+        current >= following
+        for current, following in zip(universe_ranks, universe_ranks[1:])
+    ):
+        raise CertificationError(
+            "global ranks must be unique and strictly increasing"
+        )
+    if len(set(universe_ids)) != len(universe_ids):
+        raise CertificationError("ordered universe contains duplicate packages")
+    expected = [
+        item
+        for item in universe_records
+        if item["eligible"] and item["review_verdict"] == "PASS"
+    ][:expected_count]
+    if len(expected) != expected_count:
+        raise CertificationError("ordered universe has too few eligible PASS records")
+    candidate_records = [
+        item
+        for item in records
+        if "selection_rank" in item
     ]
-    if any(not isinstance(rank, int) for rank in ranks) or ranks != sorted(ranks):
+    selected = candidate_records[:expected_count]
+    if len(selected) != expected_count:
+        raise CertificationError("batch has fewer eligible PASS records than expected")
+    selection_ranks = [item.get("selection_rank") for item in selected]
+    if selection_ranks != list(range(expected_count)):
         raise CertificationError("first-N selection order is not deterministic")
-    if len({item.get("package_id") for item in selected}) != expected_count:
+    package_ids = [item.get("package_id") for item in records]
+    if (
+        any(not isinstance(item, str) or not item.strip() for item in package_ids)
+        or len(set(package_ids)) != len(package_ids)
+    ):
         raise CertificationError("first-N selection contains duplicate packages")
+    selected_pairs = [
+        (item.get("global_rank"), item.get("package_id")) for item in selected
+    ]
+    expected_pairs = [
+        (item["global_rank"], item["package_id"]) for item in expected
+    ]
+    if selected_pairs != expected_pairs:
+        raise CertificationError(
+            "first-N selection omitted an earlier eligible PASS"
+        )
+    audit_ids = [
+        item.get("evidence", {})
+        .get("source_binding", {})
+        .get("cli_audit_identity", {})
+        .get("audit_id")
+        for item in candidate_records
+    ]
+    if (
+        any(not isinstance(item, str) or not item.strip() for item in audit_ids)
+        or len(set(audit_ids)) != len(audit_ids)
+    ):
+        raise CertificationError("duplicate or absent source audit identity")
     return selected
 
 
@@ -607,11 +1032,17 @@ def certify(
     if output.exists():
         raise CertificationError(f"certification output already exists: {output}")
     index = read_json(batch / "index.json", "batch index")
-    selected = validate_selection(index, expected_count)
+    selected = validate_selection(
+        index,
+        batch=batch,
+        expected_count=expected_count,
+    )
     packages = [
         validate_record(record, batch=batch, source_root=source_root)
         for record in selected
     ]
+    if len({item["audit_id"] for item in packages}) != len(packages):
+        raise CertificationError("certified records reuse a source audit identity")
     implementation_hashes = collect_review_implementation_hashes()
     result = {
         "schema_version": SCHEMA_VERSION,

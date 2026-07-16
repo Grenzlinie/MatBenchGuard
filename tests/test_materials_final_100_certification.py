@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,6 +33,27 @@ def canonical_hash(value: Any) -> str:
 
 def file_hash(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def run_certifier(
+    batch: Path, output: Path, *, expected_count: int = 1
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(CERTIFIER),
+            "--batch",
+            str(batch),
+            "--output",
+            str(output),
+            "--expected-count",
+            str(expected_count),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def review_implementation() -> dict[str, Any]:
@@ -360,6 +383,7 @@ def write_evidence_pass_batch(batch: Path) -> None:
             },
             "discrimination": {
                 "status": "NOT_ASSESSABLE",
+                "reason": "no independent public fixture",
                 "provenance": {
                     "source_kind": "NONE",
                     "fixture_hashes": {},
@@ -368,6 +392,7 @@ def write_evidence_pass_batch(batch: Path) -> None:
             },
             "equivalence": {
                 "status": "NOT_ASSESSABLE",
+                "reason": "no independent public fixture",
                 "provenance": {
                     "source_kind": "NONE",
                     "fixture_hashes": {},
@@ -490,7 +515,21 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
     report["qa_axes"] = {
         axis: {
             "status": "PASS",
-            "evidence": [{"fact": f"{axis} assessed"}],
+            "evidence": [
+                {
+                    "source": "instruction.md",
+                    "fact": f"{axis} assessed",
+                    "semantic": "supports_pass",
+                }
+            ],
+            "locations": [
+                {
+                    "file": "instruction.md",
+                    "line": 1,
+                    "quote": "crystal",
+                }
+            ],
+            "limitations": [],
         }
         for axis in (
             "factual_accuracy",
@@ -552,7 +591,19 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
         )
     ]
     checker["solution_content_inspected"] = False
-    checker["solution_oracle"]["scientific_evidence"] = False
+    checker["solution_oracle"].update(
+        {
+            "used": True,
+            "status": "PASS",
+            "positive_mock_available": True,
+            "attempted": True,
+            "setup_attempted": True,
+            "setup_prepared": True,
+            "producer_started": True,
+            "executed": True,
+            "scientific_evidence": False,
+        }
+    )
     checker["probe_coverage"]["positive"]["provenance"].update(
         {"oracle_used": True}
     )
@@ -625,6 +676,7 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     record.update(canonical)
     record["selection_rank"] = 0
+    record["global_rank"] = 1
     record["evidence"]["source_binding"]["source_path"] = str(source)
     record["evidence"]["source_binding"]["source_role_hashes"] = source_hashes
     record["evidence"]["cli_evidence"].update(
@@ -652,12 +704,28 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
         {
             "schema_version": "materials-final-100-index/1.0",
             "selection_policy": {
-                "ordering": "deterministic_selected_prefix"
+                "ordering": "deterministic_selected_prefix",
+                "universe_path": "ordered_universe.json",
             },
         }
     )
+    universe = {
+        "schema_version": "materials-final-100-universe/1.0",
+        "records": [
+            {
+                "global_rank": 1,
+                "package_id": record["package_id"],
+                "eligible": True,
+                "review_verdict": "PASS",
+            }
+        ],
+    }
+    universe_path = batch / "ordered_universe.json"
+    universe_path.write_text(json.dumps(universe), encoding="utf-8")
+    index["selection_policy"]["universe_hash"] = file_hash(universe_path)
     index["records"] = [record]
     index_path.write_text(json.dumps(index), encoding="utf-8")
+    refresh_evidence_bindings(batch)
 
 
 def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
@@ -689,14 +757,66 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     repair_dir = batch / "repair-bundle"
     repair_dir.mkdir()
+    changes = [
+        {
+            "operation_id": "op-1",
+            "file": "instruction.md",
+            "operation": "replace_text",
+            "before_hash": "sha256:" + "1" * 64,
+            "after_hash": "sha256:" + "2" * 64,
+            "evidence_ids": ["evidence-1"],
+        }
+    ]
     json_files = {
-        "repair_plan.json": canonical,
-        "changes.json": [{"file": "instruction.md", "operation": "replace_text"}],
+        "repair_plan.json": {
+            **canonical,
+            "schema_version": "0.1",
+            "audit_id": identity["audit_id"],
+            "finding_id": "FINDING-001",
+            "justification": "Synthetic evidence-backed repair.",
+            "repair_class": "AUTO_FIX",
+            "operations": [{"id": "op-1", "type": "replace_text"}],
+            "regression_tests": [{"id": "regression-1", "type": "command"}],
+        },
+        "changes.json": changes,
         "unresolved.json": [],
-        "regression_results.json": [{"status": "PASS", "name": "test.sh"}],
-        "re_audit_comparison.json": {"verdict": "PASS"},
-        "patch.json": {"atomic_publish": True},
-        "evidence.json": [{"source": "synthetic-independent-evidence"}],
+        "regression_results.json": [
+            {
+                "specification": {
+                    "id": "regression-1",
+                    "type": "command",
+                },
+                "before_passed": False,
+                "after_passed": True,
+            }
+        ],
+        "re_audit_comparison.json": {
+            "target_resolved": True,
+            "reaudit_audit_id": report["audit_id"],
+            "source_finding": {
+                "finding_id": "FINDING-001",
+                "status": "OPEN",
+            },
+            "source_configuration": {
+                "paper_mode": "no_paper",
+                "execution_level": "E1",
+            },
+            "reaudit_configuration": {
+                "paper_mode": "no_paper",
+                "execution_level": "E1",
+            },
+        },
+        "patch.json": {
+            "schema_version": "0.1",
+            "files": changes,
+            "atomic_publish": True,
+        },
+        "evidence.json": [
+            {
+                "evidence_id": "evidence-1",
+                "source": "synthetic-independent-evidence",
+            }
+        ],
     }
     for name, value in json_files.items():
         (repair_dir / name).write_text(json.dumps(value), encoding="utf-8")
@@ -718,6 +838,10 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
     }
     history = {
         **canonical,
+        "root_cause": "synthetic-root-cause",
+        "attempt_number": 1,
+        "status": "PUBLISHED",
+        "decision": "AUTO_FIX",
         "bundle_complete": True,
         "bundle_files": [
             "repair_plan.json",
@@ -738,6 +862,7 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
     )
     repair_manifest = {
         **canonical,
+        "schema_version": "0.1",
         "source_audit_id": identity["audit_id"],
         "repair_id": "synthetic-repair",
     }
@@ -777,13 +902,27 @@ def refresh_evidence_bindings(batch: Path) -> None:
     report_path = batch / identity["report_path"]
     manifest_path = batch / identity["manifest_path"]
     checker_path = report_path.with_name("checker_tests.json")
+    disposition_path = report_path.with_name("disposition.json")
     report = json.loads(report_path.read_text(encoding="utf-8"))
     checker = json.loads(checker_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
     manifest["output_hashes"]["checker_tests.json"] = file_hash(checker_path)
+    manifest["output_hashes"]["disposition.json"] = file_hash(disposition_path)
     manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    scoring = {
+        "scoring_version": report["summary"]["scoring_version"],
+        "final_verdict": report["summary"]["final_verdict"],
+        "hard_gate_triggered": report["summary"]["hard_gate_triggered"],
+        "dimension_scores": report["dimension_scores"],
+        "hard_gates": report["hard_gates"],
+    }
+    if "total_score" in report["summary"]:
+        scoring["total_score"] = report["summary"]["total_score"]
+    scoring["snapshot_hash"] = canonical_hash(scoring)
+    record["evidence"]["cli_scoring"] = scoring
+    identity["scoring_snapshot_hash"] = scoring["snapshot_hash"]
     cli_evidence = record["evidence"]["cli_evidence"]
     cli_evidence["probe_coverage"] = checker.get("probe_coverage", {})
     cli_evidence["review_implementation"] = manifest.get(
@@ -797,6 +936,121 @@ def refresh_evidence_bindings(batch: Path) -> None:
         {
             key: value
             for key, value in cli_evidence.items()
+            if key != "snapshot_hash"
+        }
+    )
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+
+def fixture_paths(batch: Path) -> tuple[Path, Path, Path, Path]:
+    index = json.loads((batch / "index.json").read_text(encoding="utf-8"))
+    identity = index["records"][0]["evidence"]["source_binding"][
+        "cli_audit_identity"
+    ]
+    report = batch / identity["report_path"]
+    manifest = batch / identity["manifest_path"]
+    return (
+        report,
+        manifest,
+        report.with_name("checker_tests.json"),
+        report.with_name("disposition.json"),
+    )
+
+
+def rewrite_repair_hashes(batch: Path) -> None:
+    repair_dir = batch / "repair-bundle"
+    history_path = repair_dir / "history.json"
+    history = json.loads(history_path.read_text(encoding="utf-8"))
+    history["bundle_hashes"] = {
+        name: file_hash(repair_dir / name)
+        for name in history["bundle_files"]
+        if name != "history.json"
+    }
+    history["bundle_digest"] = canonical_hash(history["bundle_hashes"])
+    history_path.write_text(json.dumps(history), encoding="utf-8")
+
+
+def upgrade_synthetic_paper_fixture(batch: Path) -> None:
+    report_path, manifest_path, _, _ = fixture_paths(batch)
+    index_path = batch / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    record = index["records"][0]
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    parent_id = "audit-parent-no-paper"
+    parent_dir = batch / "cli_reports" / "parent-no-paper"
+    shutil.copytree(report_path.parent, parent_dir)
+    parent_report_path = parent_dir / "audit_report.json"
+    parent_manifest_path = parent_dir / "audit_manifest.json"
+    parent_report = json.loads(
+        parent_report_path.read_text(encoding="utf-8")
+    )
+    parent_manifest = json.loads(
+        parent_manifest_path.read_text(encoding="utf-8")
+    )
+    parent_report["audit_id"] = parent_id
+    parent_report["configuration"] = {
+        "paper_mode": "no_paper",
+        "execution_level": "E1",
+    }
+    parent_report["audit_binding"]["parent_audit_id"] = None
+    parent_manifest["audit_id"] = parent_id
+    parent_manifest["parent_audit_id"] = None
+    parent_report_path.write_text(json.dumps(parent_report), encoding="utf-8")
+    parent_disposition_path = parent_dir / "disposition.json"
+    parent_disposition = json.loads(
+        parent_disposition_path.read_text(encoding="utf-8")
+    )
+    parent_disposition["audit_id"] = parent_id
+    parent_disposition_path.write_text(
+        json.dumps(parent_disposition), encoding="utf-8"
+    )
+    parent_manifest["output_hashes"] = {
+        name: file_hash(parent_dir / name)
+        for name in parent_manifest["output_hashes"]
+    }
+    parent_manifest["bundle_hash"] = canonical_hash(
+        parent_manifest["output_hashes"]
+    )
+    parent_report_path.write_text(json.dumps(parent_report), encoding="utf-8")
+    parent_manifest_path.write_text(
+        json.dumps(parent_manifest), encoding="utf-8"
+    )
+    report["configuration"]["paper_mode"] = "paper_grounded"
+    report["audit_binding"]["parent_audit_id"] = parent_id
+    manifest["parent_audit_id"] = parent_id
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
+    manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    stage = {
+        "status": "PAPER_GROUNDED_BOUND_TO_NO_PAPER",
+        "no_paper_audit_id": parent_id,
+        "paper_grounded_audit_id": report["audit_id"],
+        "no_paper_package_id": record["package_id"],
+        "no_paper_report_path": parent_report_path.relative_to(batch).as_posix(),
+        "no_paper_report_hash": file_hash(parent_report_path),
+        "no_paper_manifest_path": parent_manifest_path.relative_to(
+            batch
+        ).as_posix(),
+        "no_paper_manifest_hash": file_hash(parent_manifest_path),
+        "source_role_hashes": manifest["input_hashes"],
+        "review_implementation_hash": manifest["review_implementation"][
+            "aggregate_hash"
+        ],
+    }
+    record["evidence"]["cli_evidence"]["stage_binding"] = stage
+    record["evidence"]["cli_evidence"]["audit_bundle_hash"] = manifest[
+        "bundle_hash"
+    ]
+    record["evidence"]["cli_evidence"]["report_hash"] = file_hash(report_path)
+    record["evidence"]["cli_evidence"]["manifest_hash"] = file_hash(
+        manifest_path
+    )
+    record["evidence"]["cli_evidence"]["snapshot_hash"] = canonical_hash(
+        {
+            key: value
+            for key, value in record["evidence"]["cli_evidence"].items()
             if key != "snapshot_hash"
         }
     )
@@ -1022,6 +1276,335 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("probe provenance is incomplete", completed.stderr.lower())
             self.assertFalse(output.exists())
+
+    def test_certifier_rejects_missing_pass_score(self) -> None:
+        mutations = {
+            "missing": lambda summary: summary.pop("total_score"),
+            "non_numeric": lambda summary: summary.update(
+                {"total_score": "97"}
+            ),
+            "out_of_bounds": lambda summary: summary.update(
+                {"total_score": 101}
+            ),
+            "below_pass_threshold": lambda summary: summary.update(
+                {"total_score": 79}
+            ),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary:
+                batch = Path(temporary) / "batch"
+                output = Path(temporary) / "certified"
+                write_evidence_pass_batch(batch)
+                report_path, _, _, _ = fixture_paths(batch)
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                mutate(report["summary"])
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                refresh_evidence_bindings(batch)
+
+                completed = run_certifier(batch, output)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn("score", completed.stderr.lower())
+                self.assertFalse(output.exists())
+
+    def test_certifier_rejects_failed_hard_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            report_path, _, _, _ = fixture_paths(batch)
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            report["hard_gates"][0]["status"] = "FAIL"
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            refresh_evidence_bindings(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("hard gate", completed.stderr.lower())
+
+    def test_certifier_rejects_malformed_qa_probe_and_oracle(self) -> None:
+        mutations = {
+            "qa": lambda report, checker: report["qa_axes"][
+                "factual_accuracy"
+            ].pop("locations"),
+            "probe": lambda report, checker: checker["probe_coverage"][
+                "negative"
+            ].update({"status": "UNKNOWN"}),
+            "oracle": lambda report, checker: checker["solution_oracle"].update(
+                {"raw_scientific_value": "SECRET-ORACLE-VALUE"}
+            ),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary:
+                batch = Path(temporary) / "batch"
+                output = Path(temporary) / "certified"
+                write_evidence_pass_batch(batch)
+                report_path, _, checker_path, _ = fixture_paths(batch)
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                checker = json.loads(checker_path.read_text(encoding="utf-8"))
+                mutate(report, checker)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                checker_path.write_text(json.dumps(checker), encoding="utf-8")
+                refresh_evidence_bindings(batch)
+
+                completed = run_certifier(batch, output)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertFalse(output.exists())
+
+    def test_certifier_rejects_fabricated_paper_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_paper_fixture(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            stage = index["records"][0]["evidence"]["cli_evidence"][
+                "stage_binding"
+            ]
+            parent_report_path = batch / stage["no_paper_report_path"]
+            parent_manifest_path = batch / stage["no_paper_manifest_path"]
+            parent_manifest = json.loads(
+                parent_manifest_path.read_text(encoding="utf-8")
+            )
+            parent_report_path.write_text(
+                json.dumps(
+                    {
+                        "audit_id": stage["no_paper_audit_id"],
+                        "configuration": {
+                            "paper_mode": "no_paper",
+                            "execution_level": "E1",
+                        },
+                        "audit_binding": {
+                            "parent_audit_id": None,
+                            "source_hashes": stage["source_role_hashes"],
+                            "implementation_hash": stage[
+                                "review_implementation_hash"
+                            ],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            parent_manifest_path.write_text(
+                json.dumps(
+                    {
+                        "audit_id": stage["no_paper_audit_id"],
+                        "parent_audit_id": None,
+                        "input_hashes": stage["source_role_hashes"],
+                        "review_implementation": parent_manifest[
+                            "review_implementation"
+                        ],
+                        "execution_level": "E1",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stage["no_paper_report_hash"] = file_hash(parent_report_path)
+            stage["no_paper_manifest_hash"] = file_hash(parent_manifest_path)
+            cli_evidence = index["records"][0]["evidence"]["cli_evidence"]
+            cli_evidence["snapshot_hash"] = canonical_hash(
+                {
+                    key: value
+                    for key, value in cli_evidence.items()
+                    if key != "snapshot_hash"
+                }
+            )
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("parent", completed.stderr.lower())
+
+    def test_certifier_accepts_real_paper_parent_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_paper_fixture(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+
+    def test_certifier_rejects_null_publishability(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            index["records"][0]["publishability"] = None
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+            report_path, manifest_path, _, disposition_path = fixture_paths(batch)
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            disposition = json.loads(disposition_path.read_text(encoding="utf-8"))
+            report["publishability"] = None
+            disposition["publishability"] = None
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            disposition_path.write_text(
+                json.dumps(disposition), encoding="utf-8"
+            )
+            refresh_evidence_bindings(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("canonical", completed.stderr.lower())
+
+    def test_certifier_rejects_duplicate_global_rank_and_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            duplicate = json.loads(json.dumps(index["records"][0]))
+            duplicate["package_id"] = "cluster-2/theme/paper-2"
+            duplicate["source_relative_path"] = duplicate["package_id"]
+            duplicate["selection_rank"] = 1
+            index["records"].append(duplicate)
+            universe_path = batch / index["selection_policy"]["universe_path"]
+            universe = json.loads(universe_path.read_text(encoding="utf-8"))
+            universe["records"].append(
+                {
+                    "global_rank": 1,
+                    "package_id": duplicate["package_id"],
+                    "eligible": True,
+                    "review_verdict": "PASS",
+                }
+            )
+            universe_path.write_text(json.dumps(universe), encoding="utf-8")
+            index["selection_policy"]["universe_hash"] = file_hash(universe_path)
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+
+            completed = run_certifier(batch, output, expected_count=2)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertRegex(completed.stderr.lower(), "rank|audit")
+
+    def test_certifier_rejects_duplicate_audit_across_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            duplicate = json.loads(json.dumps(index["records"][0]))
+            duplicate["package_id"] = "cluster-2/theme/paper-2"
+            duplicate["source_relative_path"] = duplicate["package_id"]
+            duplicate["selection_rank"] = 1
+            duplicate["global_rank"] = 2
+            index["records"].append(duplicate)
+            universe_path = batch / index["selection_policy"]["universe_path"]
+            universe = json.loads(universe_path.read_text(encoding="utf-8"))
+            universe["records"].append(
+                {
+                    "global_rank": 2,
+                    "package_id": duplicate["package_id"],
+                    "eligible": True,
+                    "review_verdict": "PASS",
+                }
+            )
+            universe_path.write_text(json.dumps(universe), encoding="utf-8")
+            index["selection_policy"]["universe_hash"] = file_hash(universe_path)
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+
+            completed = run_certifier(batch, output, expected_count=2)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("audit", completed.stderr.lower())
+
+    def test_certifier_rejects_later_replacement_for_earlier_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            index["records"][0]["global_rank"] = 2
+            universe_path = batch / index["selection_policy"]["universe_path"]
+            universe = {
+                "schema_version": "materials-final-100-universe/1.0",
+                "records": [
+                    {
+                        "global_rank": 1,
+                        "package_id": "cluster-0/theme/paper-0",
+                        "eligible": True,
+                        "review_verdict": "PASS",
+                    },
+                    {
+                        "global_rank": 2,
+                        "package_id": index["records"][0]["package_id"],
+                        "eligible": True,
+                        "review_verdict": "PASS",
+                    },
+                ],
+            }
+            universe_path.write_text(json.dumps(universe), encoding="utf-8")
+            index["selection_policy"]["universe_hash"] = file_hash(universe_path)
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("first", completed.stderr.lower())
+
+    def test_certifier_rejects_empty_repair_plan_with_recomputed_hashes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_repaired_fixture(batch)
+            (batch / "repair-bundle/repair_plan.json").write_text(
+                "{}", encoding="utf-8"
+            )
+            rewrite_repair_hashes(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("repair_plan", completed.stderr.lower())
+
+    def test_certifier_rejects_symlink_source_file_or_parent(self) -> None:
+        for label, parent_link in (("file", False), ("parent", True)):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary)
+                batch = base / "batch"
+                output = base / "certified"
+                write_evidence_pass_batch(batch)
+                index_path = batch / "index.json"
+                index = json.loads(index_path.read_text(encoding="utf-8"))
+                binding = index["records"][0]["evidence"]["source_binding"]
+                source = Path(binding["source_path"])
+                if parent_link:
+                    alias_parent = base / "source-parent-link"
+                    os.symlink(source.parent, alias_parent)
+                    binding["source_path"] = str(alias_parent / source.name)
+                else:
+                    alias = base / "source-link"
+                    os.symlink(source, alias)
+                    binding["source_path"] = str(alias)
+                index_path.write_text(json.dumps(index), encoding="utf-8")
+
+                completed = run_certifier(batch, output)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn("symlink", completed.stderr.lower())
+
+    def test_fast_batch_docs_have_no_deleted_artifact_dependency(self) -> None:
+        documentation = (
+            REVIEW_SKILL_ROOT / "references/fast-e1-batch.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn(
+            "review_artifacts/materials_fast_e1_100", documentation
+        )
+        self.assertIn("scripts/certify_final_100.py", documentation)
 
 
 if __name__ == "__main__":

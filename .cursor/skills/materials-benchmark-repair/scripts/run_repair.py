@@ -25,7 +25,12 @@ _REVIEW_SCRIPTS = (
 if str(_REVIEW_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_REVIEW_SCRIPTS))
 
-from canonical_status import REPAIR_STATUSES, canonical_fields  # noqa: E402
+from canonical_status import (  # noqa: E402
+    REPAIR_BUNDLE_FILES,
+    REPAIR_STATUSES,
+    canonical_fields,
+    validate_repair_bundle_semantics,
+)
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
 REPAIR_CLASSES = {"AUTO_FIX", "ASSISTED_FIX"}
@@ -59,17 +64,6 @@ REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
 CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
 REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
     "references/review-implementation-files.json"
-)
-REPAIR_BUNDLE_FILES = (
-    "repair_plan.json",
-    "changes.json",
-    "unresolved.json",
-    "regression_results.json",
-    "re_audit_comparison.json",
-    "patch.json",
-    "evidence.json",
-    "repair.log",
-    "history.json",
 )
 PRECISION_RULES = {
     "json_key": ("key", "type", "required", "unit", "value"),
@@ -1878,6 +1872,13 @@ def validate_fixed_bundle(directory: Path) -> None:
     if invalid_types:
         raise ValueError(f"fixed repair bundle has invalid types: {invalid_types}")
     history = values["history.json"]
+    values["repair.log"] = (directory / "repair.log").read_text(
+        encoding="utf-8"
+    )
+    validate_repair_bundle_semantics(
+        values,
+        repair_log=values["repair.log"],
+    )
     if (
         history.get("bundle_complete") is not True
         or history.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
@@ -1933,12 +1934,29 @@ def write_history_bundle(
             "atomic_publish": status == "PUBLISHED",
         },
     )
-    write_json(
-        destination / "evidence.json",
-        list(evidence.values()) if isinstance(evidence, dict) else evidence,
+    evidence_items = (
+        list(evidence.values()) if isinstance(evidence, dict) else list(evidence)
     )
+    if not evidence_items:
+        reason = (
+            unresolved[0].get("reason")
+            if isinstance(unresolved, list)
+            and unresolved
+            and isinstance(unresolved[0], dict)
+            else "No admissible repair evidence was available."
+        )
+        evidence_items = [
+            {
+                "evidence_id": "CONTROL-STOP",
+                "source": "repair-policy",
+                "status": "UNAVAILABLE",
+                "reason": reason,
+            }
+        ]
+    write_json(destination / "evidence.json", evidence_items)
     (destination / "repair.log").write_text(
-        f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}\n",
+        f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}"
+        f"\trepair_status={repair_status}\n",
         encoding="utf-8",
     )
     bundle_hashes = {
@@ -2098,6 +2116,8 @@ def write_repair_reports(
             **canonical,
             "root_cause": manifest.get("root_cause"),
             "attempt_number": manifest.get("attempt_number"),
+            "status": manifest.get("status"),
+            "decision": manifest.get("decision"),
             "history_dir": str(history_dir),
             "snapshot_preserved": True,
             "bundle_files": list(REPAIR_BUNDLE_FILES),

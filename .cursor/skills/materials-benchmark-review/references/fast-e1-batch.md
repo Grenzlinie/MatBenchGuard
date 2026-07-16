@@ -3,13 +3,14 @@
 The batch runner applies the same Review CLI contract to a deterministic,
 resumable sample without mutating source packages.
 
-Use the frozen original identity manifest:
+Use a caller-owned output directory and a durable identity manifest. Tests use
+fixtures created under `tests/` or test-owned temporary directories:
 
 ```bash
 python .cursor/skills/materials-benchmark-review/scripts/run_fast_e1_batch.py \
   materials_science_questions \
-  --output-dir review_artifacts/materials_fast_e1_100/evidence_review_baseline_v1_20260716 \
-  --identity-manifest review_artifacts/materials_fast_e1_100/candidate_manifest.json \
+  --output-dir /path/to/new-e1-batch \
+  --identity-manifest /path/to/frozen-candidate-manifest.json \
   --workers 24 \
   --max-packages 10 \
   --target 100
@@ -64,6 +65,20 @@ component provenance, Gold provenance, Oracle
 lifecycle, and current Review implementation hashes. Four-class and stale-tool
 reports remain historical evidence and cannot become authoritative without a
 fresh audit in a new output directory.
+
+Final certification is durable source code, not a generated review artifact:
+
+```bash
+python .cursor/skills/materials-benchmark-review/scripts/certify_final_100.py \
+  --batch /path/to/new-e1-batch \
+  --output /path/to/new-certified-index \
+  --expected-count 100
+```
+
+The certifier requires a byte-hashed ordered-universe manifest and proves the
+selected records are exactly the first eligible PASS prefix. Synthetic
+certifier fixtures live in `tests/test_materials_final_100_certification.py`;
+deleted intermediate review directories are not runtime or test dependencies.
 
 Every survivor runs no-paper fail-fast first. Only after all four Hard Gates
 pass may the batch copy paper evidence and run a source-bound paper-grounded
