@@ -1,0 +1,67 @@
+[
+  {
+    "id": "1",
+    "title": "Set up material and geometric parameters",
+    "role": "process",
+    "action": "Define all material and geometric parameters for the three benchmark sets as specified: matrix E0=70 GPa, ν0=0.32; surface elastic moduli A (Esi=-7.58576e-9 GPa·m, νsi=0.39), B (Esi=-1.59233e-9 GPa·m, νsi=1.123), C (no surface stress); pore/fiber radii 1,2,5,10,20,30,40,50 nm; volume fractions f=0.2 (nanopores) and f=0.3 (nanofibers); non-circular cross-sections with A=0.4R0 and B=4,8; nanofiber interface Esi/E0=1.1636e-9 m, νsi=0.45, fiber properties E0=2Ei=70 GPa, ν0=νi=0.25. Organize into data structures suitable for driving the FFT simulations.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Prepare simulation input parameters.",
+    "output_schema": ""
+  },
+  {
+    "id": "2",
+    "title": "Implement FFT-based homogenization solver",
+    "role": "process",
+    "action": "Implement the FFT-based periodic homogenization algorithm that incorporates coherent imperfect interface/surface contributions. The implementation must include: computation of inclusion characteristic functions and their Fourier transforms; assembly of the linear system for the strain Fourier coefficients coupling bulk contrast, inclusion geometry, and interface surface integrals; an iterative solver (e.g., conjugate gradient) to solve the system; extraction of the effective stiffness tensor via the macroscopic stress formula; and calculation of the six Hill moduli (k*, m*, n*, l*, G*, G'*). The method must handle general periodic inclusion geometries and 2D surface parameter matrices.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Core computational engine used by all scored steps.",
+    "output_schema": ""
+  },
+  {
+    "id": "3",
+    "title": "Compute normalized effective moduli for circular nanopores",
+    "role": "scored",
+    "action": "Using the implemented FFT solver, simulate cylindrical nanopores with circular cross-sections for each combination of radius (1,2,5,10,20,30,40,50 nm), distribution (square, hexagonal), and surface type (A, B, C). Compute the six Hill moduli and normalize each by the corresponding modulus for surface C (no surface stress). Write the normalized ratios to step_01_nanopores_circular.csv.",
+    "output_file": "step_01_nanopores_circular.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Normalized effective moduli (k*/k_C*, m*/m_C*, n*/n_C*, l*/l_C*, G*/G_C*, G'*/G'_C*) for circular nanopores as functions of radius, distribution, and surface.",
+    "output_schema": "Columns: radius (float, nm), distribution (string, 'square'|'hexagonal'), surface (string, 'A'|'B'|'C'), k_norm (float), m_norm (float), n_norm (float), l_norm (float), G_norm (float), Gp_norm (float). One row per (radius, distribution, surface) combination; radii cover [1,2,5,10,20,30,40,50] nm."
+  },
+  {
+    "id": "4",
+    "title": "Compute normalized transverse bulk modulus for non-circular nanopores",
+    "role": "scored",
+    "action": "Using the FFT solver, simulate nanopores with non-circular cross-sections (4-oscillation and 8-oscillation shapes defined by radius function with A=0.4R0) under surface A and f=0.2. Compute the effective transverse bulk modulus k* and normalize by the matrix bulk modulus κ0. Write the results to step_02_nanopores_noncircular.csv.",
+    "output_file": "step_02_nanopores_noncircular.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Normalized transverse bulk modulus k*/κ0 for non-circular nanopores as a function of R0 and shape.",
+    "output_schema": "Columns: R0 (float, nm), shape (string, '4_oscillations'|'8_oscillations'), k_norm (float). One row per (R0, shape); R0 covers [1,2,5,10,20,30,40,50] nm."
+  },
+  {
+    "id": "5",
+    "title": "Compute normalized effective moduli for circular nanofibers",
+    "role": "scored",
+    "action": "Using the FFT solver, simulate cylindrical nanofibers with circular cross-sections under square, hexagonal, and random distributions. Use fiber radii 1,2,5,10,20,30,40,50 nm, f=0.3, E0=2Ei=70 GPa, ν0=νi=0.25, Esi/E0=1.1636e-9 m, νsi=0.45. Compute the six Hill moduli and normalize by the corresponding matrix moduli (k*/k0, m*/μ0, n*/μ0, l*/μ0, G*/μ0, G'*/μ0). For the random distribution, report at least one realization and include a realization column. Write the results to step_03_nanofibers.csv.",
+    "output_file": "step_03_nanofibers.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Normalized effective moduli for circular nanofibers as a function of radius, distribution, and (for random) realization.",
+    "output_schema": "Columns: radius (float, nm), distribution (string, 'square'|'hexagonal'|'random'), realization (integer, 1 if only one realization), k_norm (float), m_norm (float), n_norm (float), l_norm (float), G_norm (float), Gp_norm (float). One row per (radius, distribution, realization); radii cover [1,2,5,10,20,30,40,50] nm."
+  }
+]

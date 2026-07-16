@@ -1,0 +1,80 @@
+[
+  {
+    "id": "step01_load",
+    "title": "Load transport data",
+    "role": "process",
+    "action": "Read the public dataset Ga_excess_BST_transport_data.csv, which contains columns: Temperature_K, Seebeck_uV_per_K, Resistivity_Ohm_m, Kappa_total_W_per_mK for the x=0.03 sample. Validate that all necessary columns are present and numeric.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Load and validate the input transport measurements.",
+    "output_schema": ""
+  },
+  {
+    "id": "step02_lorenz",
+    "title": "Compute Lorenz number from Seebeck coefficient",
+    "role": "process",
+    "action": "For each temperature point, compute the reduced chemical potential η from the Seebeck coefficient S using the single parabolic band (SPB) model. Use the relationship S = (k_B/e) * ( (2*F_1(η)/F_0(η)) - η ), where F_j are Fermi–Dirac integrals, and solve for η numerically. Then compute the temperature-dependent Lorenz number L = (k_B/e)^2 * ( (3*F_2(η)/F_0(η)) - (2*F_1(η)/F_0(η))^2 ).",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Estimate the Lorenz number L(T) using the SPB model; required for electronic thermal conductivity calculation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step03_kappa_e",
+    "title": "Compute electronic thermal conductivity",
+    "role": "process",
+    "action": "Calculate the electronic thermal conductivity from the Wiedemann–Franz law: κ_e = L(T) * (1/ρ(T)) * T, where T is the absolute temperature, ρ is the electrical resistivity, and L(T) is the Lorenz number obtained in the previous step.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Compute the electronic contribution to thermal conductivity κ_e(T).",
+    "output_schema": ""
+  },
+  {
+    "id": "step04_kappa_l",
+    "title": "Compute and save lattice thermal conductivity",
+    "role": "scored",
+    "action": "Subtract the electronic thermal conductivity from the total thermal conductivity: κ_L = κ_total - κ_e. Save the result as a CSV file with columns Temperature_K and kappa_L_W_per_mK, one row per measured temperature point.",
+    "output_file": "kappa_L_vs_T.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Lattice thermal conductivity as a function of temperature; its significant reduction is a key claim of the paper.",
+    "output_schema": "columns: Temperature_K (numeric in K), kappa_L_W_per_mK (numeric in W·m⁻¹·K⁻¹)"
+  },
+  {
+    "id": "step05_zt",
+    "title": "Compute and save thermoelectric figure of merit ZT",
+    "role": "scored",
+    "action": "Calculate the dimensionless figure of merit ZT = S² * T / (κ_total * ρ) at each temperature, using the Seebeck coefficient S, temperature T, total thermal conductivity κ_total, and electrical resistivity ρ. Save the results as a CSV file with columns Temperature_K and ZT.",
+    "output_file": "ZT_vs_T.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Temperature-dependent ZT curve.",
+    "output_schema": "columns: Temperature_K (numeric in K), ZT (numeric, dimensionless)"
+  },
+  {
+    "id": "step06_maxzt",
+    "title": "Extract maximum ZT and temperature",
+    "role": "scored",
+    "action": "From the computed ZT(T) array, find the maximum ZT value and note the temperature at which it occurs. Write the maximum ZT value as a single floating-point number (e.g., 1.13) to a text file.",
+    "output_file": "max_ZT.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The headline reported maximum ZT value.",
+    "output_schema": "single float representing the maximum ZT value"
+  }
+]

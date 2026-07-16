@@ -1,0 +1,54 @@
+[
+  {
+    "id": "relax_geometries",
+    "title": "DFT geometry relaxation of selected GNRs",
+    "role": "process",
+    "action": "Relax the atomic positions and lattice constants for hydrogen‑passivated 7‑AGNR, 15‑AGNR, 4‑ZGNR, and 12‑ZGNR nanoribbons using SIESTA with Troullier‑Martins pseudopotentials (core radii: C 2s²(1.49), 2p²(1.50); H 1s¹(1.25)), a DZP basis set, and standard converged parameters. Ensure residual forces on each atom are <0.01 eV/Å. Save the relaxed lattice constants and atomic coordinates.",
+    "output_file": "",
+    "evidence": "relaxation_details.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the relaxed geometries for the subset of armchair and zigzag nanoribbons. These relaxed structures are used as input for all subsequent Γ‑point phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "graphene_phonons",
+    "title": "Compute graphene reference phonon dispersion",
+    "role": "process",
+    "action": "Using DFPT or finite‑displacement method with a supercell (e.g., 9×9×1) in SIESTA, compute the phonon dispersion of a periodic graphene sheet along the Γ–M and Γ–K high‑symmetry directions. Scale all computed frequencies by a constant factor such that the E₂g Raman‑active mode at Γ equals 1580 cm⁻¹ (the known experimental value).",
+    "output_file": "",
+    "evidence": "graphene_dispersion.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the reference graphene phonon dispersion curves that are needed for the zone‑folding mapping of ribbon overtones and for the RMSE computation.",
+    "output_schema": ""
+  },
+  {
+    "id": "ribbon_phonons",
+    "title": "Compute Γ‑point phonon frequencies for ribbons",
+    "role": "process",
+    "action": "For each relaxed nanoribbon (7‑AGNR, 15‑AGNR, 4‑ZGNR, 12‑ZGNR) run a finite‑displacement phonon calculation at the Γ point using SIESTA in non‑spin‑polarized mode. Apply the same frequency‑scaling factor derived from the graphene E₂g mode.",
+    "output_file": "",
+    "evidence": "ribbon_phonon_raw.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Obtain the vibrational frequencies and eigenvectors for all 3m modes of each ribbon at the Γ point. The raw eigenvalues and eigenvectors are needed to classify fundamentals, overtones, and C–H modes.",
+    "output_schema": ""
+  },
+  {
+    "id": "assemble_table",
+    "title": "Classify modes and assemble phonon‑data table",
+    "role": "scored",
+    "action": "From the graphene dispersion and the ribbon Γ‑point phonon eigenvectors, classify each ribbon mode as a fundamental oscillation (k_perp=0), an overtone (assign order n and compute k_perp = nπ/w_ribbon), or a C–H mode. Assemble a single CSV file `phonon_data.csv` that contains: (i) for graphene, the dispersion points along Γ–M and Γ–K, and (ii) for every ribbon, all Γ‑point modes with their classification. Columns: system (e.g., 'graphene','7‑AGNR','4‑ZGNR'), k_perp (float, 1/Å, set to 0 for fundamentals), mode_label (string, e.g., 'LO','TO','ZO','LA','TA','ZA','C‑H', with overtone prefix like '1‑LO'), frequency (float, cm⁻¹). At least six rows for graphene and all 3m rows for each ribbon must be present; overtones must go up to order n=N‑1 for each fundamental of the largest ribbon studied.",
+    "output_file": "phonon_data.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Final scored artifact. The CSV contains the classified phonon frequencies of graphene and the selected nanoribbons, enabling the checker to recompute LO‑TO splitting, overtone‑to‑graphene RMSE, and C‑H mode frequency ranges.",
+    "output_schema": "Columns: system (string), k_perp (float, 1/Å; 0 for fundamentals), mode_label (string), frequency (float, cm⁻¹). Include graphene rows along Γ–M and Γ–K; ribbon rows must have all fundamentals and overtones up to order N−1."
+  }
+]

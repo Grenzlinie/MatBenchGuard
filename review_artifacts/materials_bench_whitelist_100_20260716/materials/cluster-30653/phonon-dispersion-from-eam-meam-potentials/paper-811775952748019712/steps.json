@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step1",
+    "title": "EAM potential implementation and LAMMPS input preparation",
+    "role": "process",
+    "action": "Implement the EAM potential for uranium using the functional forms and parameters specified in the paper. Produce a LAMMPS input script (or implement a custom pair style) that computes the total potential energy as sum_i Φ(ρ_i) + sum_{i<j} φ(r_ij), with ρ_i = sum_j ψ(r_ij). Use the Morse pair potential φ(r) = ε[exp(-2α(r/d-1)) - 2 exp(-α(r/d-1))] with ε=0.209 eV, d=3.3318 Å, α=4.100; the density kernel ψ(r) = p1 exp(-p2 r) with p1=5.5619, p2=1.3850; and the piecewise embedding function Φ(ρ) given by Eqs. (4)-(8) with knot densities ρ1=0.900, ρ2=0.800, ρ3=0.700, ρ4=0.600, ρ5=0.500, ρ6=0.400, ρ7=0.100, ρ8=1.20, ρ9=2.00, coefficients a1=-3.5659, c1=0.2753, c2=-0.100, c3=-0.200, c4=3.65, c5=-1.850, c6=0.500, c7=10.60, c8=0.050, c9=1.62, c10=2.24, and exponents m=1.80, n=1.71. Set cut-off radius to 12.20 Å.",
+    "output_file": "",
+    "evidence": "eam_lammps_input.lammps",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The agent must encode the EAM potential in a format that LAMMPS can execute. This step is not scored directly but is necessary for all subsequent MD simulations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step2",
+    "title": "Liquid uranium properties at low pressure",
+    "role": "scored",
+    "action": "Run MD simulations for liquid uranium at the following temperatures and experimental densities: (1406 K, 17.226 g/cm³), (1500 K, 17.06 g/cm³), (2000 K, 16.18 g/cm³), (2500 K, 15.33 g/cm³), (3000 K, 14.53 g/cm³), (3500 K, 13.76 g/cm³), (4000 K, 13.03 g/cm³), (4500 K, 12.3 g/cm³), (5000 K, 11.7 g/cm³). Use NPT or NVT dynamics to maintain ~zero pressure. Extract from the trajectory: (a) potential energy U_EAM (kJ/mol) – the average EAM potential energy plus kinetic energy (3/2 RT), (b) pressure (GPa), (c) isothermal bulk modulus K_T (GPa) from the pressure–volume derivative, (d) self-diffusion coefficient D (cm²/s) from the slope of mean-square displacement vs time, (e) dynamic viscosity η (cP) computed via Stokes–Einstein η = k_B T / (6 π r_a D) with ion radius r_a = 0.792 Å. Output these values to liquid_properties.csv.",
+    "output_file": "liquid_properties.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Scored artifact containing computed liquid uranium properties at nine temperatures.",
+    "output_schema": "CSV header: T(K),density(g/cm3),pressure(GPa),U_EAM(kJ/mol),K_T(GPa),diffusion(cm2/s),viscosity(cP). Nine data rows for the listed temperatures. All fields are floating-point numbers."
+  },
+  {
+    "id": "step3",
+    "title": "Bcc crystal properties at 298 K",
+    "role": "scored",
+    "action": "Set up a bcc uranium crystal of about 1024 atoms at 298 K with zero external pressure. Perform an MD run and measure the equilibrium density, potential energy U_EAM (kJ/mol), and pressure (GPa). Write a single-row CSV file crystal_properties.csv.",
+    "output_file": "crystal_properties.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Properties of bcc crystalline uranium at room temperature.",
+    "output_schema": "CSV header: state,density(g/cm3),U_EAM(kJ/mol),pressure(GPa). One row with state='bcc'."
+  },
+  {
+    "id": "step4",
+    "title": "Shock Hugoniot states",
+    "role": "scored",
+    "action": "For the following compressed states (Z = V/V₀) and the corresponding model temperatures: (0.900, 420 K), (0.800, 810 K), (0.768, 1075 K), (0.750, 1170 K), (0.718, 1910 K), (0.700, 2540 K), (0.693, 2830 K), (0.668, 4010 K), (0.653, 4825 K), (0.6423, 5515 K), (0.628, 5810 K), (0.5834, 9045 K), run NVT simulations at constant volume. For each state compute the pressure and the total internal energy (U_EAM = potential energy + kinetic energy, in kJ/mol) – do not include the electron excitation contribution U_el. Output the results to shock_hugoniot.csv.",
+    "output_file": "shock_hugoniot.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Pressure and energy along the shock Hugoniot at twelve compression ratios.",
+    "output_schema": "CSV header: Z,pressure(GPa),energy(kJ/mol). Twelve rows in the order listed. All fields are floating-point numbers."
+  },
+  {
+    "id": "step5",
+    "title": "Melting temperatures at high compression",
+    "role": "scored",
+    "action": "For each compression ratio Z = 1.0 (ambient pressure), 0.90, 0.80, 0.70, 0.65, 0.60, 0.55, determine the melting temperature using the reheating method: prepare a defective bcc lattice, run isothermal MD at several temperatures, monitor the maximum structure factor S(K) as a function of temperature, and identify the melting temperature. Also record the average pressure during the melting transition. Output the seven (Z, pressure, Tmelt) rows to melting_temperatures.csv.",
+    "output_file": "melting_temperatures.csv",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Melting curve of uranium from ambient pressure to high compression.",
+    "output_schema": "CSV header: Z,pressure(GPa),Tmelt(K). Seven rows for the listed Z values (1.0, 0.90, 0.80, 0.70, 0.65, 0.60, 0.55). All fields are floating-point numbers."
+  }
+]

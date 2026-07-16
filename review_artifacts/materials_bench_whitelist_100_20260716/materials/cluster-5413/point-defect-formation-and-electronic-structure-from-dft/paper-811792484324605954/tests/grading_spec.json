@@ -1,0 +1,264 @@
+{
+  "scoring_tier": "result-level compare",
+  "scoring_justification": "Headline quantities (reaction energies, binding energies) are compared against paper-reported values with tolerance; the comparison table is recomputed from submitted cluster energies to verify consistency.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_00_isolated_energies.json": "exact_match",
+    "step_01_binding_energies.json": "exact_match",
+    "step_02_comparison_table.json": "exact_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Hidden gold values for reaction energies, binding energies, and isolated defect/lattice energies taken from the paper.",
+      "source_provenance": "Tables 3 and 4 of the source paper.",
+      "generation_method": "Manually transcribed from the published paper.",
+      "why_not_fabricated": "These are the authenticated numerical results from the paper used as reference targets for a compute-driven reproduction."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_00_isolated_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "lattice_energy_CeO2",
+            "lattice_energy_NiO",
+            "defect_energies"
+          ],
+          "properties": {
+            "lattice_energy_CeO2": {
+              "type": "number"
+            },
+            "lattice_energy_NiO": {
+              "type": "number"
+            },
+            "defect_energies": {
+              "type": "object",
+              "required": [
+                "VO",
+                "NiCe",
+                "Ni_i",
+                "Gd_Ce"
+              ],
+              "properties": {
+                "VO": {
+                  "type": "number"
+                },
+                "NiCe": {
+                  "type": "number"
+                },
+                "Ni_i": {
+                  "type": "number"
+                },
+                "Gd_Ce": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Isolated defect and lattice energies in eV from GULP simulation."
+      },
+      {
+        "file": "step_01_binding_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "reaction_energies",
+            "clusters"
+          ],
+          "properties": {
+            "reaction_energies": {
+              "type": "object",
+              "required": [
+                "vacancy_compensation",
+                "interstitial_route"
+              ],
+              "properties": {
+                "vacancy_compensation": {
+                  "type": "number"
+                },
+                "interstitial_route": {
+                  "type": "number"
+                }
+              }
+            },
+            "clusters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "delta_E"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "delta_E": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Reaction energies and cluster binding energies in eV."
+      },
+      {
+        "file": "step_02_comparison_table.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "object",
+          "required": [
+            "Ni_clusters",
+            "Gd_clusters",
+            "increase_Ni",
+            "increase_Gd"
+          ],
+          "properties": {
+            "Ni_clusters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "n_vacancies",
+                  "delta_E",
+                  "delta_E_per_vac"
+                ],
+                "properties": {
+                  "n_vacancies": {
+                    "type": "integer"
+                  },
+                  "delta_E": {
+                    "type": "number"
+                  },
+                  "delta_E_per_vac": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "Gd_clusters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "n_vacancies",
+                  "delta_E",
+                  "delta_E_per_vac"
+                ],
+                "properties": {
+                  "n_vacancies": {
+                    "type": "integer"
+                  },
+                  "delta_E": {
+                    "type": "number"
+                  },
+                  "delta_E_per_vac": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "increase_Ni": {
+              "type": "object",
+              "required": [
+                "delta_E",
+                "delta_E_per_vac"
+              ],
+              "properties": {
+                "delta_E": {
+                  "type": "number"
+                },
+                "delta_E_per_vac": {
+                  "type": "number"
+                }
+              }
+            },
+            "increase_Gd": {
+              "type": "object",
+              "required": [
+                "delta_E",
+                "delta_E_per_vac"
+              ],
+              "properties": {
+                "delta_E": {
+                  "type": "number"
+                },
+                "delta_E_per_vac": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "description": "Comparative binding energy analysis for Ni vs Gd clusters."
+      }
+    ],
+    "notes": "All energies in eV. The checker compares the numerical values against the hidden paper-reported values with tolerances and verifies the ordering (Ni cluster binding energies > Gd, larger increase for Ni) as an additional structural check."
+  },
+  "steps": [
+    {
+      "id": "step_00",
+      "output_file": "step_00_isolated_energies.json",
+      "weight": 0.2,
+      "kind": "scalar_field_compare",
+      "hidden_targets": {
+        "lattice_energy_CeO2": -105.65,
+        "lattice_energy_NiO": -41.99,
+        "defect_energies.VO": 15.4,
+        "defect_energies.NiCe": 53.27,
+        "defect_energies.Ni_i": -22.14,
+        "defect_energies.Gd_Ce": 32.19
+      },
+      "tolerance_abs": 0.1
+    },
+    {
+      "id": "step_01",
+      "output_file": "step_01_binding_energies.json",
+      "weight": 0.5,
+      "kind": "reaction_and_cluster_compare",
+      "reaction_targets": {
+        "vacancy_compensation": 5.0,
+        "interstitial_route": 9.46
+      },
+      "reaction_tolerance": 0.15,
+      "cluster_targets": {
+        "Ni_VO_1st_neighbour": 1.45,
+        "Ni_VO_2nd_neighbour": 1.24,
+        "Ni_VO_3rd_neighbour": 0.95,
+        "2Ni_2VO_110_div2_most_stable": 4.15,
+        "Gd_2Gd_VO_x": 0.78,
+        "Gd_4Gd_2VO_x": 1.42
+      },
+      "cluster_tolerance": 0.1
+    },
+    {
+      "id": "step_02",
+      "output_file": "step_02_comparison_table.json",
+      "weight": 0.3,
+      "kind": "comparison_table_consistency",
+      "expected_labels": {
+        "Ni_n1": "Ni_VO_1st_neighbour",
+        "Ni_n2": "2Ni_2VO_110_div2_most_stable",
+        "Gd_n1": "Gd_2Gd_VO_x",
+        "Gd_n2": "Gd_4Gd_2VO_x"
+      },
+      "trend_checks": {
+        "increase_delta_E_Ni_greater_than_Gd": true,
+        "increase_delta_E_per_vac_Ni_greater_than_Gd": true
+      }
+    }
+  ]
+}

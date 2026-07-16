@@ -1,0 +1,67 @@
+[
+  {
+    "id": "generate_config",
+    "title": "Generate initial dislocation configuration",
+    "role": "process",
+    "action": "Set up the simulation cell for repulsive dislocation intersection in f.c.c. Cu. Embed a 60° mixed dislocation (DB) dissociated into partials αB and Dα on glide plane a, and a screw dislocation (BA) dissociated into partials δA and Bδ on glide plane d, using atomic displacements from linear isotropic continuum elasticity. Write the atomic configuration to a LAMMPS data file.",
+    "output_file": "",
+    "evidence": "initial.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the initial atomistic configuration for the repulsive intersection geometry.",
+    "output_schema": ""
+  },
+  {
+    "id": "relax_config",
+    "title": "Relax initial configuration",
+    "role": "process",
+    "action": "Run a short MD relaxation at near 0 K under free boundary conditions to allow the embedded dislocations to dissociate into equilibrium partials.",
+    "output_file": "",
+    "evidence": "relaxed.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Relaxes the initial configuration so that the dissociated partial dislocations are in near-equilibrium positions.",
+    "output_schema": ""
+  },
+  {
+    "id": "apply_strain",
+    "title": "Apply compressive loading",
+    "role": "process",
+    "action": "Impose a homogeneous compressive elastic strain ε_zz at a constant strain rate until a target value is reached, then fix the positions of atoms in a few top and bottom layers to maintain the strain while all other atoms remain mobile.",
+    "output_file": "",
+    "evidence": "strained.data",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Produces the strained configuration with fixed boundary layers that will drive the intersection.",
+    "output_schema": ""
+  },
+  {
+    "id": "run_md",
+    "title": "Run MD intersection simulation",
+    "role": "process",
+    "action": "Run MD using the Cu EAM potential, evolving the system from the strained configuration to capture the partial reactions, junction formation, jog formation, and passing of the intersecting dislocations. Generate a trajectory file recording atomic positions over time.",
+    "output_file": "",
+    "evidence": "trajectory.dump",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "The main MD simulation that reveals the short-range dislocation interactions.",
+    "output_schema": ""
+  },
+  {
+    "id": "analyze_results",
+    "title": "Analyze junction, jog, and critical angle",
+    "role": "scored",
+    "action": "From the MD trajectory, identify the partial dislocation reactions and determine: (1) whether a junction line forms along [10-1]; (2) its length in units of r0; (3) the crystallographic direction of the jog line; (4) the critical breaking angle at which the bowing partial segments meet and pass the obstacle. Also compute the b² criterion for the two reactions αB+δA and αB+Bδ, reporting reactant and product squared Burgers‑vector sums. Compile all findings into a single JSON file.",
+    "output_file": "results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Scored artifact containing junction/jog properties, critical breaking angle, and b² analysis.",
+    "output_schema": "JSON object with keys: junction_formed (bool), junction_length_r0 (float), jog_direction (string, e.g., '[0-1-1]'), critical_breaking_angle_degrees (float), partial_reaction_b2_analysis (object: for each reaction 'alphaB_deltaA' and 'alphaB_Bdelta', keys 'reactants' [list of strings], 'product' [string], 'reactant_b2_sum' [string/number], 'product_b2' [string/number])."
+  }
+]

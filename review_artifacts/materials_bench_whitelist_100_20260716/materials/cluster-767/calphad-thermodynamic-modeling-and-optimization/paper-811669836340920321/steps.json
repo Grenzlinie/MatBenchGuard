@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01",
+    "title": "Obtain cement bulk compositions",
+    "role": "process",
+    "action": "Retrieve the bulk oxide chemical compositions (mass fractions of Na₂O, CaO, MgO, Fe₂O₃, Al₂O₃, SiO₂, SO₃, etc.) for the 84-day (Page & Vennesland 1983) and 300-day (Andersson et al. 1989) Portland cement samples from the cited references.",
+    "output_file": "",
+    "evidence": "composition_data.json",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02",
+    "title": "Assemble GEM input system",
+    "role": "process",
+    "action": "Construct the multiphase thermodynamic system for Gibbs energy minimization using an open-source GEM solver. Include: (i) aqueous electrolyte with all species from the provided thermodynamic list and activity coefficients by the extended Debye-Hückel equation (common third parameter 0.064), (ii) single-component solids CH, Aft, Htc, (iii) ideal solid solutions CSH1 (end-members SiO₂, Ca₀.₉SiH₁.₈O₃.₈, CaH₂SiO₄·NaOH), CSH2 (end-members Ca₀.₉SiH₁.₈O₃.₈, Ca₁.₇H₃.₄SiO₅.₄·4H₂O, CaH₂SiO₄·NaOH), and hydrogarnet (end-members C₃AH₆, C₃FH₆, C₃AS₃). Use the standard Gibbs energies provided for each end-member and species. Set T=298.15 K, P=1 bar. Ignore potassium as it is not part of the modeled system.",
+    "output_file": "",
+    "evidence": "system_definition.log",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03",
+    "title": "Run GEM simulations for CSH solubility and cement porewater",
+    "role": "scored",
+    "action": "Perform GEM equilibrium calculations for all test cases. CSH solubility: bulk of 1 mol (CaO+SiO₂) per 1 kg H₂O at Ca/Si mole ratios 0.2, 0.4, 0.6, …, 2.0. Cement porewater: bulk composition defined by the cement oxide masses from step 01 and a water/solid ratio of 0.5 kg H₂O per kg solids, for both 84-day and 300-day cements. For each cement, run the simulation first with the uncorrected ΔG°(CN₀.₅SH₁.₅) = −2211864 J/mol and then with the corrected ΔG° = −2194864 J/mol. For every case extract the total aqueous concentrations (mol/L) of Ca, Si, Al, SO₄, Mg, Na and the pH. Write all results to predictions.csv with columns: test_case, Ca, Si, Al, SO4, Mg, Na, pH.",
+    "output_file": "predictions.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Equilibrium total aqueous concentrations and pH from GEM simulations for 14 test cases: 10 CSH ratios plus 4 cement porewater conditions (2 cements x 2 Na end-member energies).",
+    "output_schema": "Columns: test_case (string; one of CSH_0.2, CSH_0.4, …, CSH_2.0, PW84U, PW84C, PW300U, PW300C), Ca (float, mol/L), Si (float, mol/L), Al (float, mol/L), SO4 (float, mol/L), Mg (float, mol/L), Na (float, mol/L), pH (float)."
+  }
+]

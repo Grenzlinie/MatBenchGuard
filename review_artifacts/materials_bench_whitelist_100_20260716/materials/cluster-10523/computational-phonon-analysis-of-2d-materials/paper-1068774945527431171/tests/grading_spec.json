@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "structural",
+  "scoring_justification": "The checker verifies structural relations (signs, ordering) and paper-reported thresholds; recomputing the full DFT+MLFF phonon spectrum is infeasible in the verifier sandbox.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-derived thresholds and sign conditions",
+      "source_provenance": "Paper text: low‑energy chirality threshold |s|≥1/4; antisymmetry s_q = -s_{-q} exact; response tensor signs and relative magnitudes stated in Section V.",
+      "generation_method": "extracted directly from the paper's reported values and physical claims",
+      "why_not_fabricated": "These are the paper's own quantitative thresholds and structural assertions, suitable for result‑level comparison."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "low_energy_chirality.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "max_s",
+            "count_s_above_quarter",
+            "total_low_energy_modes"
+          ],
+          "items": {},
+          "units": {
+            "max_s": "dimensionless",
+            "count_s_above_quarter": "integer count",
+            "total_low_energy_modes": "integer count"
+          }
+        },
+        "description": "Low-energy chirality statistics: maximum |s|, count of modes with |s|≥0.25, and total modes <25 meV."
+      },
+      {
+        "file": "antisymmetry_check.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "threshold_or_better",
+        "schema": {
+          "type": "object",
+          "required": [
+            "q_path",
+            "deviation_max",
+            "consistent"
+          ],
+          "items": {},
+          "units": {
+            "q_path": "crystallographic path label",
+            "deviation_max": "dimensionless",
+            "consistent": "boolean"
+          }
+        },
+        "description": "Antisymmetry check for Γ‑X: maximum deviation and consistency flag."
+      },
+      {
+        "file": "response_tensor.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "object",
+          "required": [
+            "alpha_xx",
+            "alpha_yy",
+            "alpha_zz",
+            "temperature",
+            "units_explanation"
+          ],
+          "items": {},
+          "units": {
+            "alpha_xx": "J s m⁻² K⁻¹",
+            "alpha_yy": "J s m⁻² K⁻¹",
+            "alpha_zz": "J s m⁻² K⁻¹"
+          }
+        },
+        "description": "Intrinsic response tensor components at 300 K, without relaxation time τ."
+      }
+    ],
+    "notes": "All values are the agent's computed results; the checker will evaluate consistency with paper relations, not absolute exact numbers."
+  },
+  "steps": [
+    {
+      "id": "low_energy_chirality",
+      "output_file": "low_energy_chirality.json",
+      "kind": "rubric",
+      "weight": 0.2,
+      "rubric": {
+        "threshold_max_s": 0.25,
+        "description": "max_s >= 0.25 earns 0.5; count_s_above_quarter > 0 earns 0.3; total_low_energy_modes > 0 earns 0.2"
+      }
+    },
+    {
+      "id": "antisymmetry_check",
+      "output_file": "antisymmetry_check.json",
+      "kind": "rubric",
+      "weight": 0.3,
+      "rubric": {
+        "threshold_deviation": 1e-06,
+        "description": "If deviation_max < 1e-6, full credit (1.0); else 0.0"
+      }
+    },
+    {
+      "id": "response_tensor",
+      "output_file": "response_tensor.json",
+      "kind": "rubric",
+      "weight": 0.5,
+      "rubric": {
+        "description": "Score based on structural relations: alpha_xx >0 (+0.2), alpha_yy <0 (+0.2), alpha_zz <0 (+0.2), |alpha_xx| > |alpha_yy| (+0.2), |alpha_xx| > |alpha_zz| (+0.2). Total capped at 1.0."
+      }
+    }
+  ]
+}

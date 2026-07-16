@@ -1,0 +1,332 @@
+{
+  "scoring_tier": "T0 result-level compare",
+  "scoring_justification": "MD simulation results; recomputing from raw trajectories is infeasible. Comparison to paper-reported values with tolerances.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "liquid_properties.csv": "reference_match",
+    "crystal_properties.csv": "reference_match",
+    "shock_hugoniot.csv": "reference_match",
+    "melting_temperatures.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "paper-reported gold values for all four artifacts",
+      "source_provenance": "Tables 1, 2, 4, 12 of the paper, with units matching the output contract",
+      "generation_method": "extracted from the paper",
+      "why_not_fabricated": "actual reproduction targets from the paper's own MD results"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "liquid_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "T(K)",
+            "density(g/cm3)",
+            "pressure(GPa)",
+            "U_EAM(kJ/mol)",
+            "K_T(GPa)",
+            "diffusion(cm2/s)",
+            "viscosity(cP)"
+          ]
+        },
+        "description": "Computed liquid uranium properties at nine temperatures along the p≈0 isobar."
+      },
+      {
+        "file": "crystal_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "state",
+            "density(g/cm3)",
+            "U_EAM(kJ/mol)",
+            "pressure(GPa)"
+          ]
+        },
+        "description": "Properties of bcc crystalline uranium at 298 K."
+      },
+      {
+        "file": "shock_hugoniot.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Z",
+            "pressure(GPa)",
+            "energy(kJ/mol)"
+          ]
+        },
+        "description": "Pressure and energy along the shock Hugoniot at twelve compression ratios."
+      },
+      {
+        "file": "melting_temperatures.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "Z",
+            "pressure(GPa)",
+            "Tmelt(K)"
+          ]
+        },
+        "description": "Melting temperatures at seven high-pressure states including the ambient-pressure point, determined by the reheating method."
+      }
+    ],
+    "notes": "All outputs are compared to the paper-reported values within tolerances suitable for MD run-to-run variability. The electron excitation contribution U_el is not part of the scored energy outputs; the agent must report only the EAM potential energy plus kinetic energy (U_EAM)."
+  },
+  "steps": [
+    {
+      "id": "liquid_properties",
+      "output_file": "liquid_properties.csv",
+      "weight": 0.4,
+      "kind": "reference_match",
+      "scored_columns": [
+        "density(g/cm3)",
+        "pressure(GPa)",
+        "U_EAM(kJ/mol)",
+        "K_T(GPa)",
+        "diffusion(cm2/s)",
+        "viscosity(cP)"
+      ],
+      "gold": {
+        "density(g/cm3)": [
+          17.226,
+          17.06,
+          16.18,
+          15.33,
+          14.53,
+          13.76,
+          13.03,
+          12.3,
+          11.7
+        ],
+        "pressure(GPa)": [
+          0.001,
+          -0.01,
+          -0.014,
+          0.055,
+          0.018,
+          -0.014,
+          0.026,
+          -0.294,
+          0.135
+        ],
+        "U_EAM(kJ/mol)": [
+          -486.07,
+          -482.87,
+          -466.43,
+          -450.54,
+          -435.51,
+          -420.25,
+          -405.29,
+          -391.43,
+          -376.83
+        ],
+        "K_T(GPa)": [
+          34.4,
+          31.7,
+          22.8,
+          18.7,
+          17.3,
+          14.8,
+          10.1,
+          4.9,
+          4.4
+        ],
+        "diffusion(cm2/s)": [
+          1.99e-05,
+          2.25e-05,
+          5.06e-05,
+          7.95e-05,
+          0.000111,
+          0.000157,
+          0.000193,
+          0.000247,
+          0.000288
+        ],
+        "viscosity(cP)": [
+          6.59,
+          6.16,
+          3.65,
+          2.91,
+          2.5,
+          2.06,
+          1.92,
+          1.87,
+          1.6
+        ]
+      },
+      "tolerances": {
+        "density(g/cm3)": {
+          "mode": "relative",
+          "value": 0.05
+        },
+        "pressure(GPa)": {
+          "mode": "absolute",
+          "value": 0.5
+        },
+        "U_EAM(kJ/mol)": {
+          "mode": "relative",
+          "value": 0.05
+        },
+        "K_T(GPa)": {
+          "mode": "relative",
+          "value": 0.15
+        },
+        "diffusion(cm2/s)": {
+          "mode": "relative",
+          "value": 0.2
+        },
+        "viscosity(cP)": {
+          "mode": "relative",
+          "value": 0.2
+        }
+      }
+    },
+    {
+      "id": "crystal_properties",
+      "output_file": "crystal_properties.csv",
+      "weight": 0.1,
+      "kind": "reference_match",
+      "scored_columns": [
+        "state",
+        "density(g/cm3)",
+        "U_EAM(kJ/mol)",
+        "pressure(GPa)"
+      ],
+      "gold": {
+        "state": [
+          "bcc"
+        ],
+        "density(g/cm3)": [
+          19.148
+        ],
+        "U_EAM(kJ/mol)": [
+          -526.58
+        ],
+        "pressure(GPa)": [
+          0.002
+        ]
+      },
+      "tolerances": {
+        "state": {
+          "mode": "absolute",
+          "value": 0
+        },
+        "density(g/cm3)": {
+          "mode": "relative",
+          "value": 0.05
+        },
+        "U_EAM(kJ/mol)": {
+          "mode": "relative",
+          "value": 0.05
+        },
+        "pressure(GPa)": {
+          "mode": "absolute",
+          "value": 0.5
+        }
+      }
+    },
+    {
+      "id": "shock_hugoniot",
+      "output_file": "shock_hugoniot.csv",
+      "weight": 0.3,
+      "kind": "reference_match",
+      "scored_columns": [
+        "pressure(GPa)",
+        "energy(kJ/mol)"
+      ],
+      "gold": {
+        "pressure(GPa)": [
+          17.1,
+          51.3,
+          67.0,
+          78.0,
+          103.8,
+          123.2,
+          132.4,
+          170.4,
+          197.8,
+          217.0,
+          248.9,
+          371.6
+        ],
+        "energy(kJ/mol)": [
+          -517.3,
+          -469.9,
+          -440.9,
+          -423.0,
+          -371.4,
+          -332.2,
+          -314.7,
+          -243.0,
+          -189.6,
+          -120.8,
+          -74.1,
+          161.2
+        ]
+      },
+      "tolerances": {
+        "pressure(GPa)": {
+          "mode": "relative",
+          "value": 0.1
+        },
+        "energy(kJ/mol)": {
+          "mode": "relative",
+          "value": 0.1
+        }
+      }
+    },
+    {
+      "id": "melting_temperatures",
+      "output_file": "melting_temperatures.csv",
+      "weight": 0.2,
+      "kind": "reference_match",
+      "scored_columns": [
+        "pressure(GPa)",
+        "Tmelt(K)"
+      ],
+      "gold": {
+        "pressure(GPa)": [
+          26.1,
+          63.2,
+          134.2,
+          209.1,
+          306.8,
+          443.8
+        ],
+        "Tmelt(K)": [
+          2492,
+          3582,
+          4650,
+          5495,
+          6430,
+          7342
+        ]
+      },
+      "tolerances": {
+        "pressure(GPa)": {
+          "mode": "relative",
+          "value": 0.05
+        },
+        "Tmelt(K)": {
+          "mode": "relative",
+          "value": 0.03
+        }
+      }
+    }
+  ]
+}

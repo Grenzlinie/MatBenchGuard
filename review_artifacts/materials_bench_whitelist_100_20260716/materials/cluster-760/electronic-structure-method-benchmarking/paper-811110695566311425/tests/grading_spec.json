@@ -1,0 +1,62 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute per-method AVE2 from agent's raw corrected_enthalpies CSV and compare to paper-reported values.",
+  "pass_threshold": 0.75,
+  "target_policies": {
+    "corrected_enthalpies_and_errors.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold AVE2 values for each method from Table 6B of the paper.",
+      "source_provenance": "Paper 'Halon thermochemistry: Ab initio calculations of the enthalpies of formation of fluoroethanes', Table 6B, column AVE2 under 'Δ_C-F' block.",
+      "generation_method": "Copied from Table 6B: G2(MP2) -5.8, G2 -6.3, CBS-4 -6.5, CBS-Q -7.7 kJ mol⁻¹.",
+      "why_not_fabricated": "These are the paper's reported residual average errors after applying C-F BAC, used as reference for verification."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "corrected_enthalpies_and_errors.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "method",
+            "molecule",
+            "n_CF",
+            "calc_Hf_abinitio",
+            "dev_abinitio",
+            "calc_Hf_BAC",
+            "dev_BAC"
+          ],
+          "units": {
+            "calc_Hf_abinitio": "kJ mol⁻¹",
+            "dev_abinitio": "kJ mol⁻¹",
+            "calc_Hf_BAC": "kJ mol⁻¹",
+            "dev_BAC": "kJ mol⁻¹"
+          }
+        },
+        "description": "Raw and C–F BAC‑corrected enthalpies of formation and deviations from experiment. The checker computes the per‑method mean of dev_BAC over fluoroethanes (n_CF > 0) and compares it against the paper‑reported average residual error (AVE2) within a hidden tolerance."
+      }
+    ],
+    "notes": "The file must include rows for ethane (n_CF=0) as well. The scored quantity is the AVE2 derived from this file; it does not need to be reported separately."
+  },
+  "steps": [
+    {
+      "id": "apply_bac_and_evaluate",
+      "output_file": "corrected_enthalpies_and_errors.csv",
+      "weight": 1.0,
+      "kind": "recompute_ave2",
+      "gold": {
+        "G2(MP2)": -5.8,
+        "G2": -6.3,
+        "CBS-4": -6.5,
+        "CBS-Q": -7.7
+      },
+      "tolerance": 1.0
+    }
+  ]
+}

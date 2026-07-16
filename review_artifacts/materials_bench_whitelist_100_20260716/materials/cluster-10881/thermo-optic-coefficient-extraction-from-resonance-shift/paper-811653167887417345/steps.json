@@ -1,0 +1,93 @@
+[
+  {
+    "id": "fe_simulation",
+    "title": "Finite Element Thermal-Structural Simulation",
+    "role": "process",
+    "action": "Set up and solve the finite element thermal-structural model of a zinc sulfide window (80×80×8 mm) using materials properties (density 4102 kg/m³, expansion coefficient 7.0e-6 K⁻¹, heat capacity 470 J/(kg·K), Young's modulus 74e9 Pa, thermal conductivity 19 W/(m·K), Poisson ratio 0.29) and boundary conditions: heat flux distribution on the outside surface divided into nine regions with specified fluxes (2.60e4, 7.97e3, 5.03e3, 4.20e4, 1.21e5, 4.40e4, 4.70e4, 5.91e4, 7.39e4 W/m²), aerodynamic pressure 5.0e5 Pa on outside, inner air pressure 1.0e5 Pa on inside and sides, initial temperature 300 K, exposure time 15 s. Obtain temperature, sum deformation, and equivalent von Mises strain fields at 15 s.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Required to generate the temperature and deformation fields that drive all subsequent optical calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "refractive_index_field",
+    "title": "Computation of Thermo-Optic Refractive Index Field",
+    "role": "process",
+    "action": "From the temperature field at 15 s, compute the 3D refractive index field on the same grid (80×80×8, 59,049 nodes) using the thermo-optic relation: n = n0 + dn/dT * (T - T0), with n0 = 2.20, dn/dT = 4.10e-5 K⁻¹, T0 = 300 K. Exclude elasto-optic contributions.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Intermediate field needed for gradient calculation and subsequent reconstruction.",
+    "output_schema": ""
+  },
+  {
+    "id": "gradient_field",
+    "title": "Computation of Refractive Index Gradient Magnitude Field",
+    "role": "process",
+    "action": "Compute the 3D refractive index gradient magnitude field from the refractive index field using finite differences on the 80×80×8 grid.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "Gradient magnitude field required for threshold determination and block identification.",
+    "output_schema": ""
+  },
+  {
+    "id": "threshold_gt",
+    "title": "Harmonic-Mean Gradient Magnitude Threshold",
+    "role": "scored",
+    "action": "Compute the harmonic-mean refractive index gradient magnitude threshold GT using all non-zero gradient magnitudes. Write the value to threshold_GT.txt as a single float in scientific notation (units mm⁻¹).",
+    "output_file": "threshold_GT.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "The harmonic-mean threshold that separates high-gradient from low-gradient regions.",
+    "output_schema": "A single floating-point number in scientific notation, e.g., '4.03e-05' (units: mm⁻¹)."
+  },
+  {
+    "id": "reconstruction",
+    "title": "Refractive Index Field Reconstruction and Correlation",
+    "role": "scored",
+    "action": "Apply the three-step modeling procedure using GT: (1) identify all grid points with |∇n| > GT as high-gradient blocks, record their locations, indices and gradients; (2) for points with |∇n| ≤ GT, set the gradient to zero; (3) for each zero-gradient region, assign a uniform refractive index by extrapolating from the nearest high-gradient block along the beam propagation direction (z-axis). Compute the percentage of original refractive index nodes retained and the correlation coefficient r between original and reconstructed fields. Write both results to reconstruction_stats.json.",
+    "output_file": "reconstruction_stats.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Statistics characterizing the reconstructed refractive index field.",
+    "output_schema": "{\"nodes_retained_percent\": number, \"correlation_coefficient\": number}"
+  },
+  {
+    "id": "validation_slab",
+    "title": "Ray-Tracing Program Validation",
+    "role": "scored",
+    "action": "Implement a ray-tracing algorithm (recursive propagation through hexahedral grids with node interpolation) and validate it using a tilt-like gradient-index slab with parameters: c=2.20, α=0.02 mm⁻¹, thickness d=8 mm, exit pupil D=60 mm, ideal lens focal length f'=150 mm, wavelength λ=10 μm. Compute the normalized point spread function and extract the x-coordinate of the peak. Write that x-coordinate (in mm) to validation_peak.txt.",
+    "output_file": "validation_peak.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "PSF peak x-coordinate from the gradient-index slab test, used to validate ray-tracing accuracy.",
+    "output_schema": "A single floating-point number (mm)."
+  },
+  {
+    "id": "wave_aberration",
+    "title": "Optical Distortion Evaluation",
+    "role": "scored",
+    "action": "Using the validated ray-tracing program, simulate transmission through the original refractive index field and the reconstructed refractive index field for the window at 0° azimuth / 75° elevation incidence (exit pupil D=60 mm, lens f'=150 mm, λ=10 μm). For each field, compute the RMS wave aberration (in waves). Report all three values in wave_aberration_results.json as {\"rms_original\": number, \"rms_reconstructed\": number, \"relative_error_percent\": number}.",
+    "output_file": "wave_aberration_results.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "RMS wave aberration results for the original and reconstructed refractive index fields, and their relative difference.",
+    "output_schema": "{\"rms_original\": number, \"rms_reconstructed\": number, \"relative_error_percent\": number}"
+  }
+]

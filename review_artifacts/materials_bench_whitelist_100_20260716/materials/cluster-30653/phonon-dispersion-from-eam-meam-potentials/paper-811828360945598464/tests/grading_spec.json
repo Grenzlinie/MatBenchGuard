@@ -1,0 +1,213 @@
+{
+  "scoring_tier": "consistency",
+  "scoring_justification": "Full recompute (T1) is infeasible for trap energy, shear stress, and surface energy, which require LAMMPS runs. Scalar quantities are compared against paper-reported values with tolerances; distributions assessed via structural audits.",
+  "pass_threshold": 0.6,
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold elastic constants, hydrogen properties, energy barriers",
+      "source_provenance": "Paper Tables 1 and 2, Figure 12",
+      "generation_method": "Hardcoded from paper's reported EAM-W values",
+      "why_not_fabricated": "Values are the published EAM-W results the paper claims; they are the reproduction target."
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_elastic_constants",
+      "output_file": "elastic_constants.csv",
+      "weight": 0.15,
+      "kind": "exact_match",
+      "expected": {
+        "C11": 230.2,
+        "C12": 135.8,
+        "C44": 116.7
+      },
+      "tolerance": {
+        "type": "relative",
+        "value": 0.05,
+        "partial": 0.1
+      }
+    },
+    {
+      "id": "step_hydrogen_properties",
+      "output_file": "hydrogen_properties.csv",
+      "weight": 0.15,
+      "kind": "exact_match",
+      "expected": {
+        "heat_of_solution": 0.28,
+        "migration_energy": 0.037
+      },
+      "tolerance": {
+        "type": "absolute",
+        "heat_of_solution": 0.03,
+        "migration_energy": 0.01
+      }
+    },
+    {
+      "id": "step_trap_energy",
+      "output_file": "trap_energy.csv",
+      "weight": 0.3,
+      "kind": "structural_audit",
+      "audit_criteria": [
+        "at_least_20_sites",
+        "max_trap_near_core",
+        "slip_plane_enhanced",
+        "decay_at_distance"
+      ]
+    },
+    {
+      "id": "step_energy_barriers",
+      "output_file": "energy_barriers.csv",
+      "weight": 0.15,
+      "kind": "exact_match",
+      "expected": {
+        "no_H": 2.65e-20,
+        "H_at_core": 2.35e-20,
+        "H_ahead": 1.18e-20
+      },
+      "tolerance": {
+        "type": "absolute",
+        "value": 5e-21
+      }
+    },
+    {
+      "id": "step_shear_stress",
+      "output_file": "shear_stress.csv",
+      "weight": 0.1,
+      "kind": "structural_audit",
+      "audit_criteria": [
+        "at_least_20_points",
+        "peak_near_core",
+        "decay_away_from_core"
+      ]
+    },
+    {
+      "id": "step_surface_energies",
+      "output_file": "surface_energies.csv",
+      "weight": 0.15,
+      "kind": "structural_audit",
+      "audit_criteria": [
+        "all_orientations_present",
+        "hydrogen_reduces_energy",
+        "highest_reduction_for_112"
+      ]
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "elastic_constants.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ],
+          "units": {
+            "value": "GPa"
+          }
+        },
+        "description": "Elastic constants C11, C12, C44 of α‑Fe computed with the EAM‑W potential."
+      },
+      {
+        "file": "hydrogen_properties.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "property",
+            "value"
+          ],
+          "units": {
+            "value": "eV"
+          }
+        },
+        "description": "Heat of solution and migration energy of hydrogen in α‑Fe from EAM‑W."
+      },
+      {
+        "file": "trap_energy.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "site_type",
+            "x",
+            "y",
+            "z",
+            "trap_energy"
+          ],
+          "units": {
+            "x": "nm",
+            "y": "nm",
+            "z": "nm",
+            "trap_energy": "eV"
+          }
+        },
+        "description": "Hydrogen trap energy at tetrahedral and octahedral sites around an edge dislocation core. The distribution must show strongest trapping at the core, a high‑trap region along the slip plane, and energies approaching zero far from the dislocation."
+      },
+      {
+        "file": "energy_barriers.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "case",
+            "barrier"
+          ],
+          "units": {
+            "barrier": "J"
+          }
+        },
+        "description": "NEB energy barriers for an edge dislocation moving 1b under three hydrogen configurations."
+      },
+      {
+        "file": "shear_stress.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "x",
+            "y",
+            "shear_stress"
+          ],
+          "units": {
+            "x": "nm",
+            "y": "nm",
+            "shear_stress": "GPa"
+          }
+        },
+        "description": "Shear stress profile along the slip plane near the edge dislocation core, with and without hydrogen. The profiles under the two conditions should be essentially identical (no significant hydrogen‑induced shielding)."
+      },
+      {
+        "file": "surface_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "structural_audit",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "orientation",
+            "condition",
+            "surface_energy"
+          ],
+          "units": {
+            "surface_energy": "J/m²"
+          }
+        },
+        "description": "Surface energies of {100}, {110} and {112} α‑Fe surfaces, clean and with adsorbed hydrogen. Hydrogen must reduce the surface energy, with the reduction being most pronounced for the {112} surface."
+      }
+    ],
+    "notes": "All outputs are produced by re-running atomistic simulations with LAMMPS and the EAM‑W potential. The checker compares values to the paper‑reported results within appropriate tolerances for deterministic quantities, and applies structural audits for distributions."
+  }
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "step_01_relax",
+    "title": "DFT Geometry Relaxation",
+    "role": "process",
+    "action": "Construct a hydrogen-terminated zigzag graphene nanoribbon supercell containing 48 carbon atoms with hydrogen-terminated edges. Perform DFT geometry relaxation using the open-source SIESTA code with GGA-PBE exchange-correlation functional, DZP basis set, and a real-space grid cutoff of 200 Ry. Apply periodic boundary conditions along the ribbon axis (z direction) and a vacuum region larger than 10 Å in x and y directions. Carry out four separate relaxations: one with no external field (Per configuration) and three with external electric fields of 0.5, 2.0, and 4.0 V/Å applied along the x direction (configurations A, B, C respectively). Save the final relaxed atomic structures.",
+    "output_file": "",
+    "evidence": "relaxation_log.txt",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Produces relaxed atomic structures for the four configurations, which are required for subsequent bond-length extraction and transport simulation.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_bond_lengths",
+    "title": "C–C Bond Length Extraction",
+    "role": "scored",
+    "action": "From the relaxed structures of configurations A, B, C, extract the four central C–C bond lengths along the fold crest (the bonds that experience the largest elongation due to folding). Report these lengths in Angstrom as a JSON object.",
+    "output_file": "bond_lengths.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "C–C bond lengths for configurations A, B, C (in Angstrom). Each configuration provides an array of four floats.",
+    "output_schema": "{ \"A\": [float, float, float, float], \"B\": [float, float, float, float], \"C\": [float, float, float, float] }"
+  },
+  {
+    "id": "step_03_transport",
+    "title": "Transport Simulation and Analysis",
+    "role": "scored",
+    "action": "Using the relaxed structures, construct two-probe models for each configuration (Per, A, B, C). Perform NEGF-DFT transport simulation with TranSIESTA to compute current at bias voltages from -2.0 V to 2.0 V in steps no larger than 0.2 V. Compute differential conductance at 1.0 V bias via central difference on the I-V data. Save the complete I-V data and the differential conductance value as a JSON file.",
+    "output_file": "transport_data.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "I-V data and differential conductance at 1.0 V bias for configurations Per, A, B, C. The checker will evaluate transport behavior against the paper's reported trends.",
+    "output_schema": "{ \"Per\": {\"bias\": [float,...], \"current\": [float,...], \"diff_cond_at_1V\": float}, \"A\": {...}, \"B\": {...}, \"C\": {...} }"
+  }
+]

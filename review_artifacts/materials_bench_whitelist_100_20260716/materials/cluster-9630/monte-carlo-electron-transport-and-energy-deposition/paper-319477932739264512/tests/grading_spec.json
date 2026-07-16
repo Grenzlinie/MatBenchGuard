@@ -1,0 +1,59 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "The checker recomputes the mean energy and mean angle from the raw CSV and compares them to tolerance windows derived from the paper's reported values (~87 keV, 15–20°). No self-reported metric is trusted.",
+  "pass_threshold": 0.99,
+  "target_policies": {
+    "electrons.csv": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "electrons.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "energy_kev",
+            "angle_deg"
+          ],
+          "units": {
+            "energy_kev": "keV",
+            "angle_deg": "degrees"
+          },
+          "items": {},
+          "required": {}
+        },
+        "description": "CSV file containing kinetic energy and incidence angle for each electron that reaches the 2.6 mm diameter converter aperture after passing through a 14 μm Al foil and 17 mm air gap. The checker recomputes the mean energy and mean angle from this file and compares them to hidden reference windows derived from the paper's reported values."
+      }
+    ],
+    "notes": "The agent must perform a Monte Carlo transport simulation using the publicly described geometry and beam parameters. The exact statistics (number of incident electrons) are not prescribed, but must be sufficient for stable mean values. The simulation may use any open-source MC toolkit (e.g., Geant4)."
+  },
+  "steps": [
+    {
+      "id": "step_01",
+      "output_file": "electrons.csv",
+      "kind": "recompute_ranges",
+      "description": "Recompute mean energy and mean angle from raw CSV; check whether each mean lies within the tolerance window derived from the paper.",
+      "weight": 1.0,
+      "mean_energy_range": [
+        85.0,
+        89.0
+      ],
+      "mean_angle_range": [
+        14.0,
+        21.0
+      ]
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "tolerance windows for mean energy and mean angle of electrons reaching the converter aperture",
+      "source_provenance": "Paper reported average energy of electrons entering converter is 87 keV and average incidence angle is 15–20°.",
+      "generation_method": "Windows set to ±2 keV around 87 keV and ±1° around the reported range, providing reasonable tolerance for different MC codes and seeds.",
+      "why_not_fabricated": "Windows are directly based on the published numerical values in the paper's Monte Carlo results; no synthetic data invented."
+    }
+  ]
+}

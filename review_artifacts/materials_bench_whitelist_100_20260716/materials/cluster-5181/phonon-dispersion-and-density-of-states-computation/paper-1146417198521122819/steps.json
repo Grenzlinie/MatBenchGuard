@@ -1,0 +1,67 @@
+[
+  {
+    "id": "step_01_build_m8dip",
+    "title": "Build M8+Dip potential",
+    "role": "process",
+    "action": "Using MULTIBINIT and the provided BaTiO3 model, construct the effective atomic potential with an 8x8x8 q-point mesh and the analytic infinite-range dipole-dipole correction activated. Save the model definition.",
+    "output_file": "",
+    "evidence": "M8Dip_model.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Build the reference potential M8+Dip as defined in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_02_build_m2",
+    "title": "Build M2 potential",
+    "role": "process",
+    "action": "Using MULTIBINIT and the provided BaTiO3 model, construct the effective atomic potential with a 2x2x2 q-point mesh and the analytic long-range dipole-dipole correction deactivated. Save the model definition.",
+    "output_file": "",
+    "evidence": "M2_model.log",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Build the truncated-range potential M2 as defined in the paper.",
+    "output_schema": ""
+  },
+  {
+    "id": "step_03_phonon_frequencies",
+    "title": "Compute phonon dispersion frequencies",
+    "role": "scored",
+    "action": "For both M8+Dip and M2 models, compute phonon dispersion curves along the high-symmetry path Gamma-X-M-Gamma. Extract frequencies (in cm^-1) at the Gamma and X points for all phonon modes. Write a CSV with columns: q_point (string, e.g., 'Gamma', 'X'), mode_index (integer, 0-based), frequency_M2 (float), frequency_M8+Dip (float).",
+    "output_file": "phonon_frequencies.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Phonon frequencies at Gamma and X for both models.",
+    "output_schema": "q_point,mode_index,frequency_M2,frequency_M8+Dip"
+  },
+  {
+    "id": "step_04_to_mode",
+    "title": "Report unstable TO mode",
+    "role": "scored",
+    "action": "From the computed phonon dispersion, identify the soft transverse-optical (TO) mode at the Gamma point for each model. For M2 and M8+Dip, report the frequency (negative for imaginary/unstable) and its character (e.g., chain-like eigendisplacement). Write two lines to a text file: one for M2, one for M8+Dip, in the format 'M2: frequency=value (cm^-1), character=<description>' and similarly for M8+Dip.",
+    "output_file": "unstable_TO_mode.txt",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "txt",
+    "purpose": "scored",
+    "description": "Frequency and character of the ferroelectric TO instability.",
+    "output_schema": "Two lines, each: 'Model: frequency=value (cm^-1), character=description'"
+  },
+  {
+    "id": "step_05_hysteresis",
+    "title": "Simulate hysteresis loop at 50 K",
+    "role": "scored",
+    "action": "For both M2 and M8+Dip models, perform a hybrid Monte Carlo (HMC) simulation at 50 K on a 12x12x12 supercell, preceded by BFGS structural relaxation. Compute the polarization vs. electric-field hysteresis loop. Extract the coercive field (kV/cm) and remanent polarization (muC/cm^2). Write a CSV with columns: model (string, 'M2' or 'M8+Dip'), coercive_field (float), remanent_polarization (float).",
+    "output_file": "hysteresis_summary.csv",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "csv",
+    "purpose": "scored",
+    "description": "Hysteresis loop parameters at 50 K.",
+    "output_schema": "model,coercive_field,remanent_polarization"
+  }
+]

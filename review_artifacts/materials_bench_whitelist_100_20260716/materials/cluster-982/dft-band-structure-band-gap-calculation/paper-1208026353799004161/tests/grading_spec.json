@@ -1,0 +1,232 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Result-level compare against paper-reported reference values with tolerances. Recomputing from raw artifacts is not needed because the target quantities are fixed physical parameters.",
+  "pass_threshold": 0.8,
+  "target_policies": {
+    "U_J_values.csv": "exact_match",
+    "bandgaps.csv": "exact_match",
+    "defect_formation_energies.csv": "exact_match"
+  },
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "U_J_values.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "subspace",
+            "U",
+            "J"
+          ],
+          "units": {
+            "U": "eV",
+            "J": "eV"
+          }
+        },
+        "description": "Hubbard U and Hund's J parameters for Cu 3d, S 3p, Sn 5s (CZTS) and Ge 4s (CZGS) subspaces, computed via minimum-tracking linear response."
+      },
+      {
+        "file": "bandgaps.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "functional",
+            "bandgap"
+          ],
+          "units": {
+            "bandgap": "eV"
+          }
+        },
+        "description": "Fundamental band gaps of pristine CZTS and CZGS computed with PBE+U_eff, PBE+U+J, and PBE+BLOR functionals."
+      },
+      {
+        "file": "defect_formation_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "exact_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "material",
+            "formation_energy"
+          ],
+          "units": {
+            "formation_energy": "eV"
+          }
+        },
+        "description": "Frozen-ion defect formation energy for the charge-neutral Cu-Zn anti-site pair in CZTS and CZGS."
+      }
+    ],
+    "notes": "All values are compared to hidden reference values from the paper within strict tolerances. The pseudopotential generation step is required for reproducibility but not directly scored."
+  },
+  "steps": [
+    {
+      "id": "check_u_j",
+      "output_file": "U_J_values.csv",
+      "weight": 0.45,
+      "kind": "numeric_table",
+      "params": {
+        "key_columns": [
+          "material",
+          "subspace"
+        ],
+        "value_columns": [
+          "U",
+          "J"
+        ],
+        "gold_rows": [
+          {
+            "material": "CZTS",
+            "subspace": "Cu 3d",
+            "U": 9.68,
+            "J": 0.86
+          },
+          {
+            "material": "CZTS",
+            "subspace": "Sn 5s",
+            "U": 2.5,
+            "J": 0.67
+          },
+          {
+            "material": "CZTS",
+            "subspace": "S 3p",
+            "U": 4.74,
+            "J": 0.57
+          },
+          {
+            "material": "CZGS",
+            "subspace": "Cu 3d",
+            "U": 10.02,
+            "J": 0.89
+          },
+          {
+            "material": "CZGS",
+            "subspace": "Ge 4s",
+            "U": 3.11,
+            "J": 0.79
+          },
+          {
+            "material": "CZGS",
+            "subspace": "S 3p",
+            "U": 4.65,
+            "J": 0.57
+          }
+        ],
+        "tolerances": {
+          "U": 0.02,
+          "J": 0.02
+        }
+      }
+    },
+    {
+      "id": "check_bandgaps",
+      "output_file": "bandgaps.csv",
+      "weight": 0.35,
+      "kind": "numeric_table",
+      "params": {
+        "key_columns": [
+          "material",
+          "functional"
+        ],
+        "value_columns": [
+          "bandgap"
+        ],
+        "gold_rows": [
+          {
+            "material": "CZTS",
+            "functional": "PBE+U_eff",
+            "bandgap": 1.47
+          },
+          {
+            "material": "CZTS",
+            "functional": "PBE+U+J",
+            "bandgap": 1.17
+          },
+          {
+            "material": "CZTS",
+            "functional": "PBE+BLOR",
+            "bandgap": 1.47
+          },
+          {
+            "material": "CZGS",
+            "functional": "PBE+U_eff",
+            "bandgap": 1.88
+          },
+          {
+            "material": "CZGS",
+            "functional": "PBE+U+J",
+            "bandgap": 1.58
+          },
+          {
+            "material": "CZGS",
+            "functional": "PBE+BLOR",
+            "bandgap": 1.88
+          }
+        ],
+        "tolerances": {
+          "bandgap": 0.05
+        }
+      }
+    },
+    {
+      "id": "check_defect_formation",
+      "output_file": "defect_formation_energies.csv",
+      "weight": 0.15,
+      "kind": "numeric_table",
+      "params": {
+        "key_columns": [
+          "material"
+        ],
+        "value_columns": [
+          "formation_energy"
+        ],
+        "gold_rows": [
+          {
+            "material": "CZTS",
+            "formation_energy": 0.58
+          },
+          {
+            "material": "CZGS",
+            "formation_energy": 0.505
+          }
+        ],
+        "tolerances": {
+          "formation_energy": 0.02
+        }
+      }
+    },
+    {
+      "id": "check_bandgap_ordering",
+      "output_file": "bandgaps.csv",
+      "weight": 0.05,
+      "kind": "structural",
+      "params": [
+        {
+          "material": "CZTS",
+          "check": "PBE+U_eff > PBE+U+J"
+        },
+        {
+          "material": "CZGS",
+          "check": "PBE+U_eff > PBE+U+J"
+        }
+      ]
+    }
+  ],
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold reference values for Hubbard U, Hund's J, bandgaps, and defect formation energies",
+      "source_provenance": "Paper Table I for U/J; figure/body text for bandgaps (1.47 eV CZTS PBE+U_eff, 1.17 eV PBE+U+J, 1.88 eV CZGS etc.) and defect formation energies (0.580 eV CZTS, 0.505 eV CZGS).",
+      "generation_method": "Direct transcription from the paper's reported values.",
+      "why_not_fabricated": "Values are the paper's own reported computed results; they are the intended reproduction target."
+    }
+  ]
+}

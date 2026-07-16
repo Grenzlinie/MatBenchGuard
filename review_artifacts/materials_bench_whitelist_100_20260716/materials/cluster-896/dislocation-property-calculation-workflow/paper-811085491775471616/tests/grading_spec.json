@@ -1,0 +1,75 @@
+{
+  "scoring_tier": "result-level compare with recomputed b²",
+  "scoring_justification": "Junction length, jog direction, and critical breaking angle are outputs of an MD simulation that cannot be rerun inside the verifier; the b² criterion can be recomputed from the reported Burgers‑vector fractions. Agent‑reported values are compared to paper‑reported gold with generous tolerances. The b² fractions are verified by exact string comparison.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "results.json": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "gold values for results.json fields",
+      "source_provenance": "paper text (junction length ~10 r0, Fig. 2; jog direction [0-1-1] from Section 2.2.3; critical breaking angle 70° from Section 2.2.4; b² sums from Eqs. (3)-(8)).",
+      "generation_method": "direct extraction from paper",
+      "why_not_fabricated": "values are taken verbatim from the original publication"
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "results.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "object",
+          "required": {
+            "junction_formed": "boolean",
+            "junction_length_r0": "number",
+            "jog_direction": "string",
+            "critical_breaking_angle_degrees": "number",
+            "partial_reaction_b2_analysis": "object"
+          },
+          "items": {},
+          "required_columns": [],
+          "units": {}
+        },
+        "description": "Contains the determined junction formation (boolean), junction length in units of r0, jog direction as crystallographic string, critical breaking angle in degrees, and a nested object with b² analysis for the two partial reactions."
+      }
+    ],
+    "notes": "Only the repulsive intersection case is required. The hidden checker compares the reported values against reference values from the paper within tolerances."
+  },
+  "steps": [
+    {
+      "id": "analyze_results",
+      "output_file": "results.json",
+      "weight": 1.0,
+      "gold": {
+        "junction_formed": true,
+        "junction_length_r0": 10.0,
+        "jog_direction": "[0-1-1]",
+        "critical_breaking_angle_degrees": 70.0,
+        "partial_reaction_b2_analysis": {
+          "alphaB_deltaA": {
+            "reactants": [
+              "alphaB",
+              "deltaA"
+            ],
+            "product": "alpha_delta_AB",
+            "reactant_b2_sum": "12/36",
+            "product_b2": "10/36"
+          },
+          "alphaB_Bdelta": {
+            "reactants": [
+              "alphaB",
+              "Bdelta"
+            ],
+            "product": "alpha_delta",
+            "reactant_b2_sum": "12/36",
+            "product_b2": "2/36"
+          }
+        }
+      }
+    }
+  ]
+}

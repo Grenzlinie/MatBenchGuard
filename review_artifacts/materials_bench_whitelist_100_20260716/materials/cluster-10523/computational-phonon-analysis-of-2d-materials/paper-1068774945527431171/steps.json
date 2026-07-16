@@ -1,0 +1,54 @@
+[
+  {
+    "id": "step-01",
+    "title": "Harmonic phonon calculation",
+    "role": "process",
+    "action": "Using the crystal structure of (S-MBA)2PbI4 (space group P2₁2₁2₁) and the pre-trained machine-learning force field from Pols et al., compute harmonic phonon frequencies, eigenvectors, and group velocities on a fine q-point grid covering the Brillouin zone, including paths Γ‑X, Γ‑Y, Γ‑Z and the negative directions. Use phonopy with the supercell approach.",
+    "output_file": "",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "other",
+    "purpose": "scored",
+    "description": "This step generates the raw phonon data required for all downstream chiral-phonon calculations.",
+    "output_schema": ""
+  },
+  {
+    "id": "step-02",
+    "title": "Low-energy chirality statistics",
+    "role": "scored",
+    "action": "For every phonon mode with frequency < 25 meV, compute the circular polarization s_{q,σ}^α using the normalized polarization vectors and the spin-1 matrices S^α (α=x,y,z). Record the maximum |s| among these modes and count how many modes satisfy |s| ≥ 0.25.",
+    "output_file": "low_energy_chirality.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Quantifies the concentration of substantial chirality in the low‑energy region (0–25 meV) as claimed in the paper.",
+    "output_schema": "{\"max_s\": \"float\", \"count_s_above_quarter\": \"int\", \"total_low_energy_modes\": \"int\"}"
+  },
+  {
+    "id": "step-03",
+    "title": "Antisymmetry check for Γ‑X path",
+    "role": "scored",
+    "action": "Along the Γ‑X path, for each band, compute the deviation of the antisymmetry relation: |s_{q,σ}^x + s_{-q,σ}^x|. Determine the maximum deviation across all bands and report whether it is consistent (small deviation).",
+    "output_file": "antisymmetry_check.json",
+    "evidence": "",
+    "load_bearing": false,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Validates the antisymmetry relation required for chiral phonons.",
+    "output_schema": "{\"q_path\": \"string\", \"deviation_max\": \"float\", \"consistent\": \"bool\"}"
+  },
+  {
+    "id": "step-04",
+    "title": "Phonon angular momentum response tensor",
+    "role": "scored",
+    "action": "Using the phonon spins, group velocities, frequencies, and the Bose-Einstein distribution at 300 K, compute the diagonal components of the intrinsic response tensor: α^{αα} = -(ħ/V) Σ_{q,σ} s_{q,σ}^α v_{q,σ}^α (∂f₀/∂T). Do not multiply by the relaxation time τ. Report α^{xx}, α^{yy}, α^{zz}.",
+    "output_file": "response_tensor.json",
+    "evidence": "",
+    "load_bearing": true,
+    "file_format": "json",
+    "purpose": "scored",
+    "description": "Main result: the induced phonon angular momentum tensor, which should exhibit α^{xx} > 0, α^{yy} < 0, α^{zz} < 0 and |α^{xx}| > |α^{yy}|, |α^{zz}|.",
+    "output_schema": "{\"alpha_xx\": \"float\", \"alpha_yy\": \"float\", \"alpha_zz\": \"float\", \"temperature\": 300, \"units_explanation\": \"J s m⁻² K⁻¹ without τ\"}"
+  }
+]

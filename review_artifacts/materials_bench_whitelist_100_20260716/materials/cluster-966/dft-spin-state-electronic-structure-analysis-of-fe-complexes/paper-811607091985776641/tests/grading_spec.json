@@ -1,0 +1,115 @@
+{
+  "scoring_tier": "result_level_comparison",
+  "scoring_justification": "Compute-driven DFT workflow; verifier cannot rerun DFT; comparing reported square-scheme energies to paper's exact gold values with tolerances, plus trend checks.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "step_energies.csv": "reference_match"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Gold values for square-scheme energies from the paper's Figure 1 and text",
+      "source_provenance": "Paper Figure 1 and manuscript text (J. Am. Chem. Soc. 2011, 133, 18234-18242)",
+      "generation_method": "Extracted from paper's reported ΔG(sol)' values for all steps; values confirmed by reference solve.sh which writes the same numbers",
+      "why_not_fabricated": "These are the exact published results; the checker compares agent's computed energies to these with tolerances accounting for different DFT code; the oracle writes these values so they are internally consistent."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "step_energies.csv",
+        "format": "csv",
+        "purpose": "scored",
+        "target_policy": "reference_match",
+        "schema": {
+          "type": "table",
+          "required_columns": [
+            "metal",
+            "step",
+            "description",
+            "delta_G_sol_prime"
+          ],
+          "units": {
+            "delta_G_sol_prime": "eV"
+          }
+        },
+        "description": "Computed square-scheme free energies for all metals and steps."
+      }
+    ],
+    "notes": "The checker compares the reported ΔG(sol)' values against the paper's hidden gold values with tolerance and enforces the required periodic trends (first vertical attachment becomes less exergonic Fe→Ru→Os, second adiabatic reduction becomes more exergonic Fe→Ru→Os, disproportionation free energies have the correct sign)."
+  },
+  "gold_values": {
+    "Fe": {
+      "i-a": -3.884,
+      "i-b": -0.18,
+      "i": -4.065,
+      "ii-a": -1.098,
+      "ii-b": -1.291,
+      "ii": -2.389,
+      "iii": -5.324,
+      "iSC": -0.417
+    },
+    "Ru": {
+      "i-a": -2.904,
+      "i-b": -0.214,
+      "i": -3.118,
+      "ii-a": -1.567,
+      "ii-b": -1.609,
+      "ii": -3.177,
+      "iii": -3.059
+    },
+    "Os": {
+      "i-a": -2.023,
+      "i-b": -0.908,
+      "i": -2.931,
+      "ii-a": -2.792,
+      "ii-b": -0.767,
+      "ii": -3.558,
+      "iii": -2.304
+    }
+  },
+  "tolerances": {
+    "attachment": 0.2,
+    "relaxation": 0.3,
+    "adiabatic": 0.25,
+    "iSC": 0.1
+  },
+  "steps": [
+    {
+      "id": "csv_schema",
+      "output_file": "step_energies.csv",
+      "weight": 0.05,
+      "kind": "existence_schema"
+    },
+    {
+      "id": "row_completeness",
+      "output_file": "step_energies.csv",
+      "weight": 0.05,
+      "kind": "row_completeness"
+    },
+    {
+      "id": "numeric_accuracy",
+      "output_file": "step_energies.csv",
+      "weight": 0.5,
+      "kind": "numeric_comparison"
+    },
+    {
+      "id": "trend_i_a",
+      "output_file": "step_energies.csv",
+      "weight": 0.15,
+      "kind": "trend"
+    },
+    {
+      "id": "trend_ii",
+      "output_file": "step_energies.csv",
+      "weight": 0.15,
+      "kind": "trend"
+    },
+    {
+      "id": "disproportionation_signs",
+      "output_file": "step_energies.csv",
+      "weight": 0.1,
+      "kind": "trend"
+    }
+  ]
+}

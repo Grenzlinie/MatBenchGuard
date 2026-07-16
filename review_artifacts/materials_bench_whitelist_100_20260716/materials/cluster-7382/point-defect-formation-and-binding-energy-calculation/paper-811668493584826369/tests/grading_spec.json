@@ -1,0 +1,121 @@
+{
+  "scoring_tier": "recompute",
+  "scoring_justification": "Recompute Ed and Ed_ref from raw DFT total energies, compare Ed to paper-reported values within tolerance, and check ordering and sign trends.",
+  "pass_threshold": 0.6,
+  "target_policies": {
+    "total_energies.json": "metric_recompute"
+  },
+  "hidden_assets": [
+    {
+      "path": "grading_spec_json.inline",
+      "purpose": "Paper-reported Ed values for pristine, Ti_Na, Na_vacancy, Al_vacancy systems",
+      "source_provenance": "Table 2 of paper: Na16Al16H64 -> 3.96 eV, (TiNa15)Al16H64 -> 1.86 eV, Na15Al16H64 -> 0.242 eV, Na16Al15H64 -> 1.469 eV",
+      "generation_method": "direct extraction from paper Table 2",
+      "why_not_fabricated": "Values trace to paper's reported numbers."
+    }
+  ],
+  "output_contract": {
+    "outputs": [
+      {
+        "file": "total_energies.json",
+        "format": "json",
+        "purpose": "scored",
+        "target_policy": "metric_recompute",
+        "schema": {
+          "type": "object",
+          "required": [
+            "E_total_pristine",
+            "E_total_pristine_minus_H",
+            "E_total_Ti_Na",
+            "E_total_Ti_Na_minus_H",
+            "E_total_Na_vacancy",
+            "E_total_Na_vacancy_minus_H",
+            "E_total_Al_vacancy",
+            "E_total_Al_vacancy_minus_H",
+            "E_total_H2"
+          ],
+          "properties": {
+            "E_total_pristine": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_pristine_minus_H": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Ti_Na": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Ti_Na_minus_H": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Na_vacancy": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Na_vacancy_minus_H": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Al_vacancy": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_Al_vacancy_minus_H": {
+              "type": "number",
+              "unit": "eV"
+            },
+            "E_total_H2": {
+              "type": "number",
+              "unit": "eV"
+            }
+          }
+        },
+        "description": "Raw DFT total energies from which hydrogen desorption energies (ΔE^H) and referenced desorption energies (ΔE^H + 1/2 E[H₂]) are recomputed by the checker."
+      }
+    ],
+    "notes": "The hidden checker will compute Ed and Ed_ref for each system, compare against paper-reported reference values with tolerances, and enforce the ordering Ed(pristine) > Ed(Ti_Na) > Ed(Al_vacancy) > Ed(Na_vacancy) and the sign conditions on Ed_ref."
+  },
+  "steps": [
+    {
+      "id": "ed_accuracy",
+      "output_file": "total_energies.json",
+      "kind": "numeric",
+      "weight": 0.5,
+      "tolerance": 0.5,
+      "decay": 1.0,
+      "gold_ed": {
+        "pristine": 3.96,
+        "ti_na": 1.86,
+        "na_vacancy": 0.242,
+        "al_vacancy": 1.469
+      }
+    },
+    {
+      "id": "ordering",
+      "output_file": "total_energies.json",
+      "kind": "structural",
+      "weight": 0.25,
+      "required_order": [
+        "pristine",
+        "ti_na",
+        "al_vacancy",
+        "na_vacancy"
+      ]
+    },
+    {
+      "id": "sign",
+      "output_file": "total_energies.json",
+      "kind": "structural",
+      "weight": 0.25,
+      "signs": {
+        "pristine": "positive",
+        "ti_na": "negative",
+        "na_vacancy": "negative",
+        "al_vacancy": "negative"
+      }
+    }
+  ]
+}
