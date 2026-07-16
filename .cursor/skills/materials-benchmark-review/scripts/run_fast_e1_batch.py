@@ -17,7 +17,11 @@ from typing import Any, Callable
 
 sys.dont_write_bytecode = True
 
-from prepare_audit_output import QUALITY_EVIDENCE_ROLES, collect_input_hashes
+from prepare_audit_output import (
+    QUALITY_EVIDENCE_ROLES,
+    collect_input_hashes,
+    collect_review_implementation_hashes,
+)
 
 
 SCHEMA_VERSION = "materials-fast-e1-index/0.2"
@@ -478,6 +482,8 @@ def validate_record_source_binding(
                         "paper_mode"
                     )
                     != paper_mode
+                    or persisted_manifest.get("review_implementation")
+                    != collect_review_implementation_hashes()
                 ):
                     errors.append(
                         "persisted CLI report identity or source hashes differ"
@@ -532,6 +538,9 @@ def validate_record_source_binding(
                     == persisted_report.get("paper_consistency", {})
                     and cli_evidence.get("probe_coverage")
                     == persisted_checker.get("probe_coverage", {})
+                    and cli_evidence.get("review_implementation")
+                    == persisted_manifest.get("review_implementation")
+                    == collect_review_implementation_hashes()
                 )
                 if not evidence_matches:
                     errors.append(
@@ -690,6 +699,11 @@ def review_one(
         audit_manifest = json.loads(
             (audit / "audit_manifest.json").read_text(encoding="utf-8")
         )
+        review_implementation = audit_manifest.get("review_implementation")
+        if review_implementation != collect_review_implementation_hashes():
+            raise ValueError(
+                "CLI audit Review implementation hashes are stale"
+            )
         copied_hashes = collect_review_source_hashes(package_copy, paper_mode)
         manifest_hashes = audit_manifest.get("input_hashes")
         expected_cli_root = str(package_copy.resolve())
@@ -744,12 +758,18 @@ def review_one(
             "paper_mode": paper_mode,
             "paper_consistency": report.get("paper_consistency", {}),
             "probe_coverage": checker.get("probe_coverage", {}),
+            "review_implementation": review_implementation,
             "solution_oracle": {
                 key: checker.get("solution_oracle", {}).get(key)
                 for key in (
                     "used",
                     "status",
                     "positive_mock_available",
+                    "attempted",
+                    "setup_attempted",
+                    "setup_prepared",
+                    "producer_started",
+                    "executed",
                     "scientific_evidence",
                 )
             },

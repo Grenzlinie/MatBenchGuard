@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import math
 import re
@@ -154,6 +155,667 @@ def add_issue(
     issues.append(issue)
 
 
+def _append_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+
+
+def instruction_contract_map(instruction: str) -> dict[str, Any]:
+    """Extract the role-aware instruction-to-output contract.
+
+    Harbor instructions commonly name process artifacts alongside final
+    submissions.  A path-only scan cannot distinguish those roles, so this
+    parser keeps the workflow step, agent action, role, and declared outputs
+    together for later checker mapping.
+    """
+    requirements: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    all_outputs: list[str] = []
+
+    def flush() -> None:
+        nonlocal current
+        if current is not None:
+            requirements.append(current)
+        current = None
+
+    for line_number, raw_line in enumerate(instruction.splitlines(), start=1):
+        line = raw_line.strip()
+        heading = re.match(r"^###\s+Step\s+(\d+)\s*(.*)$", line)
+        if heading:
+            flush()
+            current = {
+                "step": f"Step {heading.group(1)}",
+                "title": heading.group(2).strip(),
+                "line": line_number,
+                "quote": line,
+                "role": None,
+                "agent_work": None,
+                "declared_outputs": [],
+                "evidence": [],
+            }
+            continue
+        if re.match(r"^#{1,6}\s+", line):
+            flush()
+            continue
+        role_match = re.match(r"^-\s*Role:\s*(.+?)\s*$", line, re.IGNORECASE)
+        if role_match and current is not None:
+            current["role"] = role_match.group(1).strip()
+            continue
+        action_match = re.match(
+            r"^-\s*Action:\s*(.+?)\s*$", line, re.IGNORECASE
+        )
+        if action_match and current is not None:
+            current["agent_work"] = action_match.group(1).strip()
+            continue
+        path_matches = list(
+            re.finditer(
+                r"/app/outputs/([A-Za-z0-9_.-]+)", line, re.IGNORECASE
+            )
+        )
+        if not path_matches:
+            continue
+        for path_match in path_matches:
+            output_name = path_match.group(1)
+            _append_unique(all_outputs, output_name)
+            if current is None:
+                continue
+            declaration_kind = (
+                "process_evidence"
+                if re.match(r"^-\s*Evidence:", line, re.IGNORECASE)
+                else "scored_output"
+                if re.match(r"^-\s*Output file:", line, re.IGNORECASE)
+                else "output_reference"
+            )
+            declaration = {
+                "file": output_name,
+                "kind": declaration_kind,
+                "line": line_number,
+                "quote": line,
+            }
+            current["evidence"].append(declaration)
+            _append_unique(current["declared_outputs"], output_name)
+
+    flush()
+    requirements = [
+        item
+        for item in requirements
+        if item["role"] or item["agent_work"] or item["evidence"]
+    ]
+    process_evidence: list[str] = []
+    scored_outputs: list[str] = []
+    for requirement in requirements:
+        role = str(requirement.get("role") or "").lower()
+        for declaration in requirement["evidence"]:
+            output_name = declaration["file"]
+            if role.startswith("process") or declaration["kind"] == (
+                "process_evidence"
+            ):
+                _append_unique(process_evidence, output_name)
+            elif role.startswith("scored") or declaration["kind"] == (
+                "scored_output"
+            ):
+                _append_unique(scored_outputs, output_name)
+    unclassified = [
+        name
+        for name in all_outputs
+        if name not in process_evidence and name not in scored_outputs
+    ]
+    return {
+        "requirements": requirements,
+        "instruction_outputs": sorted(all_outputs),
+        "process_evidence": sorted(process_evidence),
+        "scored_outputs": sorted(scored_outputs),
+        "unclassified_outputs": sorted(unclassified),
+    }
+
+
+def _direct_returns(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.Return]:
+    """Return return statements owned by a function, excluding nested funcs."""
+    returns: list[ast.Return] = []
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if isinstance(child, ast.Return):
+                returns.append(child)
+                continue
+            visit(child)
+
+    visit(function)
+    return returns
+
+
+def _statements_guarantee_exit(statements: list[ast.stmt]) -> bool:
+    """Conservatively prove that a statement list cannot fall through."""
+    for statement in statements:
+        if isinstance(statement, (ast.Return, ast.Raise)):
+            return True
+        if isinstance(statement, ast.If):
+            if (
+                statement.orelse
+                and _statements_guarantee_exit(statement.body)
+                and _statements_guarantee_exit(statement.orelse)
+            ):
+                return True
+        if isinstance(statement, ast.Try):
+            if statement.finalbody and _statements_guarantee_exit(
+                statement.finalbody
+            ):
+                return True
+            handlers_exit = bool(statement.handlers) and all(
+                _statements_guarantee_exit(handler.body)
+                for handler in statement.handlers
+            )
+            body_exit = _statements_guarantee_exit(statement.body)
+            else_exit = (
+                _statements_guarantee_exit(statement.orelse)
+                if statement.orelse
+                else body_exit
+            )
+            if body_exit and handlers_exit and else_exit:
+                return True
+    return False
+
+
+def _return_status(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[str, list[ast.Return]]:
+    returns = _direct_returns(function)
+    if not returns:
+        return "MISSING_DIRECT_RETURN", returns
+    none_returns = [
+        item
+        for item in returns
+        if item.value is None
+        or (
+            isinstance(item.value, ast.Constant)
+            and item.value.value is None
+        )
+    ]
+    if len(none_returns) == len(returns):
+        return "ALWAYS_RETURNS_NONE", returns
+    if none_returns:
+        return "MAY_RETURN_NONE", returns
+    if not _statements_guarantee_exit(function.body):
+        return "PARTIAL_RETURN_PATHS", returns
+    return "STATIC_RETURN_CANDIDATE", returns
+
+
+def _requirement_chains(
+    contract_map: dict[str, Any], checker_outputs: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    by_file = {item["file"]: item for item in checker_outputs}
+    chains: list[dict[str, Any]] = []
+    for requirement_index, requirement in enumerate(
+        contract_map["requirements"]
+    ):
+        declarations = requirement["evidence"] or [None]
+        for declaration_index, declaration in enumerate(declarations):
+            if declaration is None:
+                chains.append(
+                    {
+                        "requirement_index": requirement_index,
+                        "declaration_index": None,
+                        "instruction_requirement": {
+                            "step": requirement.get("step"),
+                            "title": requirement.get("title"),
+                            "role": requirement.get("role"),
+                            "line": requirement.get("line"),
+                            "quote": requirement.get("quote"),
+                        },
+                        "agent_work": requirement.get("agent_work"),
+                        "core_output": None,
+                        "output_role": "unclassified",
+                        "checker_read": "UNKNOWN_NO_DECLARED_OUTPUT",
+                        "checker_score": {
+                            "checker_scores": "UNKNOWN_NO_DECLARED_OUTPUT",
+                            "runtime_score_proven": False,
+                        },
+                    }
+                )
+                continue
+            output_name = declaration["file"]
+            checker = by_file.get(output_name, {})
+            chains.append(
+                {
+                    "requirement_index": requirement_index,
+                    "declaration_index": declaration_index,
+                    "instruction_requirement": {
+                        "step": requirement.get("step"),
+                        "title": requirement.get("title"),
+                        "role": requirement.get("role"),
+                        "line": declaration.get("line"),
+                        "quote": declaration.get("quote"),
+                    },
+                    "agent_work": requirement.get("agent_work"),
+                    "core_output": output_name,
+                    "output_role": checker.get("role", "unclassified"),
+                    "checker_read": checker.get(
+                        "checker_reads", "UNKNOWN_NOT_ESTABLISHED"
+                    ),
+                    "checker_score": checker.get("checker_scoring")
+                    or {
+                        "checker_scores": "UNKNOWN_NOT_ESTABLISHED",
+                        "runtime_score_proven": False,
+                    },
+                }
+            )
+    return chains
+
+
+def checker_contract_analysis(
+    checker_source: str,
+    specification: dict[str, Any],
+    contract_map: dict[str, Any],
+    issues: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Map declared outputs to checker reads and runtime scoring functions."""
+    tree: ast.AST | None = None
+    parse_error: str | None = None
+    analysis_available = bool(checker_source.strip())
+    try:
+        tree = ast.parse(checker_source)
+    except SyntaxError as exc:
+        parse_error = str(exc)
+
+    scorer_functions: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    scorer_bindings: dict[str, str] = {}
+    scorer_registry_declared = False
+    if tree is not None:
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                scorer_functions[node.name] = node
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = (
+                    node.targets
+                    if isinstance(node, ast.Assign)
+                    else [node.target]
+                )
+                if not any(
+                    isinstance(target, ast.Name) and target.id == "_SCORERS"
+                    for target in targets
+                ):
+                    continue
+                scorer_registry_declared = True
+                value = node.value
+                if not isinstance(value, ast.Dict):
+                    continue
+                for key, item in zip(value.keys, value.values):
+                    if isinstance(key, ast.Constant) and isinstance(
+                        key.value, str
+                    ) and isinstance(item, ast.Name):
+                        scorer_bindings[key.value] = item.id
+
+    function_status: dict[str, dict[str, Any]] = {}
+    missing_returns: list[str] = []
+    incomplete_returns: list[str] = []
+    always_zero: list[str] = []
+    always_pass: list[str] = []
+    division_by_zero: list[str] = []
+    for scorer_id, function_name in scorer_bindings.items():
+        function = scorer_functions.get(function_name)
+        if function is None:
+            function_status[scorer_id] = {
+                "function": function_name,
+                "status": "FUNCTION_MISSING",
+            }
+            continue
+        status, returns = _return_status(function)
+        if status == "MISSING_DIRECT_RETURN":
+            missing_returns.append(scorer_id)
+        elif status in {
+            "ALWAYS_RETURNS_NONE",
+            "MAY_RETURN_NONE",
+            "PARTIAL_RETURN_PATHS",
+        }:
+            incomplete_returns.append(scorer_id)
+        constants = [
+            item.value
+            for item in returns
+            if isinstance(item.value, ast.Constant)
+            and isinstance(item.value.value, (int, float))
+            and not isinstance(item.value.value, bool)
+        ]
+        if status == "STATIC_RETURN_CANDIDATE" and len(constants) == len(returns):
+            if all(value == 0 for value in constants):
+                always_zero.append(scorer_id)
+                status = "STATIC_ALWAYS_ZERO"
+            elif all(value == 1 for value in constants):
+                always_pass.append(scorer_id)
+                status = "STATIC_ALWAYS_ONE"
+        literal_zero_divisions = sum(
+            isinstance(node, ast.BinOp)
+            and isinstance(node.op, ast.Div)
+            and isinstance(node.right, ast.Constant)
+            and node.right.value == 0
+            for node in ast.walk(function)
+        )
+        dynamic_divisions = sum(
+            isinstance(node, ast.BinOp)
+            and isinstance(node.op, ast.Div)
+            and not (
+                isinstance(node.right, ast.Constant)
+                and isinstance(node.right.value, (int, float))
+            )
+            for node in ast.walk(function)
+        )
+        if literal_zero_divisions:
+            division_by_zero.append(scorer_id)
+        function_status[scorer_id] = {
+            "function": function_name,
+            "status": status,
+            "direct_return_count": len(returns),
+            "return_status": status,
+            "finite_return_runtime_proven": False,
+            "division_status": (
+                "LITERAL_ZERO_DENOMINATOR"
+                if literal_zero_divisions
+                else "DYNAMIC_DENOMINATOR_REQUIRES_PROBE"
+                if dynamic_divisions
+                else "NO_DIVISION_FOUND_STATIC"
+            ),
+        }
+
+    if analysis_available and parse_error is not None:
+        add_issue(
+            issues,
+            "HIGH",
+            "CHECKER_STATIC_ANALYSIS_UNAVAILABLE",
+            "checker.py cannot be parsed for contract mapping",
+            {"parse_error": parse_error},
+            ["tests/checker.py"],
+        )
+    if analysis_available and missing_returns:
+        add_issue(
+            issues,
+            "HIGH",
+            "SCORER_MISSING_RETURN",
+            "bound scoring functions do not return their computed score: "
+            + ", ".join(sorted(missing_returns)),
+            {
+                "scorer_ids": sorted(missing_returns),
+                "root_cause": "checker_scorer_runtime_contract",
+            },
+            ["tests/checker.py"],
+        )
+    if analysis_available and incomplete_returns:
+        add_issue(
+            issues,
+            "HIGH",
+            "SCORER_RETURN_NOT_TOTAL",
+            "bound scoring functions may return None or fall through without "
+            "a score: " + ", ".join(sorted(incomplete_returns)),
+            {
+                "scorer_ids": sorted(incomplete_returns),
+                "statuses": {
+                    scorer_id: function_status[scorer_id]["return_status"]
+                    for scorer_id in sorted(incomplete_returns)
+                },
+                "root_cause": "checker_scorer_return_contract",
+            },
+            ["tests/checker.py"],
+        )
+    if analysis_available and always_zero:
+        add_issue(
+            issues,
+            "HIGH",
+            "ALWAYS_ZERO_SCORER",
+            "bound scoring functions always return zero: "
+            + ", ".join(sorted(always_zero)),
+            {"scorer_ids": sorted(always_zero)},
+            ["tests/checker.py"],
+        )
+    if analysis_available and always_pass:
+        add_issue(
+            issues,
+            "HIGH",
+            "ALWAYS_PASS_SCORER",
+            "bound scoring functions always return one: "
+            + ", ".join(sorted(always_pass)),
+            {"scorer_ids": sorted(always_pass)},
+            ["tests/checker.py"],
+        )
+    if analysis_available and division_by_zero:
+        add_issue(
+            issues,
+            "HIGH",
+            "DIVISION_BY_ZERO_LITERAL",
+            "bound scoring functions contain literal division by zero: "
+            + ", ".join(sorted(division_by_zero)),
+            {"scorer_ids": sorted(division_by_zero)},
+            ["tests/checker.py"],
+        )
+
+    grading_steps = specification.get("steps", []) or []
+    scorer_registry_present = scorer_registry_declared
+    grading_by_file = {
+        basename(step.get("output_file")): step
+        for step in grading_steps
+        if basename(step.get("output_file"))
+    }
+    contract_items = {
+        basename(item.get("file")): item
+        for item in (
+            specification.get("output_contract", {}).get("outputs", [])
+            or []
+        )
+        if basename(item.get("file"))
+    }
+    generic_loader = (
+        tree is not None
+        and "load_artifact" in checker_source
+        and "output_file" in checker_source
+        and "outputs_dir" in checker_source
+    )
+    outputs: list[dict[str, Any]] = []
+    output_names = set(contract_map["instruction_outputs"])
+    output_names.update(contract_items)
+    for output_name in sorted(output_names):
+        step = grading_by_file.get(output_name)
+        contract_item = contract_items.get(output_name, {})
+        if output_name in contract_map["process_evidence"]:
+            role = "process_evidence"
+        elif output_name in contract_map["scored_outputs"] or step is not None:
+            role = "scored_output"
+        else:
+            role = str(contract_item.get("purpose") or "unclassified")
+        step_id = str(step.get("id") or "") if step else None
+        source_bound = (
+            bool(step_id and step_id in scorer_bindings)
+            if scorer_registry_present
+            else False
+        )
+        scorer_function_exists = bool(
+            step_id
+            and scorer_bindings.get(step_id) in scorer_functions
+        )
+        declared_weight = step.get("weight") if step else None
+        numeric_weight = _finite_number(declared_weight)
+        if step is None:
+            effective_weight_status = "NOT_APPLICABLE"
+        elif numeric_weight is None:
+            effective_weight_status = "UNKNOWN_INVALID_DECLARED_WEIGHT"
+        elif numeric_weight == 0:
+            effective_weight_status = "STATIC_ZERO_DECLARED_WEIGHT"
+        elif source_bound and scorer_function_exists:
+            effective_weight_status = (
+                "STATIC_NONZERO_CANDIDATE_RUNTIME_NOT_PROVEN"
+            )
+        elif scorer_registry_present:
+            effective_weight_status = "STATIC_UNBOUND_CANDIDATE_ZERO"
+        else:
+            effective_weight_status = "UNKNOWN_DIRECT_CHECKER"
+        if not analysis_available:
+            read_status = "UNKNOWN_CHECKER_MISSING"
+        elif parse_error is not None:
+            read_status = "UNKNOWN_CHECKER_UNPARSEABLE"
+        elif generic_loader and step is not None:
+            read_status = "STATIC_GENERIC_LOADER_CANDIDATE"
+        elif re.search(
+            rf"(?:open|read_text|read_bytes|load_artifact)"
+            rf"[^\n]*{re.escape(output_name)}",
+            checker_source,
+            re.IGNORECASE,
+        ) or re.search(
+            rf"{re.escape(output_name)}[^\n]*"
+            rf"(?:open|read_text|read_bytes|load_artifact)",
+            checker_source,
+            re.IGNORECASE,
+        ):
+            read_status = "STATIC_EXPLICIT_READ_CANDIDATE"
+        elif output_name in checker_source:
+            read_status = "STATIC_FILENAME_REFERENCE_ONLY"
+        else:
+            read_status = "UNKNOWN_NOT_ESTABLISHED"
+        runtime_status = (
+            function_status.get(step_id, {}).get(
+                "status", "STATIC_BINDING_NOT_ESTABLISHED"
+            )
+            if scorer_registry_present
+            else "RUNTIME_NOT_PROVEN"
+        )
+        outputs.append(
+            {
+                "file": output_name,
+                "role": role,
+                "instruction_declared": output_name
+                in contract_map["instruction_outputs"],
+                "structured_contract": output_name in contract_items,
+                "checker_reads": read_status,
+                "checker_read_runtime_proven": False,
+                "checker_scoring": (
+                    {
+                        "step_id": step_id,
+                        "declared_weight": declared_weight,
+                        "effective_weight": (
+                            0.0
+                            if effective_weight_status
+                            == "STATIC_ZERO_DECLARED_WEIGHT"
+                            else None
+                        ),
+                        "effective_weight_status": effective_weight_status,
+                        "scorer_bound": source_bound and scorer_function_exists,
+                        "scorer_binding_status": (
+                            "STATIC_SOURCE_BOUND"
+                            if source_bound and scorer_function_exists
+                            else "STATIC_FUNCTION_MISSING"
+                            if source_bound
+                            else "STATIC_NOT_BOUND"
+                            if scorer_registry_present
+                            else "UNKNOWN_DIRECT_CHECKER"
+                        ),
+                        "runtime_status": runtime_status,
+                        "checker_scores": (
+                            "STATIC_SCORER_CANDIDATE_RUNTIME_NOT_PROVEN"
+                            if source_bound and scorer_function_exists
+                            else "UNKNOWN_NOT_ESTABLISHED"
+                        ),
+                        "runtime_score_proven": False,
+                    }
+                    if step is not None
+                    else None
+                ),
+            }
+        )
+
+    missing_bindings = [
+        str(step.get("id") or basename(step.get("output_file")))
+        for step in grading_steps
+        if str(step.get("id") or basename(step.get("output_file")))
+        not in scorer_bindings
+        or scorer_bindings.get(
+            str(step.get("id") or basename(step.get("output_file")))
+        )
+        not in scorer_functions
+    ] if analysis_available and parse_error is None and scorer_registry_present else []
+    if analysis_available and missing_bindings:
+        add_issue(
+            issues,
+            "HIGH",
+            "SCORING_COMPONENT_NOT_BOUND",
+            "grading components are not bound to runtime scorers: "
+            + ", ".join(sorted(missing_bindings)),
+            {"component_ids": sorted(missing_bindings)},
+            ["tests/checker.py", "tests/grading_spec.json"],
+        )
+    zero_weight = [
+        str(step.get("id") or basename(step.get("output_file")))
+        for step in grading_steps
+        if _finite_number(step.get("weight")) == 0
+    ] if analysis_available else []
+    if analysis_available and zero_weight:
+        add_issue(
+            issues,
+            "MEDIUM",
+            "ZERO_WEIGHT_SCORING_COMPONENT",
+            "declared grading components have no effect on the final score: "
+            + ", ".join(sorted(zero_weight)),
+            {"component_ids": sorted(zero_weight)},
+            ["tests/grading_spec.json"],
+        )
+    return {
+        "outputs": outputs,
+        "scorer_bindings": scorer_bindings,
+        "scorer_status": function_status,
+        "all_scoring_items_source_bound": bool(
+            analysis_available
+            and parse_error is None
+            and scorer_registry_present
+            and grading_steps
+            and not missing_bindings
+        ),
+        "all_scoring_items_runtime_bound": False,
+        "runtime_binding_status": (
+            "STATIC_BINDINGS_RESOLVED_RUNTIME_NOT_PROVEN"
+            if analysis_available
+            and parse_error is None
+            and scorer_registry_present
+            and grading_steps
+            and not missing_bindings
+            else "CHECKER_MISSING"
+            if not analysis_available
+            else "CHECKER_UNPARSEABLE"
+            if parse_error is not None
+            else "STATIC_BINDINGS_INCOMPLETE"
+        ),
+        "dynamic_checks_required": [
+            {
+                "check": name,
+                "status": "REQUIRED_NOT_RUN",
+                "reason": "static analysis cannot prove runtime behavior",
+            }
+            for name in (
+                "component_isolation",
+                "always_pass",
+                "always_zero",
+                "division_by_zero",
+                "direction_reversal",
+                "positive_contract",
+                "process_evidence_verification",
+                "scientifically_wrong_but_format_valid",
+            )
+        ],
+        "parse_status": (
+            "ERROR"
+            if parse_error
+            else "OK"
+            if analysis_available
+            else "NOT_RUN"
+        ),
+    }
+
+
+def _finite_number(value: Any) -> float | None:
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) else None
+
+
 def parse_roles(
     root: Path, issues: list[dict[str, Any]]
 ) -> tuple[dict[str, Any], dict[str, str]]:
@@ -262,8 +924,10 @@ def cross_file_checks(
     instruction: str,
     steps: list[dict[str, Any]],
     specification: dict[str, Any],
+    checker_source: str,
     issues: list[dict[str, Any]],
-) -> dict[str, list[str]]:
+    contract_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     grading_steps = (
         specification.get("steps", specification.get("checks", [])) or []
     )
@@ -290,9 +954,58 @@ def cross_file_checks(
         for item in grading_steps
         if basename(item.get("output_file"))
     }
-    instruction_outputs = set(
-        re.findall(r"/app/outputs/([A-Za-z0-9_.-]+)", instruction)
-    )
+    contract_map = contract_map or instruction_contract_map(instruction)
+    process_evidence = set(contract_map["process_evidence"])
+    instruction_outputs = set(contract_map["instruction_outputs"]) - process_evidence
+    checker_outputs = {
+        item.get("file"): item
+        for item in (
+            contract_map.get("checker_analysis", {}).get("outputs", [])
+            if isinstance(contract_map.get("checker_analysis"), dict)
+            else []
+        )
+    }
+    process_evidence_status: dict[str, str] = {}
+    for name in sorted(process_evidence):
+        read_status = checker_outputs.get(name, {}).get(
+            "checker_reads", "UNKNOWN_NOT_ESTABLISHED"
+        )
+        if read_status in {
+            "STATIC_GENERIC_LOADER_CANDIDATE",
+            "STATIC_EXPLICIT_READ_CANDIDATE",
+        }:
+            status = "CANDIDATE_READ_NOT_RUNTIME_PROVEN"
+        elif read_status == "STATIC_FILENAME_REFERENCE_ONLY":
+            status = "STATIC_REFERENCE_ONLY"
+        elif read_status in {
+            "DYNAMIC_NOT_VERIFIED",
+            "PROVEN_NOT_READ",
+        }:
+            status = "NOT_VERIFIED"
+        else:
+            status = "UNKNOWN"
+        process_evidence_status[name] = status
+    unverified_process_evidence = {
+        name
+        for name, status in process_evidence_status.items()
+        if status == "NOT_VERIFIED"
+    }
+    if unverified_process_evidence:
+        names = sorted(unverified_process_evidence)
+        add_issue(
+            issues,
+            "MEDIUM",
+            "PROCESS_EVIDENCE_NOT_VERIFIED",
+            "declared process evidence is not verified by tests: "
+            + ", ".join(names),
+            {
+                "unverified_process_evidence": names,
+                "role": "process",
+                "scored": False,
+                "root_cause": "process_evidence_verification_contract",
+            },
+            ["instruction.md", "tests/checker.py", "tests/grading_spec.json"],
+        )
     for name in sorted(step_outputs - contract_outputs):
         add_issue(
             issues,
@@ -330,9 +1043,18 @@ def cross_file_checks(
     return {
         "step_outputs": sorted(step_outputs),
         "step_evidence": sorted(step_evidence),
+        "process_evidence": sorted(process_evidence),
+        "process_evidence_status": process_evidence_status,
+        "unverified_process_evidence": sorted(unverified_process_evidence),
         "contract_outputs": sorted(contract_outputs),
         "grading_outputs": sorted(grading_outputs),
-        "instruction_outputs": sorted(instruction_outputs),
+        "instruction_outputs": sorted(contract_map["instruction_outputs"]),
+        "scored_instruction_outputs": sorted(
+            contract_map["scored_outputs"]
+        ),
+        "unclassified_instruction_outputs": sorted(
+            contract_map["unclassified_outputs"]
+        ),
     }
 
 
@@ -386,10 +1108,15 @@ def grading_checks(
     ):
         add_issue(
             issues,
-            "HIGH",
-            "SINGLE_COMPONENT_CAN_PASS",
-            "one of several grading components can pass the 题包 alone",
-            {"largest_weight": max(weights), "pass_threshold": threshold},
+            "MEDIUM",
+            "SINGLE_COMPONENT_THRESHOLD_REACHABLE",
+            "one component's weight reaches the pass threshold; proving a "
+            "load-bearing bypass requires a component-isolation probe",
+            {
+                "largest_weight": max(weights),
+                "pass_threshold": threshold,
+                "bypass_proven": False,
+            },
             ["tests/grading_spec.json"],
         )
 
@@ -401,6 +1128,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
     specification = normalize_grading_specification(
         role_values.get("tests/grading_spec.json", {}), issues
     )
+    contract_map = instruction_contract_map(instruction)
     qualification = materials_prescreen(instruction)
     if qualification["classification"] in {"NON_MAT", "AMBIGUOUS"}:
         add_issue(
@@ -410,11 +1138,23 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             "lexical evidence cannot authoritatively decide materials admissibility",
             qualification["evidence"],
         )
+    checker_contract = checker_contract_analysis(
+        str(role_values.get("tests/checker.py", "")),
+        specification if isinstance(specification, dict) else {},
+        contract_map,
+        issues,
+    )
+    contract_map["checker_analysis"] = checker_contract
+    contract_map["requirement_chains"] = _requirement_chains(
+        contract_map, checker_contract["outputs"]
+    )
     cross_file_sets = cross_file_checks(
         instruction,
         [],
         specification if isinstance(specification, dict) else {},
+        str(role_values.get("tests/checker.py", "")),
         issues,
+        contract_map,
     )
     grading_checks(
         specification if isinstance(specification, dict) else {}, issues
@@ -436,6 +1176,10 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "parse_status": parse_status,
         "materials_prescreen": qualification,
         "cross_file_sets": cross_file_sets,
+        "contract_map": {
+            **contract_map,
+            "checker_analysis": checker_contract,
+        },
         "issues": sorted(
             issues,
             key=lambda item: (-SEVERITY_RANK[item["severity"]], item["code"]),

@@ -30,6 +30,96 @@ repairable completeness finding, not evidence that the task science is wrong.
 Read [references/harbor-contract.md](references/harbor-contract.md) and
 [references/no-paper-e1.md](references/no-paper-e1.md).
 
+## Contract-role mapping
+
+Do not treat every path under `/app/outputs` as a scored answer. Build and
+publish this mapping for every workflow requirement:
+
+```text
+Instruction requirement
+  → Agent work/action
+  → declared core output
+  → checker actually reads
+  → checker actually scores
+```
+
+The mapping has three output roles:
+
+- `scored_output` — a final submission that contributes to a rubric component;
+- `process_evidence` — an intermediate artifact used to verify the workflow or
+  prevent hard-coded/output-only submissions, with no independent rubric weight;
+- `unclassified` — a declaration that needs human adjudication before scoring.
+
+An instruction may legitimately list process evidence separately from final
+submission files. A process artifact missing from the scoring contract is not
+`INSTRUCTION_ONLY_OUTPUT` and must not reduce instruction answerability merely
+because it has no score weight. If the instruction declares it as anti-hacking
+evidence and the checker never reads or validates it, emit one grouped
+`PROCESS_EVIDENCE_NOT_VERIFIED` finding, with all affected files as locations.
+Static loader or filename evidence is only a read candidate: preserve
+`UNKNOWN`/`CANDIDATE` unless a dynamic probe establishes non-verification.
+The generic dynamic seam may emit `PROCESS_EVIDENCE_NOT_VERIFIED` only when an
+independent positive fixture contains the process files and a safe in-process
+Python open/stat trace completes without accessing them. Access proves only
+that the file was touched, not that its semantics were validated. Unsafe,
+external, missing-fixture, or failed tracing remains `UNKNOWN`/`NOT_RUN`.
+
+For every `scored_output`, record whether the checker:
+
+1. loads the file or otherwise reads its contents;
+2. binds it to a runtime scoring function;
+3. gives it a non-zero effective weight; and
+4. uses it in the final reward rather than only checking existence or format.
+
+Missing links are checker/Gold or robustness findings, not generic
+instruction-omission findings. The report must expose the mapping even when a
+link cannot be established statically. Source-pattern matches are only static
+candidates; label them separately from runtime-proven reads, scorer returns,
+and effective weights. Missing or unparseable checkers remain unknown/not-run
+and can never imply that all scoring items are runtime-bound.
+Every parsed workflow requirement receives a chain row even when it declares no
+recognized output; use an unclassified output and unknown read/score states.
+
+## Checker anti-hacking audit
+
+The checker audit must combine static contract mapping with isolated dynamic
+probes. Inspect for:
+
+- core outputs that are never read;
+- intermediate evidence that is declared but never verified;
+- file-existence or schema-only checks that ignore the scientific result;
+- small hard-coded targets that bypass prediction/model outputs;
+- ignored model files, predictions, or load-bearing logs;
+- scoring components with zero weight, no runtime binding, or no return value;
+- always-pass, always-zero, exception-swallowed, division-by-zero, and
+  direction-reversal behavior;
+- positive valid outputs receiving a high score;
+- malformed, incomplete, random, or scientifically wrong but
+  format-valid outputs receiving a low score.
+
+`largest_weight >= pass_threshold` is only a static reachability risk. It is
+not proof of `SINGLE_COMPONENT_CAN_PASS`; prove that finding with a
+component-isolation probe. Do not deduct points for the static risk alone.
+Construct isolation cases only from source-bound contracted components,
+verified checker source/runtime bindings, and an independently justified public
+positive fixture. The Oracle positive mock is never an isolation fixture. If
+that cannot be done safely, record
+`component_isolation` as required but `NOT_RUN` with the reason.
+Every reward-derived conclusion uses the shared usable-result predicate. A
+finite reward with malformed breakdown or non-empty/malformed `_errors` is
+unusable.
+
+If an isolated Oracle producer runs successfully but the checker rejects its
+mock, attribute the rejection to checker/Gold alignment or checker runtime
+behavior. Only attribute it to solution completeness when the producer failed
+to run or failed to generate the declared outputs. Docker paths such as
+`/solution` and `/app/outputs` are valid Harbor paths and must not be rewritten
+in the package.
+
+Findings caused by the same contract defect are grouped into one deduction.
+Multiple affected files or output names are evidence locations, not automatic
+additional deductions.
+
 ## Trigger paper review
 
 Read `paper/` only for these four triggers:
@@ -77,14 +167,16 @@ Every no-paper assessment must also adjudicate all four paper triggers
 individually with instruction/tests quotes. A triggered item routes the package
 to paper-grounded evidence; it cannot remain a no-paper `PASS`.
 
-Every E1 run records four probe classes:
+Every E1 run records coverage for these probe classes:
 
 - positive — isolated Oracle mock and/or independently justified public output;
 - negative — missing, empty, malformed, random, duplicate, sparse, and
   non-finite attacks;
 - discrimination — scientifically worse outputs must not score better;
 - equivalence — scientifically equivalent ordering or serialization must not
-  change reward.
+  change reward;
+- component isolation — independently sourced one-component submissions;
+- process evidence — safe dynamic access tracing when supportable.
 
 ## Direct inputs
 

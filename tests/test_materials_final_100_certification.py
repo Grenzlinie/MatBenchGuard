@@ -17,6 +17,17 @@ CERTIFIER = (
     / "materials_fast_e1_100"
     / "certify_final_100.py"
 )
+REVIEW_SKILL_ROOT = (
+    REPO_ROOT / ".cursor/skills/materials-benchmark-review"
+)
+REVIEW_IMPLEMENTATION_FILES = (
+    "scripts/prepare_audit_output.py",
+    "scripts/audit_package.py",
+    "scripts/dynamic_checker_probe.py",
+    "scripts/finalize_audit_output.py",
+    "scripts/run_review.py",
+    "scripts/run_fast_e1_batch.py",
+)
 
 
 def canonical_hash(value: Any) -> str:
@@ -28,6 +39,19 @@ def canonical_hash(value: Any) -> str:
 
 def file_hash(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def review_implementation() -> dict[str, Any]:
+    files = {
+        relative: file_hash(REVIEW_SKILL_ROOT / relative)
+        for relative in REVIEW_IMPLEMENTATION_FILES
+    }
+    return {
+        "schema_version": "materials-review-implementation/1.0",
+        "root": ".cursor/skills/materials-benchmark-review",
+        "files": files,
+        "aggregate_hash": canonical_hash(files),
+    }
 
 
 def write_legacy_pass_batch(batch: Path) -> None:
@@ -158,6 +182,65 @@ def write_evidence_pass_batch(batch: Path) -> None:
             }
         ],
     }
+    report["findings"] = []
+    report["scope"] = {
+        "solution_content_inspected": False,
+        "solution_oracle_executed": True,
+    }
+    report["contract_map"] = {
+        "requirements": [
+            {
+                "requirement_index": 1,
+                "step": "Compute result",
+                "agent_work": "Compute result",
+                "role": "scored (load-bearing)",
+            }
+        ],
+        "requirement_chains": [
+            {
+                "requirement_index": 1,
+                "declaration_index": 1,
+                "core_output": "result.json",
+                "checker_read": "STATIC_EXPLICIT_READ_CANDIDATE",
+            }
+        ],
+        "instruction_outputs": ["result.json"],
+        "process_evidence": [],
+        "scored_outputs": ["result.json"],
+        "checker_analysis": {
+            "outputs": [
+                {
+                    "file": "result.json",
+                    "checker_reads": "STATIC_EXPLICIT_READ_CANDIDATE",
+                }
+            ],
+            "dynamic_checks_required": [
+                {
+                    "check": "component_isolation",
+                    "status": "NOT_RUN",
+                    "reason": "no independent fixture",
+                    "provenance": {
+                        "source_kind": "NONE",
+                        "oracle_used": False,
+                        "source_bindings_verified": False,
+                        "runtime_bindings_verified": False,
+                        "cases_planned": 0,
+                        "cases_executed": 0,
+                    },
+                },
+                {
+                    "check": "process_evidence_verification",
+                    "status": "NOT_APPLICABLE",
+                    "reason": "instruction declares no process-evidence outputs",
+                    "files": {},
+                    "provenance": {
+                        "source_kind": "NONE",
+                        "oracle_used": False,
+                    },
+                },
+            ],
+        },
+    }
     report["paper_trigger_adjudication"] = [
         {
             "trigger": trigger,
@@ -195,8 +278,24 @@ def write_evidence_pass_batch(batch: Path) -> None:
             "used": True,
             "status": "PASS",
             "positive_mock_available": True,
+            "attempted": True,
+            "setup_attempted": True,
+            "setup_prepared": True,
+            "producer_started": True,
+            "executed": True,
             "scientific_evidence": False,
         },
+        "tests": [
+            {
+                "probe_class": "positive",
+                "observed_status": "COMPLETED",
+            },
+            {
+                "probe_class": "negative",
+                "observed_status": "COMPLETED",
+            },
+        ],
+        "usable_reward_count": 2,
         "probe_coverage": {
             "positive": {
                 "status": "ASSESSED",
@@ -228,11 +327,35 @@ def write_evidence_pass_batch(batch: Path) -> None:
                     "oracle_used": False,
                 },
             },
+            "component_isolation": {
+                "status": "NOT_RUN",
+                "reason": "no independent fixture",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                    "source_bindings_verified": False,
+                    "runtime_bindings_verified": False,
+                    "cases_planned": 0,
+                    "cases_executed": 0,
+                },
+            },
+            "process_evidence": {
+                "status": "NOT_APPLICABLE",
+                "reason": "instruction declares no process-evidence outputs",
+                "files": {},
+                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                },
+            },
         },
     }
     checker_path.write_text(json.dumps(checker), encoding="utf-8")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
+    manifest["output_hashes"]["checker_tests.json"] = file_hash(checker_path)
+    manifest["review_implementation"] = review_implementation()
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     scoring = {
         "scoring_version": report["summary"]["scoring_version"],
@@ -253,6 +376,7 @@ def write_evidence_pass_batch(batch: Path) -> None:
         "materials_qualification": report["materials_qualification"],
         "paper_trigger_adjudication": report["paper_trigger_adjudication"],
         "probe_coverage": checker["probe_coverage"],
+        "review_implementation": manifest["review_implementation"],
         "solution_oracle": checker["solution_oracle"],
         "report_path": identity["report_path"],
         "manifest_path": identity["manifest_path"],
@@ -263,6 +387,38 @@ def write_evidence_pass_batch(batch: Path) -> None:
     }
     cli_evidence["snapshot_hash"] = canonical_hash(cli_evidence)
     record["evidence"]["cli_evidence"] = cli_evidence
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+
+def refresh_evidence_bindings(batch: Path) -> None:
+    index_path = batch / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    record = index["records"][0]
+    identity = record["evidence"]["source_binding"]["cli_audit_identity"]
+    report_path = batch / identity["report_path"]
+    manifest_path = batch / identity["manifest_path"]
+    checker_path = report_path.with_name("checker_tests.json")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    checker = json.loads(checker_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
+    manifest["output_hashes"]["checker_tests.json"] = file_hash(checker_path)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    cli_evidence = record["evidence"]["cli_evidence"]
+    cli_evidence["probe_coverage"] = checker.get("probe_coverage", {})
+    cli_evidence["review_implementation"] = manifest.get(
+        "review_implementation"
+    )
+    cli_evidence["report_hash"] = file_hash(report_path)
+    cli_evidence["manifest_hash"] = file_hash(manifest_path)
+    cli_evidence["checker_tests_hash"] = file_hash(checker_path)
+    cli_evidence["snapshot_hash"] = canonical_hash(
+        {
+            key: value
+            for key, value in cli_evidence.items()
+            if key != "snapshot_hash"
+        }
+    )
     index_path.write_text(json.dumps(index), encoding="utf-8")
 
 
@@ -300,6 +456,10 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             self.assertEqual(certified["certified_count"], 1)
             self.assertTrue(certified["all_evidence_contracts_valid"])
             self.assertEqual(
+                certified["packages"][0]["review_implementation_hash"],
+                review_implementation()["aggregate_hash"],
+            )
+            self.assertEqual(
                 certified["legacy_v8_role"],
                 "IDENTITY_ORDER_SOURCE_BINDING_BASELINE_ONLY",
             )
@@ -332,6 +492,89 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
 
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("evidence contract", completed.stderr.lower())
+            self.assertFalse(output.exists())
+
+    def test_certifier_rejects_stale_review_implementation_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            batch = base / "batch"
+            output = base / "certified"
+            write_evidence_pass_batch(batch)
+            index = json.loads(
+                (batch / "index.json").read_text(encoding="utf-8")
+            )
+            identity = index["records"][0]["evidence"]["source_binding"][
+                "cli_audit_identity"
+            ]
+            manifest_path = batch / identity["manifest_path"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["review_implementation"]["files"][
+                "scripts/run_review.py"
+            ] = "sha256:stale"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            refresh_evidence_bindings(batch)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(CERTIFIER),
+                    "--batch",
+                    str(batch),
+                    "--output",
+                    str(output),
+                    "--expected-count",
+                    "1",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("stale review implementation", completed.stderr.lower())
+            self.assertFalse(output.exists())
+
+    def test_certifier_rejects_old_four_class_probe_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            batch = base / "batch"
+            output = base / "certified"
+            write_evidence_pass_batch(batch)
+            index = json.loads(
+                (batch / "index.json").read_text(encoding="utf-8")
+            )
+            identity = index["records"][0]["evidence"]["source_binding"][
+                "cli_audit_identity"
+            ]
+            checker_path = (
+                batch / identity["report_path"]
+            ).with_name("checker_tests.json")
+            checker = json.loads(checker_path.read_text(encoding="utf-8"))
+            checker["probe_coverage"].pop("component_isolation")
+            checker["probe_coverage"].pop("process_evidence")
+            checker_path.write_text(json.dumps(checker), encoding="utf-8")
+            refresh_evidence_bindings(batch)
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(CERTIFIER),
+                    "--batch",
+                    str(batch),
+                    "--output",
+                    str(output),
+                    "--expected-count",
+                    "1",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("probe provenance is incomplete", completed.stderr.lower())
             self.assertFalse(output.exists())
 
 

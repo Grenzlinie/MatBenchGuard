@@ -13,6 +13,29 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parents[1]
+REVIEW_SKILL_ROOT = (
+    REPO_ROOT / ".cursor/skills/materials-benchmark-review"
+)
+REVIEW_IMPLEMENTATION_FILES = (
+    "scripts/prepare_audit_output.py",
+    "scripts/audit_package.py",
+    "scripts/dynamic_checker_probe.py",
+    "scripts/finalize_audit_output.py",
+    "scripts/run_review.py",
+    "scripts/run_fast_e1_batch.py",
+)
+ORACLE_SNAPSHOT_FIELDS = (
+    "used",
+    "status",
+    "positive_mock_available",
+    "attempted",
+    "setup_attempted",
+    "setup_prepared",
+    "producer_started",
+    "executed",
+    "scientific_evidence",
+)
 BATCHES = [
     ROOT / "final_100_v8_taxonomy_review_batch_1_v2",
     ROOT / "final_100_v8_taxonomy_review_batch_2_v2",
@@ -51,6 +74,37 @@ def canonical_hash(value: Any) -> str:
 
 def file_hash(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def expected_review_implementation() -> dict[str, Any]:
+    files = {
+        relative: file_hash(REVIEW_SKILL_ROOT / relative)
+        for relative in REVIEW_IMPLEMENTATION_FILES
+    }
+    return {
+        "schema_version": "materials-review-implementation/1.0",
+        "root": ".cursor/skills/materials-benchmark-review",
+        "files": files,
+        "aggregate_hash": canonical_hash(files),
+    }
+
+
+def provenance_strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [
+            item
+            for child in value.values()
+            for item in provenance_strings(child)
+        ]
+    if isinstance(value, (list, tuple)):
+        return [
+            item
+            for child in value
+            for item in provenance_strings(child)
+        ]
+    return []
 
 
 def filter_index(
@@ -222,6 +276,36 @@ def validate_evidence_contract(
                 f"dimension points/status/evidence are inconsistent for "
                 f"{package_id}: {name}"
             )
+    total = round(sum(item["points_earned"] for item in dimensions), 2)
+    gates = report.get("hard_gates")
+    if (
+        not isinstance(gates, list)
+        or [item.get("code") for item in gates]
+        != [
+            "NON_MATERIALS_TASK",
+            "SCIENTIFIC_TARGET_INVALID",
+            "CHECKER_CORE_TASK_UNASSESSED",
+            "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+        ]
+        or any(item.get("status") != "PASS" for item in gates)
+    ):
+        raise ValueError(f"PASS Hard Gates are inconsistent: {package_id}")
+    unresolved_high = any(
+        item.get("severity") == "HIGH" and item.get("repairable") is True
+        for item in report.get("findings", [])
+        if isinstance(item, dict)
+    )
+    summary = report.get("summary", {})
+    if (
+        total < 80
+        or unresolved_high
+        or summary.get("total_score") != total
+        or summary.get("final_verdict") != "PASS"
+        or summary.get("hard_gate_triggered") is not False
+    ):
+        raise ValueError(
+            f"report verdict is inconsistent with scoring: {package_id}"
+        )
     if report.get("configuration", {}).get("paper_mode") == "no_paper":
         adjudication = report.get("paper_trigger_adjudication")
         if (
@@ -242,13 +326,28 @@ def validate_evidence_contract(
             raise ValueError(
                 f"no-paper trigger adjudication is incomplete: {package_id}"
             )
+    contract_map = report.get("contract_map")
+    if (
+        not isinstance(contract_map, dict)
+        or not isinstance(contract_map.get("requirements"), list)
+        or not isinstance(contract_map.get("requirement_chains"), list)
+        or not isinstance(contract_map.get("checker_analysis"), dict)
+        or len(contract_map["requirement_chains"])
+        < len(contract_map["requirements"])
+    ):
+        raise ValueError(
+            f"instruction/checker contract map is incomplete: {package_id}"
+        )
     coverage = checker.get("probe_coverage")
-    if not isinstance(coverage, dict) or set(coverage) != {
+    required_probe_classes = {
         "positive",
         "negative",
         "discrimination",
         "equivalence",
-    }:
+        "component_isolation",
+        "process_evidence",
+    }
+    if not isinstance(coverage, dict) or set(coverage) != required_probe_classes:
         raise ValueError(
             f"dynamic probe provenance is incomplete: {package_id}"
         )
@@ -284,6 +383,136 @@ def validate_evidence_contract(
             raise ValueError(
                 f"dynamic probe status is invalid for {package_id}: {name}"
             )
+    component = coverage["component_isolation"]
+    component_status = component.get("status")
+    component_provenance = component.get("provenance", {})
+    if component_status not in {
+        "ASSESSED",
+        "NOT_RUN",
+        "NOT_ASSESSABLE",
+    }:
+        raise ValueError(
+            f"component-isolation status is invalid: {package_id}"
+        )
+    if (
+        component_provenance.get("oracle_used") is not False
+        or any(
+            "ORACLE" in value.upper()
+            for value in provenance_strings(component_provenance)
+        )
+    ):
+        raise ValueError(
+            f"component isolation uses Oracle provenance: {package_id}"
+        )
+    if component_status == "ASSESSED" and (
+        component_provenance.get("source_kind")
+        != "INDEPENDENT_PUBLIC_FIXTURE"
+        or component_provenance.get("source_bindings_verified") is not True
+        or component_provenance.get("runtime_bindings_verified") is not True
+        or not component_provenance.get("cases_executed")
+    ):
+        raise ValueError(
+            f"component isolation lacks runtime provenance: {package_id}"
+        )
+    if component_status in {"NOT_RUN", "NOT_ASSESSABLE"} and not component.get(
+        "reason"
+    ):
+        raise ValueError(
+            f"component isolation lacks unavailable reason: {package_id}"
+        )
+    process = coverage["process_evidence"]
+    process_status = process.get("status")
+    process_files = process.get("files")
+    if (
+        process_status
+        not in {"ASSESSED", "NOT_RUN", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
+        or not isinstance(process_files, dict)
+        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
+        or process.get("provenance", {}).get("oracle_used") is not False
+    ):
+        raise ValueError(
+            f"process-evidence coverage is invalid: {package_id}"
+        )
+    if process_status == "ASSESSED" and any(
+        value
+        not in {"DYNAMIC_NOT_ACCESSED", "ACCESSED_VALIDATION_UNKNOWN"}
+        for value in process_files.values()
+    ):
+        raise ValueError(
+            f"process-evidence file status is invalid: {package_id}"
+        )
+    tests_by_class: dict[str, list[dict[str, Any]]] = {
+        name: [] for name in required_probe_classes
+    }
+    for test in checker.get("tests", []):
+        probe_class = test.get("probe_class")
+        if probe_class not in tests_by_class:
+            raise ValueError(f"unknown probe class in tests: {package_id}")
+        tests_by_class[probe_class].append(test)
+    for name, entry in coverage.items():
+        class_tests = tests_by_class[name]
+        if entry.get("status") == "ASSESSED" and (
+            not class_tests
+            or any(
+                test.get("observed_status") != "COMPLETED"
+                for test in class_tests
+            )
+        ):
+            raise ValueError(
+                f"ASSESSED probe lacks completed tests: {package_id}: {name}"
+            )
+        if entry.get("status") in {"NOT_RUN", "NOT_APPLICABLE"} and class_tests:
+            raise ValueError(
+                f"probe status contradicts tests: {package_id}: {name}"
+            )
+    checker_analysis = contract_map["checker_analysis"]
+    checks = {
+        item.get("check"): item
+        for item in checker_analysis.get("dynamic_checks_required", [])
+        if isinstance(item, dict)
+    }
+    if (
+        checks.get("component_isolation", {}).get("status")
+        != component_status
+        or checks.get("component_isolation", {}).get("provenance")
+        != component_provenance
+        or checks.get("process_evidence_verification", {}).get("status")
+        != process_status
+        or checks.get("process_evidence_verification", {}).get("files")
+        != process_files
+        or checks.get("process_evidence_verification", {}).get("provenance")
+        != process.get("provenance", {})
+    ):
+        raise ValueError(
+            f"contract-map probe status differs from checker: {package_id}"
+        )
+    outputs = {
+        item.get("file"): item
+        for item in checker_analysis.get("outputs", [])
+        if isinstance(item, dict)
+    }
+    expected_reads = {
+        "DYNAMIC_NOT_ACCESSED": "DYNAMIC_NOT_VERIFIED",
+        "ACCESSED_VALIDATION_UNKNOWN": (
+            "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
+        ),
+    }
+    for filename, status in process_files.items():
+        if status in expected_reads and (
+            outputs.get(filename, {}).get("checker_reads")
+            != expected_reads[status]
+        ):
+            raise ValueError(
+                f"process output mapping differs from probe: {package_id}"
+            )
+    for chain in contract_map["requirement_chains"]:
+        output = outputs.get(chain.get("core_output"))
+        if output is not None and chain.get("checker_read") != output.get(
+            "checker_reads"
+        ):
+            raise ValueError(
+                f"requirement chain differs from checker map: {package_id}"
+            )
     oracle = checker.get("solution_oracle", {})
     if (
         checker.get("solution_content_inspected") is not False
@@ -291,6 +520,27 @@ def validate_evidence_contract(
         or oracle.get("scientific_evidence") is not False
     ):
         raise ValueError(f"Oracle boundary or leakage violation: {package_id}")
+    lifecycle_fields = (
+        "attempted",
+        "setup_attempted",
+        "setup_prepared",
+        "producer_started",
+        "executed",
+    )
+    if any(not isinstance(oracle.get(name), bool) for name in lifecycle_fields):
+        raise ValueError(f"Oracle lifecycle is incomplete: {package_id}")
+    if (
+        oracle["executed"]
+        and (
+            not oracle["attempted"]
+            or not oracle["setup_attempted"]
+            or not oracle["setup_prepared"]
+            or not oracle["producer_started"]
+        )
+    ) or bool(
+        report.get("scope", {}).get("solution_oracle_executed")
+    ) != oracle["executed"]:
+        raise ValueError(f"Oracle lifecycle is inconsistent: {package_id}")
     serialized = json.dumps(
         {"report": report, "checker": checker},
         ensure_ascii=False,
@@ -322,6 +572,11 @@ def certify_record(batch: Path, record: dict[str, Any]) -> dict[str, Any]:
         )
     checker = read_json(batch / checker_path)
     validate_evidence_contract(record["package_id"], report, checker)
+    review_implementation = manifest.get("review_implementation")
+    if review_implementation != expected_review_implementation():
+        raise ValueError(
+            f"stale Review implementation hash: {record['package_id']}"
+        )
     evidence_unhashed = {
         key: value
         for key, value in evidence_snapshot.items()
@@ -346,6 +601,13 @@ def certify_record(batch: Path, record: dict[str, Any]) -> dict[str, Any]:
         != report.get("paper_trigger_adjudication", [])
         or evidence_snapshot.get("probe_coverage")
         != checker.get("probe_coverage", {})
+        or evidence_snapshot.get("solution_oracle")
+        != {
+            key: checker.get("solution_oracle", {}).get(key)
+            for key in ORACLE_SNAPSHOT_FIELDS
+        }
+        or evidence_snapshot.get("review_implementation")
+        != review_implementation
     ):
         raise ValueError(
             f"source-bound CLI evidence snapshot mismatch: "
@@ -355,6 +617,12 @@ def certify_record(batch: Path, record: dict[str, Any]) -> dict[str, Any]:
         batch / identity["report_path"]
     ):
         raise ValueError(f"audit report output hash mismatch: {record['package_id']}")
+    if manifest.get("output_hashes", {}).get("checker_tests.json") != file_hash(
+        batch / checker_path
+    ):
+        raise ValueError(
+            f"checker output hash mismatch: {record['package_id']}"
+        )
     unhashed = {key: value for key, value in scoring.items() if key != "snapshot_hash"}
     if scoring["final_verdict"] != "PASS" or scoring["total_score"] < 80:
         raise ValueError(f"non-PASS record selected: {record['package_id']}")
@@ -411,6 +679,9 @@ def certify_record(batch: Path, record: dict[str, Any]) -> dict[str, Any]:
         "audit_id": identity["audit_id"],
         "scoring_snapshot_hash": scoring["snapshot_hash"],
         "source_role_hashes": binding["source_role_hashes"],
+        "review_implementation_hash": review_implementation[
+            "aggregate_hash"
+        ],
         "audit_report": identity["report_path"],
         "audit_manifest": identity["manifest_path"],
         "repair_history": None,

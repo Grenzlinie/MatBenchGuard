@@ -43,6 +43,14 @@ PRUNED_DIRS = {
 HASH_NAMES = {
     *QUALITY_EVIDENCE_ROLES,
 }
+REVIEW_IMPLEMENTATION_FILES = (
+    "scripts/prepare_audit_output.py",
+    "scripts/audit_package.py",
+    "scripts/dynamic_checker_probe.py",
+    "scripts/finalize_audit_output.py",
+    "scripts/run_review.py",
+    "scripts/run_fast_e1_batch.py",
+)
 
 
 def skill_root() -> Path:
@@ -161,6 +169,22 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
+def collect_review_implementation_hashes() -> dict[str, Any]:
+    files = {
+        relative: sha256_file(skill_root() / relative)
+        for relative in REVIEW_IMPLEMENTATION_FILES
+    }
+    payload = json.dumps(
+        files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return {
+        "schema_version": "materials-review-implementation/1.0",
+        "root": ".cursor/skills/materials-benchmark-review",
+        "files": files,
+        "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+    }
+
+
 def validate_paper_boundary(root: Path) -> None:
     """Ensure bundled paper roles are local files outside solution/."""
     resolved_root = root.resolve()
@@ -265,6 +289,7 @@ def prepare_workspace(
         # Paper roles are deliberately added only after the no-paper gate
         # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
+        "review_implementation": collect_review_implementation_hashes(),
         "output_hashes": {},
         "resolved_findings": [],
         "new_findings": [],

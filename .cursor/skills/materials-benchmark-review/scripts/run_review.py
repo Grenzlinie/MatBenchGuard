@@ -562,7 +562,7 @@ def validate_agent_assessment(
 
 
 def checker_skipped_by_static_gate(
-    root: Path, output: Path
+    root: Path, output: Path, reason: str = "STATIC_GATE"
 ) -> dict[str, Any]:
     result = {
         "schema_version": "0.1",
@@ -573,6 +573,11 @@ def checker_skipped_by_static_gate(
             "used": False,
             "status": "NOT_RUN",
             "positive_mock_available": False,
+            "attempted": False,
+            "setup_attempted": False,
+            "setup_prepared": False,
+            "producer_started": False,
+            "executed": False,
             "scientific_evidence": False,
         },
         "pass_threshold": None,
@@ -582,16 +587,37 @@ def checker_skipped_by_static_gate(
         "probe_coverage": {
             probe_class: {
                 "status": "NOT_ASSESSABLE",
+                "reason": reason,
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,
+                    **(
+                        {
+                            "source_bindings_verified": False,
+                            "runtime_bindings_verified": False,
+                            "cases_planned": 0,
+                            "cases_executed": 0,
+                        }
+                        if probe_class == "component_isolation"
+                        else {}
+                    ),
                 },
+                **(
+                    {
+                        "files": {},
+                        "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                    }
+                    if probe_class == "process_evidence"
+                    else {}
+                ),
             }
             for probe_class in (
                 "positive",
                 "negative",
                 "discrimination",
                 "equivalence",
+                "component_isolation",
+                "process_evidence",
             )
         },
         "limitations": [
@@ -653,10 +679,21 @@ def run_review(
     checker_ready = all(
         static_result["parse_status"].get(role) == "ok"
         for role in ("tests/checker.py", "tests/grading_spec.json")
+    ) and (
+        static_result.get("contract_map", {})
+        .get("checker_analysis", {})
+        .get("parse_status")
+        == "OK"
     )
     if static_fatal or not checker_ready:
         checker_result = checker_skipped_by_static_gate(
-            root, temp_dir / "checker_tests.json"
+            root,
+            temp_dir / "checker_tests.json",
+            reason=(
+                "REQUIRED_CHECKER_MISSING_OR_UNPARSEABLE"
+                if not checker_ready
+                else "STATIC_FATAL_GATE"
+            ),
         )
     else:
         checker_result = dynamic_checker_probe(

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
 import hashlib
 import json
@@ -20,11 +21,24 @@ from typing import Any
 
 sys.dont_write_bytecode = True
 
+from audit_package import instruction_contract_map
 from prepare_audit_output import basename, locate_root
 
 
 ORACLE_VENV_TIMEOUT_SECONDS = 60.0
 ORACLE_SOLVE_TIMEOUT_SECONDS = 300.0
+NEGATIVE_PROBE_CASES = frozenset(
+    {
+        "missing_outputs",
+        "empty_valid_shape",
+        "malformed_outputs",
+        "random_baseline",
+        "minimal_gold_shape",
+        "duplicate_gold_rows",
+        "nonfinite_values",
+        "sparse_known_valid",
+    }
+)
 
 
 def configured_timeout(name: str, default: float) -> float:
@@ -194,6 +208,434 @@ def copy_known_valid_outputs(
         shutil.copy2(source, destination)
         created.append(filename)
     return created
+
+
+def component_isolation_plan(
+    specification: dict[str, Any],
+    source_dir: Path | None,
+    checker_text: str,
+) -> tuple[list[dict[str, str]], str | None]:
+    """Build only source-bound isolation cases; never synthesize valid values."""
+    if source_dir is None:
+        return [], "no independent source-bound fixture is available"
+    try:
+        tree = ast.parse(checker_text)
+    except SyntaxError as exc:
+        return [], f"checker source cannot be parsed: {exc}"
+    functions = {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    scorer_bindings: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(
+            isinstance(target, ast.Name) and target.id == "_SCORERS"
+            for target in targets
+        ) or not isinstance(node.value, ast.Dict):
+            continue
+        current_bindings: dict[str, str] = {}
+        for key, value in zip(node.value.keys, node.value.values):
+            if (
+                isinstance(key, ast.Constant)
+                and isinstance(key.value, str)
+                and isinstance(value, ast.Name)
+            ):
+                current_bindings[key.value] = value.id
+        scorer_bindings = current_bindings
+    contract_files = {
+        basename(item.get("file"))
+        for item in (
+            (specification.get("output_contract", {}) or {}).get("outputs", [])
+            or []
+        )
+        if basename(item.get("file"))
+    }
+    candidates: list[dict[str, str]] = []
+    seen_files: set[str] = set()
+    for step in grading_steps(specification):
+        filename = basename(step.get("output_file"))
+        step_id = str(step.get("id") or filename)
+        weight = finite_number(step.get("weight"))
+        if (
+            not filename
+            or filename in seen_files
+            or filename not in contract_files
+            or weight is None
+            or weight <= 0
+            or step_id not in scorer_bindings
+            or scorer_bindings[step_id] not in functions
+        ):
+            continue
+        seen_files.add(filename)
+        candidates.append(
+            {
+                "step_id": step_id,
+                "file": filename,
+                "scorer_function": scorer_bindings[step_id],
+            }
+        )
+    if len(candidates) < 2:
+        return [], (
+            "fewer than two distinct positive-weight contracted components "
+            "have verified checker source bindings"
+        )
+    missing = [
+        item["file"]
+        for item in candidates
+        if not (source_dir / item["file"]).is_file()
+    ]
+    if missing:
+        return [], "positive fixture lacks component files: " + ", ".join(missing)
+    return candidates, None
+
+
+def process_evidence_probe_plan(
+    root: Path,
+    checker_text: str,
+    known_valid_output: Path | None,
+) -> tuple[list[str], str | None]:
+    instruction = (root / "instruction.md").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    process_files = instruction_contract_map(instruction)["process_evidence"]
+    if not process_files:
+        return [], "instruction declares no process-evidence outputs"
+    if known_valid_output is None:
+        return process_files, "no independent source-bound fixture is available"
+    fixture = reject_solution_fixture(root, known_valid_output)
+    missing = [
+        filename
+        for filename in process_files
+        if not (fixture / filename).is_file()
+    ]
+    if missing:
+        return (
+            process_files,
+            "independent fixture lacks process evidence: " + ", ".join(missing),
+        )
+    try:
+        tree = ast.parse(checker_text)
+    except SyntaxError as exc:
+        return process_files, f"checker source cannot be instrumented safely: {exc}"
+    unsafe_modules = {"ctypes", "mmap", "multiprocessing", "subprocess"}
+    imported_modules = {
+        alias.name.split(".", 1)[0]
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        for alias in (
+            node.names
+            if isinstance(node, ast.Import)
+            else [ast.alias(name=str(node.module or "").split(".", 1)[0])]
+        )
+    }
+    unsafe_calls = {
+        "call",
+        "check_call",
+        "check_output",
+        "eval",
+        "exec",
+        "execv",
+        "execve",
+        "fork",
+        "popen",
+        "Popen",
+        "posix_spawn",
+        "posix_spawnp",
+        "run",
+        "spawnl",
+        "spawnv",
+        "system",
+    }
+    called_names = {
+        (
+            node.func.attr
+            if isinstance(node.func, ast.Attribute)
+            else node.func.id
+            if isinstance(node.func, ast.Name)
+            else ""
+        )
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+    }
+    nonstdlib_modules = imported_modules - set(sys.stdlib_module_names)
+    if (
+        imported_modules & unsafe_modules
+        or nonstdlib_modules
+        or called_names & unsafe_calls
+    ):
+        return process_files, (
+            "checker may access outputs outside the in-process read tracer"
+        )
+    return process_files, None
+
+
+def component_isolation_coverage(
+    plan: list[dict[str, str]],
+    not_run_reason: str | None,
+    results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    provenance: dict[str, Any] = {
+        "source_kind": "INDEPENDENT_PUBLIC_FIXTURE" if plan else "NONE",
+        "oracle_used": False,
+        "source_bindings_verified": bool(plan),
+        "runtime_bindings_verified": False,
+        "cases_planned": len(plan),
+        "cases_executed": 0,
+    }
+    if not plan:
+        return {
+            "status": "NOT_RUN",
+            "reason": not_run_reason
+            or "component isolation could not be planned safely",
+            "provenance": provenance,
+        }
+    isolation_results = [
+        result
+        for result in results
+        if result["case"].startswith("component_isolation__")
+    ]
+    provenance["cases_executed"] = len(isolation_results)
+    runtime_bound = component_runtime_bindings_verified(plan, results)
+    cases_usable = (
+        len(isolation_results) == len(plan)
+        and all(
+            usable_probe_result(result)
+            for result in isolation_results
+        )
+    )
+    provenance["runtime_bindings_verified"] = bool(
+        runtime_bound and cases_usable
+    )
+    if provenance["runtime_bindings_verified"]:
+        return {
+            "status": "ASSESSED",
+            "reason": None,
+            "provenance": provenance,
+        }
+    return {
+        "status": "NOT_ASSESSABLE",
+        "reason": (
+            "component-isolation runtime scorer bindings or case rewards "
+            "could not be verified"
+        ),
+        "provenance": provenance,
+    }
+
+
+def component_runtime_bindings_verified(
+    plan: list[dict[str, str]], results: list[dict[str, Any]]
+) -> bool:
+    public_positive = next(
+        (
+            result
+            for result in results
+            if result["case"] == "known_valid_public"
+        ),
+        None,
+    )
+    breakdown = (
+        public_positive.get("breakdown")
+        if isinstance(public_positive, dict)
+        else None
+    )
+    return bool(
+        isinstance(public_positive, dict)
+        and usable_probe_result(public_positive)
+        and isinstance(breakdown, dict)
+        and all(
+            isinstance(breakdown.get(component["step_id"]), dict)
+            and finite_number(
+                breakdown[component["step_id"]].get("score")
+            )
+            is not None
+            for component in plan
+        )
+    )
+
+
+def usable_probe_result(result: Any) -> bool:
+    if not isinstance(result, dict) or result.get("crashed"):
+        return False
+    reward = result.get("reward")
+    breakdown = result.get("breakdown")
+    if (
+        not isinstance(reward, float)
+        or not math.isfinite(reward)
+        or not isinstance(breakdown, dict)
+    ):
+        return False
+    errors = breakdown.get("_errors", {})
+    return isinstance(errors, dict) and not errors
+
+
+def probe_assessment_flags(
+    results: list[dict[str, Any]],
+) -> dict[str, bool]:
+    by_case = {result["case"]: result for result in results}
+    positive_cases = [
+        case
+        for case in ("positive_oracle", "known_valid_public")
+        if case in by_case
+    ]
+    negative_cases = [
+        result
+        for result in results
+        if result["case"] in NEGATIVE_PROBE_CASES
+    ]
+    discrimination_cases = (
+        "known_valid_public",
+        "quality_gradient_small_error",
+        "quality_gradient_large_error",
+    )
+    equivalence_cases = (
+        "known_valid_public",
+        "metamorphic_equivalent_representation",
+    )
+    return {
+        "positive": any(
+            usable_probe_result(by_case[case]) for case in positive_cases
+        ),
+        "negative": bool(negative_cases)
+        and all(usable_probe_result(result) for result in negative_cases),
+        "discrimination": all(
+            case in by_case and usable_probe_result(by_case[case])
+            for case in discrimination_cases
+        ),
+        "equivalence": all(
+            case in by_case and usable_probe_result(by_case[case])
+            for case in equivalence_cases
+        ),
+    }
+
+
+def process_evidence_coverage(
+    process_files: list[str],
+    not_run_reason: str | None,
+    results: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    if not process_files:
+        return (
+            {
+                "status": (
+                    "NOT_APPLICABLE"
+                    if not_run_reason
+                    == "instruction declares no process-evidence outputs"
+                    else "NOT_RUN"
+                ),
+                "reason": not_run_reason,
+                "files": {},
+                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                },
+            },
+            [],
+        )
+    if not_run_reason is not None:
+        return (
+            {
+                "status": "NOT_RUN",
+                "reason": not_run_reason,
+                "files": {
+                    filename: "UNKNOWN" for filename in process_files
+                },
+                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                },
+            },
+            [],
+        )
+    result = next(
+        (
+            item
+            for item in results
+            if item["case"] == "process_evidence_read_trace"
+        ),
+        None,
+    )
+    usable = (
+        isinstance(result, dict)
+        and result.get("read_trace_enabled") is True
+        and usable_probe_result(result)
+    )
+    if not usable:
+        return (
+            {
+                "status": "NOT_ASSESSABLE",
+                "reason": (
+                    "instrumented process-evidence checker execution did not "
+                    "complete with usable scorer evidence"
+                ),
+                "files": {
+                    filename: "UNKNOWN" for filename in process_files
+                },
+                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "provenance": {
+                    "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
+                    "oracle_used": False,
+                },
+            },
+            [],
+        )
+    outputs_dir = Path(str(result["runtime_outputs_dir"]))
+    accessed = {
+        filename
+        for filename in process_files
+        if any(
+            item["operation"] in {"open", "stat", "access"}
+            and Path(item["path"]) == outputs_dir / filename
+            for item in result["read_trace"]
+        )
+    }
+    not_accessed = sorted(set(process_files) - accessed)
+    file_status = {
+        filename: (
+            "ACCESSED_VALIDATION_UNKNOWN"
+            if filename in accessed
+            else "DYNAMIC_NOT_ACCESSED"
+        )
+        for filename in process_files
+    }
+    findings = (
+        [
+            finding(
+                "MEDIUM",
+                "PROCESS_EVIDENCE_NOT_VERIFIED",
+                "declared process evidence was not accessed during a safe "
+                "instrumented positive checker run: "
+                + ", ".join(not_accessed),
+                "process_evidence_read_trace",
+                {
+                    "unverified_process_evidence": not_accessed,
+                    "file_status": file_status,
+                    "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                    "root_cause": "process_evidence_verification_contract",
+                },
+            )
+        ]
+        if not_accessed
+        else []
+    )
+    return (
+        {
+            "status": "ASSESSED",
+            "reason": None,
+            "files": file_status,
+            "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+            "provenance": {
+                "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
+                "oracle_used": False,
+            },
+        },
+        findings,
+    )
 
 
 def retain_one_known_valid_row(
@@ -409,18 +851,26 @@ def prepare_solution_oracle(
                 "used": False,
                 "status": "MISSING",
                 "positive_mock_available": False,
+                "attempted": False,
+                "setup_attempted": False,
+                "setup_prepared": False,
+                "producer_started": False,
+                "executed": False,
                 "scientific_evidence": False,
             },
         )
-    temporary = tempfile.TemporaryDirectory(prefix="materials_oracle_")
-    runtime = Path(temporary.name) / "package"
-    copy_public_package(root, runtime)
-    runtime_solution = runtime / "solution"
-    shutil.copytree(root / "solution", runtime_solution)
-    outputs = Path(temporary.name) / "outputs"
-    outputs.mkdir()
-    rebase_oracle_mount_paths(runtime_solution, outputs)
-    virtualenv = Path(temporary.name) / "venv"
+    temporary: tempfile.TemporaryDirectory[str] | None = None
+    outputs: Path | None = None
+    attempted = True
+    setup_attempted = False
+    setup_prepared = False
+    producer_started = False
+    executed = False
+    returncode: int | None = None
+    failure_stage: str | None = None
+    failure_reason: str | None = None
+    timeout_seconds: float | None = None
+    current_stage = "setup"
     venv_timeout = configured_timeout(
         "MATERIALS_ORACLE_VENV_TIMEOUT_SECONDS",
         ORACLE_VENV_TIMEOUT_SECONDS,
@@ -429,10 +879,18 @@ def prepare_solution_oracle(
         "MATERIALS_ORACLE_SOLVE_TIMEOUT_SECONDS",
         ORACLE_SOLVE_TIMEOUT_SECONDS,
     )
-    failure_stage: str | None = None
-    failure_reason: str | None = None
-    timeout_seconds: float | None = None
     try:
+        setup_attempted = True
+        temporary = tempfile.TemporaryDirectory(prefix="materials_oracle_")
+        runtime = Path(temporary.name) / "package"
+        copy_public_package(root, runtime)
+        runtime_solution = runtime / "solution"
+        shutil.copytree(root / "solution", runtime_solution)
+        outputs = Path(temporary.name) / "outputs"
+        outputs.mkdir()
+        rebase_oracle_mount_paths(runtime_solution, outputs)
+        virtualenv = Path(temporary.name) / "venv"
+        current_stage = "venv"
         subprocess.run(
             [sys.executable, "-m", "venv", str(virtualenv)],
             capture_output=True,
@@ -440,6 +898,7 @@ def prepare_solution_oracle(
             timeout=venv_timeout,
             check=True,
         )
+        setup_prepared = True
         environment = {
             **os.environ,
             "OUTPUT_DIR": str(outputs),
@@ -447,6 +906,7 @@ def prepare_solution_oracle(
             + os.pathsep
             + os.environ.get("PATH", ""),
         }
+        current_stage = "solve"
         process = subprocess.run(
             ["bash", str(runtime_solution / "solve.sh")],
             cwd=runtime,
@@ -456,21 +916,28 @@ def prepare_solution_oracle(
             timeout=solve_timeout,
             check=False,
         )
+        producer_started = True
+        executed = True
         returncode = process.returncode
-        failure_status = "BROKEN"
         if returncode != 0:
             failure_stage = "solve"
             failure_reason = "NONZERO_EXIT"
-    except subprocess.TimeoutExpired as exc:
-        returncode = None
-        failure_status = "BROKEN"
-        failure_stage = "venv" if exc.cmd[:3] == [sys.executable, "-m", "venv"] else "solve"
+    except subprocess.TimeoutExpired:
+        failure_stage = current_stage
         failure_reason = "TIMEOUT"
-        timeout_seconds = venv_timeout if failure_stage == "venv" else solve_timeout
+        timeout_seconds = (
+            venv_timeout if failure_stage == "venv" else solve_timeout
+        )
+        if current_stage == "solve":
+            producer_started = True
+            executed = True
+    except subprocess.CalledProcessError:
+        failure_stage = current_stage
+        failure_reason = "NONZERO_EXIT"
     except (subprocess.SubprocessError, OSError):
-        returncode = None
-        failure_status = "BROKEN"
-        failure_stage = "launch"
+        failure_stage = (
+            "producer_launch" if current_stage == "solve" else current_stage
+        )
         failure_reason = "PROCESS_ERROR"
     contracted = [
         basename(item.get("file"))
@@ -480,16 +947,32 @@ def prepare_solution_oracle(
         )
         if basename(item.get("file"))
     ]
-    available = returncode == 0 and all(
-        (outputs / filename).is_file() for filename in contracted
+    available = bool(
+        executed
+        and returncode == 0
+        and outputs is not None
+        and all((outputs / filename).is_file() for filename in contracted)
     )
+    if (
+        executed
+        and returncode == 0
+        and not available
+        and failure_stage is None
+    ):
+        failure_stage = "output_collection"
+        failure_reason = "CONTRACTED_OUTPUTS_MISSING"
     return (
         temporary,
         outputs if available else None,
         {
-            "used": True,
-            "status": "PASS" if available else failure_status,
+            "used": attempted,
+            "status": "PASS" if available else "BROKEN",
             "positive_mock_available": available,
+            "attempted": attempted,
+            "setup_attempted": setup_attempted,
+            "setup_prepared": setup_prepared,
+            "producer_started": producer_started,
+            "executed": executed,
             "returncode": returncode,
             **(
                 {
@@ -516,6 +999,10 @@ def run_checker_case(
     case_name: str,
     mode: str,
     known_valid_output: Path | None,
+    isolated_component: dict[str, str] | None = None,
+    fixture_source_kind: str | None = None,
+    additional_outputs: list[str] | None = None,
+    trace_reads: bool = False,
 ) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix=f"materials_checker_{case_name}_") as tmp:
         base = Path(tmp)
@@ -541,6 +1028,7 @@ def run_checker_case(
             "quality_small",
             "quality_large",
             "metamorphic",
+            "component_isolation",
         }
         if mode in known_valid_modes:
             if known_valid_output is None:
@@ -554,6 +1042,25 @@ def run_checker_case(
                 transformations = transform_known_valid_outputs(
                     outputs_dir, specification, mode
                 )
+            elif mode == "component_isolation":
+                if isolated_component is None:
+                    raise ValueError("component isolation requires a component")
+                retained = isolated_component["file"]
+                for filename in created:
+                    if filename != retained:
+                        (outputs_dir / filename).unlink(missing_ok=True)
+                created = [filename for filename in created if filename == retained]
+            if additional_outputs:
+                fixture = reject_solution_fixture(root, known_valid_output)
+                for filename in additional_outputs:
+                    source = (fixture / filename).resolve()
+                    if source.parent != fixture or not source.is_file():
+                        raise FileNotFoundError(
+                            "process-evidence fixture is missing: " + filename
+                        )
+                    shutil.copy2(source, outputs_dir / filename)
+                    if filename not in created:
+                        created.append(filename)
         elif mode == "malformed":
             created = write_malformed_outputs(outputs_dir, specification)
         elif mode != "missing":
@@ -569,8 +1076,55 @@ def run_checker_case(
         patched = patched.replace("/logs/verifier", str(logs_dir))
         checker_path = base / "checker_patched.py"
         checker_path.write_text(patched, encoding="utf-8")
+        trace_path = base / "read_trace.json"
+        executable_path = checker_path
+        if trace_reads:
+            wrapper_path = base / "checker_trace_wrapper.py"
+            wrapper_path.write_text(
+                "import json, os, runpy, sys\n"
+                "from pathlib import Path\n"
+                "_events = []\n"
+                "def _record(operation, path):\n"
+                "    try:\n"
+                "        _events.append({'operation': operation, "
+                "'path': os.fspath(path)})\n"
+                "    except TypeError:\n"
+                "        pass\n"
+                "def _audit(event, args):\n"
+                "    if event == 'open' and args:\n"
+                "        _record('open', args[0])\n"
+                "sys.addaudithook(_audit)\n"
+                "_original_stat = os.stat\n"
+                "_original_listdir = os.listdir\n"
+                "_original_scandir = os.scandir\n"
+                "_original_access = os.access\n"
+                "def _traced_stat(path, *args, **kwargs):\n"
+                "    _record('stat', path)\n"
+                "    return _original_stat(path, *args, **kwargs)\n"
+                "def _traced_listdir(path='.'):\n"
+                "    _record('listdir', path)\n"
+                "    return _original_listdir(path)\n"
+                "def _traced_scandir(path='.'):\n"
+                "    _record('scandir', path)\n"
+                "    return _original_scandir(path)\n"
+                "def _traced_access(path, *args, **kwargs):\n"
+                "    _record('access', path)\n"
+                "    return _original_access(path, *args, **kwargs)\n"
+                "os.stat = _traced_stat\n"
+                "os.listdir = _traced_listdir\n"
+                "os.scandir = _traced_scandir\n"
+                "os.access = _traced_access\n"
+                "try:\n"
+                f"    runpy.run_path({str(checker_path)!r}, "
+                "run_name='__main__')\n"
+                "finally:\n"
+                f"    Path({str(trace_path)!r}).write_text("
+                "json.dumps(_events), encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            executable_path = wrapper_path
         process = subprocess.run(
-            [sys.executable, str(checker_path)],
+            [sys.executable, str(executable_path)],
             cwd=package_dir,
             capture_output=True,
             text=True,
@@ -596,6 +1150,20 @@ def run_checker_case(
                 breakdown = breakdown_path.read_text(
                     encoding="utf-8", errors="replace"
                 )
+        read_trace: list[dict[str, str]] = []
+        if trace_path.is_file():
+            try:
+                raw_trace = read_json(trace_path)
+                if isinstance(raw_trace, list):
+                    read_trace = [
+                        item
+                        for item in raw_trace
+                        if isinstance(item, dict)
+                        and isinstance(item.get("operation"), str)
+                        and isinstance(item.get("path"), str)
+                    ]
+            except (OSError, json.JSONDecodeError):
+                read_trace = []
         return {
             "case": case_name,
             "mode": mode,
@@ -610,6 +1178,11 @@ def run_checker_case(
             "runtime_package_contains_solution": (
                 package_dir / "solution"
             ).exists(),
+            "isolated_component": isolated_component,
+            "fixture_source_kind": fixture_source_kind,
+            "read_trace": read_trace,
+            "read_trace_enabled": trace_reads,
+            "runtime_outputs_dir": str(outputs_dir),
         }
 
 
@@ -629,22 +1202,138 @@ def finding(
     }
 
 
+def normalize_runtime_failure_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        normalized_items: dict[str, Any] = {}
+        for key, item in sorted(value.items(), key=lambda pair: str(pair[0])):
+            normalized_key = str(
+                normalize_runtime_failure_value(str(key))
+            )
+            normalized_items[normalized_key] = (
+                normalize_runtime_failure_value(item)
+            )
+        return normalized_items
+    if isinstance(value, list):
+        return [normalize_runtime_failure_value(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    normalized = value.replace("\\", "/")
+    normalized = re.sub(
+        r"(?:/private)?/var/folders/[^\s'\"():]+",
+        "<TEMP_PATH>",
+        normalized,
+    )
+    normalized = re.sub(
+        r"(?:/tmp|/var/tmp)/[^\s'\"():]+",
+        "<TEMP_PATH>",
+        normalized,
+    )
+    normalized = re.sub(
+        r"/[^\s'\"():]*/materials_(?:checker|oracle)_[^\s'\"():]+",
+        "<TEMP_PATH>",
+        normalized,
+    )
+    normalized = re.sub(
+        r"\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-"
+        r"[89ab][0-9a-f]{3}-[0-9a-f]{12}\b",
+        "<UUID>",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    normalized = re.sub(
+        r"\b0x[0-9a-f]+\b", "<MEMORY_ADDRESS>", normalized, flags=re.IGNORECASE
+    )
+    normalized = re.sub(
+        r"\b(?:pid|process(?:\s+id)?)(?:\s*[=:]\s*|\s+)\d+\b",
+        "pid=<PID>",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    return " ".join(normalized.split())
+
+
+def runtime_failure_root(
+    result: dict[str, Any],
+) -> tuple[str, str, str | None]:
+    stderr = str(result.get("stderr") or "")
+    stderr_lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    terminal_error = normalize_runtime_failure_value(
+        stderr_lines[-1] if stderr_lines else ""
+    )
+    checker_frames = re.findall(
+        r'File "[^"]*checker_patched\.py", line (\d+), in ([^\n]+)',
+        stderr,
+    )
+    source_binding = (
+        f"tests/checker.py:{checker_frames[-1][0]}:{checker_frames[-1][1].strip()}"
+        if checker_frames
+        else None
+    )
+    breakdown = result.get("breakdown")
+    breakdown_errors = normalize_runtime_failure_value(
+        breakdown.get("_errors", {})
+        if isinstance(breakdown, dict)
+        else {
+            "_malformed_breakdown": breakdown,
+            "_breakdown_type": type(breakdown).__name__,
+        }
+    )
+    signature_payload = {
+        "returncode": result.get("returncode"),
+        "source_binding": source_binding,
+        "terminal_error": terminal_error,
+        "breakdown_errors": breakdown_errors,
+        "reward_type": type(result.get("reward")).__name__,
+        "reward": normalize_runtime_failure_value(repr(result.get("reward"))),
+    }
+    signature = hashlib.sha256(
+        json.dumps(
+            signature_payload, sort_keys=True, ensure_ascii=False
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    return (
+        f"checker_runtime_failure:{signature}",
+        signature,
+        source_binding,
+    )
+
+
 def evaluate_results(
     results: list[dict[str, Any]], pass_threshold: float
 ) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
-    adversarial = {
-        "missing_outputs",
-        "empty_valid_shape",
-        "malformed_outputs",
-        "random_baseline",
-        "minimal_gold_shape",
-        "duplicate_gold_rows",
-        "nonfinite_values",
-        "sparse_known_valid",
-    }
+    by_case = {result["case"]: result for result in results}
+    negative_results = [
+        result
+        for result in results
+        if result["case"] in NEGATIVE_PROBE_CASES
+    ]
+    negative_class_usable = bool(negative_results) and all(
+        usable_probe_result(result) for result in negative_results
+    )
+    isolation_results = [
+        result
+        for result in results
+        if result["case"].startswith("component_isolation__")
+    ]
+    evaluated_isolation_plan = [
+        result["isolated_component"]
+        for result in isolation_results
+        if isinstance(result.get("isolated_component"), dict)
+    ]
+    isolation_class_usable = (
+        bool(isolation_results)
+        and len(evaluated_isolation_plan) == len(isolation_results)
+        and all(usable_probe_result(result) for result in isolation_results)
+        and component_runtime_bindings_verified(
+            evaluated_isolation_plan, results
+        )
+    )
     for result in results:
         case = result["case"]
+        runtime_root, failure_signature, source_binding = (
+            runtime_failure_root(result)
+        )
         if result["runtime_package_contains_solution"]:
             findings.append(
                 finding(
@@ -662,22 +1351,48 @@ def evaluate_results(
                     "CHECKER_CRASH",
                     f"checker crashed for {case}",
                     case,
-                    {"stderr": result["stderr"]},
+                    {
+                        "stderr": result["stderr"],
+                        "failure_signature": failure_signature,
+                        "source_binding": source_binding,
+                        "root_cause": runtime_root,
+                    },
                 )
             )
         reward = result.get("reward")
-        if not isinstance(reward, float) or not math.isfinite(reward):
+        if not usable_probe_result(result):
+            breakdown = result.get("breakdown")
+            breakdown_errors = (
+                breakdown.get("_errors", {})
+                if isinstance(breakdown, dict)
+                else {
+                    "_malformed_breakdown": breakdown,
+                    "_breakdown_type": type(breakdown).__name__,
+                }
+            )
             findings.append(
                 finding(
                     "HIGH",
                     "CHECKER_RESULT_UNUSABLE",
-                    f"checker did not emit a numeric reward for {case}",
+                    "checker did not emit a usable reward/breakdown result "
+                    f"for {case}",
                     case,
-                    {"reward": reward},
+                    {
+                        "reward": reward,
+                        "breakdown_errors": breakdown_errors,
+                        "failure_signature": failure_signature,
+                        "source_binding": source_binding,
+                        "root_cause": runtime_root,
+                    },
                 )
             )
             continue
-        if case in adversarial and reward >= pass_threshold:
+        assert isinstance(reward, float)
+        if (
+            case in NEGATIVE_PROBE_CASES
+            and negative_class_usable
+            and reward >= pass_threshold
+        ):
             findings.append(
                 finding(
                     "HIGH",
@@ -707,7 +1422,7 @@ def evaluate_results(
             findings.append(
                 finding(
                     "HIGH",
-                    "SOLUTION_POSITIVE_MOCK_REJECTED",
+                    "ORACLE_POSITIVE_MOCK_REJECTED",
                     "isolated solution positive mock does not pass the checker",
                     case,
                     {
@@ -716,15 +1431,34 @@ def evaluate_results(
                     },
                 )
             )
-    by_case = {result["case"]: result for result in results}
-
+        if (
+            case.startswith("component_isolation__")
+            and isolation_class_usable
+            and reward >= pass_threshold
+        ):
+            component = result.get("isolated_component") or {}
+            findings.append(
+                finding(
+                    "HIGH",
+                    "SINGLE_COMPONENT_CAN_PASS",
+                    "a source-bound component-isolation submission reaches "
+                    "the checker pass threshold",
+                    case,
+                    {
+                        "component_id": component.get("step_id"),
+                        "retained_output": component.get("file"),
+                        "reward": reward,
+                        "pass_threshold": pass_threshold,
+                        "fixture_source_kind": result.get(
+                            "fixture_source_kind"
+                        ),
+                        "root_cause": "checker_component_aggregation_contract",
+                    },
+                )
+            )
     def usable_score(case: str) -> float | None:
-        reward = by_case.get(case, {}).get("reward")
-        return (
-            reward
-            if isinstance(reward, float) and math.isfinite(reward)
-            else None
-        )
+        result = by_case.get(case)
+        return result["reward"] if usable_probe_result(result) else None
 
     valid = usable_score("known_valid_public")
     small = usable_score("quality_gradient_small_error")
@@ -788,39 +1522,85 @@ def dynamic_checker_probe(
     oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
         root, specification
     )
-    cases: list[tuple[str, str, Path | None]] = [
-        ("missing_outputs", "missing", None),
-        ("empty_valid_shape", "empty", None),
-        ("malformed_outputs", "malformed", None),
-        ("random_baseline", "random", None),
-        ("minimal_gold_shape", "minimal", None),
-        ("duplicate_gold_rows", "duplicate", None),
-        ("nonfinite_values", "nonfinite", None),
+    cases: list[
+        tuple[
+            str,
+            str,
+            Path | None,
+            dict[str, str] | None,
+            str | None,
+        ]
+    ] = [
+        ("missing_outputs", "missing", None, None, None),
+        ("empty_valid_shape", "empty", None, None, None),
+        ("malformed_outputs", "malformed", None, None, None),
+        ("random_baseline", "random", None, None, None),
+        ("minimal_gold_shape", "minimal", None, None, None),
+        ("duplicate_gold_rows", "duplicate", None, None, None),
+        ("nonfinite_values", "nonfinite", None, None, None),
     ]
     if oracle_output is not None:
-        cases.append(("positive_oracle", "known_valid", oracle_output))
+        cases.append(
+            (
+                "positive_oracle",
+                "known_valid",
+                oracle_output,
+                None,
+                "ORACLE_POSITIVE_MOCK",
+            )
+        )
     if known_valid_output is not None:
         cases.extend(
             (
-                ("known_valid_public", "known_valid", known_valid_output),
-                ("sparse_known_valid", "sparse_known_valid", known_valid_output),
+                (
+                    "known_valid_public",
+                    "known_valid",
+                    known_valid_output,
+                    None,
+                    "INDEPENDENT_PUBLIC_FIXTURE",
+                ),
+                (
+                    "sparse_known_valid",
+                    "sparse_known_valid",
+                    known_valid_output,
+                    None,
+                    "INDEPENDENT_PUBLIC_FIXTURE",
+                ),
                 (
                     "quality_gradient_small_error",
                     "quality_small",
                     known_valid_output,
+                    None,
+                    "INDEPENDENT_PUBLIC_FIXTURE",
                 ),
                 (
                     "quality_gradient_large_error",
                     "quality_large",
                     known_valid_output,
+                    None,
+                    "INDEPENDENT_PUBLIC_FIXTURE",
                 ),
                 (
                     "metamorphic_equivalent_representation",
                     "metamorphic",
                     known_valid_output,
+                    None,
+                    "INDEPENDENT_PUBLIC_FIXTURE",
                 ),
             )
         )
+    isolation_source = known_valid_output
+    isolation_source_kind = (
+        "INDEPENDENT_PUBLIC_FIXTURE"
+        if known_valid_output is not None
+        else None
+    )
+    source_isolation_plan, isolation_not_run_reason = component_isolation_plan(
+        specification, isolation_source, checker_text
+    )
+    process_files, process_not_run_reason = process_evidence_probe_plan(
+        root, checker_text, known_valid_output
+    )
     try:
         results = [
             run_checker_case(
@@ -830,13 +1610,68 @@ def dynamic_checker_probe(
                 case_name,
                 mode,
                 source_output,
+                isolated_component,
+                source_kind,
             )
-            for case_name, mode, source_output in cases
+            for (
+                case_name,
+                mode,
+                source_output,
+                isolated_component,
+                source_kind,
+            ) in cases
         ]
+        if process_files and process_not_run_reason is None:
+            results.append(
+                run_checker_case(
+                    root,
+                    checker_text,
+                    specification,
+                    "process_evidence_read_trace",
+                    "known_valid",
+                    known_valid_output,
+                    fixture_source_kind="INDEPENDENT_PUBLIC_FIXTURE",
+                    additional_outputs=process_files,
+                    trace_reads=True,
+                )
+            )
+        isolation_plan: list[dict[str, str]] = []
+        if source_isolation_plan and component_runtime_bindings_verified(
+            source_isolation_plan, results
+        ):
+            isolation_plan = source_isolation_plan
+            for component in isolation_plan:
+                safe_id = re.sub(
+                    r"[^A-Za-z0-9_.-]+", "_", component["step_id"]
+                )
+                results.append(
+                    run_checker_case(
+                        root,
+                        checker_text,
+                        specification,
+                        f"component_isolation__{safe_id}",
+                        "component_isolation",
+                        isolation_source,
+                        component,
+                        isolation_source_kind,
+                    )
+                )
+        elif source_isolation_plan:
+            isolation_not_run_reason = (
+                "independent fixture did not establish every checker runtime "
+                "scorer binding"
+            )
     finally:
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
+    process_coverage, process_findings = process_evidence_coverage(
+        process_files, process_not_run_reason, results
+    )
+    findings.extend(process_findings)
+    isolation_coverage = component_isolation_coverage(
+        isolation_plan, isolation_not_run_reason, results
+    )
     if known_valid_output is None:
         findings.append(
             finding(
@@ -894,7 +1729,21 @@ def dynamic_checker_probe(
         "metamorphic_equivalent_representation": (
             "equivalent ordering and serialization preserve the reward"
         ),
+        "process_evidence_read_trace": (
+            "trace whether declared process evidence is accessed without "
+            "claiming that access proves semantic validation"
+        ),
     }
+    expected.update(
+        {
+            result["case"]: (
+                "a submission retaining only the named scoring component "
+                "stays below the pass threshold"
+            )
+            for result in results
+            if result["case"].startswith("component_isolation__")
+        }
+    )
     tests = []
     probe_classes = {
         "positive_oracle": "positive",
@@ -902,18 +1751,36 @@ def dynamic_checker_probe(
         "quality_gradient_small_error": "discrimination",
         "quality_gradient_large_error": "discrimination",
         "metamorphic_equivalent_representation": "equivalence",
+        "process_evidence_read_trace": "process_evidence",
     }
+    results_by_case = {result["case"]: result for result in results}
+    assessment_flags = probe_assessment_flags(results)
+    positive_assessed = assessment_flags["positive"]
+    negative_assessed = assessment_flags["negative"]
+    discrimination_assessed = assessment_flags["discrimination"]
+    equivalence_assessed = assessment_flags["equivalence"]
     for index, result in enumerate(results, start=1):
+        probe_class = (
+            "component_isolation"
+            if result["case"].startswith("component_isolation__")
+            else probe_classes.get(result["case"], "negative")
+        )
         tests.append(
             {
                 "test_id": f"CHECKER-{index:03d}",
                 "test_type": result["case"],
-                "probe_class": probe_classes.get(result["case"], "negative"),
+                "probe_class": probe_class,
                 "description": result["case"].replace("_", " "),
                 "expected_behavior": expected[result["case"]],
                 "observed_score": result.get("reward"),
                 "observed_status": (
-                    "CRASH" if result["crashed"] else "COMPLETED"
+                    "CRASH"
+                    if result["crashed"]
+                    else (
+                        "COMPLETED"
+                        if usable_probe_result(result)
+                        else "UNUSABLE"
+                    )
                 ),
                 "exit_code": result.get("returncode"),
                 "hard_gate_triggered": any(
@@ -934,27 +1801,32 @@ def dynamic_checker_probe(
         "tests": tests,
         "findings": findings,
         "usable_reward_count": sum(
-            isinstance(result.get("reward"), float)
-            and math.isfinite(result["reward"])
-            for result in results
+            usable_probe_result(result) for result in results
         ),
         "probe_coverage": {
             "positive": {
                 "status": (
-                    "ASSESSED"
-                    if oracle_output is not None or known_valid_output is not None
-                    else "NOT_ASSESSABLE"
+                    "ASSESSED" if positive_assessed else "NOT_ASSESSABLE"
+                ),
+                "reason": (
+                    None
+                    if positive_assessed
+                    else "no positive control produced a usable probe result"
                 ),
                 "provenance": {
                     "source_kinds": [
                         *(
                             ["ORACLE_POSITIVE_MOCK"]
-                            if oracle_output is not None
+                            if usable_probe_result(
+                                results_by_case.get("positive_oracle")
+                            )
                             else []
                         ),
                         *(
                             ["INDEPENDENT_PUBLIC_FIXTURE"]
-                            if known_valid_output is not None
+                            if usable_probe_result(
+                                results_by_case.get("known_valid_public")
+                            )
                             else []
                         ),
                     ],
@@ -962,7 +1834,14 @@ def dynamic_checker_probe(
                 },
             },
             "negative": {
-                "status": "ASSESSED",
+                "status": (
+                    "ASSESSED" if negative_assessed else "NOT_ASSESSABLE"
+                ),
+                "reason": (
+                    None
+                    if negative_assessed
+                    else "one or more negative probes produced unusable results"
+                ),
                 "provenance": {
                     "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
                     "oracle_used": False,
@@ -971,39 +1850,76 @@ def dynamic_checker_probe(
             "discrimination": {
                 "status": (
                     "ASSESSED"
-                    if known_valid_output is not None
+                    if discrimination_assessed
                     else "NOT_ASSESSABLE"
+                ),
+                "reason": (
+                    None
+                    if discrimination_assessed
+                    else "discrimination requires usable known-valid, small-error, and large-error results"
                 ),
                 "provenance": {
                     "source_kind": (
                         "INDEPENDENT_PUBLIC_FIXTURE"
-                        if known_valid_output is not None
+                        if discrimination_assessed
                         else "NONE"
                     ),
-                    "fixture_hashes": fixture_hashes,
+                    "fixture_hashes": (
+                        fixture_hashes if discrimination_assessed else {}
+                    ),
                     "oracle_used": False,
                 },
             },
             "equivalence": {
                 "status": (
                     "ASSESSED"
-                    if known_valid_output is not None
+                    if equivalence_assessed
                     else "NOT_ASSESSABLE"
+                ),
+                "reason": (
+                    None
+                    if equivalence_assessed
+                    else "equivalence requires usable known-valid and transformed results"
                 ),
                 "provenance": {
                     "source_kind": (
                         "INDEPENDENT_PUBLIC_FIXTURE"
-                        if known_valid_output is not None
+                        if equivalence_assessed
                         else "NONE"
                     ),
-                    "fixture_hashes": fixture_hashes,
+                    "fixture_hashes": (
+                        fixture_hashes if equivalence_assessed else {}
+                    ),
                     "oracle_used": False,
                 },
             },
+            "component_isolation": {
+                **isolation_coverage,
+            },
+            "process_evidence": process_coverage,
         },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",
             "scientific gradients and metamorphic probes require an independently justified public valid output",
+            *(
+                [
+                    "component isolation requires an independent source-bound "
+                    f"fixture and verified scorer bindings: "
+                    f"{isolation_coverage['reason']}"
+                ]
+                if isolation_coverage["status"] != "ASSESSED"
+                else []
+            ),
+            *(
+                [
+                    "process-evidence non-verification remains unknown unless "
+                    "the safe in-process read/stat tracer completes: "
+                    f"{process_coverage['reason']}"
+                ]
+                if process_coverage["status"]
+                in {"NOT_RUN", "NOT_ASSESSABLE"}
+                else []
+            ),
             "external-service or compiled checker dependencies may require container execution",
         ],
     }

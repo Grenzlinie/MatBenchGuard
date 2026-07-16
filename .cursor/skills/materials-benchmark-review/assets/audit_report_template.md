@@ -43,6 +43,17 @@ Reason: Only indispensable direct inputs explicitly required by instruction are 
 
 ## 9. Instruction and Task Design
 
+Publish the role-aware contract map:
+
+`Instruction requirement → Agent work → core output → checker read → checker score`
+
+Process evidence is verification-only and has no independent rubric weight.
+Final scored outputs must distinguish static read/scorer candidates from
+runtime proof, and show declared weight, effective-weight status, return-path
+status, and every required dynamic check that was not run.
+Include requirements without recognized outputs as unclassified rows with
+explicit unknown read and score states.
+
 ## 10. Checker Assessment
 
 ## 11. Gold Standard Assessment

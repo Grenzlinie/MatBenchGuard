@@ -98,7 +98,8 @@ def write_reviewable_package(root: Path) -> None:
         "from pathlib import Path\n"
         "logs = Path('/logs/verifier')\n"
         "logs.mkdir(parents=True, exist_ok=True)\n"
-        "(logs / 'reward.txt').write_text('0.0')\n",
+        "(logs / 'reward.txt').write_text('0.0')\n"
+        "(logs / 'breakdown.json').write_text('{\"_errors\": {}}')\n",
         encoding="utf-8",
     )
     (root / "tests" / "test.sh").write_text(
@@ -429,6 +430,29 @@ class FastE1BatchTests(unittest.TestCase):
                 "cli_reports/cluster-1/materials-energy/paper-1/checker_tests.json",
             )
             self.assertTrue(evidence_snapshot["snapshot_hash"].startswith("sha256:"))
+            implementation = evidence_snapshot["review_implementation"]
+            self.assertEqual(
+                implementation["root"],
+                ".cursor/skills/materials-benchmark-review",
+            )
+            self.assertTrue(
+                implementation["aggregate_hash"].startswith("sha256:")
+            )
+            self.assertTrue(
+                all(
+                    not Path(relative).is_absolute()
+                    for relative in implementation["files"]
+                )
+            )
+            persisted_manifest = json.loads(
+                (output / evidence_snapshot["manifest_path"]).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                persisted_manifest["review_implementation"],
+                implementation,
+            )
             self.assertTrue(
                 (output / evidence_snapshot["checker_tests_path"]).is_file()
             )

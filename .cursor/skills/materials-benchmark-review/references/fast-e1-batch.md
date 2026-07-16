@@ -47,8 +47,17 @@ For every completed CLI run, the batch persists `audit_report.json`,
 `audit_manifest.json`, and `checker_tests.json` under `cli_reports/`. The ledger
 stores a canonical `cli_evidence` snapshot bound to all three file hashes,
 authoritative materials qualification, paper-trigger adjudication, dynamic
-probe provenance, and the Oracle-safe solution status. Resume rejects any
-changed snapshot or persisted file.
+probe provenance, the Oracle-safe solution status, and deterministic hashes of
+the Review scripts that produced scoring/probing/finalization evidence. Hash
+keys are skill-relative and contain no machine-specific paths. Resume rejects
+any changed snapshot, persisted file, or Review implementation.
+
+Fresh v9 certification accepts exactly six probe classes: positive, negative,
+discrimination, equivalence, component isolation, and process evidence. It
+also verifies complete contract maps, component/process provenance, Oracle
+lifecycle, and current Review implementation hashes. Four-class and stale-tool
+reports remain historical evidence and cannot become authoritative without a
+fresh audit in a new output directory.
 
 Absence of an assessment that leaves a critical evidence gap is an honest
 terminal `NOT_ASSESSABLE` result, not permission to infer positive evidence

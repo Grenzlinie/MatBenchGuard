@@ -62,6 +62,75 @@ never adds or removes points.
 - instruction omissions, answerability defects, and unrecoverable public task
   definitions → instruction answerability.
 
+## Contract-role mapping and deductions
+
+The authoritative report must include the following chain for each declared
+workflow requirement:
+
+`instruction requirement → Agent work → core output → checker read → checker
+score`.
+
+An output named under a `Role: process` step is process evidence, not a final
+scored output. Process evidence can be required for anti-hacking or workflow
+verification while carrying zero rubric weight. Its absence from
+`output_contract` or from a weighted grading step is therefore not
+`INSTRUCTION_ONLY_OUTPUT`.
+
+If process evidence is declared as necessary but the checker does not read or
+validate it, emit one grouped `PROCESS_EVIDENCE_NOT_VERIFIED` finding. Put all
+affected artifacts in its evidence and affected locations; do not deduct once
+per artifact. A process-evidence finding is assigned to robustness/checker
+quality according to whether it affects anti-hacking or scientific alignment.
+
+`INSTRUCTION_ONLY_OUTPUT` is reserved for an output that the instruction
+requires as a final/scored result, but that has no structured contract or
+checker reference. It does not apply to process evidence.
+
+Static checks such as `largest_weight >= pass_threshold` establish only a
+reachability risk. They do not prove `SINGLE_COMPONENT_CAN_PASS` and do not
+deduct points until a component-isolation probe demonstrates that a
+scientifically incomplete submission passes.
+
+Run component isolation only when distinct contracted scoring components, an
+independent non-Oracle source-bound fixture, and checker source/runtime bindings
+make construction unambiguous. Oracle outputs are positive checker mocks only.
+Otherwise record the probe as required but `NOT_RUN`; never promote the static
+weight comparison to a bypass finding or mark crashed cases `ASSESSED`.
+Apply one fail-closed usable-result predicate before every reward-derived
+finding or coverage conclusion: the process must complete, reward must be
+finite, breakdown must be a mapping, and `_errors` must be an empty mapping
+(or absent). Non-empty or malformed `_errors`, including list/string payloads,
+make positive, negative, discrimination, equivalence, process-evidence, and
+component-isolation results unusable. Never publish a proven conclusion for a
+probe class whose coverage is `NOT_ASSESSABLE`. Every component-isolation
+status, including `NOT_ASSESSABLE`, must carry explicitly non-Oracle
+provenance.
+
+The checker mapping must separately report:
+
+- file read status;
+- runtime scorer binding;
+- effective weight;
+- whether the scorer returns a finite value;
+- whether the scorer can be constant zero/one or divide by zero; and
+- whether directionality and scientific-quality discrimination remain to be
+  demonstrated dynamically.
+
+If the Oracle producer completes but its isolated mock is rejected, the
+finding belongs to checker/Gold alignment or checker runtime behavior. It is a
+solution-completeness finding only when the producer fails to execute or does
+not generate the declared outputs. Docker mount paths are not repair defects.
+
+Findings with the same root cause share one deduction group. Multiple files,
+components, or probe cases provide evidence breadth but must not multiply the
+deduction. Grouping requires explicit or deterministic evidence of the shared
+cause; temporal proximity or co-occurrence (for example, an Oracle rejection
+beside a missing scorer return) is not sufficient.
+Normalize ephemeral paths, UUIDs, common PID spellings, process identifiers,
+and memory addresses before hashing repeated runtime failures. Include the
+stable checker source frame and normalized dict/list/string/other error payload
+so distinct defects remain distinct.
+
 ## Hard Gates
 
 Exactly four Hard Gates exist:
@@ -83,6 +152,13 @@ does not replace or hide an otherwise assessable 0–100 total.
 - `REJECT`: total below 60, or any failed Hard Gate;
 - `NOT_ASSESSABLE`: temporary required evidence is unavailable and no
   definitive Hard Gate determines rejection.
+
+A missing or statically unparseable required checker is a repairable structural
+defect: keep the checker-core Hard Gate `NOT_ASSESSABLE` and route the scored
+audit `CONDITIONAL` when no separate temporary evidence gap exists. A checker
+that starts but cannot produce usable runtime evidence is instead a temporary
+critical evidence gap and routes `NOT_ASSESSABLE`. Neither state may leave the
+checker-core Hard Gate `PASS`.
 
 ## Report evidence
 
