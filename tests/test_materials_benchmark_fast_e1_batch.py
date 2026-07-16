@@ -392,21 +392,53 @@ class FastE1BatchTests(unittest.TestCase):
                 manifest["package_ids"],
                 ["cluster-1/materials-energy/paper-1"],
             )
-            hashes = index["records"][0]["evidence"]["input_hashes"]
+            record = index["records"][0]
+            hashes = record["evidence"]["input_hashes"]
             self.assertFalse(
                 any(name.startswith("solution/") for name in hashes)
             )
-            checker_tests = index["records"][0]["evidence"]["checker"][
-                "tests"
-            ]
+            checker_tests = record["evidence"]["checker"]["tests"]
             self.assertTrue(checker_tests)
+            self.assertEqual(
+                record["evidence"]["checker"]["runtime"][
+                    "verifier_entrypoint"
+                ],
+                "tests/test.sh",
+            )
+            self.assertEqual(
+                record["evidence"]["checker"]["runtime"][
+                    "runtime_provenance"
+                ],
+                "audit-host-copy",
+            )
             self.assertTrue(
                 all(
                     item["runtime_package_contains_solution"] is False
                     for item in checker_tests
                 )
             )
-            scoring = index["records"][0]["evidence"]["cli_scoring"]
+            report_path = (
+                output
+                / record["evidence"]["cli_evidence"]["report_path"]
+            )
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                set(record["evidence"]["qa_axes"]),
+                {
+                    "factual_accuracy",
+                    "answer_leakage",
+                    "instruction_completeness",
+                    "checker_instruction_consistency",
+                },
+            )
+            self.assertEqual(
+                record["evidence"]["qa_axes"], report["qa_axes"]
+            )
+            self.assertEqual(
+                record["evidence"]["cli_evidence"]["qa_axes"],
+                report["qa_axes"],
+            )
+            scoring = record["evidence"]["cli_scoring"]
             self.assertEqual(
                 scoring["scoring_version"], "materials-review-scoring/1.0"
             )

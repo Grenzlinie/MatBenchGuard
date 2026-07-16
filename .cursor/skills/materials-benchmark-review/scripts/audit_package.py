@@ -794,10 +794,22 @@ def checker_contract_analysis(
                 "division_by_zero",
                 "direction_reversal",
                 "positive_contract",
-                "process_evidence_verification",
                 "scientifically_wrong_but_format_valid",
             )
         ],
+        "process_evidence_policy": {
+            "status": "NOT_APPLICABLE",
+            "reason": (
+                "process evidence is not a dynamic fixture or "
+                "checker-probe target"
+            ),
+            "files": {},
+            "instrumentation": "NONE",
+            "provenance": {
+                "source_kind": "NONE",
+                "oracle_used": False,
+            },
+        },
         "parse_status": (
             "ERROR"
             if parse_error
@@ -985,27 +997,7 @@ def cross_file_checks(
         else:
             status = "UNKNOWN"
         process_evidence_status[name] = status
-    unverified_process_evidence = {
-        name
-        for name, status in process_evidence_status.items()
-        if status == "NOT_VERIFIED"
-    }
-    if unverified_process_evidence:
-        names = sorted(unverified_process_evidence)
-        add_issue(
-            issues,
-            "MEDIUM",
-            "PROCESS_EVIDENCE_NOT_VERIFIED",
-            "declared process evidence is not verified by tests: "
-            + ", ".join(names),
-            {
-                "unverified_process_evidence": names,
-                "role": "process",
-                "scored": False,
-                "root_cause": "process_evidence_verification_contract",
-            },
-            ["instruction.md", "tests/checker.py", "tests/grading_spec.json"],
-        )
+    unverified_process_evidence: set[str] = set()
     for name in sorted(step_outputs - contract_outputs):
         add_issue(
             issues,

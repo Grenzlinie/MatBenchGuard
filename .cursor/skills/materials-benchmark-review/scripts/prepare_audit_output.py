@@ -40,6 +40,7 @@ PRUNED_DIRS = {
     ".benchmark_audit_tmp",
     "__MACOSX",
 }
+AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 HASH_NAMES = {
     *QUALITY_EVIDENCE_ROLES,
 }
@@ -230,6 +231,11 @@ def prepare_workspace(
     root: Path, paper_mode: str, execution_level: str
 ) -> dict[str, Any]:
     """Prepare a new candidate audit without moving the authoritative prior one."""
+    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
+        raise ValueError(
+            "authoritative materials review is E1-only; "
+            f"received execution level {execution_level!r}"
+        )
     temp_dir = root / ".benchmark_audit_tmp"
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
@@ -321,7 +327,9 @@ def main() -> int:
         default="no_paper",
     )
     parser.add_argument(
-        "--execution-level", choices=["E1", "E2"], default="E1"
+        "--execution-level",
+        choices=[AUTHORITATIVE_EXECUTION_LEVEL],
+        default=AUTHORITATIVE_EXECUTION_LEVEL,
     )
     arguments = parser.parse_args()
     try:

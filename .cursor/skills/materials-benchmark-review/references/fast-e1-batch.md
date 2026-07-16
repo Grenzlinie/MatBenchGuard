@@ -52,12 +52,17 @@ the Review scripts that produced scoring/probing/finalization evidence. Hash
 keys are skill-relative and contain no machine-specific paths. Resume rejects
 any changed snapshot, persisted file, or Review implementation.
 
+Every authoritative scoring snapshot is bound to `execution_level=E1` and the
+CLI's four Hard-Gate results. Any failed gate, including direct-input
+availability, forces `E1_EXCLUDED`; it can never remain a usable candidate.
+
 Fresh v9 certification accepts exactly six probe classes: positive, negative,
 discrimination, equivalence, component isolation, and process evidence. It
-also verifies complete contract maps, component/process provenance, Oracle
-lifecycle, and current Review implementation hashes. Four-class and stale-tool
-reports remain historical evidence and cannot become authoritative without a
-fresh audit in a new output directory.
+also verifies complete contract maps, component provenance, the process class's
+fixed `NOT_APPLICABLE` policy, Oracle lifecycle, and current Review
+implementation hashes. Four-class and stale-tool reports remain historical
+evidence and cannot become authoritative without a fresh audit in a new output
+directory.
 
 Absence of an assessment that leaves a critical evidence gap is an honest
 terminal `NOT_ASSESSABLE` result, not permission to infer positive evidence

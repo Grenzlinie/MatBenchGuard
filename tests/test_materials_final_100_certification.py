@@ -228,17 +228,20 @@ def write_evidence_pass_batch(batch: Path) -> None:
                         "cases_executed": 0,
                     },
                 },
-                {
-                    "check": "process_evidence_verification",
-                    "status": "NOT_APPLICABLE",
-                    "reason": "instruction declares no process-evidence outputs",
-                    "files": {},
-                    "provenance": {
-                        "source_kind": "NONE",
-                        "oracle_used": False,
-                    },
-                },
             ],
+            "process_evidence_policy": {
+                "status": "NOT_APPLICABLE",
+                "reason": (
+                    "process evidence is not a dynamic fixture or "
+                    "checker-probe target"
+                ),
+                "files": {},
+                "instrumentation": "NONE",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                },
+            },
         },
     }
     report["paper_trigger_adjudication"] = [
@@ -341,9 +344,12 @@ def write_evidence_pass_batch(batch: Path) -> None:
             },
             "process_evidence": {
                 "status": "NOT_APPLICABLE",
-                "reason": "instruction declares no process-evidence outputs",
+                "reason": (
+                    "process evidence is not a dynamic fixture or "
+                    "checker-probe target"
+                ),
                 "files": {},
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "instrumentation": "NONE",
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,

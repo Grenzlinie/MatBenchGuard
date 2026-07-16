@@ -41,28 +41,42 @@ recognized output still appears with `unclassified` output role and explicit
 unknown read/score states. Static process-evidence references remain candidates;
 they do not prove either verification or non-verification.
 
-Process non-verification is established only by a completed, safe in-process
-open/stat trace using an independent positive fixture that contains the declared
-process files. A traced access leaves semantic validation unknown; unsafe or
-failed instrumentation remains unknown/not-run.
-Listing or scanning the outputs directory is not per-file access and cannot
-establish that a declared process artifact was read or validated.
-
-Process evidence being absent from `output_contract` is not by itself a defect.
-If it is declared as necessary anti-hacking evidence but the checker never
-reads or validates it, report one grouped `PROCESS_EVIDENCE_NOT_VERIFIED`
-finding. Do not turn it into repeated `INSTRUCTION_ONLY_OUTPUT` deductions.
+Process evidence is not a dynamic fixture or checker target. Never copy it from
+a known-valid fixture, transform it for discrimination/equivalence, or create a
+read-trace checker case. Its dynamic probe class is always `NOT_APPLICABLE`.
+Process evidence being absent from `output_contract` is not itself a defect.
 
 ## Checker runtime
 
-The real checker runs in a disposable copy containing instruction and tests,
-without solution or paper. Paths for `/app/outputs`, `/tests`, and
-`/logs/verifier` are redirected inside that copy.
+`tests/test.sh` is Harbor's verifier entrypoint. E1 invokes that entrypoint in
+a disposable copy containing instruction and tests, without solution or paper.
+Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are redirected inside
+that copy without changing the source package's canonical Docker paths.
+
+Every checker result records runtime provenance as `Harbor-equivalent`,
+`audit-host-copy`, or `not-assessable`. An audit-host copy is not evidence that
+the Harbor container is equivalent. Direct `checker.py` execution, when used
+for a narrow diagnostic, is an audit harness and must never be labeled as a
+Harbor-equivalent verifier run.
+
+The Docker image is the Agent's task environment, not a declaration that every
+instruction dependency is preinstalled. A missing audit-host package, a
+dependency supplied by `environment/Dockerfile`, or a dependency installed by
+`tests/test.sh` is not a package defect. If the audit host cannot execute the
+verifier for one of those reasons, record `not-assessable`; do not emit checker
+crash/alignment findings from that host limitation.
 
 If `solution/solve.sh` exists, the complete solution role is first copied into
 a separate disposable workspace. It receives `OUTPUT_DIR`; generated
-contracted files may be copied to checker inputs, but file contents, stdout,
-and Oracle values are not written to the report.
+contracted files may be copied to checker inputs. The Oracle positive case
+persists only sanitized status, runtime provenance, and non-value diagnostics:
+raw reward/breakdown, stdout/stderr, file contents, and Oracle values never
+enter `checker_tests.json` or the final report.
+
+An independent known-valid fixture must be outside every package/audit role and
+carry `fixture_manifest.json`. The manifest explicitly marks it public,
+non-Oracle, and independent; binds immutable fixture hashes to the current
+instruction/tests hashes; and is itself hashed into probe provenance.
 
 Oracle lifecycle evidence distinguishes attempt, setup attempt, prepared
 environment, producer start, and execution. Only producer start/run sets

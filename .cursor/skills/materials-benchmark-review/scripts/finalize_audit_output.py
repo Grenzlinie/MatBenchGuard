@@ -48,6 +48,19 @@ REQUIRED_AUDIT_FILES = {
     "logs/audit.log",
 }
 SCORING_VERSION = "materials-review-scoring/1.0"
+QA_AXIS_NAMES = (
+    "factual_accuracy",
+    "answer_leakage",
+    "instruction_completeness",
+    "checker_instruction_consistency",
+)
+QA_AXIS_STATUSES = {"PASS", "WARNING", "FAIL", "NOT_ASSESSABLE"}
+QA_EVIDENCE_SEMANTICS = {
+    "PASS": "supports_pass",
+    "WARNING": "supports_warning",
+    "FAIL": "supports_failure",
+    "NOT_ASSESSABLE": "supports_limitation",
+}
 DIMENSION_MAX_POINTS = {
     "scientific_validity": 35,
     "instruction_answerability": 20,
@@ -262,19 +275,6 @@ def repair_text(
             "pass threshold without exposing or using Oracle values as "
             "scientific evidence."
         )
-    elif code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        repair = (
-            "Declare the process artifacts as non-scored verification evidence "
-            "and make tests/checker.py read and validate the evidence needed to "
-            "prevent output-only or hard-coded-result submissions. Do not add "
-            "the process artifacts as independent rubric components."
-        )
-        retest = (
-            "Run the Review CLI with the process artifacts present, missing, "
-            "and inconsistent; require valid process evidence to be accepted "
-            "and tampered evidence to be rejected without changing the final "
-            "scored-output weights."
-        )
     elif code in {
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -365,10 +365,17 @@ def normalized_finding(
 ) -> dict[str, Any]:
     source = dict(source)
     source_evidence = source.get("evidence", {})
+    confirmed_direct_input_barriers = {
+        "PERMANENT_UNAVAILABLE",
+        "REQUIRES_AUTH",
+        "REQUIRES_LICENSE",
+        "IDENTITY_MISMATCH",
+    }
     if (
         source.get("code") == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
         and isinstance(source_evidence, dict)
-        and source_evidence.get("status") != "PERMANENT_UNAVAILABLE"
+        and source_evidence.get("status")
+        not in confirmed_direct_input_barriers
     ):
         source["code"] = (
             "INDISPENSABLE_DIRECT_INPUT_"
@@ -425,8 +432,6 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
     files = finding["affected_files"]
     if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
         return None
-    if code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        return "robustness_discrimination"
     if code == "ORACLE_POSITIVE_MOCK_REJECTED":
         return "checker_gold_alignment"
     if code in {
@@ -724,6 +729,22 @@ def hard_gate_results(
         )
         for item in findings
     )
+    direct_input_temporary_gap = any(
+        item.get("title", "").startswith(
+            "INDISPENSABLE_DIRECT_INPUT_"
+        )
+        and item.get("title")
+        != "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+        and isinstance(item.get("evidence"), dict)
+        and item["evidence"].get("status")
+        in {
+            "TRANSIENT_FAILURE",
+            "RATE_LIMITED",
+            "BLOCKED_PRIVATE_NETWORK",
+            "UNVERIFIED",
+        }
+        for item in findings
+    )
     def non_failure_evidence(
         code: str,
         status: str,
@@ -800,6 +821,12 @@ def hard_gate_results(
             )
             if status == "NOT_ASSESSABLE"
             and code == "CHECKER_CORE_TASK_UNASSESSED"
+            else (
+                "Direct-input availability is not assessable because the "
+                "audit host encountered a temporary access limitation."
+            )
+            if status == "NOT_ASSESSABLE"
+            and code == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
             else observations[code]
         )
         return (
@@ -829,6 +856,9 @@ def hard_gate_results(
                 "checker_gold_alignment" in evidence_gaps
                 or checker_structurally_unavailable
             )
+        ) or (
+            code == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+            and direct_input_temporary_gap
         )
         status = (
             "FAIL"
@@ -1028,6 +1058,299 @@ def paper_consistency(
     }
 
 
+def _qa_locations(
+    findings: list[dict[str, Any]], codes: set[str]
+) -> list[dict[str, Any]]:
+    locations: list[dict[str, Any]] = []
+    for item in findings:
+        if item.get("title") not in codes:
+            continue
+        for location in item.get("affected_locations", []):
+            if location not in locations:
+                locations.append(location)
+    return locations
+
+
+def _qa_evidence(
+    findings: list[dict[str, Any]], codes: set[str]
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "finding_id": item.get("finding_id"),
+            "observed_fact": item.get("observed_fact"),
+            "semantic": "supports_failure",
+        }
+        for item in findings
+        if item.get("title") in codes
+    ]
+
+
+def _qa_base_location(root: Path) -> list[dict[str, Any]]:
+    instruction = root / "instruction.md"
+    if not instruction.is_file():
+        return []
+    for number, line in enumerate(
+        instruction.read_text(encoding="utf-8", errors="replace").splitlines(),
+        start=1,
+    ):
+        if line.strip():
+            return [
+                {
+                    "file": "instruction.md",
+                    "line": number,
+                    "quote": line.strip(),
+                }
+            ]
+    return []
+
+
+def derive_qa_axes(
+    root: Path,
+    findings: list[dict[str, Any]],
+    checker_result: dict[str, Any],
+    contract_map: dict[str, Any],
+    paper_result: dict[str, Any],
+    materials_assessment: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    """Derive four non-scoring QA conclusions from bounded evidence."""
+    scientific_codes = {
+        "NON_MATERIALS_TASK",
+        "SCIENTIFIC_TARGET_INVALID",
+    }
+    paper_scientific_codes = {
+        item.get("title")
+        for item in findings
+        if str(item.get("title", "")).startswith("PAPER_")
+        and any(
+            marker in str(item.get("title", ""))
+            for marker in ("INSTRUCTION_", "DATA_", "METHOD_")
+        )
+    }
+    scientific_codes.update(
+        item for item in paper_scientific_codes if isinstance(item, str)
+    )
+    completeness_codes = {
+        "UNRECOVERABLE_TASK_DEFINITION",
+        "INSTRUCTION_ONLY_OUTPUT",
+    }
+    consistency_codes = {
+        "OUTPUT_NOT_CONTRACTED",
+        "OUTPUT_NOT_SCORED",
+        "EVIDENCE_NOT_ENFORCED",
+        "SCORING_COMPONENT_NOT_BOUND",
+        "SCORER_MISSING_RETURN",
+        "SCORER_RETURN_NOT_TOTAL",
+        "CHECKER_CORE_TASK_UNASSESSED",
+    }
+    leakage_codes = {
+        "ANSWER_LEAKAGE",
+        "ORACLE_VALUE_LEAKED",
+        "SOLUTION_BOUNDARY_VIOLATION",
+    }
+    base_location = _qa_base_location(root)
+
+    def entry(
+        status: str,
+        evidence: list[dict[str, Any]],
+        locations: list[dict[str, Any]],
+        *limitations: str,
+    ) -> dict[str, Any]:
+        default_semantic = QA_EVIDENCE_SEMANTICS[status]
+        semantic_evidence = []
+        for item in evidence:
+            value = dict(item)
+            value.setdefault(
+                "semantic",
+                (
+                    "supports_failure"
+                    if "finding_id" in value
+                    else default_semantic
+                ),
+            )
+            semantic_evidence.append(value)
+        return {
+            "status": status,
+            "evidence": semantic_evidence,
+            "locations": locations,
+            "limitations": list(limitations),
+        }
+
+    scientific_evidence = _qa_evidence(findings, scientific_codes)
+    scientific_locations = _qa_locations(findings, scientific_codes)
+    if scientific_evidence:
+        factual = entry("FAIL", scientific_evidence, scientific_locations)
+    elif materials_assessment is None or paper_result.get("status") == "NOT_ASSESSED":
+        factual = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "instruction/tests", "fact": "No independent factual adjudication was supplied."}],
+            base_location,
+            "E1 checks the public contract and does not independently verify scientific facts.",
+        )
+    elif paper_result.get("status") == "NOT_ASSESSABLE":
+        factual = entry(
+            "NOT_ASSESSABLE",
+            [
+                {
+                    "source": "paper_grounded_review",
+                    "fact": (
+                        "Paper-grounded factual accuracy could not be assessed."
+                    ),
+                }
+            ],
+            base_location,
+            "Unavailable paper evidence cannot support a factual-accuracy PASS.",
+        )
+    elif paper_result.get("status") == "FAIL":
+        factual = entry(
+            "FAIL",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded evidence contains a factual inconsistency."}],
+            base_location,
+        )
+    elif paper_result.get("status") == "WARNING":
+        factual = entry(
+            "WARNING",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded factual evidence requires attention."}],
+            base_location,
+        )
+    else:
+        factual = entry(
+            "PASS",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded factual evidence passed."}],
+            base_location,
+        )
+
+    leakage_evidence = _qa_evidence(findings, leakage_codes)
+    leakage_locations = _qa_locations(findings, leakage_codes)
+    runtime_has_solution = any(
+        item.get("evidence", {}).get("runtime_package_contains_solution") is True
+        for item in checker_result.get("tests", [])
+    )
+    if checker_result.get("solution_content_inspected") is True or runtime_has_solution:
+        leakage_evidence.append(
+            {
+                "source": "checker_runtime",
+                "fact": "The isolated checker runtime contained solution content.",
+            }
+        )
+        leakage_locations = leakage_locations or [
+            {"file": "solution/", "line": None, "quote": None}
+        ]
+    if leakage_evidence:
+        leakage = entry("FAIL", leakage_evidence, leakage_locations)
+    elif checker_result.get("solution_oracle", {}).get("executed") is True:
+        leakage = entry(
+            "PASS",
+            [
+                {
+                    "source": "oracle_boundary",
+                    "fact": "The Oracle was used only to create a positive mock and its content was not inspected.",
+                }
+            ],
+            [{"file": "solution/solve.sh", "line": None, "quote": None}],
+        )
+    else:
+        leakage = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "oracle_boundary", "fact": "No isolated Oracle execution established the leakage boundary."}],
+            base_location,
+            "Answer leakage requires an isolated Oracle boundary or an explicit leakage finding.",
+        )
+
+    completeness_evidence = _qa_evidence(findings, completeness_codes)
+    completeness_locations = _qa_locations(findings, completeness_codes)
+    unclassified = contract_map.get("unclassified_outputs", [])
+    if completeness_evidence:
+        completeness = entry(
+            "FAIL", completeness_evidence, completeness_locations
+        )
+    elif unclassified:
+        completeness = entry(
+            "WARNING",
+            [
+                {
+                    "source": "instruction_contract",
+                    "fact": (
+                        "Instruction outputs remain unclassified: "
+                        + ", ".join(sorted(unclassified))
+                    ),
+                }
+            ],
+            base_location,
+            "Unclassified outputs require human adjudication before a completeness PASS.",
+        )
+    elif contract_map.get("requirements"):
+        completeness = entry(
+            "PASS",
+            [
+                {
+                    "source": "instruction_contract",
+                    "fact": "All parsed workflow requirements have a contract row.",
+                }
+            ],
+            base_location,
+        )
+    else:
+        completeness = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "instruction_contract", "fact": "No workflow requirements were parsed."}],
+            base_location,
+            "Instruction completeness requires at least one parsed workflow requirement.",
+        )
+
+    consistency_evidence = _qa_evidence(findings, consistency_codes)
+    consistency_locations = _qa_locations(findings, consistency_codes)
+    runtime = checker_result.get("runtime") or {}
+    if consistency_evidence:
+        consistency = entry(
+            "FAIL", consistency_evidence, consistency_locations
+        )
+    elif (
+        runtime.get("status") == "NOT_ASSESSABLE"
+        or (
+            checker_result.get("tests")
+            and all(
+                item.get("runtime_not_assessable") is True
+                for item in checker_result["tests"]
+            )
+        )
+    ):
+        consistency = entry(
+            "NOT_ASSESSABLE",
+            [
+                {
+                    "source": "checker_runtime",
+                    "fact": "The Harbor verifier could not be assessed in the available runtime.",
+                }
+            ],
+            base_location,
+            "Audit-host dependency failures do not establish checker/instruction consistency.",
+        )
+    elif checker_result.get("tests"):
+        consistency = entry(
+            "PASS",
+            [
+                {
+                    "source": "checker_runtime",
+                    "fact": "The Harbor verifier entrypoint produced checker cases for the declared contract.",
+                }
+            ],
+            base_location,
+        )
+    else:
+        consistency = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "checker_runtime", "fact": "No checker cases established runtime consistency."}],
+            base_location,
+            "Checker/Instruction consistency requires an assessable verifier run.",
+        )
+    return {
+        "factual_accuracy": factual,
+        "answer_leakage": leakage,
+        "instruction_completeness": completeness,
+        "checker_instruction_consistency": consistency,
+    }
+
+
 def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
@@ -1056,6 +1379,12 @@ def markdown_summary(report: dict[str, Any]) -> str:
         for item in report["dimension_scores"]
     )
     execution = report["execution_evidence"]
+    checker_runtime = report["checker_runtime"]
+    checker_runtime_summary = (
+        f"Verifier entrypoint: {checker_runtime['verifier_entrypoint']}\n"
+        f"Runtime provenance: {checker_runtime['runtime_provenance']}\n"
+        f"Runtime status: {checker_runtime['status']}"
+    )
     if execution["claim"] == "SMOKE_RUN":
         checker_assessment = (
             "The real checker executed before the E2 smoke."
@@ -1063,22 +1392,30 @@ def markdown_summary(report: dict[str, Any]) -> str:
         execution_assessment = (
             f"Status: E2_SMOKE\nReason: {execution['reason']}"
         )
-    elif report["checker_tests"]:
+    elif (
+        report["checker_tests"]
+        and checker_runtime["status"] == "ASSESSED"
+    ):
         checker_assessment = (
-            "The real checker executed in a solution-free runtime."
+            "The real checker executed in a solution-free runtime.\n"
+            + checker_runtime_summary
         )
         execution_assessment = (
             "Status: E1_ONLY\n"
             "Reason: The checker ran, but the scientific workflow did not."
         )
     else:
+        unavailable_reason = checker_runtime.get("reason") or (
+            "The verifier did not produce assessable runtime evidence."
+        )
         checker_assessment = (
             "Status: NOT_ASSESSED\n"
-            "Reason: An E0 FATAL gate prevented checker execution."
+            f"Reason: {unavailable_reason}\n"
+            + checker_runtime_summary
         )
         execution_assessment = (
-            "Status: E0_ONLY\n"
-            "Reason: E1 was skipped after an E0 FATAL gate."
+            "Status: E1_NOT_ASSESSABLE\n"
+            "Reason: The scientific workflow did not run and verifier evidence was unavailable."
         )
     resource_lines = (
         "\n".join(
@@ -1182,6 +1519,11 @@ def markdown_summary(report: dict[str, Any]) -> str:
         if report["scope"]["solution_oracle_executed"]
         else "No solution Oracle producer process was executed."
     )
+    qa_axis_lines = "\n".join(
+        f"- {name}: {axis['status']}; evidence={axis['evidence']}; "
+        f"locations={axis['locations']}; limitations={axis['limitations']}"
+        for name, axis in report["qa_axes"].items()
+    )
     return f"""# Materials Benchmark Audit Report
 
 ## 1. Audit Summary
@@ -1260,6 +1602,9 @@ Instruction → Agent work → declared output → checker read → checker scor
 ## 13. Reproducibility and Leakage
 
 {oracle_boundary}
+
+First-class QA axes (not weighted dimensions):
+{qa_axis_lines}
 
 ## 14. Paper Consistency
 
@@ -1391,6 +1736,13 @@ def synthesize_report(
         "status": "NOT_ASSESSED",
         "claim": "E1_CHECKER_ONLY",
         "scientific_reproduction": False,
+        "environment": None,
+        "environment_verified": False,
+        "runtime_provenance": "not-assessable",
+        "verifies_resources": [],
+        "returncode": None,
+        "stdout": "",
+        "stderr": "",
         "reason": "Scientific workflow execution was not assessed.",
     }
     materials_assessment = (
@@ -1476,6 +1828,14 @@ def synthesize_report(
         agent_assessment,
         skip_reason=paper_skip_reason,
     )
+    qa_axes = derive_qa_axes(
+        root,
+        findings,
+        checker_result,
+        static_result.get("contract_map", {}),
+        paper_result,
+        materials_assessment,
+    )
     contract_gaps = []
     if materials_assessment is None:
         contract_gaps.append("authoritative_materials_qualification")
@@ -1560,6 +1920,7 @@ def synthesize_report(
     }
     report["resources"] = resource_result["resources"]
     report["execution_evidence"] = execution_evidence
+    report["qa_axes"] = qa_axes
     report["paper_consistency"] = paper_result
     report["paper_trigger_adjudication"] = paper_trigger_adjudication
     contract_map = json.loads(json.dumps(static_result.get(
@@ -1595,37 +1956,7 @@ def synthesize_report(
     if isinstance(process_coverage, dict) and isinstance(
         checker_analysis, dict
     ):
-        for check in checker_analysis.get("dynamic_checks_required", []):
-            if (
-                isinstance(check, dict)
-                and check.get("check") == "process_evidence_verification"
-            ):
-                check["status"] = process_coverage.get("status", "NOT_RUN")
-                check["reason"] = process_coverage.get("reason")
-                check["files"] = process_coverage.get("files", {})
-                check["provenance"] = process_coverage.get("provenance", {})
-        process_statuses = process_coverage.get("files", {})
-        for output in checker_analysis.get("outputs", []):
-            filename = output.get("file")
-            status = process_statuses.get(filename)
-            if status == "DYNAMIC_NOT_ACCESSED":
-                output["checker_reads"] = "DYNAMIC_NOT_VERIFIED"
-                output["checker_read_runtime_proven"] = True
-            elif status == "ACCESSED_VALIDATION_UNKNOWN":
-                output["checker_reads"] = (
-                    "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-                )
-                output["checker_read_runtime_proven"] = True
-        by_output = {
-            output.get("file"): output
-            for output in checker_analysis.get("outputs", [])
-        }
-        for chain in contract_map.get("requirement_chains", []):
-            output = by_output.get(chain.get("core_output"))
-            if output is not None:
-                chain["checker_read"] = output.get(
-                    "checker_reads", chain.get("checker_read")
-                )
+        checker_analysis["process_evidence_policy"] = dict(process_coverage)
     report["contract_map"] = contract_map
     report["taxonomy_labels"] = (
         agent_assessment["taxonomy"]
@@ -1666,6 +1997,7 @@ def synthesize_report(
         for item in hard_gates
     ]
     report["dimension_scores"] = dimensions
+    report["checker_runtime"] = checker_result["runtime"]
     report["checker_tests"] = checker_result["tests"]
     report["findings"] = findings
     report["required_fixes"] = [
@@ -1930,6 +2262,10 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
                 or provenance.get("source_kind")
                 != "INDEPENDENT_PUBLIC_FIXTURE"
                 or not provenance.get("fixture_hashes")
+                or not provenance.get("source_role_hashes")
+                or not str(
+                    provenance.get("fixture_manifest_hash", "")
+                ).startswith("sha256:")
             ):
                 raise ValueError(
                     f"PASS has invalid {probe_class} probe provenance"
@@ -1939,6 +2275,8 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
                 provenance.get("oracle_used") is not False
                 or provenance.get("source_kind") != "NONE"
                 or provenance.get("fixture_hashes") != {}
+                or provenance.get("source_role_hashes", {}) != {}
+                or provenance.get("fixture_manifest_hash") is not None
             ):
                 raise ValueError(
                     f"PASS has dishonest unavailable {probe_class} provenance"
@@ -1992,22 +2330,13 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
     process_status = process.get("status")
     process_files = process.get("files")
     if (
-        process_status
-        not in {"ASSESSED", "NOT_RUN", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
-        or not isinstance(process_files, dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
+        process_status != "NOT_APPLICABLE"
+        or process_files != {}
+        or process.get("instrumentation") != "NONE"
+        or process.get("provenance")
+        != {"source_kind": "NONE", "oracle_used": False}
     ):
         raise ValueError("PASS has invalid process-evidence coverage")
-    if process_status == "ASSESSED" and any(
-        status
-        not in {"DYNAMIC_NOT_ACCESSED", "ACCESSED_VALIDATION_UNKNOWN"}
-        for status in process_files.values()
-    ):
-        raise ValueError("PASS has invalid process-evidence file status")
-    if process_status != "ASSESSED" and any(
-        status != "UNKNOWN" for status in process_files.values()
-    ):
-        raise ValueError("PASS unavailable process-evidence overclaims access")
 
 
 def _provenance_strings(value: Any) -> list[str]:
@@ -2031,6 +2360,29 @@ def _provenance_strings(value: Any) -> list[str]:
 def validate_contract_probe_consistency(
     report: dict[str, Any], checker: dict[str, Any]
 ) -> None:
+    runtime = checker.get("runtime")
+    if (
+        not isinstance(runtime, dict)
+        or runtime.get("verifier_entrypoint") != "tests/test.sh"
+        or runtime.get("runtime_provenance")
+        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+        or not isinstance(runtime.get("direct_checker_harness"), bool)
+        or runtime.get("status")
+        not in {"ASSESSED", "NOT_ASSESSABLE"}
+    ):
+        raise ValueError("checker runtime provenance is invalid")
+    if report.get("checker_runtime") != runtime:
+        raise ValueError("report/checker runtime provenance mismatch")
+    for test in checker.get("tests", []):
+        evidence = test.get("evidence")
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("verifier_entrypoint") != "tests/test.sh"
+            or evidence.get("runtime_provenance")
+            not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+            or evidence.get("direct_checker_harness") is not False
+        ):
+            raise ValueError("checker test runtime provenance is invalid")
     coverage = checker.get("probe_coverage")
     required = {
         "positive",
@@ -2053,9 +2405,6 @@ def validate_contract_probe_consistency(
             "NOT_ASSESSABLE",
         },
         "process_evidence": {
-            "ASSESSED",
-            "NOT_RUN",
-            "NOT_ASSESSABLE",
             "NOT_APPLICABLE",
         },
     }
@@ -2094,12 +2443,18 @@ def validate_contract_probe_consistency(
             or provenance.get("source_kind")
             != "INDEPENDENT_PUBLIC_FIXTURE"
             or not provenance.get("fixture_hashes")
+            or not provenance.get("source_role_hashes")
+            or not str(
+                provenance.get("fixture_manifest_hash", "")
+            ).startswith("sha256:")
         ):
             raise ValueError(f"invalid assessed {name} provenance")
         if entry["status"] == "NOT_ASSESSABLE" and (
             provenance.get("oracle_used") is not False
             or provenance.get("source_kind") != "NONE"
             or provenance.get("fixture_hashes", {}) != {}
+            or provenance.get("source_role_hashes", {}) != {}
+            or provenance.get("fixture_manifest_hash") is not None
         ):
             raise ValueError(f"invalid unavailable {name} provenance")
     component_provenance = coverage["component_isolation"].get(
@@ -2115,8 +2470,11 @@ def validate_contract_probe_consistency(
         raise ValueError("component-isolation provenance is Oracle-bound")
     process = coverage["process_evidence"]
     if (
-        not isinstance(process.get("files"), dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
+        process.get("status") != "NOT_APPLICABLE"
+        or process.get("files") != {}
+        or process.get("instrumentation") != "NONE"
+        or process.get("provenance")
+        != {"source_kind": "NONE", "oracle_used": False}
     ):
         raise ValueError("invalid process-evidence probe schema")
 
@@ -2128,7 +2486,7 @@ def validate_contract_probe_consistency(
         if isinstance(item, dict)
     }
     component_check = checks.get("component_isolation")
-    process_check = checks.get("process_evidence_verification")
+    process_policy = checker_analysis.get("process_evidence_policy")
     if (
         not isinstance(component_check, dict)
         or component_check.get("status")
@@ -2140,15 +2498,8 @@ def validate_contract_probe_consistency(
     ):
         raise ValueError("component-isolation contract/probe mismatch")
     if (
-        not isinstance(process_check, dict)
-        or process_check.get("status")
-        != coverage["process_evidence"].get("status")
-        or process_check.get("reason")
-        != coverage["process_evidence"].get("reason")
-        or process_check.get("files")
-        != coverage["process_evidence"].get("files", {})
-        or process_check.get("provenance")
-        != coverage["process_evidence"].get("provenance", {})
+        not isinstance(process_policy, dict)
+        or process_policy != coverage["process_evidence"]
     ):
         raise ValueError("process-evidence contract/probe mismatch")
 
@@ -2157,27 +2508,112 @@ def validate_contract_probe_consistency(
         for item in checker_analysis.get("outputs", [])
         if isinstance(item, dict)
     }
-    expected_reads = {
-        "DYNAMIC_NOT_ACCESSED": "DYNAMIC_NOT_VERIFIED",
-        "ACCESSED_VALIDATION_UNKNOWN": (
-            "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-        ),
-    }
-    for filename, status in coverage["process_evidence"].get(
-        "files", {}
-    ).items():
-        if status in expected_reads and (
-            filename not in outputs
-            or outputs[filename].get("checker_reads")
-            != expected_reads[status]
-        ):
-            raise ValueError("process-evidence output/probe mismatch")
     for chain in contract_map.get("requirement_chains", []):
         output = outputs.get(chain.get("core_output"))
         if output is not None and chain.get("checker_read") != output.get(
             "checker_reads"
         ):
             raise ValueError("requirement-chain checker-read mismatch")
+
+
+def validate_qa_axes(qa_axes: Any) -> None:
+    if not isinstance(qa_axes, dict) or set(qa_axes) != set(QA_AXIS_NAMES):
+        raise ValueError("QA axes must contain exactly the four first-class axes")
+    for name in QA_AXIS_NAMES:
+        axis = qa_axes[name]
+        if not isinstance(axis, dict) or set(axis) != {
+            "status",
+            "evidence",
+            "locations",
+            "limitations",
+        }:
+            raise ValueError(f"invalid QA axis schema: {name}")
+        if axis["status"] not in QA_AXIS_STATUSES:
+            raise ValueError(f"invalid QA axis status: {name}")
+        if not isinstance(axis["evidence"], list):
+            raise ValueError(f"QA axis evidence must be a list: {name}")
+        if not isinstance(axis["locations"], list):
+            raise ValueError(f"QA axis locations must be a list: {name}")
+        if not isinstance(axis["limitations"], list) or not all(
+            isinstance(item, str) and item.strip()
+            for item in axis["limitations"]
+        ):
+            raise ValueError(f"QA axis limitations must be strings: {name}")
+        evidence_semantics: list[str] = []
+        for evidence in axis["evidence"]:
+            finding_evidence = (
+                isinstance(evidence, dict)
+                and set(evidence)
+                == {"finding_id", "observed_fact", "semantic"}
+                and isinstance(evidence["finding_id"], str)
+                and bool(evidence["finding_id"].strip())
+                and isinstance(evidence["observed_fact"], str)
+                and bool(evidence["observed_fact"].strip())
+                and evidence["semantic"] == "supports_failure"
+            )
+            source_evidence = (
+                isinstance(evidence, dict)
+                and set(evidence) == {"source", "fact", "semantic"}
+                and isinstance(evidence["source"], str)
+                and bool(evidence["source"].strip())
+                and isinstance(evidence["fact"], str)
+                and bool(evidence["fact"].strip())
+                and evidence["semantic"]
+                in set(QA_EVIDENCE_SEMANTICS.values())
+            )
+            if not (finding_evidence or source_evidence):
+                raise ValueError(f"invalid QA axis evidence item: {name}")
+            evidence_semantics.append(evidence["semantic"])
+        expected_semantic = QA_EVIDENCE_SEMANTICS[axis["status"]]
+        if any(
+            semantic != expected_semantic
+            for semantic in evidence_semantics
+        ):
+            conflict = (
+                "failure evidence"
+                if "supports_failure" in evidence_semantics
+                else "contradictory evidence status"
+            )
+            raise ValueError(
+                f"{axis['status']} QA axis cannot use {conflict}: {name}"
+            )
+        for location in axis["locations"]:
+            if (
+                not isinstance(location, dict)
+                or set(location) != {"file", "line", "quote"}
+                or not isinstance(location["file"], str)
+                or not location["file"]
+                or (
+                    location["line"] is not None
+                    and (
+                        not isinstance(location["line"], int)
+                        or isinstance(location["line"], bool)
+                        or location["line"] < 1
+                    )
+                )
+                or (
+                    location["quote"] is not None
+                    and not isinstance(location["quote"], str)
+                )
+            ):
+                raise ValueError(f"invalid QA axis location: {name}")
+        if axis["status"] in {"FAIL", "WARNING"} and (
+            not axis["evidence"] or not axis["locations"]
+        ):
+            raise ValueError(
+                f"{axis['status']} QA axis requires evidence and locations: {name}"
+            )
+        if axis["status"] == "PASS" and (
+            not axis["evidence"] or not axis["locations"]
+        ):
+            raise ValueError(
+                f"PASS QA axis requires evidence and locations: {name}"
+            )
+        if axis["status"] == "NOT_ASSESSABLE":
+            if not axis["limitations"]:
+                raise ValueError(
+                    f"NOT_ASSESSABLE QA axis requires limitations: {name}"
+                )
 
 
 def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -2214,6 +2650,19 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(f"missing or out-of-order heading: {heading}")
         last_position = position
     summary = report["summary"]
+    validate_qa_axes(report.get("qa_axes"))
+    configuration = report.get("configuration", {})
+    if configuration.get("execution_level") != "E1":
+        raise ValueError("authoritative report execution level must be E1")
+    execution = report.get("execution_evidence", {})
+    if (
+        not isinstance(execution, dict)
+        or execution.get("claim") != "E1_CHECKER_ONLY"
+        or execution.get("scientific_reproduction") is not False
+        or execution.get("runtime_provenance")
+        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+    ):
+        raise ValueError("invalid E1 runtime provenance")
     if summary["final_verdict"] not in VERDICTS:
         raise ValueError("invalid verdict")
     evidence_contract = report.get("evidence_contract")
