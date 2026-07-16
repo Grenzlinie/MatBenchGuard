@@ -299,6 +299,12 @@ def write_evidence_pass_batch(batch: Path) -> None:
             },
         ],
         "usable_reward_count": 2,
+        "runtime_provenance": {
+            "status": "ASSESSED",
+            "entrypoint": "tests/test.sh",
+            "execution_mode": "ISOLATED_REBASED_HARBOR_VERIFIER",
+            "cases_executed": 2,
+        },
         "probe_coverage": {
             "positive": {
                 "status": "ASSESSED",
@@ -312,6 +318,32 @@ def write_evidence_pass_batch(batch: Path) -> None:
                 "provenance": {
                     "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
                     "oracle_used": False,
+                },
+                "subcoverage": {
+                    "task_family_attacks": {
+                        attack: {
+                            "status": "NOT_APPLICABLE",
+                            "reason": "attack is not applicable to this fixture",
+                            "provenance": {
+                                "source_kind": "NONE",
+                                "oracle_used": False,
+                                "cases": [],
+                                "modes": [],
+                            },
+                        }
+                        for attack in (
+                            "constant_or_all_zero",
+                            "all_positive_or_negative",
+                            "conflicting_or_irrelevant_records",
+                            "threshold_boundary",
+                            "unit_error",
+                            "element_or_phase_error",
+                            "coordinate_or_lattice_error",
+                            "duplicate_structure",
+                            "wrong_objective_or_endpoint",
+                            "missing_core_model",
+                        )
+                    },
                 },
             },
             "discrimination": {
@@ -341,30 +373,6 @@ def write_evidence_pass_batch(batch: Path) -> None:
                     "cases_planned": 0,
                     "cases_executed": 0,
                 },
-            },
-            "task_family_attacks": {
-                attack: {
-                    "status": "NOT_APPLICABLE",
-                    "reason": "attack is not applicable to this fixture",
-                    "provenance": {
-                        "source_kind": "NONE",
-                        "oracle_used": False,
-                        "cases": [],
-                        "modes": [],
-                    },
-                }
-                for attack in (
-                    "constant_or_all_zero",
-                    "all_positive_or_negative",
-                    "conflicting_or_irrelevant_records",
-                    "threshold_boundary",
-                    "unit_error",
-                    "element_or_phase_error",
-                    "coordinate_or_lattice_error",
-                    "duplicate_structure",
-                    "wrong_objective_or_endpoint",
-                    "missing_core_model",
-                )
             },
         },
     }
@@ -569,7 +577,6 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             ).with_name("checker_tests.json")
             checker = json.loads(checker_path.read_text(encoding="utf-8"))
             checker["probe_coverage"].pop("component_isolation")
-            checker["probe_coverage"].pop("task_family_attacks")
             checker_path.write_text(json.dumps(checker), encoding="utf-8")
             refresh_evidence_bindings(batch)
 

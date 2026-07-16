@@ -52,13 +52,19 @@ the Review scripts that produced scoring/probing/finalization evidence. Hash
 keys are skill-relative and contain no machine-specific paths. Resume rejects
 any changed snapshot, persisted file, or Review implementation.
 
-Fresh certification accepts exactly five core probe classes: positive,
-negative, discrimination, equivalence, and component isolation, plus
-task-family materials attacks. It also verifies complete contract maps,
+Fresh certification accepts exactly five top-level probe classes: positive,
+negative, discrimination, equivalence, and component isolation. Task-family
+materials attacks remain named negative/discrimination subcoverage. It also
+verifies complete contract maps,
 component provenance, Gold provenance, Oracle
 lifecycle, and current Review implementation hashes. Four-class and stale-tool
 reports remain historical evidence and cannot become authoritative without a
 fresh audit in a new output directory.
+
+Every survivor runs no-paper fail-fast first. Only after all four Hard Gates
+pass may the batch copy paper evidence and run a source-bound paper-grounded
+E1 whose parent audit ID is the no-paper audit. A direct no-paper-only run is
+excluded from usable candidates.
 
 Absence of an assessment that leaves a critical evidence gap is an honest
 terminal `NOT_ASSESSABLE` result, not permission to infer positive evidence

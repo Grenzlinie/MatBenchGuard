@@ -135,13 +135,13 @@ class MaterialsCheckerScientificProbeTests(unittest.TestCase):
             )
             self.assertFalse(audit["solution_content_inspected"])
             self.assertEqual(
-                {item["probe_class"] for item in audit["tests"]},
+                set(audit["probe_coverage"]),
                 {
                     "positive",
                     "negative",
                     "discrimination",
                     "equivalence",
-                    "task_family_attacks",
+                    "component_isolation",
                 },
             )
 

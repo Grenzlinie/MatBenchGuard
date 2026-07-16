@@ -44,20 +44,17 @@ Instruction requirement
 ```
 
 The mapping has three output roles:
+- `CORE_OUTPUT` — an explicitly core/scored/final output, or a conservatively
+  recognized complete/full model, structure, trajectory, field, or mesh;
+- `PROCESS_ONLY` — an explicitly process/intermediate/diagnostic artifact;
+- `UNCLASSIFIED` — an uncertain declaration that needs human adjudication.
 
-- `scored_output` — a final submission that contributes to a rubric component;
-- `process_evidence` — an intermediate artifact used to verify the workflow or
-  prevent hard-coded/output-only submissions, with no independent rubric weight;
-- `unclassified` — a declaration that needs human adjudication before scoring.
-
-An instruction may legitimately list process evidence separately from final
-submission files. Process artifacts remain contract-map-only: they are never
-checker targets, weighted components, deductions, gates, or dynamic probes.
-They must not produce `PROCESS_EVIDENCE_NOT_VERIFIED` or any anti-hacking trace.
-Complete models, structures, trajectories, prediction fields, and other
-load-bearing scientific artifacts are core outputs even when an instruction
-labels them as process; an ignored or existence-only core output is a severe
-`CHECKER_CORE_TASK_UNASSESSED` finding.
+Process artifacts remain contract-map-only: never checker targets, weighted
+components, deductions, gates, probes, or anti-hacking traces. Complete/full
+models, structures, trajectories, fields, and meshes are core when declared
+core/scored/final or when no explicit role contradicts that classification.
+Process-only takes precedence; uncertainty remains `UNCLASSIFIED`. Ignored or
+existence-only core output is severe `CHECKER_CORE_TASK_UNASSESSED`.
 
 For every `scored_output`, record whether the checker:
 
@@ -174,11 +171,13 @@ Every E1 run records coverage for these probe classes:
 - discrimination — scientifically worse outputs must not score better;
 - equivalence — scientifically equivalent ordering or serialization must not
   change reward;
-- component isolation — independently sourced one-component submissions;
-- task-family materials attacks — constant/all-zero, sign, conflict,
-  threshold, unit, element/phase, coordinate/lattice, duplicate-structure,
-  wrong-objective/endpoint, and missing-core-model cases, each with explicit
-  status and provenance.
+- component isolation — independently sourced one-component submissions.
+
+These are exactly the five top-level classes. Task-family attacks are named
+negative/discrimination cases and nested subcoverage, never a sixth class.
+Each has explicit status/provenance. E1 executes `tests/test.sh`; if unavailable,
+direct probes are forbidden and runtime is `NOT_ASSESSABLE`. Review and repair
+re-audit are fixed at E1, with no E2 publication path.
 
 ## Direct inputs
 

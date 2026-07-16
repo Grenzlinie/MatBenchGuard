@@ -165,6 +165,18 @@ def assessment_paper_mode(path: Path | None) -> str:
     return "paper_grounded" if isinstance(triggers, list) and triggers else "no_paper"
 
 
+def write_no_paper_assessment(source: Path, destination: Path) -> Path:
+    assessment = json.loads(source.read_text(encoding="utf-8"))
+    for key in ("paper_triggers", "reproduction_type", "dimensions"):
+        assessment.pop(key, None)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        json.dumps(assessment, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return destination
+
+
 def collect_review_source_hashes(root: Path, paper_mode: str) -> dict[str, str]:
     hashes = collect_input_hashes(root)
     if paper_mode == "paper_grounded":
@@ -270,6 +282,7 @@ def compact_checker_evidence(checker: dict[str, Any]) -> dict[str, Any]:
         "usable_reward_count": checker.get("usable_reward_count"),
         "test_count": len(tests),
         "tests": tests,
+        "runtime_provenance": checker.get("runtime_provenance", {}),
         "findings": [
             {
                 "severity": item.get("severity"),
@@ -628,7 +641,8 @@ def review_one(
         if assessment_dir is not None
         else None
     )
-    paper_mode = assessment_paper_mode(assessment_path)
+    requested_paper_mode = assessment_paper_mode(assessment_path)
+    paper_mode = "no_paper"
     source_hashes = collect_review_source_hashes(source, paper_mode)
     assessment_hash = (
         "sha256:" + hashlib.sha256(assessment_path.read_bytes()).hexdigest()
@@ -653,28 +667,39 @@ def review_one(
         },
     }
     try:
-        copy_review_package(source, package_copy, paper_mode)
-        command = [
-            sys.executable,
-            str(RUNNER),
-            str(package_copy),
-            "--paper-mode",
-            paper_mode,
-            "--execution-level",
-            "E1",
-        ]
-        if assessment_path is not None:
-            command.extend(
-                ["--agent-assessment", str(assessment_path)]
+        copy_review_package(source, package_copy, "no_paper")
+
+        def execute_review(
+            mode: str, assessment: Path | None
+        ) -> subprocess.CompletedProcess[str]:
+            command = [
+                sys.executable,
+                str(RUNNER),
+                str(package_copy),
+                "--paper-mode",
+                mode,
+                "--execution-level",
+                "E1",
+            ]
+            if assessment is not None:
+                command.extend(["--agent-assessment", str(assessment)])
+            return subprocess.run(
+                command,
+                cwd=RUNNER.parent.parent,
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                check=False,
             )
-        completed = subprocess.run(
-            command,
-            cwd=RUNNER.parent.parent,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
+
+        no_paper_assessment = (
+            write_no_paper_assessment(
+                assessment_path, workspace / "no-paper-assessment.json"
+            )
+            if assessment_path is not None
+            else None
         )
+        completed = execute_review("no_paper", no_paper_assessment)
         if completed.returncode != 0:
             return {
                 **base,
@@ -685,6 +710,36 @@ def review_one(
                 "runtime_seconds": round(time.monotonic() - started, 3),
             }
         audit = package_copy / "benchmark_audit"
+        no_paper_report = json.loads(
+            (audit / "audit_report.json").read_text(encoding="utf-8")
+        )
+        no_paper_audit_id = no_paper_report["audit_id"]
+        if (
+            requested_paper_mode == "paper_grounded"
+            and not no_paper_report.get("summary", {}).get(
+                "hard_gate_triggered", False
+            )
+        ):
+            for relative in PAPER_SOURCE_ROLES:
+                source_path = source / relative
+                destination = package_copy / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_path, destination)
+            source_hashes.update(
+                collect_review_source_hashes(source, "paper_grounded")
+            )
+            paper_mode = "paper_grounded"
+            base["evidence"]["review_paper_mode"] = paper_mode
+            completed = execute_review(paper_mode, assessment_path)
+            if completed.returncode != 0:
+                return {
+                    **base,
+                    "state": "E1_EXCLUDED",
+                    "evidence_tier": "E1_EXCLUDED",
+                    "exclusion_reasons": ["PAPER_REVIEW_RUNNER_FAILED"],
+                    "runner_error": completed.stderr[-4000:],
+                    "runtime_seconds": round(time.monotonic() - started, 3),
+                }
         report = json.loads(
             (audit / "audit_report.json").read_text(encoding="utf-8")
         )
@@ -725,6 +780,10 @@ def review_one(
             resource_failures,
             materials_class=materials_class,
         )
+        if paper_mode != "paper_grounded" and not report.get(
+            "summary", {}
+        ).get("hard_gate_triggered", False):
+            reasons.append("PAPER_GROUNDED_STAGE_REQUIRED")
         checker_evidence = compact_checker_evidence(checker)
         cli_scoring = authoritative_cli_scoring(report)
         report_relative = (
@@ -759,6 +818,19 @@ def review_one(
             "paper_consistency": report.get("paper_consistency", {}),
             "probe_coverage": checker.get("probe_coverage", {}),
             "review_implementation": review_implementation,
+            "stage_binding": {
+                "status": (
+                    "PAPER_GROUNDED_BOUND_TO_NO_PAPER"
+                    if paper_mode == "paper_grounded"
+                    else "NO_PAPER_ONLY"
+                ),
+                "no_paper_audit_id": no_paper_audit_id,
+                "paper_grounded_audit_id": (
+                    report["audit_id"]
+                    if paper_mode == "paper_grounded"
+                    else None
+                ),
+            },
             "solution_oracle": {
                 key: checker.get("solution_oracle", {}).get(key)
                 for key in (
@@ -828,6 +900,7 @@ def review_one(
                 },
                 "cli_scoring": cli_scoring,
                 "cli_evidence": cli_evidence,
+                "stage_binding": cli_evidence["stage_binding"],
                 "answer_type": report.get("summary", {}).get("answer_type"),
                 "input_hashes": source_hashes,
                 "source_binding": source_binding(
@@ -941,7 +1014,9 @@ def summarize(
             item["state"] == EVIDENCE_TIER for item in records
         ),
         "e1_usable_candidates_selected": len(candidates),
-        "paper_grounded_confirmed": 0,
+        "paper_grounded_confirmed": sum(
+            bool(item.get("scientifically_confirmed")) for item in records
+        ),
         "excluded_by_reason": dict(sorted(reason_counts.items())),
         "exclusion_reason_counts_overlap": True,
         "candidate_diversity": diversity,
@@ -956,10 +1031,11 @@ def summarize(
             "no static or checker FATAL",
             "no obvious critical resource declaration failure",
             "solution boundary remains uninspected and absent from runtime",
+            "paper-grounded E1 is bound to its no-paper parent audit",
         ],
         "claim_boundary": (
-            "E1_USABLE_CANDIDATE is not paper-grounded or scientifically "
-            "confirmed; resource reachability is not assessed."
+            "E1_USABLE_CANDIDATE is a bound paper-grounded audit result; it "
+            "does not claim scientific workflow execution or reproduction."
         ),
     }
     index = {

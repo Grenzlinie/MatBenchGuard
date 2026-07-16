@@ -1914,7 +1914,6 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
         "discrimination",
         "equivalence",
         "component_isolation",
-        "task_family_attacks",
     }
     if not isinstance(coverage, dict) or not required_coverage.issubset(
         coverage
@@ -1992,7 +1991,11 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
         or component_provenance.get("cases_executed") != 0
     ):
         raise ValueError("PASS component-isolation NOT_RUN has invalid provenance")
-    task_attacks = coverage["task_family_attacks"]
+    task_attacks = (
+        coverage["negative"].get("subcoverage", {}).get(
+            "task_family_attacks"
+        )
+    )
     if not isinstance(task_attacks, dict) or not task_attacks:
         raise ValueError("PASS lacks task-family materials attacks")
     for attack, entry in task_attacks.items():
@@ -2037,12 +2040,10 @@ def validate_contract_probe_consistency(
         "discrimination",
         "equivalence",
         "component_isolation",
-        "task_family_attacks",
     }
     if not isinstance(coverage, dict) or set(coverage) != required:
         raise ValueError(
-            "checker probe coverage must contain five core classes and "
-            "task-family attacks"
+            "checker probe coverage must contain exactly five core classes"
         )
     allowed_statuses = {
         "positive": {"ASSESSED", "NOT_ASSESSABLE"},
@@ -2070,47 +2071,6 @@ def validate_contract_probe_consistency(
         tests_by_class[probe_class].append(test)
     for name in required:
         entry = coverage[name]
-        if name == "task_family_attacks":
-            if not isinstance(entry, dict) or not entry:
-                raise ValueError("invalid task-family attack coverage")
-            for attack, attack_entry in entry.items():
-                provenance = (
-                    attack_entry.get("provenance", {})
-                    if isinstance(attack_entry, dict)
-                    else {}
-                )
-                if (
-                    not isinstance(attack_entry, dict)
-                    or attack_entry.get("status")
-                    not in {"ASSESSED", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
-                    or not isinstance(provenance, dict)
-                    or provenance.get("oracle_used") is not False
-                ):
-                    raise ValueError(
-                        f"invalid task-family attack coverage: {attack}"
-                    )
-                cases = provenance.get("cases", [])
-                if (
-                    not isinstance(cases, list)
-                    or attack_entry["status"] == "ASSESSED"
-                    and (
-                        not cases
-                        or any(
-                            case not in tests_by_type
-                            or tests_by_type[case].get("probe_class")
-                            != "task_family_attacks"
-                            or tests_by_type[case].get("observed_status")
-                            != "COMPLETED"
-                            for case in cases
-                        )
-                    )
-                    or attack_entry["status"] == "NOT_APPLICABLE"
-                    and cases
-                ):
-                    raise ValueError(
-                        f"task-family attack evidence mismatch: {attack}"
-                    )
-            continue
         if (
             not isinstance(entry, dict)
             or entry.get("status") not in allowed_statuses[name]
@@ -2128,6 +2088,48 @@ def validate_contract_probe_consistency(
             raise ValueError(f"ASSESSED {name} probe lacks usable tests")
         if entry["status"] in {"NOT_RUN", "NOT_APPLICABLE"} and class_tests:
             raise ValueError(f"{name} probe status contradicts executed tests")
+    task_attacks = (
+        coverage["negative"].get("subcoverage", {}).get(
+            "task_family_attacks"
+        )
+    )
+    if not isinstance(task_attacks, dict) or not task_attacks:
+        raise ValueError("invalid task-family attack subcoverage")
+    for attack, attack_entry in task_attacks.items():
+        provenance = (
+            attack_entry.get("provenance", {})
+            if isinstance(attack_entry, dict)
+            else {}
+        )
+        if (
+            not isinstance(attack_entry, dict)
+            or attack_entry.get("status")
+            not in {"ASSESSED", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
+            or not isinstance(provenance, dict)
+            or provenance.get("oracle_used") is not False
+        ):
+            raise ValueError(
+                f"invalid task-family attack coverage: {attack}"
+            )
+        cases = provenance.get("cases", [])
+        if (
+            not isinstance(cases, list)
+            or attack_entry["status"] == "ASSESSED"
+            and (
+                not cases
+                or any(
+                    case not in tests_by_type
+                    or tests_by_type[case].get("probe_class") != "negative"
+                    or tests_by_type[case].get("observed_status") != "COMPLETED"
+                    for case in cases
+                )
+            )
+            or attack_entry["status"] == "NOT_APPLICABLE"
+            and cases
+        ):
+            raise ValueError(
+                f"task-family attack evidence mismatch: {attack}"
+            )
     for name in ("discrimination", "equivalence"):
         entry = coverage[name]
         provenance = entry.get("provenance", {})
@@ -2262,6 +2264,22 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         raise ValueError("invalid instruction-to-checker contract map")
     validate_requirement_chains(contract_map, markdown)
     validate_contract_probe_consistency(report, checker)
+    runtime_provenance = checker.get("runtime_provenance")
+    if (
+        not isinstance(runtime_provenance, dict)
+        or runtime_provenance.get("status")
+        not in {"ASSESSED", "NOT_ASSESSABLE"}
+        or runtime_provenance.get("entrypoint") != "tests/test.sh"
+    ):
+        raise ValueError("invalid Harbor verifier runtime provenance")
+    if runtime_provenance["status"] == "ASSESSED" and (
+        runtime_provenance.get("cases_executed") != len(checker.get("tests", []))
+    ):
+        raise ValueError("Harbor verifier runtime case count is inconsistent")
+    if runtime_provenance["status"] == "NOT_ASSESSABLE" and (
+        checker.get("tests") or not runtime_provenance.get("reason")
+    ):
+        raise ValueError("unavailable Harbor verifier runtime is not truthful")
     gold = report.get("gold_provenance")
     if (
         not isinstance(gold, dict)

@@ -599,12 +599,30 @@ def task_family_applicability(
 ) -> dict[str, dict[str, Any]]:
     instruction = (root / "instruction.md").read_text(
         encoding="utf-8", errors="replace"
+    )
+    contract_map = instruction_contract_map(instruction)
+    core_outputs = set(contract_map.get("core_outputs", []))
+    core_requirements = [
+        requirement
+        for requirement in contract_map.get("requirements", [])
+        if requirement.get("classification") == "CORE_OUTPUT"
+    ]
+    output_contracts = [
+        output
+        for output in (
+            (specification.get("output_contract", {}) or {}).get("outputs", [])
+            or []
+        )
+        if (
+            basename(output.get("file")) in core_outputs
+            or not contract_map.get("requirements")
+        )
+    ]
+    context = (
+        json.dumps(core_requirements, ensure_ascii=False)
+        + "\n"
+        + json.dumps(output_contracts, ensure_ascii=False)
     ).lower()
-    contract_text = json.dumps(
-        specification.get("output_contract", {}),
-        ensure_ascii=False,
-    ).lower()
-    context = instruction + "\n" + contract_text
     specialized = {
         "element_or_phase_error": (
             ("element", "species", "phase", "composition"),
@@ -1009,7 +1027,7 @@ def run_checker_case(
         outputs_dir = base / "app" / "outputs"
         logs_dir = base / "logs" / "verifier"
         copy_public_package(root, package_dir)
-        tests_dir.mkdir(parents=True)
+        shutil.copytree(root / "tests", tests_dir)
         outputs_dir.mkdir(parents=True)
         logs_dir.mkdir(parents=True)
         specification_path = tests_dir / "grading_spec.json"
@@ -1055,18 +1073,42 @@ def run_checker_case(
                 outputs_dir, specification, mode
             )
 
-        patched = checker_text
-        patched = patched.replace(
-            "/tests/grading_spec.json", str(specification_path)
+        replacements = {
+            "/tests": str(tests_dir),
+            "/app/outputs": str(outputs_dir),
+            "/logs/verifier": str(logs_dir),
+        }
+        for runtime_file in tests_dir.rglob("*"):
+            if not runtime_file.is_file() or runtime_file.is_symlink():
+                continue
+            try:
+                runtime_text = runtime_file.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for canonical, replacement in replacements.items():
+                runtime_text = runtime_text.replace(canonical, replacement)
+            runtime_file.write_text(runtime_text, encoding="utf-8")
+        entrypoint = tests_dir / "test.sh"
+        runtime_bin = base / "bin"
+        runtime_bin.mkdir()
+        python_shim = runtime_bin / "python"
+        python_shim.write_text(
+            "#!/bin/sh\nexec "
+            + json.dumps(sys.executable)
+            + ' "$@"\n',
+            encoding="utf-8",
         )
-        patched = patched.replace("/app/outputs", str(outputs_dir))
-        patched = patched.replace("/logs/verifier", str(logs_dir))
-        checker_path = base / "checker_patched.py"
-        checker_path.write_text(patched, encoding="utf-8")
-        executable_path = checker_path
+        python_shim.chmod(0o755)
+        environment = {
+            **os.environ,
+            "PATH": str(runtime_bin)
+            + os.pathsep
+            + os.environ.get("PATH", ""),
+        }
         process = subprocess.run(
-            [sys.executable, str(executable_path)],
+            ["bash", str(entrypoint)],
             cwd=package_dir,
+            env=environment,
             capture_output=True,
             text=True,
             timeout=60,
@@ -1108,6 +1150,7 @@ def run_checker_case(
             "isolated_component": isolated_component,
             "fixture_source_kind": fixture_source_kind,
             "runtime_outputs_dir": str(outputs_dir),
+            "runtime_entrypoint": "tests/test.sh",
         }
 
 
@@ -1690,7 +1733,7 @@ def dynamic_checker_probe(
         probe_class = (
             "component_isolation"
             if result["case"].startswith("component_isolation__")
-            else "task_family_attacks"
+            else "negative"
             if result["case"] in TASK_FAMILY_CASES
             else probe_classes.get(result["case"], "negative")
         )
@@ -1775,6 +1818,9 @@ def dynamic_checker_probe(
                     "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
                     "oracle_used": False,
                 },
+                "subcoverage": {
+                    "task_family_attacks": task_attacks,
+                },
             },
             "discrimination": {
                 "status": (
@@ -1825,7 +1871,12 @@ def dynamic_checker_probe(
             "component_isolation": {
                 **isolation_coverage,
             },
-            "task_family_attacks": task_attacks,
+        },
+        "runtime_provenance": {
+            "status": "ASSESSED",
+            "entrypoint": "tests/test.sh",
+            "execution_mode": "ISOLATED_REBASED_HARBOR_VERIFIER",
+            "cases_executed": len(results),
         },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",

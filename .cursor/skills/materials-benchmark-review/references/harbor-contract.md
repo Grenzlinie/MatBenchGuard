@@ -43,16 +43,20 @@ absence from `output_contract`, lack of checker reads, or lack of validation
 cannot affect score, gate, route, or verdict. Do not run an anti-hacking trace
 or emit `PROCESS_EVIDENCE_NOT_VERIFIED`.
 
-A complete model, structure, trajectory, prediction field, or other
-load-bearing scientific artifact is a core output even when the instruction
-labels it as process. Ignoring it or checking only file existence is
-`CHECKER_CORE_TASK_UNASSESSED`.
+A complete/full model, structure, trajectory, prediction field, or mesh is a
+core output when explicitly core/scored/final or when no explicit role
+contradicts that conservative classification. Explicit process-only roles
+cannot activate checker findings or probes; uncertain roles remain
+`UNCLASSIFIED`. Ignoring a classified core output or checking only file
+existence is `CHECKER_CORE_TASK_UNASSESSED`.
 
 ## Checker runtime
 
-The real checker runs in a disposable copy containing instruction and tests,
-without solution or paper. Paths for `/app/outputs`, `/tests`, and
-`/logs/verifier` are redirected inside that copy.
+The real checker runs only through the Harbor `tests/test.sh` entrypoint in a
+disposable copy containing instruction and tests, without solution or paper.
+Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are redirected inside
+that copy. A missing entrypoint makes direct probes `NOT_ASSESSABLE`; invoking
+`checker.py` directly is forbidden.
 
 If `solution/solve.sh` exists, the complete solution role is first copied into
 a separate disposable workspace. It receives `OUTPUT_DIR`; generated

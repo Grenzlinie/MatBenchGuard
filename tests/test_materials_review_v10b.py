@@ -69,8 +69,11 @@ class MaterialsReviewV10BTests(unittest.TestCase):
                 "discrimination",
                 "equivalence",
                 "component_isolation",
-                "task_family_attacks",
             },
+        )
+        self.assertIn(
+            "task_family_attacks",
+            result["probe_coverage"]["negative"]["subcoverage"],
         )
         self.assertNotIn(
             "PROCESS_EVIDENCE_NOT_VERIFIED",
@@ -84,7 +87,7 @@ class MaterialsReviewV10BTests(unittest.TestCase):
             (package / "instruction.md").write_text(
                 """
 ### Step 1: Build the complete crystal structure model
-- Role: process
+- Role: core_output
 - Action: Generate the complete load-bearing crystal structure.
 - Output file: `/app/outputs/structure.cif`
 """,
@@ -196,7 +199,9 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
                 Path(temporary) / "checker.json",
             )
 
-        attacks = result["probe_coverage"]["task_family_attacks"]
+        attacks = result["probe_coverage"]["negative"]["subcoverage"][
+            "task_family_attacks"
+        ]
         self.assertTrue(attacks)
         for attack in attacks.values():
             self.assertIn(
@@ -205,6 +210,213 @@ reward = 1.0 if Path("/app/outputs/structure.cif").exists() else 0.0
             )
             self.assertIsInstance(attack["provenance"], dict)
             self.assertFalse(attack["provenance"].get("oracle_used", True))
+
+    def test_process_only_structure_and_model_do_not_activate_attacks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "instruction.md").write_text(
+                """
+### Step 1: Report the scalar energy
+- Role: scored_output
+- Action: Compute the crystal energy.
+- Output file: `/app/outputs/result.json`
+
+### Step 2: Save process diagnostics
+- Role: process_evidence
+- Action: Save a full crystal structure and complete predictive model trace.
+- Evidence: `/app/outputs/process_structure.cif`
+- Evidence: `/app/outputs/process_model.json`
+""",
+                encoding="utf-8",
+            )
+            specification = json.loads(
+                (package / "tests/grading_spec.json").read_text(encoding="utf-8")
+            )
+            applicability = dynamic_checker_probe.task_family_applicability(
+                package, specification
+            )
+            contract_map = audit_package.instruction_contract_map(
+                (package / "instruction.md").read_text(encoding="utf-8")
+            )
+
+        self.assertFalse(applicability["duplicate_structure"]["applicable"])
+        self.assertFalse(applicability["missing_core_model"]["applicable"])
+        self.assertEqual(
+            contract_map["process_evidence"],
+            ["process_model.json", "process_structure.cif"],
+        )
+        self.assertNotIn("process_model.json", contract_map["core_outputs"])
+        self.assertNotIn("process_structure.cif", contract_map["core_outputs"])
+
+    def test_missing_harbor_verifier_entrypoint_skips_direct_probes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "tests/test.sh").unlink()
+            run_review.run_review(package, None)
+            checker = json.loads(
+                (package / "benchmark_audit/checker_tests.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(checker["tests"], [])
+        self.assertEqual(
+            checker["runtime_provenance"]["status"], "NOT_ASSESSABLE"
+        )
+        self.assertEqual(
+            checker["runtime_provenance"]["reason"],
+            "HARBOR_VERIFIER_ENTRYPOINT_MISSING",
+        )
+
+    def test_e2_cannot_be_published_by_authoritative_review(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            with self.assertRaisesRegex(ValueError, "fixed at E1"):
+                run_review.run_review(package, None, execution_level="E2")
+
+    def test_structured_roles_recognize_wording_variants_conservatively(self) -> None:
+        variants = {
+            "predictive_model.bin": "Build a full predictive model",
+            "crystal.cif": "Return the full crystal structure",
+            "trajectory.xyz": "Generate a complete trajectory",
+            "field.vtk": "Generate a complete prediction field",
+            "mesh.msh": "Generate a complete simulation mesh",
+        }
+        lines: list[str] = []
+        for index, (filename, title) in enumerate(variants.items(), start=1):
+            lines.extend(
+                [
+                    f"### Step {index}: {title}",
+                    "- Role: core_output",
+                    f"- Output file: `/app/outputs/{filename}`",
+                    "",
+                ]
+            )
+        lines.extend(
+            [
+                "### Step 9: Save an uncertain artifact",
+                "- Role: auxiliary",
+                "- Artifact: `/app/outputs/uncertain.dat`",
+            ]
+        )
+
+        contract_map = audit_package.instruction_contract_map("\n".join(lines))
+
+        self.assertEqual(
+            set(contract_map["core_outputs"]), set(variants)
+        )
+        self.assertEqual(
+            contract_map["unclassified_outputs"], ["uncertain.dat"]
+        )
+        for requirement in contract_map["requirements"]:
+            self.assertIn(
+                requirement["classification"],
+                {"CORE_OUTPUT", "PROCESS_ONLY", "UNCLASSIFIED"},
+            )
+
+    def test_all_four_hard_gates_are_pre_paper_stops(self) -> None:
+        codes = run_review.pre_paper_hard_gate_codes(
+            {
+                "issues": [
+                    {"code": "UNRECOVERABLE_TASK_DEFINITION"},
+                    {"code": "CHECKER_CORE_TASK_UNASSESSED"},
+                ]
+            },
+            {
+                "findings": [
+                    {"code": "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"}
+                ]
+            },
+            {"classification": "NON_MAT"},
+        )
+
+        self.assertEqual(
+            codes,
+            [
+                "NON_MATERIALS_TASK",
+                "UNRECOVERABLE_TASK_DEFINITION",
+                "CHECKER_CORE_TASK_UNASSESSED",
+                "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+            ],
+        )
+
+    def test_non_materials_gate_stops_before_paper_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            package = base / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "paper").mkdir(exist_ok=True)
+            (package / "paper/paper.md").write_text(
+                "This paper must remain outside fail-fast evidence.",
+                encoding="utf-8",
+            )
+            (package / "paper/images_manifest.json").write_text(
+                "[]\n", encoding="utf-8"
+            )
+            instruction = (package / "instruction.md").read_text(
+                encoding="utf-8"
+            )
+            quote = next(
+                line.strip() for line in instruction.splitlines() if line.strip()
+            )
+            assessment = base / "assessment.json"
+            assessment.write_text(
+                json.dumps(
+                    {
+                        "materials_qualification": {
+                            "classification": "NON_MAT",
+                            "rationale": "Authoritative adjudication rejects the task.",
+                            "evidence": [
+                                {
+                                    "axis": axis,
+                                    "package_file": "instruction.md",
+                                    "package_quote": quote,
+                                }
+                                for axis in (
+                                    "object",
+                                    "operation",
+                                    "endpoint",
+                                    "domain_dependence",
+                                )
+                            ],
+                        },
+                        "dimensions": "must not be read before the gate",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            run_review.run_review(
+                package,
+                None,
+                paper_mode="paper_grounded",
+                agent_assessment_path=assessment,
+            )
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            manifest = json.loads(
+                (package / "benchmark_audit/audit_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+        self.assertIn(
+            "NON_MATERIALS_TASK",
+            [
+                gate["code"]
+                for gate in report["hard_gates"]
+                if gate["status"] == "FAIL"
+            ],
+        )
+        self.assertEqual(report["paper_consistency"]["status"], "NOT_ASSESSED")
+        self.assertNotIn("paper/paper.md", manifest["input_hashes"])
 
     def test_report_keeps_route_distinct_from_four_level_verdict(self) -> None:
         self.assertEqual(

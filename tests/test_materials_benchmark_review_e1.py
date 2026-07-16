@@ -242,7 +242,21 @@ _SCORERS = {"a": score_a, "b": score_b}
     ) -> None:
         coverage = {
             "positive": {"status": "ASSESSED"},
-            "negative": {"status": "ASSESSED"},
+            "negative": {
+                "status": "ASSESSED",
+                "subcoverage": {
+                    "task_family_attacks": {
+                        "constant_or_all_zero": {
+                            "status": "NOT_APPLICABLE",
+                            "reason": "not applicable to this fixture",
+                            "provenance": {
+                                "source_kind": "NONE",
+                                "oracle_used": False,
+                            },
+                        },
+                    },
+                },
+            },
             "discrimination": {
                 "status": "NOT_ASSESSABLE",
                 "provenance": {
@@ -269,16 +283,6 @@ _SCORERS = {"a": score_a, "b": score_b}
                     "runtime_bindings_verified": False,
                     "cases_planned": 0,
                     "cases_executed": 0,
-                },
-            },
-            "task_family_attacks": {
-                "constant_or_all_zero": {
-                    "status": "NOT_APPLICABLE",
-                    "reason": "not applicable to this fixture",
-                    "provenance": {
-                        "source_kind": "NONE",
-                        "oracle_used": False,
-                    },
                 },
             },
         }

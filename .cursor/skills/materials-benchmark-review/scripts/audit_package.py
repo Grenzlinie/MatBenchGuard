@@ -83,14 +83,29 @@ MATERIAL_TERMS = {
         "dispersion curve",
     ),
 }
-LOAD_BEARING_TERMS = (
-    "load-bearing",
-    "trajectory",
+CORE_ROLE_NAMES = {
+    "core",
+    "core_output",
+    "final",
+    "final_output",
+    "scored",
+    "scored_output",
+}
+PROCESS_ROLE_NAMES = {
+    "diagnostic",
+    "intermediate",
+    "process",
+    "process_artifact",
+    "process_evidence",
+}
+LOAD_BEARING_ARTIFACTS = (
+    "crystal structure",
+    "mesh",
+    "model",
     "prediction field",
     "predictive field",
-    "coordinates",
-    "geometry",
-    "mesh",
+    "structure",
+    "trajectory",
 )
 
 
@@ -120,23 +135,57 @@ def has_term(text: str, term: str) -> bool:
     )
 
 
-def _is_load_bearing_declaration(
+def _classify_declaration_role(
+    requirement: dict[str, Any], declaration: dict[str, Any]
+) -> str:
+    role = re.sub(
+        r"[\s-]+",
+        "_",
+        str(requirement.get("role") or "").strip().lower(),
+    )
+    if any(
+        role == name or role.startswith(name + "_")
+        for name in PROCESS_ROLE_NAMES
+    ):
+        return "PROCESS_ONLY"
+    if any(
+        role == name or role.startswith(name + "_")
+        for name in CORE_ROLE_NAMES
+    ):
+        return "CORE_OUTPUT"
+    if role:
+        return "UNCLASSIFIED"
+    if declaration.get("kind") == "process_evidence":
+        return "PROCESS_ONLY"
+    if declaration.get("kind") == "scored_output":
+        return "CORE_OUTPUT"
+    context = " ".join(
+        str(requirement.get(key) or "")
+        for key in ("title", "agent_work")
+    )
+    context += " " + str(declaration.get("quote") or "")
+    lowered = context.lower()
+    complete_artifact = any(
+        re.search(
+            rf"\b(?:complete|full)\b(?:\s+[a-z0-9_-]+){{0,4}}\s+"
+            rf"{re.escape(artifact)}\b",
+            lowered,
+        )
+        for artifact in LOAD_BEARING_ARTIFACTS
+    )
+    return "CORE_OUTPUT" if complete_artifact else "UNCLASSIFIED"
+
+
+def _is_load_bearing_artifact(
     requirement: dict[str, Any], declaration: dict[str, Any]
 ) -> bool:
     context = " ".join(
         str(requirement.get(key) or "")
-        for key in ("title", "role", "agent_work")
+        for key in ("title", "agent_work")
     )
     context += " " + str(declaration.get("quote") or "")
     lowered = context.lower()
-    complete_artifact = re.search(
-        r"\bcomplete(?:\s+[a-z0-9_-]+){0,3}\s+"
-        r"(?:model|structure|field)\b",
-        lowered,
-    )
-    return complete_artifact is not None or any(
-        term in lowered for term in LOAD_BEARING_TERMS
-    )
+    return any(artifact in lowered for artifact in LOAD_BEARING_ARTIFACTS)
 
 
 def materials_prescreen(text: str) -> dict[str, Any]:
@@ -220,6 +269,7 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
                 "agent_work": None,
                 "declared_outputs": [],
                 "evidence": [],
+                "classification": "UNCLASSIFIED",
             }
             continue
         if re.match(r"^#{1,6}\s+", line):
@@ -273,28 +323,26 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
     scored_outputs: list[str] = []
     load_bearing_outputs: list[str] = []
     for requirement in requirements:
-        role = str(requirement.get("role") or "").lower()
+        declaration_roles: list[str] = []
         for declaration in requirement["evidence"]:
             output_name = declaration["file"]
-            load_bearing = _is_load_bearing_declaration(
+            role_classification = _classify_declaration_role(
                 requirement, declaration
             )
-            if load_bearing:
-                _append_unique(load_bearing_outputs, output_name)
-            if (
-                not load_bearing
-                and (
-                    role.startswith("process")
-                    or declaration["kind"] == (
-                "process_evidence"
-                    )
-                )
-            ):
-                _append_unique(process_evidence, output_name)
-            elif role.startswith("scored") or declaration["kind"] == (
-                "scored_output"
-            ):
+            declaration["role_classification"] = role_classification
+            declaration_roles.append(role_classification)
+            if role_classification == "CORE_OUTPUT":
                 _append_unique(scored_outputs, output_name)
+                if _is_load_bearing_artifact(requirement, declaration):
+                    _append_unique(load_bearing_outputs, output_name)
+            elif role_classification == "PROCESS_ONLY":
+                _append_unique(process_evidence, output_name)
+        requirement["classification"] = (
+            declaration_roles[0]
+            if declaration_roles
+            and all(item == declaration_roles[0] for item in declaration_roles)
+            else "UNCLASSIFIED"
+        )
     unclassified = [
         name
         for name in all_outputs

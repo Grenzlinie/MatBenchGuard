@@ -24,16 +24,21 @@ Run the real checker in isolation and classify every case:
   and gaming outputs;
 - `discrimination`: meaningfully worse outputs cannot score better;
 - `equivalence`: scientifically equivalent representations preserve reward;
-- `component isolation`: a single source-bound component cannot pass alone;
-- task-family materials attacks with explicit status and provenance.
+- `component isolation`: a single source-bound component cannot pass alone.
+
+These are the only top-level classes. Task-family materials attacks are named
+cases and subcoverage within negative/discrimination, with explicit status and
+provenance.
 
 An Oracle pass proves only that a positive checker path exists. It does not
 prove scientific correctness or Gold provenance.
 
 Process artifacts are recorded only in the contract map. They are never
 checker targets, dynamic probes, deductions, gates, or anti-hacking traces.
-Load-bearing models, structures, trajectories, and prediction fields are core
-outputs; an ignored core output is a severe checker-core finding.
+Explicitly core/scored/final complete models, structures, trajectories,
+prediction fields, and meshes are core outputs; uncertain roles stay
+`UNCLASSIFIED`, while explicit process-only roles cannot activate attacks or
+findings. An ignored core output is a severe checker-core finding.
 
 ## Escalate to paper
 

@@ -174,6 +174,7 @@ def validate_fresh_audit(
     report = read_json(audit / "audit_report.json")
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
+    report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
     route = disposition.get("route") or report.get("summary", {}).get("disposition")
@@ -585,8 +586,8 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
     execution_level = configuration.get("execution_level")
     if paper_mode not in {"no_paper", "paper_grounded"}:
         raise ValueError("Review report has an unsupported paper_mode")
-    if not isinstance(execution_level, str) or not execution_level:
-        raise ValueError("Review report requires execution_level")
+    if execution_level != "E1":
+        raise ValueError("repair re-audit is fixed E1")
     return paper_mode, execution_level
 
 

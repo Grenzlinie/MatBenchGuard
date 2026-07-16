@@ -324,6 +324,23 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertIn("stale audit", completed.stderr)
             self.assertFalse((package / "benchmark_repair").exists())
 
+    def test_repair_reaudit_rejects_non_e1_source_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
+            report["configuration"]["execution_level"] = "E2"
+            write_json(package / "benchmark_audit/audit_report.json", report)
+            plan = workspace / "repair-plan.json"
+            write_plan(plan, safe_plan(report["audit_id"], finding_id))
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("fixed E1", completed.stderr)
+            self.assertFalse((package / "benchmark_repair").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

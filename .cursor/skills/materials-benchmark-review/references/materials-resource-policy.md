@@ -34,5 +34,6 @@ identity-mismatched indispensable direct input with no equivalent triggers
 `INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE`, one of the four Hard Gates. Transient
 audit-host failure is temporary `NOT_ASSESSABLE`, not a scientific rejection.
 
-An E2 audit-host smoke may show only that a minimal process starts. It does not
-establish scientific reproduction, Harbor-environment equivalence, or L6.
+Any historical or external E2 audit-host smoke may show only that a minimal
+process starts. It is never a Review publication path and does not establish
+scientific reproduction, Harbor-environment equivalence, or L6.

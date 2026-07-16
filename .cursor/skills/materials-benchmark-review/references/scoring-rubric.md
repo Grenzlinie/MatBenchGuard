@@ -70,9 +70,11 @@ workflow requirement:
 `instruction requirement → Agent work → core output → checker read → checker
 score`.
 
-An output named under a `Role: process` step is process evidence unless it is
-a complete model, structure, trajectory, prediction field, or other
-load-bearing scientific artifact. Process artifacts are contract-map-only:
+An explicitly process/intermediate/diagnostic output is process-only even when
+nearby prose mentions a model or structure. Complete/full models, structures,
+trajectories, prediction fields, and meshes are core only when explicitly
+core/scored/final or when no explicit role contradicts the conservative
+classification. Uncertain roles remain `UNCLASSIFIED`. Process artifacts are contract-map-only:
 they are never checker targets, weighted components, deductions, gates, or
 dynamic probes. Do not emit `PROCESS_EVIDENCE_NOT_VERIFIED` or run an
 anti-hacking trace.
