@@ -22,6 +22,9 @@ REPAIR_RUNNER = (
     / "scripts"
     / "run_repair.py"
 )
+REVIEW_SKILL_ROOT = (
+    REPO_ROOT / ".cursor" / "skills" / "materials-benchmark-review"
+)
 AUDIT_ID = "audit-source-001"
 FINDING_ID = "finding-missing-solve"
 
@@ -82,9 +85,13 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
 
 
 def install_repair_harness(workspace: Path) -> Path:
+    harness_root = workspace / "harness"
+    shutil.copytree(
+        REVIEW_SKILL_ROOT,
+        harness_root / "materials-benchmark-review",
+    )
     harness_runner = (
-        workspace
-        / "harness/materials-benchmark-repair/scripts/run_repair.py"
+        harness_root / "materials-benchmark-repair/scripts/run_repair.py"
     )
     harness_runner.parent.mkdir(parents=True)
     shutil.copy2(REPAIR_RUNNER, harness_runner)
@@ -92,7 +99,7 @@ def install_repair_harness(workspace: Path) -> Path:
         workspace
         / "harness/materials-benchmark-review/scripts/run_review.py"
     )
-    review_runner.parent.mkdir(parents=True)
+    review_runner.parent.mkdir(parents=True, exist_ok=True)
     review_runner.write_text(
         textwrap.dedent(
             """\
@@ -100,6 +107,53 @@ def install_repair_harness(workspace: Path) -> Path:
             import hashlib
             import json
             from pathlib import Path
+
+            IMPLEMENTATION_FILES = (
+                "scripts/prepare_audit_output.py",
+                "scripts/audit_package.py",
+                "scripts/dynamic_checker_probe.py",
+                "scripts/finalize_audit_output.py",
+                "scripts/run_review.py",
+                "scripts/run_fast_e1_batch.py",
+            )
+
+            def file_hash(path):
+                return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+            def review_implementation():
+                skill = Path(__file__).resolve().parent.parent
+                files = {name: file_hash(skill / name) for name in IMPLEMENTATION_FILES}
+                payload = json.dumps(
+                    files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode()
+                return {
+                    "schema_version": "materials-review-implementation/1.0",
+                    "root": ".cursor/skills/materials-benchmark-review",
+                    "files": files,
+                    "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+                }
+
+            def core_digest(root):
+                paths = []
+                if (root / "instruction.md").is_file():
+                    paths.append(root / "instruction.md")
+                for role in ("tests", "solution"):
+                    if (root / role).is_dir():
+                        paths.extend(
+                            path for path in sorted((root / role).rglob("*"))
+                            if path.is_file()
+                        )
+                snapshot = {
+                    "schema_version": "materials-core-contract/1.0",
+                    "surface_hashes": {
+                        path.relative_to(root).as_posix(): file_hash(path)
+                        for path in sorted(paths)
+                    },
+                }
+                payload = json.dumps(
+                    snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode()
+                return "sha256:" + hashlib.sha256(payload).hexdigest()
 
             parser = argparse.ArgumentParser()
             parser.add_argument("root")
@@ -127,8 +181,10 @@ def install_repair_harness(workspace: Path) -> Path:
                     "disposition": "PUBLISH_CANDIDATE",
                 },
             }
-            (audit / "audit_report.json").write_text(json.dumps(report))
-            (audit / "disposition.json").write_text(json.dumps({
+            report_path = audit / "audit_report.json"
+            report_path.write_text(json.dumps(report))
+            disposition_path = audit / "disposition.json"
+            disposition_path.write_text(json.dumps({
                 "route": "PUBLISH_CANDIDATE",
                 "verdict": "PASS",
             }))
@@ -149,7 +205,20 @@ def install_repair_harness(workspace: Path) -> Path:
                 "audit_id": report["audit_id"],
                 "benchmark_root": str(root),
                 "input_hashes": hashes,
-                "output_hashes": {},
+                "review_implementation": review_implementation(),
+                "core_contract_digest": core_digest(root),
+                "fixture_hashes": (
+                    {"known_valid_output": file_hash(Path(args.known_valid_output))}
+                    if args.known_valid_output else {}
+                ),
+                "assessment_hashes": (
+                    {"agent_assessment": file_hash(Path(args.agent_assessment))}
+                    if args.agent_assessment else {}
+                ),
+                "output_hashes": {
+                    "audit_report.json": file_hash(report_path),
+                    "disposition.json": file_hash(disposition_path),
+                },
             }))
             print(json.dumps(report))
             """
@@ -210,17 +279,28 @@ def initial_repair_context(
             "manifest.json",
         )
     }
+    module_spec = importlib.util.spec_from_file_location("harness_repair", runner)
+    assert module_spec is not None and module_spec.loader is not None
+    module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(module)
     write_json(
         package / "benchmark_audit/audit_manifest.json",
         {
             "audit_id": AUDIT_ID,
             "benchmark_root": str(package),
             "input_hashes": input_hashes,
-            "review_implementation": {
-                "schema_version": "materials-review-implementation/1.0",
-                "aggregate_hash": "sha256:" + "1" * 64,
+            "review_implementation": module.collect_review_implementation_hashes(),
+            "core_contract_digest": module.core_contract_digest(package),
+            "fixture_hashes": {},
+            "assessment_hashes": {},
+            "output_hashes": {
+                "audit_report.json": sha256_file(
+                    package / "benchmark_audit/audit_report.json"
+                ),
+                "disposition.json": sha256_file(
+                    package / "benchmark_audit/disposition.json"
+                ),
             },
-            "output_hashes": {},
         },
     )
     return package, report, FINDING_ID, runner
@@ -350,6 +430,10 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertTrue((history / "original").is_dir())
             self.assertTrue((history / "repair_plan.json").is_file())
             self.assertTrue((history / "attempt_manifest.json").is_file())
+            repair_module().validate_fixed_bundle(
+                package / "benchmark_repair"
+            )
+            repair_module().validate_fixed_bundle(history)
 
     def test_repair_rejects_targets_outside_instruction_tests_and_solution(
         self,

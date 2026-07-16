@@ -82,6 +82,14 @@ Never:
   reproduction type;
 - treat a passing checker alone as scientific evidence.
 
+Repair classifies evidence roots explicitly as audit finding, public
+instruction, checker contract, paper, metadata, or solution/Oracle. Metadata
+(`manifest.json`, resources, steps, task/environment files) and
+solution/Oracle content cannot support scientific, schema, or scoring changes.
+Thresholds and weights require an exact scoring-contract field/value plus
+quoted mathematical support. Typed schema evidence must quote the exact field,
+type, unit, requiredness, and value it authorizes.
+
 When evidence is absent or not linked to an operation, return
 `BLOCKED_EVIDENCE` with decision `ABANDON` without mutating the package. When a
 plan declares or attempts a forbidden change, return `POLICY_VIOLATION`. Do not
@@ -92,14 +100,20 @@ value.
 
 Before mutation, reject stale audit hashes, require a complete source-audit
 binding, freeze the core-contract digest, and verify that the selected finding
-is still open. Then:
+is still open. Authenticate every manifest-declared audit output and require
+the manifest's Review implementation hashes to match the currently installed
+Review. The frozen digest covers every file path and byte hash under
+`instruction.md`, `tests/**`, and `solution/**`, including `tests/test.sh`.
+Plan-provided fixture or assessment hashes are not authoritative; only hashes
+in the authenticated audit manifest may bind those external inputs. Then:
 
 1. Copy the full package to both
    `.benchmark_repair_tmp/<repair_id>/snapshot/` and `candidate/`.
 2. Run required regressions against the snapshot.
 3. Apply only the planned operations to the candidate, recording before/after
    hashes and evidence links.
-4. Run the regressions against the candidate.
+4. Require the causal regression set to cover every operation, then run it
+   against the candidate.
 5. Run the canonical Review CLI at the source audit's paper mode and fixed E1
    execution level. External fixtures and assessments must match the hashes
    bound by the source audit.
@@ -113,7 +127,9 @@ is still open. Then:
 
 Successful history contains the full `snapshot/`, the full pre-publication
 `original/`, `repair_plan.json`, and `attempt_manifest.json`. If the swap fails,
-restore the original package.
+restore the original package. Every published, blocked, abandoned, and
+rolled-back history must validate all fixed bundle files, including
+`history.json`; an incomplete prior history cannot count as a valid attempt.
 
 ## Attempt limit
 

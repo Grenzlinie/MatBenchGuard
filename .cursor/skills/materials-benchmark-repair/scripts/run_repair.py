@@ -7,7 +7,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -38,8 +37,23 @@ GENERATED_TOP_LEVEL = {
     ".benchmark_repair_tmp",
 }
 EVIDENCE_SOURCE_PREFIX = "benchmark_audit:"
+METADATA_ROOTS = {
+    "manifest.json",
+    "resources.json",
+    "steps.json",
+    "task.toml",
+    "environment",
+}
 REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
 CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
+REVIEW_IMPLEMENTATION_FILES = (
+    "scripts/prepare_audit_output.py",
+    "scripts/audit_package.py",
+    "scripts/dynamic_checker_probe.py",
+    "scripts/finalize_audit_output.py",
+    "scripts/run_review.py",
+    "scripts/run_fast_e1_batch.py",
+)
 REPAIR_BUNDLE_FILES = (
     "repair_plan.json",
     "changes.json",
@@ -52,12 +66,17 @@ REPAIR_BUNDLE_FILES = (
     "history.json",
 )
 PRECISION_RULES = {
-    "json_key": ("key", "type", "required", "unit"),
+    "json_key": ("key", "type", "required", "unit", "value"),
     "csv_column": ("column", "type", "required", "unit"),
     "npy_array": ("shape", "dtype", "axis_semantics", "unit"),
     "gold": ("value", "unit", "source_or_derivation"),
-    "tolerance": ("error_basis", "direction", "mode"),
-    "weight": ("scoring_contract", "mathematical_proof"),
+    "tolerance": ("field", "value", "error_basis", "direction", "mode"),
+    "scoring_contract": (
+        "field",
+        "value",
+        "scoring_contract",
+        "mathematical_proof",
+    ),
     "scientific_method": ("claim",),
     "exception_guard": ("stack_trace", "existing_reading_code"),
     "harbor_path": ("official_contract", "existing_path_code"),
@@ -115,30 +134,59 @@ def sha256_path(path: Path) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
-def core_contract_snapshot(root: Path) -> dict[str, Any]:
-    """Return the frozen public contract used to bind a repair plan."""
-    values: dict[str, Any] = {}
-    for relative in ("instruction.md", "tests/checker.py"):
+def review_skill_root() -> Path:
+    return (
+        Path(__file__).resolve().parents[2] / "materials-benchmark-review"
+    )
+
+
+def collect_review_implementation_hashes() -> dict[str, Any]:
+    root = review_skill_root()
+    files: dict[str, str] = {}
+    for relative in REVIEW_IMPLEMENTATION_FILES:
         path = root / relative
-        values[relative] = (
-            path.read_text(encoding="utf-8", errors="replace")
-            if path.is_file()
-            else None
-        )
-    specification_path = root / "tests/grading_spec.json"
-    if specification_path.is_file():
-        try:
-            specification = read_json(specification_path)
-        except (OSError, ValueError, json.JSONDecodeError):
-            specification = None
-    else:
-        specification = None
-    values["grading_contract"] = specification
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(f"current Review implementation is missing: {relative}")
+        files[relative] = sha256_file(path)
+    payload = json.dumps(
+        files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return {
+        "schema_version": "materials-review-implementation/1.0",
+        "root": ".cursor/skills/materials-benchmark-review",
+        "files": files,
+        "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def contract_surface_hashes(root: Path) -> dict[str, str]:
+    paths: list[Path] = []
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        paths.append(instruction)
+    for role in ("tests", "solution"):
+        directory = root / role
+        if directory.is_symlink():
+            raise ValueError(f"core contract role may not be a symlink: {role}")
+        if directory.is_dir():
+            for path in sorted(directory.rglob("*")):
+                if path.is_symlink():
+                    raise ValueError(
+                        f"core contract surface may not be a symlink: {path}"
+                    )
+                if path.is_file():
+                    paths.append(path)
+    return {
+        path.relative_to(root).as_posix(): sha256_file(path)
+        for path in sorted(paths)
+    }
+
+
+def core_contract_snapshot(root: Path) -> dict[str, Any]:
+    """Freeze every instruction/tests/solution path and byte hash."""
     return {
         "schema_version": CORE_CONTRACT_SCHEMA,
-        "instruction": values["instruction.md"],
-        "checker": values["tests/checker.py"],
-        "grading_contract": values["grading_contract"],
+        "surface_hashes": contract_surface_hashes(root),
     }
 
 
@@ -247,6 +295,7 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
     if plan.get("repair_class") != "ABANDON" and not regressions:
         raise ValueError("repair plan requires regression tests")
     operation_ids: set[str] = set()
+    operations_by_id: dict[str, dict[str, Any]] = {}
     for operation in operations:
         if not isinstance(operation, dict):
             raise ValueError("every repair operation must be an object")
@@ -256,9 +305,11 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
         if operation_id in operation_ids:
             raise ValueError(f"duplicate repair operation id: {operation_id}")
         operation_ids.add(operation_id)
+        operations_by_id[operation_id] = operation
         if operation.get("type") not in OPERATION_TYPES:
             raise ValueError(f"unsupported repair operation: {operation.get('type')}")
         repair_target(root, operation.get("file"))
+    causally_covered: set[str] = set()
     for index, specification in enumerate(regressions, start=1):
         if not isinstance(specification, dict):
             raise ValueError("every regression test must be an object")
@@ -285,15 +336,40 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
             raise ValueError(
                 f"regression test {index} links an unknown causal operation"
             )
+        causally_covered.update(causal)
+        if specification["type"] == "command":
+            observed_paths = {
+                Path(item).as_posix()
+                for item in specification.get("command", [])
+                if isinstance(item, str)
+            }
+        else:
+            observed_paths = {Path(str(specification.get("file", ""))).as_posix()}
+        mismatched = [
+            operation_id
+            for operation_id in causal
+            if Path(str(operations_by_id[operation_id].get("file", ""))).as_posix()
+            not in observed_paths
+        ]
+        if mismatched:
+            raise ValueError(
+                f"regression test {index} does not observe causal operation "
+                f"targets: {mismatched}"
+            )
         if specification.get("expected_before", False) is not False:
             raise ValueError("regressions must fail before the repair")
         if specification.get("expected_after", True) is not True:
             raise ValueError("regressions must pass after the repair")
+    if plan.get("repair_class") != "ABANDON" and causally_covered != operation_ids:
+        uncovered = sorted(operation_ids - causally_covered)
+        raise ValueError(
+            f"every operation requires causal regression coverage: {uncovered}"
+        )
     return plan
 
 
 def external_binding_hashes(
-    root: Path, plan: dict[str, Any], source_audit: dict[str, Any]
+    root: Path, plan: dict[str, Any], authoritative_manifest: dict[str, Any]
 ) -> tuple[dict[str, str], dict[str, str]]:
     fixture_hashes: dict[str, str] = {}
     assessment_hashes: dict[str, str] = {}
@@ -324,7 +400,7 @@ def external_binding_hashes(
         if not isinstance(value, dict):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
-                f"source_audit.{field} must be a hash mapping",
+                f"authoritative audit {field} must be a hash mapping",
             )
         normalized: dict[str, str] = {}
         for name, raw_hash in value.items():
@@ -333,26 +409,90 @@ def external_binding_hashes(
             if not isinstance(name, str) or not isinstance(raw_hash, str):
                 raise PolicyStop(
                     "BLOCKED_EVIDENCE",
-                    f"source_audit.{field} contains an invalid hash",
+                    f"authoritative audit {field} contains an invalid hash",
                 )
             normalized[name] = raw_hash
         return normalized
 
-    expected_fixtures = normalize(source_audit.get("fixture_hashes"), "fixture_hashes")
+    expected_fixtures = normalize(
+        authoritative_manifest.get("fixture_hashes"), "fixture_hashes"
+    )
     expected_assessments = normalize(
-        source_audit.get("assessment_hashes"), "assessment_hashes"
+        authoritative_manifest.get("assessment_hashes"), "assessment_hashes"
     )
     if expected_fixtures != fixture_hashes:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
-            "source audit fixture hashes do not bind the supplied fixture",
+            "authoritative audit fixture hashes do not bind the supplied fixture",
         )
     if expected_assessments != assessment_hashes:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
-            "source audit assessment hashes do not bind the supplied assessment",
+            "authoritative audit assessment hashes do not bind the supplied "
+            "assessment",
         )
     return fixture_hashes, assessment_hashes
+
+
+def authenticate_audit_bundle(
+    root: Path,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+    disposition: dict[str, Any],
+) -> None:
+    audit = root / "benchmark_audit"
+    audit_id = manifest.get("audit_id")
+    if (
+        not isinstance(audit_id, str)
+        or report.get("audit_id") != audit_id
+        or disposition.get("audit_id", audit_id) != audit_id
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit identities are inconsistent",
+        )
+    output_hashes = manifest.get("output_hashes")
+    if not isinstance(output_hashes, dict) or not output_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit lacks authenticated output hashes",
+        )
+    required = {"audit_report.json", "disposition.json"}
+    if not required.issubset(output_hashes):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit output hashes omit required reports",
+        )
+    for relative, expected in output_hashes.items():
+        try:
+            path, relative_path = package_path(
+                audit, relative, context="audit output path"
+            )
+        except (TypeError, ValueError) as exc:
+            raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
+        if relative_path.name in {"audit_manifest.json", "audit_context.json"}:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "audit output hashes may not self-authenticate manifest/context",
+            )
+        if (
+            not isinstance(expected, str)
+            or not path.is_file()
+            or sha256_file(path) != expected
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"authoritative audit output is tampered or stale: {relative}",
+            )
+    try:
+        current_implementation = collect_review_implementation_hashes()
+    except (OSError, ValueError) as exc:
+        raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
+    if manifest.get("review_implementation") != current_implementation:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit was produced by a stale Review implementation",
+        )
 
 
 def validate_source_audit_binding(
@@ -405,20 +545,6 @@ def validate_source_audit_binding(
             "BLOCKED_EVIDENCE",
             "source audit package hashes differ from the authoritative audit",
         )
-    implementation = manifest.get("review_implementation")
-    if not isinstance(implementation, dict) or not implementation:
-        raise PolicyStop(
-            "BLOCKED_EVIDENCE",
-            "authoritative audit lacks Review implementation hashes",
-        )
-    bound_implementation = source_audit.get("review_implementation")
-    if bound_implementation is None:
-        bound_implementation = source_audit.get("review_implementation_hash")
-    if bound_implementation != implementation:
-        raise PolicyStop(
-            "BLOCKED_EVIDENCE",
-            "source audit Review implementation hash is stale",
-        )
     configuration = report.get("configuration")
     if not isinstance(configuration, dict):
         raise PolicyStop(
@@ -441,12 +567,16 @@ def validate_source_audit_binding(
     bound_digest = source_audit.get("core_contract_digest")
     if bound_digest is None and isinstance(source_audit.get("core_contract"), dict):
         bound_digest = source_audit["core_contract"].get("digest")
-    if plan.get("core_contract_digest") != digest or bound_digest != digest:
+    if (
+        plan.get("core_contract_digest") != digest
+        or bound_digest != digest
+        or manifest.get("core_contract_digest") != digest
+    ):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
             "frozen core-contract digest is stale or incomplete",
         )
-    external_binding_hashes(root, plan, source_audit)
+    external_binding_hashes(root, plan, manifest)
     return source_audit
 
 
@@ -457,6 +587,7 @@ def validate_fresh_audit(
     report = read_json(audit / "audit_report.json")
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
+    authenticate_audit_bundle(root, report, manifest, disposition)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
     route = disposition.get("route") or report.get("summary", {}).get("disposition")
@@ -530,7 +661,7 @@ def evidence_index(
                     "Audit evidence must bind the selected finding.",
                 )
             local = root / "benchmark_audit/audit_report.json"
-            source_kind = "audit"
+            source_category = "audit_finding"
         else:
             try:
                 local, relative = package_path(
@@ -538,10 +669,19 @@ def evidence_index(
                 )
             except (TypeError, ValueError) as exc:
                 raise PolicyStop("BLOCKED_EVIDENCE", str(exc)) from exc
-            if relative.parts and relative.parts[0] in {"solution"}:
-                source_kind = "solution"
+            top = relative.parts[0] if relative.parts else ""
+            if top == "solution":
+                source_category = "solution_oracle"
+            elif top == "paper":
+                source_category = "paper"
+            elif top == "tests":
+                source_category = "checker_contract"
+            elif relative.as_posix() == "instruction.md":
+                source_category = "public_instruction"
+            elif top in METADATA_ROOTS:
+                source_category = "metadata"
             else:
-                source_kind = "package"
+                source_category = "unsupported"
         if not local.is_file():
             raise PolicyStop(
                 "BLOCKED_EVIDENCE", f"Evidence source does not exist: {source}"
@@ -572,7 +712,13 @@ def evidence_index(
                 f"Evidence hash does not match {source}.",
             )
         normalized = dict(item)
-        normalized["source_kind"] = source_kind
+        declared_category = item.get("source_category")
+        if declared_category is not None and declared_category != source_category:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"Evidence source category is false for {source}.",
+            )
+        normalized["source_category"] = source_category
         normalized["source_hash"] = actual_hash
         indexed[evidence_id] = normalized
     return indexed
@@ -597,19 +743,22 @@ def linked_evidence(
 
 
 def precision_kind_for(operation: dict[str, Any]) -> str | None:
-    explicit = operation.get("precision_kind")
-    if isinstance(explicit, str) and explicit:
-        return explicit
     relative = Path(str(operation.get("file", ""))).as_posix()
     if operation.get("type") == "json_set":
         tokens = operation.get("path")
         final = str(tokens[-1]).lower() if isinstance(tokens, list) and tokens else ""
-        if "threshold" in final or "tolerance" in final:
+        if "threshold" in final or "weight" in final:
+            return "scoring_contract"
+        if "tolerance" in final or "error" in final:
             return "tolerance"
-        if "weight" in final:
-            return "weight"
         if any(term in final for term in ("gold", "target", "reference")):
             return "gold"
+        return "json_key"
+    if relative.lower().endswith(".json") and operation.get("type") in {
+        "replace_text",
+        "text_replace",
+        "write_file",
+    }:
         return "json_key"
     if relative.lower().endswith(".csv"):
         return "csv_column"
@@ -622,6 +771,66 @@ def precision_kind_for(operation: dict[str, Any]) -> str | None:
     if relative.startswith("solution/"):
         return None
     return "harbor_path"
+
+
+def json_type_name(value: Any) -> str:
+    return (
+        "boolean"
+        if isinstance(value, bool)
+        else "number"
+        if isinstance(value, (int, float))
+        else "string"
+        if isinstance(value, str)
+        else "array"
+        if isinstance(value, list)
+        else "object"
+        if isinstance(value, dict)
+        else "null"
+    )
+
+
+def normalized_precision(item: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    precision = item.get("precision")
+    if not isinstance(precision, dict):
+        precision = {}
+    precision = dict(precision)
+    for canonical, aliases in {
+        "required": ("requiredness",),
+        "unit": ("units",),
+        "axis_semantics": ("axes", "axis"),
+        "source_or_derivation": ("derivation", "source"),
+        "error_basis": ("basis",),
+        "mode": ("abs_rel", "absolute_or_relative"),
+        "stack_trace": ("stack", "traceback"),
+        "existing_reading_code": ("reading_code",),
+    }.items():
+        if canonical not in precision:
+            for alias in aliases:
+                if alias in precision:
+                    precision[canonical] = precision[alias]
+                    break
+    return precision.get("kind") or item.get("kind"), precision
+
+
+def quote_supports_precision(
+    item: dict[str, Any],
+    precision: dict[str, Any],
+    fields: tuple[str, ...],
+) -> bool:
+    quote = str(item.get("quote", "")).casefold()
+    for field in fields:
+        value = precision.get(field)
+        if value is None or value == "":
+            continue
+        if field == "required" and isinstance(value, bool):
+            token = "required" if value else "optional"
+        elif isinstance(value, bool):
+            token = str(value).lower()
+        else:
+            token = str(value).casefold()
+        if token not in quote:
+            return False
+    return True
 
 
 def validate_precision_matrix(
@@ -639,30 +848,13 @@ def validate_precision_matrix(
         # than inventing scientific precision.  Core targets are rejected below.
         return
     valid: list[dict[str, Any]] = []
+    valid_items: list[dict[str, Any]] = []
     for item in linked:
-        precision = item.get("precision")
-        if not isinstance(precision, dict):
-            precision = {}
-        precision = dict(precision)
-        for canonical, aliases in {
-            "required": ("requiredness",),
-            "unit": ("units",),
-            "axis_semantics": ("axes", "axis"),
-            "source_or_derivation": ("derivation", "source"),
-            "error_basis": ("basis",),
-            "mode": ("abs_rel", "absolute_or_relative"),
-            "stack_trace": ("stack", "traceback"),
-            "existing_reading_code": ("reading_code",),
-        }.items():
-            if canonical not in precision:
-                for alias in aliases:
-                    if alias in precision:
-                        precision[canonical] = precision[alias]
-                        break
-        kind = precision.get("kind") or item.get("kind")
+        kind, precision = normalized_precision(item)
         if kind != expected:
             continue
         valid.append(precision)
+        valid_items.append(item)
     if not valid:
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
@@ -670,18 +862,83 @@ def validate_precision_matrix(
             f"{operation.get('file')}.",
         )
     required = PRECISION_RULES[expected]
-    if not all(all(field in precision for field in required) for precision in valid):
+    if not all(
+        all(
+            field in precision
+            and precision[field] is not None
+            and precision[field] != ""
+            for field in required
+        )
+        for precision in valid
+    ):
         raise PolicyStop(
             "BLOCKED_EVIDENCE",
             f"{expected} evidence lacks the required typed precision fields.",
         )
+    if expected in {"json_key", "tolerance", "scoring_contract"} and not all(
+        quote_supports_precision(item, precision, required)
+        for item, precision in zip(valid_items, valid)
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            f"{expected} quote does not substantively support the exact "
+            "field/type/unit/requiredness/value.",
+        )
     if expected == "json_key":
         operation_path = operation.get("path")
-        operation_key = (
-            str(operation_path[-1])
-            if isinstance(operation_path, list) and operation_path
-            else None
-        )
+        operation_key = None
+        operation_value: Any = None
+        if isinstance(operation_path, list) and operation_path:
+            operation_key = str(operation_path[-1])
+            operation_value = operation.get("value")
+        elif operation.get("type") in {
+            "replace_text",
+            "text_replace",
+            "write_file",
+        }:
+            try:
+                if operation.get("type") == "write_file":
+                    old_document = {}
+                    new_document = json.loads(operation.get("content", ""))
+                else:
+                    old_document = json.loads(operation.get("old", ""))
+                    new_document = json.loads(operation.get("new", ""))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON text operation must contain complete valid JSON values.",
+                )
+            if not isinstance(old_document, dict) or not isinstance(new_document, dict):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON text operation requires object-level typed evidence.",
+                )
+            changed_keys = {
+                key
+                for key in set(old_document) | set(new_document)
+                if old_document.get(key) != new_document.get(key)
+            }
+            evidenced_keys = {str(precision.get("key")) for precision in valid}
+            if changed_keys != evidenced_keys:
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON replacement evidence must cover every changed field.",
+                )
+            for precision in valid:
+                key = str(precision["key"])
+                if precision.get("value") != new_document.get(key):
+                    raise PolicyStop(
+                        "BLOCKED_EVIDENCE",
+                        "JSON evidence value differs from the replacement value.",
+                    )
+                if (
+                    str(precision.get("type")).casefold()
+                    != json_type_name(new_document.get(key))
+                ):
+                    raise PolicyStop(
+                        "BLOCKED_EVIDENCE",
+                        "JSON evidence type differs from the replacement value type.",
+                    )
         if any(
             precision.get("key") != operation_key
             for precision in valid
@@ -690,6 +947,42 @@ def validate_precision_matrix(
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
                 "JSON evidence key does not match the operation path.",
+            )
+        if operation_key is not None and any(
+            precision.get("value") != operation_value for precision in valid
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "JSON evidence value differs from the operation value.",
+            )
+        expected_value = (
+            operation_value
+            if operation_key is not None
+            else None
+        )
+        if operation_key is not None:
+            if any(
+                str(precision.get("type")).casefold()
+                != json_type_name(expected_value)
+                for precision in valid
+            ):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "JSON evidence type differs from the operation value type.",
+                )
+    if expected in {"tolerance", "scoring_contract"}:
+        tokens = operation.get("path")
+        operation_field = (
+            str(tokens[-1]) if isinstance(tokens, list) and tokens else None
+        )
+        if operation_field is None or any(
+            precision.get("field") != operation_field
+            or precision.get("value") != operation.get("value")
+            for precision in valid
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"{expected} evidence does not match the exact field and value.",
             )
     method_items = [
         item
@@ -702,8 +995,7 @@ def validate_precision_matrix(
         or item.get("kind") == expected
     ]
     if expected == "scientific_method" and any(
-        item.get("source_kind") not in {"package"}
-        or not str(item.get("source", "")).startswith(("instruction.md", "paper/"))
+        item.get("source_category") not in {"public_instruction", "paper"}
         for item in method_items
     ):
         raise PolicyStop(
@@ -788,14 +1080,34 @@ def validate_policy(
     for operation in plan["operations"]:
         linked = linked_evidence(operation, evidence)
         _, relative = repair_target(root, operation["file"])
-        validate_precision_matrix(operation, linked, plan["repair_class"])
         if relative.parts and relative.parts[0] != "solution" and any(
-            item.get("source_kind") == "solution" for item in linked
+            item.get("source_category") == "solution_oracle" for item in linked
         ):
             raise PolicyStop(
                 "POLICY_VIOLATION",
                 "Oracle/solution content cannot support public or checker "
                 "contract changes.",
+            )
+        validate_precision_matrix(operation, linked, plan["repair_class"])
+        expected_precision = precision_kind_for(operation)
+        allowed_categories = (
+            {"public_instruction", "paper"}
+            if expected_precision == "scientific_method"
+            else {
+                "audit_finding",
+                "public_instruction",
+                "checker_contract",
+                "paper",
+            }
+        )
+        if any(
+            item.get("source_category") not in allowed_categories
+            for item in linked
+        ):
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                "Evidence source role cannot support this scientific/schema/"
+                "scoring change.",
             )
         if relative.as_posix() == "instruction.md":
             if any(
@@ -1072,6 +1384,7 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
 def run_equal_depth_review(
     candidate: Path,
     report: dict[str, Any],
+    source_manifest: dict[str, Any],
     plan: dict[str, Any],
 ) -> dict[str, Any]:
     runner = (
@@ -1083,10 +1396,7 @@ def run_equal_depth_review(
     paper_mode, execution_level = report_configuration(report)
     if execution_level != REQUIRED_AUDIT_EXECUTION_LEVEL:
         raise ValueError("Repair equal-depth re-audit is fixed at E1")
-    source_audit = plan.get("source_audit")
-    if not isinstance(source_audit, dict):
-        raise ValueError("re-audit lacks source-audit binding")
-    external_binding_hashes(candidate, plan, source_audit)
+    external_binding_hashes(candidate, plan, source_manifest)
     command = [
         sys.executable,
         str(runner),
@@ -1272,8 +1582,98 @@ def prior_failed_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
             and isinstance(value.get("attempt_number"), int)
             and value["attempt_number"] > 0
         ):
+            validate_fixed_bundle(path.parent)
             attempts.append(value)
     return sorted(attempts, key=lambda item: item["attempt_number"])
+
+
+def validate_fixed_bundle(directory: Path) -> None:
+    missing = [
+        name
+        for name in REPAIR_BUNDLE_FILES
+        if not (directory / name).is_file() or (directory / name).is_symlink()
+    ]
+    if missing:
+        raise ValueError(f"incomplete fixed repair bundle: {missing}")
+    values: dict[str, Any] = {}
+    for name in REPAIR_BUNDLE_FILES:
+        if name.endswith(".json"):
+            try:
+                values[name] = read_json(directory / name)
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(f"invalid fixed repair bundle file: {name}") from exc
+    expected_types = {
+        "repair_plan.json": dict,
+        "changes.json": list,
+        "unresolved.json": list,
+        "regression_results.json": list,
+        "re_audit_comparison.json": dict,
+        "patch.json": dict,
+        "evidence.json": list,
+        "history.json": dict,
+    }
+    invalid_types = [
+        name
+        for name, expected in expected_types.items()
+        if not isinstance(values.get(name), expected)
+    ]
+    if invalid_types:
+        raise ValueError(f"fixed repair bundle has invalid types: {invalid_types}")
+    history = values["history.json"]
+    if (
+        history.get("bundle_complete") is not True
+        or history.get("bundle_files") != list(REPAIR_BUNDLE_FILES)
+    ):
+        raise ValueError("fixed repair history.json does not attest completeness")
+
+
+def write_history_bundle(
+    destination: Path,
+    *,
+    plan: dict[str, Any],
+    changes: Any,
+    unresolved: Any,
+    regressions: Any,
+    comparison: Any,
+    evidence: Any,
+    root_cause: str,
+    attempt_number: int,
+    status: str,
+    decision: str,
+) -> None:
+    write_json(destination / "repair_plan.json", plan)
+    write_json(destination / "changes.json", changes)
+    write_json(destination / "unresolved.json", unresolved)
+    write_json(destination / "regression_results.json", regressions)
+    write_json(destination / "re_audit_comparison.json", comparison)
+    write_json(
+        destination / "patch.json",
+        {
+            "schema_version": "0.1",
+            "files": changes,
+            "atomic_publish": status == "PUBLISHED",
+        },
+    )
+    write_json(
+        destination / "evidence.json",
+        list(evidence.values()) if isinstance(evidence, dict) else evidence,
+    )
+    (destination / "repair.log").write_text(
+        f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}\n",
+        encoding="utf-8",
+    )
+    write_json(
+        destination / "history.json",
+        {
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "status": status,
+            "decision": decision,
+            "bundle_files": list(REPAIR_BUNDLE_FILES),
+            "bundle_complete": True,
+        },
+    )
+    validate_fixed_bundle(destination)
 
 
 def record_control_stop(
@@ -1287,19 +1687,18 @@ def record_control_stop(
     history_root = history_root_for(root)
     destination = history_root / repair_id
     destination.mkdir(parents=True)
-    write_json(destination / "repair_plan.json", plan)
-    write_json(destination / "changes.json", [])
-    write_json(
-        destination / "unresolved.json",
-        [{"finding_id": plan.get("finding_id"), "reason": stop.reason}],
-    )
-    write_json(destination / "regression_results.json", [])
-    write_json(destination / "re_audit_comparison.json", {})
-    write_json(destination / "patch.json", {"files": []})
-    write_json(destination / "evidence.json", plan.get("evidence", []))
-    (destination / "repair.log").write_text(
-        f"{timestamp()}\tINFO\tdecision=ABANDON\tstatus={stop.status}\n",
-        encoding="utf-8",
+    write_history_bundle(
+        destination,
+        plan=plan,
+        changes=[],
+        unresolved=[{"finding_id": plan.get("finding_id"), "reason": stop.reason}],
+        regressions=[],
+        comparison={},
+        evidence=plan.get("evidence", []),
+        root_cause=root_cause,
+        attempt_number=0,
+        status=stop.status,
+        decision="ABANDON",
     )
     manifest = {
         "schema_version": "0.1",
@@ -1375,6 +1774,8 @@ def write_repair_reports(
             "attempt_number": manifest.get("attempt_number"),
             "history_dir": str(history_dir),
             "snapshot_preserved": True,
+            "bundle_files": list(REPAIR_BUNDLE_FILES),
+            "bundle_complete": True,
         },
     )
     report_dir.joinpath("repair.log").write_text(
@@ -1407,6 +1808,7 @@ def write_repair_reports(
         ),
         encoding="utf-8",
     )
+    validate_fixed_bundle(report_dir)
 
 
 def repair(root: Path, plan_path: Path) -> dict[str, Any]:
@@ -1469,17 +1871,10 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
         operation_files = {item["file"] for item in changes}
         assert_mutation_boundary(snapshot, candidate, operation_files)
         candidate_digest = core_contract_digest(candidate)
-        if plan["repair_class"] == "AUTO_FIX" and candidate_digest != plan[
-            "core_contract_digest"
-        ]:
-            raise PolicyStop(
-                "POLICY_VIOLATION",
-                "AUTO_FIX changed the frozen core-contract digest.",
-            )
         run_regressions(
             candidate, plan["regression_tests"], "after", regression_tests
         )
-        reaudit = run_equal_depth_review(candidate, report, plan)
+        reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
         re_audit_comparison = validate_reaudit(
             candidate, reaudit, finding, report
         )
@@ -1533,7 +1928,19 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
 
         history.mkdir(parents=True)
         snapshot.rename(history / "snapshot")
-        write_json(history / "repair_plan.json", plan)
+        write_history_bundle(
+            history,
+            plan=plan,
+            changes=changes,
+            unresolved=[],
+            regressions=regression_tests,
+            comparison=re_audit_comparison,
+            evidence=evidence,
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            status="PUBLISHED",
+            decision=plan["repair_class"],
+        )
         attempt_manifest = {
             "schema_version": "0.1",
             "repair_id": repair_id,
@@ -1578,34 +1985,20 @@ def repair(root: Path, plan_path: Path) -> dict[str, Any]:
             snapshot.rename(history / "snapshot")
         if candidate.exists():
             candidate.rename(history / "candidate")
-        write_json(history / "repair_plan.json", plan)
-        write_json(
-            history / "changes.json",
-            changes if "changes" in locals() else [],
-        )
-        write_json(
-            history / "unresolved.json",
-            [{"finding_id": plan["finding_id"], "reason": str(exc)}],
-        )
-        write_json(
-            history / "regression_results.json",
-            regression_tests if "regression_tests" in locals() else [],
-        )
-        write_json(
-            history / "re_audit_comparison.json",
-            re_audit_comparison if "re_audit_comparison" in locals() else {},
-        )
-        write_json(
-            history / "patch.json",
-            {
-                "files": changes if "changes" in locals() else [],
-                "atomic_publish": False,
-            },
-        )
-        write_json(history / "evidence.json", evidence if "evidence" in locals() else [])
-        (history / "repair.log").write_text(
-            f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}\n",
-            encoding="utf-8",
+        write_history_bundle(
+            history,
+            plan=plan,
+            changes=changes if "changes" in locals() else [],
+            unresolved=[{"finding_id": plan["finding_id"], "reason": str(exc)}],
+            regressions=regression_tests if "regression_tests" in locals() else [],
+            comparison=(
+                re_audit_comparison if "re_audit_comparison" in locals() else {}
+            ),
+            evidence=evidence if "evidence" in locals() else [],
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            status=status,
+            decision=decision,
         )
         attempt_manifest = {
             "schema_version": "0.1",

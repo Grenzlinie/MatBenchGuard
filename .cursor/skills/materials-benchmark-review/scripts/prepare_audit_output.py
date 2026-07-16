@@ -97,26 +97,28 @@ def sha256_path(path: Path) -> str:
 
 
 def core_contract_snapshot(root: Path) -> dict[str, Any]:
-    values: dict[str, Any] = {}
-    for relative in ("instruction.md", "tests/checker.py"):
-        path = root / relative
-        values[relative] = (
-            path.read_text(encoding="utf-8", errors="replace")
-            if path.is_file()
-            else None
-        )
-    specification_path = root / "tests/grading_spec.json"
-    try:
-        specification = json.loads(
-            specification_path.read_text(encoding="utf-8")
-        )
-    except (OSError, ValueError, json.JSONDecodeError):
-        specification = None
+    paths: list[Path] = []
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        paths.append(instruction)
+    for role in ("tests", "solution"):
+        directory = root / role
+        if directory.is_symlink():
+            raise ValueError(f"core contract role may not be a symlink: {role}")
+        if directory.is_dir():
+            for path in sorted(directory.rglob("*")):
+                if path.is_symlink():
+                    raise ValueError(
+                        f"core contract surface may not be a symlink: {path}"
+                    )
+                if path.is_file():
+                    paths.append(path)
     return {
         "schema_version": "materials-core-contract/1.0",
-        "instruction": values["instruction.md"],
-        "checker": values["tests/checker.py"],
-        "grading_contract": specification,
+        "surface_hashes": {
+            path.relative_to(root).as_posix(): sha256_file(path)
+            for path in sorted(paths)
+        },
     }
 
 

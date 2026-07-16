@@ -8,6 +8,7 @@ from typing import Any
 
 from tests.test_materials_safe_repair import (
     initial_repair_context,
+    repair_module,
     run_repair,
     safe_plan,
     sha256_file,
@@ -143,6 +144,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             manifest = json.loads(audit_manifest.read_text(encoding="utf-8"))
             manifest["input_hashes"]["solution/answer.py"] = sha256_file(
                 package / "solution/answer.py"
+            )
+            manifest["core_contract_digest"] = repair_module().core_contract_digest(
+                package
             )
             write_plan(audit_manifest, manifest)
             plan = workspace / "assisted-plan.json"

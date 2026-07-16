@@ -94,6 +94,50 @@ def evidence(
 
 
 class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
+    def test_tampered_authoritative_audit_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            report["summary"]["tampered"] = True
+            write_plan(package / "benchmark_audit/audit_report.json", report)
+            plan["evidence"][0]["source_hash"] = sha256_file(
+                package / "benchmark_audit/audit_report.json"
+            )
+            path = workspace / "tampered-audit.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_stale_current_review_implementation_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["review_implementation"]["aggregate_hash"] = (
+                "sha256:" + "0" * 64
+            )
+            write_plan(manifest_path, manifest)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["source_audit"]["review_implementation"] = manifest[
+                "review_implementation"
+            ]
+            path = workspace / "stale-review.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
     def test_fabricated_source_is_abandoned_before_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package, report, finding_id, runner = initial_repair_context(
@@ -271,7 +315,15 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     "type": "text_contains",
                     "file": "tests/checker.py",
                     "expected": "secret_field",
-                }
+                },
+                {
+                    "id": "solution",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["rewrite-solution"],
+                    "type": "text_contains",
+                    "file": "solution/solve.sh",
+                    "expected": "secret_field",
+                },
             ]
             plan = bind_plan(package, plan)
             path = Path(temporary) / "private.json"
@@ -322,6 +374,207 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             self.assertEqual(
                 json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
             )
+
+    def test_plan_cannot_authorize_arbitrary_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            fixture = workspace / "arbitrary-fixture"
+            fixture.write_text("plan-selected\n", encoding="utf-8")
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["known_valid_output"] = str(fixture)
+            plan["source_audit"]["fixture_hashes"] = {
+                "known_valid_output": repair_module().sha256_path(fixture)
+            }
+            path = workspace / "arbitrary-fixture.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_metadata_evidence_cannot_lower_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            (package / "resources.json").write_text(
+                "pass_threshold 0.5 absolute scoring threshold with "
+                "mathematical proof",
+                encoding="utf-8",
+            )
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["repair_class"] = "ASSISTED_FIX"
+            plan["evidence"] = [
+                evidence(
+                    package,
+                    "metadata-threshold",
+                    "resources.json",
+                    "pass_threshold 0.5 absolute scoring threshold with "
+                    "mathematical proof",
+                    kind="scoring_contract",
+                    precision={
+                        "field": "pass_threshold",
+                        "value": 0.5,
+                        "scoring_contract": "scoring threshold",
+                        "mathematical_proof": "mathematical proof",
+                    },
+                )
+            ]
+            plan["operations"] = [
+                {
+                    "id": "lower-threshold",
+                    "type": "json_set",
+                    "file": "tests/grading_spec.json",
+                    "path": ["pass_threshold"],
+                    "value": 0.5,
+                    "evidence_ids": ["metadata-threshold"],
+                }
+            ]
+            plan["regression_tests"] = [
+                {
+                    "id": "threshold",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["lower-threshold"],
+                    "type": "json_path_equals",
+                    "file": "tests/grading_spec.json",
+                    "path": ["pass_threshold"],
+                    "expected": 0.5,
+                }
+            ]
+            path = workspace / "metadata-threshold.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_json_replace_cannot_invent_field_with_harbor_path_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["repair_class"] = "ASSISTED_FIX"
+            plan["evidence"] = [
+                evidence(
+                    package,
+                    "path",
+                    "instruction.md",
+                    "Compute the evidence-backed quantity.",
+                    kind="harbor_path",
+                    precision={
+                        "official_contract": "Compute",
+                        "existing_path_code": "quantity",
+                    },
+                )
+            ]
+            plan["operations"] = [
+                {
+                    "id": "invent-field",
+                    "type": "replace_text",
+                    "file": "tests/grading_spec.json",
+                    "old": '{"pass_threshold": 0.8}',
+                    "new": '{"pass_threshold": 0.8, "secret_field": "private"}',
+                    "evidence_ids": ["path"],
+                }
+            ]
+            plan["regression_tests"] = [
+                {
+                    "id": "invented",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["invent-field"],
+                    "type": "text_contains",
+                    "file": "tests/grading_spec.json",
+                    "expected": "secret_field",
+                }
+            ]
+            path = workspace / "invent-field.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_every_operation_requires_causal_regression_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["operations"].append(
+                {
+                    "id": "untested-extra",
+                    "type": "write_file",
+                    "file": "solution/extra.txt",
+                    "content": "untested\n",
+                    "evidence_ids": ["audit-finding"],
+                }
+            )
+            plan["regression_tests"][0]["causal_operation_ids"].append(
+                "untested-extra"
+            )
+            path = workspace / "extra-operation.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("causal", completed.stderr)
+
+    def test_tests_shell_mutation_changes_frozen_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            before = plan["core_contract_digest"]
+            (package / "tests/test.sh").write_text("#!/bin/sh\nexit 7\n")
+
+            self.assertNotEqual(
+                repair_module().core_contract_digest(package),
+                before,
+            )
+            path = workspace / "mutated-test-shell.json"
+            write_plan(path, plan)
+            completed = run_repair(package, path, runner)
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_failed_history_bundle_is_complete_and_enforced(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["regression_tests"] = [
+                {
+                    "id": "forced-failure",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["restore-solve"],
+                    "type": "text_contains",
+                    "file": "solution/solve.sh",
+                    "expected": "never-written",
+                }
+            ]
+            path = workspace / "failed-bundle.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            history = Path(json.loads(completed.stdout)["history_dir"])
+            module = repair_module()
+            module.validate_fixed_bundle(history)
+            (history / "history.json").unlink()
+            with self.assertRaises(ValueError):
+                module.validate_fixed_bundle(history)
 
     def test_stale_core_contract_digest_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
