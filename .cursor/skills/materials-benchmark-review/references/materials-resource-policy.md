@@ -14,8 +14,12 @@ inside one logical Markdown list item, or contiguous lines in one paragraph.
 A heading may supply the direct-input topic, but not indispensability or
 no-equivalent flags to sibling entries unless the heading or an explicit
 section declaration says all contained resources share both properties.
-Optional and separate sibling URLs never inherit criticality. Ignore fenced
-examples and accept inline Markdown link targets conservatively. Do not infer
+Within an entry, split URL clauses at lines, nested resource labels, semicolons,
+sentence punctuation, and labels such as `Dataset:` or `Docs:`. A URL inherits
+only its clause/subentry metadata and explicit section-wide declarations;
+multiple URLs in one unambiguous clause share that clause. Optional, separate,
+or ambiguously mixed URLs never inherit criticality. Ignore fenced examples
+and accept inline Markdown link targets conservatively. Do not infer
 direct-input properties from package metadata. A runtime software dependency
 is not a direct data/service input merely because the instruction requires
 that software.

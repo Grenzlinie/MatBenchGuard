@@ -522,14 +522,82 @@ class MaterialsIssue20Tests(unittest.TestCase):
             ["https://example.invalid/required.csv"],
         )
 
-    def test_nested_metadata_forms_one_direct_input_declaration(self) -> None:
+    def test_required_dataset_and_optional_docs_share_paragraph(self) -> None:
         instruction = (
             "### Direct inputs\n"
+            "Dataset: indispensable, with no equivalent source, "
+            "[download](https://example.invalid/data.csv); "
+            "Docs: optional "
+            "[guide](https://example.invalid/guide.html).\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            [item["access"]["url"] for item in resources],
+            ["https://example.invalid/data.csv"],
+        )
+
+    def test_optional_first_and_required_multi_link_clause(self) -> None:
+        instruction = (
+            "### Direct inputs\n"
+            "Docs: optional [guide](https://example.invalid/guide.html) "
+            "Dataset: indispensable, no equivalent source, "
+            "[primary](https://example.invalid/primary.csv) and "
+            "[mirror](https://example.invalid/mirror.csv).\n"
+        )
+
+        resources = resource_probe.instruction_direct_inputs(instruction)
+
+        self.assertEqual(
+            [item["access"]["url"] for item in resources],
+            [
+                "https://example.invalid/primary.csv",
+                "https://example.invalid/mirror.csv",
+            ],
+        )
+
+    def test_ambiguous_mixed_url_clause_is_not_a_direct_input(self) -> None:
+        instruction = (
+            "### Direct inputs\n"
+            "Dataset required with no equivalent and optional docs links: "
+            "[first](https://example.invalid/ambiguous-a.csv) "
+            "[second](https://example.invalid/ambiguous-b.html).\n"
+        )
+
+        self.assertEqual(
+            resource_probe.instruction_direct_inputs(instruction), []
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "instruction.md").write_text(
+                instruction, encoding="utf-8"
+            )
+            result = resource_probe.probe_resources(
+                root, root / "resources.json", timeout=1
+            )
+            direct_gate = next(
+                gate
+                for gate in finalize_audit_output.hard_gate_results(
+                    root, result["findings"], []
+                )
+                if gate["code"]
+                == "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+            )
+            self.assertNotEqual(direct_gate["status"], "FAIL")
+
+    def test_nested_metadata_forms_one_direct_input_declaration(self) -> None:
+        instruction = (
+            "### Resources\n"
             "- Dataset metadata:\n"
             "  - Criticality: indispensable and required\n"
             "  - Scientific equivalence: no equivalent source\n"
             "  - Locator: "
             "[download](https://example.invalid/nested-required.csv)\n"
+            "  - Docs:\n"
+            "    - Optional: true\n"
+            "    - Locator: "
+            "[open](https://example.invalid/nested-guide.html)\n"
             "  - Non-normative example:\n"
             "    ```text\n"
             "    https://example.invalid/example-only.csv\n"
@@ -551,6 +619,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             "- Dataset A: "
             "[download](https://example.invalid/required-a.csv)\n"
             "- Dataset B: https://example.invalid/required-b.csv\n"
+            "- Docs: https://example.invalid/required-docs.html\n"
         )
 
         resources = resource_probe.instruction_direct_inputs(instruction)
@@ -560,6 +629,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             [
                 "https://example.invalid/required-a.csv",
                 "https://example.invalid/required-b.csv",
+                "https://example.invalid/required-docs.html",
             ],
         )
 

@@ -780,6 +780,16 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
             )
         )
 
+    def data_resource_clause(text: str) -> bool:
+        prefix = text.split("http", 1)[0]
+        return bool(
+            re.search(
+                r"\b(?:dataset|data\s+file|input\s+file"
+                r"|external\s+service|remote\s+service)\b",
+                prefix,
+            )
+        )
+
     def indispensable(text: str) -> bool:
         if re.search(
             r"\bnot\s+(?:indispensable|required)\b"
@@ -810,6 +820,146 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
             )
         )
 
+    def extract_urls(text: str) -> list[str]:
+        return [
+            url.rstrip(".,;:!?\"'")
+            for url in re.findall(r"https?://[^\s)\]}>]+", text)
+        ]
+
+    def docs_clause(text: str) -> bool:
+        prefix = text.split("http", 1)[0]
+        return bool(
+            re.search(
+                r"\b(?:docs?|documentation|guide|readme|reference)\b",
+                prefix,
+            )
+        )
+
+    def entity_role(text: str) -> str:
+        lowered = text.lower()
+        is_docs = docs_clause(lowered)
+        is_resource = data_resource_clause(lowered) or bool(
+            re.match(
+                r"^\s*(?:the\s+)?(?:required\s+|optional\s+)?"
+                r"(?:resource|input|service)\b",
+                lowered,
+            )
+        )
+        if is_docs and is_resource:
+            return "mixed"
+        if is_docs:
+            return "docs"
+        if is_resource:
+            return "resource"
+        return "neutral"
+
+    def markdown_clauses(
+        semantic_lines: list[tuple[int, str]],
+    ) -> tuple[
+        list[tuple[int, str, str]],
+        dict[str, str],
+        dict[str, str | None],
+    ]:
+        label_pattern = re.compile(
+            r"\b(?:dataset|data(?:\s+file)?|docs?|documentation"
+            r"|guide|reference|input|resource|service)\s*:",
+            re.IGNORECASE,
+        )
+
+        def label_segments(text: str) -> list[str]:
+            segments: list[str] = []
+            start = 0
+            seen_label = False
+            url_spans = [
+                match.span()
+                for match in re.finditer(
+                    r"https?://[^\s)\]}>]+", text
+                )
+            ]
+            for match in label_pattern.finditer(text):
+                if any(
+                    span_start <= match.start() < span_end
+                    for span_start, span_end in url_spans
+                ):
+                    continue
+                prefix = text[start : match.start()]
+                if match.start() > start and (
+                    seen_label or bool(extract_urls(prefix))
+                ):
+                    if prefix.strip():
+                        segments.append(prefix.strip())
+                    start = match.start()
+                    seen_label = False
+                seen_label = True
+            remainder = text[start:].strip()
+            if remainder:
+                segments.append(remainder)
+            return segments
+
+        clauses: list[tuple[int, str, str]] = []
+        if not semantic_lines:
+            return clauses, {}, {}
+        root_key = f"{semantic_lines[0][0]}:root"
+        branch_roles = {root_key: "neutral"}
+        branch_parents: dict[str, str | None] = {root_key: None}
+        stack: list[tuple[int, str]] = []
+        paragraph_branch = root_key
+        for line_number, line in semantic_lines:
+            marker = list_pattern.match(line)
+            content = list_pattern.sub("", line, count=1).strip()
+            punctuation_parts = re.split(
+                r";(?=\s|$)"
+                r"|(?<=[.!?])\s+(?=[A-Z0-9\[])"
+                r"|,(?=\s+(?:Dataset|Data|Docs?|Documentation"
+                r"|Guide|Reference|Input|Resource|Service)\s*:)",
+                content,
+            )
+            segments = [
+                segment
+                for part in punctuation_parts
+                for segment in label_segments(part)
+                if segment
+            ]
+            if marker:
+                indent = len(marker.group(1))
+                while stack and stack[-1][0] >= indent:
+                    stack.pop()
+                parent_key = stack[-1][1] if stack else root_key
+                line_role = entity_role(content)
+                if not stack and not clauses:
+                    line_key = root_key
+                    branch_roles[root_key] = line_role
+                elif line_role in {"docs", "resource"}:
+                    line_key = f"{line_number}:item"
+                    branch_roles[line_key] = line_role
+                    branch_parents[line_key] = parent_key
+                else:
+                    line_key = parent_key
+                stack.append((indent, line_key))
+            else:
+                line_key = stack[-1][1] if stack else paragraph_branch
+            for segment_index, segment in enumerate(segments):
+                role = entity_role(segment)
+                if role in {"docs", "resource"} and (
+                    branch_roles.get(line_key) != role
+                    or len(segments) > 1
+                ):
+                    clause_key = (
+                        f"{line_number}:clause:{segment_index}"
+                    )
+                    branch_roles[clause_key] = role
+                    branch_parents[clause_key] = (
+                        stack[-2][1]
+                        if marker and len(stack) > 1
+                        else root_key
+                    )
+                    if not marker:
+                        paragraph_branch = clause_key
+                else:
+                    clause_key = line_key
+                clauses.append((line_number, segment, clause_key))
+        return clauses, branch_roles, branch_parents
+
     section_scope_starts: dict[int, int] = {}
     for entry_index, (section_heading, entry) in enumerate(entries):
         section_key = (
@@ -822,13 +972,20 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
         )
         entry_text = semantic_text(entry)
         heading_scope = (
-            direct_topic(heading_text)
+            (
+                direct_topic(heading_text)
+                or bool(re.search(r"\bresources?\b", heading_text))
+            )
             and bool(re.search(r"\b(?:all|every|each)\b", heading_text))
             and indispensable(heading_text)
             and no_scientific_equivalent(heading_text)
         )
         paragraph_scope = (
-            (direct_topic(heading_text) or direct_topic(entry_text))
+            (
+                direct_topic(heading_text)
+                or direct_topic(entry_text)
+                or bool(re.search(r"\bresources?\b", entry_text))
+            )
             and bool(re.search(r"\b(?:all|every|each)\b", entry_text))
             and bool(
                 re.search(
@@ -865,29 +1022,12 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
             if section_heading is not None
             else ""
         )
-        critical = indispensable(lowered)
         heading_defines_direct_topic = direct_topic(heading_text)
         section_key = (
             section_heading[0] if section_heading is not None else 0
         )
         section_wide_declaration = entry_index >= section_scope_starts.get(
             section_key, len(entries)
-        )
-        optional_entry = bool(
-            re.search(r"\b(?:optional|recommended)\b", lowered)
-        )
-        explicitly_direct = (
-            "indispensable direct input" in lowered
-            or (
-                "direct input" in lowered
-                and critical
-            )
-            or (heading_defines_direct_topic and critical)
-            or section_wide_declaration
-        )
-        no_equivalent = (
-            no_scientific_equivalent(lowered)
-            or section_wide_declaration
         )
         software_only = (
             any(
@@ -909,12 +1049,32 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
                 )
             )
         )
-        if (
-            not (explicitly_direct and no_equivalent)
-            or optional_entry
-            or software_only
-        ):
+        if software_only:
             continue
+        clauses, branch_roles, branch_parents = markdown_clauses(
+            semantic_lines
+        )
+        branch_metadata: dict[str, list[str]] = {}
+        for _, clause, branch_key in clauses:
+            if not extract_urls(clause):
+                branch_metadata.setdefault(branch_key, []).append(
+                    clause.lower()
+                )
+
+        def inherited_metadata(branch_key: str) -> str:
+            keys = [branch_key]
+            if branch_roles.get(branch_key) not in {"docs", "mixed"}:
+                parent = branch_parents.get(branch_key)
+                while parent is not None:
+                    if branch_roles.get(parent) in {"docs", "mixed"}:
+                        break
+                    keys.append(parent)
+                    parent = branch_parents.get(parent)
+            return "\n".join(
+                text
+                for key in keys
+                for text in branch_metadata.get(key, [])
+            )
         checksum_match = re.search(
             r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
             lowered,
@@ -925,20 +1085,75 @@ def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
             or "solving agent has no license authorization" in lowered
         )
         position = 0
-        for line_number, line in semantic_lines:
-            for url in re.findall(r"https?://[^\s)\]}>]+", line):
+        for line_number, clause, branch_key in clauses:
+            clause_urls = extract_urls(clause)
+            if not clause_urls:
+                continue
+            clause_lowered = clause.lower()
+            local_critical = indispensable(clause_lowered)
+            local_no_equivalent = no_scientific_equivalent(
+                clause_lowered
+            )
+            local_optional = bool(
+                re.search(
+                    r"\b(?:optional|recommended)\b", clause_lowered
+                )
+            )
+            if local_optional and (
+                local_critical or local_no_equivalent
+            ):
+                continue
+            shared_text = inherited_metadata(branch_key)
+            shared_optional = bool(
+                re.search(
+                    r"\b(?:optional|recommended)\b", shared_text
+                )
+            )
+            shared_critical = indispensable(shared_text)
+            shared_no_equivalent = no_scientific_equivalent(shared_text)
+            shared_direct = (
+                direct_topic(shared_text)
+                or data_resource_clause(shared_text)
+                or branch_roles.get(branch_key) == "resource"
+            )
+            effective_critical = (
+                local_critical
+                or shared_critical
+                or section_wide_declaration
+            )
+            effective_no_equivalent = (
+                local_no_equivalent
+                or shared_no_equivalent
+                or section_wide_declaration
+            )
+            effective_direct = (
+                direct_topic(clause_lowered)
+                or data_resource_clause(clause_lowered)
+                or shared_direct
+                or heading_defines_direct_topic
+                or section_wide_declaration
+            )
+            if (
+                local_optional
+                or shared_optional
+                or not effective_critical
+                or not effective_no_equivalent
+                or not effective_direct
+            ):
+                continue
+            for url in clause_urls:
                 position += 1
                 access = (
                     {
                         "method": "license",
                         "license": "instruction-declared-license",
-                        "url": url.rstrip(".,;"),
+                        "url": url,
                         "authorization_provided": False,
                     }
                     if no_agent_license
                     else {
                         "method": "url",
-                        "url": url.rstrip(".,;"),
+                        "url": url,
                         **(
                             {
                                 "checksum": (
