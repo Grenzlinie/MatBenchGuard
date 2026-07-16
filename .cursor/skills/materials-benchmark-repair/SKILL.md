@@ -15,7 +15,9 @@ approval.
 Keep the plan outside the 题包 and run:
 
 ```sh
-python scripts/run_repair.py <Harbor题包目录> --plan <repair-plan.json>
+python scripts/run_repair.py <Harbor题包目录> \
+  --plan <repair-plan.json> \
+  --audit-attestation <immutable-external-attestation.json>
 ```
 
 The plan uses schema `0.1` and contains:
@@ -88,7 +90,11 @@ instruction, checker contract, paper, metadata, or solution/Oracle. Metadata
 solution/Oracle content cannot support scientific, schema, or scoring changes.
 Thresholds and weights require an exact scoring-contract field/value plus
 quoted mathematical support. Typed schema evidence must quote the exact field,
-type, unit, requiredness, and value it authorizes.
+type, unit, requiredness, and value it authorizes. Gold, CSV, NPY, scientific
+method, exception guard, and Harbor-path evidence must likewise quote every
+typed field and match the exact replacement patch. Paper evidence is valid only
+for a `paper_grounded` source audit that hashed that exact `paper/**` file;
+`no_paper` audits cannot authorize paper evidence.
 
 When evidence is absent or not linked to an operation, return
 `BLOCKED_EVIDENCE` with decision `ABANDON` without mutating the package. When a
@@ -100,7 +106,10 @@ value.
 
 Before mutation, reject stale audit hashes, require a complete source-audit
 binding, freeze the core-contract digest, and verify that the selected finding
-is still open. Authenticate every manifest-declared audit output and require
+is still open. Require a read-only attestation outside the Harbor 题包 that
+binds the exact manifest, report, disposition, fixture, and assessment hashes;
+the package-local manifest cannot authenticate itself. Authenticate every
+manifest-declared audit output and require
 the manifest's Review implementation hashes to match the currently installed
 Review. The frozen digest covers every file path and byte hash under
 `instruction.md`, `tests/**`, and `solution/**`, including `tests/test.sh`.
@@ -112,8 +121,9 @@ in the authenticated audit manifest may bind those external inputs. Then:
 2. Run required regressions against the snapshot.
 3. Apply only the planned operations to the candidate, recording before/after
    hashes and evidence links.
-4. Require the causal regression set to cover every operation, then run it
-   against the candidate.
+4. Require one exact, operation-semantic regression assertion per operation;
+   path overlap or a shared `file_exists` check is not causal coverage. Then run
+   the regressions against the candidate.
 5. Run the canonical Review CLI at the source audit's paper mode and fixed E1
    execution level. External fixtures and assessments must match the hashes
    bound by the source audit.

@@ -43,13 +43,8 @@ PRUNED_DIRS = {
 HASH_NAMES = {
     *QUALITY_EVIDENCE_ROLES,
 }
-REVIEW_IMPLEMENTATION_FILES = (
-    "scripts/prepare_audit_output.py",
-    "scripts/audit_package.py",
-    "scripts/dynamic_checker_probe.py",
-    "scripts/finalize_audit_output.py",
-    "scripts/run_review.py",
-    "scripts/run_fast_e1_batch.py",
+REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
+    "references/review-implementation-files.json"
 )
 
 
@@ -267,10 +262,47 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
-def collect_review_implementation_hashes() -> dict[str, Any]:
+def review_implementation_files(root: Path | None = None) -> tuple[str, ...]:
+    root = root or skill_root()
+    manifest_path = root / REVIEW_IMPLEMENTATION_FILES_MANIFEST
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema_version")
+        != "materials-review-implementation-files/1.0"
+        or not isinstance(manifest.get("files"), list)
+    ):
+        raise ValueError("Review implementation file manifest is invalid")
+    files = manifest["files"]
+    if (
+        not files
+        or files != sorted(set(files))
+        or REVIEW_IMPLEMENTATION_FILES_MANIFEST not in files
+        or not all(isinstance(item, str) and item for item in files)
+    ):
+        raise ValueError("Review implementation file list is not canonical")
+    for relative in files:
+        relative_path = Path(relative)
+        path = root / relative_path
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+            or not path.is_file()
+            or path.is_symlink()
+        ):
+            raise ValueError(
+                f"Review implementation dependency is unsafe: {relative}"
+            )
+    return tuple(files)
+
+
+def collect_review_implementation_hashes(
+    root: Path | None = None,
+) -> dict[str, Any]:
+    root = root or skill_root()
     files = {
-        relative: sha256_file(skill_root() / relative)
-        for relative in REVIEW_IMPLEMENTATION_FILES
+        relative: sha256_file(root / relative)
+        for relative in review_implementation_files(root)
     }
     payload = json.dumps(
         files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -281,6 +313,55 @@ def collect_review_implementation_hashes() -> dict[str, Any]:
         "files": files,
         "aggregate_hash": "sha256:" + hashlib.sha256(payload).hexdigest(),
     }
+
+
+def audit_attestation_payload(audit_dir: Path) -> dict[str, Any]:
+    manifest_path = audit_dir / "audit_manifest.json"
+    report_path = audit_dir / "audit_report.json"
+    disposition_path = audit_dir / "disposition.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    return {
+        "audit_id": manifest["audit_id"],
+        "manifest_hash": sha256_file(manifest_path),
+        "report_hash": sha256_file(report_path),
+        "disposition_hash": sha256_file(disposition_path),
+        "fixture_hashes": manifest.get("fixture_hashes", {}),
+        "assessment_hashes": manifest.get("assessment_hashes", {}),
+    }
+
+
+def write_audit_attestation(
+    benchmark_root: Path, output_path: Path
+) -> dict[str, Any]:
+    benchmark_root = benchmark_root.expanduser().resolve()
+    output_path = output_path.expanduser().resolve()
+    if output_path.is_relative_to(benchmark_root):
+        raise ValueError("audit attestation must remain outside the Harbor 题包")
+    if output_path.exists() or output_path.is_symlink():
+        raise FileExistsError(
+            "audit attestation output is immutable and must not already exist"
+        )
+    payload = audit_attestation_payload(benchmark_root / "benchmark_audit")
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    attestation = {
+        "schema_version": "materials-audit-attestation/1.0",
+        **payload,
+        "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with output_path.open("x", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps(attestation, indent=2, ensure_ascii=False) + "\n"
+            )
+    except FileExistsError as exc:
+        raise FileExistsError(
+            "audit attestation output is immutable and must not already exist"
+        ) from exc
+    output_path.chmod(0o444)
+    return attestation
 
 
 def validate_paper_boundary(root: Path) -> None:

@@ -140,14 +140,12 @@ Equivalent software, versions, and solver-selected convergence parameters are
 allowed unless instruction fixes them or the checker secretly depends on them.
 
 ## Run E1
-
 Write any taxonomy or triggered paper assessment outside the package, then run:
-
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
   --paper-mode no_paper \
   --execution-level E1 \
-  --agent-assessment <optional-taxonomy-assessment.json>
+  --agent-assessment <assessment.json> --attestation-output <external.json>
 ```
 
 For a triggered paper assessment:
@@ -156,8 +154,12 @@ For a triggered paper assessment:
 python scripts/run_review.py <Harbor题包目录> \
   --paper-mode paper_grounded \
   --execution-level E1 \
-  --agent-assessment <assessment.json>
+  --agent-assessment <assessment.json> --attestation-output <external.json>
 ```
+The optional attestation output is required before routing an audit into
+Repair. It is external, non-overwriting, read-only, and byte-binds audit and
+external-input hashes. Review provenance hashes the canonical dependency list
+in `references/review-implementation-files.json`.
 
 An independently justified non-Oracle output may additionally be supplied with
 `--known-valid-output`. It enables scientific quality-gradient and equivalence

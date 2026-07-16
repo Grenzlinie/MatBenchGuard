@@ -30,6 +30,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 import audit_package  # noqa: E402
 import dynamic_checker_probe  # noqa: E402
 import finalize_audit_output  # noqa: E402
+import prepare_audit_output  # noqa: E402
 SOURCE_PACKAGE = (
     REPO_ROOT
     / "materials_science_questions"
@@ -110,19 +111,27 @@ def write_public_valid_dispersion(output_dir: Path) -> None:
                     )
 
 
-def run_review(package: Path, valid_output: Path) -> subprocess.CompletedProcess[str]:
+def run_review(
+    package: Path,
+    valid_output: Path,
+    *,
+    attestation_output: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    command = [
+        sys.executable,
+        str(RUNNER),
+        str(package),
+        "--paper-mode",
+        "no_paper",
+        "--execution-level",
+        "E1",
+        "--known-valid-output",
+        str(valid_output),
+    ]
+    if attestation_output is not None:
+        command.extend(["--attestation-output", str(attestation_output)])
     return subprocess.run(
-        [
-            sys.executable,
-            str(RUNNER),
-            str(package),
-            "--paper-mode",
-            "no_paper",
-            "--execution-level",
-            "E1",
-            "--known-valid-output",
-            str(valid_output),
-        ],
+        command,
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -132,6 +141,34 @@ def run_review(package: Path, valid_output: Path) -> subprocess.CompletedProcess
 
 
 class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
+    def test_review_implementation_digest_covers_every_canonical_dependency(
+        self,
+    ) -> None:
+        canonical = prepare_audit_output.review_implementation_files()
+        self.assertIn("scripts/probe_resources.py", canonical)
+        self.assertIn("references/materials-taxonomy.json", canonical)
+        with tempfile.TemporaryDirectory() as temporary:
+            copied = Path(temporary) / "materials-benchmark-review"
+            shutil.copytree(RUNNER.parent.parent, copied)
+            baseline = prepare_audit_output.collect_review_implementation_hashes(
+                copied
+            )
+            for relative in canonical:
+                with self.subTest(relative=relative):
+                    path = copied / relative
+                    original = path.read_bytes()
+                    path.write_bytes(original + b"\n")
+                    changed = (
+                        prepare_audit_output.collect_review_implementation_hashes(
+                            copied
+                        )
+                    )
+                    self.assertNotEqual(
+                        changed["aggregate_hash"],
+                        baseline["aggregate_hash"],
+                    )
+                    path.write_bytes(original)
+
     def test_instruction_role_scope_ends_at_any_later_heading(self) -> None:
         contract = audit_package.instruction_contract_map(
             """
@@ -1583,10 +1620,15 @@ _SCORERS = {"a": score_a, "b": score_b}
                 encoding="utf-8",
             )
             solution_dir = package / "solution"
+            attestation = workspace / "source-audit-attestation.json"
             original_mode = solution_dir.stat().st_mode
             os.chmod(solution_dir, 0)
             try:
-                completed = run_review(package, valid_output)
+                completed = run_review(
+                    package,
+                    valid_output,
+                    attestation_output=attestation,
+                )
             finally:
                 os.chmod(solution_dir, original_mode)
 
@@ -1594,6 +1636,16 @@ _SCORERS = {"a": score_a, "b": score_b}
                 completed.returncode,
                 0,
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            self.assertTrue(attestation.is_file())
+            self.assertEqual(attestation.stat().st_mode & 0o222, 0)
+            attested = json.loads(attestation.read_text(encoding="utf-8"))
+            self.assertEqual(
+                attested["manifest_hash"],
+                "sha256:"
+                + hashlib.sha256(
+                    (package / "benchmark_audit/audit_manifest.json").read_bytes()
+                ).hexdigest(),
             )
 
             audit_dir = package / "benchmark_audit"

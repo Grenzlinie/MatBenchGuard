@@ -20,16 +20,6 @@ CERTIFIER = (
 REVIEW_SKILL_ROOT = (
     REPO_ROOT / ".cursor/skills/materials-benchmark-review"
 )
-REVIEW_IMPLEMENTATION_FILES = (
-    "scripts/prepare_audit_output.py",
-    "scripts/audit_package.py",
-    "scripts/dynamic_checker_probe.py",
-    "scripts/finalize_audit_output.py",
-    "scripts/run_review.py",
-    "scripts/run_fast_e1_batch.py",
-)
-
-
 def canonical_hash(value: Any) -> str:
     payload = json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -42,9 +32,15 @@ def file_hash(path: Path) -> str:
 
 
 def review_implementation() -> dict[str, Any]:
+    implementation_manifest = json.loads(
+        (
+            REVIEW_SKILL_ROOT
+            / "references/review-implementation-files.json"
+        ).read_text(encoding="utf-8")
+    )
     files = {
         relative: file_hash(REVIEW_SKILL_ROOT / relative)
-        for relative in REVIEW_IMPLEMENTATION_FILES
+        for relative in implementation_manifest["files"]
     }
     return {
         "schema_version": "materials-review-implementation/1.0",

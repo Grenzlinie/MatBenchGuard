@@ -40,6 +40,35 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def write_audit_attestation(package: Path) -> Path:
+    audit = package / "benchmark_audit"
+    manifest = json.loads(
+        (audit / "audit_manifest.json").read_text(encoding="utf-8")
+    )
+    payload = {
+        "audit_id": manifest["audit_id"],
+        "manifest_hash": sha256_file(audit / "audit_manifest.json"),
+        "report_hash": sha256_file(audit / "audit_report.json"),
+        "disposition_hash": sha256_file(audit / "disposition.json"),
+        "fixture_hashes": manifest.get("fixture_hashes", {}),
+        "assessment_hashes": manifest.get("assessment_hashes", {}),
+    }
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    attestation = {
+        "schema_version": "materials-audit-attestation/1.0",
+        **payload,
+        "bundle_digest": "sha256:" + hashlib.sha256(encoded).hexdigest(),
+    }
+    path = package.parent / "audit-attestation.json"
+    if path.exists():
+        path.chmod(0o644)
+    write_json(path, attestation)
+    path.chmod(0o444)
+    return path
+
+
 def repair_module() -> Any:
     spec = importlib.util.spec_from_file_location(
         "materials_repair_runner", REPAIR_RUNNER
@@ -55,6 +84,9 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
     if not manifest_path.is_file():
         return
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    report = json.loads(
+        (package / "benchmark_audit/audit_report.json").read_text(encoding="utf-8")
+    )
     digest = repair_module().core_contract_digest(package)
     value.setdefault("core_contract_digest", digest)
     value.setdefault(
@@ -65,7 +97,7 @@ def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
             "finding_status": "OPEN",
             "input_hashes": manifest.get("input_hashes", {}),
             "review_implementation": manifest.get("review_implementation", {}),
-            "paper_mode": "no_paper",
+            "paper_mode": report["configuration"]["paper_mode"],
             "execution_level": "E1",
             "core_contract_digest": digest,
             "fixture_hashes": {},
@@ -108,21 +140,18 @@ def install_repair_harness(workspace: Path) -> Path:
             import json
             from pathlib import Path
 
-            IMPLEMENTATION_FILES = (
-                "scripts/prepare_audit_output.py",
-                "scripts/audit_package.py",
-                "scripts/dynamic_checker_probe.py",
-                "scripts/finalize_audit_output.py",
-                "scripts/run_review.py",
-                "scripts/run_fast_e1_batch.py",
-            )
-
             def file_hash(path):
                 return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
             def review_implementation():
                 skill = Path(__file__).resolve().parent.parent
-                files = {name: file_hash(skill / name) for name in IMPLEMENTATION_FILES}
+                manifest = json.loads(
+                    (skill / "references/review-implementation-files.json").read_text()
+                )
+                files = {
+                    name: file_hash(skill / name)
+                    for name in manifest["files"]
+                }
                 payload = json.dumps(
                     files, ensure_ascii=False, sort_keys=True, separators=(",", ":")
                 ).encode()
@@ -230,6 +259,8 @@ def install_repair_harness(workspace: Path) -> Path:
 
 def initial_repair_context(
     workspace: Path,
+    *,
+    paper_mode: str = "no_paper",
 ) -> tuple[Path, dict[str, Any], str, Path]:
     runner = install_repair_harness(workspace)
     package = workspace / "paper-fixture"
@@ -244,13 +275,14 @@ def initial_repair_context(
     )
     write_json(package / "tests/grading_spec.json", {"pass_threshold": 0.8})
     (package / "paper/paper.md").write_text(
-        "The published method computes the evidence-backed quantity.\n",
+        "The published method computes the evidence-backed quantity.\n"
+        "The exact public replacement is paper-supported quantity.\n",
         encoding="utf-8",
     )
     write_json(package / "manifest.json", {"id": "paper-fixture"})
     report = {
         "audit_id": AUDIT_ID,
-        "configuration": {"paper_mode": "no_paper", "execution_level": "E1"},
+        "configuration": {"paper_mode": paper_mode, "execution_level": "E1"},
         "findings": [
             {
                 "finding_id": FINDING_ID,
@@ -303,6 +335,7 @@ def initial_repair_context(
             },
         },
     )
+    write_audit_attestation(package)
     return package, report, FINDING_ID, runner
 
 
@@ -332,6 +365,14 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
             }
         ],
         "regression_tests": [
+            {
+                "id": "solve-content",
+                "finding_id": finding_id,
+                "causal_operation_ids": ["restore-solve"],
+                "type": "text_contains",
+                "file": "solution/solve.sh",
+                "expected": "#!/bin/sh\nexit 0\n",
+            },
             {
                 "id": "solve-exists",
                 "finding_id": finding_id,
@@ -367,7 +408,15 @@ def run_repair(
     package: Path, plan: Path, runner: Path
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(runner), str(package), "--plan", str(plan)],
+        [
+            sys.executable,
+            str(runner),
+            str(package),
+            "--plan",
+            str(plan),
+            "--audit-attestation",
+            str(package.parent / "audit-attestation.json"),
+        ],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -407,7 +456,7 @@ class MaterialsSafeRepairTests(unittest.TestCase):
             self.assertEqual(repair_manifest["finding_id"], finding_id)
             self.assertEqual(
                 [item["before_passed"] for item in repair_manifest["regression_tests"]],
-                [False, False],
+                [False, False, False],
             )
             self.assertTrue(
                 all(

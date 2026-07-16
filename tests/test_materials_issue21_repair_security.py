@@ -12,6 +12,7 @@ from tests.test_materials_safe_repair import (
     run_repair,
     safe_plan,
     sha256_file,
+    write_audit_attestation,
     write_plan,
 )
 
@@ -94,6 +95,29 @@ def evidence(
 
 
 class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
+    def test_co_tampered_report_and_manifest_are_blocked_by_attestation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            report["summary"]["co_tampered"] = True
+            report_path = package / "benchmark_audit/audit_report.json"
+            write_plan(report_path, report)
+            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["output_hashes"]["audit_report.json"] = sha256_file(report_path)
+            write_plan(manifest_path, manifest)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["evidence"][0]["source_hash"] = sha256_file(report_path)
+            path = workspace / "co-tampered-audit.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
     def test_tampered_authoritative_audit_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
@@ -314,7 +338,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     "causal_operation_ids": ["rewrite-checker"],
                     "type": "text_contains",
                     "file": "tests/checker.py",
-                    "expected": "secret_field",
+                    "expected": "secret_field = 'private-protocol'",
                 },
                 {
                     "id": "solution",
@@ -322,7 +346,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     "causal_operation_ids": ["rewrite-solution"],
                     "type": "text_contains",
                     "file": "solution/solve.sh",
-                    "expected": "secret_field",
+                    "expected": "secret_field=private-protocol\n",
                 },
             ]
             plan = bind_plan(package, plan)
@@ -396,12 +420,215 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                 json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
             )
 
+    def test_manifest_cannot_authorize_arbitrary_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            fixture = workspace / "manifest-selected-fixture"
+            fixture.write_text("manifest-selected\n", encoding="utf-8")
+            fixture_hash = repair_module().sha256_path(fixture)
+            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["fixture_hashes"] = {"known_valid_output": fixture_hash}
+            write_plan(manifest_path, manifest)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["known_valid_output"] = str(fixture)
+            plan["source_audit"]["fixture_hashes"] = {
+                "known_valid_output": fixture_hash
+            }
+            path = workspace / "manifest-fixture.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_unrelated_paper_quote_cannot_set_gold_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace, paper_mode="paper_grounded"
+            )
+            paper = package / "paper/paper.md"
+            paper.write_text(
+                paper.read_text(encoding="utf-8")
+                + "The required gold_target number is 1.0 eV from the "
+                "published table.\n",
+                encoding="utf-8",
+            )
+            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["input_hashes"]["paper/paper.md"] = sha256_file(paper)
+            write_plan(manifest_path, manifest)
+            write_audit_attestation(package)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["repair_class"] = "ASSISTED_FIX"
+            plan["evidence"] = [
+                evidence(
+                    package,
+                    "wrong-gold",
+                    "paper/paper.md",
+                    "The required gold_target number is 1.0 eV from the "
+                    "published table.",
+                    kind="gold",
+                    precision={
+                        "field": "gold_target",
+                        "value": 2.0,
+                        "type": "number",
+                        "unit": "eV",
+                        "required": True,
+                        "source_or_derivation": "published table",
+                    },
+                )
+            ]
+            plan["operations"] = [
+                {
+                    "id": "set-gold",
+                    "type": "json_set",
+                    "file": "tests/grading_spec.json",
+                    "path": ["gold_target"],
+                    "value": 2.0,
+                    "evidence_ids": ["wrong-gold"],
+                }
+            ]
+            plan["regression_tests"] = [
+                {
+                    "id": "gold-value",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["set-gold"],
+                    "type": "json_path_equals",
+                    "file": "tests/grading_spec.json",
+                    "path": ["gold_target"],
+                    "expected": 2.0,
+                }
+            ]
+            path = workspace / "unrelated-gold.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_same_file_extra_operation_needs_its_own_semantic_assertion(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["operations"] = [
+                {
+                    "id": "write-intermediate",
+                    "type": "write_file",
+                    "file": "solution/solve.sh",
+                    "content": "#!/bin/sh\nexit 7\n",
+                    "evidence_ids": ["audit-finding"],
+                },
+                {
+                    "id": "replace-final",
+                    "type": "replace_text",
+                    "file": "solution/solve.sh",
+                    "old": "exit 7",
+                    "new": "exit 0",
+                    "evidence_ids": ["audit-finding"],
+                },
+            ]
+            plan["regression_tests"] = [
+                {
+                    "id": "final-content",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": [
+                        "write-intermediate",
+                        "replace-final",
+                    ],
+                    "type": "text_contains",
+                    "file": "solution/solve.sh",
+                    "expected": "exit 0",
+                }
+            ]
+            path = workspace / "same-file-extra.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("semantic", completed.stderr)
+
+    def test_no_paper_audit_cannot_use_paper_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["repair_class"] = "ASSISTED_FIX"
+            plan["evidence"] = [
+                evidence(
+                    package,
+                    "paper-method",
+                    "paper/paper.md",
+                    "The exact public replacement is paper-supported quantity.",
+                    kind="scientific_method",
+                    precision={
+                        "claim": "paper-supported quantity",
+                        "replacement": "paper-supported quantity",
+                    },
+                )
+            ]
+            plan["operations"] = [
+                {
+                    "id": "paper-edit",
+                    "type": "replace_text",
+                    "file": "instruction.md",
+                    "old": "evidence-backed quantity",
+                    "new": "paper-supported quantity",
+                    "evidence_ids": ["paper-method"],
+                }
+            ]
+            plan["regression_tests"] = [
+                {
+                    "id": "paper-edit",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["paper-edit"],
+                    "type": "text_contains",
+                    "file": "instruction.md",
+                    "expected": "paper-supported quantity",
+                }
+            ]
+            path = workspace / "no-paper-evidence.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+
+    def test_abandon_plan_cannot_carry_an_operation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(workspace)
+            plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
+            plan["repair_class"] = "ABANDON"
+            plan["regression_tests"] = []
+            path = workspace / "abandon-operation.json"
+            write_plan(path, plan)
+
+            completed = run_repair(package, path, runner)
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("ABANDON", completed.stderr)
+
     def test_metadata_evidence_cannot_lower_threshold(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
             (package / "resources.json").write_text(
-                "pass_threshold 0.5 absolute scoring threshold with "
+                "required number unitless pass_threshold 0.5 absolute "
+                "scoring threshold with "
                 "mathematical proof",
                 encoding="utf-8",
             )
@@ -412,12 +639,16 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     package,
                     "metadata-threshold",
                     "resources.json",
-                    "pass_threshold 0.5 absolute scoring threshold with "
+                    "required number unitless pass_threshold 0.5 absolute "
+                    "scoring threshold with "
                     "mathematical proof",
                     kind="scoring_contract",
                     precision={
                         "field": "pass_threshold",
                         "value": 0.5,
+                        "type": "number",
+                        "unit": "unitless",
+                        "required": True,
                         "scoring_contract": "scoring threshold",
                         "mathematical_proof": "mathematical proof",
                     },
@@ -490,7 +721,10 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     "causal_operation_ids": ["invent-field"],
                     "type": "text_contains",
                     "file": "tests/grading_spec.json",
-                    "expected": "secret_field",
+                    "expected": (
+                        '{"pass_threshold": 0.8, '
+                        '"secret_field": "private"}'
+                    ),
                 }
             ]
             path = workspace / "invent-field.json"
@@ -554,13 +788,14 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             package, report, finding_id, runner = initial_repair_context(workspace)
             plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
             plan["regression_tests"] = [
+                plan["regression_tests"][0],
                 {
                     "id": "forced-failure",
                     "finding_id": finding_id,
                     "causal_operation_ids": ["restore-solve"],
-                    "type": "text_contains",
-                    "file": "solution/solve.sh",
-                    "expected": "never-written",
+                    "type": "command",
+                    "command": ["sh", "solution/solve.sh"],
+                    "expected_returncode": 1,
                 }
             ]
             path = workspace / "failed-bundle.json"

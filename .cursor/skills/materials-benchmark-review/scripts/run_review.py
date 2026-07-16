@@ -22,6 +22,7 @@ from prepare_audit_output import (
     record_paper_input_hashes,
     skill_root,
     validate_paper_boundary,
+    write_audit_attestation,
 )
 from probe_resources import probe_resources, run_e2_smoke
 
@@ -804,6 +805,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent-assessment",
         help="Agent-authored paper fidelity and taxonomy assessment JSON",
     )
+    parser.add_argument(
+        "--attestation-output",
+        help="new immutable source-audit attestation path outside the Harbor 题包",
+    )
     return parser
 
 
@@ -832,6 +837,11 @@ def main() -> int:
             ),
             allow_private_network=arguments.allow_private_network,
         )
+        if arguments.attestation_output:
+            result["audit_attestation"] = write_audit_attestation(
+                Path(result["benchmark_root"]),
+                Path(arguments.attestation_output),
+            )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001
