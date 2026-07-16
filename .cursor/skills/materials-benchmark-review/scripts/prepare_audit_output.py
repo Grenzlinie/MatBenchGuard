@@ -34,6 +34,10 @@ QUALITY_EVIDENCE_ROLES = {
     "tests/checker.py": "text",
     "tests/test.sh": "text",
 }
+PAPER_EVIDENCE_ROLES = {
+    "paper/paper.md": "text",
+    "paper/images_manifest.json": "json",
+}
 PRUNED_DIRS = {
     "paper",
     "solution",
@@ -265,6 +269,63 @@ def collect_input_hashes(root: Path) -> dict[str, str]:
     return dict(sorted(hashes.items()))
 
 
+def collect_source_role_inventory(
+    root: Path,
+    *,
+    paper_mode: str,
+) -> dict[str, dict[str, Any]]:
+    hashes = collect_input_hashes(root)
+    if paper_mode == "paper_grounded":
+        for relative in PAPER_EVIDENCE_ROLES:
+            path = root / relative
+            if path.is_file():
+                hashes[relative] = sha256_file(path)
+    role_types = {
+        **QUALITY_EVIDENCE_ROLES,
+        **PAPER_EVIDENCE_ROLES,
+    }
+    inventory: dict[str, dict[str, Any]] = {}
+    for relative in sorted(set(hashes) | set(role_types)):
+        role_type = role_types.get(
+            relative,
+            "json" if relative.endswith(".json") else "text",
+        )
+        required = relative in {
+            "instruction.md",
+            "tests/checker.py",
+            "tests/test.sh",
+        }
+        if relative.startswith("paper/"):
+            required = paper_mode == "paper_grounded"
+            if paper_mode == "no_paper":
+                inventory[relative] = {
+                    "status": "NOT_IN_SCOPE",
+                    "required": False,
+                    "type": role_type,
+                    "sha256": None,
+                    "size_bytes": None,
+                }
+                continue
+        path = root / relative
+        if path.is_file():
+            inventory[relative] = {
+                "status": "PRESENT",
+                "required": required,
+                "type": role_type,
+                "sha256": hashes[relative],
+                "size_bytes": path.stat().st_size,
+            }
+        else:
+            inventory[relative] = {
+                "status": "ABSENT",
+                "required": required,
+                "type": role_type,
+                "sha256": None,
+                "size_bytes": None,
+            }
+    return inventory
+
+
 def review_implementation_files(root: Path | None = None) -> tuple[str, ...]:
     root = root or skill_root()
     manifest_path = root / REVIEW_IMPLEMENTATION_FILES_MANIFEST
@@ -402,6 +463,10 @@ def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
     manifest["input_hashes"] = dict(
         sorted(manifest["input_hashes"].items())
     )
+    manifest["source_role_inventory"] = collect_source_role_inventory(
+        root,
+        paper_mode="paper_grounded",
+    )
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False),
         encoding="utf-8",
@@ -492,6 +557,10 @@ def prepare_workspace(
         # Paper roles are deliberately added only after the no-paper gate
         # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
+        "source_role_inventory": collect_source_role_inventory(
+            root,
+            paper_mode=paper_mode,
+        ),
         "review_implementation": collect_review_implementation_hashes(),
         "core_contract_digest": core_contract_digest(root),
         "fixture_hashes": {},

@@ -1920,12 +1920,32 @@ def write_history_bundle(
         repair_decision=decision,
         repair_status=repair_status,
     )
+    identity = {
+        "audit_id": plan["audit_id"],
+        "finding_id": plan["finding_id"],
+        "package_identity": plan["package_identity"],
+    }
     bundle_plan = {**plan, **canonical}
+    bound_unresolved = [
+        {**item, **identity} for item in unresolved
+    ]
+    bound_comparison = (
+        {
+            **comparison,
+            **identity,
+            "source_finding": {
+                **comparison.get("source_finding", {}),
+                **identity,
+            },
+        }
+        if isinstance(comparison, dict) and comparison
+        else comparison
+    )
     write_json(destination / "repair_plan.json", bundle_plan)
     write_json(destination / "changes.json", changes)
-    write_json(destination / "unresolved.json", unresolved)
+    write_json(destination / "unresolved.json", bound_unresolved)
     write_json(destination / "regression_results.json", regressions)
-    write_json(destination / "re_audit_comparison.json", comparison)
+    write_json(destination / "re_audit_comparison.json", bound_comparison)
     write_json(
         destination / "patch.json",
         {
@@ -1953,6 +1973,7 @@ def write_history_bundle(
                 "reason": reason,
             }
         ]
+    evidence_items = [{**item, **identity} for item in evidence_items]
     write_json(destination / "evidence.json", evidence_items)
     (destination / "repair.log").write_text(
         f"{timestamp()}\tINFO\tdecision={decision}\tstatus={status}"
@@ -1972,6 +1993,7 @@ def write_history_bundle(
             "attempt_number": attempt_number,
             "status": status,
             "decision": decision,
+            **identity,
             "bundle_files": list(REPAIR_BUNDLE_FILES),
             "bundle_complete": True,
             "bundle_hashes": bundle_hashes,
@@ -2088,9 +2110,29 @@ def write_repair_reports(
         repair_status=manifest["repair_status"],
     )
     manifest.update(canonical)
+    identity = {
+        "audit_id": manifest["source_audit_id"],
+        "finding_id": manifest["finding_id"],
+        "package_identity": manifest["package_identity"],
+    }
+    bound_plan = {**plan, **canonical, **identity}
+    bound_evidence = [
+        {**item, **identity} for item in manifest.get("evidence", [])
+    ]
+    comparison = manifest.get("re_audit_comparison", {})
+    bound_comparison = {
+        **comparison,
+        **identity,
+        "source_finding": {
+            **comparison.get("source_finding", {}),
+            **identity,
+        },
+    }
+    manifest["evidence"] = bound_evidence
+    manifest["re_audit_comparison"] = bound_comparison
     write_json(report_dir / "repair_manifest.json", manifest)
     write_json(report_dir / "repair_report.json", manifest)
-    write_json(report_dir / "repair_plan.json", {**plan, **canonical})
+    write_json(report_dir / "repair_plan.json", bound_plan)
     write_json(report_dir / "changes.json", manifest.get("changes", []))
     write_json(report_dir / "unresolved.json", manifest.get("unresolved", []))
     write_json(
@@ -2099,7 +2141,7 @@ def write_repair_reports(
     )
     write_json(
         report_dir / "re_audit_comparison.json",
-        manifest.get("re_audit_comparison", {}),
+        bound_comparison,
     )
     write_json(
         report_dir / "patch.json",
@@ -2109,7 +2151,7 @@ def write_repair_reports(
             "atomic_publish": manifest.get("atomic_publish", False),
         },
     )
-    write_json(report_dir / "evidence.json", manifest.get("evidence", []))
+    write_json(report_dir / "evidence.json", bound_evidence)
     write_json(
         report_dir / "history.json",
         {
@@ -2118,6 +2160,7 @@ def write_repair_reports(
             "attempt_number": manifest.get("attempt_number"),
             "status": manifest.get("status"),
             "decision": manifest.get("decision"),
+            **identity,
             "history_dir": str(history_dir),
             "snapshot_preserved": True,
             "bundle_files": list(REPAIR_BUNDLE_FILES),
@@ -2177,6 +2220,7 @@ def repair(
     ).is_dir():
         raise ValueError("input must be a Harbor 题包 with instruction.md and tests/")
     plan = validate_external_plan(root, plan_path)
+    plan["package_identity"] = package_identity(root)
     try:
         report, audit_manifest, finding = validate_fresh_audit(
             root, plan, attestation_path
@@ -2313,8 +2357,17 @@ def repair(
             "atomic_publish": True,
             "published_at": timestamp(),
         }
-        write_repair_reports(candidate, repair_manifest, plan, history)
         rebase_audit_paths(candidate, root)
+        reaudit_report_path = candidate / "benchmark_audit/audit_report.json"
+        reaudit_manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+        repair_manifest.update(
+            {
+                "reaudit_audit_id": reaudit["audit_id"],
+                "reaudit_report_hash": sha256_file(reaudit_report_path),
+                "reaudit_manifest_hash": sha256_file(reaudit_manifest_path),
+            }
+        )
+        write_repair_reports(candidate, repair_manifest, plan, history)
 
         history.mkdir(parents=True)
         snapshot.rename(history / "snapshot")

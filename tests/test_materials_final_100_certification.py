@@ -35,6 +35,57 @@ def file_hash(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def source_role_inventory(
+    source: Path,
+    hashes: dict[str, str],
+    *,
+    paper_mode: str,
+) -> dict[str, dict[str, Any]]:
+    contract_roles = {
+        "instruction.md": ("text", True),
+        "tests/test.sh": ("text", True),
+        "tests/checker.py": ("text", True),
+        "tests/grading_spec.json": ("json", False),
+        "paper/paper.md": ("text", paper_mode == "paper_grounded"),
+        "paper/images_manifest.json": (
+            "json",
+            paper_mode == "paper_grounded",
+        ),
+    }
+    inventory: dict[str, dict[str, Any]] = {}
+    for relative in sorted(set(hashes) | set(contract_roles)):
+        role_type, required = contract_roles.get(
+            relative,
+            ("json" if relative.endswith(".json") else "text", False),
+        )
+        path = source / relative
+        if relative.startswith("paper/") and paper_mode == "no_paper":
+            inventory[relative] = {
+                "status": "NOT_IN_SCOPE",
+                "required": False,
+                "type": role_type,
+                "sha256": None,
+                "size_bytes": None,
+            }
+        elif path.is_file():
+            inventory[relative] = {
+                "status": "PRESENT",
+                "required": required,
+                "type": role_type,
+                "sha256": hashes[relative],
+                "size_bytes": path.stat().st_size,
+            }
+        else:
+            inventory[relative] = {
+                "status": "ABSENT",
+                "required": required,
+                "type": role_type,
+                "sha256": None,
+                "size_bytes": None,
+            }
+    return inventory
+
+
 def run_certifier(
     batch: Path, output: Path, *, expected_count: int = 1
 ) -> subprocess.CompletedProcess[str]:
@@ -642,6 +693,11 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
             "execution_level": "E1",
             "parent_audit_id": None,
             "input_hashes": source_hashes,
+            "source_role_inventory": source_role_inventory(
+                source,
+                source_hashes,
+                paper_mode="no_paper",
+            ),
             "review_implementation": review_implementation(),
             "output_hashes": {},
         }
@@ -679,6 +735,9 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
     record["global_rank"] = 1
     record["evidence"]["source_binding"]["source_path"] = str(source)
     record["evidence"]["source_binding"]["source_role_hashes"] = source_hashes
+    record["evidence"]["source_binding"]["source_role_inventory"] = manifest[
+        "source_role_inventory"
+    ]
     record["evidence"]["cli_evidence"].update(
         {
             "stage_binding": {
@@ -755,8 +814,48 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
     manifest["output_hashes"]["disposition.json"] = file_hash(disposition_path)
     manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    reaudit_id = "audit-synthetic-reaudit"
+    reaudit_dir = batch / "repair-reaudit"
+    shutil.copytree(report_path.parent, reaudit_dir)
+    reaudit_report_path = reaudit_dir / "audit_report.json"
+    reaudit_manifest_path = reaudit_dir / "audit_manifest.json"
+    reaudit_disposition_path = reaudit_dir / "disposition.json"
+    reaudit_report = json.loads(
+        reaudit_report_path.read_text(encoding="utf-8")
+    )
+    reaudit_manifest = json.loads(
+        reaudit_manifest_path.read_text(encoding="utf-8")
+    )
+    reaudit_disposition = json.loads(
+        reaudit_disposition_path.read_text(encoding="utf-8")
+    )
+    reaudit_report["audit_id"] = reaudit_id
+    reaudit_manifest["audit_id"] = reaudit_id
+    reaudit_disposition["audit_id"] = reaudit_id
+    reaudit_report_path.write_text(
+        json.dumps(reaudit_report), encoding="utf-8"
+    )
+    reaudit_disposition_path.write_text(
+        json.dumps(reaudit_disposition), encoding="utf-8"
+    )
+    reaudit_manifest["output_hashes"] = {
+        name: file_hash(reaudit_dir / name)
+        for name in reaudit_manifest["output_hashes"]
+    }
+    reaudit_manifest["bundle_hash"] = canonical_hash(
+        reaudit_manifest["output_hashes"]
+    )
+    reaudit_manifest_path.write_text(
+        json.dumps(reaudit_manifest), encoding="utf-8"
+    )
     repair_dir = batch / "repair-bundle"
     repair_dir.mkdir()
+    package_identity = {"package_id": record["package_id"]}
+    repair_identity = {
+        "audit_id": identity["audit_id"],
+        "finding_id": "FINDING-001",
+        "package_identity": package_identity,
+    }
     changes = [
         {
             "operation_id": "op-1",
@@ -773,10 +872,17 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
             "schema_version": "0.1",
             "audit_id": identity["audit_id"],
             "finding_id": "FINDING-001",
+            "package_identity": package_identity,
             "justification": "Synthetic evidence-backed repair.",
             "repair_class": "AUTO_FIX",
             "operations": [{"id": "op-1", "type": "replace_text"}],
-            "regression_tests": [{"id": "regression-1", "type": "command"}],
+            "regression_tests": [
+                {
+                    "id": "regression-1",
+                    "type": "command",
+                    "causal_operation_ids": ["op-1"],
+                }
+            ],
         },
         "changes.json": changes,
         "unresolved.json": [],
@@ -785,6 +891,7 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
                 "specification": {
                     "id": "regression-1",
                     "type": "command",
+                    "causal_operation_ids": ["op-1"],
                 },
                 "before_passed": False,
                 "after_passed": True,
@@ -792,8 +899,10 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
         ],
         "re_audit_comparison.json": {
             "target_resolved": True,
-            "reaudit_audit_id": report["audit_id"],
+            **repair_identity,
+            "reaudit_audit_id": reaudit_id,
             "source_finding": {
+                **repair_identity,
                 "finding_id": "FINDING-001",
                 "status": "OPEN",
             },
@@ -815,6 +924,7 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
             {
                 "evidence_id": "evidence-1",
                 "source": "synthetic-independent-evidence",
+                **repair_identity,
             }
         ],
     }
@@ -842,6 +952,7 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
         "attempt_number": 1,
         "status": "PUBLISHED",
         "decision": "AUTO_FIX",
+        **repair_identity,
         "bundle_complete": True,
         "bundle_files": [
             "repair_plan.json",
@@ -864,6 +975,11 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
         **canonical,
         "schema_version": "0.1",
         "source_audit_id": identity["audit_id"],
+        "finding_id": "FINDING-001",
+        "package_identity": package_identity,
+        "reaudit_audit_id": reaudit_id,
+        "reaudit_report_hash": file_hash(reaudit_report_path),
+        "reaudit_manifest_hash": file_hash(reaudit_manifest_path),
         "repair_id": "synthetic-repair",
     }
     repair_manifest_path = batch / "repair-manifest.json"
@@ -874,7 +990,16 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
     record["evidence"]["repair_binding"] = {
         "repair_manifest_path": repair_manifest_path.relative_to(batch).as_posix(),
         "bundle_path": repair_dir.relative_to(batch).as_posix(),
-        "reaudit_report_path": report_path.relative_to(batch).as_posix(),
+        "source_audit_id": identity["audit_id"],
+        "finding_id": "FINDING-001",
+        "package_identity": package_identity,
+        "reaudit_audit_id": reaudit_id,
+        "reaudit_report_path": reaudit_report_path.relative_to(batch).as_posix(),
+        "reaudit_manifest_path": reaudit_manifest_path.relative_to(
+            batch
+        ).as_posix(),
+        "reaudit_report_hash": file_hash(reaudit_report_path),
+        "reaudit_manifest_hash": file_hash(reaudit_manifest_path),
     }
     record["evidence"]["cli_evidence"].update(
         {
@@ -1016,9 +1141,35 @@ def upgrade_synthetic_paper_fixture(batch: Path) -> None:
     parent_manifest_path.write_text(
         json.dumps(parent_manifest), encoding="utf-8"
     )
+    source = Path(
+        record["evidence"]["source_binding"]["source_path"]
+    )
+    (source / "paper").mkdir()
+    (source / "paper/paper.md").write_text(
+        "Independent paper-grounded material evidence.\n",
+        encoding="utf-8",
+    )
+    (source / "paper/images_manifest.json").write_text(
+        "[]\n",
+        encoding="utf-8",
+    )
+    child_hashes = {
+        **manifest["input_hashes"],
+        "paper/paper.md": file_hash(source / "paper/paper.md"),
+        "paper/images_manifest.json": file_hash(
+            source / "paper/images_manifest.json"
+        ),
+    }
     report["configuration"]["paper_mode"] = "paper_grounded"
     report["audit_binding"]["parent_audit_id"] = parent_id
+    report["audit_binding"]["source_hashes"] = child_hashes
     manifest["parent_audit_id"] = parent_id
+    manifest["input_hashes"] = child_hashes
+    manifest["source_role_inventory"] = source_role_inventory(
+        source,
+        child_hashes,
+        paper_mode="paper_grounded",
+    )
     report_path.write_text(json.dumps(report), encoding="utf-8")
     manifest["output_hashes"]["audit_report.json"] = file_hash(report_path)
     manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
@@ -1039,6 +1190,11 @@ def upgrade_synthetic_paper_fixture(batch: Path) -> None:
             "aggregate_hash"
         ],
     }
+    stage["source_role_hashes"] = parent_manifest["input_hashes"]
+    record["evidence"]["source_binding"]["source_role_hashes"] = child_hashes
+    record["evidence"]["source_binding"]["source_role_inventory"] = manifest[
+        "source_role_inventory"
+    ]
     record["evidence"]["cli_evidence"]["stage_binding"] = stage
     record["evidence"]["cli_evidence"]["audit_bundle_hash"] = manifest[
         "bundle_hash"
@@ -1054,6 +1210,107 @@ def upgrade_synthetic_paper_fixture(batch: Path) -> None:
             if key != "snapshot_hash"
         }
     )
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+
+def add_second_valid_record(batch: Path) -> None:
+    index_path = batch / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    first = index["records"][0]
+    second = json.loads(json.dumps(first))
+    package_id = "cluster-2/theme/paper-2"
+    audit_id = "audit-synthetic-second"
+    first_identity = first["evidence"]["source_binding"]["cli_audit_identity"]
+    first_report = batch / first_identity["report_path"]
+    second_audit = batch / "cli_reports" / package_id
+    shutil.copytree(first_report.parent, second_audit)
+    second_report_path = second_audit / "audit_report.json"
+    second_manifest_path = second_audit / "audit_manifest.json"
+    second_disposition_path = second_audit / "disposition.json"
+    second_checker_path = second_audit / "checker_tests.json"
+    report = json.loads(second_report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(second_manifest_path.read_text(encoding="utf-8"))
+    disposition = json.loads(
+        second_disposition_path.read_text(encoding="utf-8")
+    )
+    report["audit_id"] = audit_id
+    manifest["audit_id"] = audit_id
+    disposition["audit_id"] = audit_id
+    second_report_path.write_text(json.dumps(report), encoding="utf-8")
+    second_disposition_path.write_text(
+        json.dumps(disposition), encoding="utf-8"
+    )
+    manifest["output_hashes"] = {
+        name: file_hash(second_audit / name)
+        for name in manifest["output_hashes"]
+    }
+    manifest["bundle_hash"] = canonical_hash(manifest["output_hashes"])
+    second_manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    first_source = Path(
+        first["evidence"]["source_binding"]["source_path"]
+    )
+    second_source = batch.parent / "source" / package_id
+    shutil.copytree(first_source, second_source)
+    second.update(
+        {
+            "package_id": package_id,
+            "source_relative_path": package_id,
+            "global_rank": 2,
+            "selection_rank": 1,
+        }
+    )
+    binding = second["evidence"]["source_binding"]
+    binding.update(
+        {
+            "package_id": package_id,
+            "source_relative_path": package_id,
+            "source_path": str(second_source),
+        }
+    )
+    identity = binding["cli_audit_identity"]
+    identity.update(
+        {
+            "package_id": package_id,
+            "source_relative_path": package_id,
+            "audit_id": audit_id,
+            "manifest_audit_id": audit_id,
+            "report_path": second_report_path.relative_to(batch).as_posix(),
+            "manifest_path": second_manifest_path.relative_to(
+                batch
+            ).as_posix(),
+        }
+    )
+    cli = second["evidence"]["cli_evidence"]
+    cli.update(
+        {
+            "audit_id": audit_id,
+            "report_path": identity["report_path"],
+            "manifest_path": identity["manifest_path"],
+            "checker_tests_path": second_checker_path.relative_to(
+                batch
+            ).as_posix(),
+            "report_hash": file_hash(second_report_path),
+            "manifest_hash": file_hash(second_manifest_path),
+            "checker_tests_hash": file_hash(second_checker_path),
+            "audit_bundle_hash": manifest["bundle_hash"],
+        }
+    )
+    cli["snapshot_hash"] = canonical_hash(
+        {key: value for key, value in cli.items() if key != "snapshot_hash"}
+    )
+    index["records"].append(second)
+    universe_path = batch / index["selection_policy"]["universe_path"]
+    universe = json.loads(universe_path.read_text(encoding="utf-8"))
+    universe["records"].append(
+        {
+            "global_rank": 2,
+            "package_id": package_id,
+            "eligible": True,
+            "review_verdict": "PASS",
+        }
+    )
+    universe_path.write_text(json.dumps(universe), encoding="utf-8")
+    index["selection_policy"]["universe_hash"] = file_hash(universe_path)
     index_path.write_text(json.dumps(index), encoding="utf-8")
 
 
@@ -1605,6 +1862,143 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             "review_artifacts/materials_fast_e1_100", documentation
         )
         self.assertIn("scripts/certify_final_100.py", documentation)
+
+    def test_certifier_recomputes_relabelled_earlier_pass_eligibility(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            add_second_valid_record(batch)
+            index_path = batch / "index.json"
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            index["records"][0].pop("selection_rank")
+            index["records"][1]["selection_rank"] = 0
+            universe_path = batch / index["selection_policy"]["universe_path"]
+            universe = json.loads(universe_path.read_text(encoding="utf-8"))
+            universe["records"][0]["eligible"] = False
+            universe_path.write_text(json.dumps(universe), encoding="utf-8")
+            index["selection_policy"]["universe_hash"] = file_hash(universe_path)
+            index_path.write_text(json.dumps(index), encoding="utf-8")
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertRegex(completed.stderr.lower(), "eligib|first")
+
+    def test_certifier_rejects_cross_file_repair_operation_mismatch(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_repaired_fixture(batch)
+            plan_path = batch / "repair-bundle/repair_plan.json"
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            plan["operations"][0]["id"] = "forged-operation"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            rewrite_repair_hashes(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("operation", completed.stderr.lower())
+
+    def test_certifier_rejects_forged_reaudit_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            batch = Path(temporary) / "batch"
+            output = Path(temporary) / "certified"
+            write_evidence_pass_batch(batch)
+            upgrade_synthetic_repaired_fixture(batch)
+            comparison_path = (
+                batch / "repair-bundle/re_audit_comparison.json"
+            )
+            comparison = json.loads(
+                comparison_path.read_text(encoding="utf-8")
+            )
+            comparison["reaudit_audit_id"] = "forged-reaudit"
+            comparison_path.write_text(
+                json.dumps(comparison), encoding="utf-8"
+            )
+            rewrite_repair_hashes(batch)
+
+            completed = run_certifier(batch, output)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("re-audit", completed.stderr.lower())
+
+    def test_certifier_rejects_incomplete_or_stale_source_roles(self) -> None:
+        mutations = (
+            ("missing_test_hash", "tests/test.sh", False, False),
+            ("missing_test_file", "tests/test.sh", True, False),
+            ("missing_checker_hash", "tests/checker.py", False, False),
+            (
+                "missing_grading_hash",
+                "tests/grading_spec.json",
+                False,
+                False,
+            ),
+            ("missing_paper_hash", "paper/paper.md", False, True),
+            (
+                "missing_paper_manifest_hash",
+                "paper/images_manifest.json",
+                False,
+                True,
+            ),
+            ("extra_stale_role", "tests/stale_checker.py", False, False),
+        )
+        for label, role, delete_file, paper_mode in mutations:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as temporary:
+                batch = Path(temporary) / "batch"
+                output = Path(temporary) / "certified"
+                write_evidence_pass_batch(batch)
+                if paper_mode:
+                    upgrade_synthetic_paper_fixture(batch)
+                index_path = batch / "index.json"
+                index = json.loads(index_path.read_text(encoding="utf-8"))
+                record = index["records"][0]
+                identity = record["evidence"]["source_binding"][
+                    "cli_audit_identity"
+                ]
+                report_path = batch / identity["report_path"]
+                manifest_path = batch / identity["manifest_path"]
+                report = json.loads(report_path.read_text(encoding="utf-8"))
+                manifest = json.loads(
+                    manifest_path.read_text(encoding="utf-8")
+                )
+                binding = record["evidence"]["source_binding"]
+                source = Path(binding["source_path"])
+                if label == "extra_stale_role":
+                    stale = "sha256:" + "9" * 64
+                    manifest["input_hashes"][role] = stale
+                    binding["source_role_hashes"][role] = stale
+                    report["audit_binding"]["source_hashes"][role] = stale
+                    manifest["source_role_inventory"][role] = {
+                        "status": "PRESENT",
+                        "required": False,
+                        "type": "text",
+                        "sha256": stale,
+                        "size_bytes": 10,
+                    }
+                elif delete_file:
+                    (source / role).unlink()
+                else:
+                    manifest["input_hashes"].pop(role)
+                    binding["source_role_hashes"].pop(role)
+                    report["audit_binding"]["source_hashes"].pop(role)
+                report_path.write_text(json.dumps(report), encoding="utf-8")
+                manifest_path.write_text(
+                    json.dumps(manifest), encoding="utf-8"
+                )
+                index_path.write_text(json.dumps(index), encoding="utf-8")
+                refresh_evidence_bindings(batch)
+
+                completed = run_certifier(batch, output)
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertRegex(completed.stderr.lower(), "role|source|hash")
 
 
 if __name__ == "__main__":

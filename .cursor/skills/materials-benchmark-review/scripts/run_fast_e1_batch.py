@@ -21,6 +21,7 @@ from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
     collect_input_hashes,
     collect_review_implementation_hashes,
+    collect_source_role_inventory,
 )
 from canonical_status import canonical_fields
 
@@ -392,6 +393,7 @@ def reject_manual_scoring_fields(record: dict[str, Any]) -> None:
 def source_binding(
     identity: dict[str, Any],
     source_role_hashes: dict[str, str],
+    source_role_inventory: dict[str, Any] | None = None,
     cli_audit_identity: dict[str, Any] | None = None,
     source_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -399,6 +401,7 @@ def source_binding(
         "package_id": identity["package_id"],
         "source_relative_path": identity["source_relative_path"],
         "source_role_hashes": source_role_hashes,
+        "source_role_inventory": source_role_inventory or {},
         "cli_audit_identity": cli_audit_identity
         or {
             "status": "NOT_CREATED",
@@ -441,6 +444,10 @@ def validate_record_source_binding(
         paper_mode = "no_paper"
     source = corpus / identity["source_relative_path"]
     expected_hashes = collect_review_source_hashes(source, paper_mode)
+    expected_inventory = collect_source_role_inventory(
+        source,
+        paper_mode=paper_mode,
+    )
     if evidence.get("input_hashes") != expected_hashes:
         errors.append("CLI input hashes do not exactly match source roles")
 
@@ -457,6 +464,8 @@ def validate_record_source_binding(
         errors.append("source binding path is mismatched")
     if binding.get("source_role_hashes") != expected_hashes:
         errors.append("source binding hashes do not exactly match source roles")
+    if binding.get("source_role_inventory") != expected_inventory:
+        errors.append("source binding role inventory is incomplete or stale")
 
     cli_identity = binding.get("cli_audit_identity")
     if not isinstance(cli_identity, dict):
@@ -534,6 +543,8 @@ def validate_record_source_binding(
                     persisted_report.get("audit_id") != audit_id
                     or persisted_manifest.get("audit_id") != audit_id
                     or persisted_manifest.get("input_hashes") != expected_hashes
+                    or persisted_manifest.get("source_role_inventory")
+                    != expected_inventory
                     or persisted_report.get("configuration", {}).get(
                         "paper_mode"
                     )
@@ -746,7 +757,14 @@ def review_one(
         "solution_content_inspected": False,
         "evidence": {
             "input_hashes": source_hashes,
-            "source_binding": source_binding(identity, source_hashes),
+            "source_binding": source_binding(
+                identity,
+                source_hashes,
+                collect_source_role_inventory(
+                    source,
+                    paper_mode=paper_mode,
+                ),
+            ),
             "taxonomy_assessment_hash": assessment_hash,
             "review_paper_mode": paper_mode,
         },
@@ -1073,6 +1091,7 @@ def review_one(
                 "source_binding": source_binding(
                     identity,
                     source_hashes,
+                    audit_manifest.get("source_role_inventory"),
                     cli_identity,
                     source,
                 ),
