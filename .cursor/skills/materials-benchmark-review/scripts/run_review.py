@@ -752,7 +752,7 @@ def run_review(
 ) -> dict[str, Any]:
     if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
         raise ValueError(
-            "authoritative materials review is E1-only; "
+            "authoritative materials review is fixed at E1-only; "
             f"received execution level {execution_level!r}"
         )
     if e2_smoke_plan is not None:

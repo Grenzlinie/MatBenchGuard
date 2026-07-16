@@ -1616,9 +1616,14 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
 def run_equal_depth_review(
     candidate: Path,
     report: dict[str, Any],
-    source_manifest: dict[str, Any],
-    plan: dict[str, Any],
+    source_manifest_or_plan: dict[str, Any],
+    plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if plan is None:
+        plan = source_manifest_or_plan
+        source_manifest = {}
+    else:
+        source_manifest = source_manifest_or_plan
     runner = (
         Path(__file__).resolve().parents[2]
         / "materials-benchmark-review/scripts/run_review.py"

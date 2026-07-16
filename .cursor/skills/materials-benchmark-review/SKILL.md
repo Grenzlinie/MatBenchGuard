@@ -47,11 +47,6 @@ The mapping has three output roles:
 - `PROCESS_ONLY` — an explicitly process/intermediate/diagnostic artifact;
 - `UNCLASSIFIED` — an uncertain declaration that needs human adjudication.
 
-- `scored_output` — a final submission that contributes to a rubric component;
-- `process_evidence` — an intermediate artifact used to verify the workflow or
-  prevent hard-coded/output-only submissions, with no independent rubric weight;
-- `unclassified` — a declaration that needs human adjudication before scoring.
-
 An instruction may legitimately list process evidence separately from final
 submission files. A process artifact missing from the scoring contract is not
 `INSTRUCTION_ONLY_OUTPUT` and must not reduce instruction answerability merely
@@ -70,12 +65,9 @@ For every `scored_output`, record whether the checker:
 3. gives it a non-zero effective weight; and
 4. uses it in the final reward rather than only checking existence or format.
 
-Missing links are checker/Gold or robustness findings, not generic
-instruction-omission findings. The report must expose the mapping even when a
-link cannot be established statically. Source-pattern matches are only static
-candidates; label them separately from runtime-proven reads, scorer returns,
-and effective weights. Missing or unparseable checkers remain unknown/not-run
-and can never imply that all scoring items are runtime-bound.
+Missing links are checker/Gold or robustness findings, not generic instruction
+omissions. Expose the mapping even when links are unknown; static matches are
+only candidates, and missing/unparseable checkers remain unknown/not-run.
 Every parsed workflow requirement receives a chain row even when it declares no
 recognized output; use an unclassified output and unknown read/score states.
 
@@ -95,14 +87,11 @@ probes. Inspect for:
 - malformed, incomplete, random, or scientifically wrong but
   format-valid outputs receiving a low score.
 
-`largest_weight >= pass_threshold` is only a static reachability risk. It is
-not proof of `SINGLE_COMPONENT_CAN_PASS`; prove that finding with a
-component-isolation probe. Do not deduct points for the static risk alone.
-Construct isolation cases only from source-bound contracted components,
-verified checker source/runtime bindings, and an independently justified public
-positive fixture. The Oracle positive mock is never an isolation fixture. If
-that cannot be done safely, record
-`component_isolation` as required but `NOT_RUN` with the reason.
+`largest_weight >= pass_threshold` is only a static risk, not proof of
+`SINGLE_COMPONENT_CAN_PASS`; prove it with a component-isolation probe from
+source-bound components, verified checker bindings, and an independent public
+fixture. The Oracle positive mock is never an isolation fixture; otherwise
+record `component_isolation` as required but `NOT_RUN`.
 Every reward-derived conclusion uses the shared usable-result predicate. A
 finite reward with malformed breakdown or non-empty/malformed `_errors` is
 unusable.
@@ -113,10 +102,6 @@ behavior. Only attribute it to solution completeness when the producer failed
 to run or failed to generate the declared outputs. Docker paths such as
 `/solution` and `/app/outputs` are valid Harbor paths and must not be rewritten
 in the package.
-
-Findings caused by the same contract defect are grouped into one deduction.
-Multiple affected files or output names are evidence locations, not automatic
-additional deductions.
 
 ## Trigger paper review
 

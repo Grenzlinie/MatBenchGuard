@@ -21,6 +21,7 @@ from typing import Any
 
 sys.dont_write_bytecode = True
 
+from audit_package import instruction_contract_map
 from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
     basename,

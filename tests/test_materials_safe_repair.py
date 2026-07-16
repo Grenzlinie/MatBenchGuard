@@ -537,8 +537,11 @@ class MaterialsSafeRepairTests(unittest.TestCase):
 
             completed = run_repair(package, plan, runner)
 
-            self.assertEqual(completed.returncode, 2)
-            self.assertIn("fixed E1", completed.stderr)
+            self.assertEqual(completed.returncode, 3)
+            self.assertIn(
+                "attestation does not bind the authoritative bytes",
+                completed.stdout,
+            )
             self.assertFalse((package / "benchmark_repair").exists())
 
 
