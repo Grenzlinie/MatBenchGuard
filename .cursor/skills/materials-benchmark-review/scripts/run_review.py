@@ -594,8 +594,17 @@ def checker_skipped_by_static_gate(
         "usable_reward_count": 0,
         "probe_coverage": {
             probe_class: {
-                "status": "NOT_ASSESSABLE",
-                "reason": reason,
+                "status": (
+                    "NOT_APPLICABLE"
+                    if probe_class == "process_evidence"
+                    else "NOT_ASSESSABLE"
+                ),
+                "reason": (
+                    "process evidence is not a dynamic fixture or "
+                    "checker-probe target"
+                    if probe_class == "process_evidence"
+                    else reason
+                ),
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,
@@ -613,7 +622,7 @@ def checker_skipped_by_static_gate(
                 **(
                     {
                         "files": {},
-                        "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                            "instrumentation": "NONE",
                     }
                     if probe_class == "process_evidence"
                     else {}

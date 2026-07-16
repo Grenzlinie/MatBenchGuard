@@ -682,92 +682,123 @@ def probe_item(
 
 
 def instruction_direct_inputs(instruction: str) -> list[dict[str, Any]]:
-    """Parse explicit direct-input declarations within Markdown blocks."""
-    blocks: list[list[tuple[int, str]]] = []
-    current: list[tuple[int, str]] = []
+    """Parse URLs from explicit Markdown list/paragraph/section entries."""
+    heading_pattern = re.compile(r"^\s*#{1,6}\s+")
+    list_pattern = re.compile(r"^(\s*)(?:[-+*]|\d+[.)])\s+")
+    sections: list[
+        tuple[tuple[int, str] | None, list[tuple[int, str]]]
+    ] = []
+    heading: tuple[int, str] | None = None
+    body: list[tuple[int, str]] = []
     for line_number, line in enumerate(instruction.splitlines(), start=1):
-        if re.match(r"^\s*#{1,6}\s+", line) and current:
-            blocks.append(current)
-            current = [(line_number, line)]
-        elif line.strip():
-            current.append((line_number, line))
-        elif current:
-            blocks.append(current)
-            current = []
-    if current:
-        blocks.append(current)
+        if heading_pattern.match(line):
+            if heading is not None or body:
+                sections.append((heading, body))
+            heading = (line_number, line)
+            body = []
+        else:
+            body.append((line_number, line))
+    if heading is not None or body:
+        sections.append((heading, body))
+
+    entries: list[list[tuple[int, str]]] = []
+    for section_heading, section_body in sections:
+        index = 0
+        while index < len(section_body):
+            line_number, line = section_body[index]
+            if not line.strip():
+                index += 1
+                continue
+            marker = list_pattern.match(line)
+            entry = [section_heading] if section_heading is not None else []
+            if marker:
+                item_indent = len(marker.group(1))
+                entry.append((line_number, line))
+                index += 1
+                while index < len(section_body):
+                    next_number, next_line = section_body[index]
+                    next_marker = list_pattern.match(next_line)
+                    next_indent = len(next_line) - len(next_line.lstrip())
+                    if next_marker:
+                        break
+                    if next_line.strip() and next_indent <= item_indent:
+                        break
+                    entry.append((next_number, next_line))
+                    index += 1
+            else:
+                while index < len(section_body):
+                    next_number, next_line = section_body[index]
+                    if (
+                        not next_line.strip()
+                        or list_pattern.match(next_line)
+                    ):
+                        break
+                    entry.append((next_number, next_line))
+                    index += 1
+            entries.append([item for item in entry if item is not None])
 
     resources: list[dict[str, Any]] = []
-    for block in blocks:
-        position = 0
-        for line_index, (line_number, line) in enumerate(block):
-            for url in re.findall(r"https?://[^\s)\]}>]+", line):
-                context = block[
-                    max(0, line_index - 5) : min(
-                        len(block), line_index + 3
-                    )
-                ]
-                lowered = "\n".join(
-                    context_line for _, context_line in context
-                ).lower()
-                explicitly_direct = (
-                    "indispensable direct input" in lowered
-                    or (
-                        "direct input" in lowered
-                        and any(
-                            term in lowered
-                            for term in (
-                                "indispensable",
-                                "required",
-                                "must",
-                                "必要",
-                            )
-                        )
-                    )
-                )
-                no_equivalent = any(
+    for entry in entries:
+        entry_text = "\n".join(line for _, line in entry)
+        lowered = entry_text.lower()
+        explicitly_direct = (
+            "indispensable direct input" in lowered
+            or (
+                "direct input" in lowered
+                and any(
                     term in lowered
                     for term in (
-                        "no equivalent",
-                        "without equivalent",
-                        "no scientifically equivalent",
-                        "不可替代",
+                        "indispensable",
+                        "required",
+                        "must",
+                        "必要",
                     )
                 )
-                software_only = (
-                    any(
-                        term in lowered
-                        for term in (
-                            "software package",
-                            "python package",
-                            "library dependency",
-                            "solver executable",
-                        )
-                    )
-                    and not any(
-                        term in lowered
-                        for term in (
-                            "dataset",
-                            "data file",
-                            "input file",
-                            "external service",
-                        )
-                    )
+            )
+        )
+        no_equivalent = any(
+            term in lowered
+            for term in (
+                "no equivalent",
+                "without equivalent",
+                "no scientifically equivalent",
+                "不可替代",
+            )
+        )
+        software_only = (
+            any(
+                term in lowered
+                for term in (
+                    "software package",
+                    "python package",
+                    "library dependency",
+                    "solver executable",
                 )
-                if (
-                    not (explicitly_direct and no_equivalent)
-                    or software_only
-                ):
-                    continue
-                checksum_match = re.search(
-                    r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
-                    lowered,
+            )
+            and not any(
+                term in lowered
+                for term in (
+                    "dataset",
+                    "data file",
+                    "input file",
+                    "external service",
                 )
-                no_agent_license = (
-                    "license authorization is not provided to the solving agent"
-                    in lowered
-                    or "solving agent has no license authorization" in lowered
-                )
+            )
+        )
+        if not (explicitly_direct and no_equivalent) or software_only:
+            continue
+        checksum_match = re.search(
+            r"sha-?256\s*[:=]\s*(?:sha256:)?([0-9a-f]{64})",
+            lowered,
+        )
+        no_agent_license = (
+            "license authorization is not provided to the solving agent"
+            in lowered
+            or "solving agent has no license authorization" in lowered
+        )
+        position = 0
+        for line_number, line in entry:
+            for url in re.findall(r"https?://[^\s)\]}>]+", line):
                 position += 1
                 access = (
                     {

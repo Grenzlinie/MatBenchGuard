@@ -41,17 +41,10 @@ recognized output still appears with `unclassified` output role and explicit
 unknown read/score states. Static process-evidence references remain candidates;
 they do not prove either verification or non-verification.
 
-Process non-verification is established only by a completed, safe in-process
-open/stat trace using an independent positive fixture that contains the declared
-process files. A traced access leaves semantic validation unknown; unsafe or
-failed instrumentation remains unknown/not-run.
-Listing or scanning the outputs directory is not per-file access and cannot
-establish that a declared process artifact was read or validated.
-
-Process evidence being absent from `output_contract` is not by itself a defect.
-If it is declared as necessary anti-hacking evidence but the checker never
-reads or validates it, report one grouped `PROCESS_EVIDENCE_NOT_VERIFIED`
-finding. Do not turn it into repeated `INSTRUCTION_ONLY_OUTPUT` deductions.
+Process evidence is not a dynamic fixture or checker target. Never copy it from
+a known-valid fixture, transform it for discrimination/equivalence, or create a
+read-trace checker case. Its dynamic probe class is always `NOT_APPLICABLE`.
+Process evidence being absent from `output_contract` is not itself a defect.
 
 ## Checker runtime
 

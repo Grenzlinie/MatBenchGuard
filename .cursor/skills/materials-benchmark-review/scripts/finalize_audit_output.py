@@ -55,6 +55,12 @@ QA_AXIS_NAMES = (
     "checker_instruction_consistency",
 )
 QA_AXIS_STATUSES = {"PASS", "WARNING", "FAIL", "NOT_ASSESSABLE"}
+QA_EVIDENCE_SEMANTICS = {
+    "PASS": "supports_pass",
+    "WARNING": "supports_warning",
+    "FAIL": "supports_failure",
+    "NOT_ASSESSABLE": "supports_limitation",
+}
 DIMENSION_MAX_POINTS = {
     "scientific_validity": 35,
     "instruction_answerability": 20,
@@ -269,19 +275,6 @@ def repair_text(
             "pass threshold without exposing or using Oracle values as "
             "scientific evidence."
         )
-    elif code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        repair = (
-            "Declare the process artifacts as non-scored verification evidence "
-            "and make tests/checker.py read and validate the evidence needed to "
-            "prevent output-only or hard-coded-result submissions. Do not add "
-            "the process artifacts as independent rubric components."
-        )
-        retest = (
-            "Run the Review CLI with the process artifacts present, missing, "
-            "and inconsistent; require valid process evidence to be accepted "
-            "and tampered evidence to be rejected without changing the final "
-            "scored-output weights."
-        )
     elif code in {
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -439,8 +432,6 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
     files = finding["affected_files"]
     if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
         return None
-    if code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        return "robustness_discrimination"
     if code == "ORACLE_POSITIVE_MOCK_REJECTED":
         return "checker_gold_alignment"
     if code in {
@@ -1087,6 +1078,7 @@ def _qa_evidence(
         {
             "finding_id": item.get("finding_id"),
             "observed_fact": item.get("observed_fact"),
+            "semantic": "supports_failure",
         }
         for item in findings
         if item.get("title") in codes
@@ -1145,7 +1137,6 @@ def derive_qa_axes(
         "OUTPUT_NOT_CONTRACTED",
         "OUTPUT_NOT_SCORED",
         "EVIDENCE_NOT_ENFORCED",
-        "PROCESS_EVIDENCE_NOT_VERIFIED",
         "SCORING_COMPONENT_NOT_BOUND",
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -1164,9 +1155,22 @@ def derive_qa_axes(
         locations: list[dict[str, Any]],
         *limitations: str,
     ) -> dict[str, Any]:
+        default_semantic = QA_EVIDENCE_SEMANTICS[status]
+        semantic_evidence = []
+        for item in evidence:
+            value = dict(item)
+            value.setdefault(
+                "semantic",
+                (
+                    "supports_failure"
+                    if "finding_id" in value
+                    else default_semantic
+                ),
+            )
+            semantic_evidence.append(value)
         return {
             "status": status,
-            "evidence": evidence,
+            "evidence": semantic_evidence,
             "locations": locations,
             "limitations": list(limitations),
         }
@@ -1181,6 +1185,20 @@ def derive_qa_axes(
             [{"source": "instruction/tests", "fact": "No independent factual adjudication was supplied."}],
             base_location,
             "E1 checks the public contract and does not independently verify scientific facts.",
+        )
+    elif paper_result.get("status") == "NOT_ASSESSABLE":
+        factual = entry(
+            "NOT_ASSESSABLE",
+            [
+                {
+                    "source": "paper_grounded_review",
+                    "fact": (
+                        "Paper-grounded factual accuracy could not be assessed."
+                    ),
+                }
+            ],
+            base_location,
+            "Unavailable paper evidence cannot support a factual-accuracy PASS.",
         )
     elif paper_result.get("status") == "FAIL":
         factual = entry(
@@ -1938,37 +1956,7 @@ def synthesize_report(
     if isinstance(process_coverage, dict) and isinstance(
         checker_analysis, dict
     ):
-        for check in checker_analysis.get("dynamic_checks_required", []):
-            if (
-                isinstance(check, dict)
-                and check.get("check") == "process_evidence_verification"
-            ):
-                check["status"] = process_coverage.get("status", "NOT_RUN")
-                check["reason"] = process_coverage.get("reason")
-                check["files"] = process_coverage.get("files", {})
-                check["provenance"] = process_coverage.get("provenance", {})
-        process_statuses = process_coverage.get("files", {})
-        for output in checker_analysis.get("outputs", []):
-            filename = output.get("file")
-            status = process_statuses.get(filename)
-            if status == "DYNAMIC_NOT_ACCESSED":
-                output["checker_reads"] = "DYNAMIC_NOT_VERIFIED"
-                output["checker_read_runtime_proven"] = True
-            elif status == "ACCESSED_VALIDATION_UNKNOWN":
-                output["checker_reads"] = (
-                    "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-                )
-                output["checker_read_runtime_proven"] = True
-        by_output = {
-            output.get("file"): output
-            for output in checker_analysis.get("outputs", [])
-        }
-        for chain in contract_map.get("requirement_chains", []):
-            output = by_output.get(chain.get("core_output"))
-            if output is not None:
-                chain["checker_read"] = output.get(
-                    "checker_reads", chain.get("checker_read")
-                )
+        checker_analysis["process_evidence_policy"] = dict(process_coverage)
     report["contract_map"] = contract_map
     report["taxonomy_labels"] = (
         agent_assessment["taxonomy"]
@@ -2342,22 +2330,13 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
     process_status = process.get("status")
     process_files = process.get("files")
     if (
-        process_status
-        not in {"ASSESSED", "NOT_RUN", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
-        or not isinstance(process_files, dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
+        process_status != "NOT_APPLICABLE"
+        or process_files != {}
+        or process.get("instrumentation") != "NONE"
+        or process.get("provenance")
+        != {"source_kind": "NONE", "oracle_used": False}
     ):
         raise ValueError("PASS has invalid process-evidence coverage")
-    if process_status == "ASSESSED" and any(
-        status
-        not in {"DYNAMIC_NOT_ACCESSED", "ACCESSED_VALIDATION_UNKNOWN"}
-        for status in process_files.values()
-    ):
-        raise ValueError("PASS has invalid process-evidence file status")
-    if process_status != "ASSESSED" and any(
-        status != "UNKNOWN" for status in process_files.values()
-    ):
-        raise ValueError("PASS unavailable process-evidence overclaims access")
 
 
 def _provenance_strings(value: Any) -> list[str]:
@@ -2426,9 +2405,6 @@ def validate_contract_probe_consistency(
             "NOT_ASSESSABLE",
         },
         "process_evidence": {
-            "ASSESSED",
-            "NOT_RUN",
-            "NOT_ASSESSABLE",
             "NOT_APPLICABLE",
         },
     }
@@ -2494,8 +2470,11 @@ def validate_contract_probe_consistency(
         raise ValueError("component-isolation provenance is Oracle-bound")
     process = coverage["process_evidence"]
     if (
-        not isinstance(process.get("files"), dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
+        process.get("status") != "NOT_APPLICABLE"
+        or process.get("files") != {}
+        or process.get("instrumentation") != "NONE"
+        or process.get("provenance")
+        != {"source_kind": "NONE", "oracle_used": False}
     ):
         raise ValueError("invalid process-evidence probe schema")
 
@@ -2507,7 +2486,7 @@ def validate_contract_probe_consistency(
         if isinstance(item, dict)
     }
     component_check = checks.get("component_isolation")
-    process_check = checks.get("process_evidence_verification")
+    process_policy = checker_analysis.get("process_evidence_policy")
     if (
         not isinstance(component_check, dict)
         or component_check.get("status")
@@ -2519,15 +2498,8 @@ def validate_contract_probe_consistency(
     ):
         raise ValueError("component-isolation contract/probe mismatch")
     if (
-        not isinstance(process_check, dict)
-        or process_check.get("status")
-        != coverage["process_evidence"].get("status")
-        or process_check.get("reason")
-        != coverage["process_evidence"].get("reason")
-        or process_check.get("files")
-        != coverage["process_evidence"].get("files", {})
-        or process_check.get("provenance")
-        != coverage["process_evidence"].get("provenance", {})
+        not isinstance(process_policy, dict)
+        or process_policy != coverage["process_evidence"]
     ):
         raise ValueError("process-evidence contract/probe mismatch")
 
@@ -2536,21 +2508,6 @@ def validate_contract_probe_consistency(
         for item in checker_analysis.get("outputs", [])
         if isinstance(item, dict)
     }
-    expected_reads = {
-        "DYNAMIC_NOT_ACCESSED": "DYNAMIC_NOT_VERIFIED",
-        "ACCESSED_VALIDATION_UNKNOWN": (
-            "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-        ),
-    }
-    for filename, status in coverage["process_evidence"].get(
-        "files", {}
-    ).items():
-        if status in expected_reads and (
-            filename not in outputs
-            or outputs[filename].get("checker_reads")
-            != expected_reads[status]
-        ):
-            raise ValueError("process-evidence output/probe mismatch")
     for chain in contract_map.get("requirement_chains", []):
         output = outputs.get(chain.get("core_output"))
         if output is not None and chain.get("checker_read") != output.get(
@@ -2582,25 +2539,44 @@ def validate_qa_axes(qa_axes: Any) -> None:
             for item in axis["limitations"]
         ):
             raise ValueError(f"QA axis limitations must be strings: {name}")
+        evidence_semantics: list[str] = []
         for evidence in axis["evidence"]:
             finding_evidence = (
                 isinstance(evidence, dict)
-                and set(evidence) == {"finding_id", "observed_fact"}
+                and set(evidence)
+                == {"finding_id", "observed_fact", "semantic"}
                 and isinstance(evidence["finding_id"], str)
                 and bool(evidence["finding_id"].strip())
                 and isinstance(evidence["observed_fact"], str)
                 and bool(evidence["observed_fact"].strip())
+                and evidence["semantic"] == "supports_failure"
             )
             source_evidence = (
                 isinstance(evidence, dict)
-                and set(evidence) == {"source", "fact"}
+                and set(evidence) == {"source", "fact", "semantic"}
                 and isinstance(evidence["source"], str)
                 and bool(evidence["source"].strip())
                 and isinstance(evidence["fact"], str)
                 and bool(evidence["fact"].strip())
+                and evidence["semantic"]
+                in set(QA_EVIDENCE_SEMANTICS.values())
             )
             if not (finding_evidence or source_evidence):
                 raise ValueError(f"invalid QA axis evidence item: {name}")
+            evidence_semantics.append(evidence["semantic"])
+        expected_semantic = QA_EVIDENCE_SEMANTICS[axis["status"]]
+        if any(
+            semantic != expected_semantic
+            for semantic in evidence_semantics
+        ):
+            conflict = (
+                "failure evidence"
+                if "supports_failure" in evidence_semantics
+                else "contradictory evidence status"
+            )
+            raise ValueError(
+                f"{axis['status']} QA axis cannot use {conflict}: {name}"
+            )
         for location in axis["locations"]:
             if (
                 not isinstance(location, dict)
@@ -2637,12 +2613,6 @@ def validate_qa_axes(qa_axes: Any) -> None:
             if not axis["limitations"]:
                 raise ValueError(
                     f"NOT_ASSESSABLE QA axis requires limitations: {name}"
-                )
-            if any(
-                "finding_id" in evidence for evidence in axis["evidence"]
-            ):
-                raise ValueError(
-                    f"NOT_ASSESSABLE QA axis contradicts failure evidence: {name}"
                 )
 
 

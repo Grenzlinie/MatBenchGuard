@@ -74,6 +74,9 @@ First-class QA axes (not weighted dimensions):
 - instruction_completeness: status, evidence, locations, limitations
 - checker_instruction_consistency: status, evidence, locations, limitations
 
+Evidence semantics must match status: `supports_pass`, `supports_failure`,
+`supports_warning`, or `supports_limitation`.
+
 ## 14. Paper Consistency
 
 Status: NOT_ASSESSED

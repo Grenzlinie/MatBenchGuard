@@ -21,7 +21,6 @@ from typing import Any
 
 sys.dont_write_bytecode = True
 
-from audit_package import instruction_contract_map
 from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
     basename,
@@ -388,86 +387,6 @@ def component_isolation_plan(
     return candidates, None
 
 
-def process_evidence_probe_plan(
-    root: Path,
-    checker_text: str,
-    known_valid_output: Path | None,
-) -> tuple[list[str], str | None]:
-    instruction = (root / "instruction.md").read_text(
-        encoding="utf-8", errors="replace"
-    )
-    process_files = instruction_contract_map(instruction)["process_evidence"]
-    if not process_files:
-        return [], "instruction declares no process-evidence outputs"
-    if known_valid_output is None:
-        return process_files, "no independent source-bound fixture is available"
-    fixture = reject_package_fixture(root, known_valid_output)
-    missing = [
-        filename
-        for filename in process_files
-        if not (fixture / filename).is_file()
-    ]
-    if missing:
-        return (
-            process_files,
-            "independent fixture lacks process evidence: " + ", ".join(missing),
-        )
-    try:
-        tree = ast.parse(checker_text)
-    except SyntaxError as exc:
-        return process_files, f"checker source cannot be instrumented safely: {exc}"
-    unsafe_modules = {"ctypes", "mmap", "multiprocessing", "subprocess"}
-    imported_modules = {
-        alias.name.split(".", 1)[0]
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Import, ast.ImportFrom))
-        for alias in (
-            node.names
-            if isinstance(node, ast.Import)
-            else [ast.alias(name=str(node.module or "").split(".", 1)[0])]
-        )
-    }
-    unsafe_calls = {
-        "call",
-        "check_call",
-        "check_output",
-        "eval",
-        "exec",
-        "execv",
-        "execve",
-        "fork",
-        "popen",
-        "Popen",
-        "posix_spawn",
-        "posix_spawnp",
-        "run",
-        "spawnl",
-        "spawnv",
-        "system",
-    }
-    called_names = {
-        (
-            node.func.attr
-            if isinstance(node.func, ast.Attribute)
-            else node.func.id
-            if isinstance(node.func, ast.Name)
-            else ""
-        )
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-    }
-    nonstdlib_modules = imported_modules - set(sys.stdlib_module_names)
-    if (
-        imported_modules & unsafe_modules
-        or nonstdlib_modules
-        or called_names & unsafe_calls
-    ):
-        return process_files, (
-            "checker may access outputs outside the in-process read tracer"
-        )
-    return process_files, None
-
-
 def component_isolation_coverage(
     plan: list[dict[str, str]],
     not_run_reason: str | None,
@@ -601,132 +520,6 @@ def probe_assessment_flags(
             for case in equivalence_cases
         ),
     }
-
-
-def process_evidence_coverage(
-    process_files: list[str],
-    not_run_reason: str | None,
-    results: list[dict[str, Any]],
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    if not process_files:
-        return (
-            {
-                "status": (
-                    "NOT_APPLICABLE"
-                    if not_run_reason
-                    == "instruction declares no process-evidence outputs"
-                    else "NOT_RUN"
-                ),
-                "reason": not_run_reason,
-                "files": {},
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "NONE",
-                    "oracle_used": False,
-                },
-            },
-            [],
-        )
-    if not_run_reason is not None:
-        return (
-            {
-                "status": "NOT_RUN",
-                "reason": not_run_reason,
-                "files": {
-                    filename: "UNKNOWN" for filename in process_files
-                },
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "NONE",
-                    "oracle_used": False,
-                },
-            },
-            [],
-        )
-    result = next(
-        (
-            item
-            for item in results
-            if item["case"] == "process_evidence_read_trace"
-        ),
-        None,
-    )
-    usable = (
-        isinstance(result, dict)
-        and result.get("read_trace_enabled") is True
-        and usable_probe_result(result)
-    )
-    if not usable:
-        return (
-            {
-                "status": "NOT_ASSESSABLE",
-                "reason": (
-                    "instrumented process-evidence checker execution did not "
-                    "complete with usable scorer evidence"
-                ),
-                "files": {
-                    filename: "UNKNOWN" for filename in process_files
-                },
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                    "oracle_used": False,
-                },
-            },
-            [],
-        )
-    outputs_dir = Path(str(result["runtime_outputs_dir"]))
-    accessed = {
-        filename
-        for filename in process_files
-        if any(
-            item["operation"] in {"open", "stat", "access"}
-            and Path(item["path"]) == outputs_dir / filename
-            for item in result["read_trace"]
-        )
-    }
-    not_accessed = sorted(set(process_files) - accessed)
-    file_status = {
-        filename: (
-            "ACCESSED_VALIDATION_UNKNOWN"
-            if filename in accessed
-            else "DYNAMIC_NOT_ACCESSED"
-        )
-        for filename in process_files
-    }
-    findings = (
-        [
-            finding(
-                "MEDIUM",
-                "PROCESS_EVIDENCE_NOT_VERIFIED",
-                "declared process evidence was not accessed during a safe "
-                "instrumented positive checker run: "
-                + ", ".join(not_accessed),
-                "process_evidence_read_trace",
-                {
-                    "unverified_process_evidence": not_accessed,
-                    "file_status": file_status,
-                    "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                    "root_cause": "process_evidence_verification_contract",
-                },
-            )
-        ]
-        if not_accessed
-        else []
-    )
-    return (
-        {
-            "status": "ASSESSED",
-            "reason": None,
-            "files": file_status,
-            "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-            "provenance": {
-                "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                "oracle_used": False,
-            },
-        },
-        findings,
-    )
 
 
 def retain_one_known_valid_row(
@@ -1135,8 +928,6 @@ def run_checker_case(
     known_valid_output: Path | None,
     isolated_component: dict[str, str] | None = None,
     fixture_source_kind: str | None = None,
-    additional_outputs: list[str] | None = None,
-    trace_reads: bool = False,
 ) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix=f"materials_checker_{case_name}_") as tmp:
         base = Path(tmp)
@@ -1184,17 +975,6 @@ def run_checker_case(
                     if filename != retained:
                         (outputs_dir / filename).unlink(missing_ok=True)
                 created = [filename for filename in created if filename == retained]
-            if additional_outputs:
-                fixture = reject_package_fixture(root, known_valid_output)
-                for filename in additional_outputs:
-                    source = (fixture / filename).resolve()
-                    if source.parent != fixture or not source.is_file():
-                        raise FileNotFoundError(
-                            "process-evidence fixture is missing: " + filename
-                        )
-                    shutil.copy2(source, outputs_dir / filename)
-                    if filename not in created:
-                        created.append(filename)
         elif mode == "malformed":
             created = write_malformed_outputs(outputs_dir, specification)
         elif mode != "missing":
@@ -1234,9 +1014,6 @@ def run_checker_case(
                 ).exists(),
                 "isolated_component": isolated_component,
                 "fixture_source_kind": fixture_source_kind,
-                "read_trace": [],
-                "read_trace_enabled": False,
-                "runtime_outputs_dir": str(outputs_dir),
             }
         verifier_path.write_text(
             patch_harbor_paths(
@@ -1247,57 +1024,6 @@ def run_checker_case(
             ),
             encoding="utf-8",
         )
-        trace_path = base / "read_trace.json"
-        if trace_reads:
-            wrapper_path = base / "checker_trace_wrapper.py"
-            wrapper_path.write_text(
-                "import json, os, runpy, sys\n"
-                "from pathlib import Path\n"
-                "_events = []\n"
-                "def _record(operation, path):\n"
-                "    try:\n"
-                "        _events.append({'operation': operation, "
-                "'path': os.fspath(path)})\n"
-                "    except TypeError:\n"
-                "        pass\n"
-                "def _audit(event, args):\n"
-                "    if event == 'open' and args:\n"
-                "        _record('open', args[0])\n"
-                "sys.addaudithook(_audit)\n"
-                "_original_stat = os.stat\n"
-                "_original_listdir = os.listdir\n"
-                "_original_scandir = os.scandir\n"
-                "_original_access = os.access\n"
-                "def _traced_stat(path, *args, **kwargs):\n"
-                "    _record('stat', path)\n"
-                "    return _original_stat(path, *args, **kwargs)\n"
-                "def _traced_listdir(path='.'):\n"
-                "    _record('listdir', path)\n"
-                "    return _original_listdir(path)\n"
-                "def _traced_scandir(path='.'):\n"
-                "    _record('scandir', path)\n"
-                "    return _original_scandir(path)\n"
-                "def _traced_access(path, *args, **kwargs):\n"
-                "    _record('access', path)\n"
-                "    return _original_access(path, *args, **kwargs)\n"
-                "os.stat = _traced_stat\n"
-                "os.listdir = _traced_listdir\n"
-                "os.scandir = _traced_scandir\n"
-                "os.access = _traced_access\n"
-                "try:\n"
-                f"    runpy.run_path({str(checker_path)!r}, "
-                "run_name='__main__')\n"
-                "finally:\n"
-                f"    Path({str(trace_path)!r}).write_text("
-                "json.dumps(_events), encoding='utf-8')\n",
-                encoding="utf-8",
-            )
-            verifier_path.write_text(
-                verifier_path.read_text(encoding="utf-8").replace(
-                    str(checker_path), str(wrapper_path)
-                ),
-                encoding="utf-8",
-            )
         tool_dir = base / "bin"
         tool_dir.mkdir()
         (tool_dir / "python").symlink_to(sys.executable)
@@ -1340,20 +1066,6 @@ def run_checker_case(
                 breakdown = breakdown_path.read_text(
                     encoding="utf-8", errors="replace"
                 )
-        read_trace: list[dict[str, str]] = []
-        if trace_path.is_file():
-            try:
-                raw_trace = read_json(trace_path)
-                if isinstance(raw_trace, list):
-                    read_trace = [
-                        item
-                        for item in raw_trace
-                        if isinstance(item, dict)
-                        and isinstance(item.get("operation"), str)
-                        and isinstance(item.get("path"), str)
-                    ]
-            except (OSError, json.JSONDecodeError):
-                read_trace = []
         return {
             "case": case_name,
             "mode": mode,
@@ -1379,9 +1091,6 @@ def run_checker_case(
             ).exists(),
             "isolated_component": isolated_component,
             "fixture_source_kind": fixture_source_kind,
-            "read_trace": read_trace,
-            "read_trace_enabled": trace_reads,
-            "runtime_outputs_dir": str(outputs_dir),
         }
 
 
@@ -1856,9 +1565,6 @@ def dynamic_checker_probe(
     source_isolation_plan, isolation_not_run_reason = component_isolation_plan(
         specification, isolation_source, checker_text
     )
-    process_files, process_not_run_reason = process_evidence_probe_plan(
-        root, checker_text, known_valid_output
-    )
     try:
         results = [
             run_checker_case(
@@ -1879,20 +1585,6 @@ def dynamic_checker_probe(
                 source_kind,
             ) in cases
         ]
-        if process_files and process_not_run_reason is None:
-            results.append(
-                run_checker_case(
-                    root,
-                    checker_text,
-                    specification,
-                    "process_evidence_read_trace",
-                    "known_valid",
-                    known_valid_output,
-                    fixture_source_kind="INDEPENDENT_PUBLIC_FIXTURE",
-                    additional_outputs=process_files,
-                    trace_reads=True,
-                )
-            )
         isolation_plan: list[dict[str, str]] = []
         if source_isolation_plan and component_runtime_bindings_verified(
             source_isolation_plan, results
@@ -1930,10 +1622,18 @@ def dynamic_checker_probe(
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
-    process_coverage, process_findings = process_evidence_coverage(
-        process_files, process_not_run_reason, results
-    )
-    findings.extend(process_findings)
+    process_coverage = {
+        "status": "NOT_APPLICABLE",
+        "reason": (
+            "process evidence is not a dynamic fixture or checker-probe target"
+        ),
+        "files": {},
+        "instrumentation": "NONE",
+        "provenance": {
+            "source_kind": "NONE",
+            "oracle_used": False,
+        },
+    }
     isolation_coverage = component_isolation_coverage(
         isolation_plan, isolation_not_run_reason, results
     )
@@ -1984,10 +1684,6 @@ def dynamic_checker_probe(
         "metamorphic_equivalent_representation": (
             "equivalent ordering and serialization preserve the reward"
         ),
-        "process_evidence_read_trace": (
-            "trace whether declared process evidence is accessed without "
-            "claiming that access proves semantic validation"
-        ),
     }
     expected.update(
         {
@@ -2006,7 +1702,6 @@ def dynamic_checker_probe(
         "quality_gradient_small_error": "discrimination",
         "quality_gradient_large_error": "discrimination",
         "metamorphic_equivalent_representation": "equivalence",
-        "process_evidence_read_trace": "process_evidence",
     }
     results_by_case = {result["case"]: result for result in results}
     assessment_flags = probe_assessment_flags(results)
@@ -2215,16 +1910,6 @@ def dynamic_checker_probe(
                     f"{isolation_coverage['reason']}"
                 ]
                 if isolation_coverage["status"] != "ASSESSED"
-                else []
-            ),
-            *(
-                [
-                    "process-evidence non-verification remains unknown unless "
-                    "the safe in-process read/stat tracer completes: "
-                    f"{process_coverage['reason']}"
-                ]
-                if process_coverage["status"]
-                in {"NOT_RUN", "NOT_ASSESSABLE"}
                 else []
             ),
             "external-service or compiled checker dependencies may require container execution",

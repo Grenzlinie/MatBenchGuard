@@ -51,16 +51,9 @@ The mapping has three output roles:
 An instruction may legitimately list process evidence separately from final
 submission files. A process artifact missing from the scoring contract is not
 `INSTRUCTION_ONLY_OUTPUT` and must not reduce instruction answerability merely
-because it has no score weight. If the instruction declares it as anti-hacking
-evidence and the checker never reads or validates it, emit one grouped
-`PROCESS_EVIDENCE_NOT_VERIFIED` finding, with all affected files as locations.
-Static loader or filename evidence is only a read candidate: preserve
-`UNKNOWN`/`CANDIDATE` unless a dynamic probe establishes non-verification.
-The generic dynamic seam may emit `PROCESS_EVIDENCE_NOT_VERIFIED` only when an
-independent positive fixture contains the process files and a safe in-process
-Python open/stat trace completes without accessing them. Access proves only
-that the file was touched, not that its semantics were validated. Unsafe,
-external, missing-fixture, or failed tracing remains `UNKNOWN`/`NOT_RUN`.
+because it has no score weight. Process evidence is not a dynamic fixture or
+checker-probe target: exclude process files from positive, discrimination, and
+equivalence inputs and record this class as `NOT_APPLICABLE`.
 
 For every `scored_output`, record whether the checker:
 
@@ -173,7 +166,7 @@ Every E1 run records coverage for these probe classes:
 - equivalence — scientifically equivalent ordering or serialization must not
   change reward, using the same independent public fixture;
 - component isolation — independently sourced one-component submissions;
-- process evidence — safe dynamic access tracing when supportable.
+- process evidence — classification only; never a dynamic fixture/checker case.
 
 Execute checker cases through `tests/test.sh` and label runtime provenance as
 `Harbor-equivalent`, `audit-host-copy`, or `not-assessable`. The audit-host

@@ -329,9 +329,12 @@ _SCORERS = {"a": score_a, "b": score_b}
             },
             "process_evidence": {
                 "status": "NOT_APPLICABLE",
-                "reason": "instruction declares no process-evidence outputs",
+                "reason": (
+                    "process evidence is not a dynamic fixture or "
+                    "checker-probe target"
+                ),
                 "files": {},
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+                "instrumentation": "NONE",
                 "provenance": {
                     "source_kind": "NONE",
                     "oracle_used": False,
@@ -1095,7 +1098,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             {item["code"] for item in issues},
         )
 
-    def test_dynamic_process_nonverification_is_grouped_after_safe_trace(
+    def test_process_artifacts_are_excluded_from_dynamic_fixture(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1129,69 +1132,34 @@ _SCORERS = {"a": score_a, "b": score_b}
                     encoding="utf-8"
                 )
             )
-            findings = [
-                item
-                for item in report["findings"]
-                if item["title"] == "PROCESS_EVIDENCE_NOT_VERIFIED"
-            ]
-            self.assertEqual(len(findings), 1)
-            self.assertEqual(
-                findings[0]["evidence"]["unverified_process_evidence"],
-                ["process_trace.json", "training.log"],
+            self.assertNotIn(
+                "PROCESS_EVIDENCE_NOT_VERIFIED",
+                {item["title"] for item in report["findings"]},
             )
-            process_tests = [
-                item
-                for item in report["checker_tests"]
-                if item["probe_class"] == "process_evidence"
-            ]
-            self.assertEqual(len(process_tests), 1)
-            mapped = {
-                item["file"]: item
-                for item in report["contract_map"]["checker_analysis"][
-                    "outputs"
+            self.assertFalse(
+                [
+                    item
+                    for item in report["checker_tests"]
+                    if item["probe_class"] == "process_evidence"
                 ]
-            }
-            for filename in ("process_trace.json", "training.log"):
-                self.assertEqual(
-                    mapped[filename]["checker_reads"],
-                    "DYNAMIC_NOT_VERIFIED",
-                )
-
-    def test_process_directory_listing_does_not_prove_file_access(self) -> None:
-        coverage, findings = dynamic_checker_probe.process_evidence_coverage(
-            ["process_trace.json"],
-            None,
-            [
-                {
-                    "case": "process_evidence_read_trace",
-                    "reward": 1.0,
-                    "breakdown": {"_errors": {}},
-                    "crashed": False,
-                    "read_trace_enabled": True,
-                    "runtime_outputs_dir": "/tmp/runtime/app/outputs",
-                    "read_trace": [
-                        {
-                            "operation": "listdir",
-                            "path": "/tmp/runtime/app/outputs",
-                        },
-                        {
-                            "operation": "scandir",
-                            "path": "/tmp/runtime/app/outputs",
-                        },
-                    ],
-                }
-            ],
-        )
-
-        self.assertEqual(coverage["status"], "ASSESSED")
-        self.assertEqual(
-            coverage["files"]["process_trace.json"],
-            "DYNAMIC_NOT_ACCESSED",
-        )
-        self.assertEqual(
-            [item["code"] for item in findings],
-            ["PROCESS_EVIDENCE_NOT_VERIFIED"],
-        )
+            )
+            checker = json.loads(
+                (
+                    package / "benchmark_audit/checker_tests.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                checker["probe_coverage"]["process_evidence"]["status"],
+                "NOT_APPLICABLE",
+            )
+            fixture_hashes = checker["probe_coverage"]["discrimination"][
+                "provenance"
+            ]["fixture_hashes"]
+            self.assertNotIn("process_trace.json", fixture_hashes)
+            self.assertNotIn("training.log", fixture_hashes)
+            self.assertEqual(
+                set(fixture_hashes), {"dispersion_curves.csv"}
+            )
 
     def test_component_weight_reaching_threshold_is_a_risk_not_a_proven_bypass(
         self,
