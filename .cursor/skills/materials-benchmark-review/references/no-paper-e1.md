@@ -1,41 +1,36 @@
-# No-paper E1 interpretation
+# E1 review without paper
 
-This slice asks whether a Harbor 题包 independently defines a coherent,
-machine-checkable materials task. It does not compare the task with its paper.
+Ask whether instruction and tests define a scientifically valid, answerable,
+machine-checkable materials task.
 
-## Evidence produced
+## Static evidence
 
-- Harbor 题包 role parse status.
-- Lexical materials relevance evidence for object, data, operation, and
-  endpoint axes.
-- Cross-file sets for instruction, workflow, output contract, and grading
-  references.
-- Grading weight and pass-threshold checks.
-- Real checker rewards for missing, empty, malformed, random, minimal-shaped,
-  duplicate, and non-finite submissions.
-- An optional independently justified known-valid public submission.
-- When that public submission is supplied, a numeric materials-response quality
-  gradient and an equivalent row/key ordering and serialization probe.
+- substantive materials object, operation, and endpoint in instruction;
+- necessary task definitions versus legitimate modeling/convergence freedom;
+- output and score contract consistency between instruction and tests;
+- Gold target, units, normalization, tolerances, and multiple-answer policy;
+- checker implementation defects and leakage risks;
+- solution Oracle presence or repairable absence.
 
-## Initial verdict
+Do not derive evidence from metadata, resources, steps, task configuration, or
+environment declarations.
 
-- `REJECT` when a FATAL static or dynamic finding exists.
-- `CONDITIONAL` when no FATAL exists but a HIGH or MEDIUM finding remains.
-- `PASS` when only LOW findings or no findings remain.
-- `NOT_ASSESSABLE` when the checker cannot produce usable E1 evidence.
+## Dynamic evidence
 
-This is an initial no-paper policy. Later slices replace the coarse score with
-the complete weighted material audit dimensions and Hard gates.
+Run the real checker in isolation and classify every case:
 
-## Claim boundaries
+- `positive`: Oracle mock or independently justified public output;
+- `negative`: malformed, empty, missing, random, sparse, duplicate, non-finite,
+  and gaming outputs;
+- `discrimination`: meaningfully worse outputs cannot score better;
+- `equivalence`: scientifically equivalent representations preserve reward.
 
-- E1 proves checker behavior only for the executed probes.
-- Numeric perturbation is one materials quality gradient, not a claim that all
-  task-family scientific invariants have been exhausted.
-- E1 does not prove resource reachability or scientific workflow execution.
-- `no_paper` does not establish fidelity to the source paper or Gold
-  provenance.
-- A lexical materials prescreen supplies evidence for Agent adjudication; it is
-  not an authoritative scientific classifier.
-- A generated schema-shaped submission is not a known-valid scientific result.
-  Only a separately justified public fixture may exercise the known-valid case.
+An Oracle pass proves only that a positive checker path exists. It does not
+prove scientific correctness or Gold provenance.
+
+## Escalate to paper
+
+Stop no-paper inference and trigger paper review for a scientific conflict,
+possibly missing necessary definition, uncertain Gold provenance, or explicit
+paper-reproduction claim. If paper is temporarily unavailable, use
+`NOT_ASSESSABLE`; do not invent a scientific failure.

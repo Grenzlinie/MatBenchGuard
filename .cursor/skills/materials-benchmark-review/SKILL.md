@@ -1,76 +1,66 @@
 ---
 name: materials-benchmark-review
-description: Audit a materials-science Harbor 题包 for integrity, substantive materials relevance, paper fidelity, task-checker alignment, pinned taxonomy labels, and E1 checker robustness. Use when an Agent receives a paper2arm or Harbor 题包 directory and must produce a fixed no-paper or paper-grounded audit bundle without reading solution content.
+description: Audit one materials-science Harbor package at E1 using instruction, tests, an isolated solution Oracle positive mock, and conditionally triggered paper evidence.
 ---
 
 # Materials Benchmark Review
 
-Audit one Harbor 题包 at a time. The authoritative result is the fixed
-`benchmark_audit/` bundle written inside that 题包.
+Audit one `paper-{id}/` Harbor 题包 and publish the authoritative
+`benchmark_audit/` bundle inside it.
 
-## Inputs
+## Quality evidence boundary
 
-Accept a `paper-{id}` directory containing the Harbor roles defined in
-[references/harbor-contract.md](references/harbor-contract.md).
+Review only:
 
-Treat `tests/` as privileged review evidence. Treat `solution/` as outside the
-evidence boundary: confirm that the directory exists, but never list or read
-its contents.
+- `instruction.md`;
+- all relevant files under `tests/`;
+- `solution/` only to execute its Oracle in isolation and ask whether the
+  generated mock passes the real checker;
+- `paper/` only when one or more paper triggers apply.
 
-## Choose the paper mode
+Do not inspect or score `manifest.json`, `resources.json`, `steps.json`,
+`task.toml`, `environment/`, cluster names, or other metadata. They may locate
+the package but cannot change a quality score, verdict, or Hard Gate.
 
-- `no_paper` asks whether the public task independently defines a coherent,
-  machine-checkable benchmark. It never claims paper fidelity.
-- `paper_grounded` completes the no-paper checks, then compares the task,
-  data, method, Gold, and checker with the bundled paper and applies pinned
-  materials taxonomy labels.
+Oracle outputs are privileged positive mocks. Never include their values in an
+audit artifact and never use them as scientific correctness, paper fidelity,
+or Gold-provenance evidence. Missing or broken `solution/solve.sh` is a
+repairable completeness finding, not evidence that the task science is wrong.
 
-Read [references/no-paper-e1.md](references/no-paper-e1.md) for no-paper.
-For paper-grounded review, read
-[references/paper-grounded-audit.md](references/paper-grounded-audit.md) and
-[references/materials-taxonomy.json](references/materials-taxonomy.json).
+Read [references/harbor-contract.md](references/harbor-contract.md) and
+[references/no-paper-e1.md](references/no-paper-e1.md).
 
-## Run no-paper E1
+## Trigger paper review
 
-Read the pinned taxonomy and write a taxonomy-only assessment outside the
-题包 using the evidence shape in `paper-grounded-audit.md`. From this skill
-directory, run:
+Read `paper/` only for these four triggers:
+
+1. `SCIENTIFIC_CONFLICT` — instruction, tests, and Oracle behavior conflict;
+2. `NECESSARY_INFORMATION_MISSING` — a missing definition may make the scored
+   scientific quantity undefined, incomparable, or secretly checker-dependent;
+3. `GOLD_PROVENANCE_UNCERTAIN` — Gold, tolerance, or scoring rationale lacks a
+   credible basis;
+4. `EXPLICIT_REPRODUCTION_CLAIM` — instruction claims a paper-specific system,
+   condition, result, or value.
+
+For a triggered review, read
+[references/paper-grounded-audit.md](references/paper-grounded-audit.md).
+Classify intent as `EXACT_REPRODUCTION`, `METHOD_REIMPLEMENTATION`, or
+`SCIENTIFIC_EXTENSION`; default to `METHOD_REIMPLEMENTATION`, never EXACT.
+Equivalent software, versions, and solver-selected convergence parameters are
+allowed unless instruction fixes them or the checker secretly depends on them.
+
+## Run E1
+
+Write any taxonomy or triggered paper assessment outside the package, then run:
 
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
   --paper-mode no_paper \
   --execution-level E1 \
-  --agent-assessment <taxonomy-assessment.json>
+  --agent-assessment <optional-taxonomy-assessment.json>
 ```
 
-The taxonomy assessment must not contain a reproduction type or paper
-dimensions. Omitting it remains supported for low-level compatibility but
-produces no labels.
-
-When an independently justified public valid output is available, add:
-
-```bash
---known-valid-output <output-directory>
-```
-
-The runner:
-
-1. maps and parses Harbor file roles without traversing `solution/`;
-2. records input hashes for public and privileged review files;
-3. performs a materials relevance prescreen and cross-file static checks;
-4. probes materials resources with bounded retries and a private-network deny
-   boundary;
-5. executes synthetic submissions against the real checker in isolation;
-6. verifies every supplied taxonomy label and its exact package quote;
-7. synthesizes an initial verdict and fixed report;
-8. validates the candidate, preserves the prior bundle, and publishes
-   `benchmark_audit/` with rollback on replacement failure.
-
-## Run paper-grounded E1
-
-Read the paper and every public/privileged package role except `solution/`.
-Write the evidence-backed assessment defined in `paper-grounded-audit.md`
-outside the 题包, then run:
+For a triggered paper assessment:
 
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
@@ -79,98 +69,88 @@ python scripts/run_review.py <Harbor题包目录> \
   --agent-assessment <assessment.json>
 ```
 
-The runner verifies every quote against the named file, rejects evidence from
-`solution/`, validates labels against the pinned Feishu revision, hashes the
-paper inputs, and merges paper findings and labels into the fixed bundle.
-An unrecoverable E0 package Hard gate publishes a no-paper rejection and skips
-the assessment and paper entirely; checker findings that can be repaired do
-not suppress paper-grounded evidence.
+An independently justified non-Oracle output may additionally be supplied with
+`--known-valid-output`. It enables scientific quality-gradient and equivalence
+probes without promoting Oracle values to scientific evidence.
 
-## Review materials resources
+Every no-paper assessment must also adjudicate all four paper triggers
+individually with instruction/tests quotes. A triggered item routes the package
+to paper-grounded evidence; it cannot remain a no-paper `PASS`.
 
-Read
-[references/materials-resource-policy.md](references/materials-resource-policy.md).
-Every E1 review probes declared resources and records L0–L6, role, category,
-identity, reachability, failure class, and whether E2 is recommended.
+Every E1 run records four probe classes:
 
-Use E2 only after reviewing the generated risk evidence. Write a smoke plan and
-Python script outside the 题包, then run:
+- positive — isolated Oracle mock and/or independently justified public output;
+- negative — missing, empty, malformed, random, duplicate, sparse, and
+  non-finite attacks;
+- discrimination — scientifically worse outputs must not score better;
+- equivalence — scientifically equivalent ordering or serialization must not
+  change reward.
 
-```bash
-python scripts/run_review.py <Harbor题包目录> \
-  --paper-mode no_paper \
-  --execution-level E2 \
-  --e2-smoke-plan <e2-smoke-plan.json>
-```
+## Direct inputs
 
-The plan contains `schema_version`, the adjacent script filename,
-`verifies_resources`, and `timeout_sec`. The runner executes it in Python
-isolated mode on a solution-free package copy. The script must write
-`e2_smoke_result.json` with the resource IDs it actually exercised. Audit-host
-smoke evidence never claims L6 or scientific reproduction; a failed or
-unsubstantiated smoke triggers an execution Hard gate.
+Read [references/materials-resource-policy.md](references/materials-resource-policy.md).
+Probe only a direct input or service that instruction explicitly marks as
+indispensable and without an equivalent. Do not probe resources metadata,
+solver-generated structures/trajectories/models, ordinary solver parameters,
+or replaceable software.
 
-Private, loopback, link-local, and credential-bearing resource URLs are blocked
-by default. `--allow-private-network` exists only for controlled fixtures or
-explicitly isolated test networks.
+## Score and disposition
 
-## Interpret disposition
+Read [references/scoring-rubric.md](references/scoring-rubric.md). The Review
+CLI is the sole scoring authority; batch and calibration layers only aggregate
+an identity- and source-hash-bound CLI report. Never accept manually supplied
+dimension scores, total score, Hard Gates, or verdict.
 
-The report weights materials admission, the core scientific contract, resource
-availability, task answerability, checker validity, and paper consistency when
-applicable. A FATAL finding or applicable critical dimension below `0.50`
-overrides the weighted total.
+The five quality dimensions and fixed weights are:
 
-Every authoritative bundle includes `disposition.json` and
-`corpus_index_entry.json`:
+- scientific validity: 35%;
+- instruction answerability: 20%;
+- checker/Gold alignment: 25%;
+- robustness and discrimination: 15%;
+- solution completeness: 5%.
 
-- `PASS` at `0.80` or above routes to `PUBLISH_CANDIDATE`;
-- `CONDITIONAL` at `0.60`–`0.79`, or with a repairable HIGH, routes to
-  `REPAIR_QUEUE`;
-- `REJECT` below `0.60` or after a Hard gate routes non-destructively to
-  `QUARANTINE`;
-- missing critical evidence routes `NOT_ASSESSABLE` to `EVIDENCE_PENDING`.
+Only four Hard Gates override the score:
 
-Routing is declarative: Review preserves all core 题包 roles and writes only the
-audit bundle. A corpus operator may consume the index to update collection
-membership without deleting the original or its evidence.
+1. not a substantive materials-science task;
+2. scientifically invalid or missing an unrecoverable necessary definition;
+3. checker does not evaluate the core task and cannot be repaired without
+   redefining it;
+4. an indispensable direct input is permanently unavailable with no equivalent.
+
+Each report emits points earned/max points, normalized score, deduction and
+finding IDs, and exact evidence for all five dimensions. The displayed total is
+the sum of earned points on a 0–100 scale, including assessable Hard-Gate
+rejections. `METHOD_REIMPLEMENTATION`, `EXACT_REPRODUCTION`, and
+`SCIENTIFIC_EXTENSION` are classification only and never change points.
+
+`PASS` is at least 80 with no unresolved repairable HIGH; `CONDITIONAL` is
+60–79 or has a repairable HIGH; `REJECT` is below 60 or hits a Hard Gate.
+Use `NOT_ASSESSABLE` only for temporary evidence unavailability and re-audit
+after the evidence is restored.
+
+`PASS` additionally requires the fail-closed evidence contract: authoritative
+materials qualification, non-empty evidence for all five dimensions, complete
+no-paper trigger adjudication when applicable, honest status and provenance for
+all probe classes, and Oracle-safe solution status only. Assessed
+discrimination/equivalence must use an independent non-Oracle fixture; when no
+such fixture exists, keep both probes unavailable, deduct the documented
+non-critical robustness limitation, and continue scoring the total. No
+findings never substitutes for positive evidence.
+
+Preserve the pinned three-axis taxonomy labels and exact package evidence. The
+versioned runtime source is
+[references/materials-taxonomy.json](references/materials-taxonomy.json).
+
+## Batch
+
+Read [references/fast-e1-batch.md](references/fast-e1-batch.md). The candidate
+manifest freezes identities only. Finish and freeze the complete original
+review baseline before any repair begins.
 
 ## Completion
 
-This slice is complete only when:
-
-- the command exits successfully;
-- `benchmark_audit/` contains every required JSON, JSONL, Markdown, log, and
-  manifest artifact;
-- weighted dimensions, disposition, finding summary, taxonomy, paper mode, and
-  execution level agree across the report and corpus index;
-- the report records the selected paper mode and execution level;
-- no-paper consistency is `NOT_ASSESSED`; paper-grounded consistency records
-  a reproduction type, all five dimensions, and evidence or
-  `NOT_ASSESSABLE`;
-- paper-grounded labels conform to the pinned taxonomy, include its source
-  revision and exact package evidence in the report, and leave the original
-  manifest unchanged;
-- every checker probe records its observed reward and exit status, or the audit
-  is `NOT_ASSESSABLE`;
-- every declared resource records a role, material category, required and
-  verified level, identity state, reachability status, and failure class;
-- any resource below its required level produces a structured finding rather
-  than only an E2 recommendation;
-- critical permanent, authorization, license, or identity failures produce
-  structured Hard-gate findings, while transient failures remain distinct;
-- E2 records `SMOKE_RUN` and `scientific_reproduction: false`; audit-host smoke
-  leaves `environment_verified: false`;
-- a supplied known-valid public output executes; rejection produces
-  `KNOWN_VALID_OUTPUT_REJECTED` and prevents `PASS`;
-- a supplied known-valid public output also runs a monotonic numeric materials
-  quality gradient and an equivalent ordering/serialization probe;
-- a non-monotonic quality gradient or materially changed equivalent-output
-  reward produces a FATAL scientific checker finding;
-- any malformed or adversarial output at or above the threshold produces a
-  FATAL finding and `REJECT`;
-- the checker executes in a copied runtime that contains no `solution/`, and
-  static and dynamic evidence both record that boundary.
-
-Do not infer paper fidelity, scientific reproduction, Harbor-environment L6,
-or task-family-specific robustness from this slice.
+The run is complete when the fixed bundle validates, Oracle values are absent,
+quality files are limited to instruction/tests plus the isolated Oracle role,
+paper hashes appear only for a triggered review, every checker case records
+class/reward/status/exit code, the five weights sum to one, exactly four Hard
+Gates are present, and taxonomy labels remain unchanged.

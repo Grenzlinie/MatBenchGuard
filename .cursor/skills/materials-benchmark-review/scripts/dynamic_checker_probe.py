@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
+import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -17,7 +20,22 @@ from typing import Any
 
 sys.dont_write_bytecode = True
 
-from prepare_audit_output import basename, iter_public_files, locate_root
+from prepare_audit_output import basename, locate_root
+
+
+ORACLE_VENV_TIMEOUT_SECONDS = 60.0
+ORACLE_SOLVE_TIMEOUT_SECONDS = 300.0
+
+
+def configured_timeout(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
 
 
 def read_json(path: Path) -> Any:
@@ -345,12 +363,150 @@ def transform_known_valid_outputs(
 
 
 def copy_public_package(root: Path, destination: Path) -> None:
-    """Copy the checker runtime context without solution or audit artifacts."""
-    for source in iter_public_files(root):
-        relative = source.relative_to(root)
-        target = destination / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+    """Copy only instruction/tests into the isolated checker runtime."""
+    destination.mkdir(parents=True, exist_ok=True)
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        shutil.copy2(instruction, destination / "instruction.md")
+    if (root / "tests").is_dir():
+        shutil.copytree(root / "tests", destination / "tests")
+
+
+def rebase_oracle_mount_paths(solution: Path, outputs: Path) -> None:
+    """Map canonical Harbor mounts into the disposable Oracle workspace."""
+    replacements = {
+        "/app/outputs": str(outputs),
+        "/solution": str(solution),
+    }
+    for path in solution.rglob("*"):
+        if not path.is_file() or path.is_symlink():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        rebased = text
+        for canonical, replacement in replacements.items():
+            rebased = re.sub(
+                re.escape(canonical) + r"(?=$|[/\"'\s])",
+                lambda _match: replacement,
+                rebased,
+            )
+        if rebased != text:
+            path.write_text(rebased, encoding="utf-8")
+
+
+def prepare_solution_oracle(
+    root: Path,
+    specification: dict[str, Any],
+) -> tuple[tempfile.TemporaryDirectory[str] | None, Path | None, dict[str, Any]]:
+    solve_script = root / "solution/solve.sh"
+    if not solve_script.is_file():
+        return (
+            None,
+            None,
+            {
+                "used": False,
+                "status": "MISSING",
+                "positive_mock_available": False,
+                "scientific_evidence": False,
+            },
+        )
+    temporary = tempfile.TemporaryDirectory(prefix="materials_oracle_")
+    runtime = Path(temporary.name) / "package"
+    copy_public_package(root, runtime)
+    runtime_solution = runtime / "solution"
+    shutil.copytree(root / "solution", runtime_solution)
+    outputs = Path(temporary.name) / "outputs"
+    outputs.mkdir()
+    rebase_oracle_mount_paths(runtime_solution, outputs)
+    virtualenv = Path(temporary.name) / "venv"
+    venv_timeout = configured_timeout(
+        "MATERIALS_ORACLE_VENV_TIMEOUT_SECONDS",
+        ORACLE_VENV_TIMEOUT_SECONDS,
+    )
+    solve_timeout = configured_timeout(
+        "MATERIALS_ORACLE_SOLVE_TIMEOUT_SECONDS",
+        ORACLE_SOLVE_TIMEOUT_SECONDS,
+    )
+    failure_stage: str | None = None
+    failure_reason: str | None = None
+    timeout_seconds: float | None = None
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "venv", str(virtualenv)],
+            capture_output=True,
+            text=True,
+            timeout=venv_timeout,
+            check=True,
+        )
+        environment = {
+            **os.environ,
+            "OUTPUT_DIR": str(outputs),
+            "PATH": str(virtualenv / "bin")
+            + os.pathsep
+            + os.environ.get("PATH", ""),
+        }
+        process = subprocess.run(
+            ["bash", str(runtime_solution / "solve.sh")],
+            cwd=runtime,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=solve_timeout,
+            check=False,
+        )
+        returncode = process.returncode
+        failure_status = "BROKEN"
+        if returncode != 0:
+            failure_stage = "solve"
+            failure_reason = "NONZERO_EXIT"
+    except subprocess.TimeoutExpired as exc:
+        returncode = None
+        failure_status = "BROKEN"
+        failure_stage = "venv" if exc.cmd[:3] == [sys.executable, "-m", "venv"] else "solve"
+        failure_reason = "TIMEOUT"
+        timeout_seconds = venv_timeout if failure_stage == "venv" else solve_timeout
+    except (subprocess.SubprocessError, OSError):
+        returncode = None
+        failure_status = "BROKEN"
+        failure_stage = "launch"
+        failure_reason = "PROCESS_ERROR"
+    contracted = [
+        basename(item.get("file"))
+        for item in (
+            (specification.get("output_contract", {}) or {}).get("outputs", [])
+            or []
+        )
+        if basename(item.get("file"))
+    ]
+    available = returncode == 0 and all(
+        (outputs / filename).is_file() for filename in contracted
+    )
+    return (
+        temporary,
+        outputs if available else None,
+        {
+            "used": True,
+            "status": "PASS" if available else failure_status,
+            "positive_mock_available": available,
+            "returncode": returncode,
+            **(
+                {
+                    "failure_stage": failure_stage,
+                    "failure_reason": failure_reason,
+                    **(
+                        {"timeout_seconds": timeout_seconds}
+                        if timeout_seconds is not None
+                        else {}
+                    ),
+                }
+                if not available and failure_stage is not None
+                else {}
+            ),
+            "scientific_evidence": False,
+        },
+    )
 
 
 def run_checker_case(
@@ -492,7 +648,7 @@ def evaluate_results(
         if result["runtime_package_contains_solution"]:
             findings.append(
                 finding(
-                    "FATAL",
+                    "HIGH",
                     "SOLUTION_BOUNDARY_VIOLATION",
                     "isolated checker runtime contains solution content",
                     case,
@@ -524,7 +680,7 @@ def evaluate_results(
         if case in adversarial and reward >= pass_threshold:
             findings.append(
                 finding(
-                    "FATAL",
+                    "HIGH",
                     "ADVERSARIAL_OUTPUT_PASSES",
                     f"{case} receives a passing checker reward",
                     case,
@@ -543,6 +699,19 @@ def evaluate_results(
                     case,
                     {
                         "reward": reward,
+                        "pass_threshold": pass_threshold,
+                    },
+                )
+            )
+        if case == "positive_oracle" and reward < pass_threshold:
+            findings.append(
+                finding(
+                    "HIGH",
+                    "SOLUTION_POSITIVE_MOCK_REJECTED",
+                    "isolated solution positive mock does not pass the checker",
+                    case,
+                    {
+                        "status": "REJECTED",
                         "pass_threshold": pass_threshold,
                     },
                 )
@@ -568,7 +737,7 @@ def evaluate_results(
     ):
         findings.append(
             finding(
-                "FATAL",
+                "HIGH",
                 "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
                 "checker reward is not monotonic as scientific numeric error increases",
                 "materials_quality_gradient",
@@ -588,7 +757,7 @@ def evaluate_results(
     ):
         findings.append(
             finding(
-                "FATAL",
+                "HIGH",
                 "SCIENTIFIC_INVARIANCE_VIOLATION",
                 "equivalent row/key ordering or serialization changes the checker reward",
                 "metamorphic_equivalent_representation",
@@ -616,40 +785,93 @@ def dynamic_checker_probe(
             "pass threshold must be a finite number between zero and one"
         )
     random.seed(17)
-    cases = [
-        ("missing_outputs", "missing"),
-        ("empty_valid_shape", "empty"),
-        ("malformed_outputs", "malformed"),
-        ("random_baseline", "random"),
-        ("minimal_gold_shape", "minimal"),
-        ("duplicate_gold_rows", "duplicate"),
-        ("nonfinite_values", "nonfinite"),
+    oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
+        root, specification
+    )
+    cases: list[tuple[str, str, Path | None]] = [
+        ("missing_outputs", "missing", None),
+        ("empty_valid_shape", "empty", None),
+        ("malformed_outputs", "malformed", None),
+        ("random_baseline", "random", None),
+        ("minimal_gold_shape", "minimal", None),
+        ("duplicate_gold_rows", "duplicate", None),
+        ("nonfinite_values", "nonfinite", None),
     ]
+    if oracle_output is not None:
+        cases.append(("positive_oracle", "known_valid", oracle_output))
     if known_valid_output is not None:
         cases.extend(
             (
-                ("known_valid_public", "known_valid"),
-                ("sparse_known_valid", "sparse_known_valid"),
-                ("quality_gradient_small_error", "quality_small"),
-                ("quality_gradient_large_error", "quality_large"),
+                ("known_valid_public", "known_valid", known_valid_output),
+                ("sparse_known_valid", "sparse_known_valid", known_valid_output),
+                (
+                    "quality_gradient_small_error",
+                    "quality_small",
+                    known_valid_output,
+                ),
+                (
+                    "quality_gradient_large_error",
+                    "quality_large",
+                    known_valid_output,
+                ),
                 (
                     "metamorphic_equivalent_representation",
                     "metamorphic",
+                    known_valid_output,
                 ),
             )
         )
-    results = [
-        run_checker_case(
-            root,
-            checker_text,
-            specification,
-            case_name,
-            mode,
-            known_valid_output,
-        )
-        for case_name, mode in cases
-    ]
+    try:
+        results = [
+            run_checker_case(
+                root,
+                checker_text,
+                specification,
+                case_name,
+                mode,
+                source_output,
+            )
+            for case_name, mode, source_output in cases
+        ]
+    finally:
+        if oracle_temporary is not None:
+            oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
+    if known_valid_output is None:
+        findings.append(
+            finding(
+                "MEDIUM",
+                "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+                (
+                    "discrimination and equivalence probes were not executed "
+                    "because no independently justified public valid output "
+                    "was supplied"
+                ),
+                "probe_coverage",
+                {
+                    "unassessed_probe_classes": [
+                        "discrimination",
+                        "equivalence",
+                    ],
+                    "oracle_used": False,
+                },
+            )
+        )
+    fixture_hashes: dict[str, str] = {}
+    if known_valid_output is not None:
+        fixture_root = reject_solution_fixture(root, known_valid_output)
+        for output_contract in (
+            (specification.get("output_contract", {}) or {}).get(
+                "outputs", []
+            )
+            or []
+        ):
+            filename = basename(output_contract.get("file"))
+            path = fixture_root / filename
+            if filename and path.is_file():
+                fixture_hashes[filename] = (
+                    "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+                )
     expected = {
         "missing_outputs": "score below pass threshold without crashing",
         "empty_valid_shape": "score below pass threshold without crashing",
@@ -659,6 +881,9 @@ def dynamic_checker_probe(
         "duplicate_gold_rows": "duplicates do not create a passing score",
         "nonfinite_values": "non-finite values score below pass threshold",
         "known_valid_public": "independently justified output passes",
+        "positive_oracle": (
+            "isolated solution mock passes without becoming scientific evidence"
+        ),
         "sparse_known_valid": "a sparse subset cannot pass the full task",
         "quality_gradient_small_error": (
             "small scientific numeric error scores no higher than known-valid"
@@ -671,11 +896,19 @@ def dynamic_checker_probe(
         ),
     }
     tests = []
+    probe_classes = {
+        "positive_oracle": "positive",
+        "known_valid_public": "positive",
+        "quality_gradient_small_error": "discrimination",
+        "quality_gradient_large_error": "discrimination",
+        "metamorphic_equivalent_representation": "equivalence",
+    }
     for index, result in enumerate(results, start=1):
         tests.append(
             {
                 "test_id": f"CHECKER-{index:03d}",
                 "test_type": result["case"],
+                "probe_class": probe_classes.get(result["case"], "negative"),
                 "description": result["case"].replace("_", " "),
                 "expected_behavior": expected[result["case"]],
                 "observed_score": result.get("reward"),
@@ -696,6 +929,7 @@ def dynamic_checker_probe(
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
         "solution_content_inspected": False,
+        "solution_oracle": oracle_evidence,
         "pass_threshold": pass_threshold,
         "tests": tests,
         "findings": findings,
@@ -704,6 +938,69 @@ def dynamic_checker_probe(
             and math.isfinite(result["reward"])
             for result in results
         ),
+        "probe_coverage": {
+            "positive": {
+                "status": (
+                    "ASSESSED"
+                    if oracle_output is not None or known_valid_output is not None
+                    else "NOT_ASSESSABLE"
+                ),
+                "provenance": {
+                    "source_kinds": [
+                        *(
+                            ["ORACLE_POSITIVE_MOCK"]
+                            if oracle_output is not None
+                            else []
+                        ),
+                        *(
+                            ["INDEPENDENT_PUBLIC_FIXTURE"]
+                            if known_valid_output is not None
+                            else []
+                        ),
+                    ],
+                    "oracle_scientific_evidence": False,
+                },
+            },
+            "negative": {
+                "status": "ASSESSED",
+                "provenance": {
+                    "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
+                    "oracle_used": False,
+                },
+            },
+            "discrimination": {
+                "status": (
+                    "ASSESSED"
+                    if known_valid_output is not None
+                    else "NOT_ASSESSABLE"
+                ),
+                "provenance": {
+                    "source_kind": (
+                        "INDEPENDENT_PUBLIC_FIXTURE"
+                        if known_valid_output is not None
+                        else "NONE"
+                    ),
+                    "fixture_hashes": fixture_hashes,
+                    "oracle_used": False,
+                },
+            },
+            "equivalence": {
+                "status": (
+                    "ASSESSED"
+                    if known_valid_output is not None
+                    else "NOT_ASSESSABLE"
+                ),
+                "provenance": {
+                    "source_kind": (
+                        "INDEPENDENT_PUBLIC_FIXTURE"
+                        if known_valid_output is not None
+                        else "NONE"
+                    ),
+                    "fixture_hashes": fixture_hashes,
+                    "oracle_used": False,
+                },
+            },
+        },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",
             "scientific gradients and metamorphic probes require an independently justified public valid output",

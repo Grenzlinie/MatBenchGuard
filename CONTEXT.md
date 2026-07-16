@@ -17,20 +17,24 @@ _Avoid_: cluster、corpus
 _Avoid_: 由 `manifest.discipline` 单独定义的材料题
 
 **核心科学契约**:
-`instruction.md` 对公开任务的定义与 `tests/` 对该定义的评分实现，以及两者相对于原论文科学内容的正确性关系。质检以此为主，判断出题是否正确、评分器是否鲁棒并保持 ground truth。
-_Avoid_: 仅凭 metadata 或 cluster 判定题目正确
+`instruction.md` 对公开任务的定义、`tests/` 对该定义的评分实现，以及 `solution/` 中仅用于正例 mock 的 Oracle 链路。质量证据只来自这三处；`paper/` 仅在触发条件成立时用于消歧和溯源。
+_Avoid_: 用 metadata、environment、resources 或 cluster 形成质量分
 
 **论文审查模式**:
-`no_paper` 判断题包能否仅凭公开 instruction、资源、环境和 tests 独立成立，论文一致性标为 `NOT_ASSESSED`；`paper_grounded` 先完成全部 no-paper 检查，再核对论文正文、方法、图表、补充材料、数据和 Gold provenance。后者区分严格复现、方法重实现和科学扩展。默认先运行 no-paper gate；未触发不可修复 Hard gate 的题再进入 paper-grounded，最终结论以后者为准。
-_Avoid_: no-paper 模式声称论文忠实性、把科学扩展强制匹配论文精确数值
+默认只看 `instruction.md`、`tests/` 和受限 Oracle。仅在四种情况读取 `paper/`：三者存在科学或数值矛盾；公开任务疑似缺少影响科学有效性或可答性的必要信息；Gold、容差或评分依据来源可疑；instruction 明确声称复现论文体系、条件、结果或特定数值。按 instruction 意图判定复现类型：明确逐项复现才是 `EXACT_REPRODUCTION`，新问题或新终点是 `SCIENTIFIC_EXTENSION`，其余默认 `METHOD_REIMPLEMENTATION`。
+_Avoid_: 每题默认读论文、模糊时默认 EXACT、把科学扩展强制匹配论文精确值
 
 **受限评测资产**:
-Auditor 和 Repairer 可读取的 `tests/grading_spec.json`、`tests/checker.py` 与相关测试文件，用于验证核心科学契约；它们对解题 Agent 保持隐藏。`solution/` 与隐藏参考解只可确认存在，不能用于质检或修复判断。
-_Avoid_: 使用 solution 证明题包正确
+Auditor 和 Repairer 可读取的 `tests/grading_spec.json`、`tests/checker.py`、相关测试文件，以及 `solution/` 中专门用于 checker 验证的 Oracle；它们对解题 Agent 保持隐藏。Oracle 只能在隔离环境中生成 mock 输出并验证其能否通过 checker，不能把 Oracle 数值当作论文一致性、科学正确性或 Gold provenance 的证据，也不能向解题 Agent 或公开审查产物泄露。`solution/` 中与该目的无关的内容仍不进入质检和修复判断。
+_Avoid_: 使用 Oracle 数值证明论文复现正确、把隐藏答案泄露给解题 Agent
 
 **题包元数据**:
-`manifest.json`、`resources.json`、`steps.json` 和 `task.toml` 中用于描述身份、资源、流程和运行配置的信息。它们需要一致且可用，但不能代替对核心科学契约的逐题审查。
-_Avoid_: 核心科学内容
+`manifest.json`、`resources.json`、`steps.json`、`task.toml` 和 `environment/` 只承担身份、运行和人工说明角色，不是质检对象，不进入质量分或 Hard Gate。只有 `instruction.md` 明确要求、完成任务不可替代且没有科学等价来源的直接输入/服务才验证可用性；Agent 应自行生成的结构、轨迹、模型和 solver 收敛参数不属于直接输入。
+_Avoid_: 核心科学证据、资源声明即阻塞
+
+**科学等价性**:
+只阻塞会改变体系定义、科学目标、归一化或被评分结果的实质差异。允许等价软件、版本和 solver 自选收敛参数，除非 instruction 明确固定，或 checker 暗中依赖某个未公开选择。不同超胞、边界条件或参数若改变 Gold，则不是等价实现。
+_Avoid_: 因 VASP/QE、FHI-aims/ORCA 等软件替换本身拒绝题包
 
 **三维覆盖标签**:
 质检时附加的 `computation_task`、`research_domain` 和 `material_system` 分类。`computation_task` 是主要组织维度，一个题包可有多个同等标签；材料研究领域和材料体系用于衡量覆盖度，不决定质检结论。标签写入审查报告和 corpus 级索引，不修改原始 `manifest.json`。
@@ -49,12 +53,12 @@ _Avoid_: 审计单元、质检结论
 _Avoid_: 无快照的原地修改、只隔离修复报告
 
 **Hard gate**:
-覆盖加权总分的致命准入条件；材料准入、核心科学契约、资源可用性、任务可答性、评分器有效性和适用时的论文一致性属于关键维度。任一 FATAL 或关键维度低于 0.50 时，题包不能通过。
-_Avoid_: 可由其他维度高分抵消的问题
+仅有四项可覆盖总分：①不是真正的材料科学任务；②任务科学上无效或缺少不可恢复的必要定义；③ checker 根本未评价核心任务且无法在不重定义题目的前提下修复；④ instruction 要求的不可替代直接输入永久不可用且无等价来源。格式、NaN、容差、等价表示、部分分、缺失或损坏 Oracle 等可修实现问题不属于 Hard Gate。
+_Avoid_: 任意 FATAL 或低分自动升级为 Hard Gate
 
 **审查结论**:
-`PASS` 表示总分至少 0.80、无 FATAL、无未解决 HIGH 且所有关键维度至少 0.50；`CONDITIONAL` 表示总分为 0.60–0.79 或存在可修复 HIGH；`REJECT` 表示总分低于 0.60、触发 FATAL 或关键维度低于 0.50；`NOT_ASSESSABLE` 表示关键证据不足。
-_Avoid_: 仅按总分处置
+质量总分为 100：科学有效性 35、instruction 可答性 20、checker/Gold 对齐 25、鲁棒性与区分度 15、solution 完整性 5。`PASS` 为至少 80 且无未解决可修复 HIGH；`CONDITIONAL` 为 60–79 或存在可修复问题；`REJECT` 为低于 60 或触发四项 Hard Gate。`NOT_ASSESSABLE` 只表示关键证据临时无法取得，补齐后必须重审，不能把证据不足写成科学错误。
+_Avoid_: metadata 参与加权、把临时环境故障直接判 REJECT
 
 **拒绝归档**:
 对 `REJECT` 题包的非破坏性处置：保留原始题包和完整审查证据，将其移出可发布集合并放入隔离归档。
@@ -65,9 +69,9 @@ _Avoid_: 物理删除、继续留在可发布 corpus
 _Avoid_: 把 E1 视为科学流程已复现
 
 **确定性修复**:
-有唯一、可测试且不改变核心科学契约的修复，对应 `SAFE_AUTO_FIX`。`CONDITIONAL` 后可自动规划、应用和复审；需要科学解释或可能影响契约的 `ASSISTED_FIX` 必须先取得人工批准。
-_Avoid_: 自动执行所有建议修复
+有唯一、可测试且不改变核心科学契约的修复对应 `SAFE_AUTO_FIX`；有 instruction/tests/solution 或按需 paper 证据支持的解释性修复对应 `ASSISTED_FIX`。两者都可由 Agent 在隔离副本自主应用、回归并同深度复审；证据不足时放弃，禁止猜科学参数、泄露答案、降低阈值或重定义核心科学任务。
+_Avoid_: 每项修复都要求人工审批、无证据追阈值
 
 **百题试评**:
-材料质检与修复 skills 完成后的首轮人工校准：抽取约 60 个覆盖 workflow 与三维标签的题包、20 个 checker/Gold 高风险题包、10 个边界领域题包和 10 个明确可修复候选，逐题质检、按权限修复并复审，再以 Cursor Canvas 汇总审查结论、findings、三维覆盖标签、证据和修复前后变化，由材料负责人核对。
-_Avoid_: 只验证脚本能运行、以 checker 自身作为 skill 真值
+沿用已冻结的原始 100 个 `cluster/theme/paper` 身份。先按新合同完成 10 题并由材料负责人校准，再审剩余 90 题；100 题原始审查全部完成并冻结基线之前不得进入修复。identity manifest 只固定样本身份，不携带旧 verdict 或 evidence。
+_Avoid_: 边审边修、把旧候选 verdict 当新审查证据

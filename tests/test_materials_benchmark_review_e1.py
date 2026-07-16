@@ -124,6 +124,216 @@ def run_review(package: Path, valid_output: Path) -> subprocess.CompletedProcess
 
 
 class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
+    def test_pass_is_blocked_without_authoritative_materials_qualification(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            valid_output = workspace / "known-valid-output"
+            write_public_valid_dispersion(valid_output)
+
+            completed = run_review(package, valid_output)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
+            self.assertIsNone(report["summary"]["total_score"])
+            scientific_validity = next(
+                item
+                for item in report["dimension_scores"]
+                if item["dimension"] == "scientific_validity"
+            )
+            self.assertEqual(
+                scientific_validity["status"], "NOT_ASSESSABLE"
+            )
+            self.assertIsNone(scientific_validity["points_earned"])
+            self.assertFalse(
+                report["materials_qualification"]["authoritative"]
+            )
+            self.assertIn(
+                "authoritative_materials_qualification",
+                report["evidence_contract"]["gaps"],
+            )
+
+    def test_solution_oracle_timeout_reports_the_failed_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "solution/solve.sh").write_text(
+                "#!/bin/sh\nsleep 1\n", encoding="utf-8"
+            )
+            output = workspace / "checker.json"
+            environment = {
+                **os.environ,
+                "MATERIALS_ORACLE_SOLVE_TIMEOUT_SECONDS": "0.05",
+            }
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(
+                        RUNNER.parent / "dynamic_checker_probe.py"
+                    ),
+                    str(package),
+                    "--output",
+                    str(output),
+                ],
+                cwd=REPO_ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            oracle = json.loads(output.read_text(encoding="utf-8"))[
+                "solution_oracle"
+            ]
+            self.assertEqual(oracle["status"], "BROKEN")
+            self.assertEqual(oracle["failure_stage"], "solve")
+            self.assertEqual(oracle["failure_reason"], "TIMEOUT")
+            self.assertEqual(oracle["timeout_seconds"], 0.05)
+
+    def test_solution_oracle_supplies_an_isolated_positive_mock_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            oracle_output = package / "solution/oracle-output"
+            write_public_valid_dispersion(oracle_output)
+            oracle_csv = oracle_output / "dispersion_curves.csv"
+            with oracle_csv.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+            with oracle_csv.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(rows[-1]))
+                writer.writeheader()
+                writer.writerow(rows[-1])
+            (package / "solution/generate.py").write_text(
+                "from pathlib import Path\n"
+                "assert '/solutionary' == '/solutionary'\n"
+                "Path('/app/outputs').mkdir(parents=True, exist_ok=True)\n"
+                "source = Path('/solution/oracle-output/dispersion_curves.csv')\n"
+                "Path('/app/outputs/dispersion_curves.csv').write_bytes(source.read_bytes())\n",
+                encoding="utf-8",
+            )
+            (package / "solution/solve.sh").write_text(
+                "#!/bin/sh\n"
+                "python3 -c \"import sys; assert sys.prefix != sys.base_prefix\"\n"
+                "python3 /solution/generate.py\n",
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNNER),
+                    str(package),
+                    "--paper-mode",
+                    "no_paper",
+                    "--execution-level",
+                    "E1",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            audit_dir = package / "benchmark_audit"
+            checker = json.loads(
+                (audit_dir / "checker_tests.json").read_text(encoding="utf-8")
+            )
+            positive = next(
+                item
+                for item in checker["tests"]
+                if item["test_type"] == "positive_oracle"
+            )
+            self.assertEqual(positive["probe_class"], "positive")
+            self.assertGreaterEqual(
+                positive["observed_score"], checker["pass_threshold"]
+            )
+            self.assertTrue(checker["solution_oracle"]["used"])
+            self.assertFalse(checker["solution_oracle"]["scientific_evidence"])
+            serialized = json.dumps(checker, ensure_ascii=False)
+            self.assertNotIn("1.68e12", serialized)
+            self.assertNotIn("oracle-output", serialized)
+            report = json.loads(
+                (audit_dir / "audit_report.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(report["scope"]["solution_oracle_executed"])
+            self.assertFalse(report["scope"]["solution_content_inspected"])
+            manifest = json.loads(
+                (audit_dir / "audit_manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(manifest["solution_oracle_executed"])
+            self.assertFalse(
+                any(path.startswith("solution/") for path in manifest["input_hashes"])
+            )
+
+    def test_rejected_oracle_mock_is_only_solution_completeness_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            (package / "solution/solve.sh").write_text(
+                "#!/bin/sh\n"
+                "mkdir -p /app/outputs\n"
+                "printf 'direction,mode,k,frequency\\n100,L,0,999\\n' "
+                "> /app/outputs/dispersion_curves.csv\n",
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNNER),
+                    str(package),
+                    "--paper-mode",
+                    "no_paper",
+                    "--execution-level",
+                    "E1",
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            finding_codes = {item["title"] for item in report["findings"]}
+            self.assertIn("SOLUTION_POSITIVE_MOCK_REJECTED", finding_codes)
+            self.assertNotIn("KNOWN_VALID_OUTPUT_REJECTED", finding_codes)
+            solution_dimension = next(
+                item
+                for item in report["dimension_scores"]
+                if item["dimension"] == "solution_completeness"
+            )
+            self.assertTrue(solution_dimension["finding_ids"])
+
     def test_no_paper_e1_review_publishes_real_checker_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
@@ -183,7 +393,10 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
             self.assertEqual(report["configuration"]["paper_mode"], "no_paper")
             self.assertEqual(report["configuration"]["execution_level"], "E1")
             self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
+            self.assertIsNone(report["summary"]["total_score"])
             report_findings = {
                 finding["title"] for finding in report["findings"]
             }
@@ -252,7 +465,54 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
                 ).hexdigest()
                 self.assertEqual(expected_hash, f"sha256:{digest}")
 
-    def test_missing_checker_publishes_static_reject_bundle(self) -> None:
+    def test_public_report_cites_evidence_for_every_hard_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            valid_output = workspace / "known-valid-output"
+            write_public_valid_dispersion(valid_output)
+            checker_path = package / "tests/checker.py"
+            checker_path.write_text(
+                "raise RuntimeError('forced checker evidence gap')\n"
+                + checker_path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+            completed = run_review(package, valid_output)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(len(report["hard_gates"]), 4)
+            self.assertIn(
+                "NOT_ASSESSABLE",
+                {gate["status"] for gate in report["hard_gates"]},
+            )
+            for gate in report["hard_gates"]:
+                self.assertTrue(gate["evidence"], msg=gate["code"])
+                self.assertTrue(gate["affected_locations"], msg=gate["code"])
+                for item in gate["evidence"]:
+                    self.assertTrue(item["observed_fact"])
+                    self.assertEqual(
+                        set(item["source_evidence"]),
+                        {"file", "line", "quote"},
+                    )
+                for location in gate["affected_locations"]:
+                    self.assertEqual(set(location), {"file", "line", "quote"})
+                    self.assertTrue(location["file"])
+                    self.assertIsInstance(location["line"], int)
+                    self.assertGreater(location["line"], 0)
+                    self.assertTrue(location["quote"])
+
+    def test_missing_checker_publishes_repairable_static_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
@@ -275,7 +535,9 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
             checker = json.loads(
                 (audit_dir / "checker_tests.json").read_text(encoding="utf-8")
             )
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
             self.assertIn(
                 "MISSING_FILE",
                 {finding["title"] for finding in report["findings"]},
@@ -286,15 +548,18 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
                 for gate in report["gate_results"]
             }
             self.assertEqual(
-                gates["CHECKER_ROBUSTNESS"], "NOT_ASSESSED"
+                gates["CHECKER_CORE_ALIGNMENT"], "PASS"
             )
             dimensions = {
                 item["dimension"]: item
                 for item in report["dimension_scores"]
             }
-            self.assertIsNone(dimensions["checker_validity"]["score"])
             self.assertEqual(
-                dimensions["checker_validity"]["status"], "NOT_ASSESSED"
+                dimensions["checker_gold_alignment"]["points_earned"], 15
+            )
+            self.assertEqual(
+                dimensions["checker_gold_alignment"]["status"],
+                "WARNING",
             )
             markdown = (audit_dir / "audit_report.md").read_text(
                 encoding="utf-8"
@@ -304,7 +569,7 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
             )[1].split("## 11.", 1)[0]
             self.assertIn("Status: NOT_ASSESSED", checker_section)
 
-    def test_malformed_grading_schema_publishes_static_reject_bundle(self) -> None:
+    def test_malformed_grading_schema_is_repairable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
@@ -333,13 +598,15 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
             self.assertIn(
                 "INVALID_GRADING_SPEC_SCHEMA",
                 {finding["title"] for finding in report["findings"]},
             )
 
-    def test_nonfinite_pass_threshold_is_a_fatal_static_finding(self) -> None:
+    def test_nonfinite_pass_threshold_is_a_repairable_static_finding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
@@ -367,7 +634,9 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
             self.assertIn(
                 "INVALID_PASS_THRESHOLD",
                 {finding["title"] for finding in report["findings"]},

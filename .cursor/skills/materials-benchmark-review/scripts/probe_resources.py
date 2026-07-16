@@ -7,6 +7,7 @@ import hashlib
 import ipaddress
 import json
 import math
+import re
 import shutil
 import socket
 import ssl
@@ -86,6 +87,16 @@ def validate_network_url(url: str, allow_private_network: bool) -> None:
             raise UnsafeResourceURL(
                 "resource URL resolves to a private or unsafe network address"
             )
+
+
+def is_literal_private_address(hostname: str | None) -> bool:
+    if not hostname:
+        return False
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        return False
+    return address.is_private or address.is_loopback or address.is_link_local
 
 
 class ValidatingRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -172,9 +183,10 @@ def _http_probe_once(
             "Range": f"bytes=0-{MAX_ARTIFACT_BYTES - 1}",
         },
     )
-    opener = urllib.request.build_opener(
-        ValidatingRedirectHandler(allow_private_network)
-    )
+    handlers: list[Any] = [ValidatingRedirectHandler(allow_private_network)]
+    if allow_private_network and is_literal_private_address(parsed.hostname):
+        handlers.insert(0, urllib.request.ProxyHandler({}))
+    opener = urllib.request.build_opener(*handlers)
     started = time.time()
     try:
         with opener.open(request, timeout=timeout) as response:
@@ -675,11 +687,42 @@ def probe_resources(
     timeout: float,
     allow_private_network: bool = False,
 ) -> dict[str, Any]:
-    source = root / "resources.json"
-    data = read_json(source)
-    resources = data.get("resources", []) if isinstance(data, dict) else []
-    if not isinstance(resources, list):
-        raise ValueError("resources.json resources must be a list")
+    instruction_path = root / "instruction.md"
+    instruction = (
+        instruction_path.read_text(encoding="utf-8", errors="replace")
+        if instruction_path.is_file()
+        else ""
+    )
+    resources: list[dict[str, Any]] = []
+    for line_number, line in enumerate(instruction.splitlines(), start=1):
+        lowered = line.lower()
+        explicitly_indispensable = (
+            "indispensable direct input" in lowered
+            or (
+                "direct input" in lowered
+                and any(term in lowered for term in ("required", "must"))
+            )
+        )
+        no_equivalent = any(
+            term in lowered
+            for term in ("no equivalent", "without equivalent", "不可替代")
+        )
+        if not (explicitly_indispensable and no_equivalent):
+            continue
+        for position, url in enumerate(
+            re.findall(r"https?://[^\s)\]}>]+", line), start=1
+        ):
+            resources.append(
+                {
+                    "id": f"instruction-direct-input-{line_number}-{position}",
+                    "name": "Indispensable direct instruction input",
+                    "type": "file",
+                    "role": "CRITICAL",
+                    "required_level": "L4",
+                    "access": {"method": "url", "url": url.rstrip(".,;")},
+                    "_instruction_line": line_number,
+                }
+            )
     reports: list[dict[str, Any]] = []
     findings: list[dict[str, Any]] = []
     for item in resources:
@@ -691,6 +734,15 @@ def probe_resources(
             timeout,
             allow_private_network,
         )
+        report["declaration_source"] = "instruction.md"
+        report["instruction_line"] = item["_instruction_line"]
+        report["indispensable"] = True
+        for finding_item in item_findings:
+            finding_item["affected_files"] = ["instruction.md"]
+            if finding_item["severity"] == "FATAL":
+                finding_item["code"] = (
+                    "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+                )
         reports.append(report)
         findings.extend(item_findings)
     e2_recommended = any(
@@ -723,6 +775,8 @@ def probe_resources(
         "resources": reports,
         "findings": findings,
         "limitations": [
+            "resources.json, manifest, steps, task, and environment declarations are not quality evidence",
+            "only instruction text explicitly marking a direct input indispensable and without an equivalent is probed",
             "L6 requires verification inside the declared Harbor runtime",
             "license and terms-of-use conclusions use declared evidence only",
         ],
@@ -735,11 +789,12 @@ def probe_resources(
 
 
 def copy_runtime(root: Path, destination: Path) -> None:
-    for source in iter_public_files(root):
-        relative = source.relative_to(root)
-        target = destination / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+    destination.mkdir(parents=True, exist_ok=True)
+    instruction = root / "instruction.md"
+    if instruction.is_file():
+        shutil.copy2(instruction, destination / "instruction.md")
+    if (root / "tests").is_dir():
+        shutil.copytree(root / "tests", destination / "tests")
 
 
 def run_e2_smoke(

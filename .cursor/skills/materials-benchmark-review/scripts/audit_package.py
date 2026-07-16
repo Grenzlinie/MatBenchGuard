@@ -18,7 +18,12 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
-from prepare_audit_output import REQUIRED_ROLES, basename, locate_root
+from prepare_audit_output import (
+    QUALITY_EVIDENCE_ROLES,
+    REQUIRED_ROLES,
+    basename,
+    locate_root,
+)
 
 
 SEVERITY_RANK = {"FATAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
@@ -154,23 +159,18 @@ def parse_roles(
 ) -> tuple[dict[str, Any], dict[str, str]]:
     values: dict[str, Any] = {}
     status: dict[str, str] = {}
-    for role, role_type in REQUIRED_ROLES.items():
+    for role, role_type in QUALITY_EVIDENCE_ROLES.items():
         path = root / role
         if not path.exists():
-            severity = (
-                "FATAL"
-                if role
-                in {
-                    "instruction.md",
-                    "tests/grading_spec.json",
-                    "tests/checker.py",
-                }
-                else "HIGH"
-            )
+            severity = "FATAL" if role == "instruction.md" else "HIGH"
             add_issue(
                 issues,
                 severity,
-                "MISSING_FILE",
+                (
+                    "UNRECOVERABLE_TASK_DEFINITION"
+                    if role == "instruction.md"
+                    else "MISSING_FILE"
+                ),
                 f"missing required Harbor role: {role}",
                 affected_files=[role],
             )
@@ -189,6 +189,8 @@ def parse_roles(
                 repr(exc),
                 [role],
             )
+    for role in set(REQUIRED_ROLES) - set(QUALITY_EVIDENCE_ROLES):
+        status[role] = "ancillary_not_scored"
     if not (root / "solution").is_dir():
         add_issue(
             issues,
@@ -196,6 +198,14 @@ def parse_roles(
             "SOLUTION_ROLE_MISSING",
             "solution role is absent; presence can be confirmed without inspection",
             affected_files=["solution/"],
+        )
+    elif not (root / "solution/solve.sh").is_file():
+        add_issue(
+            issues,
+            "HIGH",
+            "SOLUTION_ORACLE_MISSING",
+            "solution/solve.sh is absent; the checker positive path is repairable",
+            affected_files=["solution/solve.sh"],
         )
     status["solution/"] = (
         "present_not_inspected"
@@ -388,21 +398,10 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
     issues: list[dict[str, Any]] = []
     role_values, parse_status = parse_roles(root, issues)
     instruction = str(role_values.get("instruction.md", ""))
-    steps = role_values.get("steps.json", [])
-    resources = role_values.get("resources.json", {})
-    manifest = role_values.get("manifest.json", {})
     specification = normalize_grading_specification(
         role_values.get("tests/grading_spec.json", {}), issues
     )
-    combined = "\n".join(
-        (
-            instruction,
-            json.dumps(steps, ensure_ascii=False),
-            json.dumps(resources, ensure_ascii=False),
-            json.dumps(manifest, ensure_ascii=False),
-        )
-    )
-    qualification = materials_prescreen(combined)
+    qualification = materials_prescreen(instruction)
     if qualification["classification"] in {"NON_MAT", "AMBIGUOUS"}:
         add_issue(
             issues,
@@ -413,7 +412,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         )
     cross_file_sets = cross_file_checks(
         instruction,
-        steps if isinstance(steps, list) else [],
+        [],
         specification if isinstance(specification, dict) else {},
         issues,
     )

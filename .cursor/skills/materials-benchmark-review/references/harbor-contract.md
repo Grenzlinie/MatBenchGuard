@@ -1,41 +1,33 @@
-# Harbor 题包 contract
+# Harbor review contract
 
-The 审计单元 is one `paper-{id}` Harbor 题包 directory. Cluster and theme
-directories preserve identity but are not audit roots.
+The audit unit is one `paper-{id}/` directory.
 
-## Required roles
+## Quality roles
 
-- `instruction.md` — public task and output contract.
-- `steps.json` — structured workflow and load-bearing evidence declarations.
-- `manifest.json` — identity and difficulty metadata.
-- `resources.json` — declared tools, data, packages, and artifacts.
-- `task.toml` — Harbor runtime and timeout configuration.
-- `environment/Dockerfile` — declared container environment.
-- `tests/grading_spec.json` — privileged scoring contract.
-- `tests/checker.py` — privileged verifier implementation.
-- `tests/test.sh` — privileged verifier entry point.
+- `instruction.md` defines the public scientific task and answerability.
+- `tests/**` defines the privileged checker, Gold, tolerances, and score.
+- `solution/**` is privileged and may be copied into a disposable Oracle
+  workspace only to generate one positive mock. Its values are never report
+  evidence.
+- `paper/**` is read only after a confirmed paper trigger.
 
-The baseline runner accepts harmless schema variation such as grading
-`steps` versus `checks`, but reports missing or unparseable required roles.
+No other package role is quality evidence. `manifest.json`, `resources.json`,
+`steps.json`, `task.toml`, `environment/`, and directory labels cannot affect
+the score or gates.
 
-## Runtime contract
+## Checker runtime
 
-The checker reads submissions from `/app/outputs`, reads its grading
-specification from `/tests/grading_spec.json`, and writes:
+The real checker runs in a disposable copy containing instruction and tests,
+without solution or paper. Paths for `/app/outputs`, `/tests`, and
+`/logs/verifier` are redirected inside that copy.
 
-- `/logs/verifier/reward.txt`
-- `/logs/verifier/breakdown.json`
+If `solution/solve.sh` exists, the complete solution role is first copied into
+a separate disposable workspace. It receives `OUTPUT_DIR`; generated
+contracted files may be copied to checker inputs, but file contents, stdout,
+and Oracle values are not written to the report.
 
-E1 copies only public and privileged review files into a solution-free
-temporary runtime, patches these paths there, and executes the real checker. It
-does not execute the scientific workflow.
+## Structural rules
 
-## Evidence boundary
-
-Auditor and Repairer may inspect `tests/`. They must not inspect or execute
-anything under `solution/`.
-
-Input hashing, root discovery, static scanning, checker probes, and reporting
-must prune `solution/` before traversal. A report field claiming that solution
-was not inspected is supporting metadata, not a substitute for this structural
-rule.
+Quality-role paths cannot escape the package or route through symlinks.
+Input hashes cover instruction and tests only. Triggered paper hashes are
+added only after the no-paper gate. Solution hashes are never published.

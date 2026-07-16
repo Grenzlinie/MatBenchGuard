@@ -5,79 +5,122 @@ description: Repair one audited materials-science Harbor 题包 through a fresh,
 
 # Materials Benchmark Repair
 
-Repair one Harbor 题包 at a time. Review remains evidence-only for core package
-roles; this skill owns all mutations.
+Repair one Harbor 题包 at a time after Review routes it to `REPAIR_QUEUE`.
+Review supplies evidence and owns no mutations. The Agent writes an external,
+evidence-backed plan; Repair validates and executes it without per-fix human
+approval.
 
-## SAFE_AUTO_FIX
+## Public seam
 
-Prepare a JSON plan outside the 题包 with:
+Keep the plan outside the 题包 and run:
 
-- `schema_version: "0.1"`;
-- the authoritative `audit_id` and one open `finding_id`;
-- `repair_class: "SAFE_AUTO_FIX"` and a justification;
-- exactly one deterministic `json_set` operation that adds exact public
-  `access.evidence` to a declared resource in `resources.json`;
-- one or more `json_path_equals` regression tests that fail before and pass
-  after the operation.
-
-Run:
-
-```bash
+```sh
 python scripts/run_repair.py <Harbor题包目录> --plan <repair-plan.json>
 ```
 
-The runner rejects stale audit hashes before creating a workspace. It then
-copies the complete package into a full snapshot and separate candidate under
-`.benchmark_repair_tmp/<repair_id>/`, applies the operation only to the
-candidate, records before/after hashes, proves the regression transition, and
-reruns Review at the original paper mode and execution level.
-
-Publication requires a `PASS`, resolution of the target finding, and successful
-path rebasing. The candidate then atomically replaces the original directory;
-both the pre-change snapshot and original package move to
-`.benchmark_repair_history/<repair_id>/`. A failed swap restores the original.
-
-## Completion
-
-The repair is complete only when:
-
-- `benchmark_repair/repair_manifest.json` says `PUBLISHED`;
-- every change links the source finding and has different before/after hashes;
-- every regression is false before and true after;
-- re-audit uses equal evidence depth and routes to `PUBLISH_CANDIDATE`;
-- the package identity and full `solution/` role remain present;
-- the history contains full `snapshot/` and `original/` directories.
-
-Do not infer that arbitrary scientific, Gold, checker, or scoring changes are
-safe. Those require an assisted workflow.
-
-## ASSISTED_FIX and failure states
-
-An `ASSISTED_FIX` plan uses the same external plan seam and adds:
+The plan uses schema `0.1` and contains:
 
 ```json
 {
-  "approval": {
-    "approved": true,
-    "approved_by": "materials-owner",
-    "approved_at": "RFC3339 timestamp",
-    "evidence": [{"source": "reviewed evidence"}]
-  }
+  "schema_version": "0.1",
+  "audit_id": "authoritative audit id",
+  "finding_id": "one open finding id",
+  "repair_class": "SAFE_AUTO_FIX or ASSISTED_FIX",
+  "justification": "why this repair resolves the finding",
+  "core_science_change": false,
+  "evidence": [
+    {
+      "id": "stable-evidence-id",
+      "source": "paper/paper.md, authoritative finding, DOI, or other source",
+      "quote": "verifiable supporting text"
+    }
+  ],
+  "operations": [],
+  "regression_tests": []
 }
 ```
 
-Without approval, the runner records `AWAITING_APPROVAL` outside the package
-and exits before copying or mutation. Changes to Gold/scoring JSON, scientific
-workflow steps, endpoints, or key parameters also require non-empty approval
-evidence; otherwise the state is `BLOCKED_EVIDENCE`.
+`approval` is ignored if an older planner includes it. Both repair classes are
+autonomous:
 
-A failed first mutation/regression/re-audit archives the full snapshot and
-candidate as `ROLLED_BACK`. One corrective attempt is allowed for the same
-`audit_id` and `finding_id`; if it also fails, the root cause is `ABANDONED`.
-Later calls return the existing abandoned state without creating a third
-candidate. Neither state is publishable.
+- `SAFE_AUTO_FIX` is deterministic and does not require scientific
+  interpretation.
+- `ASSISTED_FIX` may make an evidence-backed scientific or checker correction.
+  Every operation must link one or more plan evidence IDs.
 
-Every control stop and mutation attempt writes
-`.benchmark_repair_history/<repair_id>/attempt_manifest.json`. Failed mutation
-attempts retain both `snapshot/` and `candidate/` for verification while the
-authoritative package remains unchanged.
+## Allowed changes
+
+Only these package roles are modifiable:
+
+- `instruction.md`
+- `tests/**`
+- `solution/**`
+
+`paper/**` and every metadata/environment role are read-only. The runner
+supports deterministic `write_file`, `replace_text`, `json_set`, and
+`delete_file` operations. `write_file` may create a missing
+`solution/solve.sh`, including its executable bit. Thus a missing or broken
+solution entrypoint is a repairable integrity finding, not an automatic
+rejection.
+
+Use regressions that directly prove the finding was fixed. Supported checks
+are `file_exists`, `file_absent`, `file_executable`, `text_contains`,
+`text_not_contains`, `json_path_equals`, and argv-based `command`. A regression
+is expected to fail before and pass after unless it explicitly declares
+`expected_before` or `expected_after`.
+
+## Non-negotiable scientific policy
+
+Never:
+
+- guess a scientific parameter or value;
+- use `solution/**` as evidence for public instruction text or copy hidden
+  solution content into `instruction.md`;
+- lower a checker or scoring threshold without linked evidence;
+- redefine the core scientific question, endpoint, material system, or claimed
+  reproduction type;
+- treat a passing checker alone as scientific evidence.
+
+When evidence is absent or not linked to an operation, return
+`BLOCKED_EVIDENCE` without mutating the package. When a plan declares or
+attempts a forbidden change, return `POLICY_VIOLATION`. Do not convert either
+state into an approval request and do not improvise a replacement value.
+
+## Isolated execution and publication
+
+Before mutation, reject stale audit hashes and verify that the selected finding
+is still open. Then:
+
+1. Copy the full package to both
+   `.benchmark_repair_tmp/<repair_id>/snapshot/` and `candidate/`.
+2. Run required regressions against the snapshot.
+3. Apply only the planned operations to the candidate, recording before/after
+   hashes and evidence links.
+4. Run the regressions against the candidate.
+5. Run the canonical Review CLI at exactly the source audit's paper mode and
+   execution level. Pass external assessment, known-valid-output, or E2 plans
+   through when that evidence depth requires them.
+6. Require `PASS`, `PUBLISH_CANDIDATE`, resolution of the target finding,
+   unchanged package identity, and no mutation outside the three allowed roles.
+7. Write `benchmark_repair/repair_manifest.json`, `repair_report.json`, and
+   `repair_report.md`, rebase generated Review paths, and atomically replace the
+   authoritative package.
+
+Successful history contains the full `snapshot/`, the full pre-publication
+`original/`, `repair_plan.json`, and `attempt_manifest.json`. If the swap fails,
+restore the original package.
+
+## Attempt limit
+
+A failed mutation, regression, or equal-depth re-audit leaves the authoritative
+package untouched and archives the full snapshot and candidate. The first
+failed attempt is `ROLLED_BACK`; the second failure for the same source
+`audit_id` plus `finding_id` is `ABANDONED`. Later calls return the existing
+`ABANDONED` state and never create a third candidate.
+
+## Completion
+
+A repair is complete only when the package-local manifest says `PUBLISHED`,
+all required regressions have their declared before/after results, the
+equal-depth Review routes to `PUBLISH_CANDIDATE`, package identity is
+preserved, and the complete history exists.

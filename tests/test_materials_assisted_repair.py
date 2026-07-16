@@ -1,154 +1,255 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 from tests.test_materials_safe_repair import (
-    EVIDENCE,
     initial_repair_context,
     run_repair,
+    safe_plan,
+    sha256_file,
     write_plan,
 )
 
 
-def file_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
+    value = safe_plan(audit_id, finding_id)
+    value["repair_class"] = "ASSISTED_FIX"
+    value["justification"] = (
+        "Correct a transcription error using the bundled paper quote."
+    )
+    value["evidence"] = [
+        {
+            "id": "paper-method",
+            "source": "paper/paper.md",
+            "quote": "evidence-backed quantity",
+        }
+    ]
+    value["operations"] = [
+        {
+            "id": "correct-instruction",
+            "type": "replace_text",
+            "file": "instruction.md",
+            "old": "evidence-backed quantity",
+            "new": "paper-supported quantity",
+            "evidence_ids": ["paper-method"],
+        }
+    ]
+    value["regression_tests"] = [
+        {
+            "type": "text_contains",
+            "file": "instruction.md",
+            "expected": "paper-supported quantity",
+        }
+    ]
+    return value
 
 
 class MaterialsAssistedRepairTests(unittest.TestCase):
-    def test_assisted_fix_waits_for_approval_without_mutation(self) -> None:
+    def test_evidence_backed_assisted_fix_runs_without_per_fix_approval(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
-            package, report, finding_id = initial_repair_context(workspace)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
             plan = workspace / "assisted-plan.json"
-            write_plan(plan, report["audit_id"], finding_id)
-            value = json.loads(plan.read_text(encoding="utf-8"))
-            value["repair_class"] = "ASSISTED_FIX"
-            value["approval"] = {
-                "approved": False,
-                "approved_by": None,
-                "approved_at": None,
-                "evidence": [],
-            }
-            plan.write_text(json.dumps(value), encoding="utf-8")
-            resources = package / "resources.json"
-            before = file_hash(resources)
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["approval"] = {"approved": False}
+            write_plan(plan, value)
 
-            completed = run_repair(package, plan)
+            completed = run_repair(package, plan, runner)
 
-            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "AWAITING_APPROVAL")
-            self.assertEqual(file_hash(resources), before)
-            self.assertFalse((package / "benchmark_repair").exists())
+            self.assertEqual(result["status"], "PUBLISHED")
+            self.assertIn(
+                "paper-supported quantity",
+                (package / "instruction.md").read_text(encoding="utf-8"),
+            )
+            manifest = json.loads(
+                (package / "benchmark_repair/repair_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(manifest["repair_class"], "ASSISTED_FIX")
+            self.assertEqual(manifest["evidence"][0]["id"], "paper-method")
 
-    def test_sensitive_scoring_change_requires_approval_evidence(self) -> None:
+    def test_assisted_fix_without_operation_evidence_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
-            package, report, finding_id = initial_repair_context(workspace)
-            plan = workspace / "sensitive-plan.json"
-            value = {
-                "schema_version": "0.1",
-                "audit_id": report["audit_id"],
-                "finding_id": finding_id,
-                "repair_class": "ASSISTED_FIX",
-                "justification": "Change the pass threshold.",
-                "approval": {
-                    "approved": True,
-                    "approved_by": "materials-owner",
-                    "approved_at": "2026-07-15T12:00:00Z",
-                    "evidence": [],
-                },
-                "operations": [
-                    {
-                        "type": "json_set",
-                        "file": "tests/grading_spec.json",
-                        "path": ["pass_threshold"],
-                        "value": 0.5,
-                    }
-                ],
-                "regression_tests": [
-                    {
-                        "type": "json_path_equals",
-                        "file": "tests/grading_spec.json",
-                        "path": ["pass_threshold"],
-                        "expected": 0.5,
-                    }
-                ],
-            }
-            plan.write_text(json.dumps(value), encoding="utf-8")
-            grading = package / "tests/grading_spec.json"
-            before = file_hash(grading)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
+            plan = workspace / "assisted-plan.json"
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["operations"][0]["evidence_ids"] = []
+            write_plan(plan, value)
+            before = sha256_file(package / "instruction.md")
 
-            completed = run_repair(package, plan)
+            completed = run_repair(package, plan, runner)
 
             self.assertEqual(completed.returncode, 3)
             result = json.loads(completed.stdout)
             self.assertEqual(result["status"], "BLOCKED_EVIDENCE")
-            self.assertEqual(file_hash(grading), before)
+            self.assertEqual(sha256_file(package / "instruction.md"), before)
+            self.assertFalse((package / "benchmark_repair").exists())
+
+    def test_plan_cannot_redefine_core_science(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
+            plan = workspace / "assisted-plan.json"
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["core_science_change"] = True
+            write_plan(plan, value)
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "POLICY_VIOLATION"
+            )
+
+    def test_solution_content_cannot_be_copied_into_instruction(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
+            secret = "hidden_answer = 7.314159265"
+            (package / "solution/answer.py").write_text(
+                secret + "\n", encoding="utf-8"
+            )
+            audit_manifest = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(audit_manifest.read_text(encoding="utf-8"))
+            manifest["input_hashes"]["solution/answer.py"] = sha256_file(
+                package / "solution/answer.py"
+            )
+            write_plan(audit_manifest, manifest)
+            plan = workspace / "assisted-plan.json"
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["operations"][0]["new"] = secret
+            write_plan(plan, value)
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "POLICY_VIOLATION"
+            )
+            self.assertNotIn(
+                secret,
+                (package / "instruction.md").read_text(encoding="utf-8"),
+            )
+
+    def test_threshold_lowering_requires_linked_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
+            plan = workspace / "assisted-plan.json"
+            value = assisted_plan(report["audit_id"], finding_id)
+            value["operations"] = [
+                {
+                    "id": "lower-threshold",
+                    "type": "json_set",
+                    "file": "tests/grading_spec.json",
+                    "path": ["pass_threshold"],
+                    "value": 0.5,
+                    "evidence_ids": [],
+                }
+            ]
+            value["regression_tests"] = [
+                {
+                    "type": "json_path_equals",
+                    "file": "tests/grading_spec.json",
+                    "path": ["pass_threshold"],
+                    "expected": 0.5,
+                }
+            ]
+            write_plan(plan, value)
+            before = sha256_file(package / "tests/grading_spec.json")
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            self.assertEqual(
+                json.loads(completed.stdout)["status"], "BLOCKED_EVIDENCE"
+            )
+            self.assertEqual(
+                sha256_file(package / "tests/grading_spec.json"), before
+            )
 
     def test_two_failed_attempts_roll_back_then_abandon_root_cause(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
-            package, report, finding_id = initial_repair_context(workspace)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace
+            )
             plan = workspace / "failing-plan.json"
-            write_plan(plan, report["audit_id"], finding_id)
-            value = json.loads(plan.read_text(encoding="utf-8"))
-            value["regression_tests"][0]["expected"] = [
-                {"file": "instruction.md", "quote": "not the applied evidence"}
+            value = safe_plan(report["audit_id"], finding_id)
+            value["regression_tests"][0] = {
+                "type": "text_contains",
+                "file": "solution/solve.sh",
+                "expected": "not written by the operation",
+            }
+            value["regression_tests"] = value["regression_tests"][:1]
+            write_plan(plan, value)
+            instruction_before = sha256_file(package / "instruction.md")
+
+            first = run_repair(package, plan, runner)
+            second = run_repair(package, plan, runner)
+            third = run_repair(package, plan, runner)
+
+            self.assertEqual(
+                [first.returncode, second.returncode, third.returncode],
+                [3, 3, 3],
+            )
+            results = [
+                json.loads(item.stdout) for item in (first, second, third)
             ]
-            plan.write_text(json.dumps(value), encoding="utf-8")
-            resources = package / "resources.json"
-            before = file_hash(resources)
-
-            first = run_repair(package, plan)
-            second = run_repair(package, plan)
-            third = run_repair(package, plan)
-
-            self.assertEqual(first.returncode, 3)
-            self.assertEqual(second.returncode, 3)
-            self.assertEqual(third.returncode, 3)
-            first_result = json.loads(first.stdout)
-            second_result = json.loads(second.stdout)
-            third_result = json.loads(third.stdout)
-            self.assertEqual(first_result["status"], "ROLLED_BACK")
-            self.assertEqual(second_result["status"], "ABANDONED")
-            self.assertEqual(third_result["status"], "ABANDONED")
-            self.assertEqual(file_hash(resources), before)
-            history_root = Path(first_result["history_root"])
-            manifests = sorted(history_root.glob("*/attempt_manifest.json"))
-            attempts = [
+            self.assertEqual(
+                [item["status"] for item in results],
+                ["ROLLED_BACK", "ABANDONED", "ABANDONED"],
+            )
+            self.assertEqual(
+                sha256_file(package / "instruction.md"), instruction_before
+            )
+            self.assertFalse((package / "solution/solve.sh").exists())
+            history_root = Path(results[0]["history_root"])
+            manifests = [
                 json.loads(path.read_text(encoding="utf-8"))
-                for path in manifests
-                if json.loads(path.read_text(encoding="utf-8"))[
-                    "root_cause"
-                ]
-                == first_result["root_cause"]
+                for path in history_root.glob("*/attempt_manifest.json")
             ]
-            attempts.sort(key=lambda item: item["attempt_number"])
+            attempts = sorted(
+                (
+                    item
+                    for item in manifests
+                    if item["root_cause"] == results[0]["root_cause"]
+                ),
+                key=lambda item: item["attempt_number"],
+            )
             self.assertEqual(
                 [item["status"] for item in attempts],
                 ["ROLLED_BACK", "ABANDONED"],
             )
-            self.assertEqual([item["attempt_number"] for item in attempts], [1, 2])
-            for path in manifests:
+            for path in history_root.glob("*/attempt_manifest.json"):
                 attempt = json.loads(path.read_text(encoding="utf-8"))
-                if attempt["root_cause"] == first_result["root_cause"]:
-                    attempt_dir = path.parent
-                    self.assertTrue((attempt_dir / "snapshot").is_dir())
-                    self.assertTrue((attempt_dir / "candidate").is_dir())
-                    self.assertTrue(
-                        (attempt_dir / "snapshot/solution").is_dir()
-                    )
-            current_resources = json.loads(resources.read_text(encoding="utf-8"))
-            self.assertNotIn(
-                "evidence",
-                current_resources["resources"][0]["access"],
-            )
-            self.assertNotEqual(EVIDENCE, [])
+                if attempt["root_cause"] == results[0]["root_cause"]:
+                    self.assertTrue((path.parent / "snapshot").is_dir())
+                    self.assertTrue((path.parent / "candidate").is_dir())
 
 
 if __name__ == "__main__":

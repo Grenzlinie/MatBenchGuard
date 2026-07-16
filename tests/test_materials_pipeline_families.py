@@ -12,11 +12,7 @@ from tests.test_materials_benchmark_review_paper_grounded import (
     RUNNER,
     copy_source_package,
 )
-from tests.test_materials_safe_repair import (
-    INLINE_QUOTE,
-    run_repair,
-    write_plan,
-)
+from tests.test_materials_safe_repair import safe_plan
 
 
 VALIDATOR = (
@@ -72,8 +68,66 @@ FAMILIES = [
     ),
 ]
 
+VALID_SOLUTION = """#!/bin/sh
+set -eu
+output_dir="${OUTPUT_DIR:-/app/outputs}"
+mkdir -p "$output_dir"
+python3 - "$output_dir/dispersion_curves.csv" <<'PY'
+import csv
+import math
+import sys
 
-def taxonomy_assessment(task: str, quote: str) -> dict[str, object]:
+c11, c12, c44 = 1.68e12, 1.21e12, 0.75e12
+rho, lattice = 8.96, 3.61
+lattice_cm = lattice * 1e-8
+epsilon = c11 - c12 - 2 * c44
+factor8 = 8 / (rho * lattice_cm**2)
+factor2 = 2 / (rho * lattice_cm**2)
+limits = {
+    "100": math.sqrt(2) * math.pi / lattice,
+    "110": math.sqrt(5) * math.pi / lattice,
+    "111": math.sqrt(3 / 2) * math.pi / lattice,
+}
+
+def frequency(direction, mode, k_value):
+    if direction == "100":
+        sin_sq = math.sin(lattice * k_value / (2 * math.sqrt(2))) ** 2
+        omega_sq = factor8 * sin_sq * (c11 if mode == "L" else c44)
+    elif direction == "110":
+        sin_sq = math.sin(lattice * k_value / 4) ** 2
+        if mode == "L":
+            bracket = 2 * c11 - epsilon - (2 * c11 - c44 - epsilon) * sin_sq
+        elif mode == "T1":
+            bracket = epsilon + 2 * c44 - (c44 + epsilon) * sin_sq
+        else:
+            bracket = 2 * c44 - (2 * c44 - c11) * sin_sq
+        omega_sq = factor8 * sin_sq * bracket
+    else:
+        sin_sq = math.sin(lattice * k_value / math.sqrt(6)) ** 2
+        bracket = 3 * c11 - 2 * epsilon if mode == "L" else 3 * c44 + epsilon
+        omega_sq = factor2 * sin_sq * bracket
+    return math.sqrt(max(omega_sq, 0)) / 1e13
+
+with open(sys.argv[1], "w", newline="", encoding="utf-8") as handle:
+    writer = csv.writer(handle)
+    writer.writerow(["direction", "mode", "k", "frequency"])
+    for direction, k_max in limits.items():
+        for mode in ("L", "T1", "T2"):
+            for index in range(20):
+                k_value = k_max * index / 19
+                writer.writerow(
+                    [direction, mode, k_value, frequency(direction, mode, k_value)]
+                )
+PY
+"""
+
+
+def taxonomy_assessment(
+    task: str,
+    quote: str,
+    *,
+    explicit_reproduction: bool = False,
+) -> dict[str, object]:
     return {
         "schema_version": "0.1",
         "taxonomy": {
@@ -104,7 +158,119 @@ def taxonomy_assessment(task: str, quote: str) -> dict[str, object]:
                 "package_quote": "This task focuses on face-centred cubic copper (Cu).",
             },
         ],
+        "materials_qualification": {
+            "classification": "MAT_CORE",
+            "rationale": (
+                "The public fixture defines a copper material, numerical "
+                "inputs, domain operation, and scored endpoint."
+            ),
+            "evidence": [
+                {
+                    "axis": "object",
+                    "package_file": "instruction.md",
+                    "package_quote": "face-centred cubic copper (Cu)",
+                },
+                {
+                    "axis": "data",
+                    "package_file": "instruction.md",
+                    "package_quote": "c11 = 1.68×10¹² dynes/cm²",
+                },
+                {
+                    "axis": "operation",
+                    "package_file": "instruction.md",
+                    "package_quote": quote,
+                },
+                {
+                    "axis": "endpoint",
+                    "package_file": "instruction.md",
+                    "package_quote": "dispersion_curves.csv",
+                },
+                {
+                    "axis": "domain_dependence",
+                    "package_file": "instruction.md",
+                    "package_quote": quote,
+                },
+            ],
+        },
+        "paper_trigger_adjudication": [
+            {
+                "trigger": trigger,
+                "status": (
+                    "TRIGGERED"
+                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
+                    and explicit_reproduction
+                    else "NOT_TRIGGERED"
+                ),
+                "rationale": (
+                    "The source fixture explicitly describes a reproduction."
+                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
+                    and explicit_reproduction
+                    else "The public fixture supplies no evidence for this trigger."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": quote,
+                    }
+                ],
+            }
+            for trigger in (
+                "SCIENTIFIC_CONFLICT",
+                "NECESSARY_INFORMATION_MISSING",
+                "GOLD_PROVENANCE_UNCERTAIN",
+                "EXPLICIT_REPRODUCTION_CLAIM",
+            )
+        ],
     }
+
+
+def solution_repair_plan(
+    report: dict[str, object],
+    finding: dict[str, object],
+    assessment_path: Path,
+) -> dict[str, object]:
+    finding_id = str(finding["finding_id"])
+    value = safe_plan(str(report["audit_id"]), finding_id)
+    value["repair_class"] = "ASSISTED_FIX"
+    value["justification"] = (
+        "Restore the missing Oracle from the public constants, formulas, "
+        "sampling rule, and output contract."
+    )
+    value["evidence"] = [
+        {
+            "id": "audit-finding",
+            "source": f"benchmark_audit:{finding_id}",
+            "quote": str(finding["title"]),
+        },
+        {
+            "id": "public-inputs",
+            "source": "instruction.md",
+            "quote": "c11 = 1.68×10¹² dynes/cm²",
+        },
+        {
+            "id": "public-formulas",
+            "source": "instruction.md",
+            "quote": "Evaluate the following formulas at each k value:",
+        },
+        {
+            "id": "public-output-contract",
+            "source": "instruction.md",
+            "quote": "Each curve must contain at least 20 equally spaced k points.",
+        },
+    ]
+    value["operations"][0]["content"] = VALID_SOLUTION
+    value["operations"][0]["evidence_ids"] = [
+        "audit-finding",
+        "public-inputs",
+        "public-formulas",
+        "public-output-contract",
+    ]
+    value["regression_tests"] = [
+        {"type": "file_exists", "file": "solution/solve.sh"},
+        {"type": "file_executable", "file": "solution/solve.sh"},
+    ]
+    value["agent_assessment"] = str(assessment_path)
+    return value
 
 
 def configure_answer_type(package: Path, policy: str) -> None:
@@ -114,6 +280,22 @@ def configure_answer_type(package: Path, policy: str) -> None:
     output["target_policy"] = policy
     specification["target_policies"] = {output["file"]: policy}
     path.write_text(json.dumps(specification), encoding="utf-8")
+
+
+def correct_fixture_checker(package: Path) -> None:
+    path = package / "tests/checker.py"
+    checker = path.read_text(encoding="utf-8")
+    checker = checker.replace(
+        "bracket = (3*c11 - 2*eps) * sin_sq",
+        "bracket = 3*c11 - 2*eps",
+    ).replace(
+        "bracket = (3*c44 + eps) * sin_sq",
+        "bracket = 3*c44 + eps",
+    ).replace(
+        "omega_sq = factor * bracket",
+        "omega_sq = factor * sin_sq * bracket",
+    )
+    path.write_text(checker, encoding="utf-8")
 
 
 def run_taxonomy_review(
@@ -148,6 +330,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                 with self.subTest(family=slug, answer_type=answer_type):
                     package = workspace / f"paper-{slug}"
                     copy_source_package(package)
+                    correct_fixture_checker(package)
                     instruction = package / "instruction.md"
                     instruction.write_text(
                         instruction.read_text(encoding="utf-8")
@@ -160,7 +343,11 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     assessment_path = workspace / f"{slug}-assessment.json"
                     assessment_path.write_text(
                         json.dumps(
-                            taxonomy_assessment(task, quote),
+                            taxonomy_assessment(
+                                task,
+                                quote,
+                                explicit_reproduction=True,
+                            ),
                             ensure_ascii=False,
                         ),
                         encoding="utf-8",
@@ -179,7 +366,8 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                         ).read_text(encoding="utf-8")
                     )
                     self.assertEqual(
-                        report["summary"]["disposition"], "REPAIR_QUEUE"
+                        report["summary"]["disposition"],
+                        "EVIDENCE_PENDING",
                     )
                     self.assertEqual(
                         report["summary"]["answer_type"], answer_type
@@ -187,48 +375,10 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     self.assertEqual(
                         report["taxonomy_labels"]["computation_task"], [task]
                     )
-                    finding = next(
-                        item
-                        for item in report["findings"]
-                        if item["title"]
-                        == "RESOURCE_VERIFICATION_INSUFFICIENT"
+                    self.assertIn(
+                        "triggered_paper_review",
+                        report["evidence_contract"]["gaps"],
                     )
-                    plan = workspace / f"{slug}-repair.json"
-                    write_plan(plan, report["audit_id"], finding["finding_id"])
-                    plan_value = json.loads(plan.read_text(encoding="utf-8"))
-                    plan_value["agent_assessment"] = str(assessment_path)
-                    plan.write_text(
-                        json.dumps(plan_value, ensure_ascii=False),
-                        encoding="utf-8",
-                    )
-
-                    repaired = run_repair(package, plan)
-
-                    self.assertEqual(
-                        repaired.returncode,
-                        0,
-                        msg=f"{repaired.stdout}\n{repaired.stderr}",
-                    )
-                    final_report = json.loads(
-                        (
-                            package / "benchmark_audit/audit_report.json"
-                        ).read_text(encoding="utf-8")
-                    )
-                    self.assertEqual(
-                        final_report["summary"]["disposition"],
-                        "PUBLISH_CANDIDATE",
-                    )
-                    self.assertEqual(
-                        final_report["summary"]["answer_type"], answer_type
-                    )
-                    self.assertEqual(
-                        final_report["taxonomy_labels"]["computation_task"],
-                        [task],
-                    )
-                    self.assertFalse(
-                        final_report["scope"]["solution_content_inspected"]
-                    )
-                    self.assertTrue((package / "solution").is_dir())
                     observed.add(answer_type)
             self.assertEqual(
                 observed,
@@ -302,6 +452,87 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     ).read_text(encoding="utf-8")
                 )["publishable"]
             )
+
+    def test_agent_materials_qualification_overrides_lexical_prescreen(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / "paper-boundary-material"
+            copy_source_package(package)
+            quote = (
+                "Use micromagnetic finite-element simulation of NdFeB grains "
+                "with measured anisotropy and exchange data to calculate the "
+                "coercive field that controls permanent-magnet performance."
+            )
+            (package / "instruction.md").write_text(quote + "\n", encoding="utf-8")
+            value = taxonomy_assessment("磁性与自旋", quote)
+            value["taxonomy_evidence"][2]["package_quote"] = quote
+            value["materials_qualification"] = {
+                "classification": "MAT_CORE",
+                "rationale": "The public task couples a material object and data to a materials operation, endpoint, and domain-dependent interpretation.",
+                "evidence": [
+                    {
+                        "axis": axis,
+                        "package_file": "instruction.md",
+                        "package_quote": quote,
+                    }
+                    for axis in (
+                        "object",
+                        "data",
+                        "operation",
+                        "endpoint",
+                        "domain_dependence",
+                    )
+                ],
+            }
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(value, ensure_ascii=False), encoding="utf-8"
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNNER),
+                    str(package),
+                    "--paper-mode",
+                    "no_paper",
+                    "--execution-level",
+                    "E1",
+                    "--agent-assessment",
+                    str(assessment_path),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text()
+            )
+            self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
+            self.assertEqual(
+                report["materials_qualification"]["prescreen"]["classification"],
+                "NON_MAT",
+            )
+            self.assertTrue(report["materials_qualification"]["authoritative"])
+            self.assertNotIn(
+                "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION",
+                {finding["title"] for finding in report["findings"]},
+            )
+            self.assertEqual(
+                {item["axis"] for item in report["materials_qualification"]["evidence"]},
+                {"object", "data", "operation", "endpoint", "domain_dependence"},
+            )
+            self.assertFalse(
+                any(
+                    gate["status"] == "FAIL"
+                    and gate["gate_id"] == "MATERIALS_TASK"
+                    for gate in report["hard_gates"]
+                )
+            )
             self.assertFalse((package / "benchmark_repair").exists())
 
     def test_skill_authoring_contract_is_valid(self) -> None:
@@ -325,7 +556,6 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
             set(result["skills"]),
             {"materials-benchmark-review", "materials-benchmark-repair"},
         )
-        self.assertTrue(INLINE_QUOTE)
 
 
 if __name__ == "__main__":

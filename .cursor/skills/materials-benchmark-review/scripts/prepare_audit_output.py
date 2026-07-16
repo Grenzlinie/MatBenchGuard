@@ -26,6 +26,12 @@ REQUIRED_ROLES = {
     "tests/checker.py": "text",
     "tests/test.sh": "text",
 }
+QUALITY_EVIDENCE_ROLES = {
+    "instruction.md": "text",
+    "tests/grading_spec.json": "json",
+    "tests/checker.py": "text",
+    "tests/test.sh": "text",
+}
 PRUNED_DIRS = {
     "paper",
     "solution",
@@ -35,7 +41,7 @@ PRUNED_DIRS = {
     "__MACOSX",
 }
 HASH_NAMES = {
-    *REQUIRED_ROLES,
+    *QUALITY_EVIDENCE_ROLES,
 }
 
 
@@ -87,7 +93,7 @@ def validate_role_boundary(root: Path) -> None:
     solution = root / "solution"
     if solution.is_symlink():
         raise ValueError("solution/ must not be a symbolic link")
-    for role in REQUIRED_ROLES:
+    for role in QUALITY_EVIDENCE_ROLES:
         path = root / role
         if not path.exists():
             continue
@@ -109,7 +115,7 @@ def locate_root(source: Path) -> Path:
     source = source.expanduser().resolve()
     if not source.is_dir():
         raise ValueError("input must be a Harbor 题包 directory")
-    if sum((source / role).exists() for role in REQUIRED_ROLES) >= 3:
+    if sum((source / role).exists() for role in QUALITY_EVIDENCE_ROLES) >= 2:
         validate_role_boundary(source)
         return source
 
@@ -119,7 +125,9 @@ def locate_root(source: Path) -> Path:
             name for name in directories if name not in PRUNED_DIRS
         ]
         candidate = Path(current)
-        score = sum((candidate / role).exists() for role in REQUIRED_ROLES)
+        score = sum(
+            (candidate / role).exists() for role in QUALITY_EVIDENCE_ROLES
+        )
         if score:
             candidates.append((-score, len(candidate.parts), candidate))
     if not candidates:
@@ -139,14 +147,17 @@ def render_template(source: Path, values: dict[str, str]) -> str:
 
 def collect_input_hashes(root: Path) -> dict[str, str]:
     hashes: dict[str, str] = {}
-    for path in iter_public_files(root):
+    candidates = [root / "instruction.md"]
+    tests = root / "tests"
+    if tests.is_dir():
+        candidates.extend(path for path in tests.rglob("*") if path.is_file())
+    for path in candidates:
+        if not path.is_file():
+            continue
+        if path.is_symlink():
+            raise ValueError(f"quality evidence cannot be a symlink: {path}")
         relative = path.relative_to(root).as_posix()
-        if relative in HASH_NAMES or path.suffix.lower() in {
-            ".toml",
-            ".yaml",
-            ".yml",
-        }:
-            hashes[relative] = sha256_file(path)
+        hashes[relative] = sha256_file(path)
     return dict(sorted(hashes.items()))
 
 

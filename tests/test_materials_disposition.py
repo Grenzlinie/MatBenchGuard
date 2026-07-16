@@ -13,8 +13,10 @@ from tests.test_materials_benchmark_review_paper_grounded import (
     RUNNER,
     assessment,
     copy_source_package,
+    no_paper_assessment,
     run_paper_grounded,
 )
+from tests.test_materials_benchmark_review_e1 import write_public_valid_dispersion
 
 
 def run_no_paper(package: Path) -> subprocess.CompletedProcess[str]:
@@ -54,14 +56,214 @@ def clear_external_resources(package: Path) -> None:
     )
 
 
+def install_passing_oracle(package: Path) -> None:
+    oracle_output = package / "solution/oracle-output"
+    write_public_valid_dispersion(oracle_output)
+    (package / "solution/solve.sh").write_text(
+        "#!/bin/sh\n"
+        "mkdir -p \"${OUTPUT_DIR}\"\n"
+        "cp \"$(dirname \"$0\")/oracle-output/dispersion_curves.csv\" "
+        "\"${OUTPUT_DIR}/dispersion_curves.csv\"\n",
+        encoding="utf-8",
+    )
+    (package / "tests/checker.py").write_text(
+        "import csv, json, math\n"
+        "from pathlib import Path\n"
+        "output = Path('/app/outputs/dispersion_curves.csv')\n"
+        "reward = 0.0\n"
+        "try:\n"
+        "    with output.open(newline='', encoding='utf-8') as handle:\n"
+        "        rows = list(csv.DictReader(handle))\n"
+        "    keys = [(r['direction'], r['mode'], r['k']) for r in rows]\n"
+        "    if len(rows) == 180 and len(set(keys)) == 180 and all("
+        "math.isfinite(float(r['frequency'])) for r in rows):\n"
+        "        reward = 1.0\n"
+        "except (OSError, KeyError, TypeError, ValueError):\n"
+        "    pass\n"
+        "logs = Path('/logs/verifier')\n"
+        "logs.mkdir(parents=True, exist_ok=True)\n"
+        "(logs / 'reward.txt').write_text(str(reward), encoding='utf-8')\n"
+        "(logs / 'breakdown.json').write_text("
+        "json.dumps({'scientific_contract': reward}), encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+
+
 class MaterialsDispositionTests(unittest.TestCase):
+    def test_quality_score_uses_only_the_confirmed_five_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "paper-fixture"
+            copy_source_package(package)
+
+            completed = run_no_paper(package)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            report, index = read_bundle(package)
+            self.assertEqual(
+                {
+                    item["dimension"]: item["max_points"]
+                    for item in report["dimension_scores"]
+                },
+                {
+                    "scientific_validity": 35,
+                    "instruction_answerability": 20,
+                    "checker_gold_alignment": 25,
+                    "robustness_discrimination": 15,
+                    "solution_completeness": 5,
+                },
+            )
+            for dimension in report["dimension_scores"]:
+                self.assertIn("points_earned", dimension)
+                self.assertIn("normalized_score", dimension)
+                self.assertIn("deduction_ids", dimension)
+                self.assertIn("finding_ids", dimension)
+                self.assertIn("evidence", dimension)
+            self.assertEqual(
+                {item["code"] for item in report["hard_gates"]},
+                {
+                    "NON_MATERIALS_TASK",
+                    "SCIENTIFIC_TARGET_INVALID",
+                    "CHECKER_CORE_TASK_UNASSESSED",
+                    "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+                },
+            )
+            for gate in report["hard_gates"]:
+                self.assertIn(gate["status"], {"PASS", "FAIL", "NOT_ASSESSABLE"})
+                self.assertIn("evidence", gate)
+                self.assertIn("affected_locations", gate)
+            self.assertEqual(
+                report["summary"]["scoring_version"],
+                "materials-review-scoring/1.0",
+            )
+            self.assertEqual(
+                index["dimension_scores"], report["dimension_scores"]
+            )
+            self.assertEqual(index["hard_gates"], report["hard_gates"])
+            self.assertEqual(
+                index["total_score"], report["summary"]["total_score"]
+            )
+
+    def test_metadata_environment_and_resource_roles_do_not_change_quality(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            baseline = workspace / "baseline"
+            stripped = workspace / "stripped"
+            copy_source_package(baseline)
+            copy_source_package(stripped)
+            for relative in (
+                "task.toml",
+                "manifest.json",
+                "steps.json",
+                "resources.json",
+                "environment/Dockerfile",
+            ):
+                (stripped / relative).unlink()
+
+            baseline_run = run_no_paper(baseline)
+            stripped_run = run_no_paper(stripped)
+
+            self.assertEqual(baseline_run.returncode, 0, msg=baseline_run.stderr)
+            self.assertEqual(stripped_run.returncode, 0, msg=stripped_run.stderr)
+            baseline_report, _ = read_bundle(baseline)
+            stripped_report, _ = read_bundle(stripped)
+            self.assertEqual(
+                stripped_report["summary"]["final_verdict"],
+                baseline_report["summary"]["final_verdict"],
+            )
+            self.assertEqual(
+                stripped_report["summary"]["total_score"],
+                baseline_report["summary"]["total_score"],
+            )
+            self.assertFalse(
+                {
+                    "task.toml",
+                    "manifest.json",
+                    "steps.json",
+                    "resources.json",
+                    "environment/Dockerfile",
+                }
+                & set(stripped_report["scope"]["quality_evidence_files"])
+            )
+
+    def test_missing_solution_oracle_is_repairable_completeness_not_hard_gate(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "paper-fixture"
+            copy_source_package(package)
+
+            completed = run_no_paper(package)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report, index = read_bundle(package)
+            dimensions = {
+                item["dimension"]: item for item in report["dimension_scores"]
+            }
+            self.assertEqual(
+                dimensions["solution_completeness"]["points_earned"], 0
+            )
+            self.assertEqual(
+                dimensions["solution_completeness"]["normalized_score"], 0.0
+            )
+            self.assertIsNone(report["summary"]["total_score"])
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
+            self.assertFalse(report["summary"]["hard_gate_triggered"])
+            self.assertEqual(index["route"], "EVIDENCE_PENDING")
+            self.assertIn(
+                "SOLUTION_ORACLE_MISSING",
+                {item["title"] for item in report["findings"]},
+            )
+
     def test_pass_routes_to_publish_candidate_with_weighted_index(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
             clear_external_resources(package)
+            install_passing_oracle(package)
+            valid_output = Path(temporary) / "known-valid-output"
+            write_public_valid_dispersion(valid_output)
+            assessment_value = assessment()
+            assessment_value["materials_qualification"] = (
+                no_paper_assessment()["materials_qualification"]
+            )
+            assessment_value["dimensions"]["checker_fidelity"]["evidence"][0][
+                "package_quote"
+            ] = "scientific_contract"
+            assessment_value["dimensions"]["gold_provenance"]["evidence"][0][
+                "package_quote"
+            ] = "reward = 1.0"
+            assessment_path = Path(temporary) / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(assessment_value, ensure_ascii=False),
+                encoding="utf-8",
+            )
 
-            completed = run_no_paper(package)
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(RUNNER),
+                    str(package),
+                    "--paper-mode",
+                    "paper_grounded",
+                    "--execution-level",
+                    "E1",
+                    "--agent-assessment",
+                    str(assessment_path),
+                    "--known-valid-output",
+                    str(valid_output),
+                ],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
 
             self.assertEqual(
                 completed.returncode,
@@ -75,31 +277,30 @@ class MaterialsDispositionTests(unittest.TestCase):
                 for item in report["dimension_scores"]
             }
             self.assertEqual(summary["final_verdict"], "PASS")
-            self.assertGreaterEqual(summary["total_score"], 0.8)
+            self.assertGreaterEqual(summary["total_score"], 80)
             self.assertEqual(summary["disposition"], "PUBLISH_CANDIDATE")
             self.assertFalse(summary["hard_gate_triggered"])
             self.assertEqual(
                 {
-                    "materials_admission",
-                    "core_scientific_contract",
-                    "resource_availability",
-                    "task_answerability",
-                    "checker_validity",
-                    "paper_consistency",
+                    "scientific_validity",
+                    "instruction_answerability",
+                    "checker_gold_alignment",
+                    "robustness_discrimination",
+                    "solution_completeness",
                 },
                 set(dimensions),
             )
             self.assertTrue(
                 all(
-                    item["score"] is None
+                    item["normalized_score"] is None
                     or not item["critical"]
-                    or item["score"] >= 0.5
+                    or item["normalized_score"] >= 0.5
                     for item in dimensions.values()
                 )
             )
             self.assertEqual(index["route"], "PUBLISH_CANDIDATE")
             self.assertTrue(index["publishable"])
-            self.assertEqual(index["paper_mode"], "no_paper")
+            self.assertEqual(index["paper_mode"], "paper_grounded")
             self.assertEqual(index["execution_level"], "E1")
             self.assertIn("taxonomy_labels", index)
             self.assertIn("finding_summary", index)
@@ -128,14 +329,55 @@ class MaterialsDispositionTests(unittest.TestCase):
             )
             report, index = read_bundle(package)
             self.assertEqual(
-                report["summary"]["final_verdict"], "CONDITIONAL"
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
             )
-            self.assertEqual(report["summary"]["disposition"], "REPAIR_QUEUE")
+            self.assertEqual(
+                report["summary"]["disposition"], "EVIDENCE_PENDING"
+            )
             self.assertFalse(index["publishable"])
             self.assertEqual(
                 index["taxonomy_labels"]["computation_task"],
                 ["声子与晶格动力学"],
             )
+
+    def test_repairable_paper_fidelity_failure_is_not_a_hard_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / "paper-fixture"
+            copy_source_package(package)
+            clear_external_resources(package)
+            paper_assessment = assessment()
+            for dimension in paper_assessment["dimensions"].values():
+                dimension["status"] = "PASS"
+            paper_assessment["dimensions"]["checker_fidelity"]["status"] = "FAIL"
+            paper_assessment["dimensions"]["checker_fidelity"]["rationale"] = (
+                "The checker has a repairable paper-fidelity defect."
+            )
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(paper_assessment, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            completed = run_paper_grounded(package, assessment_path)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            report, index = read_bundle(package)
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
+            self.assertFalse(report["summary"]["hard_gate_triggered"])
+            self.assertEqual(index["route"], "EVIDENCE_PENDING")
+            finding = next(
+                item
+                for item in report["findings"]
+                if item["title"] == "PAPER_CHECKER_FIDELITY_FAIL"
+            )
+            self.assertEqual(finding["category"], "PAPER_FIDELITY")
 
     def test_reject_routes_non_destructively_to_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -155,6 +397,11 @@ logs.mkdir(parents=True, exist_ok=True)
                 encoding="utf-8",
             )
             instruction = package / "instruction.md"
+            instruction.write_text(
+                "Sort a list of generic integers and write the result to "
+                "/app/outputs/result.json.",
+                encoding="utf-8",
+            )
             before = hashlib.sha256(instruction.read_bytes()).hexdigest()
 
             completed = run_no_paper(package)
@@ -167,6 +414,7 @@ logs.mkdir(parents=True, exist_ok=True)
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertIsNone(report["summary"]["total_score"])
             self.assertEqual(report["summary"]["disposition"], "QUARANTINE")
             self.assertEqual(index["route"], "QUARANTINE")
             self.assertFalse(index["publishable"])
@@ -199,6 +447,35 @@ logs.mkdir(parents=True, exist_ok=True)
             self.assertEqual(index["route"], "EVIDENCE_PENDING")
             self.assertFalse(index["publishable"])
             self.assertTrue(index["evidence_gaps"])
+
+    def test_findings_publish_exact_locations_and_actionable_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "paper-fixture"
+            copy_source_package(package)
+            (package / "tests/checker.py").unlink()
+
+            completed = run_no_paper(package)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report, _ = read_bundle(package)
+            finding = next(
+                item
+                for item in report["findings"]
+                if item["title"] == "MISSING_FILE"
+            )
+            self.assertEqual(
+                finding["affected_locations"],
+                [
+                    {
+                        "file": "tests/checker.py",
+                        "line": None,
+                        "quote": None,
+                    }
+                ],
+            )
+            self.assertNotIn("may be invalid", finding["impact"])
+            self.assertNotIn("Resolve the observed", finding["minimal_repair"])
+            self.assertNotIn("Re-run the failing", finding["retest"])
 
 
 if __name__ == "__main__":

@@ -8,6 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.test_materials_benchmark_review_e1 import (
+    write_public_valid_dispersion,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNNER = (
@@ -81,6 +85,34 @@ if not _paper_test_valid:
 def assessment() -> dict[str, object]:
     return {
         "schema_version": "0.1",
+        "paper_triggers": ["EXPLICIT_REPRODUCTION_CLAIM"],
+        "paper_trigger_adjudication": [
+            {
+                "trigger": trigger,
+                "status": (
+                    "TRIGGERED"
+                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
+                    else "NOT_TRIGGERED"
+                ),
+                "rationale": (
+                    "The instruction explicitly claims a scoped reproduction."
+                    if trigger == "EXPLICIT_REPRODUCTION_CLAIM"
+                    else "The public package evidence does not trigger this condition."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": "This computation reproduces a key prediction",
+                    }
+                ],
+            }
+            for trigger in (
+                "SCIENTIFIC_CONFLICT",
+                "NECESSARY_INFORMATION_MISSING",
+                "GOLD_PROVENANCE_UNCERTAIN",
+                "EXPLICIT_REPRODUCTION_CLAIM",
+            )
+        ],
         "reproduction_type": "METHOD_REIMPLEMENTATION",
         "dimensions": {
             "instruction_fidelity": {
@@ -111,8 +143,8 @@ def assessment() -> dict[str, object]:
                 "evidence": [
                     {
                         "paper_quote": "If one confines oneself to nearest neighbors only, the three force constants may be determined from the experimental values of the three elastic constants.",
-                        "package_file": "steps.json",
-                        "package_quote": "nearest‑neighbor interactions (α=β=0)",
+                        "package_file": "instruction.md",
+                        "package_quote": "only nearest-neighbour interactions (α=β=0)",
                     }
                 ],
             },
@@ -182,6 +214,107 @@ def assessment() -> dict[str, object]:
     }
 
 
+def no_paper_assessment() -> dict[str, object]:
+    value = assessment()
+    return {
+        "schema_version": value["schema_version"],
+        "taxonomy": value["taxonomy"],
+        "taxonomy_evidence": value["taxonomy_evidence"],
+        "materials_qualification": {
+            "classification": "MAT_CORE",
+            "rationale": (
+                "The public task fixes a copper material, numerical inputs, "
+                "lattice-dynamics operation, and phonon-dispersion endpoint."
+            ),
+            "evidence": [
+                {
+                    "axis": "object",
+                    "package_file": "instruction.md",
+                    "package_quote": "face-centred cubic copper (Cu)",
+                },
+                {
+                    "axis": "data",
+                    "package_file": "instruction.md",
+                    "package_quote": "c11 = 1.68×10¹² dynes/cm²",
+                },
+                {
+                    "axis": "operation",
+                    "package_file": "instruction.md",
+                    "package_quote": "evaluate the corresponding analytical formula",
+                },
+                {
+                    "axis": "endpoint",
+                    "package_file": "instruction.md",
+                    "package_quote": "dispersion_curves.csv",
+                },
+                {
+                    "axis": "domain_dependence",
+                    "package_file": "instruction.md",
+                    "package_quote": "phonon spectrum",
+                },
+            ],
+        },
+        "paper_trigger_adjudication": [
+            {
+                "trigger": "SCIENTIFIC_CONFLICT",
+                "status": "NOT_TRIGGERED",
+                "rationale": (
+                    "The instruction and checker both define the same "
+                    "dispersion-curve endpoint."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": "independently recomputes the expected frequencies",
+                    }
+                ],
+            },
+            {
+                "trigger": "NECESSARY_INFORMATION_MISSING",
+                "status": "NOT_TRIGGERED",
+                "rationale": (
+                    "The instruction supplies formulas, constants, units, "
+                    "sampling, and the output schema."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": "The required inputs are",
+                    }
+                ],
+            },
+            {
+                "trigger": "GOLD_PROVENANCE_UNCERTAIN",
+                "status": "NOT_TRIGGERED",
+                "rationale": (
+                    "The public contract says the checker independently "
+                    "recomputes the target from disclosed formulas and inputs."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": "metric_recompute",
+                    }
+                ],
+            },
+            {
+                "trigger": "EXPLICIT_REPRODUCTION_CLAIM",
+                "status": "TRIGGERED",
+                "rationale": (
+                    "The instruction explicitly calls the task a scoped "
+                    "reproduction of a lattice-dynamical prediction."
+                ),
+                "evidence": [
+                    {
+                        "package_file": "instruction.md",
+                        "package_quote": "This computation reproduces a key prediction",
+                    }
+                ],
+            },
+        ],
+    }
+
+
 def run_paper_grounded(
     package: Path, assessment_path: Path
 ) -> subprocess.CompletedProcess[str]:
@@ -229,6 +362,277 @@ def run_no_paper_with_taxonomy(
 
 
 class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
+    def test_missing_public_fixture_deducts_noncritical_robustness(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            shutil.rmtree(package / "solution")
+            write_public_valid_dispersion(package / "solution")
+            (package / "solution/solve.sh").write_text(
+                "#!/bin/sh\n"
+                'mkdir -p "$OUTPUT_DIR"\n'
+                'cp "$(dirname "$0")/dispersion_curves.csv" '
+                '"$OUTPUT_DIR/dispersion_curves.csv"\n',
+                encoding="utf-8",
+            )
+            (package / "solution/solve.sh").chmod(0o755)
+            (package / "tests/checker.py").write_text(
+                """
+import csv
+import json
+import math
+from pathlib import Path
+
+output = Path("/app/outputs/dispersion_curves.csv")
+reward = 0.0
+if output.is_file():
+    try:
+        with output.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+        keys = [(row["direction"], row["mode"], row["k"]) for row in rows]
+        if (
+            reader.fieldnames == ["direction", "mode", "k", "frequency"]
+            and len(rows) == 180
+            and len(set(keys)) == len(keys)
+            and all(math.isfinite(float(row["frequency"])) for row in rows)
+        ):
+            reward = 1.0
+    except (KeyError, TypeError, ValueError):
+        reward = 0.0
+logs = Path("/logs/verifier")
+logs.mkdir(parents=True, exist_ok=True)
+(logs / "reward.txt").write_text(str(reward), encoding="utf-8")
+(logs / "breakdown.json").write_text(
+    json.dumps({"fixture_integrity": reward}),
+    encoding="utf-8",
+)
+""",
+                encoding="utf-8",
+            )
+            value = assessment()
+            public_assessment = no_paper_assessment()
+            value["materials_qualification"] = public_assessment[
+                "materials_qualification"
+            ]
+            value["paper_trigger_adjudication"] = public_assessment[
+                "paper_trigger_adjudication"
+            ]
+            for dimension in value["dimensions"].values():
+                dimension["status"] = "PASS"
+            value["dimensions"]["gold_provenance"]["evidence"][0][
+                "package_quote"
+            ] = "len(rows) == 180"
+            value["dimensions"]["checker_fidelity"]["evidence"][0][
+                "package_quote"
+            ] = 'reader.fieldnames == ["direction", "mode", "k", "frequency"]'
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(value, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            completed = run_paper_grounded(package, assessment_path)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (
+                    package / "benchmark_audit/audit_report.json"
+                ).read_text(encoding="utf-8")
+            )
+            dimensions = {
+                item["dimension"]: item
+                for item in report["dimension_scores"]
+            }
+            self.assertEqual(
+                dimensions["robustness_discrimination"]["points_earned"],
+                12,
+            )
+            self.assertEqual(
+                dimensions["robustness_discrimination"]["status"],
+                "PASS",
+            )
+            self.assertEqual(
+                {
+                    name: dimension["points_earned"]
+                    for name, dimension in dimensions.items()
+                },
+                {
+                    "scientific_validity": 35,
+                    "instruction_answerability": 20,
+                    "checker_gold_alignment": 25,
+                    "robustness_discrimination": 12,
+                    "solution_completeness": 5,
+                },
+                msg=json.dumps(report["findings"], ensure_ascii=False),
+            )
+            self.assertEqual(report["summary"]["total_score"], 97)
+            self.assertEqual(report["summary"]["final_verdict"], "PASS")
+            self.assertNotIn(
+                "independent_known_valid_output",
+                report["evidence_contract"]["gaps"],
+            )
+            self.assertIn(
+                "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+                {finding["title"] for finding in report["findings"]},
+            )
+
+    def test_no_paper_report_records_trigger_adjudication_and_blocks_pass(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(no_paper_assessment(), ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            completed = run_no_paper_with_taxonomy(package, assessment_path)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                {
+                    item["trigger"]
+                    for item in report["paper_trigger_adjudication"]
+                },
+                {
+                    "SCIENTIFIC_CONFLICT",
+                    "NECESSARY_INFORMATION_MISSING",
+                    "GOLD_PROVENANCE_UNCERTAIN",
+                    "EXPLICIT_REPRODUCTION_CLAIM",
+                },
+            )
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
+            self.assertIn(
+                "triggered_paper_review",
+                report["evidence_contract"]["gaps"],
+            )
+            for dimension in report["dimension_scores"]:
+                self.assertTrue(
+                    dimension["evidence"],
+                    msg=dimension["dimension"],
+                )
+
+    def test_no_paper_assessment_requires_per_trigger_adjudication(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            value = assessment()
+            taxonomy_only = {
+                "schema_version": value["schema_version"],
+                "taxonomy": value["taxonomy"],
+                "taxonomy_evidence": value["taxonomy_evidence"],
+            }
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(taxonomy_only, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            completed = run_no_paper_with_taxonomy(package, assessment_path)
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "paper_trigger_adjudication must cover exactly",
+                completed.stderr,
+            )
+
+    def test_paper_review_requires_a_confirmed_trigger_and_defaults_to_method(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            value = assessment()
+            del value["reproduction_type"]
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(value, ensure_ascii=False), encoding="utf-8"
+            )
+
+            completed = run_paper_grounded(package, assessment_path)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                report["paper_consistency"]["reproduction_type"],
+                "METHOD_REIMPLEMENTATION",
+            )
+            self.assertEqual(
+                report["paper_consistency"]["triggers"],
+                ["EXPLICIT_REPRODUCTION_CLAIM"],
+            )
+
+    def test_paper_grounded_report_preserves_trigger_adjudication(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package = workspace / SOURCE_PACKAGE.name
+            copy_source_package(package)
+            value = assessment()
+            no_paper_value = no_paper_assessment()
+            value["materials_qualification"] = no_paper_value[
+                "materials_qualification"
+            ]
+            value["paper_trigger_adjudication"] = no_paper_value[
+                "paper_trigger_adjudication"
+            ]
+            assessment_path = workspace / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(value, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            completed = run_paper_grounded(package, assessment_path)
+
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            report = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            adjudication = {
+                item["trigger"]: item["status"]
+                for item in report["paper_trigger_adjudication"]
+            }
+            self.assertEqual(
+                adjudication,
+                {
+                    "SCIENTIFIC_CONFLICT": "NOT_TRIGGERED",
+                    "NECESSARY_INFORMATION_MISSING": "NOT_TRIGGERED",
+                    "GOLD_PROVENANCE_UNCERTAIN": "NOT_TRIGGERED",
+                    "EXPLICIT_REPRODUCTION_CLAIM": "TRIGGERED",
+                },
+            )
+            self.assertNotIn(
+                "triggered_paper_review",
+                report["evidence_contract"]["gaps"],
+            )
+
     def test_paper_grounded_review_publishes_fidelity_and_taxonomy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
@@ -284,7 +688,7 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
                 "https://dptechnology.feishu.cn/docx/RclxdULMcoH4cUxALk4cd8EgnDe",
             )
             self.assertEqual(
-                report["summary"]["final_verdict"], "CONDITIONAL"
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
             )
             self.assertNotIn(
                 "no-paper",
@@ -345,7 +749,9 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
                     package / "benchmark_audit/audit_report.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertEqual(
+                report["summary"]["final_verdict"], "NOT_ASSESSABLE"
+            )
             self.assertEqual(
                 report["paper_consistency"]["reproduction_type"],
                 "METHOD_REIMPLEMENTATION",
@@ -361,11 +767,7 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
             copy_source_package(package)
             original_manifest = (package / "manifest.json").read_bytes()
             value = assessment()
-            taxonomy_only = {
-                "schema_version": value["schema_version"],
-                "taxonomy": value["taxonomy"],
-                "taxonomy_evidence": value["taxonomy_evidence"],
-            }
+            taxonomy_only = no_paper_assessment()
             assessment_path = workspace / "taxonomy-assessment.json"
             assessment_path.write_text(
                 json.dumps(taxonomy_only, ensure_ascii=False),
@@ -631,12 +1033,21 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
             )
             self.assertFalse((package / "benchmark_audit").exists())
 
-    def test_failed_paper_dimension_triggers_hard_gate(self) -> None:
+    def test_failed_paper_dimension_is_scored_without_inventing_hard_gate(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
             value = assessment()
+            public_assessment = no_paper_assessment()
+            value["materials_qualification"] = public_assessment[
+                "materials_qualification"
+            ]
+            value["paper_trigger_adjudication"] = public_assessment[
+                "paper_trigger_adjudication"
+            ]
             value["dimensions"]["gold_provenance"]["status"] = "FAIL"
             value["dimensions"]["gold_provenance"]["rationale"] = (
                 "The checker target contradicts the paper evidence."
@@ -660,24 +1071,86 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(report["paper_consistency"]["status"], "FAIL")
-            self.assertTrue(report["summary"]["hard_gate_triggered"])
-            self.assertEqual(report["summary"]["final_verdict"], "REJECT")
+            self.assertFalse(report["summary"]["hard_gate_triggered"])
+            self.assertEqual(
+                report["summary"]["final_verdict"], "CONDITIONAL"
+            )
+            self.assertIsInstance(
+                report["summary"]["total_score"], (int, float)
+            )
+            checker_alignment = next(
+                item
+                for item in report["dimension_scores"]
+                if item["dimension"] == "checker_gold_alignment"
+            )
+            self.assertEqual(checker_alignment["points_earned"], 15)
+            self.assertEqual(
+                [
+                    deduction["points"]
+                    for deduction in checker_alignment["deductions"]
+                ],
+                [10],
+            )
             self.assertIn(
                 "PAPER_GOLD_PROVENANCE_FAIL",
                 {finding["title"] for finding in report["findings"]},
             )
-            gates = {
-                item["gate_id"]: item["status"]
-                for item in report["gate_results"]
-            }
-            self.assertEqual(gates["PAPER_CONSISTENCY"], "FAIL")
+            self.assertTrue(
+                all(
+                    item["code"] != "PAPER_GOLD_PROVENANCE_FAIL"
+                    for item in report["hard_gates"]
+                )
+            )
 
-    def test_fatal_no_paper_gate_skips_paper_grounded_assessment(self) -> None:
+    def test_reproduction_classification_never_changes_score(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            method_package = workspace / "method"
+            exact_package = workspace / "exact"
+            copy_source_package(method_package)
+            copy_source_package(exact_package)
+            method_value = assessment()
+            exact_value = assessment()
+            exact_value["reproduction_type"] = "EXACT_REPRODUCTION"
+            method_path = workspace / "method-assessment.json"
+            exact_path = workspace / "exact-assessment.json"
+            method_path.write_text(
+                json.dumps(method_value, ensure_ascii=False), encoding="utf-8"
+            )
+            exact_path.write_text(
+                json.dumps(exact_value, ensure_ascii=False), encoding="utf-8"
+            )
+
+            method_run = run_paper_grounded(method_package, method_path)
+            exact_run = run_paper_grounded(exact_package, exact_path)
+
+            self.assertEqual(method_run.returncode, 0, msg=method_run.stderr)
+            self.assertEqual(exact_run.returncode, 0, msg=exact_run.stderr)
+            method_report = json.loads(
+                (
+                    method_package / "benchmark_audit/audit_report.json"
+                ).read_text(encoding="utf-8")
+            )
+            exact_report = json.loads(
+                (
+                    exact_package / "benchmark_audit/audit_report.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                method_report["summary"]["total_score"],
+                exact_report["summary"]["total_score"],
+            )
+            self.assertEqual(
+                method_report["summary"]["final_verdict"],
+                exact_report["summary"]["final_verdict"],
+            )
+
+    def test_unrecoverable_task_definition_skips_paper_assessment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package = workspace / SOURCE_PACKAGE.name
             copy_source_package(package)
-            (package / "tests/checker.py").unlink()
+            (package / "instruction.md").unlink()
 
             completed = run_paper_grounded(
                 package, workspace / "missing-assessment.json"
@@ -702,7 +1175,7 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
                 report["paper_consistency"]["reason"].lower(),
             )
             self.assertIn(
-                "MISSING_FILE",
+                "UNRECOVERABLE_TASK_DEFINITION",
                 {finding["title"] for finding in report["findings"]},
             )
 
@@ -743,7 +1216,7 @@ class MaterialsBenchmarkPaperGroundedTests(unittest.TestCase):
                 for item in report["gate_results"]
             }
             self.assertEqual(
-                gates["PAPER_CONSISTENCY"], "WARNING"
+                gates["SCIENTIFIC_VALIDITY"], "NOT_ASSESSABLE"
             )
 
     def test_not_assessable_dimension_rejects_conflicting_evidence(self) -> None:

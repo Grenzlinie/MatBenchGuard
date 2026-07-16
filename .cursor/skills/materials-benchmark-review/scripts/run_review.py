@@ -15,7 +15,7 @@ from audit_package import static_audit
 from dynamic_checker_probe import dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
-    REQUIRED_ROLES,
+    QUALITY_EVIDENCE_ROLES,
     locate_root,
     prepare_workspace,
     record_paper_input_hashes,
@@ -38,13 +38,34 @@ REPRODUCTION_TYPES = {
     "METHOD_REIMPLEMENTATION",
     "SCIENTIFIC_EXTENSION",
 }
+PAPER_TRIGGERS = {
+    "SCIENTIFIC_CONFLICT",
+    "NECESSARY_INFORMATION_MISSING",
+    "GOLD_PROVENANCE_UNCERTAIN",
+    "EXPLICIT_REPRODUCTION_CLAIM",
+}
+PAPER_TRIGGER_ADJUDICATION_STATUSES = {"TRIGGERED", "NOT_TRIGGERED"}
 TAXONOMY_EVIDENCE_DIMENSIONS = {
     "computation_task",
     "research_domain",
     "material_system.primary",
     "material_system.secondary",
 }
-PACKAGE_EVIDENCE_ROLES = frozenset(REQUIRED_ROLES)
+PACKAGE_EVIDENCE_ROLES = frozenset(QUALITY_EVIDENCE_ROLES)
+MATERIALS_QUALIFICATION_AXES = {
+    "object",
+    "data",
+    "operation",
+    "endpoint",
+    "domain_dependence",
+}
+MATERIALS_QUALIFICATION_CLASSES = {
+    "MAT_CORE",
+    "MAT_METHOD",
+    "MAT_WRAPPER",
+    "NON_MAT",
+    "AMBIGUOUS",
+}
 
 
 def read_json(path: Path) -> Any:
@@ -127,7 +148,13 @@ def validate_package_quote(
         for part in (package_file, package_quote)
     ):
         raise ValueError(f"{context} requires package_file and package_quote")
-    if package_file not in PACKAGE_EVIDENCE_ROLES:
+    normalized_file = Path(package_file)
+    allowed = package_file == "instruction.md" or (
+        package_file.startswith("tests/")
+        and ".." not in normalized_file.parts
+        and normalized_file.is_absolute() is False
+    )
+    if not allowed:
         raise ValueError(
             f"{context} uses unsupported package evidence file: {package_file}"
         )
@@ -244,14 +271,218 @@ def validate_agent_assessment(
         ),
         "taxonomy_source": taxonomy["source"],
     }
+    qualification = assessment.get("materials_qualification")
+    if qualification is not None:
+        if not isinstance(qualification, dict):
+            raise ValueError("materials_qualification must be an object")
+        classification = qualification.get("classification")
+        rationale = qualification.get("rationale")
+        evidence = qualification.get("evidence")
+        if classification not in MATERIALS_QUALIFICATION_CLASSES:
+            raise ValueError(
+                f"invalid materials qualification: {classification!r}"
+            )
+        if not isinstance(rationale, str) or not rationale.strip():
+            raise ValueError("materials_qualification requires a rationale")
+        if not isinstance(evidence, list):
+            raise ValueError("materials_qualification evidence must be a list")
+        normalized_evidence: list[dict[str, str]] = []
+        seen_axes: set[str] = set()
+        for index, item in enumerate(evidence, start=1):
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"materials qualification evidence {index} must be an object"
+                )
+            axis = item.get("axis")
+            if axis not in MATERIALS_QUALIFICATION_AXES:
+                raise ValueError(
+                    f"materials qualification evidence {index} has invalid axis: {axis!r}"
+                )
+            package_file, package_quote = validate_package_quote(
+                root,
+                item.get("package_file"),
+                item.get("package_quote"),
+                f"materials qualification evidence {index}",
+            )
+            normalized_evidence.append(
+                {
+                    "axis": axis,
+                    "package_file": package_file,
+                    "package_quote": package_quote,
+                }
+            )
+            seen_axes.add(axis)
+        required_axes = (
+            MATERIALS_QUALIFICATION_AXES
+            if classification in {"MAT_CORE", "MAT_METHOD"}
+            else {"object", "operation", "endpoint", "domain_dependence"}
+        )
+        missing_axes = sorted(required_axes - seen_axes)
+        if missing_axes:
+            raise ValueError(
+                "materials_qualification is missing evidence for: "
+                + ", ".join(missing_axes)
+            )
+        normalized["materials_qualification"] = {
+            "classification": classification,
+            "rationale": rationale,
+            "evidence": normalized_evidence,
+            "authoritative": True,
+        }
     if paper_mode == "no_paper":
-        if "reproduction_type" in assessment or "dimensions" in assessment:
+        adjudication = assessment.get("paper_trigger_adjudication")
+        if not isinstance(adjudication, list) or {
+            item.get("trigger")
+            for item in adjudication
+            if isinstance(item, dict)
+        } != PAPER_TRIGGERS:
+            raise ValueError(
+                "paper_trigger_adjudication must cover exactly "
+                f"{sorted(PAPER_TRIGGERS)}"
+            )
+        normalized_adjudication: list[dict[str, Any]] = []
+        for index, item in enumerate(adjudication, start=1):
+            if not isinstance(item, dict):
+                raise ValueError(
+                    f"paper trigger adjudication {index} must be an object"
+                )
+            trigger = item.get("trigger")
+            status = item.get("status")
+            rationale = item.get("rationale")
+            evidence = item.get("evidence")
+            if status not in PAPER_TRIGGER_ADJUDICATION_STATUSES:
+                raise ValueError(
+                    f"paper trigger adjudication {trigger} has invalid status"
+                )
+            if not isinstance(rationale, str) or not rationale.strip():
+                raise ValueError(
+                    f"paper trigger adjudication {trigger} requires a rationale"
+                )
+            if not isinstance(evidence, list) or not evidence:
+                raise ValueError(
+                    f"paper trigger adjudication {trigger} requires evidence"
+                )
+            normalized_evidence: list[dict[str, str]] = []
+            for evidence_index, evidence_item in enumerate(evidence, start=1):
+                if not isinstance(evidence_item, dict):
+                    raise ValueError(
+                        f"paper trigger adjudication {trigger} evidence "
+                        f"{evidence_index} must be an object"
+                    )
+                package_file, package_quote = validate_package_quote(
+                    root,
+                    evidence_item.get("package_file"),
+                    evidence_item.get("package_quote"),
+                    f"paper trigger adjudication {trigger} evidence "
+                    f"{evidence_index}",
+                )
+                normalized_evidence.append(
+                    {
+                        "package_file": package_file,
+                        "package_quote": package_quote,
+                    }
+                )
+            normalized_adjudication.append(
+                {
+                    "trigger": trigger,
+                    "status": status,
+                    "rationale": rationale.strip(),
+                    "evidence": normalized_evidence,
+                }
+            )
+        normalized["paper_trigger_adjudication"] = normalized_adjudication
+        if (
+            "paper_triggers" in assessment
+            or "reproduction_type" in assessment
+            or "dimensions" in assessment
+        ):
             raise ValueError(
                 "no_paper assessment must not claim paper fidelity"
             )
         return normalized
 
-    reproduction_type = assessment.get("reproduction_type")
+    triggers = assessment.get("paper_triggers")
+    if (
+        not isinstance(triggers, list)
+        or not triggers
+        or not all(isinstance(item, str) for item in triggers)
+    ):
+        raise ValueError("paper_grounded assessment requires paper_triggers")
+    unknown_triggers = sorted(set(triggers) - PAPER_TRIGGERS)
+    if unknown_triggers:
+        raise ValueError(f"unknown paper triggers: {unknown_triggers}")
+    adjudication = assessment.get("paper_trigger_adjudication")
+    if not isinstance(adjudication, list) or {
+        item.get("trigger")
+        for item in adjudication
+        if isinstance(item, dict)
+    } != PAPER_TRIGGERS:
+        raise ValueError(
+            "paper_trigger_adjudication must cover exactly "
+            f"{sorted(PAPER_TRIGGERS)}"
+        )
+    normalized_adjudication: list[dict[str, Any]] = []
+    for index, item in enumerate(adjudication, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"paper trigger adjudication {index} must be an object"
+            )
+        trigger = item.get("trigger")
+        status = item.get("status")
+        rationale = item.get("rationale")
+        evidence = item.get("evidence")
+        if status not in PAPER_TRIGGER_ADJUDICATION_STATUSES:
+            raise ValueError(
+                f"paper trigger adjudication {trigger} has invalid status"
+            )
+        if not isinstance(rationale, str) or not rationale.strip():
+            raise ValueError(
+                f"paper trigger adjudication {trigger} requires a rationale"
+            )
+        if not isinstance(evidence, list) or not evidence:
+            raise ValueError(
+                f"paper trigger adjudication {trigger} requires evidence"
+            )
+        normalized_evidence: list[dict[str, str]] = []
+        for evidence_index, evidence_item in enumerate(evidence, start=1):
+            if not isinstance(evidence_item, dict):
+                raise ValueError(
+                    f"paper trigger adjudication {trigger} evidence "
+                    f"{evidence_index} must be an object"
+                )
+            package_file, package_quote = validate_package_quote(
+                root,
+                evidence_item.get("package_file"),
+                evidence_item.get("package_quote"),
+                f"paper trigger adjudication {trigger} evidence "
+                f"{evidence_index}",
+            )
+            normalized_evidence.append(
+                {
+                    "package_file": package_file,
+                    "package_quote": package_quote,
+                }
+            )
+        normalized_adjudication.append(
+            {
+                "trigger": trigger,
+                "status": status,
+                "rationale": rationale.strip(),
+                "evidence": normalized_evidence,
+            }
+        )
+    if {
+        item["trigger"]
+        for item in normalized_adjudication
+        if item["status"] == "TRIGGERED"
+    } != set(triggers):
+        raise ValueError(
+            "paper_triggers must equal the TRIGGERED adjudication set"
+        )
+    normalized["paper_trigger_adjudication"] = normalized_adjudication
+    reproduction_type = assessment.get(
+        "reproduction_type", "METHOD_REIMPLEMENTATION"
+    )
     if reproduction_type not in REPRODUCTION_TYPES:
         raise ValueError(f"invalid reproduction_type: {reproduction_type!r}")
     dimensions = assessment.get("dimensions")
@@ -322,6 +553,7 @@ def validate_agent_assessment(
         }
     normalized.update(
         {
+            "paper_triggers": list(dict.fromkeys(triggers)),
             "reproduction_type": reproduction_type,
             "dimensions": normalized_dimensions,
         }
@@ -337,12 +569,33 @@ def checker_skipped_by_static_gate(
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
         "solution_content_inspected": False,
+        "solution_oracle": {
+            "used": False,
+            "status": "NOT_RUN",
+            "positive_mock_available": False,
+            "scientific_evidence": False,
+        },
         "pass_threshold": None,
         "tests": [],
         "findings": [],
         "usable_reward_count": 0,
+        "probe_coverage": {
+            probe_class: {
+                "status": "NOT_ASSESSABLE",
+                "provenance": {
+                    "source_kind": "NONE",
+                    "oracle_used": False,
+                },
+            }
+            for probe_class in (
+                "positive",
+                "negative",
+                "discrimination",
+                "equivalence",
+            )
+        },
         "limitations": [
-            "E1 checker probes were skipped because an E0 FATAL gate failed."
+            "E1 checker probes were skipped because the checker contract was not runnable."
         ],
     }
     output.write_text(
@@ -397,7 +650,11 @@ def run_review(
     static_fatal = any(
         issue["severity"] == "FATAL" for issue in static_result["issues"]
     )
-    if static_fatal:
+    checker_ready = all(
+        static_result["parse_status"].get(role) == "ok"
+        for role in ("tests/checker.py", "tests/grading_spec.json")
+    )
+    if static_fatal or not checker_ready:
         checker_result = checker_skipped_by_static_gate(
             root, temp_dir / "checker_tests.json"
         )
@@ -407,22 +664,12 @@ def run_review(
             temp_dir / "checker_tests.json",
             known_valid_output=known_valid_output,
         )
-    resource_parse_status = static_result["parse_status"].get(
-        "resources.json", "missing"
+    resource_result = probe_resources(
+        root,
+        temp_dir / "resource_checks.json",
+        timeout=resource_timeout,
+        allow_private_network=allow_private_network,
     )
-    if resource_parse_status == "ok":
-        resource_result = probe_resources(
-            root,
-            temp_dir / "resource_checks.json",
-            timeout=resource_timeout,
-            allow_private_network=allow_private_network,
-        )
-    else:
-        resource_result = resources_skipped_by_static_gate(
-            root,
-            temp_dir / "resource_checks.json",
-            resource_parse_status,
-        )
     if execution_level == "E2":
         if e2_smoke_plan is None:
             raise ValueError("E2 requires --e2-smoke-plan")

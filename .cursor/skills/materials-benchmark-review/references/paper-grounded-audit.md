@@ -1,122 +1,91 @@
-# Paper-grounded audit
+# Triggered paper audit
 
-Use this branch only after completing the no-paper checks. It compares the
-public task and privileged tests with the bundled paper without inspecting
-`solution/`.
+Read paper only after at least one confirmed trigger:
 
-## Classify the task
+- `SCIENTIFIC_CONFLICT`;
+- `NECESSARY_INFORMATION_MISSING`;
+- `GOLD_PROVENANCE_UNCERTAIN`;
+- `EXPLICIT_REPRODUCTION_CLAIM`.
 
-Choose exactly one:
+## Reproduction type
 
-- `EXACT_REPRODUCTION` — the task claims to reproduce the paper's result with
-  the same method, inputs, versions, and scientific scope.
-- `METHOD_REIMPLEMENTATION` — the task implements a paper method or a
-  deliberately scoped specialization; equivalent implementations are allowed.
-- `SCIENTIFIC_EXTENSION` — the task applies the paper's method to a new system,
-  question, or analysis. Exact paper values cannot be its sole Gold.
+- `EXACT_REPRODUCTION`: instruction explicitly fixes the paper system,
+  conditions, method, and target result.
+- `METHOD_REIMPLEMENTATION`: the paper method or scientific endpoint is
+  implemented with scientifically equivalent choices. This is the default.
+- `SCIENTIFIC_EXTENSION`: a new system, question, or endpoint is evaluated;
+  paper values cannot be its sole Gold.
 
-## Assess five dimensions
+Equivalent software, versions, and solver-selected cutoff, mesh, convergence,
+seed, or search parameters are allowed unless they change the defined system,
+normalization, endpoint, or expected result; instruction may also explicitly
+fix a choice. Missing detail is a defect only if the scored quantity becomes
+undefined, valid input cannot be constructed, results cannot reasonably be
+compared, or checker secretly relies on an undisclosed choice.
 
-For every dimension, record `PASS`, `WARNING`, `FAIL`, or `NOT_ASSESSABLE` and
-a concise rationale. PASS/WARNING/FAIL require at least one evidence pair;
-NOT_ASSESSABLE uses an empty evidence list and explains what is unavailable.
-Each evidence pair must contain an exact quote from
-`paper/paper.md`, an exact quote from a public or privileged package file, and
-that package file's relative path.
+## Five paper dimensions
 
-The package side may reference only the Harbor roles listed in
-`harbor-contract.md`. It cannot reference the paper itself, generated audit
-artifacts, or `solution/`; otherwise one source could masquerade as both sides
-of the comparison.
+Record `PASS`, `WARNING`, `FAIL`, or `NOT_ASSESSABLE` for:
 
-1. `instruction_fidelity` — scope, requested endpoint, required operation, and
-   claims match the selected reproduction type.
-2. `data_fidelity` — materials, structures, samples, constants, units,
-   conditions, versions, and exclusions have supportable provenance.
-3. `method_fidelity` — equations, method choices, order, parameters, and
-   equivalence rules match the paper or clearly state a justified adaptation.
-4. `gold_provenance` — Gold is experimental, curated, recomputed, transcribed,
-   or digitized as claimed; uncertainty and multiple valid answers are handled.
-5. `checker_fidelity` — the checker enforces the paper-grounded scientific
-   target rather than file shape, public constants, or an unrelated proxy.
+1. `instruction_fidelity`;
+2. `data_fidelity`;
+3. `method_fidelity`;
+4. `gold_provenance`;
+5. `checker_fidelity`.
 
-`FAIL` creates a FATAL paper finding. `WARNING` creates a HIGH finding. Use
-`NOT_ASSESSABLE` rather than inventing a quote or conclusion.
+PASS/WARNING/FAIL require an exact paper quote paired with an exact quote from
+`instruction.md` or `tests/**`. `solution/**` cannot be paper evidence.
+`NOT_ASSESSABLE` requires an empty evidence list and is temporary.
 
-## Apply the pinned taxonomy
+Gold provenance is mode-dependent: EXACT may compare paper values; METHOD may
+use independent computation, physical constraints, or an equivalent reference;
+EXTENSION needs independent scientific support and must not be forced to paper
+numbers.
 
-Read [materials-taxonomy.json](materials-taxonomy.json). Select:
+## Taxonomy
+
+Preserve the pinned taxonomy snapshot and labels:
 
 - one or more equal `computation_task` labels;
 - one or more `research_domain` labels;
-- one `material_system.primary` and optional free-text secondary tags.
+- one `material_system.primary` plus optional evidence-backed secondary tags.
 
-For every selected label, add one or more exact package quotes under
-`taxonomy_evidence`. Evidence uses a dimension name, selected label, Harbor
-role, and exact quote. Secondary material-system labels also require evidence.
-
-Cluster and manifest discipline are hints only. Base labels on the task's
-scientific content and scored operations. The runner rejects category labels
-that are absent from the pinned taxonomy and records its Feishu URL and
-revision in the report.
+Cluster and manifest values are not evidence. Every selected label needs an
+exact quote from instruction or tests.
 
 ## Assessment shape
 
-Write a JSON object outside the Harbor 题包:
+Write JSON outside the package:
 
 ```json
 {
   "schema_version": "0.1",
+  "paper_triggers": ["EXPLICIT_REPRODUCTION_CLAIM"],
   "reproduction_type": "METHOD_REIMPLEMENTATION",
   "dimensions": {
     "instruction_fidelity": {
       "status": "PASS",
-      "rationale": "Why the evidence supports this status.",
+      "rationale": "Evidence-backed rationale.",
       "evidence": [{
-        "paper_quote": "Exact quote from paper/paper.md",
+        "paper_quote": "Exact paper quote",
         "package_file": "instruction.md",
-        "package_quote": "Exact quote from the named package file"
+        "package_quote": "Exact instruction quote"
       }]
     },
-    "data_fidelity": {"status": "PASS", "rationale": "...", "evidence": []},
-    "method_fidelity": {"status": "PASS", "rationale": "...", "evidence": []},
-    "gold_provenance": {"status": "PASS", "rationale": "...", "evidence": []},
-    "checker_fidelity": {"status": "PASS", "rationale": "...", "evidence": []}
+    "data_fidelity": {"status": "PASS", "rationale": "...", "evidence": [{}]},
+    "method_fidelity": {"status": "PASS", "rationale": "...", "evidence": [{}]},
+    "gold_provenance": {"status": "PASS", "rationale": "...", "evidence": [{}]},
+    "checker_fidelity": {"status": "PASS", "rationale": "...", "evidence": [{}]}
   },
   "taxonomy": {
     "computation_task": ["声子与晶格动力学"],
     "research_domain": ["基础材料研究与材料发现"],
     "material_system": {"primary": "金属与合金", "secondary": ["铜"]}
   },
-  "taxonomy_evidence": [{
-    "dimension": "computation_task",
-    "label": "声子与晶格动力学",
-    "package_file": "instruction.md",
-    "package_quote": "Exact quote supporting this label"
-  }, {
-    "dimension": "research_domain",
-    "label": "基础材料研究与材料发现",
-    "package_file": "instruction.md",
-    "package_quote": "Exact quote supporting this label"
-  }, {
-    "dimension": "material_system.primary",
-    "label": "金属与合金",
-    "package_file": "instruction.md",
-    "package_quote": "Exact quote supporting this label"
-  }, {
-    "dimension": "material_system.secondary",
-    "label": "铜",
-    "package_file": "instruction.md",
-    "package_quote": "Exact quote supporting this label"
-  }]
+  "taxonomy_evidence": []
 }
 ```
 
-Replace every placeholder and ensure every dimension has evidence before
-running the review. The runner verifies that quotes occur in the named files,
-that evidence never references `solution/`, and that taxonomy labels belong to
-the pinned revision.
-
-For `no_paper`, submit only `schema_version`, `taxonomy`, and
-`taxonomy_evidence`. The runner rejects reproduction types or paper dimensions
-in that mode and keeps paper consistency `NOT_ASSESSED`.
+Omitting `reproduction_type` defaults to METHOD. The runner rejects unknown
+triggers, unsupported taxonomy labels, non-exact quotes, paper-as-package
+evidence, and solution evidence.
