@@ -262,19 +262,6 @@ def repair_text(
             "pass threshold without exposing or using Oracle values as "
             "scientific evidence."
         )
-    elif code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        repair = (
-            "Declare the process artifacts as non-scored verification evidence "
-            "and make tests/checker.py read and validate the evidence needed to "
-            "prevent output-only or hard-coded-result submissions. Do not add "
-            "the process artifacts as independent rubric components."
-        )
-        retest = (
-            "Run the Review CLI with the process artifacts present, missing, "
-            "and inconsistent; require valid process evidence to be accepted "
-            "and tampered evidence to be rejected without changing the final "
-            "scored-output weights."
-        )
     elif code in {
         "SCORER_MISSING_RETURN",
         "SCORER_RETURN_NOT_TOTAL",
@@ -425,8 +412,6 @@ def scored_dimension_for(finding: dict[str, Any]) -> str | None:
     files = finding["affected_files"]
     if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
         return None
-    if code == "PROCESS_EVIDENCE_NOT_VERIFIED":
-        return "robustness_discrimination"
     if code == "ORACLE_POSITIVE_MOCK_REJECTED":
         return "checker_gold_alignment"
     if code in {
@@ -487,6 +472,8 @@ def dimension_scores(
         unavailable.add("scientific_validity")
     if paper_result["status"] == "NOT_ASSESSABLE":
         unavailable.add("scientific_validity")
+    if "gold_provenance" in contract_gaps:
+        unavailable.add("checker_gold_alignment")
     if any(
         item["category"] == "RESOURCE_USABILITY"
         and isinstance(item.get("evidence"), dict)
@@ -1158,12 +1145,15 @@ def markdown_summary(report: dict[str, Any]) -> str:
         )
         or "No requirement-linked mapping was established."
     )
-    gold = paper["dimensions"].get("gold_provenance")
+    gold = report.get("gold_provenance")
+    if not isinstance(gold, dict):
+        gold = paper["dimensions"].get("gold_provenance")
     gold_assessment = (
-        f"Status: {gold['status']}\nReason: {gold['rationale']}"
+        f"Status: {gold['status']}\nReason: "
+        f"{gold.get('rationale', gold.get('reason'))}"
         if gold is not None
         else "Status: NOT_ASSESSED\n"
-        "Reason: Gold provenance requires paper-grounded review."
+        "Reason: Gold provenance was not assessed."
     )
     scope_mode = (
         f"paper-grounded {configuration['execution_level']}"
@@ -1171,10 +1161,9 @@ def markdown_summary(report: dict[str, Any]) -> str:
         else f"no-paper {configuration['execution_level']}"
     )
     next_step = (
-        "Run task-family-specific probes before production admission."
+        "Use the fixed verdict and route for production disposition."
         if configuration["paper_mode"] == "paper_grounded"
-        else "Run paper-grounded and task-family-specific slices before "
-        "production admission."
+        else "Continue survivors with the source-bound paper-grounded E1."
     )
     oracle_boundary = (
         "The solution Oracle ran only in an isolated positive-mock workspace; "
@@ -1240,7 +1229,8 @@ Reason: This slice checks declared outputs and grading references.
 
 ## 9. Instruction and Task Design
 
-The audit distinguishes process evidence from final scored outputs.
+The audit records process artifacts only in the contract map; they do not
+affect scoring, gates, routes, verdicts, or probes.
 
 Instruction → Agent work → declared output → checker read → checker score:
 {contract_map_lines}
@@ -1479,6 +1469,19 @@ def synthesize_report(
     contract_gaps = []
     if materials_assessment is None:
         contract_gaps.append("authoritative_materials_qualification")
+    static_gold = static_result.get("gold_provenance", {})
+    if (
+        isinstance(static_gold, dict)
+        and static_gold.get("status") != "ASSESSED"
+        and not (
+            agent_assessment is not None
+            and agent_assessment.get("dimensions", {})
+            .get("gold_provenance", {})
+            .get("status")
+            in {"PASS", "WARNING", "FAIL"}
+        )
+    ):
+        contract_gaps.append("gold_provenance")
     paper_trigger_adjudication = (
         agent_assessment.get("paper_trigger_adjudication", [])
         if agent_assessment is not None
@@ -1526,6 +1529,17 @@ def synthesize_report(
         hard_gates,
     )
     disposition = ROUTES[verdict]
+    audit_route = (
+        "PAPER_GROUNDED_E1"
+        if (
+            read_json(temp_dir / "audit_report.json")["configuration"][
+                "paper_mode"
+            ]
+            == "no_paper"
+            and not hard_gate
+        )
+        else disposition
+    )
     report = read_json(temp_dir / "audit_report.json")
     report["summary"] = {
         "materials_class": materials_class,
@@ -1535,6 +1549,7 @@ def synthesize_report(
         "total_score": score,
         "hard_gate_triggered": hard_gate,
         "disposition": disposition,
+        "route": audit_route,
         "core_reason": reason,
     }
     report["materials_qualification"] = {
@@ -1570,15 +1585,14 @@ def synthesize_report(
             "instruction_outputs": [],
             "process_evidence": [],
             "scored_outputs": [],
+            "load_bearing_outputs": [],
+            "core_outputs": [],
             "unclassified_outputs": [],
             "checker_analysis": {},
         },
     )))
     component_coverage = checker_result.get("probe_coverage", {}).get(
         "component_isolation"
-    )
-    process_coverage = checker_result.get("probe_coverage", {}).get(
-        "process_evidence"
     )
     checker_analysis = contract_map.get("checker_analysis", {})
     if isinstance(component_coverage, dict) and isinstance(
@@ -1592,41 +1606,40 @@ def synthesize_report(
                 check["status"] = component_coverage.get("status", "NOT_RUN")
                 check["reason"] = component_coverage.get("reason")
                 check["provenance"] = component_coverage.get("provenance", {})
-    if isinstance(process_coverage, dict) and isinstance(
-        checker_analysis, dict
-    ):
-        for check in checker_analysis.get("dynamic_checks_required", []):
-            if (
-                isinstance(check, dict)
-                and check.get("check") == "process_evidence_verification"
-            ):
-                check["status"] = process_coverage.get("status", "NOT_RUN")
-                check["reason"] = process_coverage.get("reason")
-                check["files"] = process_coverage.get("files", {})
-                check["provenance"] = process_coverage.get("provenance", {})
-        process_statuses = process_coverage.get("files", {})
-        for output in checker_analysis.get("outputs", []):
-            filename = output.get("file")
-            status = process_statuses.get(filename)
-            if status == "DYNAMIC_NOT_ACCESSED":
-                output["checker_reads"] = "DYNAMIC_NOT_VERIFIED"
-                output["checker_read_runtime_proven"] = True
-            elif status == "ACCESSED_VALIDATION_UNKNOWN":
-                output["checker_reads"] = (
-                    "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-                )
-                output["checker_read_runtime_proven"] = True
-        by_output = {
-            output.get("file"): output
-            for output in checker_analysis.get("outputs", [])
-        }
-        for chain in contract_map.get("requirement_chains", []):
-            output = by_output.get(chain.get("core_output"))
-            if output is not None:
-                chain["checker_read"] = output.get(
-                    "checker_reads", chain.get("checker_read")
-                )
     report["contract_map"] = contract_map
+    paper_gold = paper_result.get("dimensions", {}).get("gold_provenance")
+    if isinstance(paper_gold, dict):
+        report["gold_provenance"] = {
+            **paper_gold,
+            "mode": "paper_grounded",
+            "reason": paper_gold.get("rationale"),
+            "outputs": contract_map.get("core_outputs", []),
+            "oracle_used": False,
+            "provenance": {
+                "source_kind": "PAPER_AND_PACKAGE_EVIDENCE",
+                "independent": True,
+                "evidence": paper_gold.get("evidence", []),
+            },
+        }
+    else:
+        report["gold_provenance"] = (
+            static_result.get("gold_provenance")
+            or contract_map.get("gold_provenance")
+            or {
+                "status": "NOT_ASSESSABLE",
+                "mode": "no_paper",
+                "reason": "Gold provenance was not assessed.",
+                "oracle_used": False,
+            }
+        )
+    manifest = read_json(temp_dir / "audit_manifest.json")
+    report["audit_binding"] = {
+        "parent_audit_id": manifest.get("parent_audit_id"),
+        "source_hashes": manifest.get("input_hashes", {}),
+        "implementation_hash": manifest.get(
+            "review_implementation", {}
+        ).get("aggregate_hash"),
+    }
     report["taxonomy_labels"] = (
         agent_assessment["taxonomy"]
         if agent_assessment is not None
@@ -1744,15 +1757,6 @@ def synthesize_report(
             *(
                 ["scientific workflow execution"]
                 if execution_evidence["claim"] != "SMOKE_RUN"
-                else []
-            ),
-            *(
-                ["task-family-specific scientific probes"]
-                if not any(
-                    item["test_type"]
-                    == "metamorphic_equivalent_representation"
-                    for item in checker_result["tests"]
-                )
                 else []
             ),
         ],
@@ -1910,7 +1914,7 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
         "discrimination",
         "equivalence",
         "component_isolation",
-        "process_evidence",
+        "task_family_attacks",
     }
     if not isinstance(coverage, dict) or not required_coverage.issubset(
         coverage
@@ -1988,26 +1992,21 @@ def validate_pass_probe_coverage(coverage: Any) -> None:
         or component_provenance.get("cases_executed") != 0
     ):
         raise ValueError("PASS component-isolation NOT_RUN has invalid provenance")
-    process = coverage["process_evidence"]
-    process_status = process.get("status")
-    process_files = process.get("files")
-    if (
-        process_status
-        not in {"ASSESSED", "NOT_RUN", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
-        or not isinstance(process_files, dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
-    ):
-        raise ValueError("PASS has invalid process-evidence coverage")
-    if process_status == "ASSESSED" and any(
-        status
-        not in {"DYNAMIC_NOT_ACCESSED", "ACCESSED_VALIDATION_UNKNOWN"}
-        for status in process_files.values()
-    ):
-        raise ValueError("PASS has invalid process-evidence file status")
-    if process_status != "ASSESSED" and any(
-        status != "UNKNOWN" for status in process_files.values()
-    ):
-        raise ValueError("PASS unavailable process-evidence overclaims access")
+    task_attacks = coverage["task_family_attacks"]
+    if not isinstance(task_attacks, dict) or not task_attacks:
+        raise ValueError("PASS lacks task-family materials attacks")
+    for attack, entry in task_attacks.items():
+        provenance = entry.get("provenance", {}) if isinstance(entry, dict) else {}
+        if (
+            not isinstance(entry, dict)
+            or entry.get("status")
+            not in {"ASSESSED", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
+            or not isinstance(provenance, dict)
+            or provenance.get("oracle_used") is not False
+        ):
+            raise ValueError(
+                f"PASS has invalid task-family attack coverage: {attack}"
+            )
 
 
 def _provenance_strings(value: Any) -> list[str]:
@@ -2038,10 +2037,13 @@ def validate_contract_probe_consistency(
         "discrimination",
         "equivalence",
         "component_isolation",
-        "process_evidence",
+        "task_family_attacks",
     }
     if not isinstance(coverage, dict) or set(coverage) != required:
-        raise ValueError("checker probe coverage must contain six classes")
+        raise ValueError(
+            "checker probe coverage must contain five core classes and "
+            "task-family attacks"
+        )
     allowed_statuses = {
         "positive": {"ASSESSED", "NOT_ASSESSABLE"},
         "negative": {"ASSESSED", "NOT_ASSESSABLE"},
@@ -2052,15 +2054,14 @@ def validate_contract_probe_consistency(
             "NOT_RUN",
             "NOT_ASSESSABLE",
         },
-        "process_evidence": {
-            "ASSESSED",
-            "NOT_RUN",
-            "NOT_ASSESSABLE",
-            "NOT_APPLICABLE",
-        },
     }
     tests_by_class: dict[str, list[dict[str, Any]]] = {
         name: [] for name in required
+    }
+    tests_by_type = {
+        test.get("test_type"): test
+        for test in checker.get("tests", [])
+        if isinstance(test, dict)
     }
     for test in checker.get("tests", []):
         probe_class = test.get("probe_class")
@@ -2069,6 +2070,47 @@ def validate_contract_probe_consistency(
         tests_by_class[probe_class].append(test)
     for name in required:
         entry = coverage[name]
+        if name == "task_family_attacks":
+            if not isinstance(entry, dict) or not entry:
+                raise ValueError("invalid task-family attack coverage")
+            for attack, attack_entry in entry.items():
+                provenance = (
+                    attack_entry.get("provenance", {})
+                    if isinstance(attack_entry, dict)
+                    else {}
+                )
+                if (
+                    not isinstance(attack_entry, dict)
+                    or attack_entry.get("status")
+                    not in {"ASSESSED", "NOT_ASSESSABLE", "NOT_APPLICABLE"}
+                    or not isinstance(provenance, dict)
+                    or provenance.get("oracle_used") is not False
+                ):
+                    raise ValueError(
+                        f"invalid task-family attack coverage: {attack}"
+                    )
+                cases = provenance.get("cases", [])
+                if (
+                    not isinstance(cases, list)
+                    or attack_entry["status"] == "ASSESSED"
+                    and (
+                        not cases
+                        or any(
+                            case not in tests_by_type
+                            or tests_by_type[case].get("probe_class")
+                            != "task_family_attacks"
+                            or tests_by_type[case].get("observed_status")
+                            != "COMPLETED"
+                            for case in cases
+                        )
+                    )
+                    or attack_entry["status"] == "NOT_APPLICABLE"
+                    and cases
+                ):
+                    raise ValueError(
+                        f"task-family attack evidence mismatch: {attack}"
+                    )
+            continue
         if (
             not isinstance(entry, dict)
             or entry.get("status") not in allowed_statuses[name]
@@ -2113,13 +2155,6 @@ def validate_contract_probe_consistency(
         )
     ):
         raise ValueError("component-isolation provenance is Oracle-bound")
-    process = coverage["process_evidence"]
-    if (
-        not isinstance(process.get("files"), dict)
-        or process.get("instrumentation") != "PYTHON_FILE_ACCESS_TRACE"
-    ):
-        raise ValueError("invalid process-evidence probe schema")
-
     contract_map = report["contract_map"]
     checker_analysis = contract_map["checker_analysis"]
     checks = {
@@ -2128,7 +2163,6 @@ def validate_contract_probe_consistency(
         if isinstance(item, dict)
     }
     component_check = checks.get("component_isolation")
-    process_check = checks.get("process_evidence_verification")
     if (
         not isinstance(component_check, dict)
         or component_check.get("status")
@@ -2139,39 +2173,11 @@ def validate_contract_probe_consistency(
         != coverage["component_isolation"].get("provenance", {})
     ):
         raise ValueError("component-isolation contract/probe mismatch")
-    if (
-        not isinstance(process_check, dict)
-        or process_check.get("status")
-        != coverage["process_evidence"].get("status")
-        or process_check.get("reason")
-        != coverage["process_evidence"].get("reason")
-        or process_check.get("files")
-        != coverage["process_evidence"].get("files", {})
-        or process_check.get("provenance")
-        != coverage["process_evidence"].get("provenance", {})
-    ):
-        raise ValueError("process-evidence contract/probe mismatch")
-
     outputs = {
         item.get("file"): item
         for item in checker_analysis.get("outputs", [])
         if isinstance(item, dict)
     }
-    expected_reads = {
-        "DYNAMIC_NOT_ACCESSED": "DYNAMIC_NOT_VERIFIED",
-        "ACCESSED_VALIDATION_UNKNOWN": (
-            "DYNAMIC_READ_OBSERVED_VALIDATION_UNKNOWN"
-        ),
-    }
-    for filename, status in coverage["process_evidence"].get(
-        "files", {}
-    ).items():
-        if status in expected_reads and (
-            filename not in outputs
-            or outputs[filename].get("checker_reads")
-            != expected_reads[status]
-        ):
-            raise ValueError("process-evidence output/probe mismatch")
     for chain in contract_map.get("requirement_chains", []):
         output = outputs.get(chain.get("core_output"))
         if output is not None and chain.get("checker_read") != output.get(
@@ -2207,6 +2213,17 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         "review_implementation"
     ) != collect_review_implementation_hashes():
         raise ValueError("audit Review implementation hashes are stale")
+    binding = report.get("audit_binding")
+    if (
+        not isinstance(binding, dict)
+        or binding.get("parent_audit_id")
+        != manifest.get("parent_audit_id")
+        or binding.get("source_hashes")
+        != manifest.get("input_hashes", {})
+        or binding.get("implementation_hash")
+        != manifest.get("review_implementation", {}).get("aggregate_hash")
+    ):
+        raise ValueError("audit binding differs from its manifest")
     last_position = -1
     for heading in REQUIRED_HEADINGS:
         position = markdown.find(heading)
@@ -2238,11 +2255,29 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or not isinstance(contract_map.get("instruction_outputs"), list)
         or not isinstance(contract_map.get("process_evidence"), list)
         or not isinstance(contract_map.get("scored_outputs"), list)
+        or not isinstance(contract_map.get("load_bearing_outputs"), list)
+        or not isinstance(contract_map.get("core_outputs"), list)
         or not isinstance(contract_map.get("checker_analysis"), dict)
     ):
         raise ValueError("invalid instruction-to-checker contract map")
     validate_requirement_chains(contract_map, markdown)
     validate_contract_probe_consistency(report, checker)
+    gold = report.get("gold_provenance")
+    if (
+        not isinstance(gold, dict)
+        or gold.get("status")
+        not in {
+            "ASSESSED",
+            "NOT_ASSESSABLE",
+            "PASS",
+            "WARNING",
+            "FAIL",
+        }
+        or gold.get("mode") not in {"no_paper", "paper_grounded"}
+        or gold.get("oracle_used") is not False
+        or not isinstance(gold.get("provenance", {}), dict)
+    ):
+        raise ValueError("invalid Gold provenance")
     if summary.get("scoring_version") != SCORING_VERSION:
         raise ValueError("invalid scoring version")
     dimensions = report.get("dimension_scores")
@@ -2338,6 +2373,16 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     expected_route = ROUTES[summary["final_verdict"]]
     if summary.get("disposition") != expected_route:
         raise ValueError("summary disposition does not match verdict")
+    expected_audit_route = (
+        "PAPER_GROUNDED_E1"
+        if (
+            report["configuration"]["paper_mode"] == "no_paper"
+            and not expected_gate_triggered
+        )
+        else expected_route
+    )
+    if summary.get("route") != expected_audit_route:
+        raise ValueError("summary route does not match audit sequence")
     if disposition.get("route") != expected_route:
         raise ValueError("disposition artifact does not match verdict")
     if index_entry.get("route") != expected_route:

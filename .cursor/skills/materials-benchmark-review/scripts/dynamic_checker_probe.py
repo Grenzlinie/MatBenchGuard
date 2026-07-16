@@ -39,6 +39,44 @@ NEGATIVE_PROBE_CASES = frozenset(
         "sparse_known_valid",
     }
 )
+TASK_FAMILY_CASES = {
+    "materials_constant_or_all_zero": "constant_or_all_zero",
+    "materials_all_positive": "all_positive_or_negative",
+    "materials_all_negative": "all_positive_or_negative",
+    "materials_conflicting_records": "conflicting_or_irrelevant_records",
+    "materials_threshold_boundary": "threshold_boundary",
+    "materials_unit_error": "unit_error",
+    "materials_element_phase_error": "element_or_phase_error",
+    "materials_coordinate_lattice_error": "coordinate_or_lattice_error",
+    "materials_duplicate_structure": "duplicate_structure",
+    "materials_wrong_objective_endpoint": "wrong_objective_or_endpoint",
+    "materials_missing_core_model": "missing_core_model",
+}
+TASK_FAMILY_MODES = {
+    "materials_constant_or_all_zero": "constant_zero",
+    "materials_all_positive": "all_positive",
+    "materials_all_negative": "all_negative",
+    "materials_conflicting_records": "conflict",
+    "materials_threshold_boundary": "threshold",
+    "materials_unit_error": "unit_error",
+    "materials_element_phase_error": "element_phase_error",
+    "materials_coordinate_lattice_error": "coordinate_lattice_error",
+    "materials_duplicate_structure": "duplicate_structure",
+    "materials_wrong_objective_endpoint": "wrong_endpoint",
+    "materials_missing_core_model": "missing_core_model",
+}
+TASK_FAMILY_ATTACKS = (
+    "constant_or_all_zero",
+    "all_positive_or_negative",
+    "conflicting_or_irrelevant_records",
+    "threshold_boundary",
+    "unit_error",
+    "element_or_phase_error",
+    "coordinate_or_lattice_error",
+    "duplicate_structure",
+    "wrong_objective_or_endpoint",
+    "missing_core_model",
+)
 
 
 def configured_timeout(name: str, default: float) -> float:
@@ -79,6 +117,23 @@ def table_value(column: str, mode: str) -> Any:
         return "nan"
     if mode == "random":
         return random.uniform(-1000, 1000)
+    if mode in {"all_positive", "unit_error"}:
+        return 1000.0 if mode == "unit_error" else 1.0
+    if mode == "all_negative":
+        return -1.0
+    if mode in {
+        "constant_zero",
+        "conflict",
+        "threshold",
+        "element_phase_error",
+        "coordinate_lattice_error",
+        "wrong_endpoint",
+    }:
+        if normalized in {"element", "species", "phase", "material"}:
+            return "wrong_phase"
+        if normalized in {"x", "y", "z", "a", "b", "c", "lattice"}:
+            return 999.0
+        return 0.0
     return 0
 
 
@@ -92,6 +147,8 @@ def write_synthetic_outputs(
     for output in outputs:
         filename = basename(output.get("file"))
         if not filename:
+            continue
+        if mode == "missing_core_model":
             continue
         path = output_dir / filename
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -111,6 +168,18 @@ def write_synthetic_outputs(
                     if mode == "nonfinite"
                     else random.uniform(-1000, 1000)
                     if mode == "random"
+                    else table_value(field, mode)
+                    if mode
+                    in {
+                        "constant_zero",
+                        "all_positive",
+                        "all_negative",
+                        "threshold",
+                        "unit_error",
+                        "element_phase_error",
+                        "coordinate_lattice_error",
+                        "wrong_endpoint",
+                    }
                     else (step or {}).get("target_value", 0)
                 )
                 for field in fields
@@ -126,15 +195,43 @@ def write_synthetic_outputs(
             ]
             delimiter = "\t" if output_format == "tsv" else ","
             rows: list[dict[str, Any]] = []
-            if mode in {"random", "minimal", "nonfinite", "duplicate"}:
+            if mode in {
+                "random",
+                "minimal",
+                "nonfinite",
+                "duplicate",
+                "constant_zero",
+                "all_positive",
+                "all_negative",
+                "conflict",
+                "threshold",
+                "unit_error",
+                "element_phase_error",
+                "coordinate_lattice_error",
+                "duplicate_structure",
+                "wrong_endpoint",
+            }:
                 rows = [
                     {
                         column: table_value(column, mode)
                         for column in columns
                     }
                 ]
-                if mode == "duplicate":
+                if mode in {"duplicate", "duplicate_structure"}:
                     rows *= 2
+                elif mode == "conflict" and rows:
+                    conflicting = dict(rows[0])
+                    candidate = next(
+                        (
+                            column
+                            for column in reversed(columns)
+                            if isinstance(conflicting.get(column), (int, float))
+                        ),
+                        None,
+                    )
+                    if candidate is not None:
+                        conflicting[candidate] = 1.0
+                    rows.append(conflicting)
             with path.open("w", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(
                     handle, fieldnames=columns, delimiter=delimiter
@@ -293,86 +390,6 @@ def component_isolation_plan(
     return candidates, None
 
 
-def process_evidence_probe_plan(
-    root: Path,
-    checker_text: str,
-    known_valid_output: Path | None,
-) -> tuple[list[str], str | None]:
-    instruction = (root / "instruction.md").read_text(
-        encoding="utf-8", errors="replace"
-    )
-    process_files = instruction_contract_map(instruction)["process_evidence"]
-    if not process_files:
-        return [], "instruction declares no process-evidence outputs"
-    if known_valid_output is None:
-        return process_files, "no independent source-bound fixture is available"
-    fixture = reject_solution_fixture(root, known_valid_output)
-    missing = [
-        filename
-        for filename in process_files
-        if not (fixture / filename).is_file()
-    ]
-    if missing:
-        return (
-            process_files,
-            "independent fixture lacks process evidence: " + ", ".join(missing),
-        )
-    try:
-        tree = ast.parse(checker_text)
-    except SyntaxError as exc:
-        return process_files, f"checker source cannot be instrumented safely: {exc}"
-    unsafe_modules = {"ctypes", "mmap", "multiprocessing", "subprocess"}
-    imported_modules = {
-        alias.name.split(".", 1)[0]
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Import, ast.ImportFrom))
-        for alias in (
-            node.names
-            if isinstance(node, ast.Import)
-            else [ast.alias(name=str(node.module or "").split(".", 1)[0])]
-        )
-    }
-    unsafe_calls = {
-        "call",
-        "check_call",
-        "check_output",
-        "eval",
-        "exec",
-        "execv",
-        "execve",
-        "fork",
-        "popen",
-        "Popen",
-        "posix_spawn",
-        "posix_spawnp",
-        "run",
-        "spawnl",
-        "spawnv",
-        "system",
-    }
-    called_names = {
-        (
-            node.func.attr
-            if isinstance(node.func, ast.Attribute)
-            else node.func.id
-            if isinstance(node.func, ast.Name)
-            else ""
-        )
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-    }
-    nonstdlib_modules = imported_modules - set(sys.stdlib_module_names)
-    if (
-        imported_modules & unsafe_modules
-        or nonstdlib_modules
-        or called_names & unsafe_calls
-    ):
-        return process_files, (
-            "checker may access outputs outside the in-process read tracer"
-        )
-    return process_files, None
-
-
 def component_isolation_coverage(
     plan: list[dict[str, str]],
     not_run_reason: str | None,
@@ -512,130 +529,113 @@ def probe_assessment_flags(
     }
 
 
-def process_evidence_coverage(
-    process_files: list[str],
-    not_run_reason: str | None,
+def task_family_attack_coverage(
     results: list[dict[str, Any]],
-) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    if not process_files:
-        return (
-            {
-                "status": (
-                    "NOT_APPLICABLE"
-                    if not_run_reason
-                    == "instruction declares no process-evidence outputs"
-                    else "NOT_RUN"
-                ),
-                "reason": not_run_reason,
-                "files": {},
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
+    pass_threshold: float,
+    applicability: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    by_case = {result["case"]: result for result in results}
+    coverage: dict[str, Any] = {}
+    for attack in TASK_FAMILY_ATTACKS:
+        applicability_entry = applicability[attack]
+        if not applicability_entry["applicable"]:
+            coverage[attack] = {
+                "status": "NOT_APPLICABLE",
+                "reason": applicability_entry["reason"],
                 "provenance": {
-                    "source_kind": "NONE",
+                    "source_kind": "INSTRUCTION_CONTRACT_CLASSIFICATION",
                     "oracle_used": False,
+                    "cases": [],
+                    "modes": [],
                 },
-            },
-            [],
-        )
-    if not_run_reason is not None:
-        return (
-            {
-                "status": "NOT_RUN",
-                "reason": not_run_reason,
-                "files": {
-                    filename: "UNKNOWN" for filename in process_files
-                },
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "NONE",
-                    "oracle_used": False,
-                },
-            },
-            [],
-        )
-    result = next(
-        (
-            item
-            for item in results
-            if item["case"] == "process_evidence_read_trace"
-        ),
-        None,
-    )
-    usable = (
-        isinstance(result, dict)
-        and result.get("read_trace_enabled") is True
-        and usable_probe_result(result)
-    )
-    if not usable:
-        return (
-            {
-                "status": "NOT_ASSESSABLE",
-                "reason": (
-                    "instrumented process-evidence checker execution did not "
-                    "complete with usable scorer evidence"
-                ),
-                "files": {
-                    filename: "UNKNOWN" for filename in process_files
-                },
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                    "oracle_used": False,
-                },
-            },
-            [],
-        )
-    outputs_dir = Path(str(result["runtime_outputs_dir"]))
-    accessed = {
-        filename
-        for filename in process_files
-        if any(
-            item["operation"] in {"open", "stat", "access"}
-            and Path(item["path"]) == outputs_dir / filename
-            for item in result["read_trace"]
-        )
-    }
-    not_accessed = sorted(set(process_files) - accessed)
-    file_status = {
-        filename: (
-            "ACCESSED_VALIDATION_UNKNOWN"
-            if filename in accessed
-            else "DYNAMIC_NOT_ACCESSED"
-        )
-        for filename in process_files
-    }
-    findings = (
-        [
-            finding(
-                "MEDIUM",
-                "PROCESS_EVIDENCE_NOT_VERIFIED",
-                "declared process evidence was not accessed during a safe "
-                "instrumented positive checker run: "
-                + ", ".join(not_accessed),
-                "process_evidence_read_trace",
-                {
-                    "unverified_process_evidence": not_accessed,
-                    "file_status": file_status,
-                    "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                    "root_cause": "process_evidence_verification_contract",
-                },
-            )
+            }
+            continue
+        cases = [
+            case
+            for case, declared_attack in TASK_FAMILY_CASES.items()
+            if declared_attack == attack
         ]
-        if not_accessed
-        else []
-    )
-    return (
-        {
-            "status": "ASSESSED",
-            "reason": None,
-            "files": file_status,
-            "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-            "provenance": {
-                "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
-                "oracle_used": False,
-            },
-        },
-        findings,
-    )
+        attack_results = [by_case[case] for case in cases if case in by_case]
+        provenance = {
+            "source_kind": "SCHEMA_SHAPED_SYNTHETIC_ATTACKS",
+            "oracle_used": False,
+            "cases": cases,
+            "modes": [TASK_FAMILY_MODES[case] for case in cases],
+        }
+        if len(attack_results) != len(cases):
+            coverage[attack] = {
+                "status": "NOT_ASSESSABLE",
+                "reason": "task-family attack was not executed",
+                "provenance": provenance,
+            }
+            continue
+        if all(usable_probe_result(result) for result in attack_results):
+            coverage[attack] = {
+                "status": "ASSESSED",
+                "reason": (
+                    "checker returned a usable result for the declared "
+                    "materials attack"
+                ),
+                "provenance": {
+                    **provenance,
+                    "rewards": {
+                        result["case"]: result.get("reward")
+                        for result in attack_results
+                    },
+                    "pass_threshold": pass_threshold,
+                },
+            }
+        else:
+            coverage[attack] = {
+                "status": "NOT_ASSESSABLE",
+                "reason": "checker result was not usable",
+                "provenance": provenance,
+            }
+    return coverage
+
+
+def task_family_applicability(
+    root: Path, specification: dict[str, Any]
+) -> dict[str, dict[str, Any]]:
+    instruction = (root / "instruction.md").read_text(
+        encoding="utf-8", errors="replace"
+    ).lower()
+    contract_text = json.dumps(
+        specification.get("output_contract", {}),
+        ensure_ascii=False,
+    ).lower()
+    context = instruction + "\n" + contract_text
+    specialized = {
+        "element_or_phase_error": (
+            ("element", "species", "phase", "composition"),
+            "the public contract has no element, species, phase, or composition field",
+        ),
+        "coordinate_or_lattice_error": (
+            ("coordinate", "lattice", "geometry", "position", "cif", "poscar"),
+            "the public contract has no coordinate, lattice, or structure field",
+        ),
+        "duplicate_structure": (
+            ("structure", "geometry", "cif", "poscar"),
+            "the public contract does not submit structures",
+        ),
+        "missing_core_model": (
+            ("model", "structure", "trajectory", "prediction field"),
+            "the public contract does not submit a load-bearing model artifact",
+        ),
+    }
+    applicability: dict[str, dict[str, Any]] = {}
+    for attack in TASK_FAMILY_ATTACKS:
+        if attack not in specialized:
+            applicability[attack] = {"applicable": True, "reason": None}
+            continue
+        terms, reason = specialized[attack]
+        applicability[attack] = {
+            "applicable": any(term in context for term in terms),
+            "reason": (
+                None if any(term in context for term in terms) else reason
+            ),
+        }
+    return applicability
 
 
 def retain_one_known_valid_row(
@@ -1001,8 +1001,6 @@ def run_checker_case(
     known_valid_output: Path | None,
     isolated_component: dict[str, str] | None = None,
     fixture_source_kind: str | None = None,
-    additional_outputs: list[str] | None = None,
-    trace_reads: bool = False,
 ) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix=f"materials_checker_{case_name}_") as tmp:
         base = Path(tmp)
@@ -1050,17 +1048,6 @@ def run_checker_case(
                     if filename != retained:
                         (outputs_dir / filename).unlink(missing_ok=True)
                 created = [filename for filename in created if filename == retained]
-            if additional_outputs:
-                fixture = reject_solution_fixture(root, known_valid_output)
-                for filename in additional_outputs:
-                    source = (fixture / filename).resolve()
-                    if source.parent != fixture or not source.is_file():
-                        raise FileNotFoundError(
-                            "process-evidence fixture is missing: " + filename
-                        )
-                    shutil.copy2(source, outputs_dir / filename)
-                    if filename not in created:
-                        created.append(filename)
         elif mode == "malformed":
             created = write_malformed_outputs(outputs_dir, specification)
         elif mode != "missing":
@@ -1076,53 +1063,7 @@ def run_checker_case(
         patched = patched.replace("/logs/verifier", str(logs_dir))
         checker_path = base / "checker_patched.py"
         checker_path.write_text(patched, encoding="utf-8")
-        trace_path = base / "read_trace.json"
         executable_path = checker_path
-        if trace_reads:
-            wrapper_path = base / "checker_trace_wrapper.py"
-            wrapper_path.write_text(
-                "import json, os, runpy, sys\n"
-                "from pathlib import Path\n"
-                "_events = []\n"
-                "def _record(operation, path):\n"
-                "    try:\n"
-                "        _events.append({'operation': operation, "
-                "'path': os.fspath(path)})\n"
-                "    except TypeError:\n"
-                "        pass\n"
-                "def _audit(event, args):\n"
-                "    if event == 'open' and args:\n"
-                "        _record('open', args[0])\n"
-                "sys.addaudithook(_audit)\n"
-                "_original_stat = os.stat\n"
-                "_original_listdir = os.listdir\n"
-                "_original_scandir = os.scandir\n"
-                "_original_access = os.access\n"
-                "def _traced_stat(path, *args, **kwargs):\n"
-                "    _record('stat', path)\n"
-                "    return _original_stat(path, *args, **kwargs)\n"
-                "def _traced_listdir(path='.'):\n"
-                "    _record('listdir', path)\n"
-                "    return _original_listdir(path)\n"
-                "def _traced_scandir(path='.'):\n"
-                "    _record('scandir', path)\n"
-                "    return _original_scandir(path)\n"
-                "def _traced_access(path, *args, **kwargs):\n"
-                "    _record('access', path)\n"
-                "    return _original_access(path, *args, **kwargs)\n"
-                "os.stat = _traced_stat\n"
-                "os.listdir = _traced_listdir\n"
-                "os.scandir = _traced_scandir\n"
-                "os.access = _traced_access\n"
-                "try:\n"
-                f"    runpy.run_path({str(checker_path)!r}, "
-                "run_name='__main__')\n"
-                "finally:\n"
-                f"    Path({str(trace_path)!r}).write_text("
-                "json.dumps(_events), encoding='utf-8')\n",
-                encoding="utf-8",
-            )
-            executable_path = wrapper_path
         process = subprocess.run(
             [sys.executable, str(executable_path)],
             cwd=package_dir,
@@ -1150,20 +1091,6 @@ def run_checker_case(
                 breakdown = breakdown_path.read_text(
                     encoding="utf-8", errors="replace"
                 )
-        read_trace: list[dict[str, str]] = []
-        if trace_path.is_file():
-            try:
-                raw_trace = read_json(trace_path)
-                if isinstance(raw_trace, list):
-                    read_trace = [
-                        item
-                        for item in raw_trace
-                        if isinstance(item, dict)
-                        and isinstance(item.get("operation"), str)
-                        and isinstance(item.get("path"), str)
-                    ]
-            except (OSError, json.JSONDecodeError):
-                read_trace = []
         return {
             "case": case_name,
             "mode": mode,
@@ -1180,8 +1107,6 @@ def run_checker_case(
             ).exists(),
             "isolated_component": isolated_component,
             "fixture_source_kind": fixture_source_kind,
-            "read_trace": read_trace,
-            "read_trace_enabled": trace_reads,
             "runtime_outputs_dir": str(outputs_dir),
         }
 
@@ -1389,8 +1314,10 @@ def evaluate_results(
             continue
         assert isinstance(reward, float)
         if (
-            case in NEGATIVE_PROBE_CASES
-            and negative_class_usable
+            (
+                (case in NEGATIVE_PROBE_CASES and negative_class_usable)
+                or case in TASK_FAMILY_CASES
+            )
             and reward >= pass_threshold
         ):
             findings.append(
@@ -1519,6 +1446,7 @@ def dynamic_checker_probe(
             "pass threshold must be a finite number between zero and one"
         )
     random.seed(17)
+    attack_applicability = task_family_applicability(root, specification)
     oracle_temporary, oracle_output, oracle_evidence = prepare_solution_oracle(
         root, specification
     )
@@ -1538,6 +1466,19 @@ def dynamic_checker_probe(
         ("minimal_gold_shape", "minimal", None, None, None),
         ("duplicate_gold_rows", "duplicate", None, None, None),
         ("nonfinite_values", "nonfinite", None, None, None),
+        *(
+            (
+                case_name,
+                mode,
+                None,
+                None,
+                "SCHEMA_SHAPED_SYNTHETIC_ATTACK",
+            )
+            for case_name, mode in TASK_FAMILY_MODES.items()
+            if attack_applicability[TASK_FAMILY_CASES[case_name]][
+                "applicable"
+            ]
+        ),
     ]
     if oracle_output is not None:
         cases.append(
@@ -1598,9 +1539,6 @@ def dynamic_checker_probe(
     source_isolation_plan, isolation_not_run_reason = component_isolation_plan(
         specification, isolation_source, checker_text
     )
-    process_files, process_not_run_reason = process_evidence_probe_plan(
-        root, checker_text, known_valid_output
-    )
     try:
         results = [
             run_checker_case(
@@ -1621,20 +1559,6 @@ def dynamic_checker_probe(
                 source_kind,
             ) in cases
         ]
-        if process_files and process_not_run_reason is None:
-            results.append(
-                run_checker_case(
-                    root,
-                    checker_text,
-                    specification,
-                    "process_evidence_read_trace",
-                    "known_valid",
-                    known_valid_output,
-                    fixture_source_kind="INDEPENDENT_PUBLIC_FIXTURE",
-                    additional_outputs=process_files,
-                    trace_reads=True,
-                )
-            )
         isolation_plan: list[dict[str, str]] = []
         if source_isolation_plan and component_runtime_bindings_verified(
             source_isolation_plan, results
@@ -1665,12 +1589,11 @@ def dynamic_checker_probe(
         if oracle_temporary is not None:
             oracle_temporary.cleanup()
     findings = evaluate_results(results, pass_threshold)
-    process_coverage, process_findings = process_evidence_coverage(
-        process_files, process_not_run_reason, results
-    )
-    findings.extend(process_findings)
     isolation_coverage = component_isolation_coverage(
         isolation_plan, isolation_not_run_reason, results
+    )
+    task_attacks = task_family_attack_coverage(
+        results, pass_threshold, attack_applicability
     )
     if known_valid_output is None:
         findings.append(
@@ -1729,11 +1652,16 @@ def dynamic_checker_probe(
         "metamorphic_equivalent_representation": (
             "equivalent ordering and serialization preserve the reward"
         ),
-        "process_evidence_read_trace": (
-            "trace whether declared process evidence is accessed without "
-            "claiming that access proves semantic validation"
-        ),
     }
+    expected.update(
+        {
+            case_name: (
+                "task-family materials attack does not receive a passing "
+                "reward without semantic validation"
+            )
+            for case_name in TASK_FAMILY_CASES
+        }
+    )
     expected.update(
         {
             result["case"]: (
@@ -1751,7 +1679,6 @@ def dynamic_checker_probe(
         "quality_gradient_small_error": "discrimination",
         "quality_gradient_large_error": "discrimination",
         "metamorphic_equivalent_representation": "equivalence",
-        "process_evidence_read_trace": "process_evidence",
     }
     results_by_case = {result["case"]: result for result in results}
     assessment_flags = probe_assessment_flags(results)
@@ -1763,6 +1690,8 @@ def dynamic_checker_probe(
         probe_class = (
             "component_isolation"
             if result["case"].startswith("component_isolation__")
+            else "task_family_attacks"
+            if result["case"] in TASK_FAMILY_CASES
             else probe_classes.get(result["case"], "negative")
         )
         tests.append(
@@ -1896,7 +1825,7 @@ def dynamic_checker_probe(
             "component_isolation": {
                 **isolation_coverage,
             },
-            "process_evidence": process_coverage,
+            "task_family_attacks": task_attacks,
         },
         "limitations": [
             "schema-shaped synthetic outputs do not establish scientific correctness",
@@ -1908,16 +1837,6 @@ def dynamic_checker_probe(
                     f"{isolation_coverage['reason']}"
                 ]
                 if isolation_coverage["status"] != "ASSESSED"
-                else []
-            ),
-            *(
-                [
-                    "process-evidence non-verification remains unknown unless "
-                    "the safe in-process read/stat tracer completes: "
-                    f"{process_coverage['reason']}"
-                ]
-                if process_coverage["status"]
-                in {"NOT_RUN", "NOT_ASSESSABLE"}
                 else []
             ),
             "external-service or compiled checker dependencies may require container execution",

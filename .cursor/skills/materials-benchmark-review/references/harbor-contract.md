@@ -38,20 +38,15 @@ runtime-proven effective weights.
 
 The chain covers every parsed workflow requirement. A requirement with no
 recognized output still appears with `unclassified` output role and explicit
-unknown read/score states. Static process-evidence references remain candidates;
-they do not prove either verification or non-verification.
+unknown read/score states. Process artifacts remain contract-map-only: their
+absence from `output_contract`, lack of checker reads, or lack of validation
+cannot affect score, gate, route, or verdict. Do not run an anti-hacking trace
+or emit `PROCESS_EVIDENCE_NOT_VERIFIED`.
 
-Process non-verification is established only by a completed, safe in-process
-open/stat trace using an independent positive fixture that contains the declared
-process files. A traced access leaves semantic validation unknown; unsafe or
-failed instrumentation remains unknown/not-run.
-Listing or scanning the outputs directory is not per-file access and cannot
-establish that a declared process artifact was read or validated.
-
-Process evidence being absent from `output_contract` is not by itself a defect.
-If it is declared as necessary anti-hacking evidence but the checker never
-reads or validates it, report one grouped `PROCESS_EVIDENCE_NOT_VERIFIED`
-finding. Do not turn it into repeated `INSTRUCTION_ONLY_OUTPUT` deductions.
+A complete model, structure, trajectory, prediction field, or other
+load-bearing scientific artifact is a core output even when the instruction
+labels it as process. Ignoring it or checking only file existence is
+`CHECKER_CORE_TASK_UNASSESSED`.
 
 ## Checker runtime
 

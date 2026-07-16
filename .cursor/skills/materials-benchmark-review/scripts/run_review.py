@@ -12,7 +12,7 @@ from typing import Any
 sys.dont_write_bytecode = True
 
 from audit_package import static_audit
-from dynamic_checker_probe import dynamic_checker_probe
+from dynamic_checker_probe import TASK_FAMILY_ATTACKS, dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
@@ -602,14 +602,6 @@ def checker_skipped_by_static_gate(
                         else {}
                     ),
                 },
-                **(
-                    {
-                        "files": {},
-                        "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                    }
-                    if probe_class == "process_evidence"
-                    else {}
-                ),
             }
             for probe_class in (
                 "positive",
@@ -617,12 +609,24 @@ def checker_skipped_by_static_gate(
                 "discrimination",
                 "equivalence",
                 "component_isolation",
-                "process_evidence",
             )
         },
         "limitations": [
             "E1 checker probes were skipped because the checker contract was not runnable."
         ],
+    }
+    result["probe_coverage"]["task_family_attacks"] = {
+        attack: {
+            "status": "NOT_ASSESSABLE",
+            "reason": reason,
+            "provenance": {
+                "source_kind": "NONE",
+                "oracle_used": False,
+                "cases": [],
+                "modes": [],
+            },
+        }
+        for attack in TASK_FAMILY_ATTACKS
     }
     output.write_text(
         json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -668,6 +672,18 @@ def run_review(
     allow_private_network: bool = False,
 ) -> dict[str, Any]:
     root = locate_root(input_path)
+    if paper_mode == "auto":
+        paper_mode = "no_paper"
+        if agent_assessment_path is not None:
+            candidate = read_json(
+                agent_assessment_path.expanduser().resolve()
+            )
+            if (
+                isinstance(candidate, dict)
+                and isinstance(candidate.get("dimensions"), dict)
+                and candidate.get("paper_triggers")
+            ):
+                paper_mode = "paper_grounded"
     context = prepare_workspace(root, paper_mode, execution_level)
     temp_dir = Path(context["audit_temp_dir"])
     static_result = static_audit(
@@ -675,6 +691,14 @@ def run_review(
     )
     static_fatal = any(
         issue["severity"] == "FATAL" for issue in static_result["issues"]
+    )
+    static_hard_gate = any(
+        issue.get("code")
+        in {
+            "UNRECOVERABLE_TASK_DEFINITION",
+            "CHECKER_CORE_TASK_UNASSESSED",
+        }
+        for issue in static_result["issues"]
     )
     checker_ready = all(
         static_result["parse_status"].get(role) == "ok"
@@ -732,7 +756,7 @@ def run_review(
         }
     agent_assessment: dict[str, Any] | None = None
     paper_skip_reason: str | None = None
-    if paper_mode == "paper_grounded" and static_fatal:
+    if paper_mode == "paper_grounded" and static_hard_gate:
         paper_skip_reason = (
             "Paper-grounded review was skipped because the no-paper E1 "
             "stage triggered an unrecoverable Hard gate."
@@ -768,8 +792,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("input", help="Harbor 题包 directory")
     parser.add_argument(
         "--paper-mode",
-        choices=["no_paper", "paper_grounded"],
-        default="no_paper",
+        choices=["auto", "no_paper", "paper_grounded"],
+        default="auto",
     )
     parser.add_argument(
         "--execution-level", choices=["E1", "E2"], default="E1"

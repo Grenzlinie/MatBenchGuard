@@ -70,17 +70,16 @@ workflow requirement:
 `instruction requirement → Agent work → core output → checker read → checker
 score`.
 
-An output named under a `Role: process` step is process evidence, not a final
-scored output. Process evidence can be required for anti-hacking or workflow
-verification while carrying zero rubric weight. Its absence from
-`output_contract` or from a weighted grading step is therefore not
-`INSTRUCTION_ONLY_OUTPUT`.
+An output named under a `Role: process` step is process evidence unless it is
+a complete model, structure, trajectory, prediction field, or other
+load-bearing scientific artifact. Process artifacts are contract-map-only:
+they are never checker targets, weighted components, deductions, gates, or
+dynamic probes. Do not emit `PROCESS_EVIDENCE_NOT_VERIFIED` or run an
+anti-hacking trace.
 
-If process evidence is declared as necessary but the checker does not read or
-validate it, emit one grouped `PROCESS_EVIDENCE_NOT_VERIFIED` finding. Put all
-affected artifacts in its evidence and affected locations; do not deduct once
-per artifact. A process-evidence finding is assigned to robustness/checker
-quality according to whether it affects anti-hacking or scientific alignment.
+An ignored or existence-only load-bearing artifact produces the severe
+`CHECKER_CORE_TASK_UNASSESSED` finding. Its affected artifact is evidence for
+one grouped core-task finding, not a separate deduction per file.
 
 `INSTRUCTION_ONLY_OUTPUT` is reserved for an output that the instruction
 requires as a final/scored result, but that has no structured contract or
@@ -100,8 +99,8 @@ Apply one fail-closed usable-result predicate before every reward-derived
 finding or coverage conclusion: the process must complete, reward must be
 finite, breakdown must be a mapping, and `_errors` must be an empty mapping
 (or absent). Non-empty or malformed `_errors`, including list/string payloads,
-make positive, negative, discrimination, equivalence, process-evidence, and
-component-isolation results unusable. Never publish a proven conclusion for a
+make positive, negative, discrimination, equivalence, component-isolation, and
+task-family attack results unusable. Never publish a proven conclusion for a
 probe class whose coverage is `NOT_ASSESSABLE`. Every component-isolation
 status, including `NOT_ASSESSABLE`, must carry explicitly non-Oracle
 provenance.

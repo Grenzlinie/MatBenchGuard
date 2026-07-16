@@ -23,10 +23,17 @@ Run the real checker in isolation and classify every case:
 - `negative`: malformed, empty, missing, random, sparse, duplicate, non-finite,
   and gaming outputs;
 - `discrimination`: meaningfully worse outputs cannot score better;
-- `equivalence`: scientifically equivalent representations preserve reward.
+- `equivalence`: scientifically equivalent representations preserve reward;
+- `component isolation`: a single source-bound component cannot pass alone;
+- task-family materials attacks with explicit status and provenance.
 
 An Oracle pass proves only that a positive checker path exists. It does not
 prove scientific correctness or Gold provenance.
+
+Process artifacts are recorded only in the contract map. They are never
+checker targets, dynamic probes, deductions, gates, or anti-hacking traces.
+Load-bearing models, structures, trajectories, and prediction fields are core
+outputs; an ignored core output is a severe checker-core finding.
 
 ## Escalate to paper
 

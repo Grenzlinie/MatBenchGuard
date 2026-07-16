@@ -207,6 +207,8 @@ def write_evidence_pass_batch(batch: Path) -> None:
         "instruction_outputs": ["result.json"],
         "process_evidence": [],
         "scored_outputs": ["result.json"],
+        "load_bearing_outputs": ["result.json"],
+        "core_outputs": ["result.json"],
         "checker_analysis": {
             "outputs": [
                 {
@@ -228,17 +230,18 @@ def write_evidence_pass_batch(batch: Path) -> None:
                         "cases_executed": 0,
                     },
                 },
-                {
-                    "check": "process_evidence_verification",
-                    "status": "NOT_APPLICABLE",
-                    "reason": "instruction declares no process-evidence outputs",
-                    "files": {},
-                    "provenance": {
-                        "source_kind": "NONE",
-                        "oracle_used": False,
-                    },
-                },
             ],
+        },
+    }
+    report["gold_provenance"] = {
+        "status": "ASSESSED",
+        "mode": "no_paper",
+        "reason": "Independent public evidence supports the Gold contract.",
+        "outputs": ["result.json"],
+        "oracle_used": False,
+        "provenance": {
+            "source_kind": "INDEPENDENT_PUBLIC_FIXTURE",
+            "independent": True,
         },
     }
     report["paper_trigger_adjudication"] = [
@@ -339,15 +342,29 @@ def write_evidence_pass_batch(batch: Path) -> None:
                     "cases_executed": 0,
                 },
             },
-            "process_evidence": {
-                "status": "NOT_APPLICABLE",
-                "reason": "instruction declares no process-evidence outputs",
-                "files": {},
-                "instrumentation": "PYTHON_FILE_ACCESS_TRACE",
-                "provenance": {
-                    "source_kind": "NONE",
-                    "oracle_used": False,
-                },
+            "task_family_attacks": {
+                attack: {
+                    "status": "NOT_APPLICABLE",
+                    "reason": "attack is not applicable to this fixture",
+                    "provenance": {
+                        "source_kind": "NONE",
+                        "oracle_used": False,
+                        "cases": [],
+                        "modes": [],
+                    },
+                }
+                for attack in (
+                    "constant_or_all_zero",
+                    "all_positive_or_negative",
+                    "conflicting_or_irrelevant_records",
+                    "threshold_boundary",
+                    "unit_error",
+                    "element_or_phase_error",
+                    "coordinate_or_lattice_error",
+                    "duplicate_structure",
+                    "wrong_objective_or_endpoint",
+                    "missing_core_model",
+                )
             },
         },
     }
@@ -552,7 +569,7 @@ class MaterialsFinal100CertificationTests(unittest.TestCase):
             ).with_name("checker_tests.json")
             checker = json.loads(checker_path.read_text(encoding="utf-8"))
             checker["probe_coverage"].pop("component_isolation")
-            checker["probe_coverage"].pop("process_evidence")
+            checker["probe_coverage"].pop("task_family_attacks")
             checker_path.write_text(json.dumps(checker), encoding="utf-8")
             refresh_evidence_bindings(batch)
 

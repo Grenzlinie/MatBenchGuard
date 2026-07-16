@@ -47,7 +47,8 @@ Publish the role-aware contract map:
 
 `Instruction requirement → Agent work → core output → checker read → checker score`
 
-Process evidence is verification-only and has no independent rubric weight.
+Process artifacts are contract-map-only and never score, gate, or trigger
+dynamic probes. Load-bearing scientific artifacts remain core outputs.
 Final scored outputs must distinguish static read/scorer candidates from
 runtime proof, and show declared weight, effective-weight status, return-path
 status, and every required dynamic check that was not run.
@@ -59,7 +60,8 @@ explicit unknown read and score states.
 ## 11. Gold Standard Assessment
 
 Status: NOT_ASSESSED
-Reason: Gold provenance requires paper-grounded review.
+Reason: Gold provenance must be recorded from independent no-paper or
+paper-grounded evidence; Oracle outputs are not provenance.
 
 ## 12. Execution Feasibility
 

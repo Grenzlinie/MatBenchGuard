@@ -52,9 +52,10 @@ the Review scripts that produced scoring/probing/finalization evidence. Hash
 keys are skill-relative and contain no machine-specific paths. Resume rejects
 any changed snapshot, persisted file, or Review implementation.
 
-Fresh v9 certification accepts exactly six probe classes: positive, negative,
-discrimination, equivalence, component isolation, and process evidence. It
-also verifies complete contract maps, component/process provenance, Oracle
+Fresh certification accepts exactly five core probe classes: positive,
+negative, discrimination, equivalence, and component isolation, plus
+task-family materials attacks. It also verifies complete contract maps,
+component provenance, Gold provenance, Oracle
 lifecycle, and current Review implementation hashes. Four-class and stale-tool
 reports remain historical evidence and cannot become authoritative without a
 fresh audit in a new output directory.

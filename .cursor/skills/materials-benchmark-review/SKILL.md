@@ -51,18 +51,13 @@ The mapping has three output roles:
 - `unclassified` — a declaration that needs human adjudication before scoring.
 
 An instruction may legitimately list process evidence separately from final
-submission files. A process artifact missing from the scoring contract is not
-`INSTRUCTION_ONLY_OUTPUT` and must not reduce instruction answerability merely
-because it has no score weight. If the instruction declares it as anti-hacking
-evidence and the checker never reads or validates it, emit one grouped
-`PROCESS_EVIDENCE_NOT_VERIFIED` finding, with all affected files as locations.
-Static loader or filename evidence is only a read candidate: preserve
-`UNKNOWN`/`CANDIDATE` unless a dynamic probe establishes non-verification.
-The generic dynamic seam may emit `PROCESS_EVIDENCE_NOT_VERIFIED` only when an
-independent positive fixture contains the process files and a safe in-process
-Python open/stat trace completes without accessing them. Access proves only
-that the file was touched, not that its semantics were validated. Unsafe,
-external, missing-fixture, or failed tracing remains `UNKNOWN`/`NOT_RUN`.
+submission files. Process artifacts remain contract-map-only: they are never
+checker targets, weighted components, deductions, gates, or dynamic probes.
+They must not produce `PROCESS_EVIDENCE_NOT_VERIFIED` or any anti-hacking trace.
+Complete models, structures, trajectories, prediction fields, and other
+load-bearing scientific artifacts are core outputs even when an instruction
+labels them as process; an ignored or existence-only core output is a severe
+`CHECKER_CORE_TASK_UNASSESSED` finding.
 
 For every `scored_output`, record whether the checker:
 
@@ -80,13 +75,12 @@ and can never imply that all scoring items are runtime-bound.
 Every parsed workflow requirement receives a chain row even when it declares no
 recognized output; use an unclassified output and unknown read/score states.
 
-## Checker anti-hacking audit
+## Checker and Gold audit
 
 The checker audit must combine static contract mapping with isolated dynamic
 probes. Inspect for:
 
 - core outputs that are never read;
-- intermediate evidence that is declared but never verified;
 - file-existence or schema-only checks that ignore the scientific result;
 - small hard-coded targets that bypass prediction/model outputs;
 - ignored model files, predictions, or load-bearing logs;
@@ -122,6 +116,11 @@ additional deductions.
 
 ## Trigger paper review
 
+No-paper E1 is a fail-fast stage. A package that reaches a confirmed Hard Gate
+stops without reading paper. Other materials packages normally route to a
+paper-grounded E1 whose report binds the prior audit ID, source hashes, and
+Review implementation hash. E1 never claims that the scientific workflow ran.
+
 Read `paper/` only for these four triggers:
 
 1. `SCIENTIFIC_CONFLICT` — instruction, tests, and Oracle behavior conflict;
@@ -145,7 +144,7 @@ Write any taxonomy or triggered paper assessment outside the package, then run:
 
 ```bash
 python scripts/run_review.py <Harbor题包目录> \
-  --paper-mode no_paper \
+  --paper-mode auto \
   --execution-level E1 \
   --agent-assessment <optional-taxonomy-assessment.json>
 ```
@@ -176,7 +175,10 @@ Every E1 run records coverage for these probe classes:
 - equivalence — scientifically equivalent ordering or serialization must not
   change reward;
 - component isolation — independently sourced one-component submissions;
-- process evidence — safe dynamic access tracing when supportable.
+- task-family materials attacks — constant/all-zero, sign, conflict,
+  threshold, unit, element/phase, coordinate/lattice, duplicate-structure,
+  wrong-objective/endpoint, and missing-core-model cases, each with explicit
+  status and provenance.
 
 ## Direct inputs
 
