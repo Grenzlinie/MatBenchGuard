@@ -429,7 +429,7 @@ def component_isolation_coverage(
 def component_runtime_bindings_verified(
     plan: list[dict[str, str]], results: list[dict[str, Any]]
 ) -> bool:
-    public_positive = next(
+    public_fixture = next(
         (
             result
             for result in results
@@ -438,13 +438,13 @@ def component_runtime_bindings_verified(
         None,
     )
     breakdown = (
-        public_positive.get("breakdown")
-        if isinstance(public_positive, dict)
+        public_fixture.get("breakdown")
+        if isinstance(public_fixture, dict)
         else None
     )
     return bool(
-        isinstance(public_positive, dict)
-        and usable_probe_result(public_positive)
+        isinstance(public_fixture, dict)
+        and usable_probe_result(public_fixture)
         and isinstance(breakdown, dict)
         and all(
             isinstance(breakdown.get(component["step_id"]), dict)
@@ -476,11 +476,7 @@ def probe_assessment_flags(
     results: list[dict[str, Any]],
 ) -> dict[str, bool]:
     by_case = {result["case"]: result for result in results}
-    positive_cases = [
-        case
-        for case in ("positive_oracle", "known_valid_public")
-        if case in by_case
-    ]
+    positive_cases = ["positive_oracle"] if "positive_oracle" in by_case else []
     negative_cases = [
         result
         for result in results
@@ -814,6 +810,49 @@ def copy_public_package(root: Path, destination: Path) -> None:
         shutil.copytree(root / "tests", destination / "tests")
 
 
+def patch_harbor_paths(
+    text: str,
+    tests_dir: Path,
+    outputs_dir: Path,
+    logs_dir: Path,
+) -> str:
+    """Run the Harbor verifier entrypoint against an isolated host copy."""
+    replacements = {
+        "/tests/grading_spec.json": str(tests_dir / "grading_spec.json"),
+        "/tests/": str(tests_dir) + os.sep,
+        "/tests": str(tests_dir),
+        "/app/outputs": str(outputs_dir),
+        "/logs/verifier": str(logs_dir),
+    }
+    pattern = re.compile(
+        r"/tests/grading_spec\.json|/app/outputs|/logs/verifier|/tests/|/tests"
+    )
+    return pattern.sub(lambda match: replacements[match.group(0)], text)
+
+
+def audit_host_dependency_failure(stdout: str, stderr: str) -> str | None:
+    """Return a reason when the audit host cannot provide verifier dependencies."""
+    combined = f"{stdout}\n{stderr}".lower()
+    patterns = (
+        "modulenotfounderror",
+        "no module named",
+        "command not found",
+        "cannot import name",
+        "could not find a version that satisfies",
+        "unable to locate package",
+        "temporary failure resolving",
+        "could not resolve host",
+        "network is unreachable",
+    )
+    if any(pattern in combined for pattern in patterns):
+        return (
+            "The Harbor verifier entrypoint could not run on the audit host "
+            "because a runtime dependency was unavailable; this is not a "
+            "package defect."
+        )
+    return None
+
+
 def rebase_oracle_mount_paths(solution: Path, outputs: Path) -> None:
     """Map canonical Harbor mounts into the disposable Oracle workspace."""
     replacements = {
@@ -1068,16 +1107,52 @@ def run_checker_case(
                 outputs_dir, specification, mode
             )
 
-        patched = checker_text
-        patched = patched.replace(
-            "/tests/grading_spec.json", str(specification_path)
+        patched = patch_harbor_paths(
+            checker_text, tests_dir, outputs_dir, logs_dir
         )
-        patched = patched.replace("/app/outputs", str(outputs_dir))
-        patched = patched.replace("/logs/verifier", str(logs_dir))
-        checker_path = base / "checker_patched.py"
+        checker_path = tests_dir / "checker.py"
         checker_path.write_text(patched, encoding="utf-8")
+        verifier_source = root / "tests/test.sh"
+        verifier_path = base / "test.sh"
+        runtime_provenance = "audit-host-copy"
+        if not verifier_source.is_file():
+            return {
+                "case": case_name,
+                "mode": mode,
+                "created_outputs": created,
+                "transformations": transformations,
+                "returncode": None,
+                "reward": None,
+                "breakdown": None,
+                "stdout": "",
+                "stderr": "tests/test.sh is missing",
+                "crashed": False,
+                "runtime_not_assessable": True,
+                "runtime_not_assessable_reason": (
+                    "Harbor verifier entrypoint tests/test.sh is missing."
+                ),
+                "runtime_provenance": "not-assessable",
+                "verifier_entrypoint": "tests/test.sh",
+                "direct_checker_harness": False,
+                "runtime_package_contains_solution": (
+                    package_dir / "solution"
+                ).exists(),
+                "isolated_component": isolated_component,
+                "fixture_source_kind": fixture_source_kind,
+                "read_trace": [],
+                "read_trace_enabled": False,
+                "runtime_outputs_dir": str(outputs_dir),
+            }
+        verifier_path.write_text(
+            patch_harbor_paths(
+                verifier_source.read_text(encoding="utf-8", errors="replace"),
+                tests_dir,
+                outputs_dir,
+                logs_dir,
+            ),
+            encoding="utf-8",
+        )
         trace_path = base / "read_trace.json"
-        executable_path = checker_path
         if trace_reads:
             wrapper_path = base / "checker_trace_wrapper.py"
             wrapper_path.write_text(
@@ -1122,14 +1197,34 @@ def run_checker_case(
                 "json.dumps(_events), encoding='utf-8')\n",
                 encoding="utf-8",
             )
-            executable_path = wrapper_path
+            verifier_path.write_text(
+                verifier_path.read_text(encoding="utf-8").replace(
+                    str(checker_path), str(wrapper_path)
+                ),
+                encoding="utf-8",
+            )
+        tool_dir = base / "bin"
+        tool_dir.mkdir()
+        (tool_dir / "python").symlink_to(sys.executable)
+        runtime_environment = {
+            **os.environ,
+            "PATH": str(tool_dir)
+            + os.pathsep
+            + os.environ.get("PATH", ""),
+        }
         process = subprocess.run(
-            [sys.executable, str(executable_path)],
+            ["/bin/bash", str(verifier_path)],
             cwd=package_dir,
+            env=runtime_environment,
             capture_output=True,
             text=True,
             timeout=60,
             check=False,
+        )
+        dependency_failure = (
+            audit_host_dependency_failure(process.stdout, process.stderr)
+            if process.returncode != 0
+            else None
         )
         reward: float | str | None = None
         reward_path = logs_dir / "reward.txt"
@@ -1174,7 +1269,16 @@ def run_checker_case(
             "breakdown": breakdown,
             "stdout": process.stdout[-4000:],
             "stderr": process.stderr[-4000:],
-            "crashed": process.returncode != 0,
+            "crashed": process.returncode != 0 and dependency_failure is None,
+            "runtime_not_assessable": dependency_failure is not None,
+            "runtime_not_assessable_reason": dependency_failure,
+            "runtime_provenance": (
+                "not-assessable"
+                if dependency_failure is not None
+                else runtime_provenance
+            ),
+            "verifier_entrypoint": "tests/test.sh",
+            "direct_checker_harness": False,
             "runtime_package_contains_solution": (
                 package_dir / "solution"
             ).exists(),
@@ -1331,6 +1435,8 @@ def evaluate_results(
     )
     for result in results:
         case = result["case"]
+        if result.get("runtime_not_assessable") is True:
+            continue
         runtime_root, failure_signature, source_binding = (
             runtime_failure_root(result)
         )
@@ -1747,7 +1853,7 @@ def dynamic_checker_probe(
     tests = []
     probe_classes = {
         "positive_oracle": "positive",
-        "known_valid_public": "positive",
+        "known_valid_public": "discrimination",
         "quality_gradient_small_error": "discrimination",
         "quality_gradient_large_error": "discrimination",
         "metamorphic_equivalent_representation": "equivalence",
@@ -1791,10 +1897,36 @@ def dynamic_checker_probe(
                 "evidence": result,
             }
         )
+    runtime_not_assessable = [
+        result
+        for result in results
+        if result.get("runtime_not_assessable") is True
+    ]
     checker_result = {
         "schema_version": "0.1",
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
+        "runtime": {
+            "verifier_entrypoint": "tests/test.sh",
+            "runtime_provenance": (
+                "not-assessable"
+                if runtime_not_assessable
+                else "audit-host-copy"
+            ),
+            "direct_checker_harness": False,
+            "status": (
+                "NOT_ASSESSABLE"
+                if runtime_not_assessable
+                else "ASSESSED"
+            ),
+            "reason": (
+                runtime_not_assessable[0].get(
+                    "runtime_not_assessable_reason"
+                )
+                if runtime_not_assessable
+                else None
+            ),
+        },
         "solution_content_inspected": False,
         "solution_oracle": oracle_evidence,
         "pass_threshold": pass_threshold,
@@ -1819,13 +1951,6 @@ def dynamic_checker_probe(
                             ["ORACLE_POSITIVE_MOCK"]
                             if usable_probe_result(
                                 results_by_case.get("positive_oracle")
-                            )
-                            else []
-                        ),
-                        *(
-                            ["INDEPENDENT_PUBLIC_FIXTURE"]
-                            if usable_probe_result(
-                                results_by_case.get("known_valid_public")
                             )
                             else []
                         ),
@@ -1921,6 +2046,18 @@ def dynamic_checker_probe(
                 else []
             ),
             "external-service or compiled checker dependencies may require container execution",
+            *(
+                [
+                    "The Harbor verifier could not be assessed on the audit host: "
+                    + str(
+                        runtime_not_assessable[0].get(
+                            "runtime_not_assessable_reason"
+                        )
+                    )
+                ]
+                if runtime_not_assessable
+                else []
+            ),
         ],
     }
     output.parent.mkdir(parents=True, exist_ok=True)

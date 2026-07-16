@@ -19,11 +19,13 @@ environment declarations.
 
 Run the real checker in isolation and classify every case:
 
-- `positive`: Oracle mock or independently justified public output;
+- `positive`: isolated Oracle mock only;
 - `negative`: malformed, empty, missing, random, sparse, duplicate, non-finite,
   and gaming outputs;
-- `discrimination`: meaningfully worse outputs cannot score better;
-- `equivalence`: scientifically equivalent representations preserve reward.
+- `discrimination`: an independently justified public fixture and meaningfully
+  worse outputs cannot score better;
+- `equivalence`: scientifically equivalent representations preserve reward
+  relative to the same independent public fixture.
 
 An Oracle pass proves only that a positive checker path exists. It does not
 prove scientific correctness or Gold provenance.

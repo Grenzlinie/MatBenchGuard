@@ -67,6 +67,13 @@ Reason: Gold provenance requires paper-grounded review.
 
 Oracle values are never scientific evidence and never appear in this report.
 
+First-class QA axes (not weighted dimensions):
+
+- factual_accuracy: status, evidence, locations, limitations
+- answer_leakage: status, evidence, locations, limitations
+- instruction_completeness: status, evidence, locations, limitations
+- checker_instruction_consistency: status, evidence, locations, limitations
+
 ## 14. Paper Consistency
 
 Status: NOT_ASSESSED

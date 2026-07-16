@@ -98,8 +98,9 @@ is still open. Then:
    hashes and evidence links.
 4. Run the regressions against the candidate.
 5. Run the canonical Review CLI at exactly the source audit's paper mode and
-   execution level. Pass external assessment, known-valid-output, or E2 plans
-   through when that evidence depth requires them.
+   authoritative E1 execution level. Pass source-bound external assessment or
+   known-valid-output evidence through when required; E2/E3/E4 re-audits are
+   reserved for future workflows and cannot publish.
 6. Require `PASS`, `PUBLISH_CANDIDATE`, resolution of the target finding,
    unchanged package identity, and no mutation outside the three allowed roles.
 7. Write `benchmark_repair/repair_manifest.json`, `repair_report.json`, and

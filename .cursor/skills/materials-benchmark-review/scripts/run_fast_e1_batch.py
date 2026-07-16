@@ -269,6 +269,7 @@ def compact_checker_evidence(checker: dict[str, Any]) -> dict[str, Any]:
         "pass_threshold": checker.get("pass_threshold"),
         "usable_reward_count": checker.get("usable_reward_count"),
         "test_count": len(tests),
+        "runtime": checker.get("runtime", {}),
         "tests": tests,
         "findings": [
             {
@@ -536,6 +537,8 @@ def validate_record_source_binding(
                     and cli_evidence.get("paper_mode") == paper_mode
                     and cli_evidence.get("paper_consistency")
                     == persisted_report.get("paper_consistency", {})
+                    and cli_evidence.get("qa_axes")
+                    == persisted_report.get("qa_axes", {})
                     and cli_evidence.get("probe_coverage")
                     == persisted_checker.get("probe_coverage", {})
                     and cli_evidence.get("review_implementation")
@@ -757,6 +760,7 @@ def review_one(
             ),
             "paper_mode": paper_mode,
             "paper_consistency": report.get("paper_consistency", {}),
+            "qa_axes": report.get("qa_axes", {}),
             "probe_coverage": checker.get("probe_coverage", {}),
             "review_implementation": review_implementation,
             "solution_oracle": {
@@ -828,6 +832,7 @@ def review_one(
                 },
                 "cli_scoring": cli_scoring,
                 "cli_evidence": cli_evidence,
+                "qa_axes": report.get("qa_axes", {}),
                 "answer_type": report.get("summary", {}).get("answer_type"),
                 "input_hashes": source_hashes,
                 "source_binding": source_binding(

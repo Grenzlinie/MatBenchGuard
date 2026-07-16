@@ -48,6 +48,13 @@ REQUIRED_AUDIT_FILES = {
     "logs/audit.log",
 }
 SCORING_VERSION = "materials-review-scoring/1.0"
+QA_AXIS_NAMES = (
+    "factual_accuracy",
+    "answer_leakage",
+    "instruction_completeness",
+    "checker_instruction_consistency",
+)
+QA_AXIS_STATUSES = {"PASS", "WARNING", "FAIL", "NOT_ASSESSABLE"}
 DIMENSION_MAX_POINTS = {
     "scientific_validity": 35,
     "instruction_answerability": 20,
@@ -1028,6 +1035,269 @@ def paper_consistency(
     }
 
 
+def _qa_locations(
+    findings: list[dict[str, Any]], codes: set[str]
+) -> list[dict[str, Any]]:
+    locations: list[dict[str, Any]] = []
+    for item in findings:
+        if item.get("title") not in codes:
+            continue
+        for location in item.get("affected_locations", []):
+            if location not in locations:
+                locations.append(location)
+    return locations
+
+
+def _qa_evidence(
+    findings: list[dict[str, Any]], codes: set[str]
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "finding_id": item.get("finding_id"),
+            "observed_fact": item.get("observed_fact"),
+        }
+        for item in findings
+        if item.get("title") in codes
+    ]
+
+
+def _qa_base_location(root: Path) -> list[dict[str, Any]]:
+    instruction = root / "instruction.md"
+    if not instruction.is_file():
+        return []
+    for number, line in enumerate(
+        instruction.read_text(encoding="utf-8", errors="replace").splitlines(),
+        start=1,
+    ):
+        if line.strip():
+            return [
+                {
+                    "file": "instruction.md",
+                    "line": number,
+                    "quote": line.strip(),
+                }
+            ]
+    return []
+
+
+def derive_qa_axes(
+    root: Path,
+    findings: list[dict[str, Any]],
+    checker_result: dict[str, Any],
+    contract_map: dict[str, Any],
+    paper_result: dict[str, Any],
+    materials_assessment: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    """Derive four non-scoring QA conclusions from bounded evidence."""
+    scientific_codes = {
+        "NON_MATERIALS_TASK",
+        "SCIENTIFIC_TARGET_INVALID",
+    }
+    paper_scientific_codes = {
+        item.get("title")
+        for item in findings
+        if str(item.get("title", "")).startswith("PAPER_")
+        and any(
+            marker in str(item.get("title", ""))
+            for marker in ("INSTRUCTION_", "DATA_", "METHOD_")
+        )
+    }
+    scientific_codes.update(
+        item for item in paper_scientific_codes if isinstance(item, str)
+    )
+    completeness_codes = {
+        "UNRECOVERABLE_TASK_DEFINITION",
+        "INSTRUCTION_ONLY_OUTPUT",
+    }
+    consistency_codes = {
+        "OUTPUT_NOT_CONTRACTED",
+        "OUTPUT_NOT_SCORED",
+        "EVIDENCE_NOT_ENFORCED",
+        "PROCESS_EVIDENCE_NOT_VERIFIED",
+        "SCORING_COMPONENT_NOT_BOUND",
+        "SCORER_MISSING_RETURN",
+        "SCORER_RETURN_NOT_TOTAL",
+        "CHECKER_CORE_TASK_UNASSESSED",
+    }
+    leakage_codes = {
+        "ANSWER_LEAKAGE",
+        "ORACLE_VALUE_LEAKED",
+        "SOLUTION_BOUNDARY_VIOLATION",
+    }
+    base_location = _qa_base_location(root)
+
+    def entry(
+        status: str,
+        evidence: list[dict[str, Any]],
+        locations: list[dict[str, Any]],
+        *limitations: str,
+    ) -> dict[str, Any]:
+        return {
+            "status": status,
+            "evidence": evidence,
+            "locations": locations,
+            "limitations": list(limitations),
+        }
+
+    scientific_evidence = _qa_evidence(findings, scientific_codes)
+    scientific_locations = _qa_locations(findings, scientific_codes)
+    if scientific_evidence:
+        factual = entry("FAIL", scientific_evidence, scientific_locations)
+    elif materials_assessment is None or paper_result.get("status") == "NOT_ASSESSED":
+        factual = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "instruction/tests", "fact": "No independent factual adjudication was supplied."}],
+            base_location,
+            "E1 checks the public contract and does not independently verify scientific facts.",
+        )
+    elif paper_result.get("status") == "FAIL":
+        factual = entry(
+            "FAIL",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded evidence contains a factual inconsistency."}],
+            base_location,
+        )
+    elif paper_result.get("status") == "WARNING":
+        factual = entry(
+            "WARNING",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded factual evidence requires attention."}],
+            base_location,
+        )
+    else:
+        factual = entry(
+            "PASS",
+            [{"source": "paper_grounded_review", "fact": "Paper-grounded factual evidence passed."}],
+            base_location,
+        )
+
+    leakage_evidence = _qa_evidence(findings, leakage_codes)
+    leakage_locations = _qa_locations(findings, leakage_codes)
+    runtime_has_solution = any(
+        item.get("evidence", {}).get("runtime_package_contains_solution") is True
+        for item in checker_result.get("tests", [])
+    )
+    if checker_result.get("solution_content_inspected") is True or runtime_has_solution:
+        leakage_evidence.append(
+            {
+                "source": "checker_runtime",
+                "fact": "The isolated checker runtime contained solution content.",
+            }
+        )
+        leakage_locations = leakage_locations or [
+            {"file": "solution/", "line": None, "quote": None}
+        ]
+    if leakage_evidence:
+        leakage = entry("FAIL", leakage_evidence, leakage_locations)
+    elif checker_result.get("solution_oracle", {}).get("executed") is True:
+        leakage = entry(
+            "PASS",
+            [
+                {
+                    "source": "oracle_boundary",
+                    "fact": "The Oracle was used only to create a positive mock and its content was not inspected.",
+                }
+            ],
+            [{"file": "solution/solve.sh", "line": None, "quote": None}],
+        )
+    else:
+        leakage = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "oracle_boundary", "fact": "No isolated Oracle execution established the leakage boundary."}],
+            base_location,
+            "Answer leakage requires an isolated Oracle boundary or an explicit leakage finding.",
+        )
+
+    completeness_evidence = _qa_evidence(findings, completeness_codes)
+    completeness_locations = _qa_locations(findings, completeness_codes)
+    unclassified = contract_map.get("unclassified_outputs", [])
+    if completeness_evidence:
+        completeness = entry(
+            "FAIL", completeness_evidence, completeness_locations
+        )
+    elif unclassified:
+        completeness = entry(
+            "WARNING",
+            [
+                {
+                    "source": "instruction_contract",
+                    "fact": "Some instruction outputs remain unclassified.",
+                    "outputs": sorted(unclassified),
+                }
+            ],
+            base_location,
+            "Unclassified outputs require human adjudication before a completeness PASS.",
+        )
+    elif contract_map.get("requirements"):
+        completeness = entry(
+            "PASS",
+            [
+                {
+                    "source": "instruction_contract",
+                    "fact": "All parsed workflow requirements have a contract row.",
+                }
+            ],
+            base_location,
+        )
+    else:
+        completeness = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "instruction_contract", "fact": "No workflow requirements were parsed."}],
+            base_location,
+        )
+
+    consistency_evidence = _qa_evidence(findings, consistency_codes)
+    consistency_locations = _qa_locations(findings, consistency_codes)
+    runtime = checker_result.get("runtime") or {}
+    if consistency_evidence:
+        consistency = entry(
+            "FAIL", consistency_evidence, consistency_locations
+        )
+    elif (
+        runtime.get("status") == "NOT_ASSESSABLE"
+        or (
+            checker_result.get("tests")
+            and all(
+                item.get("runtime_not_assessable") is True
+                for item in checker_result["tests"]
+            )
+        )
+    ):
+        consistency = entry(
+            "NOT_ASSESSABLE",
+            [
+                {
+                    "source": "checker_runtime",
+                    "fact": "The Harbor verifier could not be assessed in the available runtime.",
+                }
+            ],
+            base_location,
+            "Audit-host dependency failures do not establish checker/instruction consistency.",
+        )
+    elif checker_result.get("tests"):
+        consistency = entry(
+            "PASS",
+            [
+                {
+                    "source": "checker_runtime",
+                    "fact": "The Harbor verifier entrypoint produced checker cases for the declared contract.",
+                }
+            ],
+            base_location,
+        )
+    else:
+        consistency = entry(
+            "NOT_ASSESSABLE",
+            [{"source": "checker_runtime", "fact": "No checker cases established runtime consistency."}],
+            base_location,
+            "Checker/Instruction consistency requires an assessable verifier run.",
+        )
+    return {
+        "factual_accuracy": factual,
+        "answer_leakage": leakage,
+        "instruction_completeness": completeness,
+        "checker_instruction_consistency": consistency,
+    }
+
+
 def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
@@ -1056,6 +1326,12 @@ def markdown_summary(report: dict[str, Any]) -> str:
         for item in report["dimension_scores"]
     )
     execution = report["execution_evidence"]
+    checker_runtime = report["checker_runtime"]
+    checker_runtime_summary = (
+        f"Verifier entrypoint: {checker_runtime['verifier_entrypoint']}\n"
+        f"Runtime provenance: {checker_runtime['runtime_provenance']}\n"
+        f"Runtime status: {checker_runtime['status']}"
+    )
     if execution["claim"] == "SMOKE_RUN":
         checker_assessment = (
             "The real checker executed before the E2 smoke."
@@ -1063,22 +1339,30 @@ def markdown_summary(report: dict[str, Any]) -> str:
         execution_assessment = (
             f"Status: E2_SMOKE\nReason: {execution['reason']}"
         )
-    elif report["checker_tests"]:
+    elif (
+        report["checker_tests"]
+        and checker_runtime["status"] == "ASSESSED"
+    ):
         checker_assessment = (
-            "The real checker executed in a solution-free runtime."
+            "The real checker executed in a solution-free runtime.\n"
+            + checker_runtime_summary
         )
         execution_assessment = (
             "Status: E1_ONLY\n"
             "Reason: The checker ran, but the scientific workflow did not."
         )
     else:
+        unavailable_reason = checker_runtime.get("reason") or (
+            "The verifier did not produce assessable runtime evidence."
+        )
         checker_assessment = (
             "Status: NOT_ASSESSED\n"
-            "Reason: An E0 FATAL gate prevented checker execution."
+            f"Reason: {unavailable_reason}\n"
+            + checker_runtime_summary
         )
         execution_assessment = (
-            "Status: E0_ONLY\n"
-            "Reason: E1 was skipped after an E0 FATAL gate."
+            "Status: E1_NOT_ASSESSABLE\n"
+            "Reason: The scientific workflow did not run and verifier evidence was unavailable."
         )
     resource_lines = (
         "\n".join(
@@ -1182,6 +1466,11 @@ def markdown_summary(report: dict[str, Any]) -> str:
         if report["scope"]["solution_oracle_executed"]
         else "No solution Oracle producer process was executed."
     )
+    qa_axis_lines = "\n".join(
+        f"- {name}: {axis['status']}; evidence={axis['evidence']}; "
+        f"locations={axis['locations']}; limitations={axis['limitations']}"
+        for name, axis in report["qa_axes"].items()
+    )
     return f"""# Materials Benchmark Audit Report
 
 ## 1. Audit Summary
@@ -1260,6 +1549,9 @@ Instruction → Agent work → declared output → checker read → checker scor
 ## 13. Reproducibility and Leakage
 
 {oracle_boundary}
+
+First-class QA axes (not weighted dimensions):
+{qa_axis_lines}
 
 ## 14. Paper Consistency
 
@@ -1391,6 +1683,13 @@ def synthesize_report(
         "status": "NOT_ASSESSED",
         "claim": "E1_CHECKER_ONLY",
         "scientific_reproduction": False,
+        "environment": None,
+        "environment_verified": False,
+        "runtime_provenance": "not-assessable",
+        "verifies_resources": [],
+        "returncode": None,
+        "stdout": "",
+        "stderr": "",
         "reason": "Scientific workflow execution was not assessed.",
     }
     materials_assessment = (
@@ -1476,6 +1775,14 @@ def synthesize_report(
         agent_assessment,
         skip_reason=paper_skip_reason,
     )
+    qa_axes = derive_qa_axes(
+        root,
+        findings,
+        checker_result,
+        static_result.get("contract_map", {}),
+        paper_result,
+        materials_assessment,
+    )
     contract_gaps = []
     if materials_assessment is None:
         contract_gaps.append("authoritative_materials_qualification")
@@ -1560,6 +1867,7 @@ def synthesize_report(
     }
     report["resources"] = resource_result["resources"]
     report["execution_evidence"] = execution_evidence
+    report["qa_axes"] = qa_axes
     report["paper_consistency"] = paper_result
     report["paper_trigger_adjudication"] = paper_trigger_adjudication
     contract_map = json.loads(json.dumps(static_result.get(
@@ -1666,6 +1974,7 @@ def synthesize_report(
         for item in hard_gates
     ]
     report["dimension_scores"] = dimensions
+    report["checker_runtime"] = checker_result["runtime"]
     report["checker_tests"] = checker_result["tests"]
     report["findings"] = findings
     report["required_fixes"] = [
@@ -2031,6 +2340,29 @@ def _provenance_strings(value: Any) -> list[str]:
 def validate_contract_probe_consistency(
     report: dict[str, Any], checker: dict[str, Any]
 ) -> None:
+    runtime = checker.get("runtime")
+    if (
+        not isinstance(runtime, dict)
+        or runtime.get("verifier_entrypoint") != "tests/test.sh"
+        or runtime.get("runtime_provenance")
+        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+        or not isinstance(runtime.get("direct_checker_harness"), bool)
+        or runtime.get("status")
+        not in {"ASSESSED", "NOT_ASSESSABLE"}
+    ):
+        raise ValueError("checker runtime provenance is invalid")
+    if report.get("checker_runtime") != runtime:
+        raise ValueError("report/checker runtime provenance mismatch")
+    for test in checker.get("tests", []):
+        evidence = test.get("evidence")
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("verifier_entrypoint") != "tests/test.sh"
+            or evidence.get("runtime_provenance")
+            not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+            or evidence.get("direct_checker_harness") is not False
+        ):
+            raise ValueError("checker test runtime provenance is invalid")
     coverage = checker.get("probe_coverage")
     required = {
         "positive",
@@ -2180,6 +2512,51 @@ def validate_contract_probe_consistency(
             raise ValueError("requirement-chain checker-read mismatch")
 
 
+def validate_qa_axes(qa_axes: Any) -> None:
+    if not isinstance(qa_axes, dict) or set(qa_axes) != set(QA_AXIS_NAMES):
+        raise ValueError("QA axes must contain exactly the four first-class axes")
+    for name in QA_AXIS_NAMES:
+        axis = qa_axes[name]
+        if not isinstance(axis, dict) or set(axis) != {
+            "status",
+            "evidence",
+            "locations",
+            "limitations",
+        }:
+            raise ValueError(f"invalid QA axis schema: {name}")
+        if axis["status"] not in QA_AXIS_STATUSES:
+            raise ValueError(f"invalid QA axis status: {name}")
+        if not isinstance(axis["evidence"], list):
+            raise ValueError(f"QA axis evidence must be a list: {name}")
+        if not isinstance(axis["locations"], list):
+            raise ValueError(f"QA axis locations must be a list: {name}")
+        if not isinstance(axis["limitations"], list) or not all(
+            isinstance(item, str) and item.strip()
+            for item in axis["limitations"]
+        ):
+            raise ValueError(f"QA axis limitations must be strings: {name}")
+        for location in axis["locations"]:
+            if (
+                not isinstance(location, dict)
+                or set(location) != {"file", "line", "quote"}
+                or not isinstance(location["file"], str)
+                or not location["file"]
+                or (
+                    location["line"] is not None
+                    and (
+                        not isinstance(location["line"], int)
+                        or isinstance(location["line"], bool)
+                        or location["line"] < 1
+                    )
+                )
+                or (
+                    location["quote"] is not None
+                    and not isinstance(location["quote"], str)
+                )
+            ):
+                raise ValueError(f"invalid QA axis location: {name}")
+
+
 def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     present = {
         path.relative_to(temp_dir).as_posix()
@@ -2214,6 +2591,19 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(f"missing or out-of-order heading: {heading}")
         last_position = position
     summary = report["summary"]
+    validate_qa_axes(report.get("qa_axes"))
+    configuration = report.get("configuration", {})
+    if configuration.get("execution_level") != "E1":
+        raise ValueError("authoritative report execution level must be E1")
+    execution = report.get("execution_evidence", {})
+    if (
+        not isinstance(execution, dict)
+        or execution.get("claim") != "E1_CHECKER_ONLY"
+        or execution.get("scientific_reproduction") is not False
+        or execution.get("runtime_provenance")
+        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+    ):
+        raise ValueError("invalid E1 runtime provenance")
     if summary["final_verdict"] not in VERDICTS:
         raise ValueError("invalid verdict")
     evidence_contract = report.get("evidence_contract")

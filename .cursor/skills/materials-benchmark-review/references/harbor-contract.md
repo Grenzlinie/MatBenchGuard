@@ -55,9 +55,23 @@ finding. Do not turn it into repeated `INSTRUCTION_ONLY_OUTPUT` deductions.
 
 ## Checker runtime
 
-The real checker runs in a disposable copy containing instruction and tests,
-without solution or paper. Paths for `/app/outputs`, `/tests`, and
-`/logs/verifier` are redirected inside that copy.
+`tests/test.sh` is Harbor's verifier entrypoint. E1 invokes that entrypoint in
+a disposable copy containing instruction and tests, without solution or paper.
+Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are redirected inside
+that copy without changing the source package's canonical Docker paths.
+
+Every checker result records runtime provenance as `Harbor-equivalent`,
+`audit-host-copy`, or `not-assessable`. An audit-host copy is not evidence that
+the Harbor container is equivalent. Direct `checker.py` execution, when used
+for a narrow diagnostic, is an audit harness and must never be labeled as a
+Harbor-equivalent verifier run.
+
+The Docker image is the Agent's task environment, not a declaration that every
+instruction dependency is preinstalled. A missing audit-host package, a
+dependency supplied by `environment/Dockerfile`, or a dependency installed by
+`tests/test.sh` is not a package defect. If the audit host cannot execute the
+verifier for one of those reasons, record `not-assessable`; do not emit checker
+crash/alignment findings from that host limitation.
 
 If `solution/solve.sh` exists, the complete solution role is first copied into
 a separate disposable workspace. It receives `OUTPUT_DIR`; generated

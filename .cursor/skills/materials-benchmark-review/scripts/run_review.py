@@ -15,6 +15,7 @@ from audit_package import static_audit
 from dynamic_checker_probe import dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
+    AUTHORITATIVE_EXECUTION_LEVEL,
     QUALITY_EVIDENCE_ROLES,
     locate_root,
     prepare_workspace,
@@ -22,7 +23,7 @@ from prepare_audit_output import (
     skill_root,
     validate_paper_boundary,
 )
-from probe_resources import probe_resources, run_e2_smoke
+from probe_resources import probe_resources
 
 
 PAPER_DIMENSIONS = {
@@ -568,6 +569,13 @@ def checker_skipped_by_static_gate(
         "schema_version": "0.1",
         "benchmark_root": str(root),
         "checker_path": "tests/checker.py",
+        "runtime": {
+            "verifier_entrypoint": "tests/test.sh",
+            "runtime_provenance": "not-assessable",
+            "direct_checker_harness": False,
+            "status": "NOT_ASSESSABLE",
+            "reason": reason,
+        },
         "solution_content_inspected": False,
         "solution_oracle": {
             "used": False,
@@ -667,6 +675,15 @@ def run_review(
     e2_smoke_plan: Path | None = None,
     allow_private_network: bool = False,
 ) -> dict[str, Any]:
+    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
+        raise ValueError(
+            "authoritative materials review is E1-only; "
+            f"received execution level {execution_level!r}"
+        )
+    if e2_smoke_plan is not None:
+        raise ValueError(
+            "E2/E3/E4 execution plans are not part of the authoritative E1 workflow"
+        )
     root = locate_root(input_path)
     context = prepare_workspace(root, paper_mode, execution_level)
     temp_dir = Path(context["audit_temp_dir"])
@@ -678,7 +695,11 @@ def run_review(
     )
     checker_ready = all(
         static_result["parse_status"].get(role) == "ok"
-        for role in ("tests/checker.py", "tests/grading_spec.json")
+        for role in (
+            "tests/checker.py",
+            "tests/grading_spec.json",
+            "tests/test.sh",
+        )
     ) and (
         static_result.get("contract_map", {})
         .get("checker_analysis", {})
@@ -707,29 +728,19 @@ def run_review(
         timeout=resource_timeout,
         allow_private_network=allow_private_network,
     )
-    if execution_level == "E2":
-        if e2_smoke_plan is None:
-            raise ValueError("E2 requires --e2-smoke-plan")
-        execution_evidence = run_e2_smoke(
-            root,
-            e2_smoke_plan,
-            resource_result,
-        )
-    else:
-        if e2_smoke_plan is not None:
-            raise ValueError("--e2-smoke-plan is only valid for E2")
-        execution_evidence = {
-            "status": "NOT_ASSESSED",
-            "claim": "E1_CHECKER_ONLY",
-            "scientific_reproduction": False,
-            "environment": None,
-            "environment_verified": False,
-            "verifies_resources": [],
-            "returncode": None,
-            "stdout": "",
-            "stderr": "",
-            "reason": "E1 executes checker probes but not the scientific workflow.",
-        }
+    execution_evidence = {
+        "status": "NOT_ASSESSED",
+        "claim": "E1_CHECKER_ONLY",
+        "scientific_reproduction": False,
+        "environment": None,
+        "environment_verified": False,
+        "runtime_provenance": "not-assessable",
+        "verifies_resources": [],
+        "returncode": None,
+        "stdout": "",
+        "stderr": "",
+        "reason": "E1 executes the Harbor verifier entrypoint but not the scientific workflow.",
+    }
     agent_assessment: dict[str, Any] | None = None
     paper_skip_reason: str | None = None
     if paper_mode == "paper_grounded" and static_fatal:
@@ -772,7 +783,9 @@ def build_parser() -> argparse.ArgumentParser:
         default="no_paper",
     )
     parser.add_argument(
-        "--execution-level", choices=["E1", "E2"], default="E1"
+        "--execution-level",
+        choices=[AUTHORITATIVE_EXECUTION_LEVEL],
+        default=AUTHORITATIVE_EXECUTION_LEVEL,
     )
     parser.add_argument(
         "--known-valid-output",
@@ -786,7 +799,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--e2-smoke-plan",
-        help="external E2 smoke plan JSON",
+        help="reserved for non-authoritative future execution levels",
     )
     parser.add_argument(
         "--allow-private-network",

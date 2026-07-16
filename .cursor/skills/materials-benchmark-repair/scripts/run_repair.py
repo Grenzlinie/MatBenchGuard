@@ -18,6 +18,7 @@ from typing import Any, Iterable
 sys.dont_write_bytecode = True
 
 REPAIR_CLASSES = {"SAFE_AUTO_FIX", "ASSISTED_FIX"}
+AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 OPERATION_TYPES = {"write_file", "replace_text", "text_replace", "json_set", "delete_file"}
 REGRESSION_TYPES = {
     "file_exists",
@@ -585,8 +586,11 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
     execution_level = configuration.get("execution_level")
     if paper_mode not in {"no_paper", "paper_grounded"}:
         raise ValueError("Review report has an unsupported paper_mode")
-    if not isinstance(execution_level, str) or not execution_level:
-        raise ValueError("Review report requires execution_level")
+    if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
+        raise ValueError(
+            "authoritative repair re-audit is E1-only; "
+            f"received execution level {execution_level!r}"
+        )
     return paper_mode, execution_level
 
 
@@ -611,10 +615,13 @@ def run_equal_depth_review(
         "--execution-level",
         execution_level,
     ]
+    if plan.get("e2_smoke_plan") is not None:
+        raise ValueError(
+            "E2/E3/E4 plans cannot enter an authoritative E1 repair re-audit"
+        )
     for key, flag in {
         "known_valid_output": "--known-valid-output",
         "agent_assessment": "--agent-assessment",
-        "e2_smoke_plan": "--e2-smoke-plan",
     }.items():
         raw = plan.get(key)
         if raw is None:

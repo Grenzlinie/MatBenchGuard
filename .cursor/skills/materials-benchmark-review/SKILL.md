@@ -9,7 +9,6 @@ Audit one `paper-{id}/` Harbor 题包 and publish the authoritative
 `benchmark_audit/` bundle inside it.
 
 ## Quality evidence boundary
-
 Review only:
 
 - `instruction.md`;
@@ -31,7 +30,6 @@ Read [references/harbor-contract.md](references/harbor-contract.md) and
 [references/no-paper-e1.md](references/no-paper-e1.md).
 
 ## Contract-role mapping
-
 Do not treat every path under `/app/outputs` as a scored answer. Build and
 publish this mapping for every workflow requirement:
 
@@ -81,7 +79,6 @@ Every parsed workflow requirement receives a chain row even when it declares no
 recognized output; use an unclassified output and unknown read/score states.
 
 ## Checker anti-hacking audit
-
 The checker audit must combine static contract mapping with isolated dynamic
 probes. Inspect for:
 
@@ -121,7 +118,6 @@ Multiple affected files or output names are evidence locations, not automatic
 additional deductions.
 
 ## Trigger paper review
-
 Read `paper/` only for these four triggers:
 
 1. `SCIENTIFIC_CONFLICT` — instruction, tests, and Oracle behavior conflict;
@@ -140,7 +136,6 @@ Equivalent software, versions, and solver-selected convergence parameters are
 allowed unless instruction fixes them or the checker secretly depends on them.
 
 ## Run E1
-
 Write any taxonomy or triggered paper assessment outside the package, then run:
 
 ```bash
@@ -160,8 +155,9 @@ python scripts/run_review.py <Harbor题包目录> \
 ```
 
 An independently justified non-Oracle output may additionally be supplied with
-`--known-valid-output`. It enables scientific quality-gradient and equivalence
-probes without promoting Oracle values to scientific evidence.
+`--known-valid-output`. It is used only for discrimination and equivalence
+probes; it is never a positive control and never replaces the isolated Oracle
+positive mock.
 
 Every no-paper assessment must also adjudicate all four paper triggers
 individually with instruction/tests quotes. A triggered item routes the package
@@ -169,17 +165,23 @@ to paper-grounded evidence; it cannot remain a no-paper `PASS`.
 
 Every E1 run records coverage for these probe classes:
 
-- positive — isolated Oracle mock and/or independently justified public output;
+- positive — isolated Oracle mock only;
 - negative — missing, empty, malformed, random, duplicate, sparse, and
   non-finite attacks;
-- discrimination — scientifically worse outputs must not score better;
+- discrimination — an independently justified public fixture and scientifically
+  worse outputs must not score better;
 - equivalence — scientifically equivalent ordering or serialization must not
-  change reward;
+  change reward, using the same independent public fixture;
 - component isolation — independently sourced one-component submissions;
 - process evidence — safe dynamic access tracing when supportable.
 
-## Direct inputs
+Execute checker cases through `tests/test.sh` and label runtime provenance as
+`Harbor-equivalent`, `audit-host-copy`, or `not-assessable`. The audit-host
+copy is not Harbor-equivalent. Missing host dependencies, dependencies supplied
+by `environment/Dockerfile`, and verifier-time dependency installation are
+runtime limitations, not package defects.
 
+## Direct inputs
 Read [references/materials-resource-policy.md](references/materials-resource-policy.md).
 Probe only a direct input or service that instruction explicitly marks as
 indispensable and without an equivalent. Do not probe resources metadata,
@@ -187,7 +189,6 @@ solver-generated structures/trajectories/models, ordinary solver parameters,
 or replaceable software.
 
 ## Score and disposition
-
 Read [references/scoring-rubric.md](references/scoring-rubric.md). The Review
 CLI is the sole scoring authority; batch and calibration layers only aggregate
 an identity- and source-hash-bound CLI report. Never accept manually supplied
@@ -234,7 +235,6 @@ versioned runtime source is
 [references/materials-taxonomy.json](references/materials-taxonomy.json).
 
 ## Batch
-
 Read [references/fast-e1-batch.md](references/fast-e1-batch.md). The candidate
 manifest freezes identities only. Finish and freeze the complete original
 review baseline before any repair begins.
