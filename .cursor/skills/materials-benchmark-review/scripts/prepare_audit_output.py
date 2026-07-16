@@ -73,6 +73,102 @@ def sha256_file(path: Path) -> str:
     return "sha256:" + digest.hexdigest()
 
 
+def sha256_path(path: Path) -> str:
+    if path.is_symlink():
+        raise ValueError(f"external evidence may not be a symbolic link: {path}")
+    if path.is_file():
+        return sha256_file(path)
+    if not path.is_dir():
+        raise FileNotFoundError(path)
+    entries = []
+    for child in sorted(path.rglob("*")):
+        if child.is_symlink():
+            raise ValueError(
+                f"external evidence may not contain symbolic links: {child}"
+            )
+        if child.is_file():
+            entries.append(
+                (child.relative_to(path).as_posix(), sha256_file(child))
+            )
+    payload = json.dumps(
+        entries, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def core_contract_snapshot(root: Path) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    for relative in ("instruction.md", "tests/checker.py"):
+        path = root / relative
+        values[relative] = (
+            path.read_text(encoding="utf-8", errors="replace")
+            if path.is_file()
+            else None
+        )
+    specification_path = root / "tests/grading_spec.json"
+    try:
+        specification = json.loads(
+            specification_path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError, json.JSONDecodeError):
+        specification = None
+    return {
+        "schema_version": "materials-core-contract/1.0",
+        "instruction": values["instruction.md"],
+        "checker": values["tests/checker.py"],
+        "grading_contract": specification,
+    }
+
+
+def core_contract_digest(root: Path) -> str:
+    payload = json.dumps(
+        core_contract_snapshot(root),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def bind_external_evidence(
+    temp_dir: Path,
+    known_valid_output: Path | None,
+    agent_assessment: Path | None,
+) -> dict[str, dict[str, str]]:
+    manifest_path = temp_dir / "audit_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    root = Path(manifest["benchmark_root"]).resolve()
+    fixture_hashes: dict[str, str] = {}
+    assessment_hashes: dict[str, str] = {}
+    if known_valid_output is not None:
+        resolved = known_valid_output.expanduser().resolve()
+        if resolved.is_relative_to(root):
+            raise ValueError("known-valid output must remain outside the Harbor 题包")
+        fixture_hashes["known_valid_output"] = sha256_path(
+            resolved
+        )
+    if agent_assessment is not None:
+        resolved = agent_assessment.expanduser().resolve()
+        if resolved.is_relative_to(root):
+            raise ValueError("agent assessment must remain outside the Harbor 题包")
+        assessment_hashes["agent_assessment"] = sha256_path(
+            resolved
+        )
+    manifest["fixture_hashes"] = fixture_hashes
+    manifest["assessment_hashes"] = assessment_hashes
+    manifest["core_contract_digest"] = core_contract_digest(
+        Path(manifest["benchmark_root"])
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    return {
+        "fixture_hashes": fixture_hashes,
+        "assessment_hashes": assessment_hashes,
+        "core_contract_digest": manifest["core_contract_digest"],
+    }
+
+
 def iter_public_files(root: Path) -> Iterable[Path]:
     """Yield files without entering solution or generated audit directories."""
     for current, directories, filenames in os.walk(root, topdown=True):
@@ -290,6 +386,9 @@ def prepare_workspace(
         # passes, so a terminal E0/E1 result never traverses paper content.
         "input_hashes": collect_input_hashes(root),
         "review_implementation": collect_review_implementation_hashes(),
+        "core_contract_digest": core_contract_digest(root),
+        "fixture_hashes": {},
+        "assessment_hashes": {},
         "output_hashes": {},
         "resolved_findings": [],
         "new_findings": [],

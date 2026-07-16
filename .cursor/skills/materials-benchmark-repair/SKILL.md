@@ -25,7 +25,7 @@ The plan uses schema `0.1` and contains:
   "schema_version": "0.1",
   "audit_id": "authoritative audit id",
   "finding_id": "one open finding id",
-  "repair_class": "SAFE_AUTO_FIX or ASSISTED_FIX",
+  "repair_class": "AUTO_FIX, ASSISTED_FIX, or ABANDON",
   "justification": "why this repair resolves the finding",
   "core_science_change": false,
   "evidence": [
@@ -40,13 +40,14 @@ The plan uses schema `0.1` and contains:
 }
 ```
 
-`approval` is ignored if an older planner includes it. Both repair classes are
-autonomous:
+There is no human approval state. The closed decision classes are autonomous:
 
-- `SAFE_AUTO_FIX` is deterministic and does not require scientific
+- `AUTO_FIX` is deterministic and does not require scientific
   interpretation.
 - `ASSISTED_FIX` may make an evidence-backed scientific or checker correction.
   Every operation must link one or more plan evidence IDs.
+- `ABANDON` stops immediately when evidence is insufficient or the repair would
+  redefine the core scientific contract. It has no operations.
 
 ## Allowed changes
 
@@ -82,13 +83,15 @@ Never:
 - treat a passing checker alone as scientific evidence.
 
 When evidence is absent or not linked to an operation, return
-`BLOCKED_EVIDENCE` without mutating the package. When a plan declares or
-attempts a forbidden change, return `POLICY_VIOLATION`. Do not convert either
-state into an approval request and do not improvise a replacement value.
+`BLOCKED_EVIDENCE` with decision `ABANDON` without mutating the package. When a
+plan declares or attempts a forbidden change, return `POLICY_VIOLATION`. Do not
+convert either state into an approval request and do not improvise a replacement
+value.
 
 ## Isolated execution and publication
 
-Before mutation, reject stale audit hashes and verify that the selected finding
+Before mutation, reject stale audit hashes, require a complete source-audit
+binding, freeze the core-contract digest, and verify that the selected finding
 is still open. Then:
 
 1. Copy the full package to both
@@ -97,13 +100,15 @@ is still open. Then:
 3. Apply only the planned operations to the candidate, recording before/after
    hashes and evidence links.
 4. Run the regressions against the candidate.
-5. Run the canonical Review CLI at exactly the source audit's paper mode and
-   execution level. Pass external assessment, known-valid-output, or E2 plans
-   through when that evidence depth requires them.
+5. Run the canonical Review CLI at the source audit's paper mode and fixed E1
+   execution level. External fixtures and assessments must match the hashes
+   bound by the source audit.
 6. Require `PASS`, `PUBLISH_CANDIDATE`, resolution of the target finding,
    unchanged package identity, and no mutation outside the three allowed roles.
-7. Write `benchmark_repair/repair_manifest.json`, `repair_report.json`, and
-   `repair_report.md`, rebase generated Review paths, and atomically replace the
+7. Write the fixed repair bundle (`repair_plan.json`, `changes.json`,
+   `unresolved.json`, `regression_results.json`, `re_audit_comparison.json`,
+   `patch.json`, `evidence.json`, `repair.log`, and `history.json`) plus the
+   manifests/reports, rebase generated Review paths, and atomically replace the
    authoritative package.
 
 Successful history contains the full `snapshot/`, the full pre-publication

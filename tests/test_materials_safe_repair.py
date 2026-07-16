@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -34,6 +35,50 @@ def write_json(path: Path, value: Any) -> None:
 
 def sha256_file(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def repair_module() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "materials_repair_runner", REPAIR_RUNNER
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def bind_plan_to_package(package: Path, value: dict[str, Any]) -> None:
+    manifest_path = package / "benchmark_audit/audit_manifest.json"
+    if not manifest_path.is_file():
+        return
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    digest = repair_module().core_contract_digest(package)
+    value.setdefault("core_contract_digest", digest)
+    value.setdefault(
+        "source_audit",
+        {
+            "audit_id": value["audit_id"],
+            "finding_id": value["finding_id"],
+            "finding_status": "OPEN",
+            "input_hashes": manifest.get("input_hashes", {}),
+            "review_implementation": manifest.get("review_implementation", {}),
+            "paper_mode": "no_paper",
+            "execution_level": "E1",
+            "core_contract_digest": digest,
+            "fixture_hashes": {},
+            "assessment_hashes": {},
+        },
+    )
+    for item in value.get("evidence", []):
+        source = item.get("source")
+        if not isinstance(source, str) or "source_hash" in item:
+            continue
+        if source.startswith("benchmark_audit:"):
+            local = package / "benchmark_audit/audit_report.json"
+        else:
+            local = package / source
+        if local.is_file():
+            item["source_hash"] = sha256_file(local)
 
 
 def install_repair_harness(workspace: Path) -> Path:
@@ -140,6 +185,7 @@ def initial_repair_context(
         "findings": [
             {
                 "finding_id": FINDING_ID,
+                "status": "OPEN",
                 "title": "SOLUTION_ENTRYPOINT_MISSING",
                 "severity": "HIGH",
             }
@@ -170,6 +216,10 @@ def initial_repair_context(
             "audit_id": AUDIT_ID,
             "benchmark_root": str(package),
             "input_hashes": input_hashes,
+            "review_implementation": {
+                "schema_version": "materials-review-implementation/1.0",
+                "aggregate_hash": "sha256:" + "1" * 64,
+            },
             "output_hashes": {},
         },
     )
@@ -181,7 +231,7 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
         "schema_version": "0.1",
         "audit_id": audit_id,
         "finding_id": finding_id,
-        "repair_class": "SAFE_AUTO_FIX",
+        "repair_class": "AUTO_FIX",
         "justification": "Restore the missing deterministic solution entrypoint.",
         "core_science_change": False,
         "evidence": [
@@ -202,8 +252,17 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
             }
         ],
         "regression_tests": [
-            {"type": "file_exists", "file": "solution/solve.sh"},
             {
+                "id": "solve-exists",
+                "finding_id": finding_id,
+                "causal_operation_ids": ["restore-solve"],
+                "type": "file_exists",
+                "file": "solution/solve.sh",
+            },
+            {
+                "id": "solve-runs",
+                "finding_id": finding_id,
+                "causal_operation_ids": ["restore-solve"],
                 "type": "command",
                 "command": ["sh", "solution/solve.sh"],
                 "expected_returncode": 0,
@@ -213,6 +272,14 @@ def safe_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
 
 
 def write_plan(path: Path, value: dict[str, Any]) -> None:
+    packages = [
+        candidate
+        for candidate in path.parent.iterdir()
+        if candidate.is_dir()
+        and (candidate / "benchmark_audit/audit_report.json").is_file()
+    ]
+    if len(packages) == 1:
+        bind_plan_to_package(packages[0], value)
     write_json(path, value)
 
 

@@ -26,6 +26,11 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
             "id": "paper-method",
             "source": "paper/paper.md",
             "quote": "evidence-backed quantity",
+            "kind": "scientific_method",
+            "precision": {
+                "kind": "scientific_method",
+                "claim": "the paper-supported quantity",
+            },
         }
     ]
     value["operations"] = [
@@ -40,6 +45,9 @@ def assisted_plan(audit_id: str, finding_id: str) -> dict[str, Any]:
     ]
     value["regression_tests"] = [
         {
+            "id": "instruction-correction",
+            "finding_id": finding_id,
+            "causal_operation_ids": ["correct-instruction"],
             "type": "text_contains",
             "file": "instruction.md",
             "expected": "paper-supported quantity",
@@ -173,6 +181,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             ]
             value["regression_tests"] = [
                 {
+                    "id": "threshold",
+                    "finding_id": finding_id,
+                    "causal_operation_ids": ["lower-threshold"],
                     "type": "json_path_equals",
                     "file": "tests/grading_spec.json",
                     "path": ["pass_threshold"],
@@ -201,6 +212,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
             plan = workspace / "failing-plan.json"
             value = safe_plan(report["audit_id"], finding_id)
             value["regression_tests"][0] = {
+                "id": "forced-failure",
+                "finding_id": finding_id,
+                "causal_operation_ids": ["restore-solve"],
                 "type": "text_contains",
                 "file": "solution/solve.sh",
                 "expected": "not written by the operation",

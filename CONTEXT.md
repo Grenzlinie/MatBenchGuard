@@ -69,7 +69,7 @@ _Avoid_: 物理删除、继续留在可发布 corpus
 _Avoid_: 把 E1 视为科学流程已复现
 
 **确定性修复**:
-有唯一、可测试且不改变核心科学契约的修复对应 `SAFE_AUTO_FIX`；有 instruction/tests/solution 或按需 paper 证据支持的解释性修复对应 `ASSISTED_FIX`。两者都可由 Agent 在隔离副本自主应用、回归并同深度复审；证据不足时放弃，禁止猜科学参数、泄露答案、降低阈值或重定义核心科学任务。
+有唯一、可测试且不改变核心科学契约的修复对应 `AUTO_FIX`；有 instruction/tests/solution 或按需 paper 证据支持的解释性修复对应 `ASSISTED_FIX`；证据不足或会重定义核心科学契约时对应 `ABANDON`。前两者都可由 Agent 在隔离副本自主应用、回归并同深度复审；禁止猜科学参数、泄露答案、降低阈值或重定义核心科学任务。
 _Avoid_: 每项修复都要求人工审批、无证据追阈值
 
 **百题试评**:

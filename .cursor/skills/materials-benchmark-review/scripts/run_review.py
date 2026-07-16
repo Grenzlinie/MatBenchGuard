@@ -16,6 +16,7 @@ from dynamic_checker_probe import dynamic_checker_probe
 from finalize_audit_output import finalize_audit, synthesize_report
 from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
+    bind_external_evidence,
     locate_root,
     prepare_workspace,
     record_paper_input_hashes,
@@ -750,6 +751,11 @@ def run_review(
             "paper_grounded mode requires --agent-assessment after the "
             "no-paper gate passes"
         )
+    external_bindings = bind_external_evidence(
+        temp_dir,
+        known_valid_output,
+        agent_assessment_path if agent_assessment is not None else None,
+    )
     synthesize_report(
         root,
         temp_dir,
@@ -759,6 +765,7 @@ def run_review(
         execution_evidence=execution_evidence,
         agent_assessment=agent_assessment,
         paper_skip_reason=paper_skip_reason,
+        external_bindings=external_bindings,
     )
     return finalize_audit(root)
 
