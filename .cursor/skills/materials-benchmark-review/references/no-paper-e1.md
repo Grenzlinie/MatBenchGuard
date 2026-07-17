@@ -1,4 +1,9 @@
-# E1 review without paper
+# E1 deterministic and dynamic evidence
+
+This layer gathers the package-first (D-layer + dynamic) evidence that does not
+itself require the paper. It is **not** a separate "no-paper mode": the normal
+review path is always paper-grounded E1 (see `paper-grounded-audit.md`). The
+only time the paper is skipped is a Stage 0 `NON_MAT` Hard Gate fail-fast.
 
 Ask whether instruction and tests define a scientifically valid, answerable,
 machine-checkable materials task.
@@ -47,9 +52,11 @@ as `UNCLASSIFIED` without removing core checker analysis. Only non-load-bearing
 logs and intermediate audit artifacts are process-only. An ignored core output
 is a severe checker-core finding.
 
-## Escalate to paper
+## Fixed paper rule (no trigger switch)
 
-Stop no-paper inference and trigger paper review for a scientific conflict,
-possibly missing necessary definition, uncertain Gold provenance, or explicit
-paper-reproduction claim. If paper is temporarily unavailable, use
-`NOT_ASSESSABLE`; do not invent a scientific failure.
+There is no paper trigger switch. `A2` (necessary definitions), `A4` (paper
+fidelity and reproducibility), and `A5` (Gold credibility) **always read
+`paper/`**; `A1` and `A3` are package-first and may extend to the paper when
+needed. Every review therefore enters paper-grounded E1 unless Stage 0
+fail-fasts on the `NON_MAT` Hard Gate. If the paper is temporarily unavailable,
+use `NOT_ASSESSABLE`; do not invent a scientific failure.

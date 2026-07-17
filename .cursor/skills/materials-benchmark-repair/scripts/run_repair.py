@@ -28,11 +28,36 @@ if str(_REVIEW_SCRIPTS) not in sys.path:
 from canonical_status import (  # noqa: E402
     REPAIR_BUNDLE_FILES,
     REPAIR_STATUSES,
+    SUCCESS_REPAIR_STATUSES,
     canonical_fields,
     validate_repair_bundle_semantics,
 )
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
+# The batch four-state lifecycle mapped onto the unified terminal fields
+# (disposition, publishable, repair_state).  ``ROLLED_BACK`` keeps the source
+# verdict because the authoritative package is restored unchanged.
+TERMINAL_STATE_FIELDS = {
+    "REPAIRED": ("PASS", True),
+    "PARTIALLY_REPAIRED": ("CONDITIONAL", False),
+    "ABANDONED": ("REJECT", False),
+    "ROLLED_BACK": (None, False),
+}
+
+
+def terminal_fields(
+    repair_state: str, *, source_verdict: str | None = None
+) -> dict[str, Any]:
+    disposition, publishable = TERMINAL_STATE_FIELDS.get(
+        repair_state, (None, False)
+    )
+    if disposition is None:
+        disposition = source_verdict or "CONDITIONAL"
+    return {
+        "disposition": disposition,
+        "publishable": publishable,
+        "repair_state": repair_state,
+    }
 REPAIR_CLASSES = {"AUTO_FIX", "ASSISTED_FIX"}
 AUTHORITATIVE_EXECUTION_LEVEL = "E1"
 OPERATION_TYPES = {"write_file", "replace_text", "text_replace", "json_set", "delete_file"}
@@ -359,43 +384,26 @@ def regression_semantically_asserts(
     return False
 
 
-def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
-    resolved = plan_path.expanduser().resolve()
-    if resolved.is_relative_to(root.resolve()):
-        raise ValueError("repair plan must remain outside the Harbor 题包")
-    if not resolved.is_file():
-        raise FileNotFoundError(f"repair plan is missing: {resolved}")
-    plan = read_json(resolved)
-    if isinstance(plan, dict) and "repair_class" not in plan:
-        if plan.get("decision") in DECISIONS:
-            plan["repair_class"] = plan["decision"]
-    if not isinstance(plan, dict) or plan.get("schema_version") != "0.1":
-        raise ValueError("repair plan must use schema_version 0.1")
-    if "source_audit" not in plan and isinstance(plan.get("audit_binding"), dict):
-        plan["source_audit"] = plan["audit_binding"]
-    if plan.get("repair_class") not in DECISIONS:
-        raise ValueError(
-            "repair_class must be AUTO_FIX, ASSISTED_FIX, or ABANDON"
-        )
-    if not isinstance(plan.get("justification"), str) or not plan[
-        "justification"
-    ].strip():
-        raise ValueError("repair plan requires a justification")
-    if not isinstance(plan.get("audit_id"), str) or not plan["audit_id"]:
-        raise ValueError("repair plan requires audit_id")
-    if not isinstance(plan.get("finding_id"), str) or not plan["finding_id"]:
-        raise ValueError("repair plan requires finding_id")
-    operations = plan.get("operations")
-    regressions = plan.get("regression_tests")
+def validate_finding_spec(root: Path, spec: dict[str, Any]) -> None:
+    """Validate one finding's operation/regression schema.
+
+    ``spec`` is either a legacy single-finding plan or one entry of a batch
+    plan's ``findings`` list; both carry ``repair_class``, ``operations``,
+    ``regression_tests``, and ``finding_id``.
+    """
+
+    finding_id = spec["finding_id"]
+    operations = spec.get("operations")
+    regressions = spec.get("regression_tests")
     if not isinstance(operations, list):
         raise ValueError("repair plan operations must be a list")
     if not isinstance(regressions, list):
         raise ValueError("repair plan regression_tests must be a list")
-    if plan.get("repair_class") != "ABANDON" and not operations:
+    if spec.get("repair_class") != "ABANDON" and not operations:
         raise ValueError("repair plan requires at least one operation")
-    if plan.get("repair_class") != "ABANDON" and not regressions:
+    if spec.get("repair_class") != "ABANDON" and not regressions:
         raise ValueError("repair plan requires regression tests")
-    if plan.get("repair_class") == "ABANDON" and (operations or regressions):
+    if spec.get("repair_class") == "ABANDON" and (operations or regressions):
         raise ValueError("ABANDON plans require operations=[] and regression_tests=[]")
     operation_ids: set[str] = set()
     operations_by_id: dict[str, dict[str, Any]] = {}
@@ -421,11 +429,11 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
             raise ValueError(
                 f"unsupported regression test type: {specification.get('type')}"
             )
-        if plan.get("repair_class") == "ABANDON":
+        if spec.get("repair_class") == "ABANDON":
             raise ValueError("ABANDON plans may not carry regressions")
         if not isinstance(specification.get("id"), str) or not specification["id"]:
             raise ValueError(f"regression test {index} requires a stable id")
-        if specification.get("finding_id") != plan["finding_id"]:
+        if specification.get("finding_id") != finding_id:
             raise ValueError(
                 f"regression test {index} must bind the target finding"
             )
@@ -468,13 +476,13 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
             raise ValueError("regressions must fail before the repair")
         if specification.get("expected_after", True) is not True:
             raise ValueError("regressions must pass after the repair")
-    if plan.get("repair_class") != "ABANDON" and causally_covered != operation_ids:
+    if spec.get("repair_class") != "ABANDON" and causally_covered != operation_ids:
         uncovered = sorted(operation_ids - causally_covered)
         raise ValueError(
             f"every operation requires causal regression coverage: {uncovered}"
         )
     if (
-        plan.get("repair_class") != "ABANDON"
+        spec.get("repair_class") != "ABANDON"
         and semantically_covered != operation_ids
     ):
         uncovered = sorted(operation_ids - semantically_covered)
@@ -482,6 +490,69 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
             "every operation requires its own exact semantic regression "
             f"assertion: {uncovered}"
         )
+
+
+def validate_batch_plan(root: Path, plan: dict[str, Any]) -> dict[str, Any]:
+    """Validate a batch plan carrying ``audit_id`` + ``findings[]``."""
+
+    findings = plan["findings"]
+    if not findings:
+        raise ValueError("batch repair plan requires at least one finding")
+    seen: set[str] = set()
+    for finding in findings:
+        if not isinstance(finding, dict):
+            raise ValueError("every batch finding must be an object")
+        finding_id = finding.get("finding_id")
+        if not isinstance(finding_id, str) or not finding_id:
+            raise ValueError("every batch finding requires finding_id")
+        if finding_id in seen:
+            raise ValueError(f"duplicate finding_id in batch plan: {finding_id}")
+        seen.add(finding_id)
+        if finding.get("repair_class") not in DECISIONS:
+            raise ValueError(
+                "every batch finding requires a repair_class of "
+                "AUTO_FIX, ASSISTED_FIX, or ABANDON"
+            )
+        if (
+            not isinstance(finding.get("justification"), str)
+            or not finding["justification"].strip()
+        ):
+            raise ValueError("every batch finding requires a justification")
+        finding.setdefault("operations", [])
+        finding.setdefault("regression_tests", [])
+        finding.setdefault("evidence", [])
+        validate_finding_spec(root, finding)
+    return plan
+
+
+def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
+    resolved = plan_path.expanduser().resolve()
+    if resolved.is_relative_to(root.resolve()):
+        raise ValueError("repair plan must remain outside the Harbor 题包")
+    if not resolved.is_file():
+        raise FileNotFoundError(f"repair plan is missing: {resolved}")
+    plan = read_json(resolved)
+    if not isinstance(plan, dict) or plan.get("schema_version") != "0.1":
+        raise ValueError("repair plan must use schema_version 0.1")
+    if "source_audit" not in plan and isinstance(plan.get("audit_binding"), dict):
+        plan["source_audit"] = plan["audit_binding"]
+    if not isinstance(plan.get("audit_id"), str) or not plan["audit_id"]:
+        raise ValueError("repair plan requires audit_id")
+    if isinstance(plan.get("findings"), list):
+        return validate_batch_plan(root, plan)
+    if "repair_class" not in plan and plan.get("decision") in DECISIONS:
+        plan["repair_class"] = plan["decision"]
+    if plan.get("repair_class") not in DECISIONS:
+        raise ValueError(
+            "repair_class must be AUTO_FIX, ASSISTED_FIX, or ABANDON"
+        )
+    if not isinstance(plan.get("justification"), str) or not plan[
+        "justification"
+    ].strip():
+        raise ValueError("repair plan requires a justification")
+    if not isinstance(plan.get("finding_id"), str) or not plan["finding_id"]:
+        raise ValueError("repair plan requires finding_id")
+    validate_finding_spec(root, plan)
     return plan
 
 
@@ -776,7 +847,7 @@ def validate_fresh_audit(
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
-    route = disposition.get("route") or report.get("summary", {}).get("disposition")
+    route = disposition.get("route") or canonical_publish_route(report)
     if route != "REPAIR_QUEUE":
         raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
     findings = {
@@ -894,20 +965,19 @@ def evidence_index(
         )
         actual_hash = sha256_file(local)
         if source_category == "paper":
-            configuration = report.get("configuration", {})
+            # Review is always paper-grounded now (the only non-paper path is a
+            # NON_MAT fail-fast that never enters Repair).  Paper evidence is
+            # therefore always admissible, but each item must bind the exact
+            # paper/** file the source audit hashed (mismatch/unbound →
+            # BLOCKED_EVIDENCE).
             input_hashes = manifest.get("input_hashes", {})
-            if configuration.get("paper_mode") != "paper_grounded":
-                raise PolicyStop(
-                    "BLOCKED_EVIDENCE",
-                    "paper evidence requires a paper-grounded source audit",
-                )
             if (
                 not isinstance(input_hashes, dict)
                 or input_hashes.get(relative.as_posix()) != actual_hash
             ):
                 raise PolicyStop(
                     "BLOCKED_EVIDENCE",
-                    "paper evidence is absent from authoritative input hashes",
+                    "paper evidence must bind the source-audit-hashed paper file",
                 )
         if supplied_hash != actual_hash:
             raise PolicyStop(
@@ -1694,6 +1764,27 @@ def finding_key(finding: dict[str, Any]) -> str | None:
     return None
 
 
+def canonical_publish_route(report: dict[str, Any]) -> str | None:
+    """Return the publish route from a Review report, never the verdict.
+
+    In v11 ``summary.disposition`` holds the VERDICT; the route lives in the
+    top-level ``publishability`` and ``summary.publication_route`` /
+    ``summary.publishability`` fields.  Returns ``None`` when no route field is
+    present so ``canonical_fields`` can derive it from the verdict.
+    """
+
+    if not isinstance(report, dict):
+        return None
+    summary = report.get("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    return (
+        report.get("publishability")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
+
+
 def validate_reaudit(
     candidate: Path,
     reaudit: dict[str, Any],
@@ -1704,7 +1795,15 @@ def validate_reaudit(
     disposition_path = candidate / "benchmark_audit/disposition.json"
     disposition = read_json(disposition_path) if disposition_path.is_file() else {}
     verdict = summary.get("final_verdict") or disposition.get("verdict")
-    route = summary.get("disposition") or disposition.get("route")
+    # The publish route lives in disposition.json ``route`` (and the finalizer's
+    # ``summary.publication_route`` / ``summary.publishability``).  In v11
+    # ``summary.disposition`` holds the VERDICT, so it must never be read as the
+    # route (mirrors repair_batch and read_ext_disposition).
+    route = (
+        disposition.get("route")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
     if verdict != "PASS" or route != "PUBLISH_CANDIDATE":
         raise ValueError("equal-depth re-audit did not route PASS to PUBLISH_CANDIDATE")
     source_key = finding_key(source_finding)
@@ -1830,7 +1929,8 @@ def prior_failed_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
         if (
             isinstance(value, dict)
             and value.get("root_cause") == root_cause
-            and value.get("status") in {"ROLLED_BACK", "ABANDONED"}
+            and value.get("status")
+            in {"ROLLED_BACK", "ABANDONED", "PARTIALLY_REPAIRED"}
             and isinstance(value.get("attempt_number"), int)
             and value["attempt_number"] > 0
         ):
@@ -1922,9 +2022,10 @@ def write_history_bundle(
     )
     identity = {
         "audit_id": plan["audit_id"],
-        "finding_id": plan["finding_id"],
         "package_identity": plan["package_identity"],
     }
+    if isinstance(plan.get("finding_id"), str) and plan["finding_id"]:
+        identity["finding_id"] = plan["finding_id"]
     bundle_plan = {**plan, **canonical}
     bound_unresolved = [
         {**item, **identity} for item in unresolved
@@ -1951,7 +2052,7 @@ def write_history_bundle(
         {
             "schema_version": "0.1",
             "files": changes,
-            "atomic_publish": status == "PUBLISHED",
+            "atomic_publish": status in SUCCESS_REPAIR_STATUSES,
         },
     )
     evidence_items = (
@@ -2029,12 +2130,7 @@ def record_control_stop(
         review_verdict=report.get(
             "review_verdict", report.get("summary", {}).get("final_verdict")
         ),
-        publishability=report.get(
-            "publishability",
-            report.get("summary", {}).get(
-                "disposition", "EVIDENCE_PENDING"
-            ),
-        ),
+        publishability=canonical_publish_route(report),
     )
     manifest = {
         "schema_version": "0.1",
@@ -2042,12 +2138,7 @@ def record_control_stop(
             report.get(
                 "review_verdict", report.get("summary", {}).get("final_verdict")
             ),
-            publishability=report.get(
-                "publishability",
-                report.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(report),
             repair_decision="ABANDON",
             repair_status="ABANDONED",
         ),
@@ -2067,6 +2158,10 @@ def record_control_stop(
     return {
         "status": stop.status,
         "decision": "ABANDON",
+        **terminal_fields(
+            "ABANDONED",
+            source_verdict=report.get("summary", {}).get("final_verdict"),
+        ),
         **{
             key: manifest[key]
             for key in (
@@ -2112,9 +2207,10 @@ def write_repair_reports(
     manifest.update(canonical)
     identity = {
         "audit_id": manifest["source_audit_id"],
-        "finding_id": manifest["finding_id"],
         "package_identity": manifest["package_identity"],
     }
+    if isinstance(manifest.get("finding_id"), str) and manifest["finding_id"]:
+        identity["finding_id"] = manifest["finding_id"]
     bound_plan = {**plan, **canonical, **identity}
     bound_evidence = [
         {**item, **identity} for item in manifest.get("evidence", [])
@@ -2209,6 +2305,842 @@ def write_repair_reports(
     validate_fixed_bundle(report_dir)
 
 
+V11_DIMENSION_KEYS = ("C01", "C02", "C03", "C04", "C05", "C06", "C07")
+
+
+def batch_root_cause(report: dict[str, Any], plan: dict[str, Any]) -> str:
+    finding_ids = sorted(
+        str(finding.get("finding_id"))
+        for finding in plan.get("findings", [])
+        if isinstance(finding, dict)
+    )
+    value = f"{report['audit_id']}:batch:" + ",".join(finding_ids)
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
+
+
+def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "0.1",
+        "audit_id": plan["audit_id"],
+        "finding_id": finding["finding_id"],
+        "repair_class": finding["repair_class"],
+        "justification": finding["justification"],
+        "core_science_change": finding.get(
+            "core_science_change", plan.get("core_science_change", False)
+        ),
+        "evidence": finding.get("evidence", []),
+        "operations": finding.get("operations", []),
+        "regression_tests": finding.get("regression_tests", []),
+        "source_audit": plan.get("source_audit"),
+        "core_contract_digest": plan.get("core_contract_digest"),
+        "package_identity": plan.get("package_identity"),
+        "known_valid_output": plan.get("known_valid_output"),
+        "agent_assessment": plan.get("agent_assessment"),
+    }
+
+
+def validate_source_audit_binding_batch(
+    root: Path,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Audit-level binding for a batch plan (no single finding_id)."""
+
+    source_audit = plan.get("source_audit")
+    if not isinstance(source_audit, dict):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE", "Repair requires a complete source-audit binding."
+        )
+    expected_audit_id = report.get("audit_id")
+    if (
+        source_audit.get("audit_id") != expected_audit_id
+        or source_audit.get("audit_id") != manifest.get("audit_id")
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source audit identity is not bound to the authoritative audit",
+        )
+    input_hashes = manifest.get("input_hashes")
+    if not isinstance(input_hashes, dict) or not input_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "authoritative audit lacks complete package input hashes",
+        )
+    bound_input_hashes = (
+        source_audit.get("input_hashes")
+        or source_audit.get("package_hashes")
+        or source_audit.get("source_hashes")
+    )
+    if bound_input_hashes != input_hashes:
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "source audit package hashes differ from the authoritative audit",
+        )
+    configuration = report.get("configuration")
+    if not isinstance(configuration, dict):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE", "authoritative audit lacks configuration"
+        )
+    if (
+        source_audit.get("paper_mode", source_audit.get("paper_review_mode"))
+        != configuration.get("paper_mode")
+        or source_audit.get(
+            "execution_level", source_audit.get("evidence_depth")
+        )
+        != REQUIRED_AUDIT_EXECUTION_LEVEL
+        or configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "Repair source audit and re-audit must be fixed at E1 depth",
+        )
+    digest = core_contract_digest(root)
+    bound_digest = source_audit.get("core_contract_digest")
+    if bound_digest is None and isinstance(source_audit.get("core_contract"), dict):
+        bound_digest = source_audit["core_contract"].get("digest")
+    if (
+        plan.get("core_contract_digest") != digest
+        or bound_digest != digest
+        or manifest.get("core_contract_digest") != digest
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "frozen core-contract digest is stale or incomplete",
+        )
+    external_binding_hashes(root, plan, manifest)
+    return source_audit
+
+
+def validate_fresh_audit_batch(
+    root: Path,
+    plan: dict[str, Any],
+    attestation_path: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]]:
+    audit = root / "benchmark_audit"
+    validate_audit_attestation(root, audit, attestation_path)
+    report = read_json(audit / "audit_report.json")
+    manifest = read_json(audit / "audit_manifest.json")
+    disposition = read_json(audit / "disposition.json")
+    authenticate_audit_bundle(root, report, manifest, disposition)
+    report_configuration(report)
+    if plan["audit_id"] != report.get("audit_id"):
+        raise ValueError("stale audit: plan audit_id is not authoritative")
+    route = disposition.get("route") or canonical_publish_route(report)
+    if route != "REPAIR_QUEUE":
+        raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
+    findings_by_id = {
+        item.get("finding_id"): item
+        for item in report.get("findings", [])
+        if isinstance(item, dict) and isinstance(item.get("finding_id"), str)
+    }
+    for finding in plan["findings"]:
+        if (
+            finding.get("repair_class") != "ABANDON"
+            and finding["finding_id"] not in findings_by_id
+        ):
+            raise ValueError(
+                f"repair plan finding is not open in the audit: "
+                f"{finding['finding_id']}"
+            )
+    input_hashes = manifest.get("input_hashes")
+    if not isinstance(input_hashes, dict):
+        raise ValueError("audit manifest input_hashes must be an object")
+    for relative, expected in input_hashes.items():
+        source, relative_path = package_path(
+            root, relative, context="audit manifest input path"
+        )
+        if relative_path.parts[0] in GENERATED_TOP_LEVEL:
+            raise ValueError("audit manifest hashes a generated report path")
+        if not source.is_file() or sha256_file(source) != expected:
+            raise ValueError(f"stale audit: input changed since review: {relative}")
+    validate_source_audit_binding_batch(root, report, manifest, plan)
+    return report, manifest, findings_by_id
+
+
+def check_operation_policy(
+    root: Path,
+    operation: dict[str, Any],
+    evidence: dict[str, dict[str, Any]],
+    hidden_fragments: set[str],
+    repair_class: str,
+) -> None:
+    """Per-operation evidence-precision policy (raises PolicyStop on failure)."""
+
+    linked = linked_evidence(operation, evidence)
+    _, relative = repair_target(root, operation["file"])
+    if relative.parts and relative.parts[0] != "solution" and any(
+        item.get("source_category") == "solution_oracle" for item in linked
+    ):
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "Oracle/solution content cannot support public or checker "
+            "contract changes.",
+        )
+    if relative.as_posix() == "instruction.md":
+        addition = proposed_text(operation)
+        if any(fragment in addition for fragment in hidden_fragments):
+            raise PolicyStop(
+                "POLICY_VIOLATION",
+                "Repair would leak hidden solution content into instruction.md.",
+            )
+    validate_precision_matrix(operation, linked, repair_class)
+    expected_precision = precision_kind_for(operation)
+    allowed_categories = (
+        {"public_instruction", "paper"}
+        if expected_precision == "scientific_method"
+        else {
+            "audit_finding",
+            "public_instruction",
+            "checker_contract",
+            "paper",
+        }
+    )
+    if any(
+        item.get("source_category") not in allowed_categories for item in linked
+    ):
+        raise PolicyStop(
+            "BLOCKED_EVIDENCE",
+            "Evidence source role cannot support this scientific/schema/"
+            "scoring change.",
+        )
+    if relative.as_posix() == "instruction.md" and any(
+        Path(str(item["source"])).parts[:1] == ("solution",) for item in linked
+    ):
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "Solution content cannot be evidence for public instruction.",
+        )
+
+
+def classify_finding(
+    root: Path,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+    fplan: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Classify one finding's operations without blocking siblings.
+
+    Returns ``(evidence, valid_operations, blocked_operations)``.  Raises
+    ``PolicyStop`` for finding-level violations that block the whole finding.
+    """
+
+    if fplan.get("core_science_change") is not False:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "Plan must declare core_science_change=false; Repair may not "
+            "redefine the Harbor package's core science.",
+        )
+    evidence = evidence_index(root, report, manifest, fplan)
+    hidden_fragments = solution_fragments(root)
+    target_roles: set[str] = set()
+    for operation in fplan["operations"]:
+        _, relative = repair_target(root, operation["file"])
+        target_roles.add(
+            "solution"
+            if relative.parts and relative.parts[0] == "solution"
+            else "instruction"
+            if relative.as_posix() == "instruction.md"
+            else "tests"
+            if relative.parts and relative.parts[0] == "tests"
+            else "other"
+        )
+        if relative.parts and relative.parts[0] == "solution":
+            hidden_fragments.update(
+                line.strip()
+                for line in proposed_text(operation).splitlines()
+                if len(line.strip()) >= 12
+            )
+    if fplan["repair_class"] == "AUTO_FIX" and target_roles & {
+        "instruction",
+        "tests",
+    }:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "AUTO_FIX may not change the frozen core scientific contract.",
+        )
+    if "solution" in target_roles and target_roles & {"instruction", "tests"}:
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "A repair may not rewrite checker/instruction and solution "
+            "protocols together.",
+        )
+    valid_operations: list[dict[str, Any]] = []
+    blocked_operations: list[dict[str, Any]] = []
+    for operation in fplan["operations"]:
+        try:
+            check_operation_policy(
+                root, operation, evidence, hidden_fragments, fplan["repair_class"]
+            )
+        except PolicyStop as stop:
+            blocked_operations.append(
+                {
+                    "operation_id": operation["id"],
+                    "reason": f"{stop.status}: {stop.reason}",
+                }
+            )
+            continue
+        valid_operations.append(operation)
+    return evidence, valid_operations, blocked_operations
+
+
+def compute_repair_delta(
+    before: dict[str, Any], after: dict[str, Any]
+) -> dict[str, Any]:
+    def dims(report: dict[str, Any]) -> dict[str, Any]:
+        summary = report.get("summary", {}) if isinstance(report, dict) else {}
+        value = summary.get("dimensions_v11") or report.get("dimensions_v11")
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            return {
+                item["dimension"]: item
+                for item in value
+                if isinstance(item, dict) and item.get("dimension")
+            }
+        return {}
+
+    before_dims = dims(before)
+    after_dims = dims(after)
+    delta: dict[str, Any] = {}
+    for key in V11_DIMENSION_KEYS:
+        before_value = (before_dims.get(key) or {}).get("normalized")
+        after_value = (after_dims.get(key) or {}).get("normalized")
+        delta_pp = (
+            round(after_value - before_value, 4)
+            if isinstance(before_value, (int, float))
+            and isinstance(after_value, (int, float))
+            else None
+        )
+        delta[key] = {
+            "before_normalized": before_value,
+            "after_normalized": after_value,
+            "delta_pp": delta_pp,
+        }
+    return delta
+
+
+def archive_batch_attempt(
+    *,
+    root: Path,
+    report: dict[str, Any],
+    plan: dict[str, Any],
+    root_cause: str,
+    attempt_number: int,
+    repair_state: str,
+    decision: str,
+    changes: list[dict[str, Any]],
+    unresolved: list[dict[str, Any]],
+    regressions: list[dict[str, Any]],
+    comparison: dict[str, Any],
+    evidence: list[dict[str, Any]],
+    reason: str,
+    history_dir: Path | None = None,
+    source_verdict: str | None = None,
+) -> dict[str, Any]:
+    """Archive a non-publishing batch attempt and return its result payload."""
+
+    repair_id = history_dir.name if history_dir is not None else unique_id("repair")
+    destination = history_dir or (history_root_for(root) / repair_id)
+    destination.mkdir(parents=True, exist_ok=True)
+    review_verdict = report.get(
+        "review_verdict", report.get("summary", {}).get("final_verdict")
+    )
+    publishability = canonical_publish_route(report)
+    write_history_bundle(
+        destination,
+        plan=plan,
+        changes=changes,
+        unresolved=unresolved or [{"finding_id": "__batch__", "reason": reason}],
+        regressions=regressions,
+        comparison=comparison,
+        evidence=evidence,
+        root_cause=root_cause,
+        attempt_number=attempt_number,
+        status=repair_state,
+        decision=decision,
+        review_verdict=review_verdict,
+        publishability=publishability,
+    )
+    write_json(
+        destination / "attempt_manifest.json",
+        {
+            "schema_version": "0.1",
+            "repair_id": repair_id,
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "max_attempts": 2,
+            "status": repair_state,
+            "decision": decision,
+            "audit_id": report["audit_id"],
+            "finding_ids": [
+                finding.get("finding_id") for finding in plan.get("findings", [])
+            ],
+            "package_mutated": False,
+            "reason": reason,
+            "recorded_at": timestamp(),
+        },
+    )
+    return {
+        "repair_id": repair_id,
+        "status": repair_state,
+        "decision": decision,
+        **terminal_fields(repair_state, source_verdict=source_verdict),
+        "root_cause": root_cause,
+        "attempt_number": attempt_number,
+        "history_root": str(history_root_for(root)),
+        "history_dir": str(destination),
+        "attempt_manifest": str(destination / "attempt_manifest.json"),
+        "unresolved": unresolved,
+        "repair_delta": comparison.get("repair_delta")
+        if isinstance(comparison, dict)
+        else None,
+        "reason": reason,
+    }
+
+
+def repair_batch(
+    root: Path,
+    plan: dict[str, Any],
+    attestation_path: Path,
+) -> dict[str, Any]:
+    plan["package_identity"] = package_identity(root)
+    try:
+        report, audit_manifest, findings_by_id = validate_fresh_audit_batch(
+            root, plan, attestation_path
+        )
+    except PolicyStop as stop:
+        report = read_json(root / "benchmark_audit/audit_report.json")
+        root_cause = batch_root_cause(report, plan)
+        return archive_batch_attempt(
+            root=root,
+            report=report,
+            plan=plan,
+            root_cause=root_cause,
+            attempt_number=0,
+            repair_state="ABANDONED",
+            decision="ABANDON",
+            changes=[],
+            unresolved=[
+                {"finding_id": "__batch__", "reason": f"{stop.status}: {stop.reason}"}
+            ],
+            regressions=[],
+            comparison={},
+            evidence=[],
+            reason=f"{stop.status}: {stop.reason}",
+        )
+    root_cause = batch_root_cause(report, plan)
+    source_verdict = report.get("summary", {}).get("final_verdict")
+    prior = prior_failed_attempts(root, root_cause)
+    if len(prior) >= 2 or any(item["status"] == "ABANDONED" for item in prior):
+        return archive_batch_attempt(
+            root=root,
+            report=report,
+            plan=plan,
+            root_cause=root_cause,
+            attempt_number=len(prior),
+            repair_state="ABANDONED",
+            decision="ABANDON",
+            changes=[],
+            unresolved=[
+                {
+                    "finding_id": "__batch__",
+                    "reason": "Two failed batch attempts exhausted the limit.",
+                }
+            ],
+            regressions=[],
+            comparison={},
+            evidence=[],
+            reason="Two failed batch attempts exhausted the root-cause limit.",
+            source_verdict=source_verdict,
+        )
+
+    abandoned: list[dict[str, Any]] = []
+    blocked: list[dict[str, Any]] = []
+    resolved_targets: list[str] = []
+    valid_ops: list[dict[str, Any]] = []
+    op_finding: dict[str, str] = {}
+    planned_regressions: list[dict[str, Any]] = []
+    evidence_all: dict[str, dict[str, Any]] = {}
+    for finding in plan["findings"]:
+        finding_id = finding["finding_id"]
+        fplan = build_fplan(plan, finding)
+        if finding["repair_class"] == "ABANDON":
+            abandoned.append(
+                {"finding_id": finding_id, "reason": finding["justification"]}
+            )
+            continue
+        finding_obj = findings_by_id.get(finding_id)
+        if finding_obj is None or finding_obj.get("status") != "OPEN":
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "reason": "finding is not OPEN in the authoritative audit",
+                }
+            )
+            continue
+        try:
+            evidence, finding_valid_ops, finding_blocked_ops = classify_finding(
+                root, report, audit_manifest, fplan
+            )
+        except PolicyStop as stop:
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "reason": f"{stop.status}: {stop.reason}",
+                }
+            )
+            continue
+        for blocked_op in finding_blocked_ops:
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "operation_id": blocked_op["operation_id"],
+                    "reason": blocked_op["reason"],
+                }
+            )
+        if not finding_valid_ops:
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "reason": "all operations were blocked by evidence precision",
+                }
+            )
+            continue
+        valid_ids = {operation["id"] for operation in finding_valid_ops}
+        for operation in finding_valid_ops:
+            for evidence_id in operation.get("evidence_ids", []):
+                evidence_all[evidence_id] = evidence[evidence_id]
+            valid_ops.append(operation)
+            op_finding[operation["id"]] = finding_id
+        for specification in fplan["regression_tests"]:
+            causal = specification.get("causal_operation_ids", [])
+            if set(causal).issubset(valid_ids):
+                planned_regressions.append(specification)
+        resolved_targets.append(finding_id)
+
+    unresolved_findings = blocked + abandoned
+    if not valid_ops:
+        return archive_batch_attempt(
+            root=root,
+            report=report,
+            plan=plan,
+            root_cause=root_cause,
+            attempt_number=len(prior) + 1,
+            repair_state="ABANDONED",
+            decision="ABANDON",
+            changes=[],
+            unresolved=unresolved_findings
+            or [{"finding_id": "__batch__", "reason": "No fixable operations."}],
+            regressions=[],
+            comparison={},
+            evidence=list(evidence_all.values()),
+            reason="No fixable operations in the batch.",
+            source_verdict=source_verdict,
+        )
+
+    attempt_number = len(prior) + 1
+    repair_id = unique_id("repair")
+    workspace = root.parent / ".benchmark_repair_tmp" / repair_id
+    history = history_root_for(root) / repair_id
+    if workspace.exists() or history.exists():
+        raise FileExistsError("repair workspace already exists")
+    workspace.parent.mkdir(exist_ok=True)
+    workspace.mkdir()
+    snapshot = workspace / "snapshot"
+    candidate = workspace / "candidate"
+    identity = package_identity(root)
+    # Explicit sentinel: ``regression_results`` is a function-local for the
+    # whole scope, so gate the rollback branch on an unambiguous ``is not None``
+    # test rather than fragile ``in dir()`` introspection.
+    regression_results: list[dict[str, Any]] | None = None
+    try:
+        shutil.copytree(root, snapshot)
+        shutil.copytree(snapshot, candidate)
+        regression_results = run_regressions(
+            snapshot, planned_regressions, "before"
+        )
+        changes = [apply_operation(candidate, operation) for operation in valid_ops]
+        operation_files = {item["file"] for item in changes}
+        assert_mutation_boundary(snapshot, candidate, operation_files)
+        candidate_digest = core_contract_digest(candidate)
+        run_regressions(
+            candidate, planned_regressions, "after", regression_results
+        )
+        reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
+    except Exception as exc:  # noqa: BLE001
+        repair_state = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
+        decision = "ASSISTED_FIX" if repair_state == "ROLLED_BACK" else "ABANDON"
+        history.mkdir(parents=True, exist_ok=True)
+        if snapshot.exists():
+            snapshot.rename(history / "snapshot")
+        if candidate.exists():
+            candidate.rename(history / "candidate")
+        result = archive_batch_attempt(
+            root=root,
+            report=report,
+            plan=plan,
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            repair_state=repair_state,
+            decision=decision,
+            changes=[],
+            unresolved=unresolved_findings
+            + [{"finding_id": "__batch__", "reason": str(exc)}],
+            regressions=(
+                regression_results if regression_results is not None else []
+            ),
+            comparison={},
+            evidence=list(evidence_all.values()),
+            reason=str(exc),
+            history_dir=history,
+            source_verdict=source_verdict,
+        )
+        if workspace.exists():
+            shutil.rmtree(workspace, ignore_errors=True)
+        return result
+
+    summary = reaudit.get("summary", {})
+    verdict = summary.get("final_verdict")
+    # The publish route lives in disposition.json ``route`` (and the
+    # finalizer's ``summary.publication_route`` / ``summary.publishability``).
+    # ``summary.disposition`` holds the VERDICT, not the route, so it must not
+    # be used here (mirrors read_ext_disposition and finalize_audit_output).
+    reaudit_disposition_path = candidate / "benchmark_audit/disposition.json"
+    reaudit_disposition = (
+        read_json(reaudit_disposition_path)
+        if reaudit_disposition_path.is_file()
+        else {}
+    )
+    route = (
+        reaudit_disposition.get("route")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
+    reaudit_findings = [
+        item for item in reaudit.get("findings", []) if isinstance(item, dict)
+    ]
+    # Every targeted finding must be absent/closed in the fresh re-audit before
+    # the batch may publish (§8.4); mirrors the legacy single-finding closure
+    # guard in validate_reaudit.
+    reaudit_finding_keys = {
+        finding_key(item) for item in reaudit_findings if finding_key(item)
+    }
+    targets_still_open = [
+        finding_id
+        for finding_id in resolved_targets
+        if (target_key := finding_key(findings_by_id.get(finding_id, {})))
+        is not None
+        and target_key in reaudit_finding_keys
+    ]
+    has_fatal = any(
+        item.get("severity") == "FATAL" for item in reaudit_findings
+    ) or bool(summary.get("hard_gate"))
+    fully_passed = (
+        verdict == "PASS"
+        and route == "PUBLISH_CANDIDATE"
+        and not unresolved_findings
+        and not targets_still_open
+        and package_identity(candidate, directory_name=root.name) == identity
+    )
+    repair_delta = compute_repair_delta(report, reaudit)
+    paper_mode, execution_level = report_configuration(reaudit)
+    comparison = {
+        "target_resolved": fully_passed,
+        "reaudit_audit_id": reaudit.get("audit_id"),
+        "resolved_findings": resolved_targets,
+        "unresolved_findings": unresolved_findings,
+        "source_finding": {
+            "finding_id": resolved_targets[0] if resolved_targets else None,
+            "status": "OPEN",
+        },
+        "source_configuration": {
+            "paper_mode": report.get("configuration", {}).get("paper_mode"),
+            "execution_level": report.get("configuration", {}).get(
+                "execution_level"
+            ),
+        },
+        "reaudit_configuration": {
+            "paper_mode": paper_mode,
+            "execution_level": execution_level,
+        },
+        "repair_delta": repair_delta,
+    }
+
+    if not fully_passed:
+        if has_fatal or attempt_number >= 2:
+            repair_state = "ABANDONED"
+            decision = "ABANDON"
+        else:
+            repair_state = "PARTIALLY_REPAIRED"
+            decision = "ASSISTED_FIX"
+        reaudit_unresolved = [
+            {
+                "finding_id": item.get("finding_id"),
+                "reason": "remains open after equal-depth re-audit",
+            }
+            for item in reaudit_findings
+        ] + [
+            {
+                "finding_id": finding_id,
+                "reason": "targeted finding still present in equal-depth re-audit",
+            }
+            for finding_id in targets_still_open
+        ]
+        history.mkdir(parents=True, exist_ok=True)
+        if snapshot.exists():
+            snapshot.rename(history / "snapshot")
+        if candidate.exists():
+            candidate.rename(history / "candidate")
+        result = archive_batch_attempt(
+            root=root,
+            report=report,
+            plan=plan,
+            root_cause=root_cause,
+            attempt_number=attempt_number,
+            repair_state=repair_state,
+            decision=decision,
+            changes=[],
+            unresolved=unresolved_findings + reaudit_unresolved
+            or [{"finding_id": "__batch__", "reason": "re-audit did not reach PASS"}],
+            regressions=regression_results,
+            comparison=comparison,
+            evidence=list(evidence_all.values()),
+            reason=(
+                "Equal-depth re-audit did not reach PASS; the authoritative "
+                "package is preserved unchanged."
+            ),
+            history_dir=history,
+            source_verdict=source_verdict,
+        )
+        result["repair_delta"] = repair_delta
+        if workspace.exists():
+            shutil.rmtree(workspace, ignore_errors=True)
+        return result
+
+    # REPAIRED: full re-audit PASS with every batch finding resolved.
+    repair_canonical = canonical_fields(
+        "PASS",
+        publishability="PUBLISH_CANDIDATE",
+        repair_decision="ASSISTED_FIX",
+        repair_status="REPAIRED",
+    )
+    repair_manifest = {
+        "schema_version": "0.1",
+        **repair_canonical,
+        "repair_id": repair_id,
+        "status": "REPAIRED",
+        "decision": "ASSISTED_FIX",
+        **terminal_fields("REPAIRED"),
+        "root_cause": root_cause,
+        "attempt_number": attempt_number,
+        "max_attempts": 2,
+        "finding_id": None,
+        "finding_ids": resolved_targets,
+        "repair_class": "ASSISTED_FIX",
+        "package_identity": identity,
+        "source_audit_id": report["audit_id"],
+        "source_audit_input_hashes": audit_manifest["input_hashes"],
+        "source_audit_review_implementation": audit_manifest[
+            "review_implementation"
+        ],
+        "source_audit_fixture_hashes": audit_manifest.get("fixture_hashes", {}),
+        "source_audit_assessment_hashes": audit_manifest.get(
+            "assessment_hashes", {}
+        ),
+        "core_contract_digest_before": plan["core_contract_digest"],
+        "core_contract_digest_after": candidate_digest,
+        "justification": "; ".join(
+            finding["justification"] for finding in plan["findings"]
+        ),
+        "evidence": list(evidence_all.values()),
+        "changes": changes,
+        "regression_tests": regression_results,
+        "unresolved": [],
+        "re_audit_comparison": comparison,
+        "repair_delta": repair_delta,
+        "reaudit": {
+            "audit_id": reaudit["audit_id"],
+            "paper_mode": paper_mode,
+            "execution_level": execution_level,
+            "verdict": verdict,
+            "disposition": route,
+        },
+        "atomic_publish": True,
+        "published_at": timestamp(),
+    }
+    rebase_audit_paths(candidate, root)
+    reaudit_report_path = candidate / "benchmark_audit/audit_report.json"
+    reaudit_manifest_path = candidate / "benchmark_audit/audit_manifest.json"
+    repair_manifest.update(
+        {
+            "reaudit_audit_id": reaudit["audit_id"],
+            "reaudit_report_hash": sha256_file(reaudit_report_path),
+            "reaudit_manifest_hash": sha256_file(reaudit_manifest_path),
+        }
+    )
+    write_repair_reports(candidate, repair_manifest, plan, history)
+    history.mkdir(parents=True)
+    snapshot.rename(history / "snapshot")
+    write_history_bundle(
+        history,
+        plan=plan,
+        changes=changes,
+        unresolved=[],
+        regressions=regression_results,
+        comparison=comparison,
+        evidence=evidence_all,
+        root_cause=root_cause,
+        attempt_number=attempt_number,
+        status="REPAIRED",
+        decision="ASSISTED_FIX",
+        review_verdict=repair_canonical["review_verdict"],
+        publishability=repair_canonical["publishability"],
+    )
+    write_json(
+        history / "attempt_manifest.json",
+        {
+            "schema_version": "0.1",
+            "repair_id": repair_id,
+            "root_cause": root_cause,
+            "attempt_number": attempt_number,
+            "max_attempts": 2,
+            "status": "REPAIRED",
+            "decision": "ASSISTED_FIX",
+            **repair_canonical,
+            "audit_id": report["audit_id"],
+            "finding_ids": resolved_targets,
+            "error": None,
+            "snapshot_preserved": True,
+            "candidate_preserved": False,
+            "recorded_at": timestamp(),
+        },
+    )
+    original = history / "original"
+    root.rename(original)
+    try:
+        candidate.rename(root)
+    except Exception:
+        original.rename(root)
+        raise
+    shutil.rmtree(workspace, ignore_errors=True)
+    return {
+        "repair_id": repair_id,
+        "status": "REPAIRED",
+        "decision": "ASSISTED_FIX",
+        **repair_canonical,
+        **terminal_fields("REPAIRED"),
+        "benchmark_root": str(root),
+        "history_dir": str(history),
+        "history_root": str(history_root_for(root)),
+        "root_cause": root_cause,
+        "attempt_number": attempt_number,
+        "audit_id": reaudit["audit_id"],
+        "resolved_findings": resolved_targets,
+        "repair_delta": repair_delta,
+    }
+
+
 def repair(
     root: Path,
     plan_path: Path,
@@ -2221,6 +3153,8 @@ def repair(
         raise ValueError("input must be a Harbor 题包 with instruction.md and tests/")
     plan = validate_external_plan(root, plan_path)
     plan["package_identity"] = package_identity(root)
+    if isinstance(plan.get("findings"), list):
+        return repair_batch(root, plan, attestation_path)
     try:
         report, audit_manifest, finding = validate_fresh_audit(
             root, plan, attestation_path
@@ -2248,12 +3182,7 @@ def repair(
                     "review_verdict",
                     report.get("summary", {}).get("final_verdict"),
                 ),
-                publishability=report.get(
-                    "publishability",
-                    report.get("summary", {}).get(
-                        "disposition", "EVIDENCE_PENDING"
-                    ),
-                ),
+                publishability=canonical_publish_route(report),
                 repair_decision="ABANDON",
                 repair_status="ABANDONED",
             ),
@@ -2306,20 +3235,16 @@ def repair(
                 "review_verdict",
                 reaudit.get("summary", {}).get("final_verdict"),
             ),
-            publishability=reaudit.get(
-                "publishability",
-                reaudit.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(reaudit),
             repair_decision=plan["repair_class"],
-            repair_status="PUBLISHED",
+            repair_status="REPAIRED",
         )
         repair_manifest = {
             "schema_version": "0.1",
             **repair_canonical,
+            **terminal_fields("REPAIRED"),
             "repair_id": repair_id,
-            "status": "PUBLISHED",
+            "status": "REPAIRED",
             "decision": plan["repair_class"],
             "root_cause": root_cause,
             "attempt_number": attempt_number,
@@ -2381,7 +3306,7 @@ def repair(
             evidence=evidence,
             root_cause=root_cause,
             attempt_number=attempt_number,
-            status="PUBLISHED",
+            status="REPAIRED",
             decision=plan["repair_class"],
             review_verdict=repair_canonical["review_verdict"],
             publishability=repair_canonical["publishability"],
@@ -2392,7 +3317,7 @@ def repair(
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "max_attempts": 2,
-            "status": "PUBLISHED",
+            "status": "REPAIRED",
             "decision": plan["repair_class"],
             **repair_canonical,
             "audit_id": report["audit_id"],
@@ -2414,9 +3339,10 @@ def repair(
         shutil.rmtree(workspace, ignore_errors=True)
         return {
             "repair_id": repair_id,
-            "status": "PUBLISHED",
+            "status": "REPAIRED",
             "decision": plan["repair_class"],
             **repair_canonical,
+            **terminal_fields("REPAIRED"),
             "benchmark_root": str(root),
             "history_dir": str(history),
             "history_root": str(history_root_for(root)),
@@ -2432,12 +3358,7 @@ def repair(
                 "review_verdict",
                 report.get("summary", {}).get("final_verdict"),
             ),
-            publishability=report.get(
-                "publishability",
-                report.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(report),
             repair_decision=decision,
             repair_status=status,
         )
@@ -2487,6 +3408,10 @@ def repair(
         return {
             "repair_id": repair_id,
             "status": status,
+            **terminal_fields(
+                status,
+                source_verdict=report.get("summary", {}).get("final_verdict"),
+            ),
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "history_dir": str(history),
@@ -2511,7 +3436,7 @@ def main() -> int:
             Path(arguments.audit_attestation),
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        return 0 if result["status"] == "PUBLISHED" else 3
+        return 0 if result["status"] == "REPAIRED" else 3
     except Exception as exc:  # noqa: BLE001
         print(f"materials repair failed: {exc}", file=sys.stderr)
         return 2

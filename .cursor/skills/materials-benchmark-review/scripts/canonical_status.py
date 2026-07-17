@@ -23,8 +23,20 @@ REPAIR_DECISIONS = frozenset(
     {"NOT_REQUIRED", "AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
 )
 REPAIR_STATUSES = frozenset(
-    {"NOT_APPLICABLE", "PUBLISHED", "ROLLED_BACK", "ABANDONED"}
+    {
+        "NOT_APPLICABLE",
+        # ``PUBLISHED`` is retained only for the legacy certification archive.
+        # The Repair skill now emits the batch four-state lifecycle below.
+        "PUBLISHED",
+        "REPAIRED",
+        "PARTIALLY_REPAIRED",
+        "ROLLED_BACK",
+        "ABANDONED",
+    }
 )
+# A repair that atomically publishes the fixed package.  ``REPAIRED`` is the
+# batch-model success state; ``PUBLISHED`` is the legacy single-finding value.
+SUCCESS_REPAIR_STATUSES = frozenset({"PUBLISHED", "REPAIRED"})
 REPAIR_BUNDLE_FILES = (
     "repair_plan.json",
     "changes.json",
@@ -81,22 +93,25 @@ def canonical_fields(
         raise ValueError(
             "NOT_APPLICABLE repair_status requires NOT_REQUIRED decision"
         )
-    if repair_status == "PUBLISHED" and repair_decision not in {
+    if repair_status in {"PUBLISHED", "REPAIRED"} and repair_decision not in {
         "AUTO_FIX",
         "ASSISTED_FIX",
     }:
         raise ValueError(
-            "PUBLISHED repair_status requires AUTO_FIX or ASSISTED_FIX"
+            f"{repair_status} repair_status requires AUTO_FIX or ASSISTED_FIX"
         )
     if repair_status == "ABANDONED" and repair_decision != "ABANDON":
         raise ValueError("ABANDONED repair_status requires ABANDON decision")
-    if repair_status == "ROLLED_BACK" and repair_decision not in {
-        "AUTO_FIX",
-        "ASSISTED_FIX",
-        "ABANDON",
-    }:
+    if repair_status in {"ROLLED_BACK", "PARTIALLY_REPAIRED"} and (
+        repair_decision
+        not in {
+            "AUTO_FIX",
+            "ASSISTED_FIX",
+            "ABANDON",
+        }
+    ):
         raise ValueError(
-            "ROLLED_BACK repair_status requires a repair decision"
+            f"{repair_status} repair_status requires a repair decision"
         )
     return {
         "review_verdict": review_verdict,
@@ -170,23 +185,50 @@ def validate_repair_bundle_semantics(
     )
     if plan.get("schema_version") != "0.1":
         raise ValueError("repair_plan.json schema_version is invalid")
-    for name in ("audit_id", "finding_id", "justification"):
+    # ``REPAIRED`` is the batch-model success state; ``PUBLISHED`` is the legacy
+    # single-finding success value.  Both atomically publish the fixed package.
+    published = fields["repair_status"] in SUCCESS_REPAIR_STATUSES
+    batch_findings = plan.get("findings")
+    is_batch = isinstance(batch_findings, list) and bool(batch_findings)
+    required_plan_names = (
+        ("audit_id",)
+        if is_batch
+        else ("audit_id", "finding_id", "justification")
+    )
+    for name in required_plan_names:
         if not isinstance(plan.get(name), str) or not plan[name].strip():
             raise ValueError(f"repair_plan.json requires {name}")
+    if is_batch:
+        plan_operations = [
+            operation
+            for finding in batch_findings
+            if isinstance(finding, dict)
+            for operation in finding.get("operations", [])
+        ]
+        plan_regressions = [
+            specification
+            for finding in batch_findings
+            if isinstance(finding, dict)
+            for specification in finding.get("regression_tests", [])
+        ]
+    else:
+        plan_operations = plan.get("operations", [])
+        plan_regressions = plan.get("regression_tests", [])
     if (
-        fields["repair_status"] == "PUBLISHED"
+        published
+        and not is_batch
         and plan.get("repair_class") != fields["repair_decision"]
     ):
         raise ValueError("repair_plan.json decision is inconsistent")
-    if fields["repair_status"] == "PUBLISHED" and (
-        not isinstance(plan.get("operations"), list)
-        or not plan["operations"]
-        or not isinstance(plan.get("regression_tests"), list)
-        or not plan["regression_tests"]
+    if published and (
+        not isinstance(plan_operations, list)
+        or not plan_operations
+        or not isinstance(plan_regressions, list)
+        or not plan_regressions
     ):
         raise ValueError("repair_plan.json lacks repair operations or regressions")
     operation_ids = [
-        item.get("id") for item in plan.get("operations", [])
+        item.get("id") for item in plan_operations
         if isinstance(item, dict)
     ]
     if (
@@ -216,7 +258,7 @@ def validate_repair_bundle_semantics(
         for item in changes
     ):
         raise ValueError("changes.json semantic schema is invalid")
-    if fields["repair_status"] == "PUBLISHED" and not changes:
+    if published and not changes:
         raise ValueError("changes.json is empty for a published repair")
     change_ids = [item["operation_id"] for item in changes]
     patch_files = patch.get("files") if isinstance(patch, dict) else None
@@ -231,7 +273,7 @@ def validate_repair_bundle_semantics(
         or len(set(change_ids)) != len(change_ids)
         or (
             operation_ids != change_ids
-            if fields["repair_status"] == "PUBLISHED"
+            if (published and not is_batch)
             else not set(change_ids).issubset(set(operation_ids))
         )
     ):
@@ -245,9 +287,9 @@ def validate_repair_bundle_semantics(
         for item in unresolved
     ):
         raise ValueError("unresolved.json semantic schema is invalid")
-    if fields["repair_status"] == "PUBLISHED" and unresolved:
+    if published and unresolved:
         raise ValueError("published repair has unresolved findings")
-    if fields["repair_status"] != "PUBLISHED" and not unresolved:
+    if not published and not unresolved:
         raise ValueError("non-published repair lacks unresolved findings")
     if not isinstance(regressions, list) or not all(
         isinstance(item, dict)
@@ -262,9 +304,9 @@ def validate_repair_bundle_semantics(
         for item in regressions
     ):
         raise ValueError("regression_results.json semantic schema is invalid")
-    if fields["repair_status"] == "PUBLISHED" and not regressions:
+    if published and not regressions:
         raise ValueError("regression_results.json is empty for a published repair")
-    planned_regressions = plan.get("regression_tests", [])
+    planned_regressions = plan_regressions
     planned_regression_ids = [
         item.get("id")
         for item in planned_regressions
@@ -280,7 +322,7 @@ def validate_repair_bundle_semantics(
         len(set(planned_regression_ids)) != len(planned_regression_ids)
         or (
             planned_regression_ids != result_regression_ids
-            if fields["repair_status"] == "PUBLISHED"
+            if (published and not is_batch)
             else not set(result_regression_ids).issubset(
                 set(planned_regression_ids)
             )
@@ -304,7 +346,7 @@ def validate_repair_bundle_semantics(
             raise ValueError("regression causal operation IDs are invalid")
     if not isinstance(comparison, dict):
         raise ValueError("re_audit_comparison.json must be an object")
-    if fields["repair_status"] == "PUBLISHED" and (
+    if published and (
         comparison.get("target_resolved") is not True
         or not isinstance(comparison.get("reaudit_audit_id"), str)
         or not comparison["reaudit_audit_id"].strip()
@@ -316,8 +358,7 @@ def validate_repair_bundle_semantics(
     if not isinstance(patch, dict) or (
         patch.get("schema_version") != "0.1"
         or patch.get("files") != changes
-        or patch.get("atomic_publish")
-        is not (fields["repair_status"] == "PUBLISHED")
+        or patch.get("atomic_publish") is not published
     ):
         raise ValueError("patch.json semantic schema is invalid")
     if not isinstance(evidence, list) or not evidence or not all(
@@ -340,8 +381,14 @@ def validate_repair_bundle_semantics(
     if (
         len(set(evidence_ids)) != len(evidence_ids)
         or (
-            fields["repair_status"] == "PUBLISHED"
+            published
+            and not is_batch
             and set(evidence_ids) != set(referenced_evidence_ids)
+        )
+        or (
+            published
+            and is_batch
+            and not set(referenced_evidence_ids).issubset(set(evidence_ids))
         )
     ):
         raise ValueError("repair evidence IDs are missing, extra, or duplicated")
@@ -353,15 +400,18 @@ def validate_repair_bundle_semantics(
     identity_values = [history]
     identity_values.extend(evidence)
     identity_values.extend(unresolved)
-    if fields["repair_status"] == "PUBLISHED":
+    if published:
         identity_values.extend(
             [comparison, comparison.get("source_finding", {})]
         )
     for item in identity_values:
+        # Batch bundles bind identity on audit_id + package_identity because a
+        # single batch resolves many findings; per-item finding_id is only bound
+        # for the legacy single-finding bundle.
         if (
             item.get("audit_id") != audit_id
-            or item.get("finding_id") != finding_id
             or item.get("package_identity") != package_identity
+            or (not is_batch and item.get("finding_id") != finding_id)
         ):
             raise ValueError(
                 "repair audit/finding/package identities are inconsistent"
@@ -378,8 +428,8 @@ def validate_repair_bundle_semantics(
         or history["attempt_number"] < 0
         or history.get("decision") != fields["repair_decision"]
         or (
-            fields["repair_status"] == "PUBLISHED"
-            and history.get("status") != "PUBLISHED"
+            published
+            and history.get("status") not in SUCCESS_REPAIR_STATUSES
         )
     ):
         raise ValueError("history.json semantic schema is invalid")

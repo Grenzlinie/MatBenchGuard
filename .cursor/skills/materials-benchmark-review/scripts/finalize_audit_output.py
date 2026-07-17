@@ -124,6 +124,125 @@ SEVERITY_DEDUCTION_FRACTIONS = {
     "LOW": 0.1,
 }
 SEVERITY_RANK = {"FATAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+# ---------------------------------------------------------------------------
+# v11 seven-dimension model (C01-C07).
+#
+# The canonical weights and definitions live in
+# ``references/scoring-rubric.md`` (single source of truth); the numeric
+# mirror below MUST stay in sync with that document.  Each dimension's
+# ``max_points`` equals its weight so the weighted total reduces to the sum of
+# earned points on a 0-100 scale.
+# ---------------------------------------------------------------------------
+V11_SCORING_VERSION = "materials-review-scoring/1.1"
+V11_DIMENSIONS = ("C01", "C02", "C03", "C04", "C05", "C06", "C07")
+V11_DIMENSION_WEIGHTS = {
+    "C01": 10,
+    "C02": 20,
+    "C03": 20,
+    "C04": 20,
+    "C05": 10,
+    "C06": 10,
+    "C07": 10,
+}
+V11_DIMENSION_TITLES = {
+    "C01": "domain_admission",
+    "C02": "task_design_and_file_consistency",
+    "C03": "scientific_validity_and_solvability",
+    "C04": "scoring_semantics",
+    "C05": "answer_leakage",
+    "C06": "reproducibility",
+    "C07": "difficulty_and_auditability",
+}
+V11_DIMENSION_FAMILY = {
+    "C01": "admission",
+    "C02": "deterministic",
+    "C03": "scientific",
+    "C04": "deterministic",
+    "C05": "scientific",
+    "C06": "scientific",
+    "C07": "deterministic_scientific",
+}
+# Key (gate-bound) dimensions may escalate the whole package to
+# NOT_ASSESSABLE when their evidence is missing.  Non-key dimensions (e.g.
+# C07 discrimination gaps) only lose points inside their own dimension.
+V11_KEY_DIMENSIONS = {"C01", "C03", "C04", "C06"}
+# Hard gate code -> bound dimension (plan sec 3.1 / 7.1 step 3).
+V11_HARD_GATE_DIMENSION = {
+    "NON_MATERIALS_TASK": "C01",
+    "SCIENTIFIC_TARGET_INVALID": "C03",
+    "UNRECOVERABLE_TASK_DEFINITION": "C03",
+    "CHECKER_CORE_TASK_UNASSESSED": "C04",
+    "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE": "C06",
+}
+HARD_GATE_CODE_DIMENSION = {
+    "NON_MATERIALS_TASK": "C01",
+    "SCIENTIFIC_TARGET_INVALID": "C03",
+    "CHECKER_CORE_TASK_UNASSESSED": "C04",
+    "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE": "C06",
+}
+# Explicit finding-code -> C0x attribution (finding-attribution dimensions).
+V11_C01_CODES = {
+    "NON_MATERIALS_TASK",
+    "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION",
+}
+V11_C02_CODES = {
+    "INSTRUCTION_INTERNAL_INCONSISTENCY",
+    "OUTPUT_DECLARATION_MISMATCH",
+    "OUTPUT_NOT_CONTRACTED",
+    "OUTPUT_NOT_SCORED",
+    "EVIDENCE_NOT_ENFORCED",
+    "INSTRUCTION_ONLY_OUTPUT",
+    "INVALID_WEIGHT",
+    "WEIGHTS_NOT_ONE",
+    "MISSING_FILE",
+    "PARSE_ERROR",
+    "SOLUTION_ROLE_MISSING",
+    "SOLUTION_ORACLE_MISSING",
+    "SOLUTION_ORACLE_BROKEN",
+    "INVALID_GRADING_SPEC_SCHEMA",
+    "CONTRADICTORY_OUTPUT_ROLE",
+}
+V11_C03_CODES = {
+    "SCIENTIFIC_TARGET_INVALID",
+    "UNRECOVERABLE_TASK_DEFINITION",
+}
+V11_C04_CODES = {
+    "CHECKER_STATIC_ANALYSIS_UNAVAILABLE",
+    "SCORER_MISSING_RETURN",
+    "SCORER_RETURN_NOT_TOTAL",
+    "ALWAYS_ZERO_SCORER",
+    "ALWAYS_PASS_SCORER",
+    "DIVISION_BY_ZERO_LITERAL",
+    "CHECKER_CORE_TASK_UNASSESSED",
+    "SCORING_COMPONENT_NOT_BOUND",
+    "ZERO_WEIGHT_SCORING_COMPONENT",
+    "INVALID_PASS_THRESHOLD",
+    "CHECKER_CRASH",
+    "CHECKER_RESULT_UNUSABLE",
+    "ADVERSARIAL_OUTPUT_PASSES",
+    "ORACLE_POSITIVE_MOCK_REJECTED",
+    "KNOWN_VALID_OUTPUT_REJECTED",
+}
+V11_C05_CODES = {
+    "SOLUTION_BOUNDARY_VIOLATION",
+    "ANSWER_LEAKAGE",
+    "ORACLE_VALUE_LEAKED",
+}
+V11_C06_CODES = {"E2_SMOKE_FAILED"}
+V11_C07_CODES = {
+    "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
+    "SCIENTIFIC_INVARIANCE_VIOLATION",
+    "SINGLE_COMPONENT_CAN_PASS",
+    "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+}
+V11_FROM_LEGACY_DIMENSION = {
+    "scientific_validity": "C03",
+    "instruction_answerability": "C02",
+    "checker_gold_alignment": "C04",
+    "robustness_discrimination": "C07",
+    "solution_completeness": "C02",
+}
 REQUIRED_HEADINGS = [
     "# Materials Benchmark Audit Report",
     "## 1. Audit Summary",
@@ -975,6 +1094,223 @@ def scoring_verdict(
     )
 
 
+def scored_dimension_v11_for(finding: dict[str, Any]) -> str | None:
+    """Attribute a finding to a C01-C07 dimension (plan sec 7 mapping)."""
+    code = finding["title"]
+    if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
+        return None
+    if code in V11_C01_CODES:
+        return "C01"
+    if code in V11_C05_CODES:
+        return "C05"
+    if code in V11_C07_CODES:
+        return "C07"
+    if code in V11_C04_CODES:
+        return "C04"
+    if code in V11_C03_CODES:
+        return "C03"
+    if code in V11_C02_CODES:
+        return "C02"
+    if code.startswith("INDISPENSABLE_DIRECT_INPUT_"):
+        return "C06"
+    if finding.get("category") == "RESOURCE_USABILITY":
+        return "C06"
+    if code in V11_C06_CODES:
+        return "C06"
+    if code.startswith("PAPER_"):
+        name = code[len("PAPER_"):]
+        if name.startswith(("INSTRUCTION_", "DATA_", "METHOD_")):
+            return "C03"
+        if "GOLD" in name:
+            return "C04"
+        if "LEAK" in name or "IDENTITY" in name:
+            return "C05"
+        return "C06"
+    if code.startswith("SOLUTION_"):
+        return "C02"
+    if code.startswith("MATERIALS_"):
+        return "C01"
+    legacy = scored_dimension_for(finding)
+    if legacy is None:
+        return "C02"
+    return V11_FROM_LEGACY_DIMENSION.get(legacy, "C02")
+
+
+def dimensions_v11_scores(
+    findings: list[dict[str, Any]],
+    unavailable: set[str],
+) -> list[dict[str, Any]]:
+    """Compute the C01-C07 records: earned/normalized/status/finding_ids.
+
+    ``unavailable`` holds the *key* dimensions whose evidence is temporarily
+    missing.  Only those dimensions become NOT_ASSESSABLE; every other
+    dimension keeps scoring (non-key gaps only deduct within their own
+    dimension, never escalating the whole package).
+    """
+    records: list[dict[str, Any]] = []
+    for dimension in V11_DIMENSIONS:
+        maximum = V11_DIMENSION_WEIGHTS[dimension]
+        relevant = [
+            item
+            for item in findings
+            if scored_dimension_v11_for(item) == dimension
+        ]
+        group_representatives: dict[str, str] = {}
+        for group in {
+            item.get("deduction_group", item["finding_id"])
+            for item in relevant
+        }:
+            members = [
+                item
+                for item in relevant
+                if item.get("deduction_group", item["finding_id"]) == group
+            ]
+            representative = sorted(
+                members,
+                key=lambda item: (
+                    -SEVERITY_RANK[item["severity"]],
+                    item["finding_id"],
+                ),
+            )[0]
+            group_representatives[group] = representative["finding_id"]
+        deductions: list[dict[str, Any]] = []
+        deducted = 0.0
+        for item in relevant:
+            deduction_group = item.get("deduction_group", item["finding_id"])
+            fraction = SEVERITY_DEDUCTION_FRACTIONS[item["severity"]]
+            deduction_applied = (
+                group_representatives[deduction_group] == item["finding_id"]
+            )
+            points = round(maximum * fraction, 2) if deduction_applied else 0.0
+            deducted += points
+            deductions.append(
+                {
+                    "deduction_id": (
+                        f"V11-DEDUCTION-{item['finding_id']}-{dimension}"
+                    ),
+                    "finding_id": item["finding_id"],
+                    "points": points,
+                    "severity": item["severity"],
+                    "deduction_group": deduction_group,
+                    "deduction_applied": deduction_applied,
+                }
+            )
+        if dimension in unavailable and dimension in V11_KEY_DIMENSIONS:
+            earned: float | int | None = None
+            normalized: float | None = None
+            status = "NOT_ASSESSABLE"
+        else:
+            earned = round(max(0.0, maximum - deducted), 2)
+            if isinstance(earned, float) and earned.is_integer():
+                earned = int(earned)
+            normalized = round(float(earned) / maximum * 100, 4)
+            status = (
+                "FAIL"
+                if normalized < 50
+                else "WARNING"
+                if normalized < 80
+                else "PASS"
+            )
+        records.append(
+            {
+                "dimension": dimension,
+                "title": V11_DIMENSION_TITLES[dimension],
+                "family": V11_DIMENSION_FAMILY[dimension],
+                "weight": maximum,
+                "max_points": maximum,
+                "points_earned": earned,
+                "normalized": normalized,
+                "key_dimension": dimension in V11_KEY_DIMENSIONS,
+                "status": status,
+                "finding_ids": [item["finding_id"] for item in relevant],
+                "deductions": deductions,
+            }
+        )
+    return records
+
+
+def v11_weighted_total(
+    dimensions_v11: list[dict[str, Any]],
+) -> tuple[float | None, list[str]]:
+    """Weighted 0-100 total; None when a key dimension is NOT_ASSESSABLE."""
+    key_gaps = [
+        item["dimension"]
+        for item in dimensions_v11
+        if item["points_earned"] is None
+    ]
+    if key_gaps:
+        return None, key_gaps
+    weight_sum = sum(item["weight"] for item in dimensions_v11)
+    if weight_sum == 0:
+        return None, key_gaps
+    weighted = sum(
+        item["weight"] * float(item["normalized"])
+        for item in dimensions_v11
+    )
+    total = round(weighted / weight_sum, 2)
+    if float(total).is_integer():
+        total = int(total)
+    return total, key_gaps
+
+
+def scoring_verdict_v11(
+    findings: list[dict[str, Any]],
+    dimensions_v11: list[dict[str, Any]],
+    hard_gates: list[dict[str, Any]],
+) -> tuple[str, float | None, bool, str, list[str]]:
+    """Stage 3 disposition on the C01-C07 weighted total (plan sec 7.1)."""
+    total, evidence_gaps = v11_weighted_total(dimensions_v11)
+    failed_gates = [
+        item["code"] for item in hard_gates if item["status"] == "FAIL"
+    ]
+    if failed_gates:
+        return (
+            "REJECT",
+            total,
+            True,
+            "Confirmed Hard Gate: " + ", ".join(failed_gates),
+            evidence_gaps,
+        )
+    if evidence_gaps:
+        return (
+            "NOT_ASSESSABLE",
+            None,
+            False,
+            "Key-dimension evidence is temporarily unavailable: "
+            + ", ".join(evidence_gaps),
+            evidence_gaps,
+        )
+    if total is None or total < 60:
+        return (
+            "REJECT",
+            total,
+            False,
+            "The authoritative C01-C07 weighted score is below 60/100.",
+            evidence_gaps,
+        )
+    repairable_high = any(
+        item["repairable"] and item["severity"] == "HIGH"
+        for item in findings
+    )
+    if total < 80 or repairable_high:
+        return (
+            "CONDITIONAL",
+            total,
+            False,
+            "The C01-C07 weighted score is 60-79/100 or a repairable HIGH "
+            "with sufficient evidence remains.",
+            evidence_gaps,
+        )
+    return (
+        "PASS",
+        total,
+        False,
+        "The C01-C07 weighted score is at least 80/100 with no unresolved "
+        "HIGH/FATAL and no Hard Gate.",
+        evidence_gaps,
+    )
+
+
 def execution_findings(
     execution_evidence: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -1382,12 +1718,36 @@ def markdown_summary(report: dict[str, Any]) -> str:
         f"(locations={gate['affected_locations']})"
         for gate in report["hard_gates"]
     )
-    dimension_lines = "\n".join(
-        f"- {item['dimension']}: {item['status']} "
+    v11_lines = "\n".join(
+        f"- {item['dimension']} {item['title']} "
+        f"[{item['family']}]: {item['status']} "
         f"({item['points_earned']}/{item['max_points']}, "
-        f"normalized={item['normalized_score']}, "
-        f"deductions={item['deduction_ids']})"
-        for item in report["dimension_scores"]
+        f"normalized={item['normalized']}%, "
+        f"findings={item['finding_ids']})"
+        for item in report.get("dimensions_v11", [])
+    ) or "No C01-C07 dimension scores were computed."
+    dimension_lines = (
+        "### C01-C07 (authoritative)\n\n"
+        f"{v11_lines}\n\n"
+        f"- Weighted total (0-100): {report['summary']['total_score']}\n"
+        "- Weights: "
+        + ", ".join(
+            f"{name}={weight}"
+            for name, weight in V11_DIMENSION_WEIGHTS.items()
+        )
+        + "\n\n### Legacy internal dimensions (compatibility)\n\n"
+        + (
+            "\n".join(
+                f"- {item['dimension']}: {item['status']} "
+                f"({item['points_earned']}/{item['max_points']}, "
+                f"normalized={item['normalized_score']}, "
+                f"deductions={item['deduction_ids']})"
+                for item in report["dimension_scores"]
+            )
+            or "No legacy dimension scores were computed."
+        )
+        + f"\n- Legacy total (0-100, legacy): "
+        f"{report['summary'].get('legacy_total_score')}"
     )
     execution = report["execution_evidence"]
     checker_runtime = report["checker_runtime"]
@@ -1657,18 +2017,22 @@ def write_disposition_artifacts(
     evidence_gaps: list[str],
 ) -> None:
     summary = report["summary"]
-    route = summary["disposition"]
+    route = ROUTES[summary["final_verdict"]]
     disposition = {
         "schema_version": "1.0",
         "audit_id": report["audit_id"],
         **canonical_fields(
             summary["final_verdict"],
-            publishability=summary["disposition"],
+            publishability=route,
         ),
         "scoring_version": summary["scoring_version"],
         "verdict": summary["final_verdict"],
+        "disposition": summary["final_verdict"],
+        "repair_state": summary.get("repair_state", "NOT_REQUIRED"),
         "total_score": summary["total_score"],
+        "legacy_total_score": summary.get("legacy_total_score"),
         "dimension_scores": report["dimension_scores"],
+        "dimensions_v11": report.get("dimensions_v11", []),
         "hard_gates": report["hard_gates"],
         "route": route,
         "publishable": route == "PUBLISH_CANDIDATE",
@@ -1701,7 +2065,7 @@ def write_disposition_artifacts(
         "audit_id": report["audit_id"],
         **canonical_fields(
             summary["final_verdict"],
-            publishability=summary["disposition"],
+            publishability=route,
         ),
         "benchmark": {
             "name": root.name,
@@ -1710,8 +2074,10 @@ def write_disposition_artifacts(
             "paper_id": manifest_data.get("paper_id"),
         },
         "final_verdict": summary["final_verdict"],
+        "disposition": summary["final_verdict"],
         "scoring_version": summary["scoring_version"],
         "total_score": summary["total_score"],
+        "legacy_total_score": summary.get("legacy_total_score"),
         "hard_gate_triggered": summary["hard_gate_triggered"],
         "hard_gates": report["hard_gates"],
         "route": route,
@@ -1726,6 +2092,7 @@ def write_disposition_artifacts(
             "codes": [item["title"] for item in report["findings"]],
         },
         "dimension_scores": report["dimension_scores"],
+        "dimensions_v11": report.get("dimensions_v11", []),
         "evidence_gaps": evidence_gaps,
     }
     (temp_dir / "disposition.json").write_text(
@@ -1776,7 +2143,7 @@ def synthesize_report(
     materials_class = (
         materials_assessment["classification"]
         if materials_assessment is not None
-        else static_result["materials_prescreen"]["classification"]
+        else "AMBIGUOUS"
     )
     materials_gate_sources = []
     if materials_class == "NON_MAT":
@@ -1916,12 +2283,54 @@ def synthesize_report(
         if item["critical"] and item["points_earned"] is None
     ]
     hard_gates = hard_gate_results(root, findings, provisional_gaps)
-    verdict, score, hard_gate, reason, evidence_gaps = scoring_verdict(
+    for gate in hard_gates:
+        gate["dimension"] = HARD_GATE_CODE_DIMENSION.get(gate["code"])
+    legacy_by_dimension = {item["dimension"]: item for item in dimensions}
+    transient_resource_statuses = {
+        "TRANSIENT_FAILURE",
+        "RATE_LIMITED",
+        "BLOCKED_PRIVATE_NETWORK",
+        "UNVERIFIED",
+    }
+    v11_unavailable: set[str] = set()
+    if materials_assessment is None:
+        v11_unavailable.add("C01")
+    if legacy_by_dimension["scientific_validity"]["points_earned"] is None:
+        v11_unavailable.add("C03")
+    if legacy_by_dimension["checker_gold_alignment"]["points_earned"] is None:
+        v11_unavailable.add("C04")
+    if any(
+        (
+            item.get("category") == "RESOURCE_USABILITY"
+            or item.get("title", "").startswith("INDISPENSABLE_DIRECT_INPUT_")
+        )
+        and item.get("title") != "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+        and isinstance(item.get("evidence"), dict)
+        and item["evidence"].get("status") in transient_resource_statuses
+        for item in findings
+    ):
+        v11_unavailable.add("C06")
+    dimensions_v11 = dimensions_v11_scores(findings, v11_unavailable)
+    legacy_gaps = [
+        item["dimension"]
+        for item in dimensions
+        if item["points_earned"] is None
+    ]
+    legacy_total = (
+        None
+        if legacy_gaps
+        else round(
+            sum(float(item["points_earned"]) for item in dimensions), 2
+        )
+    )
+    if legacy_total is not None and float(legacy_total).is_integer():
+        legacy_total = int(legacy_total)
+    verdict, score, hard_gate, reason, evidence_gaps = scoring_verdict_v11(
         findings,
-        dimensions,
+        dimensions_v11,
         hard_gates,
     )
-    disposition = ROUTES[verdict]
+    route = ROUTES[verdict]
     audit_route = (
         "PAPER_GROUNDED_E1"
         if (
@@ -1931,28 +2340,33 @@ def synthesize_report(
             == "no_paper"
             and not hard_gate
         )
-        else disposition
+        else route
     )
     report = read_json(temp_dir / "audit_report.json")
     report["summary"] = {
         "materials_class": materials_class,
         "answer_type": answer_type_for(root),
-        "scoring_version": SCORING_VERSION,
+        "scoring_version": V11_SCORING_VERSION,
+        "legacy_scoring_version": SCORING_VERSION,
         "final_verdict": verdict,
+        "disposition": verdict,
+        "publishable": verdict == "PASS",
+        "repair_state": "NOT_REQUIRED",
         "total_score": score,
+        "legacy_total_score": legacy_total,
         "hard_gate_triggered": hard_gate,
-        "disposition": disposition,
         "route": audit_route,
+        "publication_route": route,
         "core_reason": reason,
     }
     canonical = canonical_fields(
         verdict,
-        publishability=disposition,
+        publishability=route,
     )
     report.update(canonical)
     report["summary"].update(canonical)
     report["materials_qualification"] = {
-        "axes": static_result["materials_prescreen"]["axes_present"],
+        "axes": [],
         "prescreen": static_result["materials_prescreen"],
         "authoritative": materials_assessment is not None,
         "classification": materials_class,
@@ -2085,6 +2499,16 @@ def synthesize_report(
         for item in hard_gates
     ]
     report["dimension_scores"] = dimensions
+    report["dimensions_v11"] = dimensions_v11
+    report["scoring_model"] = {
+        "version": V11_SCORING_VERSION,
+        "weights": dict(V11_DIMENSION_WEIGHTS),
+        "severity_deduction_fractions": dict(SEVERITY_DEDUCTION_FRACTIONS),
+        "weighted_total": score,
+        "legacy_total_score": legacy_total,
+        "key_dimensions": sorted(V11_KEY_DIMENSIONS),
+        "hard_gate_dimensions": dict(HARD_GATE_CODE_DIMENSION),
+    }
     report["checker_runtime"] = checker_result["runtime"]
     report["checker_tests"] = checker_result["tests"]
     report["findings"] = findings
@@ -2794,7 +3218,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     try:
         canonical = canonical_fields(
             summary["final_verdict"],
-            publishability=summary.get("disposition"),
+            publishability=ROUTES[summary["final_verdict"]],
         )
     except ValueError as exc:
         raise ValueError(
@@ -2887,8 +3311,10 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or not isinstance(gold.get("provenance", {}), dict)
     ):
         raise ValueError("invalid Gold provenance")
-    if summary.get("scoring_version") != SCORING_VERSION:
+    if summary.get("scoring_version") != V11_SCORING_VERSION:
         raise ValueError("invalid scoring version")
+    if summary.get("legacy_scoring_version") != SCORING_VERSION:
+        raise ValueError("invalid legacy scoring version")
     dimensions = report.get("dimension_scores")
     if not isinstance(dimensions, list) or [
         item.get("dimension") for item in dimensions
@@ -2947,18 +3373,51 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         for item in hard_gates
     ):
         raise ValueError("invalid Hard Gate evidence schema")
-    evidence_gaps = [
+    legacy_gaps = [
         item["dimension"]
         for item in dimensions
         if item["points_earned"] is None
     ]
-    expected_total = (
+    expected_legacy_total = (
         None
-        if evidence_gaps
+        if legacy_gaps
         else round(sum(item["points_earned"] for item in dimensions), 2)
     )
+    if expected_legacy_total is not None and float(
+        expected_legacy_total
+    ).is_integer():
+        expected_legacy_total = int(expected_legacy_total)
+    if summary.get("legacy_total_score") != expected_legacy_total:
+        raise ValueError("legacy total score does not equal dimension points")
+    dimensions_v11 = report.get("dimensions_v11")
+    if not isinstance(dimensions_v11, list) or [
+        item.get("dimension") for item in dimensions_v11
+    ] != list(V11_DIMENSIONS):
+        raise ValueError("v11 dimension order or membership is invalid")
+    for item in dimensions_v11:
+        name = item["dimension"]
+        maximum = V11_DIMENSION_WEIGHTS[name]
+        if item.get("max_points") != maximum or item.get("weight") != maximum:
+            raise ValueError(f"invalid v11 weight for {name}")
+        earned = item.get("points_earned")
+        normalized = item.get("normalized")
+        if earned is None:
+            if (
+                normalized is not None
+                or item.get("status") != "NOT_ASSESSABLE"
+                or name not in V11_KEY_DIMENSIONS
+            ):
+                raise ValueError(f"inconsistent unavailable v11 score for {name}")
+        elif (
+            not isinstance(earned, (int, float))
+            or isinstance(earned, bool)
+            or not 0 <= earned <= maximum
+            or normalized != round(float(earned) / maximum * 100, 4)
+        ):
+            raise ValueError(f"invalid earned or normalized v11 score for {name}")
+    expected_total, expected_gaps = v11_weighted_total(dimensions_v11)
     if summary.get("total_score") != expected_total:
-        raise ValueError("total score does not equal dimension points")
+        raise ValueError("total score does not equal v11 weighted total")
     if expected_total is not None and not 0 <= expected_total <= 100:
         raise ValueError("total score is outside 0–100")
     (
@@ -2967,7 +3426,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         expected_gate_triggered,
         expected_reason,
         recomputed_gaps,
-    ) = scoring_verdict(findings, dimensions, hard_gates)
+    ) = scoring_verdict_v11(findings, dimensions_v11, hard_gates)
     if (
         summary.get("final_verdict") != expected_verdict
         or summary.get("total_score") != recomputed_total
@@ -2980,8 +3439,14 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     if summary["answer_type"] not in ANSWER_TYPES:
         raise ValueError("invalid answer type")
     expected_route = ROUTES[summary["final_verdict"]]
-    if summary.get("disposition") != expected_route:
+    if summary.get("disposition") != summary["final_verdict"]:
         raise ValueError("summary disposition does not match verdict")
+    if summary.get("publishable") is not (
+        summary["final_verdict"] == "PASS"
+    ):
+        raise ValueError("summary publishable flag does not match verdict")
+    if summary.get("publication_route") != expected_route:
+        raise ValueError("summary publication route does not match verdict")
     expected_audit_route = (
         "PAPER_GROUNDED_E1"
         if (
@@ -3000,7 +3465,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         ("disposition", disposition),
         ("corpus index", index_entry),
     ):
-        if artifact.get("scoring_version") != SCORING_VERSION:
+        if artifact.get("scoring_version") != V11_SCORING_VERSION:
             raise ValueError(f"{name} scoring version differs from report")
         if artifact.get("total_score") != summary["total_score"]:
             raise ValueError(f"{name} total differs from report")

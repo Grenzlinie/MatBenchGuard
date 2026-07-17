@@ -28,61 +28,16 @@ from prepare_audit_output import (
 
 
 SEVERITY_RANK = {"FATAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
-MATERIAL_TERMS = {
-    "object": (
-        "material",
-        "crystal",
-        "lattice",
-        "alloy",
-        "metal",
-        "ceramic",
-        "polymer",
-        "surface",
-        "interface",
-        "defect",
-        "copper",
-        "graphene",
-        "phonon",
-    ),
-    "data": (
-        "cif",
-        "poscar",
-        "structure",
-        "elastic constant",
-        "density",
-        "lattice parameter",
-        "dispersion",
-        "stress-strain",
-        "trajectory",
-        "phase diagram",
-    ),
-    "operation": (
-        "compute",
-        "calculate",
-        "simulation",
-        "density functional",
-        "dft",
-        "molecular dynamics",
-        "phonopy",
-        "calphad",
-        "neb",
-        "numerical",
-        "recompute",
-    ),
-    "endpoint": (
-        "frequency",
-        "energy",
-        "band gap",
-        "modulus",
-        "thermal conductivity",
-        "migration barrier",
-        "phase stability",
-        "adsorption",
-        "strength",
-        "material property",
-        "dispersion curve",
-    ),
-}
+# Materials admissibility (C01) is decided by the Agent reading the
+# instruction's structured fields (## Problem background / ## Approach /
+# ## Reproduction target).  The deterministic layer no longer owns a keyword
+# term list: it only records that a classification is required and validates the
+# Agent's authoritative quotes elsewhere (validate_materials_qualification).
+INSTRUCTION_CLASSIFICATION_FIELDS = (
+    "Problem background",
+    "Approach",
+    "Reproduction target",
+)
 CORE_ROLE_NAMES = {
     "core",
     "core_output",
@@ -123,17 +78,6 @@ def read_role(path: Path, role_type: str) -> Any:
         with path.open("rb") as handle:
             return tomllib.load(handle)
     return path.read_text(encoding="utf-8", errors="replace")
-
-
-def has_term(text: str, term: str) -> bool:
-    if " " in term or "-" in term or len(term) > 4:
-        return term in text
-    return (
-        re.search(
-            r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", text
-        )
-        is not None
-    )
 
 
 def _classify_declaration_role(
@@ -205,28 +149,36 @@ def _has_process_annotation(
     )
 
 
-def materials_prescreen(text: str) -> dict[str, Any]:
-    lowered = text.lower()
-    evidence = {
-        axis: sorted({term for term in terms if has_term(lowered, term)})[:16]
-        for axis, terms in MATERIAL_TERMS.items()
-    }
-    present_axes = [axis for axis, hits in evidence.items() if hits]
-    if all(evidence[axis] for axis in ("object", "operation", "endpoint")):
-        classification = "MAT_CORE"
-    elif evidence["operation"] and evidence["endpoint"] and len(present_axes) >= 2:
-        classification = "MAT_METHOD"
-    elif evidence["object"] and len(present_axes) == 1:
-        classification = "MAT_WRAPPER"
-    elif not evidence["object"] and not evidence["endpoint"]:
-        classification = "NON_MAT"
-    else:
-        classification = "AMBIGUOUS"
+def materials_classification_stub(text: str) -> dict[str, Any]:
+    """Record that materials admissibility must be Agent-adjudicated.
+
+    The deterministic layer no longer classifies packages from a keyword term
+    list.  Classification (C01) is decided by the Agent reading the
+    instruction's ``## Problem background`` / ``## Approach`` /
+    ``## Reproduction target`` fields and is validated as authoritative quotes
+    by ``validate_materials_qualification`` in ``run_review.py``.  When the
+    Agent supplies no authoritative classification the package is
+    ``NOT_ASSESSABLE`` (it is never passed via keywords).
+    """
+    present_fields = [
+        field
+        for field in INSTRUCTION_CLASSIFICATION_FIELDS
+        if re.search(
+            rf"^#{{1,6}}\s+{re.escape(field)}\s*$",
+            text,
+            re.IGNORECASE | re.MULTILINE,
+        )
+    ]
     return {
-        "classification": classification,
-        "axes_present": present_axes,
-        "evidence": evidence,
+        "classification": "NOT_PROVIDED",
         "authoritative": False,
+        "method": "agent_structured_fields",
+        "structured_fields_present": present_fields,
+        "structured_fields_expected": list(INSTRUCTION_CLASSIFICATION_FIELDS),
+        "note": (
+            "Materials admissibility is decided by the Agent from the "
+            "instruction's structured fields; no keyword prescreen is applied."
+        ),
     }
 
 
@@ -409,6 +361,114 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
         ),
         "unclassified_outputs": sorted(unclassified),
         "role_conflicts": role_conflicts,
+    }
+
+
+def _instruction_sections(instruction: str) -> dict[str, str]:
+    """Split an instruction into its top-level ``## `` sections."""
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for raw_line in instruction.splitlines():
+        heading = re.match(r"^##\s+(.+?)\s*$", raw_line)
+        if heading and not raw_line.startswith("###"):
+            current = heading.group(1).strip().lower()
+            sections.setdefault(current, [])
+            continue
+        if current is not None:
+            sections[current].append(raw_line)
+    return {name: "\n".join(body) for name, body in sections.items()}
+
+
+def _section_output_basenames(body: str, *, scored_only: bool = False) -> set[str]:
+    names: set[str] = set()
+    for line in body.splitlines():
+        if scored_only and not re.match(
+            r"^\s*-\s*Output file\s*:", line, re.IGNORECASE
+        ):
+            continue
+        for match in re.finditer(
+            r"/app/outputs/([A-Za-z0-9_.-]+)", line, re.IGNORECASE
+        ):
+            names.add(match.group(1))
+    return names
+
+
+def _selfcheck_output_basenames(body: str) -> set[str]:
+    names: set[str] = set()
+    for match in re.finditer(r"\"file\"\s*:\s*\"([^\"]+)\"", body):
+        names.add(basename(match.group(1)))
+    names.update(_section_output_basenames(body))
+    return names
+
+
+def instruction_internal_consistency(
+    instruction: str, issues: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """D2: check instruction sections declare the same scored outputs.
+
+    Compares the scored/declared output filenames across the ``Workflow
+    steps``, ``Output files``, ``Output contract``, and optional
+    ``Self-check`` sections.  A mismatch between any two present, non-empty
+    sections is a repairable ``INSTRUCTION_INTERNAL_INCONSISTENCY`` finding.
+    """
+    sections = _instruction_sections(instruction)
+
+    def find_section(*keywords: str) -> str | None:
+        for name, body in sections.items():
+            if all(keyword in name for keyword in keywords):
+                return body
+        return None
+
+    workflow_body = find_section("workflow")
+    output_files_body = find_section("output", "files")
+    output_contract_body = find_section("output", "contract")
+    selfcheck_body = find_section("self-check") or find_section("self", "check")
+
+    declared: dict[str, set[str]] = {}
+    if workflow_body is not None:
+        declared["Workflow steps"] = _section_output_basenames(
+            workflow_body, scored_only=True
+        )
+    if output_files_body is not None:
+        declared["Output files"] = _section_output_basenames(output_files_body)
+    if output_contract_body is not None:
+        declared["Output contract"] = _section_output_basenames(
+            output_contract_body
+        )
+    if selfcheck_body is not None:
+        declared["Self-check"] = _selfcheck_output_basenames(selfcheck_body)
+
+    present = {name: values for name, values in declared.items() if values}
+    mismatches: list[dict[str, Any]] = []
+    section_names = sorted(present)
+    for index, left in enumerate(section_names):
+        for right in section_names[index + 1 :]:
+            if present[left] != present[right]:
+                mismatches.append(
+                    {
+                        "left_section": left,
+                        "right_section": right,
+                        "only_in_left": sorted(present[left] - present[right]),
+                        "only_in_right": sorted(present[right] - present[left]),
+                    }
+                )
+    if mismatches:
+        add_issue(
+            issues,
+            "MEDIUM",
+            "INSTRUCTION_INTERNAL_INCONSISTENCY",
+            "instruction sections declare inconsistent scored outputs across "
+            "Workflow steps / Output files / Output contract / Self-check",
+            {"mismatches": mismatches},
+            ["instruction.md"],
+        )
+    return {
+        "sections_present": sorted(sections),
+        "declared_outputs_by_section": {
+            name: sorted(values) for name, values in declared.items()
+        },
+        "consistent": not mismatches,
+        "mismatches": mismatches,
     }
 
 
@@ -1371,15 +1431,23 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
             {"role_conflicts": contract_map["role_conflicts"]},
             ["instruction.md"],
         )
-    qualification = materials_prescreen(instruction)
-    if qualification["classification"] in {"NON_MAT", "AMBIGUOUS"}:
-        add_issue(
-            issues,
-            "HIGH",
-            "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION",
-            "lexical evidence cannot authoritatively decide materials admissibility",
-            qualification["evidence"],
-        )
+    qualification = materials_classification_stub(instruction)
+    add_issue(
+        issues,
+        "HIGH",
+        "MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION",
+        "materials admissibility must be decided by the Agent from the "
+        "instruction's structured fields; no keyword prescreen is applied",
+        {
+            "structured_fields_present": qualification[
+                "structured_fields_present"
+            ],
+            "structured_fields_expected": qualification[
+                "structured_fields_expected"
+            ],
+        },
+        ["instruction.md"],
+    )
     checker_contract = checker_contract_analysis(
         str(role_values.get("tests/checker.py", "")),
         specification if isinstance(specification, dict) else {},
@@ -1397,6 +1465,9 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         str(role_values.get("tests/checker.py", "")),
         issues,
         contract_map,
+    )
+    instruction_consistency = instruction_internal_consistency(
+        instruction, issues
     )
     gold_provenance = gold_provenance_analysis(
         specification if isinstance(specification, dict) else {},
@@ -1425,6 +1496,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "solution_content_inspected": False,
         "parse_status": parse_status,
         "materials_prescreen": qualification,
+        "instruction_consistency": instruction_consistency,
         "gold_provenance": gold_provenance,
         "cross_file_sets": cross_file_sets,
         "contract_map": {
@@ -1437,7 +1509,8 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         ),
         "static_verdict": static_verdict,
         "limitations": [
-            "materials classification is lexical evidence for Agent adjudication",
+            "materials classification (C01) is decided by the Agent from the "
+            "instruction structured fields; no keyword prescreen is applied",
             "resource reachability is not tested in this slice",
             "paper fidelity is not tested in no-paper mode",
         ],

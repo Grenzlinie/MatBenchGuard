@@ -198,16 +198,28 @@ def install_repair_harness(workspace: Path) -> Path:
                 import shutil
                 shutil.rmtree(audit)
             audit.mkdir()
+            instruction_text = (root / "instruction.md").read_text()
+            residual_target = "STILL_LISTS_TARGET" in instruction_text
+            findings = (
+                [{"finding_id": "reaudit-residual", "status": "OPEN",
+                  "title": "SOLUTION_ENTRYPOINT_MISSING", "severity": "LOW"}]
+                if residual_target else []
+            )
             report = {
                 "audit_id": "audit-reaudit-001",
                 "configuration": {
                     "paper_mode": args.paper_mode,
                     "execution_level": args.execution_level,
                 },
-                "findings": [],
+                "findings": findings,
+                # v11 layout: ``disposition`` holds the VERDICT; the publish
+                # route lives in ``publication_route`` / ``publishability`` and
+                # disposition.json ``route``.
                 "summary": {
                     "final_verdict": "PASS",
-                    "disposition": "PUBLISH_CANDIDATE",
+                    "disposition": "PASS",
+                    "publication_route": "PUBLISH_CANDIDATE",
+                    "publishability": "PUBLISH_CANDIDATE",
                 },
             }
             report_path = audit / "audit_report.json"
@@ -261,15 +273,17 @@ def initial_repair_context(
     workspace: Path,
     *,
     paper_mode: str = "no_paper",
+    residual_target: bool = False,
 ) -> tuple[Path, dict[str, Any], str, Path]:
     runner = install_repair_harness(workspace)
     package = workspace / "paper-fixture"
     (package / "tests").mkdir(parents=True)
     (package / "solution").mkdir()
     (package / "paper").mkdir()
-    (package / "instruction.md").write_text(
-        "Compute the evidence-backed quantity.\n", encoding="utf-8"
-    )
+    instruction = "Compute the evidence-backed quantity.\n"
+    if residual_target:
+        instruction += "STILL_LISTS_TARGET\n"
+    (package / "instruction.md").write_text(instruction, encoding="utf-8")
     (package / "tests/checker.py").write_text(
         "raise SystemExit(0)\n", encoding="utf-8"
     )
@@ -452,7 +466,10 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(repair_manifest["status"], "PUBLISHED")
+            self.assertEqual(repair_manifest["status"], "REPAIRED")
+            self.assertEqual(repair_manifest["repair_state"], "REPAIRED")
+            self.assertEqual(repair_manifest["disposition"], "PASS")
+            self.assertTrue(repair_manifest["publishable"])
             self.assertEqual(repair_manifest["finding_id"], finding_id)
             self.assertEqual(
                 [item["before_passed"] for item in repair_manifest["regression_tests"]],
@@ -483,6 +500,31 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                 package / "benchmark_repair"
             )
             repair_module().validate_fixed_bundle(history)
+
+    def test_legacy_reaudit_still_listing_target_blocks_publish(self) -> None:
+        # Item 4 regression: the legacy single-finding path must read the
+        # publish route from disposition.json route / publication_route (NOT
+        # summary.disposition, which is the verdict in v11) AND must refuse to
+        # publish when the target finding is still listed in the re-audit.
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, report, finding_id, runner = initial_repair_context(
+                workspace, residual_target=True
+            )
+            plan = workspace / "repair-plan.json"
+            write_plan(plan, safe_plan(report["audit_id"], finding_id))
+
+            completed = run_repair(package, plan, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "ROLLED_BACK")
+            self.assertFalse(result["publishable"])
+            self.assertIn("target finding remains open", result["reason"])
+            # Authoritative package preserved unchanged, no publish.
+            self.assertFalse((package / "solution/solve.sh").is_file())
+            self.assertFalse((package / "benchmark_repair").exists())
+            self.assertEqual(package.name, "paper-fixture")
 
     def test_repair_rejects_targets_outside_instruction_tests_and_solution(
         self,

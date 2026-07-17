@@ -9,8 +9,14 @@
 - Materials class: AMBIGUOUS
 - Answer type: OPEN_ENDED
 - Final verdict: NOT_ASSESSABLE
+- Disposition: NOT_ASSESSABLE
+- Publishable: false
+- Repair state: NOT_REQUIRED
 - Authoritative score (0–100): null
-- Scoring version: materials-review-scoring/1.0
+- Legacy total score (0–100): null
+- Scoring version: materials-review-scoring/1.1
+- Legacy scoring version: materials-review-scoring/1.0
+- Publication route: EVIDENCE_PENDING
 - Core reason: Audit not yet completed.
 
 ## 2. Benchmark Identity
@@ -86,10 +92,29 @@ Reason: No-paper mode does not assess paper fidelity.
 
 ## 15. Dimension Scores
 
-Each dimension reports points earned/max points, normalized score, deduction
-IDs, finding IDs, and non-empty positive or finding evidence. Robustness also
-records positive/negative/discrimination/equivalence provenance. Solution
-completeness records only solve/positive-mock status and never Oracle values.
+The authoritative scoring is the seven-dimension `dimensions_v11` model
+(C01–C07). Each dimension reports weight/max points, points earned, normalized
+score, key-dimension flag, status, its deductions, and finding IDs; deductions
+apply by severity ratio inside that dimension only. `summary.total_score` is the
+weighted 0–100 total; `legacy_total_score` and the legacy `dimension_scores`
+table are retained as compatibility fields. Robustness (C07) also records
+positive/negative/discrimination/equivalence provenance. C06/solution status
+records only solve/positive-mock status and never Oracle values.
+
+| dim | title | weight | earned | normalized | key | finding IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+| C01 | domain_admission | 10 | | | yes | |
+| C02 | task_design_and_file_consistency | 20 | | | no | |
+| C03 | scientific_validity_and_solvability | 20 | | | yes | |
+| C04 | scoring_semantics | 20 | | | yes | |
+| C05 | answer_leakage | 10 | | | no | |
+| C06 | reproducibility | 10 | | | yes | |
+| C07 | difficulty_and_auditability | 10 | | | no | |
+
+### 15.1 Repair Delta
+
+After a repair re-audit, `repair_delta` records before/after normalized scores
+and `delta_pp` per C01–C07 from the single equal-depth re-audit.
 
 ## 16. Findings
 

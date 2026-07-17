@@ -140,10 +140,38 @@ class MaterialsDispositionTests(unittest.TestCase):
                 self.assertIn("affected_locations", gate)
             self.assertEqual(
                 report["summary"]["scoring_version"],
+                "materials-review-scoring/1.1",
+            )
+            self.assertEqual(
+                report["summary"]["legacy_scoring_version"],
                 "materials-review-scoring/1.0",
             )
             self.assertEqual(
+                [item["dimension"] for item in report["dimensions_v11"]],
+                ["C01", "C02", "C03", "C04", "C05", "C06", "C07"],
+            )
+            self.assertEqual(
+                {item["dimension"]: item["weight"]
+                 for item in report["dimensions_v11"]},
+                {
+                    "C01": 10,
+                    "C02": 20,
+                    "C03": 20,
+                    "C04": 20,
+                    "C05": 10,
+                    "C06": 10,
+                    "C07": 10,
+                },
+            )
+            for gate in report["hard_gates"]:
+                self.assertIn(
+                    gate["dimension"], {"C01", "C03", "C04", "C06"}
+                )
+            self.assertEqual(
                 index["dimension_scores"], report["dimension_scores"]
+            )
+            self.assertEqual(
+                index["dimensions_v11"], report["dimensions_v11"]
             )
             self.assertEqual(index["hard_gates"], report["hard_gates"])
             self.assertEqual(
@@ -282,7 +310,17 @@ class MaterialsDispositionTests(unittest.TestCase):
             }
             self.assertEqual(summary["final_verdict"], "PASS")
             self.assertGreaterEqual(summary["total_score"], 80)
-            self.assertEqual(summary["disposition"], "PUBLISH_CANDIDATE")
+            self.assertEqual(summary["disposition"], "PASS")
+            self.assertTrue(summary["publishable"])
+            self.assertEqual(summary["repair_state"], "NOT_REQUIRED")
+            self.assertEqual(summary["publication_route"], "PUBLISH_CANDIDATE")
+            v11 = {item["dimension"]: item for item in report["dimensions_v11"]}
+            self.assertTrue(
+                all(
+                    v11[name]["points_earned"] is not None
+                    for name in ("C01", "C02", "C03", "C04", "C05", "C06", "C07")
+                )
+            )
             self.assertFalse(summary["hard_gate_triggered"])
             self.assertEqual(
                 {
@@ -336,8 +374,9 @@ class MaterialsDispositionTests(unittest.TestCase):
                 report["summary"]["final_verdict"], "NOT_ASSESSABLE"
             )
             self.assertEqual(
-                report["summary"]["disposition"], "EVIDENCE_PENDING"
+                report["summary"]["disposition"], "NOT_ASSESSABLE"
             )
+            self.assertFalse(report["summary"]["publishable"])
             self.assertFalse(index["publishable"])
             self.assertEqual(
                 index["taxonomy_labels"]["computation_task"],
@@ -388,24 +427,11 @@ class MaterialsDispositionTests(unittest.TestCase):
             package = Path(temporary) / "paper-fixture"
             copy_source_package(package)
             checker_path = package / "tests/checker.py"
-            checker_path.write_text(
-                """
-from pathlib import Path
-import json
-
-logs = Path("/logs/verifier")
-logs.mkdir(parents=True, exist_ok=True)
-(logs / "reward.txt").write_text("1.0", encoding="utf-8")
-(logs / "breakdown.json").write_text(json.dumps({"gaming": 1.0}), encoding="utf-8")
-""",
-                encoding="utf-8",
-            )
+            # A checker that never evaluates the declared core output is a
+            # confirmed CHECKER_CORE_TASK_UNASSESSED Hard Gate (C04) and must
+            # REJECT deterministically without an agent classification.
+            checker_path.write_text("raise SystemExit(0)\n", encoding="utf-8")
             instruction = package / "instruction.md"
-            instruction.write_text(
-                "Sort a list of generic integers and write the result to "
-                "/app/outputs/result.json.",
-                encoding="utf-8",
-            )
             before = hashlib.sha256(instruction.read_bytes()).hexdigest()
 
             completed = run_no_paper(package)
@@ -418,8 +444,9 @@ logs.mkdir(parents=True, exist_ok=True)
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(report["summary"]["final_verdict"], "REJECT")
-            self.assertIsNone(report["summary"]["total_score"])
-            self.assertEqual(report["summary"]["disposition"], "QUARANTINE")
+            self.assertEqual(report["summary"]["disposition"], "REJECT")
+            self.assertFalse(report["summary"]["publishable"])
+            self.assertEqual(disposition["route"], "QUARANTINE")
             self.assertEqual(index["route"], "QUARANTINE")
             self.assertFalse(index["publishable"])
             self.assertTrue(disposition["non_destructive"])
@@ -446,7 +473,7 @@ logs.mkdir(parents=True, exist_ok=True)
                 report["summary"]["final_verdict"], "REJECT"
             )
             self.assertEqual(
-                report["summary"]["disposition"], "QUARANTINE"
+                report["summary"]["disposition"], "REJECT"
             )
             self.assertEqual(index["route"], "QUARANTINE")
             self.assertFalse(index["publishable"])

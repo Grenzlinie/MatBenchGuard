@@ -558,10 +558,19 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertIn("semantic", completed.stderr)
 
-    def test_no_paper_audit_cannot_use_paper_evidence(self) -> None:
+    def test_paper_evidence_must_bind_source_audit_hash(self) -> None:
+        # no_paper mode is gone: paper evidence is always admissible, but each
+        # item must bind the exact paper/** file the source audit hashed.  Here
+        # the paper file is dropped from the authoritative input hashes, so the
+        # otherwise-valid paper-grounded edit is BLOCKED_EVIDENCE.
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             package, report, finding_id, runner = initial_repair_context(workspace)
+            manifest_path = package / "benchmark_audit/audit_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["input_hashes"].pop("paper/paper.md", None)
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            write_audit_attestation(package)
             plan = bind_plan(package, safe_plan(report["audit_id"], finding_id))
             plan["repair_class"] = "ASSISTED_FIX"
             plan["evidence"] = [
@@ -597,7 +606,7 @@ class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
                     "expected": "paper-supported quantity",
                 }
             ]
-            path = workspace / "no-paper-evidence.json"
+            path = workspace / "unbound-paper-evidence.json"
             write_plan(path, plan)
 
             completed = run_repair(package, path, runner)

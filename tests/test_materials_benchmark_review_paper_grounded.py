@@ -467,8 +467,15 @@ logs.mkdir(parents=True, exist_ok=True)
                 },
                 msg=json.dumps(report["findings"], ensure_ascii=False),
             )
-            self.assertEqual(report["summary"]["total_score"], 97)
+            self.assertEqual(report["summary"]["legacy_total_score"], 97)
+            self.assertEqual(report["summary"]["total_score"], 98)
             self.assertEqual(report["summary"]["final_verdict"], "PASS")
+            v11 = {
+                item["dimension"]: item
+                for item in report["dimensions_v11"]
+            }
+            self.assertEqual(v11["C07"]["points_earned"], 8)
+            self.assertEqual(v11["C07"]["normalized"], 80.0)
             self.assertNotIn(
                 "independent_known_valid_output",
                 report["evidence_contract"]["gaps"],

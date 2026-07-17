@@ -367,6 +367,10 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                     )
                     self.assertEqual(
                         report["summary"]["disposition"],
+                        "NOT_ASSESSABLE",
+                    )
+                    self.assertEqual(
+                        report["summary"]["publication_route"],
                         "EVIDENCE_PENDING",
                     )
                     self.assertEqual(
@@ -426,15 +430,42 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-
-            completed = subprocess.run(
-                [sys.executable, str(RUNNER), str(package)],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                check=False,
+            # Classification is Agent-authoritative (no keyword prescreen); a
+            # NON_MAT verdict is the only thing that fires the C01 Hard Gate.
+            quote = (
+                "Sort generic records and write "
+                "/app/outputs/dispersion_curves.csv."
             )
+            value = taxonomy_assessment("磁性与自旋", quote)
+            for item in value["taxonomy_evidence"]:
+                item["package_quote"] = quote
+            value["materials_qualification"] = {
+                "classification": "NON_MAT",
+                "rationale": (
+                    "The public task is generic record sorting with no "
+                    "materials object, operation, endpoint, or domain "
+                    "dependence."
+                ),
+                "evidence": [
+                    {
+                        "axis": axis,
+                        "package_file": "instruction.md",
+                        "package_quote": quote,
+                    }
+                    for axis in (
+                        "object",
+                        "operation",
+                        "endpoint",
+                        "domain_dependence",
+                    )
+                ],
+            }
+            assessment_path = Path(temporary) / "assessment.json"
+            assessment_path.write_text(
+                json.dumps(value, ensure_ascii=False), encoding="utf-8"
+            )
+
+            completed = run_taxonomy_review(package, assessment_path)
 
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             report = json.loads(
@@ -443,7 +474,17 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
                 )
             )
             self.assertEqual(report["summary"]["materials_class"], "NON_MAT")
-            self.assertEqual(report["summary"]["disposition"], "QUARANTINE")
+            self.assertEqual(report["summary"]["disposition"], "REJECT")
+            self.assertEqual(
+                report["summary"]["publication_route"], "QUARANTINE"
+            )
+            c01_gate = next(
+                gate
+                for gate in report["hard_gates"]
+                if gate["code"] == "NON_MATERIALS_TASK"
+            )
+            self.assertEqual(c01_gate["status"], "FAIL")
+            self.assertEqual(c01_gate["dimension"], "C01")
             self.assertFalse(
                 json.loads(
                     (
@@ -515,7 +556,7 @@ class MaterialsPipelineFamilyTests(unittest.TestCase):
             self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
             self.assertEqual(
                 report["materials_qualification"]["prescreen"]["classification"],
-                "NON_MAT",
+                "NOT_PROVIDED",
             )
             self.assertTrue(report["materials_qualification"]["authoritative"])
             self.assertNotIn(
