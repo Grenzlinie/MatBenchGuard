@@ -848,6 +848,82 @@ _SCORERS = {"a": score_a, "b": score_b}
         self.assertEqual(applied[0]["finding_id"], "FINDING-004")
         self.assertEqual(applied[0]["points"], 6.0)
 
+    def test_v11_dimension_metadata_matches_plan(self) -> None:
+        self.assertEqual(
+            finalize_audit_output.V11_DIMENSION_TITLES,
+            {
+                "C01": "domain_admission",
+                "C02": "task_design_and_file_consistency",
+                "C03": "scientific_validity_and_solvability",
+                "C04": "scoring_semantics",
+                "C05": "answer_leakage",
+                "C06": "reproducibility",
+                "C07": "difficulty_and_auditability",
+            },
+        )
+        self.assertEqual(
+            finalize_audit_output.V11_DIMENSION_WEIGHTS,
+            {
+                "C01": 10,
+                "C02": 20,
+                "C03": 20,
+                "C04": 20,
+                "C05": 10,
+                "C06": 10,
+                "C07": 10,
+            },
+        )
+        self.assertEqual(
+            finalize_audit_output.V11_KEY_DIMENSIONS,
+            {"C01", "C03", "C04", "C06"},
+        )
+        self.assertEqual(
+            finalize_audit_output.V11_HARD_GATE_DIMENSION[
+                "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE"
+            ],
+            "C06",
+        )
+        self.assertEqual(
+            finalize_audit_output.V11_HARD_GATE_DIMENSION["NON_MATERIALS_TASK"],
+            "C01",
+        )
+
+    def test_v11_finding_attribution_c05_c06_c07(self) -> None:
+        def finding(code: str, category: str = "") -> dict[str, object]:
+            return {
+                "title": code,
+                "category": category,
+                "affected_files": [],
+            }
+
+        attribute = finalize_audit_output.scored_dimension_v11_for
+        for code in (
+            "SOLUTION_BOUNDARY_VIOLATION",
+            "ANSWER_LEAKAGE",
+            "ORACLE_VALUE_LEAKED",
+            "PAPER_ANSWER_LEAK",
+            "PAPER_IDENTITY_MISMATCH",
+        ):
+            self.assertEqual(attribute(finding(code)), "C05", msg=code)
+        for code in (
+            "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+            "INDISPENSABLE_DIRECT_INPUT_TRANSIENT",
+            "E2_SMOKE_FAILED",
+            "PAPER_REPRODUCIBILITY_GAP",
+        ):
+            self.assertEqual(attribute(finding(code)), "C06", msg=code)
+        self.assertEqual(
+            attribute(finding("RESOURCE_MISSING", "RESOURCE_USABILITY")),
+            "C06",
+        )
+        for code in (
+            "SCIENTIFIC_QUALITY_GRADIENT_VIOLATION",
+            "SCIENTIFIC_INVARIANCE_VIOLATION",
+            "SINGLE_COMPONENT_CAN_PASS",
+            "INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE",
+        ):
+            self.assertEqual(attribute(finding(code)), "C07", msg=code)
+
     def test_pass_is_blocked_without_authoritative_materials_qualification(
         self,
     ) -> None:

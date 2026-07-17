@@ -16,13 +16,20 @@ as `legacy_total_score`.
 
 | Dim | Title | Weight | Family | Key |
 | --- | --- | --- | --- | --- |
-| C01 | 材料准入 (materials admissibility) | 10 | classification | yes |
-| C02 | 题目设计完整性与文件一致性 | 20 | deterministic | no |
-| C03 | 科学有效性 (scientific validity) | 20 | scientific | yes |
-| C04 | 评分语义 (checker/Gold scoring semantics) | 20 | deterministic | yes |
-| C05 | 可复现性与环境 | 10 | deterministic | no |
-| C06 | 直接输入可得性 (direct-input availability) | 10 | resource | yes |
-| C07 | 鲁棒性与区分度 | 10 | robustness | no |
+| C01 | 领域准入 (domain admission) | 10 | admission | yes |
+| C02 | 题目设计完整性与文件一致性 (task design completeness & file consistency) | 20 | deterministic | no |
+| C03 | 科学有效性与方法可解性 (scientific validity & solvability) | 20 | scientific | yes |
+| C04 | 评分语义 (scoring semantics) | 20 | deterministic | yes |
+| C05 | 答案泄漏 (answer leakage) | 10 | scientific | no |
+| C06 | 可复现性 (reproducibility) | 10 | scientific | yes |
+| C07 | 难度与可审计性 (difficulty & auditability) | 10 | deterministic_scientific | no |
+
+C05 答案泄漏 covers numeric-answer leakage in the instruction (a method or
+formula is not leakage) and a solution boundary the checker depends on. C06
+可复现性 covers paper fidelity, indispensable direct-input availability (the
+direct-input probe), and whether correct execution earns a high score. C07
+难度与可审计性 covers scoring discrimination (monotonicity / sensitivity /
+saturation / specificity / single-component isolation) and auditability.
 
 Per dimension, start at `weight` and deduct `weight × severity_fraction`
 (`FATAL=1.0`, `HIGH=0.4`, `MEDIUM=0.2`, `LOW=0.1`), accumulating and flooring at
@@ -58,65 +65,52 @@ Review side). The publication route is derived from the verdict
 - `NOT_ASSESSABLE`: a key dimension is null (temporary required evidence
   unavailable) and no Hard Gate forces rejection.
 
-The five-dimension model below remains the internal legacy computation
-(`dimension_scores` / `legacy_total_score`); it is retained for continuity and
-maps into C01–C07 for attribution.
+A legacy five-dimension total (`dimension_scores` / `legacy_total_score`) is
+still computed internally and retained only as a compatibility field; it is not
+the authoritative score and never overrides C01–C07. Every scored finding is
+attributed to exactly one C01–C07 dimension.
 
-## Formula
-
-Start each dimension at its fixed maximum:
-
-- scientific validity: 35;
-- instruction answerability: 20;
-- checker/Gold alignment: 25;
-- robustness and discrimination: 15;
-- solution completeness: 5.
-
-Each scored finding is assigned to exactly one dimension. Deduct that
-dimension's maximum multiplied by the finding fraction: `FATAL=1.0`,
-`HIGH=0.4`, `MEDIUM=0.2`, `LOW=0.1`. Multiple deductions accumulate and floor
-the dimension at zero. A missing or broken solution Oracle deducts all 5
-solution-completeness points. For each dimension:
-
-`points_earned = max(0, max_points - sum(deductions))`
-
-`normalized_score = points_earned / max_points`
-
-The total is the sum of all five `points_earned` values and is displayed on a
-0–100 scale. A temporary evidence gap in a critical dimension
-(`scientific_validity`, `instruction_answerability`, or
-`checker_gold_alignment`) makes that dimension and the total `null`; it does
-not create a scientific defect. Non-critical dimensions remain scored from the
-available evidence and limitations.
+## Robustness and discrimination (C07)
 
 Schema-shaped attacks can assess negative robustness. Discrimination and
 equivalence require an independently justified public valid fixture. The
 solution Oracle is never that fixture. Without one, record both probe classes
 as `NOT_ASSESSABLE` with `source_kind=NONE`, `oracle_used=false`, and empty
-fixture hashes. Add the `MEDIUM`
-`INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE` limitation finding, deduct 3 of the
-15 robustness points, and retain completed positive, negative, error-handling,
-and static-checker evidence. Do not claim that unexecuted discrimination or
-equivalence probes passed. This non-critical limitation does not null the total
-or force the package verdict to `NOT_ASSESSABLE`.
+fixture hashes. Add the `MEDIUM` `INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE`
+limitation finding (a C07 deduction of `0.2 × 10 = 2` points) and retain
+completed positive, negative, error-handling, and static-checker evidence. Do
+not claim that unexecuted discrimination or equivalence probes passed. C07 is a
+non-key dimension: this limitation only deducts within C07 and never nulls the
+authoritative total or forces the package verdict to `NOT_ASSESSABLE`.
 
 Every deduction records a deterministic deduction ID, finding ID, point value,
 severity, observed fact, and exact affected location. Classification as
 `METHOD_REIMPLEMENTATION`, `EXACT_REPRODUCTION`, or `SCIENTIFIC_EXTENSION`
 never adds or removes points.
 
-## Finding assignment
+## Finding assignment (C01–C07)
 
-- solution role or Oracle completeness → solution completeness;
-- checker crashes, unusable rewards, adversarial passes, quality-gradient
-  failures, invariance failures, or solution-boundary failures → robustness
-  and discrimination;
-- known-valid rejection, checker/Gold paper findings, and defects in `tests/`
-  contracts → checker/Gold alignment;
-- instruction/data/method paper findings and scientific-target defects →
-  scientific validity;
-- instruction omissions, answerability defects, and unrecoverable public task
-  definitions → instruction answerability.
+Each finding maps to exactly one dimension (`scored_dimension_v11_for`):
+
+- **C01 领域准入**: `NON_MATERIALS_TASK`,
+  `MATERIALS_ADMISSIBILITY_REQUIRES_ADJUDICATION`, and `MATERIALS_*` findings;
+- **C02 题目设计完整性与文件一致性**: instruction internal inconsistency, output
+  contract/declaration/scoring defects, missing/parse-error files, invalid
+  weights, grading-spec schema defects, solution role/Oracle completeness
+  (`SOLUTION_*`), and any otherwise-unattributed deterministic defect;
+- **C03 科学有效性与方法可解性**: `SCIENTIFIC_TARGET_INVALID`,
+  `UNRECOVERABLE_TASK_DEFINITION`, and `PAPER_{INSTRUCTION,DATA,METHOD}_*`
+  paper findings;
+- **C04 评分语义**: checker read/binding/return/threshold defects,
+  always-zero/always-pass/divide-by-zero scorers, adversarial pass,
+  `CHECKER_CORE_TASK_UNASSESSED`, Oracle-mock rejection, known-valid rejection,
+  and `PAPER_*GOLD*` findings;
+- **C05 答案泄漏**: `SOLUTION_BOUNDARY_VIOLATION`, `ANSWER_LEAKAGE`,
+  `ORACLE_VALUE_LEAKED`, and `PAPER_*` leak/identity findings;
+- **C06 可复现性**: `INDISPENSABLE_DIRECT_INPUT_*`, `RESOURCE_USABILITY`
+  findings, `E2_SMOKE_FAILED`, and residual `PAPER_*` fidelity findings;
+- **C07 难度与可审计性**: quality-gradient / invariance violations,
+  `SINGLE_COMPONENT_CAN_PASS`, and `INDEPENDENT_PUBLIC_FIXTURE_UNAVAILABLE`.
 
 ## Contract-role mapping and deductions
 
@@ -228,10 +222,11 @@ path with `line=null` and `quote=null`. Generic-only repair language is not a
 valid authoritative finding.
 
 `PASS` is also fail-closed under `materials-evidence-contract/1.0`:
-authoritative materials qualification quotes instruction/tests evidence; all
-five dimensions have non-empty evidence; no-paper review adjudicates all four
-paper triggers with package evidence; every probe class records honest status
-and provenance; assessed discrimination/equivalence uses an independent
+authoritative materials qualification quotes instruction/tests evidence; every
+scored C01–C07 dimension has non-empty evidence; the paper-grounded review
+adjudicates the required paper-fidelity checks with cited paper/package
+evidence (A2/A4/A5 always read `paper/`); every probe class records honest
+status and provenance; assessed discrimination/equivalence uses an independent
 non-Oracle fixture while unavailable classes explicitly record no fixture; and
 solution completeness records only solve/positive-mock status, never Oracle
 values. No findings is not positive evidence.
