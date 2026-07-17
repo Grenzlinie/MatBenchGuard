@@ -2882,9 +2882,36 @@ def repair_batch(
 
     summary = reaudit.get("summary", {})
     verdict = summary.get("final_verdict")
-    route = summary.get("disposition")
+    # The publish route lives in disposition.json ``route`` (and the
+    # finalizer's ``summary.publication_route`` / ``summary.publishability``).
+    # ``summary.disposition`` holds the VERDICT, not the route, so it must not
+    # be used here (mirrors read_ext_disposition and finalize_audit_output).
+    reaudit_disposition_path = candidate / "benchmark_audit/disposition.json"
+    reaudit_disposition = (
+        read_json(reaudit_disposition_path)
+        if reaudit_disposition_path.is_file()
+        else {}
+    )
+    route = (
+        reaudit_disposition.get("route")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
     reaudit_findings = [
         item for item in reaudit.get("findings", []) if isinstance(item, dict)
+    ]
+    # Every targeted finding must be absent/closed in the fresh re-audit before
+    # the batch may publish (§8.4); mirrors the legacy single-finding closure
+    # guard in validate_reaudit.
+    reaudit_finding_keys = {
+        finding_key(item) for item in reaudit_findings if finding_key(item)
+    }
+    targets_still_open = [
+        finding_id
+        for finding_id in resolved_targets
+        if (target_key := finding_key(findings_by_id.get(finding_id, {})))
+        is not None
+        and target_key in reaudit_finding_keys
     ]
     has_fatal = any(
         item.get("severity") == "FATAL" for item in reaudit_findings
@@ -2893,6 +2920,7 @@ def repair_batch(
         verdict == "PASS"
         and route == "PUBLISH_CANDIDATE"
         and not unresolved_findings
+        and not targets_still_open
         and package_identity(candidate, directory_name=root.name) == identity
     )
     repair_delta = compute_repair_delta(report, reaudit)
@@ -2932,6 +2960,12 @@ def repair_batch(
                 "reason": "remains open after equal-depth re-audit",
             }
             for item in reaudit_findings
+        ] + [
+            {
+                "finding_id": finding_id,
+                "reason": "targeted finding still present in equal-depth re-audit",
+            }
+            for finding_id in targets_still_open
         ]
         history.mkdir(parents=True, exist_ok=True)
         if snapshot.exists():

@@ -114,7 +114,9 @@ parser.add_argument("--agent-assessment")
 parser.add_argument("--e2-smoke-plan")
 args = parser.parse_args()
 root = Path(args.root)
-broken = "STILL_BROKEN" in (root / "instruction.md").read_text()
+instruction_text = (root / "instruction.md").read_text()
+broken = "STILL_BROKEN" in instruction_text
+residual_target = "STILL_LISTS_TARGET" in instruction_text
 audit = root / "benchmark_audit"
 if audit.exists():
     shutil.rmtree(audit)
@@ -124,6 +126,14 @@ if broken:
     findings = [{"finding_id": "reaudit-open", "status": "OPEN",
                  "title": "STILL_BROKEN", "severity": "HIGH"}]
     dimensions = {k: {"normalized": 60.0} for k in
+                  ("C01","C02","C03","C04","C05","C06","C07")}
+elif residual_target:
+    # Re-audit routes PASS/PUBLISH_CANDIDATE yet still lists a targeted
+    # finding code as a residual low-severity finding.
+    verdict, route = "PASS", "PUBLISH_CANDIDATE"
+    findings = [{"finding_id": "reaudit-residual", "status": "OPEN",
+                 "title": "SOLUTION_ENTRYPOINT_MISSING", "severity": "LOW"}]
+    dimensions = {k: {"normalized": 100.0} for k in
                   ("C01","C02","C03","C04","C05","C06","C07")}
 else:
     verdict, route = "PASS", "PUBLISH_CANDIDATE"
@@ -135,7 +145,10 @@ report = {
     "configuration": {"paper_mode": args.paper_mode,
                       "execution_level": args.execution_level},
     "findings": findings,
-    "summary": {"final_verdict": verdict, "disposition": route,
+    # v11 layout: ``disposition`` holds the VERDICT; the publish route lives in
+    # ``publication_route``/``publishability`` and disposition.json ``route``.
+    "summary": {"final_verdict": verdict, "disposition": verdict,
+                "publication_route": route, "publishability": route,
                 "dimensions_v11": dimensions},
 }
 report_path = audit / "audit_report.json"
@@ -212,7 +225,7 @@ def write_audit_attestation(package: Path) -> Path:
 
 
 def batch_context(
-    workspace: Path, *, marker: bool = False
+    workspace: Path, *, marker: bool = False, residual_target: bool = False
 ) -> tuple[Path, Path]:
     runner = install_harness(workspace)
     spec = importlib.util.spec_from_file_location("harness_batch_ctx", runner)
@@ -226,6 +239,8 @@ def batch_context(
     instruction = "Compute the evidence-backed quantity.\n"
     if marker:
         instruction += "STILL_BROKEN\n"
+    if residual_target:
+        instruction += "STILL_LISTS_TARGET\n"
     (package / "instruction.md").write_text(instruction, encoding="utf-8")
     (package / "tests/checker.py").write_text(
         "raise SystemExit(0)\n", encoding="utf-8"
@@ -570,6 +585,93 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             unresolved_ids = {item.get("finding_id") for item in result["unresolved"]}
             self.assertIn(FINDING_B, unresolved_ids)
             self.assertFalse((package / "solution/solve.sh").is_file())
+
+    def test_batch_publishes_reading_publication_route_not_verdict(self) -> None:
+        # Regression for Bug 1: the re-audit stub emits the real v11 layout
+        # where summary.disposition holds the VERDICT ("PASS") and the publish
+        # route lives in publication_route / disposition.json route.  Reading
+        # summary.disposition as the route (the bug) would leave this batch at
+        # PARTIALLY_REPAIRED and never publish.
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, runner = batch_context(workspace)
+            plan = batch_plan(
+                [
+                    finding_entry(
+                        FINDING_A,
+                        "op-a",
+                        "solution/solve.sh",
+                        "SOLUTION_ENTRYPOINT_MISSING",
+                    ),
+                    finding_entry(
+                        FINDING_B,
+                        "op-b",
+                        "solution/helper.sh",
+                        "SOLUTION_HELPER_MISSING",
+                    ),
+                ]
+            )
+            bind_batch_plan(package, plan)
+            plan_path = workspace / "route-plan.json"
+            write_json(plan_path, plan)
+
+            completed = run_repair(package, plan_path, runner)
+
+            self.assertEqual(
+                completed.returncode,
+                0,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "REPAIRED")
+            self.assertTrue(result["publishable"])
+            self.assertTrue((package / "solution/solve.sh").is_file())
+            # Confirm the published re-audit really used the v11 layout: the
+            # verdict lives in disposition, and the route is elsewhere.
+            reaudit = json.loads(
+                (package / "benchmark_audit/audit_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(reaudit["summary"]["disposition"], "PASS")
+            self.assertEqual(
+                reaudit["summary"]["publication_route"], "PUBLISH_CANDIDATE"
+            )
+
+    def test_batch_residual_target_finding_blocks_publish(self) -> None:
+        # Regression for Bug 2: the re-audit routes PASS/PUBLISH_CANDIDATE but
+        # still lists a targeted finding code.  The batch must NOT publish; it
+        # stays PARTIALLY_REPAIRED and the original package is preserved.
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, runner = batch_context(workspace, residual_target=True)
+            plan = batch_plan(
+                [
+                    finding_entry(
+                        FINDING_A,
+                        "op-a",
+                        "solution/solve.sh",
+                        "SOLUTION_ENTRYPOINT_MISSING",
+                    ),
+                ]
+            )
+            bind_batch_plan(package, plan)
+            plan_path = workspace / "residual-plan.json"
+            write_json(plan_path, plan)
+
+            completed = run_repair(package, plan_path, runner)
+
+            self.assertEqual(completed.returncode, 3)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "PARTIALLY_REPAIRED")
+            self.assertFalse(result["publishable"])
+            self.assertFalse((package / "solution/solve.sh").is_file())
+            self.assertFalse((package / "benchmark_repair").exists())
+            unresolved_ids = {
+                item.get("finding_id") for item in result["unresolved"]
+            }
+            self.assertIn(FINDING_A, unresolved_ids)
+            repair_module().validate_fixed_bundle(Path(result["history_dir"]))
 
     def test_batch_attempt_limit_second_failure_is_abandoned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
