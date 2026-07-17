@@ -452,7 +452,10 @@ class MaterialsSafeRepairTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(repair_manifest["status"], "PUBLISHED")
+            self.assertEqual(repair_manifest["status"], "REPAIRED")
+            self.assertEqual(repair_manifest["repair_state"], "REPAIRED")
+            self.assertEqual(repair_manifest["disposition"], "PASS")
+            self.assertTrue(repair_manifest["publishable"])
             self.assertEqual(repair_manifest["finding_id"], finding_id)
             self.assertEqual(
                 [item["before_passed"] for item in repair_manifest["regression_tests"]],

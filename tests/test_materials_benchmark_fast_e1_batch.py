@@ -468,14 +468,22 @@ class FastE1BatchTests(unittest.TestCase):
             )
             scoring = record["evidence"]["cli_scoring"]
             self.assertEqual(
-                scoring["scoring_version"], "materials-review-scoring/1.0"
+                scoring["scoring_version"], "materials-review-scoring/1.1"
+            )
+            self.assertEqual(
+                scoring["legacy_scoring_version"],
+                "materials-review-scoring/1.0",
             )
             self.assertIsNone(scoring["total_score"])
             self.assertTrue(
                 any(
                     item["points_earned"] is None
-                    for item in scoring["dimension_scores"]
+                    for item in scoring["dimensions_v11"]
                 )
+            )
+            self.assertEqual(
+                [item["dimension"] for item in scoring["dimensions_v11"]],
+                ["C01", "C02", "C03", "C04", "C05", "C06", "C07"],
             )
             self.assertEqual(len(scoring["hard_gates"]), 4)
             evidence_snapshot = index["records"][0]["evidence"][

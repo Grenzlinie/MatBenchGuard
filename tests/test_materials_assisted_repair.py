@@ -81,7 +81,9 @@ class MaterialsAssistedRepairTests(unittest.TestCase):
                 msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
             )
             result = json.loads(completed.stdout)
-            self.assertEqual(result["status"], "PUBLISHED")
+            self.assertEqual(result["status"], "REPAIRED")
+            self.assertEqual(result["repair_state"], "REPAIRED")
+            self.assertTrue(result["publishable"])
             self.assertIn(
                 "paper-supported quantity",
                 (package / "instruction.md").read_text(encoding="utf-8"),

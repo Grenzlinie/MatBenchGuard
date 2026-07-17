@@ -30,6 +30,7 @@ SCHEMA_VERSION = "materials-fast-e1-index/0.2"
 IDENTITY_MANIFEST_SCHEMA = "materials-fast-e1-sample-identities/1.0"
 EVIDENCE_TIER = "E1_USABLE_CANDIDATE"
 SCORING_VERSION = "materials-review-scoring/1.0"
+V11_SCORING_VERSION = "materials-review-scoring/1.1"
 RUNNER = Path(__file__).resolve().with_name("run_review.py")
 TERMINAL_STATES = {"E1_USABLE_CANDIDATE", "E1_EXCLUDED"}
 IDENTITY_FIELDS = (
@@ -55,6 +56,15 @@ DIMENSION_MAX_POINTS = {
     "checker_gold_alignment": 25,
     "robustness_discrimination": 15,
     "solution_completeness": 5,
+}
+V11_DIMENSION_WEIGHTS = {
+    "C01": 10,
+    "C02": 20,
+    "C03": 20,
+    "C04": 20,
+    "C05": 10,
+    "C06": 10,
+    "C07": 10,
 }
 PAPER_SOURCE_ROLES = ("paper/paper.md", "paper/images_manifest.json")
 
@@ -319,29 +329,48 @@ def authoritative_cli_scoring(report: dict[str, Any]) -> dict[str, Any]:
     if execution_level != "E1":
         raise ValueError("authoritative CLI snapshot requires execution_level=E1")
     dimensions = report.get("dimension_scores")
+    dimensions_v11 = report.get("dimensions_v11")
     gates = report.get("hard_gates")
-    if summary.get("scoring_version") != SCORING_VERSION:
+    if summary.get("scoring_version") != V11_SCORING_VERSION:
         raise ValueError("CLI report uses an unsupported scoring version")
     if not isinstance(dimensions, list) or {
         item.get("dimension"): item.get("max_points") for item in dimensions
     } != DIMENSION_MAX_POINTS:
         raise ValueError("CLI report dimension schema is invalid")
+    if not isinstance(dimensions_v11, list) or {
+        item.get("dimension"): item.get("weight") for item in dimensions_v11
+    } != V11_DIMENSION_WEIGHTS:
+        raise ValueError("CLI report v11 dimension schema is invalid")
     if not isinstance(gates, list) or len(gates) != 4:
         raise ValueError("CLI report must contain exactly four Hard Gates")
     total = summary.get("total_score")
-    available_points = [item.get("points_earned") for item in dimensions]
-    if all(isinstance(item, (int, float)) for item in available_points):
-        if total != round(sum(available_points), 2):
-            raise ValueError("CLI total does not equal dimension points")
+    v11_earned = [item.get("points_earned") for item in dimensions_v11]
+    if all(isinstance(item, (int, float)) for item in v11_earned):
+        weight_sum = sum(item["weight"] for item in dimensions_v11)
+        weighted = round(
+            sum(
+                item["weight"] * float(item["normalized"])
+                for item in dimensions_v11
+            )
+            / weight_sum,
+            2,
+        )
+        if total != weighted:
+            raise ValueError("CLI total does not equal v11 weighted total")
     elif total is not None:
-        raise ValueError("CLI total must be null when a dimension is unavailable")
+        raise ValueError(
+            "CLI total must be null when a key dimension is unavailable"
+        )
     snapshot = {
-        "scoring_version": SCORING_VERSION,
+        "scoring_version": V11_SCORING_VERSION,
+        "legacy_scoring_version": SCORING_VERSION,
         "execution_level": execution_level,
         "final_verdict": summary.get("final_verdict"),
         "total_score": total,
+        "legacy_total_score": summary.get("legacy_total_score"),
         "hard_gate_triggered": summary.get("hard_gate_triggered"),
         "dimension_scores": dimensions,
+        "dimensions_v11": dimensions_v11,
         "hard_gates": gates,
     }
     snapshot["snapshot_hash"] = canonical_json_hash(snapshot)
@@ -566,7 +595,7 @@ def validate_record_source_binding(
                 canonical = canonical_fields(
                     persisted_report.get("summary", {}).get("final_verdict"),
                     publishability=persisted_report.get("summary", {}).get(
-                        "disposition"
+                        "publication_route"
                     ),
                 )
                 if any(record.get(key) != value for key, value in canonical.items()):
@@ -1049,7 +1078,7 @@ def review_one(
             **base,
             **canonical_fields(
                 report["summary"]["final_verdict"],
-                publishability=report["summary"]["disposition"],
+                publishability=report["summary"]["publication_route"],
             ),
             "paper_grounded_status": report.get(
                 "paper_consistency", {}

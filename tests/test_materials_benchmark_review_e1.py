@@ -1717,7 +1717,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             )
             self.assertEqual(report["configuration"]["paper_mode"], "no_paper")
             self.assertEqual(report["configuration"]["execution_level"], "E1")
-            self.assertEqual(report["summary"]["materials_class"], "MAT_CORE")
+            self.assertEqual(report["summary"]["materials_class"], "AMBIGUOUS")
             self.assertEqual(
                 report["summary"]["final_verdict"], "NOT_ASSESSABLE"
             )
@@ -1965,7 +1965,7 @@ _SCORERS = {"a": score_a, "b": score_b}
             report["summary"]["final_verdict"] = "CONDITIONAL"
             report_path.write_text(json.dumps(report), encoding="utf-8")
             with self.assertRaisesRegex(
-                ValueError, "verdict is inconsistent"
+                ValueError, "inconsistent"
             ):
                 finalize_audit_output.validate_bundle(audit)
             report_path.write_text(original_report, encoding="utf-8")

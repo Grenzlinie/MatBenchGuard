@@ -1,10 +1,66 @@
 # Authoritative scoring rubric
 
-Scoring version: `materials-review-scoring/1.0`.
+Authoritative scoring version: `materials-review-scoring/1.1` (seven-dimension
+`dimensions_v11`). Legacy scoring version: `materials-review-scoring/1.0` (the
+five-dimension `dimension_scores`, retained as a compatibility view). The Review
+CLI is the only scoring authority. Batch and calibration tools may copy a
+source-bound CLI scoring snapshot, but must reject manually supplied dimension
+scores, totals, Hard Gates, or verdicts.
 
-The Review CLI is the only scoring authority. Batch and calibration tools may
-copy a source-bound CLI scoring snapshot, but must reject manually supplied
-dimension scores, totals, Hard Gates, or verdicts.
+## Seven-dimension model C01–C07 (authoritative, `materials-review-scoring/1.1`)
+
+Findings are attributed to exactly one of seven dimensions. Each dimension has a
+fixed weight; the authoritative total is the weight-normalized percentage across
+all seven dimensions on a 0–100 scale. The legacy five-dimension total is kept
+as `legacy_total_score`.
+
+| Dim | Title | Weight | Family | Key |
+| --- | --- | --- | --- | --- |
+| C01 | 材料准入 (materials admissibility) | 10 | classification | yes |
+| C02 | 题目设计完整性与文件一致性 | 20 | deterministic | no |
+| C03 | 科学有效性 (scientific validity) | 20 | scientific | yes |
+| C04 | 评分语义 (checker/Gold scoring semantics) | 20 | deterministic | yes |
+| C05 | 可复现性与环境 | 10 | deterministic | no |
+| C06 | 直接输入可得性 (direct-input availability) | 10 | resource | yes |
+| C07 | 鲁棒性与区分度 | 10 | robustness | no |
+
+Per dimension, start at `weight` and deduct `weight × severity_fraction`
+(`FATAL=1.0`, `HIGH=0.4`, `MEDIUM=0.2`, `LOW=0.1`), accumulating and flooring at
+zero. `normalized = points_earned / weight × 100`. The authoritative
+`total_score = Σ(weight × normalized%) / Σ(weight)`, rounded to 2 places.
+
+A temporary evidence gap in a **key** dimension (C01, C03, C04, C06) makes that
+dimension's `points_earned` and the authoritative `total_score` `null`
+(`NOT_ASSESSABLE`). An evidence gap in a **non-key** dimension (C02, C05, C07)
+only deducts within that dimension and never nulls the total.
+
+### Hard Gate → dimension binding
+
+The four Hard Gates bind to key dimensions: `NON_MATERIALS_TASK → C01`,
+`SCIENTIFIC_TARGET_INVALID → C03`, `CHECKER_CORE_TASK_UNASSESSED → C04`,
+`INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE → C06`. Each Hard Gate result carries its
+bound `dimension`.
+
+### Disposition and unified terminal fields
+
+The verdict drives three unified terminal fields written to every report:
+`disposition` (= `PASS | CONDITIONAL | REJECT | NOT_ASSESSABLE`), `publishable`
+(`true` only when `disposition=PASS`), and `repair_state` (`NOT_REQUIRED` on the
+Review side). The publication route is derived from the verdict
+(`PASS → PUBLISH_CANDIDATE`, `CONDITIONAL → REPAIR_QUEUE`,
+`REJECT → QUARANTINE`, `NOT_ASSESSABLE → EVIDENCE_PENDING`).
+
+- `PASS`: authoritative total ≥ 80, no failed Hard Gate, no null key dimension,
+  no unresolved repairable `HIGH`;
+- `CONDITIONAL`: total 60–79 (no failed gate / null key dimension), or any
+  unresolved repairable `HIGH`;
+- `REJECT`: any failed Hard Gate, or total < 60;
+- `NOT_ASSESSABLE`: a key dimension is null (temporary required evidence
+  unavailable) and no Hard Gate forces rejection.
+
+The five-dimension model below remains the internal legacy computation
+(`dimension_scores` / `legacy_total_score`); it is retained for continuity and
+maps into C01–C07 for attribution.
 
 ## Formula
 
