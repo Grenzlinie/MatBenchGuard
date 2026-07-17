@@ -81,7 +81,7 @@ equivalent).
 ## Unified terminal fields
 
 Every report and disposition carries `disposition` (PASS / CONDITIONAL / REJECT /
-NOT_ASSESSABLE), `publishable` (bool), and `repair_state` (NOT_APPLICABLE at
+NOT_ASSESSABLE), `publishable` (bool), and `repair_state` (NOT_REQUIRED at
 review time; REPAIRED / PARTIALLY_REPAIRED / ABANDONED / ROLLED_BACK after
 repair). `publication_route` mirrors the legacy publishability route
 (PUBLISH_CANDIDATE / REPAIR_QUEUE / QUARANTINE / EVIDENCE_PENDING).
