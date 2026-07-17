@@ -225,7 +225,11 @@ def write_audit_attestation(package: Path) -> Path:
 
 
 def batch_context(
-    workspace: Path, *, marker: bool = False, residual_target: bool = False
+    workspace: Path,
+    *,
+    marker: bool = False,
+    residual_target: bool = False,
+    precreate_solve: bool = False,
 ) -> tuple[Path, Path]:
     runner = install_harness(workspace)
     spec = importlib.util.spec_from_file_location("harness_batch_ctx", runner)
@@ -236,6 +240,13 @@ def batch_context(
     (package / "tests").mkdir(parents=True)
     (package / "solution").mkdir()
     (package / "paper").mkdir()
+    if precreate_solve:
+        # Pre-seed the operation target with the exact content the plan writes
+        # so the "before" regression already passes and run_regressions raises
+        # BEFORE regression_results is assigned (exercises the sentinel branch).
+        (package / "solution/solve.sh").write_text(
+            "#!/bin/sh\nexit 0\n", encoding="utf-8"
+        )
     instruction = "Compute the evidence-backed quantity.\n"
     if marker:
         instruction += "STILL_BROKEN\n"
@@ -672,6 +683,54 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             }
             self.assertIn(FINDING_A, unresolved_ids)
             repair_module().validate_fixed_bundle(Path(result["history_dir"]))
+
+    def test_batch_rollback_before_regressions_preserves_package(self) -> None:
+        # Item 3 regression: force a failure during the "before" regression run
+        # (i.e. BEFORE regression_results is assigned) and assert the rollback
+        # archival does not raise UnboundLocalError, surfaces the original
+        # error, and preserves the authoritative package.
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            package, runner = batch_context(workspace, precreate_solve=True)
+            original_solve = (package / "solution/solve.sh").read_text(
+                encoding="utf-8"
+            )
+            plan = batch_plan(
+                [
+                    finding_entry(
+                        FINDING_A,
+                        "op-a",
+                        "solution/solve.sh",
+                        "SOLUTION_ENTRYPOINT_MISSING",
+                    ),
+                ]
+            )
+            bind_batch_plan(package, plan)
+            plan_path = workspace / "rollback-plan.json"
+            write_json(plan_path, plan)
+
+            completed = run_repair(package, plan_path, runner)
+
+            # returncode 3 = controlled non-publish outcome; 2 would mean an
+            # uncaught exception (e.g. UnboundLocalError) escaped repair_batch.
+            self.assertEqual(
+                completed.returncode,
+                3,
+                msg=f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}",
+            )
+            self.assertNotIn("UnboundLocalError", completed.stderr)
+            result = json.loads(completed.stdout)
+            self.assertEqual(result["status"], "ROLLED_BACK")
+            self.assertFalse(result["publishable"])
+            # The original (pre-regression) error is surfaced, not shadowed.
+            self.assertIn("regression test before result", result["reason"])
+            # Authoritative package preserved unchanged; no publish.
+            self.assertTrue((package / "solution/solve.sh").is_file())
+            self.assertEqual(
+                (package / "solution/solve.sh").read_text(encoding="utf-8"),
+                original_solve,
+            )
+            self.assertFalse((package / "benchmark_repair").exists())
 
     def test_batch_attempt_limit_second_failure_is_abandoned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

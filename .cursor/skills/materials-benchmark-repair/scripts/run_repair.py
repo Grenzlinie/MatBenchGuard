@@ -847,7 +847,7 @@ def validate_fresh_audit(
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
-    route = disposition.get("route") or report.get("summary", {}).get("disposition")
+    route = disposition.get("route") or canonical_publish_route(report)
     if route != "REPAIR_QUEUE":
         raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
     findings = {
@@ -1764,6 +1764,27 @@ def finding_key(finding: dict[str, Any]) -> str | None:
     return None
 
 
+def canonical_publish_route(report: dict[str, Any]) -> str | None:
+    """Return the publish route from a Review report, never the verdict.
+
+    In v11 ``summary.disposition`` holds the VERDICT; the route lives in the
+    top-level ``publishability`` and ``summary.publication_route`` /
+    ``summary.publishability`` fields.  Returns ``None`` when no route field is
+    present so ``canonical_fields`` can derive it from the verdict.
+    """
+
+    if not isinstance(report, dict):
+        return None
+    summary = report.get("summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    return (
+        report.get("publishability")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
+
+
 def validate_reaudit(
     candidate: Path,
     reaudit: dict[str, Any],
@@ -1774,7 +1795,15 @@ def validate_reaudit(
     disposition_path = candidate / "benchmark_audit/disposition.json"
     disposition = read_json(disposition_path) if disposition_path.is_file() else {}
     verdict = summary.get("final_verdict") or disposition.get("verdict")
-    route = summary.get("disposition") or disposition.get("route")
+    # The publish route lives in disposition.json ``route`` (and the finalizer's
+    # ``summary.publication_route`` / ``summary.publishability``).  In v11
+    # ``summary.disposition`` holds the VERDICT, so it must never be read as the
+    # route (mirrors repair_batch and read_ext_disposition).
+    route = (
+        disposition.get("route")
+        or summary.get("publication_route")
+        or summary.get("publishability")
+    )
     if verdict != "PASS" or route != "PUBLISH_CANDIDATE":
         raise ValueError("equal-depth re-audit did not route PASS to PUBLISH_CANDIDATE")
     source_key = finding_key(source_finding)
@@ -2101,12 +2130,7 @@ def record_control_stop(
         review_verdict=report.get(
             "review_verdict", report.get("summary", {}).get("final_verdict")
         ),
-        publishability=report.get(
-            "publishability",
-            report.get("summary", {}).get(
-                "disposition", "EVIDENCE_PENDING"
-            ),
-        ),
+        publishability=canonical_publish_route(report),
     )
     manifest = {
         "schema_version": "0.1",
@@ -2114,12 +2138,7 @@ def record_control_stop(
             report.get(
                 "review_verdict", report.get("summary", {}).get("final_verdict")
             ),
-            publishability=report.get(
-                "publishability",
-                report.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(report),
             repair_decision="ABANDON",
             repair_status="ABANDONED",
         ),
@@ -2407,7 +2426,7 @@ def validate_fresh_audit_batch(
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
-    route = disposition.get("route") or report.get("summary", {}).get("disposition")
+    route = disposition.get("route") or canonical_publish_route(report)
     if route != "REPAIR_QUEUE":
         raise ValueError("authoritative audit is not routed to REPAIR_QUEUE")
     findings_by_id = {
@@ -2627,10 +2646,7 @@ def archive_batch_attempt(
     review_verdict = report.get(
         "review_verdict", report.get("summary", {}).get("final_verdict")
     )
-    publishability = report.get(
-        "publishability",
-        report.get("summary", {}).get("disposition", "EVIDENCE_PENDING"),
-    )
+    publishability = canonical_publish_route(report)
     write_history_bundle(
         destination,
         plan=plan,
@@ -2834,6 +2850,10 @@ def repair_batch(
     snapshot = workspace / "snapshot"
     candidate = workspace / "candidate"
     identity = package_identity(root)
+    # Explicit sentinel: ``regression_results`` is a function-local for the
+    # whole scope, so gate the rollback branch on an unambiguous ``is not None``
+    # test rather than fragile ``in dir()`` introspection.
+    regression_results: list[dict[str, Any]] | None = None
     try:
         shutil.copytree(root, snapshot)
         shutil.copytree(snapshot, candidate)
@@ -2868,7 +2888,7 @@ def repair_batch(
             unresolved=unresolved_findings
             + [{"finding_id": "__batch__", "reason": str(exc)}],
             regressions=(
-                regression_results if "regression_results" in dir() else []
+                regression_results if regression_results is not None else []
             ),
             comparison={},
             evidence=list(evidence_all.values()),
@@ -3162,12 +3182,7 @@ def repair(
                     "review_verdict",
                     report.get("summary", {}).get("final_verdict"),
                 ),
-                publishability=report.get(
-                    "publishability",
-                    report.get("summary", {}).get(
-                        "disposition", "EVIDENCE_PENDING"
-                    ),
-                ),
+                publishability=canonical_publish_route(report),
                 repair_decision="ABANDON",
                 repair_status="ABANDONED",
             ),
@@ -3220,12 +3235,7 @@ def repair(
                 "review_verdict",
                 reaudit.get("summary", {}).get("final_verdict"),
             ),
-            publishability=reaudit.get(
-                "publishability",
-                reaudit.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(reaudit),
             repair_decision=plan["repair_class"],
             repair_status="REPAIRED",
         )
@@ -3348,12 +3358,7 @@ def repair(
                 "review_verdict",
                 report.get("summary", {}).get("final_verdict"),
             ),
-            publishability=report.get(
-                "publishability",
-                report.get("summary", {}).get(
-                    "disposition", "EVIDENCE_PENDING"
-                ),
-            ),
+            publishability=canonical_publish_route(report),
             repair_decision=decision,
             repair_status=status,
         )
