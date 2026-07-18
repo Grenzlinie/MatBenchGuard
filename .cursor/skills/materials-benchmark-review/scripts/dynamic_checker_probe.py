@@ -12,6 +12,7 @@ import math
 import os
 import random
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,6 +33,49 @@ from prepare_audit_output import (
 
 ORACLE_VENV_TIMEOUT_SECONDS = 60.0
 ORACLE_SOLVE_TIMEOUT_SECONDS = 300.0
+CHECKER_RUN_TIMEOUT_SECONDS = 60.0
+CHECKER_RUN_TIMEOUT_UV_SECONDS = 300.0
+# Baseline scientific dependencies always provided to the uv-managed ephemeral
+# environment. ``pip`` is included so a checker's own in-process
+# ``python -m pip install`` self-install still succeeds inside the isolated env.
+CHECKER_UV_BASELINE_PACKAGES = ("numpy", "scipy", "pandas", "pip")
+# Host python may be too new for some scientific wheels; pin uv to a broadly
+# wheel-compatible interpreter unless the operator overrides it.
+CHECKER_UV_DEFAULT_PYTHON = "3.12"
+# Map common third-party import names to their PyPI distribution names.
+IMPORT_TO_PYPI = {
+    "numpy": "numpy",
+    "scipy": "scipy",
+    "pandas": "pandas",
+    "sklearn": "scikit-learn",
+    "skimage": "scikit-image",
+    "matplotlib": "matplotlib",
+    "mpl_toolkits": "matplotlib",
+    "ase": "ase",
+    "pymatgen": "pymatgen",
+    "monty": "monty",
+    "spglib": "spglib",
+    "phonopy": "phonopy",
+    "seekpath": "seekpath",
+    "mp_api": "mp-api",
+    "cv2": "opencv-python-headless",
+    "PIL": "pillow",
+    "yaml": "pyyaml",
+    "h5py": "h5py",
+    "netCDF4": "netCDF4",
+    "networkx": "networkx",
+    "sympy": "sympy",
+    "numba": "numba",
+    "numexpr": "numexpr",
+    "statsmodels": "statsmodels",
+    "sklearn_extra": "scikit-learn-extra",
+    "tqdm": "tqdm",
+    "torch": "torch",
+    "sklearn.linear_model": "scikit-learn",
+    "pint": "pint",
+    "uncertainties": "uncertainties",
+    "lmfit": "lmfit",
+}
 NEGATIVE_PROBE_CASES = frozenset(
     {
         "missing_outputs",
@@ -982,6 +1026,114 @@ def audit_host_dependency_failure(stdout: str, stderr: str) -> str | None:
     return None
 
 
+def uv_python_version() -> str:
+    """Return the interpreter version uv should provision for checkers."""
+    value = os.environ.get("MATERIALS_CHECKER_UV_PYTHON", "").strip()
+    return value or CHECKER_UV_DEFAULT_PYTHON
+
+
+def extra_uv_packages() -> list[str]:
+    """Operator-supplied extra packages via MATERIALS_CHECKER_UV_WITH."""
+    raw = os.environ.get("MATERIALS_CHECKER_UV_WITH", "")
+    return [token for token in re.split(r"[,\s]+", raw) if token]
+
+
+def detect_import_packages(text: str) -> set[str]:
+    """Return PyPI names for third-party imports found in Python source text."""
+    packages: set[str] = set()
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return packages
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top in IMPORT_TO_PYPI:
+                    packages.add(IMPORT_TO_PYPI[top])
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0 and node.module:
+                top = node.module.split(".")[0]
+                if top in IMPORT_TO_PYPI:
+                    packages.add(IMPORT_TO_PYPI[top])
+    return packages
+
+
+def detect_pip_install_packages(text: str) -> set[str]:
+    """Extract explicit ``pip install <names>`` distributions from any text."""
+    names: set[str] = set()
+    for match in re.finditer(
+        r"pip['\"\s,]+install\b(.*?)(?:\]|\n|;)", text, re.DOTALL
+    ):
+        segment = match.group(1)
+        for quoted, bare in re.findall(r"""['"]([^'"]+)['"]|(\S+)""", segment):
+            candidate = (quoted or bare).strip().strip(",")
+            if not candidate or candidate.startswith("-"):
+                continue
+            if "/" in candidate or ":" in candidate:
+                continue
+            base = re.split(r"[<>=!~\[; ]", candidate)[0].strip()
+            if base and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.\-]*", base):
+                names.add(base)
+    return names
+
+
+def checker_uv_packages(root: Path, checker_text: str) -> list[str]:
+    """Derive the ``--with`` package set for the uv-managed checker runtime."""
+    detected: set[str] = set()
+    texts = [checker_text]
+    solution_dir = root / "solution"
+    if solution_dir.is_dir():
+        solve_script = solution_dir / "solve.sh"
+        if solve_script.is_file():
+            texts.append(
+                solve_script.read_text(encoding="utf-8", errors="replace")
+            )
+        for python_file in sorted(solution_dir.glob("*.py")):
+            if python_file.is_file():
+                texts.append(
+                    python_file.read_text(encoding="utf-8", errors="replace")
+                )
+    for text in texts:
+        detected |= detect_import_packages(text)
+        detected |= detect_pip_install_packages(text)
+    ordered: list[str] = []
+    for name in (
+        *CHECKER_UV_BASELINE_PACKAGES,
+        *sorted(detected),
+        *extra_uv_packages(),
+    ):
+        if name not in ordered:
+            ordered.append(name)
+    return ordered
+
+
+def write_python_shim(
+    bin_dir: Path,
+    uv_path: str,
+    packages: list[str],
+    python_version: str,
+) -> None:
+    """Write ``python``/``python3`` shims that exec through a uv ephemeral env.
+
+    Any ``python``/``python3`` invocation (including a checker's own child
+    ``python -m pip install X``) then runs inside an isolated, network-capable
+    uv environment that already has the scientific dependencies, without
+    polluting the audit host interpreter.
+    """
+    with_args = " ".join(f"--with {shlex.quote(pkg)}" for pkg in packages)
+    script = (
+        "#!/bin/sh\n"
+        f"exec {shlex.quote(uv_path)} run "
+        f"--python {shlex.quote(python_version)} "
+        f"{with_args} python \"$@\"\n"
+    )
+    for name in ("python", "python3"):
+        target = bin_dir / name
+        target.write_text(script, encoding="utf-8")
+        target.chmod(0o755)
+
+
 def rebase_oracle_mount_paths(solution: Path, outputs: Path) -> None:
     """Map canonical Harbor mounts into the disposable Oracle workspace."""
     replacements = {
@@ -1057,20 +1209,39 @@ def prepare_solution_oracle(
         outputs = Path(temporary.name) / "outputs"
         outputs.mkdir()
         rebase_oracle_mount_paths(runtime_solution, outputs)
-        virtualenv = Path(temporary.name) / "venv"
         current_stage = "venv"
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(virtualenv)],
-            capture_output=True,
-            text=True,
-            timeout=venv_timeout,
-            check=True,
-        )
+        uv_path = shutil.which("uv")
+        if uv_path is not None:
+            oracle_bin = Path(temporary.name) / "bin"
+            oracle_bin.mkdir()
+            checker_source = root / "tests/checker.py"
+            checker_text = (
+                checker_source.read_text(encoding="utf-8", errors="replace")
+                if checker_source.is_file()
+                else ""
+            )
+            write_python_shim(
+                oracle_bin,
+                uv_path,
+                checker_uv_packages(root, checker_text),
+                uv_python_version(),
+            )
+            solve_bin = str(oracle_bin)
+        else:
+            virtualenv = Path(temporary.name) / "venv"
+            subprocess.run(
+                [sys.executable, "-m", "venv", str(virtualenv)],
+                capture_output=True,
+                text=True,
+                timeout=venv_timeout,
+                check=True,
+            )
+            solve_bin = str(virtualenv / "bin")
         setup_prepared = True
         environment = {
             **os.environ,
             "OUTPUT_DIR": str(outputs),
-            "PATH": str(virtualenv / "bin")
+            "PATH": solve_bin
             + os.pathsep
             + os.environ.get("PATH", ""),
         }
@@ -1267,7 +1438,26 @@ def run_checker_case(
         )
         tool_dir = base / "bin"
         tool_dir.mkdir()
-        (tool_dir / "python").symlink_to(sys.executable)
+        uv_path = shutil.which("uv")
+        if uv_path is not None:
+            write_python_shim(
+                tool_dir,
+                uv_path,
+                checker_uv_packages(root, checker_text),
+                uv_python_version(),
+            )
+            runtime_provenance = "uv-ephemeral-env"
+            run_timeout = configured_timeout(
+                "MATERIALS_CHECKER_RUN_TIMEOUT_SECONDS",
+                CHECKER_RUN_TIMEOUT_UV_SECONDS,
+            )
+        else:
+            (tool_dir / "python").symlink_to(sys.executable)
+            (tool_dir / "python3").symlink_to(sys.executable)
+            run_timeout = configured_timeout(
+                "MATERIALS_CHECKER_RUN_TIMEOUT_SECONDS",
+                CHECKER_RUN_TIMEOUT_SECONDS,
+            )
         runtime_environment = {
             **os.environ,
             "PATH": str(tool_dir)
@@ -1280,7 +1470,7 @@ def run_checker_case(
             env=runtime_environment,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=run_timeout,
             check=False,
         )
         dependency_failure = (

@@ -63,6 +63,9 @@ LOAD_BEARING_ARTIFACTS = (
     "structure",
     "trajectory",
 )
+OUTPUT_PATH_PATTERN = re.compile(
+    r"/app/outputs/([A-Za-z0-9_.-]+)", re.IGNORECASE
+)
 
 
 def read_json(path: Path) -> Any:
@@ -206,6 +209,22 @@ def _append_unique(values: list[str], value: str) -> None:
         values.append(value)
 
 
+def _output_name_from_path_match(path_match: re.Match[str]) -> str:
+    """Return a declared output name without adjacent prose punctuation.
+
+    The permissive path pattern intentionally accepts dots within filenames,
+    but that also captures a sentence-final period in an unquoted reference
+    such as ``/app/outputs/result.csv.``.  A period immediately followed by a
+    closing backtick is part of an explicitly quoted path; otherwise trailing
+    periods are prose punctuation rather than part of the Harbor output name.
+    """
+    output_name = path_match.group(1)
+    following_text = path_match.string[path_match.end() :]
+    if output_name.endswith(".") and not following_text.startswith("`"):
+        return output_name.rstrip(".")
+    return output_name
+
+
 def instruction_contract_map(instruction: str) -> dict[str, Any]:
     """Extract the role-aware instruction-to-output contract.
 
@@ -254,15 +273,11 @@ def instruction_contract_map(instruction: str) -> dict[str, Any]:
         if action_match and current is not None:
             current["agent_work"] = action_match.group(1).strip()
             continue
-        path_matches = list(
-            re.finditer(
-                r"/app/outputs/([A-Za-z0-9_.-]+)", line, re.IGNORECASE
-            )
-        )
+        path_matches = list(OUTPUT_PATH_PATTERN.finditer(line))
         if not path_matches:
             continue
         for path_match in path_matches:
-            output_name = path_match.group(1)
+            output_name = _output_name_from_path_match(path_match)
             _append_unique(all_outputs, output_name)
             if current is None:
                 continue
@@ -386,10 +401,8 @@ def _section_output_basenames(body: str, *, scored_only: bool = False) -> set[st
             r"^\s*-\s*Output file\s*:", line, re.IGNORECASE
         ):
             continue
-        for match in re.finditer(
-            r"/app/outputs/([A-Za-z0-9_.-]+)", line, re.IGNORECASE
-        ):
-            names.add(match.group(1))
+        for match in OUTPUT_PATH_PATTERN.finditer(line):
+            names.add(_output_name_from_path_match(match))
     return names
 
 

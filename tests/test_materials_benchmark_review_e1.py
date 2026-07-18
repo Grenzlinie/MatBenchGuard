@@ -246,6 +246,28 @@ class MaterialsBenchmarkReviewE1Tests(unittest.TestCase):
         self.assertEqual(contract["scored_outputs"], ["result.json"])
         self.assertEqual(contract["process_evidence"], [])
 
+    def test_instruction_output_reference_ignores_sentence_punctuation(self) -> None:
+        contract = audit_package.instruction_contract_map(
+            """
+### Step 5: Compute lambda
+- Role: scored (load-bearing)
+- Action: Compute the scientific result.
+  Write lambda values to /app/outputs/lambda.csv.
+  Also retain /app/outputs/archive.tar.gz.
+- Output file: `/app/outputs/lambda.csv`
+"""
+        )
+
+        self.assertEqual(
+            contract["requirements"][0]["declared_outputs"],
+            ["lambda.csv", "archive.tar.gz"],
+        )
+        self.assertEqual(
+            contract["instruction_outputs"],
+            ["archive.tar.gz", "lambda.csv"],
+        )
+        self.assertNotIn("lambda.csv.", contract["core_outputs"])
+
     def test_missing_checker_cannot_claim_runtime_binding(self) -> None:
         contract = audit_package.instruction_contract_map(
             """
