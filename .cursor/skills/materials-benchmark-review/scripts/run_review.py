@@ -27,6 +27,7 @@ from prepare_audit_output import (
     write_audit_attestation,
 )
 from probe_resources import probe_resources
+import sandbox_runtime
 
 
 PAPER_DIMENSIONS = {
@@ -584,7 +585,7 @@ def checker_skipped_by_static_gate(
         "checker_path": "tests/checker.py",
         "runtime": {
             "verifier_entrypoint": "tests/test.sh",
-            "runtime_provenance": "not-assessable",
+            "runtime_provenance": "sandbox",
             "direct_checker_harness": False,
             "status": "NOT_ASSESSABLE",
             "reason": reason,
@@ -608,6 +609,7 @@ def checker_skipped_by_static_gate(
         "runtime_provenance": {
             "status": "NOT_ASSESSABLE",
             "entrypoint": "tests/test.sh",
+            "runtime_provenance": "sandbox",
             "reason": reason,
             "cases_executed": 0,
         },
@@ -760,6 +762,7 @@ def run_review(
             "E2/E3/E4 execution plans are not part of the authoritative E1 workflow"
         )
     root = locate_root(input_path)
+    sandbox_runtime.ensure_env()
     if paper_mode == "auto":
         paper_mode = "no_paper"
         if agent_assessment_path is not None:
@@ -858,7 +861,7 @@ def run_review(
         "scientific_reproduction": False,
         "environment": None,
         "environment_verified": False,
-        "runtime_provenance": "not-assessable",
+        "runtime_provenance": "sandbox",
         "verifies_resources": [],
         "returncode": None,
         "stdout": "",

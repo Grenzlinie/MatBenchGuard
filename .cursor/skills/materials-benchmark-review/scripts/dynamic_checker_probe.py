@@ -29,15 +29,15 @@ from prepare_audit_output import (
     locate_root,
     sha256_file,
 )
+import sandbox_runtime
 
 
 ORACLE_VENV_TIMEOUT_SECONDS = 60.0
 ORACLE_SOLVE_TIMEOUT_SECONDS = 300.0
+# Baseline scientific dependencies always provided to the checker sandbox.
+# ``pip`` is included so a checker's own in-process ``python -m pip install``
+# self-install still succeeds inside the isolated env.
 CHECKER_RUN_TIMEOUT_SECONDS = 60.0
-CHECKER_RUN_TIMEOUT_UV_SECONDS = 300.0
-# Baseline scientific dependencies always provided to the uv-managed ephemeral
-# environment. ``pip`` is included so a checker's own in-process
-# ``python -m pip install`` self-install still succeeds inside the isolated env.
 CHECKER_UV_BASELINE_PACKAGES = ("numpy", "scipy", "pandas", "pip")
 # Host python may be too new for some scientific wheels; pin uv to a broadly
 # wheel-compatible interpreter unless the operator overrides it.
@@ -147,6 +147,17 @@ def configured_timeout(name: str, default: float) -> float:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def checker_run_timeout() -> float:
+    """Return the checker limit, allowing only a stricter operator override."""
+    return min(
+        configured_timeout(
+            "MATERIALS_CHECKER_RUN_TIMEOUT_SECONDS",
+            CHECKER_RUN_TIMEOUT_SECONDS,
+        ),
+        CHECKER_RUN_TIMEOUT_SECONDS,
+    )
 
 
 def read_json(path: Path) -> Any:
@@ -1003,29 +1014,6 @@ def patch_harbor_paths(
     return pattern.sub(lambda match: replacements[match.group(0)], text)
 
 
-def audit_host_dependency_failure(stdout: str, stderr: str) -> str | None:
-    """Return a reason when the audit host cannot provide verifier dependencies."""
-    combined = f"{stdout}\n{stderr}".lower()
-    patterns = (
-        "modulenotfounderror",
-        "no module named",
-        "command not found",
-        "cannot import name",
-        "could not find a version that satisfies",
-        "unable to locate package",
-        "temporary failure resolving",
-        "could not resolve host",
-        "network is unreachable",
-    )
-    if any(pattern in combined for pattern in patterns):
-        return (
-            "The Harbor verifier entrypoint could not run on the audit host "
-            "because a runtime dependency was unavailable; this is not a "
-            "package defect."
-        )
-    return None
-
-
 def uv_python_version() -> str:
     """Return the interpreter version uv should provision for checkers."""
     value = os.environ.get("MATERIALS_CHECKER_UV_PYTHON", "").strip()
@@ -1051,11 +1039,15 @@ def detect_import_packages(text: str) -> set[str]:
                 top = alias.name.split(".")[0]
                 if top in IMPORT_TO_PYPI:
                     packages.add(IMPORT_TO_PYPI[top])
+                elif top not in sys.stdlib_module_names:
+                    packages.add(top)
         elif isinstance(node, ast.ImportFrom):
             if node.level == 0 and node.module:
                 top = node.module.split(".")[0]
                 if top in IMPORT_TO_PYPI:
                     packages.add(IMPORT_TO_PYPI[top])
+                elif top not in sys.stdlib_module_names:
+                    packages.add(top)
     return packages
 
 
@@ -1395,13 +1387,16 @@ def run_checker_case(
             )
 
         patched = patch_harbor_paths(
-            checker_text, tests_dir, outputs_dir, logs_dir
+            checker_text,
+            Path("/tests"),
+            Path("/app/outputs"),
+            Path("/logs/verifier"),
         )
         checker_path = tests_dir / "checker.py"
         checker_path.write_text(patched, encoding="utf-8")
         verifier_source = root / "tests/test.sh"
         verifier_path = base / "test.sh"
-        runtime_provenance = "audit-host-copy"
+        runtime_provenance = "sandbox"
         if not verifier_source.is_file():
             return {
                 "case": case_name,
@@ -1418,7 +1413,8 @@ def run_checker_case(
                 "runtime_not_assessable_reason": (
                     "Harbor verifier entrypoint tests/test.sh is missing."
                 ),
-                "runtime_provenance": "not-assessable",
+                "runtime_provenance": runtime_provenance,
+                "checker_dependency_env": runtime_provenance,
                 "verifier_entrypoint": "tests/test.sh",
                 "direct_checker_harness": False,
                 "runtime_package_contains_solution": (
@@ -1430,53 +1426,28 @@ def run_checker_case(
         verifier_path.write_text(
             patch_harbor_paths(
                 verifier_source.read_text(encoding="utf-8", errors="replace"),
-                tests_dir,
-                outputs_dir,
-                logs_dir,
+                Path("/tests"),
+                Path("/app/outputs"),
+                Path("/logs/verifier"),
             ),
             encoding="utf-8",
         )
-        tool_dir = base / "bin"
-        tool_dir.mkdir()
-        uv_path = shutil.which("uv")
-        if uv_path is not None:
-            write_python_shim(
-                tool_dir,
-                uv_path,
-                checker_uv_packages(root, checker_text),
-                uv_python_version(),
-            )
-            runtime_provenance = "uv-ephemeral-env"
-            run_timeout = configured_timeout(
-                "MATERIALS_CHECKER_RUN_TIMEOUT_SECONDS",
-                CHECKER_RUN_TIMEOUT_UV_SECONDS,
-            )
-        else:
-            (tool_dir / "python").symlink_to(sys.executable)
-            (tool_dir / "python3").symlink_to(sys.executable)
-            run_timeout = configured_timeout(
-                "MATERIALS_CHECKER_RUN_TIMEOUT_SECONDS",
-                CHECKER_RUN_TIMEOUT_SECONDS,
-            )
-        runtime_environment = {
-            **os.environ,
-            "PATH": str(tool_dir)
-            + os.pathsep
-            + os.environ.get("PATH", ""),
-        }
-        process = subprocess.run(
-            ["/bin/bash", str(verifier_path)],
-            cwd=package_dir,
-            env=runtime_environment,
-            capture_output=True,
-            text=True,
+        # Checker execution is an E1 regression boundary: callers may tighten
+        # its timeout, but must never extend the contractual 60-second limit.
+        run_timeout = checker_run_timeout()
+        process = sandbox_runtime.run_in_sandbox(
+            ["/bin/bash", "/workspace/test.sh"],
+            mounts=[
+                (base, "/workspace", "rw"),
+                (tests_dir, "/workspace/tests", "rw"),
+                (tests_dir, "/tests", "rw"),
+                (outputs_dir, "/app/outputs", "rw"),
+                (logs_dir, "/logs/verifier", "rw"),
+            ],
+            workdir="/workspace",
             timeout=run_timeout,
-            check=False,
-        )
-        dependency_failure = (
-            audit_host_dependency_failure(process.stdout, process.stderr)
-            if process.returncode != 0
-            else None
+            packages=checker_uv_packages(root, checker_text),
+            python_version=uv_python_version(),
         )
         reward: float | str | None = None
         reward_path = logs_dir / "reward.txt"
@@ -1507,14 +1478,11 @@ def run_checker_case(
             "breakdown": breakdown,
             "stdout": process.stdout[-4000:],
             "stderr": process.stderr[-4000:],
-            "crashed": process.returncode != 0 and dependency_failure is None,
-            "runtime_not_assessable": dependency_failure is not None,
-            "runtime_not_assessable_reason": dependency_failure,
-            "runtime_provenance": (
-                "not-assessable"
-                if dependency_failure is not None
-                else runtime_provenance
-            ),
+            "crashed": process.returncode != 0,
+            "runtime_not_assessable": False,
+            "runtime_not_assessable_reason": None,
+            "runtime_provenance": runtime_provenance,
+            "checker_dependency_env": runtime_provenance,
             "verifier_entrypoint": "tests/test.sh",
             "direct_checker_harness": False,
             "runtime_package_contains_solution": (
@@ -2210,11 +2178,7 @@ def dynamic_checker_probe(
         "checker_path": "tests/checker.py",
         "runtime": {
             "verifier_entrypoint": "tests/test.sh",
-            "runtime_provenance": (
-                "not-assessable"
-                if runtime_not_assessable
-                else "audit-host-copy"
-            ),
+            "runtime_provenance": "sandbox",
             "direct_checker_harness": False,
             "status": (
                 "NOT_ASSESSABLE"
@@ -2356,7 +2320,8 @@ def dynamic_checker_probe(
         "runtime_provenance": {
             "status": "ASSESSED",
             "entrypoint": "tests/test.sh",
-            "execution_mode": "ISOLATED_REBASED_HARBOR_VERIFIER",
+            "runtime_provenance": "sandbox",
+            "execution_mode": "DISPOSABLE_DOCKER_SANDBOX",
             "cases_executed": len(results),
         },
         "limitations": [
@@ -2371,10 +2336,11 @@ def dynamic_checker_probe(
                 if isolation_coverage["status"] != "ASSESSED"
                 else []
             ),
-            "external-service or compiled checker dependencies may require container execution",
+            "checker cases run in the disposable qa-checker Docker sandbox",
+            "checker execution has Docker network disabled; long-tail dependencies must be available as wheels during sandbox preparation",
             *(
                 [
-                    "The Harbor verifier could not be assessed on the audit host: "
+                    "The Harbor verifier entrypoint was unavailable: "
                     + str(
                         runtime_not_assessable[0].get(
                             "runtime_not_assessable_reason"

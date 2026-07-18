@@ -98,7 +98,7 @@ class MaterialsIssue23IntegrationTests(unittest.TestCase):
         )
         self.assertIn(
             checker["runtime"]["runtime_provenance"],
-            {"Harbor-equivalent", "audit-host-copy", "not-assessable"},
+            {"sandbox"},
         )
         self.assertEqual(
             report["execution_evidence"]["claim"], "E1_CHECKER_ONLY"

@@ -133,7 +133,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             )
             self.assertEqual(
                 report["checker_runtime"]["runtime_provenance"],
-                "audit-host-copy",
+                "sandbox",
             )
             self.assertFalse(
                 report["checker_runtime"]["direct_checker_harness"]
@@ -180,7 +180,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
         self.assertTrue(flags["discrimination"])
         self.assertTrue(flags["equivalence"])
 
-    def test_checker_cases_record_test_sh_audit_host_provenance(self) -> None:
+    def test_checker_cases_record_sandbox_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
@@ -202,7 +202,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
             )
             self.assertEqual(
                 result["runtime"]["runtime_provenance"],
-                "audit-host-copy",
+                "sandbox",
             )
             self.assertFalse(result["runtime"]["direct_checker_harness"])
             for case in result["tests"]:
@@ -212,7 +212,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 )
                 self.assertEqual(
                     case["evidence"]["runtime_provenance"],
-                    "audit-host-copy",
+                    "sandbox",
                 )
             self.assertEqual(
                 source_before,
@@ -223,7 +223,7 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 },
             )
 
-    def test_audit_host_missing_dependency_is_not_a_package_defect(self) -> None:
+    def test_prepared_sandbox_missing_dependency_is_a_package_finding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             package = Path(temporary) / SOURCE_PACKAGE.name
             copy_source_package(package)
@@ -246,16 +246,16 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 known_valid_output=None,
             )
 
-            self.assertEqual(result["runtime"]["status"], "NOT_ASSESSABLE")
+            self.assertEqual(result["runtime"]["status"], "ASSESSED")
             self.assertEqual(
-                result["runtime"]["runtime_provenance"], "not-assessable"
+                result["runtime"]["runtime_provenance"], "sandbox"
             )
-            self.assertFalse(
+            self.assertTrue(
                 {"CHECKER_CRASH", "CHECKER_RESULT_UNUSABLE"}
                 & {finding["code"] for finding in result["findings"]}
             )
 
-    def test_verifier_dependency_install_failure_is_not_a_package_defect(
+    def test_prepared_sandbox_dependency_install_failure_is_a_package_finding(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -274,8 +274,8 @@ class MaterialsIssue20Tests(unittest.TestCase):
                 known_valid_output=None,
             )
 
-            self.assertEqual(result["runtime"]["status"], "NOT_ASSESSABLE")
-            self.assertFalse(
+            self.assertEqual(result["runtime"]["status"], "ASSESSED")
+            self.assertTrue(
                 {"CHECKER_CRASH", "CHECKER_RESULT_UNUSABLE"}
                 & {finding["code"] for finding in result["findings"]}
             )

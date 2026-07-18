@@ -2128,7 +2128,7 @@ def synthesize_report(
         "scientific_reproduction": False,
         "environment": None,
         "environment_verified": False,
-        "runtime_provenance": "not-assessable",
+        "runtime_provenance": "sandbox",
         "verifies_resources": [],
         "returncode": None,
         "stdout": "",
@@ -2879,7 +2879,7 @@ def validate_contract_probe_consistency(
         not isinstance(runtime, dict)
         or runtime.get("verifier_entrypoint") != "tests/test.sh"
         or runtime.get("runtime_provenance")
-        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+        not in {"sandbox"}
         or not isinstance(runtime.get("direct_checker_harness"), bool)
         or runtime.get("status")
         not in {"ASSESSED", "NOT_ASSESSABLE"}
@@ -2893,7 +2893,7 @@ def validate_contract_probe_consistency(
             not isinstance(evidence, dict)
             or evidence.get("verifier_entrypoint") != "tests/test.sh"
             or evidence.get("runtime_provenance")
-            not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+            not in {"sandbox"}
             or evidence.get("direct_checker_harness") is not False
         ):
             raise ValueError("checker test runtime provenance is invalid")
@@ -3244,7 +3244,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or execution.get("claim") != "E1_CHECKER_ONLY"
         or execution.get("scientific_reproduction") is not False
         or execution.get("runtime_provenance")
-        not in {"Harbor-equivalent", "audit-host-copy", "not-assessable"}
+        not in {"sandbox"}
     ):
         raise ValueError("invalid E1 runtime provenance")
     if summary["final_verdict"] not in VERDICTS:
@@ -3285,6 +3285,7 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         or runtime_provenance.get("status")
         not in {"ASSESSED", "NOT_ASSESSABLE"}
         or runtime_provenance.get("entrypoint") != "tests/test.sh"
+        or runtime_provenance.get("runtime_provenance") != "sandbox"
     ):
         raise ValueError("invalid Harbor verifier runtime provenance")
     if runtime_provenance["status"] == "ASSESSED" and (
@@ -3292,7 +3293,9 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     ):
         raise ValueError("Harbor verifier runtime case count is inconsistent")
     if runtime_provenance["status"] == "NOT_ASSESSABLE" and (
-        checker.get("tests") or not runtime_provenance.get("reason")
+        checker.get("tests")
+        or not runtime_provenance.get("reason")
+        or runtime_provenance.get("runtime_provenance") != "sandbox"
     ):
         raise ValueError("unavailable Harbor verifier runtime is not truthful")
     gold = report.get("gold_provenance")

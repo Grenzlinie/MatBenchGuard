@@ -152,11 +152,14 @@ Every E1 run records coverage for these probe classes:
   change reward, using the same independent public fixture;
 - component isolation — independently sourced one-component submissions.
 
-Execute checker cases through `tests/test.sh` and label runtime provenance as
-`Harbor-equivalent`, `audit-host-copy`, or `not-assessable`. The audit-host
-copy is not Harbor-equivalent. Missing host dependencies, dependencies supplied
-by `environment/Dockerfile`, and verifier-time dependency installation are
-runtime limitations, not package defects.
+Execute checker cases through `tests/test.sh` in the disposable prebuilt
+`qa-checker` Docker sandbox and label runtime provenance as `sandbox`. Build the
+image once with
+`.cursor/skills/materials-benchmark-review/scripts/sandbox/build_qa_checker.sh`
+before running Review or Repair. Docker daemon/image/cache readiness is an
+operator precondition: if it is missing, abort the run with the build hint.
+Once the sandbox is ready, dependency-install failures and checker crashes are
+package findings, not `not-assessable` runtime limitations.
 
 These are exactly the five top-level classes. Task-family attacks are named
 negative/discrimination cases and nested subcoverage, never a sixth class.

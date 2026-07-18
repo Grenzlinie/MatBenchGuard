@@ -1043,11 +1043,18 @@ _SCORERS = {"a": score_a, "b": score_b}
                     encoding="utf-8"
                 )
             )
-            with mock.patch.object(
-                dynamic_checker_probe.subprocess,
-                "run",
-                side_effect=subprocess.TimeoutExpired(
-                    [sys.executable, "-m", "venv"], 0.05
+            with (
+                mock.patch.object(
+                    dynamic_checker_probe.shutil,
+                    "which",
+                    return_value=None,
+                ),
+                mock.patch.object(
+                    dynamic_checker_probe.subprocess,
+                    "run",
+                    side_effect=subprocess.TimeoutExpired(
+                        [sys.executable, "-m", "venv"], 0.05
+                    ),
                 ),
             ):
                 temporary_oracle, oracle_output, oracle = (

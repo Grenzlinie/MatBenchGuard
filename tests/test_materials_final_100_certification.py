@@ -388,7 +388,8 @@ def write_evidence_pass_batch(batch: Path) -> None:
         "runtime_provenance": {
             "status": "ASSESSED",
             "entrypoint": "tests/test.sh",
-            "execution_mode": "ISOLATED_REBASED_HARBOR_VERIFIER",
+            "runtime_provenance": "sandbox",
+            "execution_mode": "DISPOSABLE_DOCKER_SANDBOX",
             "cases_executed": 2,
         },
         "probe_coverage": {

@@ -437,7 +437,7 @@ class FastE1BatchTests(unittest.TestCase):
                 record["evidence"]["checker"]["runtime"][
                     "runtime_provenance"
                 ],
-                "audit-host-copy",
+                "sandbox",
             )
             self.assertTrue(
                 all(

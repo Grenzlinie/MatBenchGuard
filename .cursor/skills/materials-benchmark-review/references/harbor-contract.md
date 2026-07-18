@@ -52,21 +52,22 @@ Process evidence being absent from `output_contract` is not itself a defect.
 
 `tests/test.sh` is Harbor's verifier entrypoint. E1 invokes that entrypoint in
 a disposable copy containing instruction and tests, without solution or paper.
-Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are redirected inside
-that copy without changing the source package's canonical Docker paths.
+Paths for `/app/outputs`, `/tests`, and `/logs/verifier` are mounted at their
+canonical Docker paths without changing the source package.
 
-Every checker result records runtime provenance as `Harbor-equivalent`,
-`audit-host-copy`, or `not-assessable`. An audit-host copy is not evidence that
-the Harbor container is equivalent. Direct `checker.py` execution, when used
-for a narrow diagnostic, is an audit harness and must never be labeled as a
-Harbor-equivalent verifier run.
+Every checker result records runtime provenance as `sandbox`. Review invokes
+`tests/test.sh` from the prebuilt `qa-checker` image in a disposable container.
+The image contains the common scientific stack; long-tail dependencies are
+supplied through the sandbox's cached `uv run --with` fallback. The sandbox is
+not a claim that the full Harbor image is equivalent.
 
-The Docker image is the Agent's task environment, not a declaration that every
-instruction dependency is preinstalled. A missing audit-host package, a
-dependency supplied by `environment/Dockerfile`, or a dependency installed by
-`tests/test.sh` is not a package defect. If the audit host cannot execute the
-verifier for one of those reasons, record `not-assessable`; do not emit checker
-crash/alignment findings from that host limitation.
+Docker daemon readiness, the local `qa-checker` image, and a writable uv cache
+are operator preconditions. A missing precondition aborts Review or Repair with
+the one-time image-build command. Once the sandbox is ready, a dependency
+installation failure or checker crash is package evidence and must not be
+reclassified as `not-assessable`. Direct `checker.py` execution, when used for
+a narrow diagnostic, remains an audit harness and is not a separate runtime
+provenance label.
 Process artifacts are contract-map-only and are not a top-level probe class.
 Complete/full models, structures, trajectories, prediction fields, and meshes
 remain core even when mislabeled process; record the contradiction as

@@ -32,6 +32,7 @@ from canonical_status import (  # noqa: E402
     canonical_fields,
     validate_repair_bundle_semantics,
 )
+import sandbox_runtime  # noqa: E402
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
 # The batch four-state lifecycle mapped onto the unified terminal fields
@@ -1573,13 +1574,11 @@ def regression_result(
             timeout = specification.get("timeout_seconds", 30)
             if not isinstance(timeout, (int, float)) or not 0 < timeout <= 60:
                 raise ValueError("command regression timeout must be in (0, 60]")
-            process = subprocess.run(
+            process = sandbox_runtime.run_in_sandbox(
                 command,
-                cwd=root,
-                capture_output=True,
-                text=True,
+                mounts=[(root, "/workspace", "rw")],
+                workdir="/workspace",
                 timeout=timeout,
-                check=False,
             )
             expected = specification.get("expected_returncode", 0)
             passed = process.returncode == expected
@@ -1620,6 +1619,18 @@ def regression_result(
     except (OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError) as exc:
         return False, {"error": str(exc)}
     raise ValueError(f"unsupported regression test type: {kind}")
+
+
+def ensure_command_regression_env(
+    specifications: Iterable[dict[str, Any]],
+) -> None:
+    """Abort before mutation when a command regression needs the sandbox."""
+    if any(
+        isinstance(specification, dict)
+        and specification.get("type") == "command"
+        for specification in specifications
+    ):
+        sandbox_runtime.ensure_env()
 
 
 def run_regressions(
@@ -2839,6 +2850,7 @@ def repair_batch(
             source_verdict=source_verdict,
         )
 
+    ensure_command_regression_env(planned_regressions)
     attempt_number = len(prior) + 1
     repair_id = unique_id("repair")
     workspace = root.parent / ".benchmark_repair_tmp" / repair_id
@@ -3196,6 +3208,7 @@ def repair(
     except PolicyStop as stop:
         return record_control_stop(root, report, plan, root_cause, stop)
 
+    ensure_command_regression_env(plan["regression_tests"])
     attempt_number = len(prior) + 1
     repair_id = unique_id("repair")
     workspace = root.parent / ".benchmark_repair_tmp" / repair_id

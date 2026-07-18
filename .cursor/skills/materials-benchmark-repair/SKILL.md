@@ -105,6 +105,13 @@ broken solution entrypoint is repairable, not an automatic rejection. Supported
 regressions are `file_exists`, `file_absent`, `file_executable`, `text_contains`,
 `text_not_contains`, `json_path_equals`, and argv `command`.
 
+Regression specifications of type `command` run through the shared disposable
+`qa-checker` Docker sandbox, using the same image and operator preflight as
+Review. Build the image once with
+`.cursor/skills/materials-benchmark-review/scripts/sandbox/build_qa_checker.sh`;
+Docker/image/cache setup failures abort the repair operation rather than being
+recorded as a package regression result.
+
 ## Materials repair scope
 
 Repair **can**:

@@ -45,6 +45,18 @@ is `NOT_ASSESSABLE`.
 | D6 | checker core-task mapping (static) | `instruction.md`, `tests/checker.py`, `tests/grading_spec.json` | contract-chain map + AST binding |
 | D7 | dynamic robustness & discrimination | `tests/test.sh`, `tests/checker.py`, external fixture | run `tests/test.sh` + reward compare (negative / discrimination / equivalence / component-isolation) |
 
+## Checker execution precondition
+
+Dynamic E1 checker cases and Repair argv command regressions run through the
+disposable prebuilt `qa-checker` Docker sandbox. Build it once with
+`.cursor/skills/materials-benchmark-review/scripts/sandbox/build_qa_checker.sh`.
+Docker daemon reachability, the local image, and a writable uv cache are
+operator preconditions; a missing precondition aborts the run with the build
+hint. After preflight succeeds, dependency-install failures and checker
+crashes are package findings rather than `not-assessable` runtime results.
+Runtime provenance is always `sandbox`; fixture and Oracle provenance remains
+independent and is not collapsed into that runtime label.
+
 ## A-layer (LLM, code-verified quotes)
 
 | # | name | direction | key inputs | notes |
