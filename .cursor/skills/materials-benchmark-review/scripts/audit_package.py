@@ -1508,6 +1508,8 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "benchmark_root": str(root),
         "solution_content_inspected": False,
         "parse_status": parse_status,
+        "package_roles": parse_status,
+        "grading_contract": specification,
         "materials_prescreen": qualification,
         "instruction_consistency": instruction_consistency,
         "gold_provenance": gold_provenance,

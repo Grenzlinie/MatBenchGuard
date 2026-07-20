@@ -32,6 +32,10 @@ from canonical_status import (  # noqa: E402
     canonical_fields,
     validate_repair_bundle_semantics,
 )
+from deterministic_contract import (  # noqa: E402
+    validate_deterministic_contract,
+    validate_deterministic_plan_binding,
+)
 import sandbox_runtime  # noqa: E402
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
@@ -831,6 +835,15 @@ def validate_source_audit_binding(
             "frozen core-contract digest is stale or incomplete",
         )
     external_binding_hashes(root, plan, manifest)
+    if plan.get("deterministic_contract") is not None:
+        try:
+            validate_deterministic_contract(report.get("deterministic_contract"))
+            validate_deterministic_plan_binding(report, plan)
+        except ValueError as exc:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"deterministic repair binding is invalid: {exc}",
+            ) from exc
     return source_audit
 
 
@@ -1817,6 +1830,14 @@ def validate_reaudit(
     )
     if verdict != "PASS" or route != "PUBLISH_CANDIDATE":
         raise ValueError("equal-depth re-audit did not route PASS to PUBLISH_CANDIDATE")
+    if "deterministic_contract" in reaudit:
+        deterministic = validate_deterministic_contract(
+            reaudit["deterministic_contract"]
+        )
+        if deterministic["repair_summary"]["state"] != "CLEAN":
+            raise ValueError(
+                "equal-depth re-audit did not return deterministic CLEAN"
+            )
     source_key = finding_key(source_finding)
     if source_key and any(
         finding_key(item) == source_key
@@ -2334,6 +2355,7 @@ def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]
         "schema_version": "0.1",
         "audit_id": plan["audit_id"],
         "finding_id": finding["finding_id"],
+        "deterministic_check": finding.get("deterministic_check"),
         "repair_class": finding["repair_class"],
         "justification": finding["justification"],
         "core_science_change": finding.get(
@@ -2948,9 +2970,18 @@ def repair_batch(
     has_fatal = any(
         item.get("severity") == "FATAL" for item in reaudit_findings
     ) or bool(summary.get("hard_gate"))
+    deterministic_clean = True
+    if "deterministic_contract" in reaudit:
+        deterministic = validate_deterministic_contract(
+            reaudit["deterministic_contract"]
+        )
+        deterministic_clean = (
+            deterministic["repair_summary"]["state"] == "CLEAN"
+        )
     fully_passed = (
         verdict == "PASS"
         and route == "PUBLISH_CANDIDATE"
+        and deterministic_clean
         and not unresolved_findings
         and not targets_still_open
         and package_identity(candidate, directory_name=root.name) == identity

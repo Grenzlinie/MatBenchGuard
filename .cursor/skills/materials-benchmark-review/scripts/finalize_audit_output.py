@@ -20,6 +20,13 @@ from prepare_audit_output import (
     sha256_file,
 )
 from canonical_status import canonical_fields
+from deterministic_contract import (
+    annotate_findings,
+    apply_deterministic_gate,
+    deterministic_repair_summary,
+    evaluate_deterministic_contract,
+    validate_deterministic_contract,
+)
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -1701,6 +1708,7 @@ def derive_qa_axes(
 def markdown_summary(report: dict[str, Any]) -> str:
     summary = report["summary"]
     configuration = report["configuration"]
+    deterministic = report["deterministic_contract"]
     finding_lines = (
         "\n".join(
             f"- {item['finding_id']} [{item['severity']}] {item['title']}: "
@@ -1911,6 +1919,8 @@ def markdown_summary(report: dict[str, Any]) -> str:
 - Disposition: {summary['disposition']}
 - Authoritative score (0–100): {summary['total_score']}
 - Scoring version: {summary['scoring_version']}
+- Deterministic D1-D6 status: {summary['deterministic_status']}
+- Deterministic repair state: {summary['repair_state']}
 - Core reason: {summary['core_reason']}
 
 ## 2. Benchmark Identity
@@ -1948,6 +1958,19 @@ Reason: This slice checks declared outputs and grading references.
 ## 7. Gate Results
 
 {gate_lines}
+
+### 7.1 Deterministic D1-D6 Contract
+
+- Schema: {deterministic['schema_version']}
+- Registry: {deterministic['registry_version']}
+- Repair summary: {deterministic['repair_summary']}
+- Checks:
+{chr(10).join(
+    f"  - {item['check_id']}: {item['status']} "
+    f"(blocking={item['blocking_finding_ids']}; "
+    f"advisory={item['advisory_finding_ids']})"
+    for item in deterministic['checks']
+)}
 
 ## 8. Resource Reachability
 
@@ -2018,13 +2041,16 @@ def write_disposition_artifacts(
 ) -> None:
     summary = report["summary"]
     route = ROUTES[summary["final_verdict"]]
+    canonical = canonical_fields(
+        summary["final_verdict"],
+        publishability=route,
+        repair_decision=summary.get("repair_decision", "NOT_REQUIRED"),
+        repair_status=summary.get("repair_status", "NOT_APPLICABLE"),
+    )
     disposition = {
         "schema_version": "1.0",
         "audit_id": report["audit_id"],
-        **canonical_fields(
-            summary["final_verdict"],
-            publishability=route,
-        ),
+        **canonical,
         "scoring_version": summary["scoring_version"],
         "verdict": summary["final_verdict"],
         "disposition": summary["final_verdict"],
@@ -2041,6 +2067,8 @@ def write_disposition_artifacts(
         "core_package_roles_mutated": False,
         "evidence_bundle": "benchmark_audit",
         "evidence_gaps": evidence_gaps,
+        "deterministic_contract": report["deterministic_contract"],
+        "deterministic_repair": report["deterministic_repair"],
         "reason": summary["core_reason"],
     }
     manifest_data: dict[str, Any] = {}
@@ -2063,10 +2091,7 @@ def write_disposition_artifacts(
     index_entry = {
         "schema_version": "1.0",
         "audit_id": report["audit_id"],
-        **canonical_fields(
-            summary["final_verdict"],
-            publishability=route,
-        ),
+        **canonical,
         "benchmark": {
             "name": root.name,
             "root": str(root),
@@ -2094,6 +2119,8 @@ def write_disposition_artifacts(
         "dimension_scores": report["dimension_scores"],
         "dimensions_v11": report.get("dimensions_v11", []),
         "evidence_gaps": evidence_gaps,
+        "deterministic_contract": report["deterministic_contract"],
+        "deterministic_repair": report["deterministic_repair"],
     }
     (temp_dir / "disposition.json").write_text(
         json.dumps(disposition, indent=2, ensure_ascii=False),
@@ -2214,6 +2241,16 @@ def synthesize_report(
         )
         for index, (source, phase, category) in enumerate(sources, start=1)
     ]
+    findings = annotate_findings(findings)
+    deterministic_contract = evaluate_deterministic_contract(
+        normalized_instruction_contract=static_result.get("contract_map"),
+        grading_contract=static_result.get("grading_contract"),
+        checker_analysis=static_result.get("contract_map", {}).get(
+            "checker_analysis"
+        ),
+        package_roles=static_result.get("package_roles"),
+        findings=findings,
+    )
     paper_result = paper_consistency(
         agent_assessment,
         skip_reason=paper_skip_reason,
@@ -2330,7 +2367,29 @@ def synthesize_report(
         dimensions_v11,
         hard_gates,
     )
+    verdict, deterministic_reason = apply_deterministic_gate(
+        verdict=verdict,
+        score=score,
+        hard_gate=hard_gate,
+        evidence_gaps=evidence_gaps,
+        contract=deterministic_contract,
+    )
+    deterministic_required = (
+        deterministic_contract["repair_summary"]["state"] == "REQUIRED"
+    )
+    if deterministic_reason is not None:
+        reason = deterministic_reason
     route = ROUTES[verdict]
+    repair_state = (
+        "DETERMINISTIC_REPAIR_REQUIRED"
+        if deterministic_required
+        and verdict == "CONDITIONAL"
+        and not hard_gate
+        and not evidence_gaps
+        and score is not None
+        and score >= 60
+        else "NOT_REQUIRED"
+    )
     audit_route = (
         "PAPER_GROUNDED_E1"
         if (
@@ -2351,7 +2410,13 @@ def synthesize_report(
         "final_verdict": verdict,
         "disposition": verdict,
         "publishable": verdict == "PASS",
-        "repair_state": "NOT_REQUIRED",
+        "repair_state": repair_state,
+        "deterministic_status": deterministic_contract["repair_summary"][
+            "state"
+        ],
+        "deterministic_repair_required": (
+            repair_state == "DETERMINISTIC_REPAIR_REQUIRED"
+        ),
         "total_score": score,
         "legacy_total_score": legacy_total,
         "hard_gate_triggered": hard_gate,
@@ -2362,6 +2427,11 @@ def synthesize_report(
     canonical = canonical_fields(
         verdict,
         publishability=route,
+        repair_status=(
+            repair_state
+            if repair_state == "DETERMINISTIC_REPAIR_REQUIRED"
+            else "NOT_APPLICABLE"
+        ),
     )
     report.update(canonical)
     report["summary"].update(canonical)
@@ -2386,6 +2456,10 @@ def synthesize_report(
         "fail_closed": True,
         "gaps": contract_gaps,
     }
+    report["deterministic_contract"] = deterministic_contract
+    report["deterministic_repair"] = deterministic_repair_summary(
+        deterministic_contract
+    )
     report["source_bindings"] = external_bindings or {
         "fixture_hashes": {},
         "assessment_hashes": {},
@@ -2459,6 +2533,9 @@ def synthesize_report(
         "implementation_hash": manifest.get(
             "review_implementation", {}
         ).get("aggregate_hash"),
+        "deterministic_contract_digest": deterministic_contract[
+            "contract_digest"
+        ],
     }
     report["taxonomy_labels"] = (
         agent_assessment["taxonomy"]
@@ -2609,6 +2686,12 @@ def synthesize_report(
     )
     audit_manifest = read_json(temp_dir / "audit_manifest.json")
     audit_manifest.update(canonical)
+    audit_manifest["deterministic_contract_schema_version"] = (
+        deterministic_contract["schema_version"]
+    )
+    audit_manifest["deterministic_contract_digest"] = (
+        deterministic_contract["contract_digest"]
+    )
     audit_manifest["execution_level"] = report["configuration"][
         "execution_level"
     ]
@@ -3206,6 +3289,8 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         != manifest.get("input_hashes", {})
         or binding.get("implementation_hash")
         != manifest.get("review_implementation", {}).get("aggregate_hash")
+        or binding.get("deterministic_contract_digest")
+        != manifest.get("deterministic_contract_digest")
     ):
         raise ValueError("audit binding differs from its manifest")
     last_position = -1
@@ -3215,10 +3300,48 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
             raise ValueError(f"missing or out-of-order heading: {heading}")
         last_position = position
     summary = report["summary"]
+    deterministic_contract = validate_deterministic_contract(
+        report.get("deterministic_contract")
+    )
+    if report.get("deterministic_repair") != deterministic_repair_summary(
+        deterministic_contract
+    ):
+        raise ValueError("deterministic repair summary differs from contract")
+    if (
+        summary.get("deterministic_status")
+        != deterministic_contract["repair_summary"]["state"]
+        or summary.get("deterministic_repair_required")
+        is not (
+            summary.get("repair_state")
+            == "DETERMINISTIC_REPAIR_REQUIRED"
+        )
+    ):
+        raise ValueError("summary deterministic status is inconsistent")
+    if (
+        manifest.get("deterministic_contract_schema_version")
+        != deterministic_contract["schema_version"]
+        or manifest.get("deterministic_contract_digest")
+        != deterministic_contract["contract_digest"]
+    ):
+        raise ValueError("manifest deterministic binding is stale")
+    for artifact_name, artifact in (
+        ("disposition", disposition),
+        ("corpus index", index_entry),
+    ):
+        if (
+            artifact.get("deterministic_contract") != deterministic_contract
+            or artifact.get("deterministic_repair")
+            != deterministic_repair_summary(deterministic_contract)
+        ):
+            raise ValueError(
+                f"{artifact_name} deterministic contract differs from report"
+            )
     try:
         canonical = canonical_fields(
             summary["final_verdict"],
             publishability=ROUTES[summary["final_verdict"]],
+            repair_decision=summary.get("repair_decision", "NOT_REQUIRED"),
+            repair_status=summary.get("repair_status", "NOT_APPLICABLE"),
         )
     except ValueError as exc:
         raise ValueError(
@@ -3430,6 +3553,15 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
         expected_reason,
         recomputed_gaps,
     ) = scoring_verdict_v11(findings, dimensions_v11, hard_gates)
+    expected_verdict, deterministic_reason = apply_deterministic_gate(
+        verdict=expected_verdict,
+        score=recomputed_total,
+        hard_gate=expected_gate_triggered,
+        evidence_gaps=recomputed_gaps,
+        contract=deterministic_contract,
+    )
+    if deterministic_reason is not None:
+        expected_reason = deterministic_reason
     if (
         summary.get("final_verdict") != expected_verdict
         or summary.get("total_score") != recomputed_total

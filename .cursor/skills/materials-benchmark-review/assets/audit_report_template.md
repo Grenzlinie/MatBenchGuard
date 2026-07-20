@@ -16,6 +16,8 @@
 - Legacy total score (0–100): null
 - Scoring version: materials-review-scoring/1.1
 - Legacy scoring version: materials-review-scoring/1.0
+- Deterministic D1-D6 status: NOT_APPLICABLE
+- Deterministic repair state: NOT_REQUIRED
 - Publication route: EVIDENCE_PENDING
 - Core reason: Audit not yet completed.
 
@@ -41,6 +43,12 @@ package evidence.
 
 Exactly four Hard Gates are reported with code, status, evidence, and affected
 locations.
+
+### 7.1 Deterministic D1-D6 Contract
+
+The authoritative report records every D1-D6 status, proven/blocking finding
+IDs, advisory-only findings, the complete deterministic repair queue, and the
+source-bound implementation digest. Advisory risks do not block PASS.
 
 ## 8. Resource Reachability
 

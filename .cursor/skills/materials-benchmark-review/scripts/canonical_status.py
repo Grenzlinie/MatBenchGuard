@@ -25,6 +25,9 @@ REPAIR_DECISIONS = frozenset(
 REPAIR_STATUSES = frozenset(
     {
         "NOT_APPLICABLE",
+        # Review-time lifecycle state.  It routes a package to Repair but is
+        # not a terminal outcome and never publishes a package.
+        "DETERMINISTIC_REPAIR_REQUIRED",
         # ``PUBLISHED`` is retained only for the legacy certification archive.
         # The Repair skill now emits the batch four-state lifecycle below.
         "PUBLISHED",
@@ -92,6 +95,13 @@ def canonical_fields(
     if repair_status == "NOT_APPLICABLE" and repair_decision != "NOT_REQUIRED":
         raise ValueError(
             "NOT_APPLICABLE repair_status requires NOT_REQUIRED decision"
+        )
+    if (
+        repair_status == "DETERMINISTIC_REPAIR_REQUIRED"
+        and repair_decision != "NOT_REQUIRED"
+    ):
+        raise ValueError(
+            "DETERMINISTIC_REPAIR_REQUIRED requires NOT_REQUIRED decision"
         )
     if repair_status in {"PUBLISHED", "REPAIRED"} and repair_decision not in {
         "AUTO_FIX",
