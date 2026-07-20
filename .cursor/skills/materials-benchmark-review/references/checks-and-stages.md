@@ -11,13 +11,18 @@
 [Stage 2 LLM A-layer]  A1–A5; each declares its input files; default paper-grounded.
 [Stage 3 Score + disposition]  C01–C07 normalized + weighted total + Hard Gates +
   verdict + unified terminal fields.
-  ├─ PASS           → publishable=true
+  ├─ PASS           → publishable=true only when D1–D6=CLEAN
   ├─ CONDITIONAL    → repair
   ├─ REJECT         → abandon (total < 60 or a Hard Gate)
   └─ NOT_ASSESSABLE → re-audit after evidence is restored
 [Stage 4 Repair (CONDITIONAL only)]  AUTO_FIX / ASSISTED_FIX / ABANDON in isolation.
 [Stage 5 Re-audit + compare]  Re-run Review; emit before/after C01–C07 and delta.
 ```
+
+Repair is never a second scoring authority. It runs the canonical Review CLI
+exactly once at equal E1 depth after the isolated candidate pass. That one
+re-audit controls the post-repair verdict, D1–D6 state, Hard-Gate result, and
+target resolution.
 
 ## Classification reform (Agent-adjudicated)
 
@@ -44,6 +49,12 @@ is `NOT_ASSESSABLE`.
 | D5 | package file completeness (Harbor entry) | `instruction.md`, `tests/checker.py`, `tests/grading_spec.json`, `tests/test.sh`, `solution` | existence + parse_status |
 | D6 | checker core-task mapping (static) | `instruction.md`, `tests/checker.py`, `tests/grading_spec.json` | contract-chain map + AST binding |
 | D7 | dynamic robustness & discrimination | `tests/test.sh`, `tests/checker.py`, external fixture | run `tests/test.sh` + reward compare (negative / discrimination / equivalence / component-isolation) |
+
+Each D1–D6 check emits exactly one of `PASS`, `FAIL`, `BLOCKED`, or
+`NOT_ASSESSABLE`. Proven, OPEN, repairable D1–D6 findings are blocking; static
+warnings and unproven reachability risks are advisory. The deterministic repair
+summary is `CLEAN`, `REQUIRED`, or `NOT_APPLICABLE`, and `REQUIRED` contains
+the complete source queue, never a selected subset.
 
 ## Checker execution precondition
 
@@ -90,6 +101,12 @@ does not evaluate the core task and cannot be repaired without redefining it),
 and C06 (an indispensable direct input is permanently unavailable with no
 equivalent).
 
+An atomic repair publication is permitted only when the single equal-depth E1
+re-audit reports overall `PASS`, deterministic `CLEAN`, no failed Hard Gate,
+preserved package identity, allowed mutation scope, and resolution of every
+target finding. Residual deterministic blockers map to a non-published
+terminal state.
+
 ## Unified terminal fields
 
 Every report and disposition carries `disposition` (PASS / CONDITIONAL / REJECT /
@@ -97,3 +114,8 @@ NOT_ASSESSABLE), `publishable` (bool), and `repair_state` (NOT_REQUIRED at
 review time; REPAIRED / PARTIALLY_REPAIRED / ABANDONED / ROLLED_BACK after
 repair). `publication_route` mirrors the legacy publishability route
 (PUBLISH_CANDIDATE / REPAIR_QUEUE / QUARANTINE / EVIDENCE_PENDING).
+
+Historical unbound repair plans and bundles using schema `0.1` remain readable
+as evidence archives. New deterministic plans use
+`materials-deterministic-repair-plan/1.0`, bind the source deterministic
+schema/registry/digest and complete queue, and are validated fail-closed.

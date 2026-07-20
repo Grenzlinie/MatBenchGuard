@@ -58,7 +58,7 @@ Review side). The publication route is derived from the verdict
 `REJECT → QUARANTINE`, `NOT_ASSESSABLE → EVIDENCE_PENDING`).
 
 - `PASS`: authoritative total ≥ 80, no failed Hard Gate, no null key dimension,
-  no unresolved repairable `HIGH`;
+  no unresolved repairable `HIGH`, and deterministic D1–D6 is `CLEAN`;
 - `CONDITIONAL`: total 60–79 (no failed gate / null key dimension), or any
   unresolved repairable `HIGH`;
 - `REJECT`: any failed Hard Gate, or total < 60;
@@ -213,6 +213,25 @@ audit `CONDITIONAL` when no separate temporary evidence gap exists. A checker
 that starts but cannot produce usable runtime evidence is instead a temporary
 critical evidence gap and routes `NOT_ASSESSABLE`. Neither state may leave the
 checker-core Hard Gate `PASS`.
+
+## Deterministic repair publication
+
+The source audit's deterministic contract is the repair plan's schema authority.
+New deterministic plans bind the contract schema version, registry version,
+contract digest, source audit identity, and the complete set of
+`required_finding_ids`. An omitted OPEN blocking D1–D6 finding, unknown check
+target, stale digest/schema, or stale source binding fails closed. Historical
+unbound plan/bundle schema `0.1` records remain readable as evidence archives.
+
+Repair runs fail-before and pass-after causal regressions, then invokes the
+equal-depth E1 Review CLI exactly once. Only that re-audit may establish the
+post-repair verdict and D1–D6 state. Atomic publication requires all of:
+
+`PASS + deterministic CLEAN + no Hard Gate + preserved identity + allowed
+mutation scope + every target finding resolved`.
+
+Residual deterministic blockers are terminal and non-publishable; local repair
+scores, heuristics, or regression results cannot promote a candidate.
 
 ## Report evidence
 

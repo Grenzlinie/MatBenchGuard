@@ -27,6 +27,7 @@ from deterministic_contract import (
     evaluate_deterministic_contract,
     validate_deterministic_contract,
 )
+from d6_core_output_scoring import merge_runtime_evidence
 
 
 VERDICTS = {"PASS", "CONDITIONAL", "REJECT", "NOT_ASSESSABLE"}
@@ -201,14 +202,23 @@ V11_C02_CODES = {
     "EVIDENCE_NOT_ENFORCED",
     "INSTRUCTION_ONLY_OUTPUT",
     "INVALID_WEIGHT",
+    "NON_FINITE_WEIGHT",
     "WEIGHTS_NOT_ONE",
+    "INEFFECTIVE_WEIGHT_SCORING_COMPONENT",
     "MISSING_FILE",
     "PARSE_ERROR",
     "SOLUTION_ROLE_MISSING",
     "SOLUTION_ORACLE_MISSING",
     "SOLUTION_ORACLE_BROKEN",
+    "QUALITY_ROLE_INVALID",
+    "VERIFIER_ENTRYPOINT_MISSING",
+    "VERIFIER_ENTRYPOINT_INVALID",
     "INVALID_GRADING_SPEC_SCHEMA",
     "CONTRADICTORY_OUTPUT_ROLE",
+    "OUTPUT_FIELD_MISMATCH",
+    "OUTPUT_UNIT_MISMATCH",
+    "OUTPUT_REQUIREDNESS_MISMATCH",
+    "OUTPUT_DEFINITION_AMBIGUITY",
 }
 V11_C03_CODES = {
     "SCIENTIFIC_TARGET_INVALID",
@@ -221,9 +231,12 @@ V11_C04_CODES = {
     "ALWAYS_ZERO_SCORER",
     "ALWAYS_PASS_SCORER",
     "DIVISION_BY_ZERO_LITERAL",
+    "SCORER_WIRING_MISSING",
     "CHECKER_CORE_TASK_UNASSESSED",
     "SCORING_COMPONENT_NOT_BOUND",
     "ZERO_WEIGHT_SCORING_COMPONENT",
+    "NON_FINITE_WEIGHT",
+    "INEFFECTIVE_WEIGHT_SCORING_COMPONENT",
     "INVALID_PASS_THRESHOLD",
     "CHECKER_CRASH",
     "CHECKER_RESULT_UNUSABLE",
@@ -1874,6 +1887,29 @@ def markdown_summary(report: dict[str, Any]) -> str:
         )
         or "No requirement-linked mapping was established."
     )
+    d6_trace = (
+        contract_map.get("checker_analysis", {}).get(
+            "d6_core_output_scoring"
+        )
+        if isinstance(contract_map.get("checker_analysis"), dict)
+        else None
+    )
+    d6_lines = (
+        "\n".join(
+            "- {file}: content_read={content_read}; "
+            "scorer_binding={scorer_binding}; "
+            "positive_effective_weight={positive_effective_weight}; "
+            "finite_return={finite_return}; final_reward={final_reward}".format(
+                **item
+            )
+            for item in d6_trace.get("core_outputs", [])
+            if isinstance(item, dict)
+        )
+        if isinstance(d6_trace, dict)
+        else "D6 core-output scoring trace was not established."
+    )
+    if not d6_lines:
+        d6_lines = "No core outputs were declared for D6 tracing."
     gold = report.get("gold_provenance")
     if not isinstance(gold, dict):
         gold = paper["dimensions"].get("gold_provenance")
@@ -1971,6 +2007,12 @@ Reason: This slice checks declared outputs and grading references.
     f"advisory={item['advisory_finding_ids']})"
     for item in deterministic['checks']
 )}
+
+### 7.2 D6 Core-Output Scoring Chains
+
+- Status: {d6_trace.get('status') if isinstance(d6_trace, dict) else 'UNKNOWN'}
+- Assessable: {d6_trace.get('assessable') if isinstance(d6_trace, dict) else False}
+{d6_lines}
 
 ## 8. Resource Reachability
 
@@ -2242,6 +2284,21 @@ def synthesize_report(
         for index, (source, phase, category) in enumerate(sources, start=1)
     ]
     findings = annotate_findings(findings)
+    contract_map_for_d6 = static_result.get("contract_map", {})
+    checker_analysis_for_d6 = (
+        contract_map_for_d6.get("checker_analysis", {})
+        if isinstance(contract_map_for_d6, dict)
+        else {}
+    )
+    if isinstance(checker_analysis_for_d6, dict):
+        d6_trace = checker_analysis_for_d6.get(
+            "d6_core_output_scoring"
+        )
+        if isinstance(d6_trace, dict):
+            merged_d6 = merge_runtime_evidence(d6_trace, checker_result)
+            checker_analysis_for_d6["d6_core_output_scoring"] = merged_d6
+            if isinstance(contract_map_for_d6, dict):
+                contract_map_for_d6["d6_core_output_scoring"] = merged_d6
     deterministic_contract = evaluate_deterministic_contract(
         normalized_instruction_contract=static_result.get("contract_map"),
         grading_contract=static_result.get("grading_contract"),
@@ -2500,6 +2557,34 @@ def synthesize_report(
                 check["status"] = component_coverage.get("status", "NOT_RUN")
                 check["reason"] = component_coverage.get("reason")
                 check["provenance"] = component_coverage.get("provenance", {})
+    d6_trace = (
+        checker_analysis.get("d6_core_output_scoring")
+        if isinstance(checker_analysis, dict)
+        else None
+    )
+    d6_by_output = {
+        item.get("file"): item
+        for item in (
+            d6_trace.get("core_outputs", [])
+            if isinstance(d6_trace, dict)
+            else []
+        )
+        if isinstance(item, dict) and isinstance(item.get("file"), str)
+    }
+    for chain in contract_map.get("requirement_chains", []):
+        if not isinstance(chain, dict):
+            continue
+        d6_output = d6_by_output.get(chain.get("core_output"))
+        if d6_output is None:
+            continue
+        chain["d6_scoring_chain"] = d6_output
+        score = chain.get("checker_score")
+        if isinstance(score, dict):
+            score["d6_scoring_chain"] = d6_output
+        else:
+            chain["checker_score"] = {
+                "d6_scoring_chain": d6_output,
+            }
     report["contract_map"] = contract_map
     paper_gold = paper_result.get("dimensions", {}).get("gold_provenance")
     if isinstance(paper_gold, dict):

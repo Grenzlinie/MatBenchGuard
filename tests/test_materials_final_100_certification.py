@@ -24,6 +24,13 @@ CERTIFIER = (
 REVIEW_SKILL_ROOT = (
     REPO_ROOT / ".cursor/skills/materials-benchmark-review"
 )
+REVIEW_SCRIPTS = REVIEW_SKILL_ROOT / "scripts"
+if str(REVIEW_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(REVIEW_SCRIPTS))
+
+import deterministic_contract  # noqa: E402
+
+
 def canonical_hash(value: Any) -> str:
     payload = json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -33,6 +40,18 @@ def canonical_hash(value: Any) -> str:
 
 def file_hash(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def clean_deterministic_contract() -> dict[str, Any]:
+    return deterministic_contract.evaluate_deterministic_contract(
+        normalized_instruction_contract={},
+        grading_contract={},
+        checker_analysis={
+            "d6_core_output_scoring": {"status": "PROVEN"}
+        },
+        package_roles={},
+        findings=[],
+    )
 
 
 def source_role_inventory(
@@ -534,11 +553,13 @@ def upgrade_synthetic_certification_fixture(batch: Path) -> None:
         {
             "final_verdict": "PASS",
             "disposition": "PUBLISH_CANDIDATE",
-            "scoring_version": "materials-review-scoring/1.0",
+            "publication_route": "PUBLISH_CANDIDATE",
+            "scoring_version": "materials-review-scoring/1.1",
             "total_score": 97,
             "hard_gate_triggered": False,
         }
     )
+    report["deterministic_contract"] = clean_deterministic_contract()
     report["evidence_contract"] = {
         "version": "materials-evidence-contract/1.0",
         "fail_closed": True,
@@ -902,6 +923,25 @@ def upgrade_synthetic_repaired_fixture(batch: Path) -> None:
             "target_resolved": True,
             **repair_identity,
             "reaudit_audit_id": reaudit_id,
+            "reaudit_count": 1,
+            "reaudit_verdict": "PASS",
+            "publication_route": "PUBLISH_CANDIDATE",
+            "score": 97,
+            "evidence_contract_fail_closed": True,
+            "evidence_contract_gaps": [],
+            "hard_gate_codes": [
+                "NON_MATERIALS_TASK",
+                "SCIENTIFIC_TARGET_INVALID",
+                "CHECKER_CORE_TASK_UNASSESSED",
+                "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+            ],
+            "hard_gate_statuses": ["PASS", "PASS", "PASS", "PASS"],
+            "hard_gate_evidence": True,
+            "deterministic_state": "CLEAN",
+            "hard_gate_free": True,
+            "identity_preserved": True,
+            "mutation_scope_allowed": True,
+            "residual_blocking_finding_ids": [],
             "source_finding": {
                 **repair_identity,
                 "finding_id": "FINDING-001",

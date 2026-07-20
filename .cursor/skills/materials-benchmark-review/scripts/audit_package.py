@@ -21,10 +21,31 @@ except ModuleNotFoundError:  # pragma: no cover
 
 from prepare_audit_output import (
     QUALITY_EVIDENCE_ROLES,
-    REQUIRED_ROLES,
     basename,
     locate_root,
 )
+from d5_package_completeness import (
+    METADATA_ROLE_PATHS,
+    ORACLE_ENTRYPOINT_PATH,
+    ORACLE_ROLE_PATH,
+    QUALITY_ROLE_PATHS,
+)
+from d1_d2_contract import (
+    OUTPUT_PATH_PATTERN,
+    compare_instruction_sections,
+    compare_scored_outputs,
+    grading_step_output_names,
+    normalize_output_name,
+    normalize_output_path_match,
+    normalized_output_names,
+    scored_output_names,
+)
+from d3_d4_checker import (
+    add_checker_health_issues,
+    analyze_checker_health,
+    analyze_weights,
+)
+from d6_core_output_scoring import analyze as analyze_d6
 
 
 SEVERITY_RANK = {"FATAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
@@ -63,11 +84,6 @@ LOAD_BEARING_ARTIFACTS = (
     "structure",
     "trajectory",
 )
-OUTPUT_PATH_PATTERN = re.compile(
-    r"/app/outputs/([A-Za-z0-9_.-]+)", re.IGNORECASE
-)
-
-
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -218,11 +234,7 @@ def _output_name_from_path_match(path_match: re.Match[str]) -> str:
     closing backtick is part of an explicitly quoted path; otherwise trailing
     periods are prose punctuation rather than part of the Harbor output name.
     """
-    output_name = path_match.group(1)
-    following_text = path_match.string[path_match.end() :]
-    if output_name.endswith(".") and not following_text.startswith("`"):
-        return output_name.rstrip(".")
-    return output_name
+    return normalize_output_path_match(path_match)
 
 
 def instruction_contract_map(instruction: str) -> dict[str, Any]:
@@ -424,65 +436,28 @@ def instruction_internal_consistency(
     ``Self-check`` sections.  A mismatch between any two present, non-empty
     sections is a repairable ``INSTRUCTION_INTERNAL_INCONSISTENCY`` finding.
     """
-    sections = _instruction_sections(instruction)
-
-    def find_section(*keywords: str) -> str | None:
-        for name, body in sections.items():
-            if all(keyword in name for keyword in keywords):
-                return body
-        return None
-
-    workflow_body = find_section("workflow")
-    output_files_body = find_section("output", "files")
-    output_contract_body = find_section("output", "contract")
-    selfcheck_body = find_section("self-check") or find_section("self", "check")
-
-    declared: dict[str, set[str]] = {}
-    if workflow_body is not None:
-        declared["Workflow steps"] = _section_output_basenames(
-            workflow_body, scored_only=True
-        )
-    if output_files_body is not None:
-        declared["Output files"] = _section_output_basenames(output_files_body)
-    if output_contract_body is not None:
-        declared["Output contract"] = _section_output_basenames(
-            output_contract_body
-        )
-    if selfcheck_body is not None:
-        declared["Self-check"] = _selfcheck_output_basenames(selfcheck_body)
-
-    present = {name: values for name, values in declared.items() if values}
-    mismatches: list[dict[str, Any]] = []
-    section_names = sorted(present)
-    for index, left in enumerate(section_names):
-        for right in section_names[index + 1 :]:
-            if present[left] != present[right]:
-                mismatches.append(
-                    {
-                        "left_section": left,
-                        "right_section": right,
-                        "only_in_left": sorted(present[left] - present[right]),
-                        "only_in_right": sorted(present[right] - present[left]),
-                    }
-                )
-    if mismatches:
+    result = compare_instruction_sections(instruction)
+    if result["mismatches"]:
         add_issue(
             issues,
             "MEDIUM",
             "INSTRUCTION_INTERNAL_INCONSISTENCY",
             "instruction sections declare inconsistent scored outputs across "
             "Workflow steps / Output files / Output contract / Self-check",
-            {"mismatches": mismatches},
+            {"mismatches": result["mismatches"]},
             ["instruction.md"],
         )
-    return {
-        "sections_present": sorted(sections),
-        "declared_outputs_by_section": {
-            name: sorted(values) for name, values in declared.items()
-        },
-        "consistent": not mismatches,
-        "mismatches": mismatches,
-    }
+    for mismatch in result["semantic_mismatches"]:
+        add_issue(
+            issues,
+            "MEDIUM",
+            mismatch["code"],
+            "instruction sections disagree on a scored output's "
+            f"{mismatch['code'].removeprefix('OUTPUT_').lower()}",
+            mismatch,
+            ["instruction.md"],
+        )
+    return result
 
 
 def _direct_returns(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.Return]:
@@ -665,168 +640,53 @@ def checker_contract_analysis(
                     ) and isinstance(item, ast.Name):
                         scorer_bindings[key.value] = item.id
 
-    function_status: dict[str, dict[str, Any]] = {}
-    missing_returns: list[str] = []
-    incomplete_returns: list[str] = []
-    always_zero: list[str] = []
-    always_pass: list[str] = []
-    division_by_zero: list[str] = []
-    for scorer_id, function_name in scorer_bindings.items():
-        function = scorer_functions.get(function_name)
-        if function is None:
-            function_status[scorer_id] = {
-                "function": function_name,
-                "status": "FUNCTION_MISSING",
-            }
-            continue
-        status, returns = _return_status(function)
-        if status == "MISSING_DIRECT_RETURN":
-            missing_returns.append(scorer_id)
-        elif status in {
-            "ALWAYS_RETURNS_NONE",
-            "MAY_RETURN_NONE",
-            "PARTIAL_RETURN_PATHS",
-        }:
-            incomplete_returns.append(scorer_id)
-        constants = [
-            item.value
-            for item in returns
-            if isinstance(item.value, ast.Constant)
-            and isinstance(item.value.value, (int, float))
-            and not isinstance(item.value.value, bool)
-        ]
-        if status == "STATIC_RETURN_CANDIDATE" and len(constants) == len(returns):
-            if all(value == 0 for value in constants):
-                always_zero.append(scorer_id)
-                status = "STATIC_ALWAYS_ZERO"
-            elif all(value == 1 for value in constants):
-                always_pass.append(scorer_id)
-                status = "STATIC_ALWAYS_ONE"
-        literal_zero_divisions = sum(
-            isinstance(node, ast.BinOp)
-            and isinstance(node.op, ast.Div)
-            and isinstance(node.right, ast.Constant)
-            and node.right.value == 0
-            for node in ast.walk(function)
+    scoring_step_ids = [
+        str(
+            step.get("id")
+            or normalize_output_name(step.get("output_file"))
         )
-        dynamic_divisions = sum(
-            isinstance(node, ast.BinOp)
-            and isinstance(node.op, ast.Div)
-            and not (
-                isinstance(node.right, ast.Constant)
-                and isinstance(node.right.value, (int, float))
-            )
-            for node in ast.walk(function)
-        )
-        if literal_zero_divisions:
-            division_by_zero.append(scorer_id)
-        function_status[scorer_id] = {
-            "function": function_name,
-            "status": status,
-            "direct_return_count": len(returns),
-            "return_status": status,
-            "finite_return_runtime_proven": False,
-            "division_status": (
-                "LITERAL_ZERO_DENOMINATOR"
-                if literal_zero_divisions
-                else "DYNAMIC_DENOMINATOR_REQUIRES_PROBE"
-                if dynamic_divisions
-                else "NO_DIVISION_FOUND_STATIC"
-            ),
-        }
-
-    if analysis_available and parse_error is not None:
-        add_issue(
+        for step in specification.get("steps", []) or []
+        if isinstance(step, dict)
+    ]
+    health = analyze_checker_health(
+        checker_source,
+        scorer_bindings,
+        scorer_registry_present=scorer_registry_declared,
+        scoring_step_ids=scoring_step_ids,
+    )
+    function_status = health["scorer_status"]
+    if analysis_available:
+        add_checker_health_issues(
             issues,
-            "HIGH",
-            "CHECKER_STATIC_ANALYSIS_UNAVAILABLE",
-            "checker.py cannot be parsed for contract mapping",
-            {"parse_error": parse_error},
-            ["tests/checker.py"],
-        )
-    if analysis_available and missing_returns:
-        add_issue(
-            issues,
-            "HIGH",
-            "SCORER_MISSING_RETURN",
-            "bound scoring functions do not return their computed score: "
-            + ", ".join(sorted(missing_returns)),
-            {
-                "scorer_ids": sorted(missing_returns),
-                "root_cause": "checker_scorer_runtime_contract",
-            },
-            ["tests/checker.py"],
-        )
-    if analysis_available and incomplete_returns:
-        add_issue(
-            issues,
-            "HIGH",
-            "SCORER_RETURN_NOT_TOTAL",
-            "bound scoring functions may return None or fall through without "
-            "a score: " + ", ".join(sorted(incomplete_returns)),
-            {
-                "scorer_ids": sorted(incomplete_returns),
-                "statuses": {
-                    scorer_id: function_status[scorer_id]["return_status"]
-                    for scorer_id in sorted(incomplete_returns)
-                },
-                "root_cause": "checker_scorer_return_contract",
-            },
-            ["tests/checker.py"],
-        )
-    if analysis_available and always_zero:
-        add_issue(
-            issues,
-            "HIGH",
-            "ALWAYS_ZERO_SCORER",
-            "bound scoring functions always return zero: "
-            + ", ".join(sorted(always_zero)),
-            {"scorer_ids": sorted(always_zero)},
-            ["tests/checker.py"],
-        )
-    if analysis_available and always_pass:
-        add_issue(
-            issues,
-            "HIGH",
-            "ALWAYS_PASS_SCORER",
-            "bound scoring functions always return one: "
-            + ", ".join(sorted(always_pass)),
-            {"scorer_ids": sorted(always_pass)},
-            ["tests/checker.py"],
-        )
-    if analysis_available and division_by_zero:
-        add_issue(
-            issues,
-            "HIGH",
-            "DIVISION_BY_ZERO_LITERAL",
-            "bound scoring functions contain literal division by zero: "
-            + ", ".join(sorted(division_by_zero)),
-            {"scorer_ids": sorted(division_by_zero)},
-            ["tests/checker.py"],
+            health,
+            scorer_bindings=scorer_bindings,
+            scoring_step_ids=scoring_step_ids,
         )
 
     grading_steps = specification.get("steps", []) or []
-    process_outputs = set(contract_map.get("process_evidence", []))
-    core_outputs = set(contract_map.get("core_outputs", []))
+    process_outputs = normalized_output_names(
+        contract_map.get("process_evidence", [])
+    )
+    core_outputs = normalized_output_names(contract_map.get("core_outputs", []))
     grading_steps = [
         step
         for step in grading_steps
-        if basename(step.get("output_file")) not in process_outputs
-        or basename(step.get("output_file")) in core_outputs
+        if normalize_output_name(step.get("output_file")) not in process_outputs
+        or normalize_output_name(step.get("output_file")) in core_outputs
     ]
     scorer_registry_present = scorer_registry_declared
     grading_by_file = {
-        basename(step.get("output_file")): step
+        normalize_output_name(step.get("output_file")): step
         for step in grading_steps
-        if basename(step.get("output_file"))
+        if normalize_output_name(step.get("output_file"))
     }
     contract_items = {
-        basename(item.get("file")): item
+        normalize_output_name(item.get("file")): item
         for item in (
             specification.get("output_contract", {}).get("outputs", [])
             or []
         )
-        if basename(item.get("file"))
+        if normalize_output_name(item.get("file"))
     }
     generic_loader = (
         tree is not None
@@ -981,30 +841,36 @@ def checker_contract_analysis(
             status = "REFERENCE_ONLY"
         semantic_validation[output_name] = status
         output["semantic_validation"] = status
-        if status in {"NOT_REFERENCED", "EXISTENCE_ONLY"}:
-            add_issue(
-                issues,
-                "FATAL",
-                "CHECKER_CORE_TASK_UNASSESSED",
-                "load-bearing core output is ignored or only checked for "
-                f"existence: {output_name}",
-                {
-                    "output": output_name,
-                    "semantic_validation": status,
-                    "role": "core_output",
-                },
-                ["instruction.md", "tests/checker.py", "tests/grading_spec.json"],
-            )
 
+    unique_wiring_ids = {
+        item["component_id"]
+        for item in health.get("missing_wiring", [])
+        if isinstance(item, dict) and item.get("component_id")
+    }
     missing_bindings = [
-        str(step.get("id") or basename(step.get("output_file")))
-        for step in grading_steps
-        if str(step.get("id") or basename(step.get("output_file")))
-        not in scorer_bindings
-        or scorer_bindings.get(
-            str(step.get("id") or basename(step.get("output_file")))
+        str(
+            step.get("id")
+            or normalize_output_name(step.get("output_file"))
         )
-        not in scorer_functions
+        for step in grading_steps
+        if (
+            str(
+                step.get("id")
+                or normalize_output_name(step.get("output_file"))
+            )
+            not in scorer_bindings
+            or scorer_bindings.get(
+                str(
+                    step.get("id")
+                    or normalize_output_name(step.get("output_file"))
+                )
+            )
+            not in scorer_functions
+        )
+        and str(
+            step.get("id")
+            or normalize_output_name(step.get("output_file"))
+        ) not in unique_wiring_ids
     ] if analysis_available and parse_error is None and scorer_registry_present else []
     if analysis_available and missing_bindings:
         add_issue(
@@ -1016,26 +882,24 @@ def checker_contract_analysis(
             {"component_ids": sorted(missing_bindings)},
             ["tests/checker.py", "tests/grading_spec.json"],
         )
-    zero_weight = [
-        str(step.get("id") or basename(step.get("output_file")))
-        for step in grading_steps
-        if _finite_number(step.get("weight")) == 0
-    ] if analysis_available else []
-    if analysis_available and zero_weight:
-        add_issue(
-            issues,
-            "MEDIUM",
-            "ZERO_WEIGHT_SCORING_COMPONENT",
-            "declared grading components have no effect on the final score: "
-            + ", ".join(sorted(zero_weight)),
-            {"component_ids": sorted(zero_weight)},
-            ["tests/grading_spec.json"],
-        )
+    d6 = analyze_d6(
+        contract_map=contract_map,
+        checker_analysis={
+            "outputs": outputs,
+            "scorer_bindings": scorer_bindings,
+            "scorer_status": function_status,
+        },
+        grading_contract=specification,
+        checker_source=checker_source,
+    )
+    issues.extend(d6["findings"])
     return {
         "outputs": outputs,
         "scorer_bindings": scorer_bindings,
         "scorer_status": function_status,
+        "d3_health": health,
         "semantic_validation": semantic_validation,
+        "d6_core_output_scoring": d6,
         "all_scoring_items_source_bound": bool(
             analysis_available
             and parse_error is None
@@ -1099,7 +963,7 @@ def checker_contract_analysis(
 def _finite_number(value: Any) -> float | None:
     try:
         result = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     return result if math.isfinite(result) else None
 
@@ -1111,7 +975,7 @@ def parse_roles(
     status: dict[str, str] = {}
     for role, role_type in QUALITY_EVIDENCE_ROLES.items():
         path = root / role
-        if not path.exists():
+        if not path.exists() or path.is_symlink():
             severity = "FATAL" if role == "instruction.md" else "HIGH"
             add_issue(
                 issues,
@@ -1126,9 +990,27 @@ def parse_roles(
             )
             status[role] = "missing"
             continue
+        if not path.is_file():
+            add_issue(
+                issues,
+                "FATAL" if role == "instruction.md" else "HIGH",
+                "QUALITY_ROLE_INVALID",
+                f"required Harbor quality role is not a regular file: {role}",
+                affected_files=[role],
+            )
+            status[role] = "invalid"
+            continue
         try:
             values[role] = read_role(path, role_type)
             status[role] = "ok"
+            if role == "tests/test.sh" and not str(values[role]).strip():
+                add_issue(
+                    issues,
+                    "HIGH",
+                    "QUALITY_ROLE_INVALID",
+                    "Harbor verifier entrypoint is empty",
+                    affected_files=[role],
+                )
         except Exception as exc:  # noqa: BLE001
             status[role] = f"error: {exc}"
             add_issue(
@@ -1139,27 +1021,31 @@ def parse_roles(
                 repr(exc),
                 [role],
             )
-    for role in set(REQUIRED_ROLES) - set(QUALITY_EVIDENCE_ROLES):
+    # Metadata/environment roles remain discoverable for callers that need
+    # package context, but are never parsed into quality evidence or findings.
+    for role in METADATA_ROLE_PATHS:
         status[role] = "ancillary_not_scored"
-    if not (root / "solution").is_dir():
+    solution_dir = root / ORACLE_ROLE_PATH
+    solve_path = root / ORACLE_ENTRYPOINT_PATH
+    if not solution_dir.is_dir() or solution_dir.is_symlink():
         add_issue(
             issues,
             "HIGH",
             "SOLUTION_ROLE_MISSING",
             "solution role is absent; presence can be confirmed without inspection",
-            affected_files=["solution/"],
+            affected_files=[ORACLE_ROLE_PATH],
         )
-    elif not (root / "solution/solve.sh").is_file():
+    elif not solve_path.is_file() or solve_path.is_symlink():
         add_issue(
             issues,
             "HIGH",
             "SOLUTION_ORACLE_MISSING",
             "solution/solve.sh is absent; the checker positive path is repairable",
-            affected_files=["solution/solve.sh"],
+            affected_files=[ORACLE_ENTRYPOINT_PATH],
         )
     status["solution/"] = (
         "present_not_inspected"
-        if (root / "solution").is_dir()
+        if solution_dir.is_dir() and not solution_dir.is_symlink()
         else "missing"
     )
     return values, status
@@ -1219,45 +1105,26 @@ def cross_file_checks(
     grading_steps = (
         specification.get("steps", specification.get("checks", [])) or []
     )
-    contract_outputs = {
-        basename(item.get("file"))
-        for item in (
-            (specification.get("output_contract", {}) or {}).get("outputs", [])
-            or []
-        )
-        if basename(item.get("file"))
-    }
-    step_outputs = {
-        basename(item.get("output_file"))
-        for item in steps
-        if basename(item.get("output_file"))
-    }
-    step_evidence = {
-        basename(item.get("evidence"))
-        for item in steps
-        if basename(item.get("evidence"))
-    }
-    grading_outputs = {
-        basename(item.get("output_file"))
-        for item in grading_steps
-        if basename(item.get("output_file"))
-    }
     contract_map = contract_map or instruction_contract_map(instruction)
-    process_evidence = set(contract_map["process_evidence"])
-    core_outputs = set(contract_map.get("core_outputs", []))
-    instruction_outputs = (
-        set(contract_map["instruction_outputs"])
-        - process_evidence
-        - core_outputs
+    process_evidence = normalized_output_names(
+        contract_map.get("process_evidence", [])
     )
-    checker_outputs = {
-        item.get("file"): item
-        for item in (
-            contract_map.get("checker_analysis", {}).get("outputs", [])
-            if isinstance(contract_map.get("checker_analysis"), dict)
-            else []
-        )
-    }
+    contract_outputs = scored_output_names(specification)
+    grading_outputs = grading_step_output_names(specification)
+    grading_outputs -= process_evidence
+    step_outputs = grading_outputs
+    step_evidence = normalized_output_names(
+        item.get("evidence")
+        for item in grading_steps
+        if isinstance(item, dict)
+    )
+    instruction_outputs = normalized_output_names(
+        contract_map.get("instruction_outputs", [])
+    )
+    scored_instruction_outputs = normalized_output_names(
+        contract_map.get("scored_outputs", [])
+    )
+    d1_comparison = compare_scored_outputs(contract_map, specification)
     process_evidence_status = {
         name: "CONTRACT_MAP_ONLY" for name in sorted(process_evidence)
     }
@@ -1267,7 +1134,7 @@ def cross_file_checks(
             "HIGH",
             "OUTPUT_NOT_CONTRACTED",
             f"workflow output is absent from output contract: {name}",
-            affected_files=["steps.json", "tests/grading_spec.json"],
+            affected_files=["tests/grading_spec.json"],
         )
     for name in sorted(contract_outputs - grading_outputs - process_evidence):
         add_issue(
@@ -1283,10 +1150,11 @@ def cross_file_checks(
             "HIGH",
             "EVIDENCE_NOT_ENFORCED",
             f"declared evidence is absent from output contract: {name}",
-            affected_files=["steps.json", "tests/grading_spec.json"],
+            affected_files=["tests/grading_spec.json"],
         )
     for name in sorted(
-        instruction_outputs - (contract_outputs | step_outputs | step_evidence)
+        scored_instruction_outputs
+        - (contract_outputs | step_outputs | step_evidence)
     ):
         add_issue(
             issues,
@@ -1310,6 +1178,7 @@ def cross_file_checks(
         "unclassified_instruction_outputs": sorted(
             contract_map["unclassified_outputs"]
         ),
+        "d1_comparison": d1_comparison,
     }
 
 
@@ -1318,46 +1187,33 @@ def grading_checks(
     issues: list[dict[str, Any]],
     contract_map: dict[str, Any] | None = None,
 ) -> None:
-    grading_steps = (
-        specification.get("steps", specification.get("checks", [])) or []
+    contract_map = contract_map or {}
+    weight_result = analyze_weights(
+        specification,
+        process_outputs=contract_map.get("process_evidence", []),
+        checker_analysis=contract_map.get("checker_analysis"),
     )
-    process_evidence = set((contract_map or {}).get("process_evidence", []))
-    core_outputs = set((contract_map or {}).get("core_outputs", []))
-    grading_steps = [
-        step
-        for step in grading_steps
-        if basename(step.get("output_file")) not in process_evidence
-        or basename(step.get("output_file")) in core_outputs
-    ]
-    weights: list[float] = []
-    for step in grading_steps:
-        try:
-            weights.append(float(step.get("weight", 0)))
-        except (TypeError, ValueError):
-            add_issue(
-                issues,
-                "HIGH",
-                "INVALID_WEIGHT",
-                "grading weight is not numeric",
-                step.get("weight"),
-                ["tests/grading_spec.json"],
-            )
-    if weights and abs(sum(weights) - 1.0) > 1e-6:
+    for finding in weight_result["findings"]:
         add_issue(
             issues,
-            "HIGH",
-            "WEIGHTS_NOT_ONE",
-            "grading weights do not sum to one",
-            sum(weights),
-            ["tests/grading_spec.json"],
+            finding["severity"],
+            finding["code"],
+            finding["message"],
+            finding.get("evidence"),
+            finding.get("affected_files"),
         )
+    weights = [
+        float(item["value"])
+        for item in weight_result.get("valid_weights", [])
+        if isinstance(item, dict)
+    ]
     raw_threshold = specification.get("pass_threshold")
     threshold: float | None = None
     try:
         threshold = float(raw_threshold)
         if not math.isfinite(threshold) or not 0 <= threshold <= 1:
             raise ValueError
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         add_issue(
             issues,
             "FATAL",
@@ -1393,14 +1249,14 @@ def gold_provenance_analysis(
 ) -> dict[str, Any]:
     outputs = sorted(
         {
-            basename(item.get("file"))
+            normalize_output_name(item.get("file"))
             for item in (
                 (specification.get("output_contract", {}) or {}).get(
                     "outputs", []
                 )
                 or []
             )
-            if basename(item.get("file"))
+            if normalize_output_name(item.get("file"))
         }
         | set(contract_map.get("core_outputs", []))
     )
@@ -1467,6 +1323,21 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         contract_map,
         issues,
     )
+    if (
+        parse_status.get("tests/checker.py") == "ok"
+        and checker_contract.get("parse_status") != "OK"
+    ):
+        add_issue(
+            issues,
+            "HIGH",
+            "QUALITY_ROLE_INVALID",
+            "tests/checker.py is not syntactically parseable",
+            {
+                "checker_parse_status": checker_contract.get("parse_status"),
+                "checker_parse_error": checker_contract.get("parse_error"),
+            },
+            ["tests/checker.py"],
+        )
     contract_map["checker_analysis"] = checker_contract
     contract_map["requirement_chains"] = _requirement_chains(
         contract_map, checker_contract["outputs"]
@@ -1508,7 +1379,31 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "benchmark_root": str(root),
         "solution_content_inspected": False,
         "parse_status": parse_status,
-        "package_roles": parse_status,
+        "package_roles": {
+            "quality_roles": {
+                role: (
+                    "invalid"
+                    if (
+                        role == "tests/checker.py"
+                        and checker_contract.get("parse_status") != "OK"
+                        and parse_status.get(role) == "ok"
+                    )
+                    else parse_status.get(role, "missing")
+                )
+                for role in QUALITY_ROLE_PATHS
+            },
+            "oracle_entrypoint": (
+                "ok"
+                if (
+                    (root / ORACLE_ROLE_PATH).is_dir()
+                    and not (root / ORACLE_ROLE_PATH).is_symlink()
+                    and (root / ORACLE_ENTRYPOINT_PATH).is_file()
+                    and not (root / ORACLE_ENTRYPOINT_PATH).is_symlink()
+                )
+                else "missing"
+            ),
+            "metadata_roles_excluded": list(METADATA_ROLE_PATHS),
+        },
         "grading_contract": specification,
         "materials_prescreen": qualification,
         "instruction_consistency": instruction_consistency,
@@ -1516,6 +1411,7 @@ def static_audit(root: Path, output: Path) -> dict[str, Any]:
         "cross_file_sets": cross_file_sets,
         "contract_map": {
             **contract_map,
+            "cross_file_sets": cross_file_sets,
             "checker_analysis": checker_contract,
         },
         "issues": sorted(

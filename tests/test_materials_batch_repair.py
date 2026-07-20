@@ -58,7 +58,11 @@ import argparse
 import hashlib
 import json
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from deterministic_contract import evaluate_deterministic_contract
 
 def file_hash(path):
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
@@ -149,7 +153,31 @@ report = {
     # ``publication_route``/``publishability`` and disposition.json ``route``.
     "summary": {"final_verdict": verdict, "disposition": verdict,
                 "publication_route": route, "publishability": route,
-                "dimensions_v11": dimensions},
+                "dimensions_v11": dimensions,
+                "scoring_version": "materials-review-scoring/1.1",
+                "total_score": 90 if verdict == "PASS" else 70,
+                "hard_gate_triggered": False},
+    "publishability": route,
+    "evidence_contract": {"fail_closed": True, "gaps": []},
+    "hard_gates": [
+        {"code": code, "status": "PASS",
+         "evidence": [{"fact": "source-bound fixture evidence"}]}
+        for code in (
+            "NON_MATERIALS_TASK",
+            "SCIENTIFIC_TARGET_INVALID",
+            "CHECKER_CORE_TASK_UNASSESSED",
+            "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+        )
+    ],
+    "deterministic_contract": evaluate_deterministic_contract(
+        normalized_instruction_contract={},
+        grading_contract={},
+        checker_analysis={
+            "d6_core_output_scoring": {"status": "PROVEN"}
+        },
+        package_roles={},
+        findings=[],
+    ),
 }
 report_path = audit / "audit_report.json"
 report_path.write_text(json.dumps(report))

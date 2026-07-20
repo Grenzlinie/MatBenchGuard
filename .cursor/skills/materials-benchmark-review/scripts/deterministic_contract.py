@@ -11,12 +11,31 @@ import hashlib
 import json
 from typing import Any, Iterable
 
+from d1_d2_contract import D1_D2_SEMANTIC_CODES, repair_class_for_code
+from d5_package_completeness import (
+    d5_role_failures,
+    package_role_snapshot,
+    repair_class_for_finding as d5_repair_class_for_finding,
+)
+from d3_d4_checker import expected_repair_class
+
 
 DETERMINISTIC_SCHEMA_VERSION = "materials-deterministic-contract/1.0"
 DETERMINISTIC_REGISTRY_VERSION = "materials-deterministic-check-registry/1.0"
+DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION = (
+    "materials-deterministic-repair-plan/1.0"
+)
+# ``0.2`` was used by an early integration draft.  It is accepted as an
+# equivalent wire spelling, while every emitted plan uses the named version
+# above.  Historical, unbound repair plans remain the separate ``0.1`` mode.
+DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES = frozenset(
+    {DETERMINISTIC_REPAIR_PLAN_SCHEMA_VERSION, "0.2"}
+)
+LEGACY_REPAIR_PLAN_SCHEMA_VERSION = "0.1"
 CHECK_STATUSES = frozenset({"PASS", "FAIL", "BLOCKED", "NOT_ASSESSABLE"})
 REPAIR_SUMMARY_STATES = frozenset({"CLEAN", "REQUIRED", "NOT_APPLICABLE"})
 CHECK_IDS = ("D1", "D2", "D3", "D4", "D5", "D6")
+UNAVAILABLE_CHECK_STATUSES = frozenset({"BLOCKED", "NOT_ASSESSABLE"})
 
 
 # Finding ownership is centralized here so Review and Repair never need to
@@ -35,6 +54,7 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "OUTPUT_NOT_SCORED",
         ),
         "repair_class": "AUTO_FIX",
+        "repair_classes": ("AUTO_FIX",),
         "required_inputs": ("instruction_contract", "grading_contract"),
     },
     {
@@ -49,8 +69,10 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "EVIDENCE_NOT_ENFORCED",
             "CONTRADICTORY_OUTPUT_ROLE",
             "INSTRUCTION_ONLY_OUTPUT",
+            *sorted(D1_D2_SEMANTIC_CODES),
         ),
         "repair_class": "AUTO_FIX",
+        "repair_classes": ("AUTO_FIX", "ASSISTED_FIX"),
         "required_inputs": ("instruction_contract",),
     },
     {
@@ -67,9 +89,11 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
             "ALWAYS_ZERO_SCORER",
             "ALWAYS_PASS_SCORER",
             "DIVISION_BY_ZERO_LITERAL",
+            "SCORER_WIRING_MISSING",
             "CHECKER_CRASH",
         ),
         "repair_class": "ASSISTED_FIX",
+        "repair_classes": ("AUTO_FIX", "ASSISTED_FIX"),
         "required_inputs": ("checker_analysis",),
     },
     {
@@ -81,14 +105,18 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
         ),
         "finding_codes": (
             "INVALID_WEIGHT",
+            "NON_FINITE_WEIGHT",
             "WEIGHTS_NOT_ONE",
             "ZERO_WEIGHT_SCORING_COMPONENT",
+            "INEFFECTIVE_WEIGHT_SCORING_COMPONENT",
             "INVALID_PASS_THRESHOLD",
             # This is a reachability warning until isolation proves a bypass.
             "SINGLE_COMPONENT_THRESHOLD_REACHABLE",
+            "SINGLE_COMPONENT_CAN_PASS",
         ),
         "advisory_codes": ("SINGLE_COMPONENT_THRESHOLD_REACHABLE",),
         "repair_class": "ASSISTED_FIX",
+        "repair_classes": ("AUTO_FIX", "ASSISTED_FIX"),
         "required_inputs": ("grading_contract",),
     },
     {
@@ -101,11 +129,16 @@ _CHECK_REGISTRY: tuple[dict[str, Any], ...] = (
         "finding_codes": (
             "MISSING_FILE",
             "PARSE_ERROR",
+            "INVALID_GRADING_SPEC_SCHEMA",
+            "QUALITY_ROLE_INVALID",
+            "VERIFIER_ENTRYPOINT_MISSING",
+            "VERIFIER_ENTRYPOINT_INVALID",
             "SOLUTION_ROLE_MISSING",
             "SOLUTION_ORACLE_MISSING",
             "SOLUTION_ORACLE_BROKEN",
         ),
         "repair_class": "AUTO_FIX",
+        "repair_classes": ("AUTO_FIX", "ASSISTED_FIX"),
         "required_inputs": ("package_roles",),
     },
     {
@@ -161,9 +194,35 @@ def repair_class_for_check(check_id: str) -> str:
         raise ValueError(f"unknown deterministic check: {check_id!r}") from exc
 
 
+def repair_class_for_finding(
+    title: Any, affected_files: Any = None, evidence: Any = None
+) -> str | None:
+    check_id = check_for_finding_code(title)
+    if (
+        check_id == "D6"
+        and isinstance(evidence, dict)
+        and evidence.get("repair_class") == "AUTO_FIX"
+        and evidence.get("repair_scope") == "UNIQUE_SCORING_WIRING"
+        and evidence.get("unique_wiring") is True
+        and isinstance(evidence.get("source_bound_unique_proof"), dict)
+        and evidence["source_bound_unique_proof"].get("proof_status")
+        == "PROVEN"
+    ):
+        return "AUTO_FIX"
+    if check_id in {"D3", "D4"}:
+        return expected_repair_class(check_id, title, evidence)
+    d1_d2_class = repair_class_for_code(title, evidence)
+    if d1_d2_class is not None:
+        return d1_d2_class
+    return d5_repair_class_for_finding(title, affected_files)
+
+
 def _is_advisory(code: Any, evidence: Any) -> bool:
     if code == "SINGLE_COMPONENT_THRESHOLD_REACHABLE":
-        return True
+        return not (
+            isinstance(evidence, dict)
+            and evidence.get("bypass_proven") is True
+        )
     if isinstance(evidence, dict) and evidence.get("bypass_proven") is False:
         return True
     return False
@@ -190,6 +249,13 @@ def annotate_findings(
         open_finding = item.get("status", "OPEN") == "OPEN"
         repairable = item.get("repairable") is True
         blocking = bool(check_id and proven and open_finding and repairable)
+        repair_class = (
+            repair_class_for_finding(
+                code, item.get("affected_files"), item.get("evidence")
+            )
+            if check_id
+            else None
+        )
         item.update(
             {
                 "deterministic_check": check_id,
@@ -197,7 +263,10 @@ def annotate_findings(
                 "advisory": advisory,
                 "blocking": blocking,
                 "deterministic_repair_class": (
-                    repair_class_for_check(check_id) if check_id else None
+                    repair_class
+                    or repair_class_for_check(check_id)
+                    if check_id
+                    else None
                 ),
             }
         )
@@ -247,6 +316,8 @@ def evaluate_deterministic_contract(
         "package_roles": package_roles,
     }
     normalized_findings = annotate_findings(findings)
+    d5_snapshot = package_role_snapshot(package_roles)
+    d5_failures = d5_role_failures(package_roles)
     by_check: dict[str, list[dict[str, Any]]] = {key: [] for key in CHECK_IDS}
     for item in normalized_findings:
         check_id = item.get("deterministic_check")
@@ -262,6 +333,11 @@ def evaluate_deterministic_contract(
             for name in definition["required_inputs"]
             if not isinstance(inputs.get(name), dict)
         ]
+        trace = None
+        if check_id == "D6" and isinstance(inputs["checker_analysis"], dict):
+            trace = inputs["checker_analysis"].get("d6_core_output_scoring")
+            if not isinstance(trace, dict):
+                missing_inputs.append("checker_analysis.d6_core_output_scoring")
         proven = [
             item
             for item in matched
@@ -283,7 +359,15 @@ def evaluate_deterministic_contract(
                 item.get("deterministic_check") == "D5"
                 and item.get("proven_defect") is True
                 and item.get("title")
-                in {"MISSING_FILE", "PARSE_ERROR", "SOLUTION_ROLE_MISSING"}
+                in {
+                    "MISSING_FILE",
+                    "PARSE_ERROR",
+                    "INVALID_GRADING_SPEC_SCHEMA",
+                    "QUALITY_ROLE_INVALID",
+                    "VERIFIER_ENTRYPOINT_MISSING",
+                    "VERIFIER_ENTRYPOINT_INVALID",
+                    "SOLUTION_ROLE_MISSING",
+                }
                 for item in normalized_findings
             )
         ):
@@ -291,9 +375,48 @@ def evaluate_deterministic_contract(
         if missing_inputs:
             status = "NOT_ASSESSABLE"
             reason = "Required normalized contract input is unavailable."
+        elif (
+            check_id == "D5"
+            and d5_snapshot["available"]
+            and d5_failures
+            and not proven
+        ):
+            status = "FAIL"
+            reason = "One or more required quality roles or entrypoints are incomplete."
         elif proven:
             status = "FAIL"
             reason = "One or more proven deterministic findings are present."
+        elif check_id == "D6":
+            if not isinstance(trace, dict):
+                status = "NOT_ASSESSABLE"
+                reason = (
+                    "The authoritative D6 core-output scoring trace is "
+                    "unavailable."
+                )
+            elif trace.get("status") == "FAILED":
+                status = "FAIL"
+                reason = (
+                    "One or more D6 core-output scoring chains contain a "
+                    "proven defect."
+                )
+            elif trace.get("status") == "UNKNOWN":
+                status = "NOT_ASSESSABLE"
+                reason = (
+                    "D6 runtime evidence does not establish every core-output "
+                    "scoring-chain state."
+                )
+            elif trace.get("status") != "PROVEN":
+                status = "NOT_ASSESSABLE"
+                reason = (
+                    "D6 trace status is not an authoritative proven result."
+                )
+            else:
+                status = "PASS"
+                reason = (
+                    "No proven deterministic defect is present."
+                    if not advisory
+                    else "Only advisory deterministic risks are present."
+                )
         elif blocked_by:
             status = "BLOCKED"
             reason = "An earlier structural check prevents this check."
@@ -313,6 +436,18 @@ def evaluate_deterministic_contract(
                 "reason": reason,
                 "required_inputs": list(definition["required_inputs"]),
                 "missing_inputs": missing_inputs,
+                **(
+                    {
+                        "trace_status": trace.get("status")
+                        if isinstance(trace, dict)
+                        else None,
+                        "trace_schema_version": trace.get("schema_version")
+                        if isinstance(trace, dict)
+                        else None,
+                    }
+                    if check_id == "D6"
+                    else {}
+                ),
                 "blocked_by": blocked_by,
                 "finding_ids": [
                     item.get("finding_id") for item in matched
@@ -326,6 +461,14 @@ def evaluate_deterministic_contract(
                 "advisory_finding_ids": [
                     item.get("finding_id") for item in advisory
                 ],
+                **(
+                    {
+                        "package_role_state": d5_snapshot,
+                        "missing_quality_roles": d5_failures,
+                    }
+                    if check_id == "D5"
+                    else {}
+                ),
                 "recommended_repair_class": definition["repair_class"],
                 "blocking_policy": (
                     "proven_defect=true AND status=OPEN AND repairable=true"
@@ -340,6 +483,8 @@ def evaluate_deterministic_contract(
             "title": item["title"],
             "status": item.get("status", "OPEN"),
             "repair_class": item["deterministic_repair_class"],
+            "affected_files": item.get("affected_files", []),
+            "evidence": item.get("evidence", {}),
             "proven_defect": True,
             "blocking": True,
         }
@@ -347,8 +492,9 @@ def evaluate_deterministic_contract(
         if item.get("blocking") is True
     ]
     required_findings.sort(key=lambda item: item["finding_id"])
-    not_assessable = any(
-        item["status"] == "NOT_ASSESSABLE" for item in checks
+    unavailable = any(
+        item["status"] in UNAVAILABLE_CHECK_STATUSES or item["status"] == "FAIL"
+        for item in checks
     )
     if required_findings:
         repair_state = "REQUIRED"
@@ -356,11 +502,11 @@ def evaluate_deterministic_contract(
             "Every OPEN, proven, repairable D1-D6 blocker must be covered "
             "by the deterministic Repair queue."
         )
-    elif not_assessable:
+    elif unavailable:
         repair_state = "NOT_APPLICABLE"
         repair_reason = (
-            "Deterministic checks are incomplete because key normalized "
-            "contract evidence is unavailable."
+            "Deterministic checks are not publishable because one or more "
+            "checks are unavailable or failed without a repair queue."
         )
     else:
         repair_state = "CLEAN"
@@ -404,20 +550,36 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
     if value.get("check_registry") != check_registry():
         raise ValueError("deterministic check registry is stale")
     checks = value.get("checks")
-    if not isinstance(checks, list) or [
-        item.get("check_id") for item in checks if isinstance(item, dict)
+    if not isinstance(checks, list) or len(checks) != len(CHECK_IDS) or [
+        item.get("check_id") if isinstance(item, dict) else None
+        for item in checks
     ] != list(CHECK_IDS):
         raise ValueError("deterministic checks must contain D1-D6 in order")
+    finding_records: dict[str, dict[str, Any]] = {}
     for item in checks:
         if (
             not isinstance(item, dict)
             or item.get("status") not in CHECK_STATUSES
+            or not isinstance(item.get("missing_inputs"), list)
             or not isinstance(item.get("finding_ids"), list)
             or not isinstance(item.get("blocking_finding_ids"), list)
             or not isinstance(item.get("advisory_finding_ids"), list)
             or not isinstance(item.get("blocked_by"), list)
         ):
             raise ValueError("deterministic check schema is invalid")
+        if item.get("check_id") == "D6":
+            trace_status = item.get("trace_status")
+            missing_trace = "checker_analysis.d6_core_output_scoring" in item[
+                "missing_inputs"
+            ]
+            if item.get("status") == "PASS" and (
+                missing_trace or trace_status != "PROVEN"
+            ):
+                raise ValueError(
+                    "D6 PASS requires an authoritative PROVEN scoring trace"
+                )
+            if missing_trace and trace_status is not None:
+                raise ValueError("D6 trace availability is inconsistent")
         if not all(
             isinstance(finding_id, str) and finding_id
             for finding_id in item["finding_ids"]
@@ -425,6 +587,19 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
             + item["advisory_finding_ids"]
         ):
             raise ValueError("deterministic finding IDs are invalid")
+        if len(item["finding_ids"]) != len(set(item["finding_ids"])):
+            raise ValueError("deterministic finding IDs are duplicated")
+        if any(
+            finding_id not in item["finding_ids"]
+            for finding_id in item["blocking_finding_ids"]
+            + item["advisory_finding_ids"]
+        ):
+            raise ValueError("deterministic finding ownership is inconsistent")
+        for finding_id in item["finding_ids"]:
+            prior = finding_records.get(finding_id)
+            if prior is not None and prior is not item:
+                raise ValueError("deterministic finding has multiple owners")
+            finding_records[finding_id] = item
     summary = value.get("repair_summary")
     if not isinstance(summary, dict) or summary.get("state") not in {
         "CLEAN",
@@ -449,6 +624,8 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
         raise ValueError("CLEAN deterministic contract has required findings")
     if summary["state"] == "REQUIRED" and not required:
         raise ValueError("REQUIRED deterministic contract has no findings")
+    if summary.get("complete") is not (summary["state"] == "CLEAN"):
+        raise ValueError("deterministic summary completeness is inconsistent")
     blocking_ids = sorted(
         {
             finding_id
@@ -458,6 +635,8 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
     )
     if sorted(required_ids) != blocking_ids:
         raise ValueError("deterministic blocking queue is incomplete")
+    if len(required_ids) != len(set(required_ids)):
+        raise ValueError("deterministic required finding queue is duplicated")
     check_by_id = {item["check_id"]: item for item in checks}
     for item in required:
         if (
@@ -465,11 +644,43 @@ def validate_deterministic_contract(value: Any) -> dict[str, Any]:
             or item.get("finding_id") not in blocking_ids
             or item.get("check_id") not in check_by_id
             or item.get("repair_class")
-            != repair_class_for_check(item["check_id"])
+            != (
+                repair_class_for_finding(
+                    item.get("title"),
+                    item.get("affected_files"),
+                    item.get("evidence"),
+                )
+                or repair_class_for_check(item["check_id"])
+            )
             or item.get("proven_defect") is not True
             or item.get("blocking") is not True
         ):
             raise ValueError("deterministic required finding is invalid")
+        source_check = check_by_id[item["check_id"]]
+        if item["finding_id"] not in source_check["finding_ids"]:
+            raise ValueError("deterministic required finding ownership is invalid")
+        if source_check["status"] != "FAIL":
+            raise ValueError("deterministic blocking finding is not failed")
+        if item.get("status") != "OPEN":
+            raise ValueError("deterministic required finding is not OPEN")
+    if summary["state"] == "CLEAN" and any(
+        item["status"] != "PASS" for item in checks
+    ):
+        raise ValueError("CLEAN deterministic contract has non-PASS checks")
+    if summary["state"] == "NOT_APPLICABLE" and not any(
+        item["status"] in UNAVAILABLE_CHECK_STATUSES or item["status"] == "FAIL"
+        for item in checks
+    ):
+        raise ValueError(
+            "NOT_APPLICABLE deterministic contract has no unavailable or failed check"
+        )
+    if summary["state"] == "NOT_APPLICABLE" and any(
+        item["status"] == "FAIL" and item["blocking_finding_ids"]
+        for item in checks
+    ):
+        raise ValueError(
+            "NOT_APPLICABLE deterministic contract has blocking findings"
+        )
     policy = value.get("blocking_policy")
     if not isinstance(policy, dict) or policy.get("advisory_risks_block") is not False:
         raise ValueError("deterministic blocking policy is invalid")
@@ -491,6 +702,15 @@ def deterministic_repair_summary(contract: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def is_deterministic_repair_plan(plan: Any) -> bool:
+    """Return whether a plan opts into the fail-closed D1-D6 protocol."""
+
+    return isinstance(plan, dict) and (
+        plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        or isinstance(plan.get("deterministic_contract"), dict)
+    )
+
+
 def apply_deterministic_gate(
     *,
     verdict: str,
@@ -501,19 +721,57 @@ def apply_deterministic_gate(
 ) -> tuple[str, str | None]:
     """Apply the D1-D6 gate without changing rejection precedence."""
 
-    if (
-        contract["repair_summary"]["state"] != "REQUIRED"
-        or verdict != "PASS"
-        or hard_gate
-        or list(evidence_gaps)
-        or score is None
-        or score < 60
-    ):
+    gaps = list(evidence_gaps)
+    if hard_gate:
+        return (
+            "REJECT",
+            None if verdict == "REJECT" else "A Hard Gate is triggered.",
+        )
+    if gaps:
+        return (
+            "NOT_ASSESSABLE",
+            None
+            if verdict == "NOT_ASSESSABLE"
+            else "Authoritative evidence is unavailable.",
+        )
+    if score is None:
+        return (
+            "NOT_ASSESSABLE",
+            None if verdict == "NOT_ASSESSABLE" else "The authoritative score is unavailable.",
+        )
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError, OverflowError):
+        numeric_score = float("-inf")
+    if numeric_score < 60:
+        return (
+            "REJECT",
+            None if verdict == "REJECT" else "The authoritative score is below 60.",
+        )
+    if verdict != "PASS":
         return verdict, None
+    try:
+        validated_contract = validate_deterministic_contract(contract)
+    except (TypeError, ValueError):
+        return (
+            "NOT_ASSESSABLE",
+            "The D1-D6 deterministic contract is invalid or unavailable.",
+        )
+    state = validated_contract["repair_summary"]["state"]
+    if state == "REQUIRED":
+        return (
+            "CONDITIONAL",
+            "The authoritative C01-C07 score is publishable, but one or more "
+            "proven OPEN repairable D1-D6 blockers require deterministic Repair.",
+        )
+    if state != "CLEAN":
+        return (
+            "NOT_ASSESSABLE",
+            "The D1-D6 deterministic contract is not complete and cannot publish.",
+        )
     return (
-        "CONDITIONAL",
-        "The authoritative C01-C07 score is publishable, but one or more "
-        "proven OPEN repairable D1-D6 blockers require deterministic Repair.",
+        "PASS",
+        None,
     )
 
 
@@ -524,8 +782,8 @@ def validate_deterministic_plan_binding(
 
     binding = plan.get("deterministic_contract")
     if binding is None:
-        # Historical 0.1 plans remain readable.  New deterministic plans opt
-        # into this binding by carrying the field.
+        # Historical 0.1 plans remain readable as evidence archives.  They do
+        # not opt into the current deterministic publication protocol.
         return
     contract = validate_deterministic_contract(report.get("deterministic_contract"))
     if not isinstance(binding, dict):
@@ -536,6 +794,27 @@ def validate_deterministic_plan_binding(
         or binding.get("contract_digest") != contract["contract_digest"]
     ):
         raise ValueError("deterministic repair binding is stale")
+    report_audit_id = report.get("audit_id")
+    if (
+        binding.get("audit_id") is not None
+        and binding.get("audit_id") != report_audit_id
+    ):
+        raise ValueError("deterministic repair audit binding is stale")
+    required_ids = contract["repair_summary"]["required_finding_ids"]
+    if (
+        plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        and binding.get("required_finding_ids") != required_ids
+    ):
+        raise ValueError("deterministic repair queue binding is stale")
+    if plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES:
+        source_audit = plan.get("source_audit")
+        if not isinstance(source_audit, dict):
+            raise ValueError("deterministic source audit binding is absent")
+        if (
+            source_audit.get("audit_id") != report_audit_id
+            or source_audit.get("deterministic_contract") != binding
+        ):
+            raise ValueError("deterministic source audit binding is stale")
     expected = contract["repair_summary"]["required_findings"]
     planned = plan.get("findings")
     if not isinstance(planned, list):
@@ -546,7 +825,10 @@ def validate_deterministic_plan_binding(
     ]
     if not all(isinstance(item, str) and item for item in planned_ids):
         raise ValueError("deterministic plan finding IDs are invalid")
-    if planned_ids != sorted(expected_ids):
+    if (
+        len(planned_ids) != len(set(planned_ids))
+        or planned_ids != sorted(expected_ids)
+    ):
         raise ValueError(
             "deterministic repair plan must cover the complete source queue"
         )
@@ -557,7 +839,22 @@ def validate_deterministic_plan_binding(
         source = expected_by_id.get(item.get("finding_id"))
         if source is None:
             raise ValueError("deterministic plan finding is not in source queue")
-        if item.get("deterministic_check") != source["check_id"]:
+        check_id = item.get("deterministic_check")
+        if check_id not in CHECK_IDS:
+            raise ValueError("deterministic repair target check is unknown")
+        if check_id != source["check_id"]:
             raise ValueError("deterministic finding ownership is stale")
-        if item.get("repair_class") != source["repair_class"]:
+        allowed_classes = {source["repair_class"]}
+        if source["check_id"] == "D5":
+            # D5 may discover that an AUTO_FIX candidate lacks a unique
+            # implementation at plan time.  It must then be escalated to a
+            # human-assisted decision or explicitly abandoned.
+            allowed_classes.update({"ASSISTED_FIX", "ABANDON"})
+        if item.get("repair_class") not in allowed_classes:
             raise ValueError("deterministic repair class is stale")
+        if (
+            plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+            and item.get("finding_code", item.get("title"))
+            not in {source["title"], None}
+        ):
+            raise ValueError("deterministic finding code is stale")

@@ -7,8 +7,9 @@ description: Repair one audited materials-science Harbor 题包 by fixing all fi
 
 Repair one Harbor 题包 per source audit. Review supplies evidence and owns no
 mutations. The Agent writes an external, evidence-backed **batch** plan that
-lists every fixable finding from that audit; Repair validates and executes it in
-one isolated pass, then runs the equal-depth Review CLI exactly once.
+lists every OPEN blocking D1–D6 finding from that audit; Repair validates and
+executes it in one isolated pass, then runs the equal-depth Review CLI exactly
+once. The re-audit is the sole post-repair authority.
 
 ## Public seam
 
@@ -20,14 +21,27 @@ python scripts/run_repair.py <Harbor题包目录> \
   --audit-attestation <immutable-external-attestation.json>
 ```
 
-The batch plan uses schema `0.1` and binds one `audit_id` plus a `findings[]`
-list. Each finding carries its own decision, operations, evidence, and
-regressions:
+Historical plans use schema `0.1` and remain readable as evidence archives.
+New deterministic plans use
+`materials-deterministic-repair-plan/1.0` (the transitional wire spelling
+`0.2` is accepted) and bind the source deterministic schema, registry, digest,
+and complete queue. A deterministic plan must carry one `audit_id` plus a
+`findings[]` list containing every source `required_finding_id`; omission,
+unknown D1–D6 ownership, stale schema/digest, or a stale source binding fails
+closed before mutation. Each finding carries its own decision, operations,
+evidence, and regressions:
 
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "materials-deterministic-repair-plan/1.0",
   "audit_id": "authoritative audit id",
+  "deterministic_contract": {
+    "schema_version": "materials-deterministic-contract/1.0",
+    "registry_version": "materials-deterministic-check-registry/1.0",
+    "contract_digest": "sha256:...",
+    "audit_id": "authoritative audit id",
+    "required_finding_ids": ["every OPEN blocking finding"]
+  },
   "source_audit": { "audit_id": "...", "input_hashes": {}, "paper_mode": "paper_grounded", "execution_level": "E1", "core_contract_digest": "..." },
   "core_contract_digest": "frozen digest",
   "findings": [
@@ -44,8 +58,10 @@ regressions:
 }
 ```
 
-A legacy single-finding plan (top-level `finding_id`/`operations`) is still
-accepted and treated as a one-finding batch.
+A legacy single-finding plan (top-level `finding_id`/`operations`) and an
+unbound `0.1` batch are still accepted for historical compatibility. They are
+not evidence that the D1–D6 contract was assessed; a new deterministic
+publication must use the bound schema above.
 
 There is no human approval state. The closed decision classes are autonomous:
 
@@ -70,7 +86,8 @@ There is no human approval state. The closed decision classes are autonomous:
    Each operation needs one exact operation-semantic regression assertion.
 4. Run the canonical Review CLI **exactly once** at the source audit's paper
    mode and E1 execution level. Emit the before/after C01–C07 normalized
-   percentages and Δ(pp) from that single re-audit.
+   percentages and Δ(pp) from that single re-audit. No local score, finding
+   heuristic, or regression result can publish a candidate.
 
 ## Terminal states and unified fields
 
@@ -79,14 +96,18 @@ The batch resolves to one of four states, mapped to the unified terminal fields
 
 | repair_state | when | disposition | publishable | package |
 |---|---|---|---|---|
-| `REPAIRED` | re-audit PASS, no unresolved HIGH/FATAL, identity preserved, no out-of-scope change, every batch finding resolved | `PASS` | `true` | atomically published |
+| `REPAIRED` | the one equal-depth E1 re-audit is PASS, D1–D6 is CLEAN, no Hard Gate exists, identity and allowed mutation scope are preserved, and every batch finding is resolved | `PASS` | `true` | atomically published |
 | `PARTIALLY_REPAIRED` | some findings resolved but re-audit not PASS, or some `BLOCKED_EVIDENCE`/`ABANDON` remain | `CONDITIONAL` | `false` | original preserved |
 | `ABANDONED` | nothing fixable, or re-audit still FATAL / hits a Hard Gate / needs a core-science change | `REJECT` | `false` | original preserved |
 | `ROLLED_BACK` | batch apply or regression failed | source verdict | `false` | restored unchanged |
 
-**Publish invariant:** publish only on a full re-audit PASS with no unresolved
-HIGH/FATAL. Never publish a partially-fixed package. The old `PUBLISHED`
-parallel state is gone.
+**Publish invariant:** for a deterministic plan, atomic publication requires
+`PASS + deterministic CLEAN + no Hard Gate + identity preserved + allowed
+mutation scope + all target findings resolved`, with `reaudit_count=1` at E1.
+Any residual deterministic blocker is a non-published
+`PARTIALLY_REPAIRED`/`ABANDONED`/`ROLLED_BACK` result. Never publish a
+partially-fixed package. The old `PUBLISHED` state remains readable only for
+legacy certification archives.
 
 ## Attempt limit
 

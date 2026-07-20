@@ -48,7 +48,14 @@ locations.
 
 The authoritative report records every D1-D6 status, proven/blocking finding
 IDs, advisory-only findings, the complete deterministic repair queue, and the
-source-bound implementation digest. Advisory risks do not block PASS.
+source-bound implementation digest. Advisory risks do not block PASS. A
+publishable PASS requires deterministic `CLEAN`; an OPEN blocking finding at
+any severity routes to `CONDITIONAL / REPAIR_QUEUE`.
+
+New deterministic repair plans use
+`materials-deterministic-repair-plan/1.0` and bind the source contract schema,
+registry, digest, audit identity, and every `required_finding_id`. Historical
+unbound repair plan `0.1` artifacts remain evidence archives.
 
 ## 8. Resource Reachability
 
@@ -123,6 +130,9 @@ records only solve/positive-mock status and never Oracle values.
 
 After a repair re-audit, `repair_delta` records before/after normalized scores
 and `delta_pp` per C01–C07 from the single equal-depth re-audit.
+The re-audit runs exactly once at E1 and is the sole post-repair authority.
+Atomic publication additionally requires no Hard Gate, preserved identity,
+allowed mutation scope, and resolution of every target finding.
 
 ## 16. Findings
 

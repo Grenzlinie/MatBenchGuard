@@ -25,6 +25,9 @@ from canonical_status import (  # noqa: E402
     require_canonical_fields,
     validate_repair_bundle_semantics,
 )
+from deterministic_contract import (  # noqa: E402
+    validate_deterministic_contract,
+)
 from finalize_audit_output import validate_qa_axes as validate_review_qa_axes
 from prepare_audit_output import (  # noqa: E402
     collect_review_implementation_hashes,
@@ -34,7 +37,7 @@ from prepare_audit_output import (  # noqa: E402
 SCHEMA_VERSION = "materials-final-100-index/1.0"
 CERTIFIER_VERSION = "materials-final-100-certifier/1.0"
 EXECUTION_LEVEL = "E1"
-SCORING_VERSION = "materials-review-scoring/1.0"
+SCORING_VERSION = "materials-review-scoring/1.1"
 FIVE_PROBE_CLASSES = (
     "positive",
     "negative",
@@ -84,6 +87,70 @@ CONTRACT_ROLE_TYPES = {
 
 class CertificationError(ValueError):
     """Raised when persisted evidence cannot support certification."""
+
+
+def reaudit_has_no_hard_gate_for_certification(report: dict[str, Any]) -> bool:
+    summary = report.get("summary", {})
+    if not isinstance(summary, dict):
+        return False
+    if summary.get("hard_gate") is True or summary.get("hard_gate_triggered") is True:
+        return False
+    gates = report.get("hard_gates")
+    return isinstance(gates, list) and not any(
+        isinstance(gate, dict) and gate.get("status") == "FAIL"
+        for gate in gates
+    )
+
+
+def validate_persisted_reaudit_pass(report: dict[str, Any]) -> None:
+    summary = report.get("summary")
+    if (
+        not isinstance(summary, dict)
+        or summary.get("scoring_version") != SCORING_VERSION
+        or summary.get("final_verdict") != "PASS"
+        or (
+            report.get("publishability")
+            or summary.get("publication_route")
+            or summary.get("publishability")
+        )
+        != "PUBLISH_CANDIDATE"
+        or summary.get("hard_gate_triggered") is not False
+    ):
+        raise CertificationError("published re-audit is not an authoritative PASS")
+    score = summary.get("total_score")
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError, OverflowError):
+        numeric_score = float("nan")
+    if not math.isfinite(numeric_score) or not 80 <= numeric_score <= 100:
+        raise CertificationError("published re-audit score is below 80 or non-finite")
+    evidence_contract = report.get("evidence_contract")
+    if (
+        not isinstance(evidence_contract, dict)
+        or evidence_contract.get("fail_closed") is not True
+        or evidence_contract.get("gaps") != []
+    ):
+        raise CertificationError("published re-audit evidence contract is incomplete")
+    validate_qa_axes(report)
+    validate_dimensions(report)
+    validate_hard_gates(report)
+    try:
+        deterministic = validate_deterministic_contract(
+            report.get("deterministic_contract")
+        )
+    except (TypeError, ValueError) as exc:
+        raise CertificationError(
+            "published re-audit lacks deterministic CLEAN evidence"
+        ) from exc
+    if deterministic["repair_summary"]["state"] != "CLEAN":
+        raise CertificationError("published re-audit is not deterministically CLEAN")
+    if any(
+        isinstance(item, dict)
+        and item.get("blocking") is True
+        and item.get("status", "OPEN") not in {"RESOLVED", "CLOSED", "FIXED"}
+        for item in report.get("findings", [])
+    ):
+        raise CertificationError("published re-audit has residual blockers")
 
 
 def canonical_json_hash(value: Any) -> str:
@@ -800,6 +867,18 @@ def validate_paper_parent(
         validate_qa_axes(parent_report)
         validate_dimensions(parent_report)
         validate_hard_gates(parent_report)
+        try:
+            parent_deterministic = validate_deterministic_contract(
+                parent_report.get("deterministic_contract")
+            )
+        except (TypeError, ValueError) as exc:
+            raise CertificationError(
+                "paper parent lacks valid deterministic CLEAN evidence"
+            ) from exc
+        if parent_deterministic["repair_summary"]["state"] != "CLEAN":
+            raise CertificationError(
+                "paper parent is not deterministically CLEAN"
+            )
     elif mode == "no_paper":
         if parent not in {None, ""}:
             raise CertificationError("no-paper audit has an unexpected parent")
@@ -918,7 +997,7 @@ def validate_repair(
             raise CertificationError(f"repair bundle bytes are stale: {name}")
     if history.get("bundle_digest") != canonical_json_hash(bundle_hashes):
         raise CertificationError("repair bundle digest is stale")
-    if repair_status == "PUBLISHED":
+    if repair_status in {"PUBLISHED", "REPAIRED"}:
         reaudit_path = resolve_external(
             repair.get("reaudit_report_path"),
             base=batch,
@@ -981,11 +1060,28 @@ def validate_repair(
             )
             if not artifact.is_file() or file_hash(artifact) != expected_hash:
                 raise CertificationError("repair re-audit bundle bytes are stale")
+        validate_persisted_reaudit_pass(reaudit)
         reaudit_fields = validate_canonical(reaudit, context="repair re-audit")
         if reaudit_fields["review_verdict"] != "PASS":
             raise CertificationError("published repair re-audit is not PASS")
         if reaudit_fields["publishability"] != review_fields["publishability"]:
             raise CertificationError("repaired PASS publishability differs")
+        if repair_status == "REPAIRED":
+            deterministic = reaudit.get("deterministic_contract")
+            try:
+                deterministic = validate_deterministic_contract(deterministic)
+            except (TypeError, ValueError) as exc:
+                raise CertificationError(
+                    "REPAIRED re-audit lacks valid deterministic CLEAN evidence"
+                ) from exc
+            if deterministic["repair_summary"]["state"] != "CLEAN":
+                raise CertificationError(
+                    "REPAIRED re-audit is not deterministically CLEAN"
+                )
+            if not reaudit_has_no_hard_gate_for_certification(reaudit):
+                raise CertificationError(
+                    "REPAIRED re-audit contains a failed Hard Gate"
+                )
 
 
 def validate_record(
@@ -1054,6 +1150,13 @@ def validate_record(
         or summary.get("hard_gate_triggered") is not False
     ):
         raise CertificationError("report does not contain an authoritative PASS")
+    evidence_contract = report.get("evidence_contract")
+    if (
+        not isinstance(evidence_contract, dict)
+        or evidence_contract.get("fail_closed") is not True
+        or evidence_contract.get("gaps") != []
+    ):
+        raise CertificationError("PASS evidence contract is incomplete")
     if manifest.get("execution_level") != EXECUTION_LEVEL:
         raise CertificationError("E1 configuration is absent or stale")
     if report.get("configuration", {}).get("execution_level") != EXECUTION_LEVEL:
@@ -1088,6 +1191,17 @@ def validate_record(
     validate_qa_axes(report)
     validate_dimensions(report)
     validate_hard_gates(report)
+    deterministic = report.get("deterministic_contract")
+    try:
+        deterministic = validate_deterministic_contract(deterministic)
+    except (TypeError, ValueError) as exc:
+        raise CertificationError(
+            "certified PASS lacks valid deterministic CLEAN evidence"
+        ) from exc
+    if deterministic["repair_summary"]["state"] != "CLEAN":
+        raise CertificationError(
+            "certified PASS is not deterministically CLEAN"
+        )
     validate_score(report, evidence.get("cli_scoring"))
     validate_probes(checker)
     validate_boundaries(report, checker, cli_evidence)

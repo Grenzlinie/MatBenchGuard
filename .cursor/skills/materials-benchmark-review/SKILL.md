@@ -31,6 +31,11 @@ prescreen), the D1–D7 and A1–A5 tables with declared input files, the
 dimension→check mapping, and the unified terminal fields are in
 [references/checks-and-stages.md](references/checks-and-stages.md).
 
+Every authoritative E1 report emits the shared D1–D6 deterministic contract.
+Only proven OPEN repairable blockers enter its complete `REQUIRED` queue;
+advisory risks never block PASS. A PASS report is eligible for publication only
+when the contract is valid and `CLEAN`.
+
 Read [references/harbor-contract.md](references/harbor-contract.md) and
 [references/no-paper-e1.md](references/no-paper-e1.md).
 
@@ -165,7 +170,10 @@ These are exactly the five top-level classes. Task-family attacks are named
 negative/discrimination cases and nested subcoverage, never a sixth class.
 Each has explicit status/provenance. E1 executes `tests/test.sh`; if unavailable,
 direct probes are forbidden and runtime is `NOT_ASSESSABLE`. Review and repair
-re-audit are fixed at E1, with no E2 publication path.
+re-audit are fixed at E1, with no E2 publication path. Repair invokes this
+Review CLI exactly once after mutation. That equal-depth re-audit alone
+controls the post-repair verdict and deterministic CLEAN state; local repair
+heuristics and regression results cannot publish a package.
 
 ## Direct inputs
 Read [references/materials-resource-policy.md](references/materials-resource-policy.md).
@@ -214,6 +222,12 @@ only. Assessed discrimination/equivalence must use an independent non-Oracle
 fixture; when no such fixture exists, keep both probes unavailable, deduct the
 documented non-critical robustness limitation within C07, and continue scoring.
 No findings never substitutes for positive evidence.
+
+For repair publication, overall PASS is necessary but not sufficient. The
+atomic invariant is:
+`PASS + deterministic CLEAN + no Hard Gate + preserved package identity +
+allowed mutation scope + all target findings resolved`. Any residual D1–D6
+blocker is terminal and non-publishable.
 
 Preserve the pinned three-axis taxonomy labels and exact package evidence. The
 versioned runtime source is

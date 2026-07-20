@@ -100,10 +100,10 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
         required_contract = {
             "repair_summary": {"state": "REQUIRED"},
         }
-        for verdict, score, hard_gate, evidence_gaps in (
-            ("REJECT", 40, False, []),
-            ("NOT_ASSESSABLE", None, False, ["C04"]),
-            ("PASS", 90, True, []),
+        for verdict, score, hard_gate, evidence_gaps, expected in (
+            ("REJECT", 40, False, [], "REJECT"),
+            ("NOT_ASSESSABLE", None, False, ["C04"], "NOT_ASSESSABLE"),
+            ("PASS", 90, True, [], "REJECT"),
         ):
             actual, reason = apply_deterministic_gate(
                 verdict=verdict,
@@ -112,8 +112,11 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
                 evidence_gaps=evidence_gaps,
                 contract=required_contract,
             )
-            self.assertEqual(actual, verdict)
-            self.assertIsNone(reason)
+            self.assertEqual(actual, expected)
+            if expected == verdict:
+                self.assertIsNone(reason)
+            else:
+                self.assertIsNotNone(reason)
 
     def test_proven_medium_blocker_routes_high_score_to_repair_queue(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -195,7 +198,9 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
         result = evaluate_deterministic_contract(
             normalized_instruction_contract={},
             grading_contract={},
-            checker_analysis={},
+            checker_analysis={
+                "d6_core_output_scoring": {"status": "PROVEN"}
+            },
             package_roles={},
             findings=[
                 {
@@ -215,6 +220,77 @@ class MaterialsIssue27DeterministicGateTests(unittest.TestCase):
         self.assertEqual(
             result["repair_summary"]["state"], "CLEAN"
         )
+
+    def test_missing_d6_trace_is_unavailable_and_cannot_publish(self) -> None:
+        scripts = (
+            REPO_ROOT
+            / ".cursor"
+            / "skills"
+            / "materials-benchmark-review"
+            / "scripts"
+        )
+        sys.path.insert(0, str(scripts))
+        from deterministic_contract import (  # pylint: disable=import-outside-toplevel
+            apply_deterministic_gate,
+            evaluate_deterministic_contract,
+        )
+
+        contract = evaluate_deterministic_contract(
+            normalized_instruction_contract={},
+            grading_contract={},
+            checker_analysis={},
+            package_roles={},
+            findings=[],
+        )
+        d6 = next(
+            item for item in contract["checks"] if item["check_id"] == "D6"
+        )
+        self.assertEqual(d6["status"], "NOT_ASSESSABLE")
+        self.assertIn(
+            "checker_analysis.d6_core_output_scoring", d6["missing_inputs"]
+        )
+        self.assertEqual(contract["repair_summary"]["state"], "NOT_APPLICABLE")
+        verdict, _ = apply_deterministic_gate(
+            verdict="PASS",
+            score=95,
+            hard_gate=False,
+            evidence_gaps=[],
+            contract=contract,
+        )
+        self.assertEqual(verdict, "NOT_ASSESSABLE")
+
+    def test_unavailable_contract_preserves_gate_evidence_score_precedence(
+        self,
+    ) -> None:
+        scripts = (
+            REPO_ROOT
+            / ".cursor"
+            / "skills"
+            / "materials-benchmark-review"
+            / "scripts"
+        )
+        sys.path.insert(0, str(scripts))
+        from deterministic_contract import (  # pylint: disable=import-outside-toplevel
+            apply_deterministic_gate,
+        )
+
+        contract = {"repair_summary": {"state": "NOT_APPLICABLE"}}
+        cases = [
+            (90, True, [], "REJECT"),
+            (90, False, ["missing"], "NOT_ASSESSABLE"),
+            (50, False, [], "REJECT"),
+            (90, False, [], "NOT_ASSESSABLE"),
+        ]
+        for score, hard_gate, gaps, expected in cases:
+            with self.subTest(expected=expected):
+                actual, _ = apply_deterministic_gate(
+                    verdict="PASS",
+                    score=score,
+                    hard_gate=hard_gate,
+                    evidence_gaps=gaps,
+                    contract=contract,
+                )
+                self.assertEqual(actual, expected)
 
     def test_deterministic_repair_binding_requires_complete_queue(self) -> None:
         scripts = (

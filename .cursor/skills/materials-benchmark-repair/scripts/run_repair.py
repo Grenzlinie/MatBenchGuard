@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -32,9 +33,22 @@ from canonical_status import (  # noqa: E402
     canonical_fields,
     validate_repair_bundle_semantics,
 )
+from d1_d2_contract import (  # noqa: E402
+    is_structural_auto_fix_operation,
+    output_repair_proof,
+    structural_auto_fix_operation_error,
+)
 from deterministic_contract import (  # noqa: E402
+    CHECK_IDS,
+    DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
+    is_deterministic_repair_plan,
     validate_deterministic_contract,
     validate_deterministic_plan_binding,
+)
+from d5_package_completeness import validate_auto_fix_operation  # noqa: E402
+from d3_d4_checker import auto_fix_operation_error  # noqa: E402
+from d6_core_output_scoring import (  # noqa: E402
+    unique_wiring_auto_fix_operation_error,
 )
 import sandbox_runtime  # noqa: E402
 
@@ -92,6 +106,13 @@ METADATA_ROOTS = {
 }
 REQUIRED_AUDIT_EXECUTION_LEVEL = "E1"
 CORE_CONTRACT_SCHEMA = "materials-core-contract/1.0"
+CURRENT_SCORING_VERSION = "materials-review-scoring/1.1"
+HARD_GATE_CODES = (
+    "NON_MATERIALS_TASK",
+    "SCIENTIFIC_TARGET_INVALID",
+    "CHECKER_CORE_TASK_UNASSESSED",
+    "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+)
 REVIEW_IMPLEMENTATION_FILES_MANIFEST = (
     "references/review-implementation-files.json"
 )
@@ -503,6 +524,14 @@ def validate_batch_plan(root: Path, plan: dict[str, Any]) -> dict[str, Any]:
     findings = plan["findings"]
     if not findings:
         raise ValueError("batch repair plan requires at least one finding")
+    deterministic_plan = is_deterministic_repair_plan(plan)
+    if (
+        plan.get("schema_version") in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        and not isinstance(plan.get("deterministic_contract"), dict)
+    ):
+        raise ValueError(
+            "deterministic repair plan requires a source contract binding"
+        )
     seen: set[str] = set()
     for finding in findings:
         if not isinstance(finding, dict):
@@ -518,6 +547,8 @@ def validate_batch_plan(root: Path, plan: dict[str, Any]) -> dict[str, Any]:
                 "every batch finding requires a repair_class of "
                 "AUTO_FIX, ASSISTED_FIX, or ABANDON"
             )
+        if deterministic_plan and finding.get("deterministic_check") not in CHECK_IDS:
+            raise ValueError("deterministic repair target check is unknown")
         if (
             not isinstance(finding.get("justification"), str)
             or not finding["justification"].strip()
@@ -537,14 +568,21 @@ def validate_external_plan(root: Path, plan_path: Path) -> dict[str, Any]:
     if not resolved.is_file():
         raise FileNotFoundError(f"repair plan is missing: {resolved}")
     plan = read_json(resolved)
-    if not isinstance(plan, dict) or plan.get("schema_version") != "0.1":
-        raise ValueError("repair plan must use schema_version 0.1")
+    if not isinstance(plan, dict) or plan.get("schema_version") not in (
+        {"0.1"} | set(DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES)
+    ):
+        raise ValueError(
+            "repair plan must use schema_version 0.1 or the deterministic "
+            "repair-plan schema"
+        )
     if "source_audit" not in plan and isinstance(plan.get("audit_binding"), dict):
         plan["source_audit"] = plan["audit_binding"]
     if not isinstance(plan.get("audit_id"), str) or not plan["audit_id"]:
         raise ValueError("repair plan requires audit_id")
     if isinstance(plan.get("findings"), list):
         return validate_batch_plan(root, plan)
+    if is_deterministic_repair_plan(plan):
+        raise ValueError("deterministic repair plan must be a complete batch")
     if "repair_class" not in plan and plan.get("decision") in DECISIONS:
         plan["repair_class"] = plan["decision"]
     if plan.get("repair_class") not in DECISIONS:
@@ -1127,8 +1165,16 @@ def validate_precision_matrix(
     operation: dict[str, Any],
     linked: list[dict[str, Any]],
     repair_class: str,
+    repair_scope: str | None = None,
 ) -> None:
     expected = precision_kind_for(operation)
+    if (
+        repair_class == "ASSISTED_FIX"
+        and repair_scope == "SCORING_SEMANTICS"
+        and Path(str(operation.get("file"))).as_posix()
+        == "tests/checker.py"
+    ):
+        expected = "scoring_contract"
     if expected is None:
         return
     if repair_class == "AUTO_FIX" and Path(str(operation["file"])).as_posix() != (
@@ -1279,6 +1325,17 @@ def validate_precision_matrix(
         operation_field = (
             str(tokens[-1]) if isinstance(tokens, list) and tokens else None
         )
+        if expected == "scoring_contract" and operation_field is None:
+            if any(
+                precision.get("replacement") != proposed_text(operation)
+                for precision in valid
+            ):
+                raise PolicyStop(
+                    "BLOCKED_EVIDENCE",
+                    "scoring-contract evidence must bind the exact checker "
+                    "replacement.",
+                )
+            return
         if operation_field is None or any(
             precision.get("field") != operation_field
             or precision.get("value") != operation.get("value")
@@ -1366,6 +1423,26 @@ def validate_policy(
             "redefine the Harbor package's core science.",
         )
     evidence = evidence_index(root, report, manifest, plan)
+    deterministic_evidence = plan.get("deterministic_evidence")
+    if not isinstance(deterministic_evidence, dict):
+        deterministic_evidence = next(
+            (
+                item.get("evidence", {})
+                for item in report.get("findings", [])
+                if isinstance(item, dict)
+                and item.get("finding_id") == plan.get("finding_id")
+            ),
+            {},
+        )
+    if plan.get("deterministic_check") in {"D1", "D2"}:
+        deterministic_evidence = dict(
+            deterministic_evidence
+            if isinstance(deterministic_evidence, dict)
+            else {}
+        )
+        deterministic_evidence["source_bound_output_proof"] = (
+            output_repair_proof(report.get("contract_map"))
+        )
     hidden_fragments = solution_fragments(root)
     target_roles: set[str] = set()
     for operation in plan["operations"]:
@@ -1386,10 +1463,25 @@ def validate_policy(
             for line in proposed_text(operation).splitlines()
             if len(line.strip()) >= 12
         )
-    if plan["repair_class"] == "AUTO_FIX" and target_roles & {
-        "instruction",
-        "tests",
-    }:
+    unique_scoring_wiring_auto_fix = (
+        plan.get("deterministic_check") == "D6"
+        and plan.get("repair_class") == "AUTO_FIX"
+        and plan.get("repair_scope") == "UNIQUE_SCORING_WIRING"
+    )
+    structural_auto_fix = (
+        plan.get("repair_class") == "AUTO_FIX"
+        and plan.get("deterministic_check") in {"D1", "D2"}
+        and bool(plan["operations"])
+        and all(
+            is_structural_auto_fix_operation(operation)
+            for operation in plan["operations"]
+        )
+    )
+    if (
+        plan["repair_class"] == "AUTO_FIX"
+        and target_roles & {"instruction", "tests"}
+        and not (unique_scoring_wiring_auto_fix or structural_auto_fix)
+    ):
         raise PolicyStop(
             "POLICY_VIOLATION",
             "AUTO_FIX may not change the frozen core scientific contract.",
@@ -1401,6 +1493,64 @@ def validate_policy(
             "protocols together.",
         )
     for operation in plan["operations"]:
+        if plan["repair_class"] == "AUTO_FIX":
+            try:
+                if plan.get("deterministic_check") in {"D1", "D2"}:
+                    error = structural_auto_fix_operation_error(
+                        operation,
+                        deterministic_evidence.get(
+                            "source_bound_output_proof"
+                        ),
+                    )
+                    if error:
+                        raise ValueError(error)
+                elif plan.get("deterministic_check") in {"D3", "D4"}:
+                    error = auto_fix_operation_error(
+                        {
+                            "deterministic_check": plan.get("deterministic_check"),
+                            "title": plan.get("finding_code"),
+                            "evidence": deterministic_evidence,
+                        },
+                        operation,
+                    )
+                    if error:
+                        raise ValueError(error)
+                elif plan.get("deterministic_check") == "D5":
+                    validate_auto_fix_operation(
+                        root,
+                        operation,
+                        plan.get("finding_code")
+                        or (
+                            "PARSE_ERROR"
+                            if plan.get("deterministic_check") == "D5"
+                            else None
+                        ),
+                    )
+                elif (
+                    plan.get("deterministic_check") == "D6"
+                    and plan.get("repair_scope") == "UNIQUE_SCORING_WIRING"
+                ):
+                    checker_path = root / "tests/checker.py"
+                    checker_source = (
+                        checker_path.read_text(encoding="utf-8")
+                        if checker_path.is_file()
+                        else ""
+                    )
+                    error = unique_wiring_auto_fix_operation_error(
+                        {
+                            "deterministic_check": plan.get(
+                                "deterministic_check"
+                            ),
+                            "title": plan.get("finding_code"),
+                            "evidence": deterministic_evidence,
+                        },
+                        operation,
+                        checker_source,
+                    )
+                    if error:
+                        raise ValueError(error)
+            except ValueError as exc:
+                raise PolicyStop("POLICY_VIOLATION", str(exc)) from exc
         linked = linked_evidence(operation, evidence)
         _, relative = repair_target(root, operation["file"])
         if relative.parts and relative.parts[0] != "solution" and any(
@@ -1418,7 +1568,16 @@ def validate_policy(
                     "POLICY_VIOLATION",
                     "Repair would leak hidden solution content into instruction.md.",
                 )
-        validate_precision_matrix(operation, linked, plan["repair_class"])
+        if not (
+            plan["repair_class"] == "AUTO_FIX"
+            and plan.get("deterministic_check") in {"D1", "D2", "D3", "D4"}
+        ):
+            validate_precision_matrix(
+                operation,
+                linked,
+                plan["repair_class"],
+                plan.get("repair_scope"),
+            )
         expected_precision = precision_kind_for(operation)
         allowed_categories = (
             {"public_instruction", "paper"}
@@ -1809,11 +1968,109 @@ def canonical_publish_route(report: dict[str, Any]) -> str | None:
     )
 
 
+def reaudit_has_no_hard_gate(reaudit: dict[str, Any]) -> bool:
+    """Return the persisted Review hard-gate result, fail-closed."""
+
+    summary = reaudit.get("summary", {})
+    if not isinstance(summary, dict):
+        return False
+    if summary.get("hard_gate") is True or summary.get("hard_gate_triggered") is True:
+        return False
+    gates = reaudit.get("hard_gates")
+    if not isinstance(gates, list):
+        return False
+    return not any(
+        isinstance(gate, dict) and gate.get("status") == "FAIL"
+        for gate in gates
+    )
+
+
+def validate_authoritative_pass(reaudit: dict[str, Any]) -> dict[str, Any]:
+    """Validate every evidence obligation required for publication."""
+
+    if not isinstance(reaudit, dict):
+        raise ValueError("re-audit report is not an object")
+    summary = reaudit.get("summary")
+    if not isinstance(summary, dict):
+        raise ValueError("re-audit summary is absent")
+    if summary.get("final_verdict") != "PASS":
+        raise ValueError("re-audit authoritative verdict is not PASS")
+    if summary.get("scoring_version") != CURRENT_SCORING_VERSION:
+        raise ValueError(
+            "re-audit scoring schema is stale: "
+            f"{summary.get('scoring_version')!r}"
+        )
+    if canonical_publish_route(reaudit) != "PUBLISH_CANDIDATE":
+        raise ValueError("re-audit authoritative route is not PUBLISH_CANDIDATE")
+    if summary.get("hard_gate_triggered") is not False:
+        raise ValueError("re-audit has a triggered Hard Gate")
+    score = summary.get("total_score")
+    try:
+        numeric_score = float(score)
+    except (TypeError, ValueError, OverflowError):
+        numeric_score = float("nan")
+    if not math.isfinite(numeric_score) or not 80 <= numeric_score <= 100:
+        raise ValueError("re-audit authoritative score is below 80 or non-finite")
+    evidence_contract = reaudit.get("evidence_contract")
+    if (
+        not isinstance(evidence_contract, dict)
+        or evidence_contract.get("fail_closed") is not True
+        or evidence_contract.get("gaps") != []
+    ):
+        raise ValueError("re-audit evidence contract is incomplete")
+    gates = reaudit.get("hard_gates")
+    if not isinstance(gates, list) or [
+        item.get("code") for item in gates if isinstance(item, dict)
+    ] != list(HARD_GATE_CODES):
+        raise ValueError("re-audit Hard Gates are incomplete")
+    if any(
+        not isinstance(gate, dict)
+        or gate.get("status") != "PASS"
+        or not isinstance(gate.get("evidence"), list)
+        or not gate["evidence"]
+        for gate in gates
+    ):
+        raise ValueError("all four re-audit Hard Gates must PASS with evidence")
+    deterministic = reaudit.get("deterministic_contract")
+    try:
+        deterministic = validate_deterministic_contract(deterministic)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "equal-depth re-audit lacks valid deterministic CLEAN evidence"
+        ) from exc
+    if deterministic["repair_summary"]["state"] != "CLEAN":
+        raise ValueError("equal-depth re-audit did not return deterministic CLEAN")
+    residual = [
+        item.get("finding_id")
+        for item in reaudit.get("findings", [])
+        if isinstance(item, dict)
+        and item.get("blocking") is True
+        and item.get("status", "OPEN") not in {"RESOLVED", "CLOSED", "FIXED"}
+    ]
+    if residual:
+        raise ValueError(
+            "re-audit has residual blocking findings: " + ", ".join(residual)
+        )
+    return {
+        "authoritative_pass": True,
+        "score": numeric_score,
+        "evidence_contract_fail_closed": True,
+        "evidence_contract_gaps": [],
+        "hard_gate_codes": list(HARD_GATE_CODES),
+        "hard_gate_statuses": ["PASS"] * len(HARD_GATE_CODES),
+        "hard_gate_evidence": True,
+        "deterministic_state": "CLEAN",
+        "residual_blocking_finding_ids": [],
+    }
+
+
 def validate_reaudit(
     candidate: Path,
     reaudit: dict[str, Any],
     source_finding: dict[str, Any],
     source_report: dict[str, Any],
+    *,
+    require_deterministic: bool = True,
 ) -> dict[str, Any]:
     summary = reaudit.get("summary", {})
     disposition_path = candidate / "benchmark_audit/disposition.json"
@@ -1830,14 +2087,6 @@ def validate_reaudit(
     )
     if verdict != "PASS" or route != "PUBLISH_CANDIDATE":
         raise ValueError("equal-depth re-audit did not route PASS to PUBLISH_CANDIDATE")
-    if "deterministic_contract" in reaudit:
-        deterministic = validate_deterministic_contract(
-            reaudit["deterministic_contract"]
-        )
-        if deterministic["repair_summary"]["state"] != "CLEAN":
-            raise ValueError(
-                "equal-depth re-audit did not return deterministic CLEAN"
-            )
     source_key = finding_key(source_finding)
     if source_key and any(
         finding_key(item) == source_key
@@ -1845,11 +2094,16 @@ def validate_reaudit(
         if isinstance(item, dict)
     ):
         raise ValueError("target finding remains open after re-audit")
+    pass_evidence = validate_authoritative_pass(reaudit)
     configuration = reaudit.get("configuration", {})
     manifest_path = candidate / "benchmark_audit/audit_manifest.json"
     manifest = read_json(manifest_path) if manifest_path.is_file() else {}
     if configuration.get("execution_level") != REQUIRED_AUDIT_EXECUTION_LEVEL:
         raise ValueError("re-audit execution level is not E1")
+    if configuration.get("paper_mode") != source_report.get(
+        "configuration", {}
+    ).get("paper_mode"):
+        raise ValueError("re-audit paper mode is not equal to the source audit")
     manifest_hashes = manifest.get("input_hashes")
     current_hashes = (
         {
@@ -1879,6 +2133,14 @@ def validate_reaudit(
             "execution_level": configuration.get("execution_level"),
         },
         "reaudit_audit_id": reaudit.get("audit_id"),
+        "reaudit_count": 1,
+        "reaudit_verdict": verdict,
+        "publication_route": route,
+        **pass_evidence,
+        "hard_gate_free": True,
+        "identity_preserved": True,
+        "mutation_scope_allowed": True,
+        "residual_blocking_finding_ids": [],
         "reaudit_finding_ids": [
             item.get("finding_id")
             for item in reaudit.get("findings", [])
@@ -2356,6 +2618,10 @@ def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]
         "audit_id": plan["audit_id"],
         "finding_id": finding["finding_id"],
         "deterministic_check": finding.get("deterministic_check"),
+        "finding_code": finding.get("title", finding.get("code")),
+        "repair_scope": finding.get(
+            "repair_scope", plan.get("repair_scope")
+        ),
         "repair_class": finding["repair_class"],
         "justification": finding["justification"],
         "core_science_change": finding.get(
@@ -2442,6 +2708,15 @@ def validate_source_audit_binding_batch(
             "frozen core-contract digest is stale or incomplete",
         )
     external_binding_hashes(root, plan, manifest)
+    if plan.get("deterministic_contract") is not None:
+        try:
+            validate_deterministic_contract(report.get("deterministic_contract"))
+            validate_deterministic_plan_binding(report, plan)
+        except ValueError as exc:
+            raise PolicyStop(
+                "BLOCKED_EVIDENCE",
+                f"deterministic repair binding is invalid: {exc}",
+            ) from exc
     return source_audit
 
 
@@ -2470,7 +2745,11 @@ def validate_fresh_audit_batch(
     for finding in plan["findings"]:
         if (
             finding.get("repair_class") != "ABANDON"
-            and finding["finding_id"] not in findings_by_id
+            and (
+                finding["finding_id"] not in findings_by_id
+                or findings_by_id[finding["finding_id"]].get("status")
+                != "OPEN"
+            )
         ):
             raise ValueError(
                 f"repair plan finding is not open in the audit: "
@@ -2497,11 +2776,83 @@ def check_operation_policy(
     evidence: dict[str, dict[str, Any]],
     hidden_fragments: set[str],
     repair_class: str,
+    *,
+    deterministic_check: str | None = None,
+    finding_code: str | None = None,
+    deterministic_evidence: dict[str, Any] | None = None,
+    repair_scope: str | None = None,
 ) -> None:
     """Per-operation evidence-precision policy (raises PolicyStop on failure)."""
 
     linked = linked_evidence(operation, evidence)
     _, relative = repair_target(root, operation["file"])
+    structural_auto_fix = (
+        repair_class == "AUTO_FIX"
+        and deterministic_check in {"D1", "D2"}
+        and is_structural_auto_fix_operation(operation)
+    )
+    if structural_auto_fix:
+        error = structural_auto_fix_operation_error(
+            operation,
+            (deterministic_evidence or {}).get(
+                "source_bound_output_proof"
+            ),
+        )
+        if error:
+            raise PolicyStop("POLICY_VIOLATION", error)
+    if (
+        repair_class == "AUTO_FIX"
+        and deterministic_check in {"D1", "D2"}
+        and not structural_auto_fix
+    ):
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "D1/D2 AUTO_FIX is limited to unambiguous output path/file "
+            "synchronization.",
+        )
+    if repair_class == "AUTO_FIX" and not structural_auto_fix:
+        try:
+            if deterministic_check in {"D3", "D4"}:
+                error = auto_fix_operation_error(
+                    {
+                        "deterministic_check": deterministic_check,
+                        "title": finding_code,
+                        "evidence": deterministic_evidence or {},
+                    },
+                    operation,
+                )
+                if error:
+                    raise ValueError(error)
+            elif (
+                deterministic_check == "D6"
+                and repair_scope == "UNIQUE_SCORING_WIRING"
+            ):
+                checker_path = root / "tests/checker.py"
+                checker_source = (
+                    checker_path.read_text(encoding="utf-8")
+                    if checker_path.is_file()
+                    else ""
+                )
+                error = unique_wiring_auto_fix_operation_error(
+                    {
+                        "deterministic_check": deterministic_check,
+                        "title": finding_code,
+                        "evidence": deterministic_evidence or {},
+                    },
+                    operation,
+                    checker_source,
+                )
+                if error:
+                    raise ValueError(error)
+            elif deterministic_check == "D5":
+                validate_auto_fix_operation(
+                    root,
+                    operation,
+                    finding_code
+                    or ("PARSE_ERROR" if deterministic_check == "D5" else None),
+                )
+        except ValueError as exc:
+            raise PolicyStop("POLICY_VIOLATION", str(exc)) from exc
     if relative.parts and relative.parts[0] != "solution" and any(
         item.get("source_category") == "solution_oracle" for item in linked
     ):
@@ -2517,10 +2868,21 @@ def check_operation_policy(
                 "POLICY_VIOLATION",
                 "Repair would leak hidden solution content into instruction.md.",
             )
-    validate_precision_matrix(operation, linked, repair_class)
+    if not (
+        repair_class == "AUTO_FIX"
+        and deterministic_check in {"D3", "D4"}
+    ) and not structural_auto_fix:
+        validate_precision_matrix(
+            operation,
+            linked,
+            repair_class,
+            repair_scope,
+        )
     expected_precision = precision_kind_for(operation)
     allowed_categories = (
-        {"public_instruction", "paper"}
+        {"audit_finding", "public_instruction", "checker_contract", "paper"}
+        if structural_auto_fix
+        else {"public_instruction", "paper"}
         if expected_precision == "scientific_method"
         else {
             "audit_finding",
@@ -2537,7 +2899,7 @@ def check_operation_policy(
             "Evidence source role cannot support this scientific/schema/"
             "scoring change.",
         )
-    if relative.as_posix() == "instruction.md" and any(
+    if relative.as_posix() == "instruction.md" and not structural_auto_fix and any(
         Path(str(item["source"])).parts[:1] == ("solution",) for item in linked
     ):
         raise PolicyStop(
@@ -2584,10 +2946,24 @@ def classify_finding(
                 for line in proposed_text(operation).splitlines()
                 if len(line.strip()) >= 12
             )
-    if fplan["repair_class"] == "AUTO_FIX" and target_roles & {
-        "instruction",
-        "tests",
-    }:
+    if (
+        fplan["repair_class"] == "AUTO_FIX"
+        and target_roles & {"instruction", "tests"}
+        and not (
+            (
+                fplan.get("deterministic_check") == "D6"
+                and fplan.get("repair_scope") == "UNIQUE_SCORING_WIRING"
+            )
+            or (
+                fplan.get("deterministic_check") in {"D1", "D2"}
+                and bool(fplan["operations"])
+                and all(
+                    is_structural_auto_fix_operation(operation)
+                    for operation in fplan["operations"]
+                )
+            )
+        )
+    ):
         raise PolicyStop(
             "POLICY_VIOLATION",
             "AUTO_FIX may not change the frozen core scientific contract.",
@@ -2603,7 +2979,15 @@ def classify_finding(
     for operation in fplan["operations"]:
         try:
             check_operation_policy(
-                root, operation, evidence, hidden_fragments, fplan["repair_class"]
+                root,
+                operation,
+                evidence,
+                hidden_fragments,
+                fplan["repair_class"],
+                deterministic_check=fplan.get("deterministic_check"),
+                finding_code=fplan.get("finding_code"),
+                deterministic_evidence=fplan.get("deterministic_evidence"),
+                repair_scope=fplan.get("repair_scope"),
             )
         except PolicyStop as stop:
             blocked_operations.append(
@@ -2812,6 +3196,15 @@ def repair_batch(
                 }
             )
             continue
+        fplan["deterministic_evidence"] = dict(
+            finding_obj.get("evidence", {})
+            if isinstance(finding_obj.get("evidence"), dict)
+            else {}
+        )
+        if finding.get("deterministic_check") in {"D1", "D2"}:
+            fplan["deterministic_evidence"]["source_bound_output_proof"] = (
+                output_repair_proof(report.get("contract_map"))
+            )
         try:
             evidence, finding_valid_ops, finding_blocked_ops = classify_finding(
                 root, report, audit_manifest, fplan
@@ -2902,6 +3295,16 @@ def repair_batch(
             candidate, planned_regressions, "after", regression_results
         )
         reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
+        try:
+            pass_evidence = validate_authoritative_pass(reaudit)
+        except ValueError as exc:
+            pass_evidence = {
+                "authoritative_pass": False,
+                "authoritative_pass_error": str(exc),
+            }
+        else:
+            pass_evidence["authoritative_pass"] = True
+        assert_mutation_boundary(snapshot, candidate, operation_files)
     except Exception as exc:  # noqa: BLE001
         repair_state = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
         decision = "ASSISTED_FIX" if repair_state == "ROLLED_BACK" else "ABANDON"
@@ -2970,18 +3373,33 @@ def repair_batch(
     has_fatal = any(
         item.get("severity") == "FATAL" for item in reaudit_findings
     ) or bool(summary.get("hard_gate"))
-    deterministic_clean = True
-    if "deterministic_contract" in reaudit:
-        deterministic = validate_deterministic_contract(
-            reaudit["deterministic_contract"]
-        )
+    require_deterministic = is_deterministic_repair_plan(plan)
+    hard_gate_free = (
+        reaudit_has_no_hard_gate(reaudit)
+        if require_deterministic or "hard_gates" in reaudit
+        else True
+    )
+    if not hard_gate_free:
+        has_fatal = True
+    deterministic_clean = False
+    deterministic = None
+    if isinstance(reaudit.get("deterministic_contract"), dict):
+        try:
+            deterministic = validate_deterministic_contract(
+                reaudit["deterministic_contract"]
+            )
+        except (TypeError, ValueError):
+            deterministic = None
         deterministic_clean = (
-            deterministic["repair_summary"]["state"] == "CLEAN"
+            deterministic is not None
+            and deterministic["repair_summary"]["state"] == "CLEAN"
         )
     fully_passed = (
         verdict == "PASS"
         and route == "PUBLISH_CANDIDATE"
+        and pass_evidence.get("authoritative_pass") is True
         and deterministic_clean
+        and hard_gate_free
         and not unresolved_findings
         and not targets_still_open
         and package_identity(candidate, directory_name=root.name) == identity
@@ -2991,6 +3409,28 @@ def repair_batch(
     comparison = {
         "target_resolved": fully_passed,
         "reaudit_audit_id": reaudit.get("audit_id"),
+        "reaudit_count": 1,
+        "reaudit_verdict": verdict,
+        "publication_route": route,
+        "deterministic_state": (
+            deterministic["repair_summary"]["state"]
+            if deterministic is not None
+            else "LEGACY_UNBOUND"
+        ),
+        "hard_gate_free": hard_gate_free,
+        "identity_preserved": (
+            package_identity(candidate, directory_name=root.name) == identity
+        ),
+        "mutation_scope_allowed": True,
+        "residual_blocking_finding_ids": (
+            [
+                item.get("finding_id")
+                for item in reaudit_findings
+                if item.get("blocking") is True
+            ]
+            if isinstance(reaudit_findings, list)
+            else []
+        ),
         "resolved_findings": resolved_targets,
         "unresolved_findings": unresolved_findings,
         "source_finding": {
@@ -3008,6 +3448,7 @@ def repair_batch(
             "execution_level": execution_level,
         },
         "repair_delta": repair_delta,
+        **pass_evidence,
     }
 
     if not fully_passed:
@@ -3268,7 +3709,11 @@ def repair(
         )
         reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
         re_audit_comparison = validate_reaudit(
-            candidate, reaudit, finding, report
+            candidate,
+            reaudit,
+            finding,
+            report,
+            require_deterministic=is_deterministic_repair_plan(plan),
         )
         assert_mutation_boundary(snapshot, candidate, operation_files)
         if package_identity(candidate, directory_name=root.name) != identity:

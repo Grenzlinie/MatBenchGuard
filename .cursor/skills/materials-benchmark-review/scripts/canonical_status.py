@@ -10,7 +10,13 @@ These fields deliberately model four different concerns:
 
 from __future__ import annotations
 
+import math
 from typing import Any
+
+from deterministic_contract import (
+    DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES,
+    LEGACY_REPAIR_PLAN_SCHEMA_VERSION,
+)
 
 
 REVIEW_VERDICTS = frozenset(
@@ -193,7 +199,10 @@ def validate_repair_bundle_semantics(
         expected_repair_decision=fields["repair_decision"],
         expected_repair_status=fields["repair_status"],
     )
-    if plan.get("schema_version") != "0.1":
+    if plan.get("schema_version") not in (
+        {LEGACY_REPAIR_PLAN_SCHEMA_VERSION}
+        | set(DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES)
+    ):
         raise ValueError("repair_plan.json schema_version is invalid")
     # ``REPAIRED`` is the batch-model success state; ``PUBLISHED`` is the legacy
     # single-finding success value.  Both atomically publish the fixed package.
@@ -365,6 +374,81 @@ def validate_repair_bundle_semantics(
         or not isinstance(comparison.get("reaudit_configuration"), dict)
     ):
         raise ValueError("re_audit_comparison.json semantic schema is invalid")
+    deterministic_plan = (
+        plan.get("schema_version")
+        in DETERMINISTIC_REPAIR_PLAN_SCHEMA_ALIASES
+        or isinstance(plan.get("deterministic_contract"), dict)
+    )
+    if published and deterministic_plan:
+        binding = plan.get("deterministic_contract")
+        if (
+            not isinstance(binding, dict)
+            or not isinstance(binding.get("schema_version"), str)
+            or not isinstance(binding.get("registry_version"), str)
+            or not isinstance(binding.get("contract_digest"), str)
+            or not binding["contract_digest"].startswith("sha256:")
+            or not isinstance(binding.get("required_finding_ids"), list)
+            or not binding["required_finding_ids"]
+            or not all(
+                isinstance(item, str) and item for item in binding["required_finding_ids"]
+            )
+            or len(binding["required_finding_ids"])
+            != len(set(binding["required_finding_ids"]))
+        ):
+            raise ValueError("published deterministic plan binding is incomplete")
+        planned_findings = plan.get("findings")
+        if not isinstance(planned_findings, list) or [
+            item.get("finding_id")
+            for item in planned_findings
+            if isinstance(item, dict)
+        ] != sorted(binding["required_finding_ids"]):
+            raise ValueError("published deterministic plan queue is incomplete")
+        source_audit = plan.get("source_audit")
+        if not isinstance(source_audit, dict):
+            raise ValueError("published deterministic source audit is absent")
+        if (
+            source_audit.get("audit_id") != plan.get("audit_id")
+            or source_audit.get("deterministic_contract") != binding
+        ):
+            raise ValueError("published deterministic source binding is stale")
+    if published:
+        required_comparison = {
+            "reaudit_count": 1,
+            "reaudit_verdict": "PASS",
+            "publication_route": "PUBLISH_CANDIDATE",
+            "deterministic_state": "CLEAN",
+            "hard_gate_free": True,
+            "evidence_contract_fail_closed": True,
+            "evidence_contract_gaps": [],
+            "hard_gate_codes": [
+                "NON_MATERIALS_TASK",
+                "SCIENTIFIC_TARGET_INVALID",
+                "CHECKER_CORE_TASK_UNASSESSED",
+                "INDISPENSABLE_DIRECT_INPUT_UNAVAILABLE",
+            ],
+            "hard_gate_statuses": ["PASS", "PASS", "PASS", "PASS"],
+            "hard_gate_evidence": True,
+            "identity_preserved": True,
+            "mutation_scope_allowed": True,
+            "target_resolved": True,
+            "residual_blocking_finding_ids": [],
+        }
+        if any(
+            comparison.get(key) != expected
+            for key, expected in required_comparison.items()
+        ):
+            raise ValueError(
+                "published repair does not satisfy the atomic publication invariant"
+            )
+        score = comparison.get("score")
+        try:
+            numeric_score = float(score)
+        except (TypeError, ValueError, OverflowError):
+            numeric_score = float("nan")
+        if not math.isfinite(numeric_score) or not 80 <= numeric_score <= 100:
+            raise ValueError(
+                "published repair lacks a finite authoritative score >= 80"
+            )
     if not isinstance(patch, dict) or (
         patch.get("schema_version") != "0.1"
         or patch.get("files") != changes
