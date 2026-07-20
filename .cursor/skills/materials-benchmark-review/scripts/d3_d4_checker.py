@@ -8,6 +8,7 @@ algorithms.  Those changes remain assisted repairs.
 from __future__ import annotations
 
 import ast
+import hashlib
 import math
 from typing import Any, Iterable
 
@@ -127,6 +128,212 @@ def _return_proof(
     }
 
 
+def _source_span(node: ast.AST) -> dict[str, int] | None:
+    """Return a stable, source-relative span for a parsed AST node."""
+
+    start_line = getattr(node, "lineno", None)
+    start_column = getattr(node, "col_offset", None)
+    end_line = getattr(node, "end_lineno", None)
+    end_column = getattr(node, "end_col_offset", None)
+    if not all(
+        isinstance(value, int)
+        for value in (start_line, start_column, end_line, end_column)
+    ):
+        return None
+    return {
+        "start_line": start_line,
+        "start_column": start_column,
+        "end_line": end_line,
+        "end_column": end_column,
+    }
+
+
+def _parameter_names(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[str] | None:
+    """Return exact positional parameters, rejecting implicit mappings."""
+
+    arguments = function.args
+    if (
+        arguments.vararg is not None
+        or arguments.kwarg is not None
+        or arguments.kwonlyargs
+        or arguments.defaults
+    ):
+        return None
+    positional = [*arguments.posonlyargs, *arguments.args]
+    return [argument.arg for argument in positional]
+
+
+def _outer_local_bindings(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> set[str]:
+    """Collect names bound by the outer function, excluding nested scopes."""
+
+    bindings = set(_parameter_names(function) or ())
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    bindings.add(child.name)
+                continue
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store):
+                bindings.add(child.id)
+            visit(child)
+
+    visit(function)
+    return bindings
+
+
+def _loaded_names(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> set[str]:
+    """Collect names loaded by an inner function, excluding nested scopes."""
+
+    loaded: set[str] = set()
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load):
+                loaded.add(child.id)
+            visit(child)
+
+    visit(function)
+    return loaded
+
+
+def _nested_wrapper_return_proof(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    source_hash: str,
+) -> dict[str, Any]:
+    """Prove only the exact ``return inner(outer_args...)`` wrapper shape."""
+
+    base: dict[str, Any] = {
+        "proof_status": "AMBIGUOUS",
+        "auto_fix_provable": False,
+        "source_hash": source_hash,
+        "outer_function": function.name,
+        "outer_function_span": _source_span(function),
+        "function_name": function.name,
+        "function_span": _source_span(function),
+    }
+    if isinstance(function, ast.AsyncFunctionDef):
+        base["reason"] = "outer scorer must be synchronous"
+        return base
+    body = list(function.body)
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(body[0].value, ast.Constant)
+        and isinstance(body[0].value.value, str)
+    ):
+        body = body[1:]
+    nested = [
+        node
+        for node in body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    if len(body) not in {1, 2} or len(nested) != 1:
+        base["reason"] = (
+            "outer scorer must contain exactly one nested function and no "
+            "other operation except its direct call"
+        )
+        return base
+    inner = nested[0]
+    if not isinstance(inner, ast.FunctionDef) or inner.decorator_list:
+        base["reason"] = "nested scorer must be a plain synchronous function"
+        return base
+    call: ast.Call | None = None
+    if len(body) == 2:
+        call_statement = body[1]
+        if not (
+            isinstance(call_statement, ast.Expr)
+            and isinstance(call_statement.value, ast.Call)
+        ):
+            base["reason"] = (
+                "nested scorer call is not the unique direct operation"
+            )
+            return base
+        call = call_statement.value
+        if not isinstance(call.func, ast.Name) or call.func.id != inner.name:
+            base["reason"] = (
+                "outer call does not uniquely target the nested scorer"
+            )
+            return base
+        if call.keywords or any(
+            isinstance(argument, ast.Starred) for argument in call.args
+        ):
+            base["reason"] = "nested scorer arguments are not positionally unique"
+            return base
+
+    outer_parameters = _parameter_names(function)
+    inner_parameters = _parameter_names(inner)
+    if (
+        outer_parameters is None
+        or inner_parameters is None
+        or len(outer_parameters) != len(inner_parameters)
+        or (
+            call is not None
+            and (
+                len(call.args) != len(outer_parameters)
+                or any(
+                    not isinstance(argument, ast.Name)
+                    or argument.id != parameter
+                    for argument, parameter in zip(
+                        call.args, outer_parameters
+                    )
+                )
+            )
+        )
+    ):
+        base["reason"] = (
+            "nested scorer signature or call arguments do not have a "
+            "one-to-one positional mapping"
+        )
+        return base
+
+    inner_local_parameters = set(inner_parameters)
+    closure_names = (
+        _loaded_names(inner) - inner_local_parameters - {inner.name}
+    ) & _outer_local_bindings(function)
+    if closure_names or any(
+        isinstance(node, (ast.Nonlocal, ast.Global))
+        for node in ast.walk(inner)
+    ):
+        base["reason"] = "nested scorer has ambiguous closure or scope capture"
+        return base
+    inner_status, inner_returns = return_status(inner)
+    if not inner_returns or inner_status == "ALWAYS_RETURNS_NONE":
+        base["reason"] = "nested function is not a value-returning scorer"
+        return base
+
+    expression = (
+        ast.unparse(call)
+        if call is not None
+        else f"{inner.name}({', '.join(outer_parameters)})"
+    )
+    return {
+        **base,
+        "proof_status": "PROVEN",
+        "auto_fix_provable": True,
+        "inner_function": inner.name,
+        "inner_function_span": _source_span(inner),
+        "call_span": _source_span(call) if call is not None else None,
+        "source_span": _source_span(call or function),
+        "call_derived": call is None,
+        "return_expression": expression,
+        "argument_mapping": dict(zip(inner_parameters, outer_parameters)),
+        "inner_return_status": inner_status,
+    }
+
+
 def _scorer_candidate(name: str, step_id: str) -> bool:
     lowered = name.casefold()
     step = step_id.casefold()
@@ -167,6 +374,9 @@ def analyze_checker_health(
     """
 
     scorer_bindings = dict(scorer_bindings or {})
+    source_hash = "sha256:" + hashlib.sha256(
+        checker_source.encode("utf-8")
+    ).hexdigest()
     parse_error: str | None = None
     tree: ast.AST | None = None
     try:
@@ -235,6 +445,11 @@ def analyze_checker_health(
         )
         if literal_zero_divisions:
             division_by_zero.append(scorer_id)
+        return_proof = (
+            _nested_wrapper_return_proof(function, source_hash)
+            if status == "MISSING_DIRECT_RETURN"
+            else _return_proof(status, returns)
+        )
         function_status[scorer_id] = {
             "function": function_name,
             "status": status,
@@ -248,10 +463,7 @@ def analyze_checker_health(
                 if dynamic_divisions
                 else "NO_DIVISION_FOUND_STATIC"
             ),
-            "return_proof": _return_proof(
-                status if status == "PARTIAL_RETURN_PATHS" else return_status(function)[0],
-                returns,
-            ),
+            "return_proof": return_proof,
         }
 
     if tree is not None:
@@ -296,6 +508,7 @@ def analyze_checker_health(
                 )
 
     return {
+        "source_hash": source_hash,
         "parse_status": "ERROR"
         if parse_error
         else "OK"
@@ -340,6 +553,10 @@ def add_checker_health_issues(
             {"parse_error": health.get("parse_error")},
         )
     if health.get("missing_returns"):
+        proof = {
+            scorer_id: health["scorer_status"][scorer_id].get("return_proof", {})
+            for scorer_id in health["missing_returns"]
+        }
         add(
             "SCORER_MISSING_RETURN",
             "bound scoring functions do not return their computed score: "
@@ -347,7 +564,13 @@ def add_checker_health_issues(
             {
                 "scorer_ids": health["missing_returns"],
                 "root_cause": "checker_scorer_runtime_contract",
-                "auto_fix_provable": False,
+                "return_proof": proof,
+                "auto_fix_provable": bool(proof) and all(
+                    isinstance(item, dict)
+                    and item.get("proof_status") == "PROVEN"
+                    and item.get("auto_fix_provable") is True
+                    for item in proof.values()
+                ),
             },
         )
     if health.get("incomplete_returns"):
@@ -623,8 +846,23 @@ def expected_repair_class(
             return "AUTO_FIX"
         if code in D3_AUTO_RETURN_CODES:
             proof = evidence.get("return_proof", {}) if isinstance(evidence, dict) else {}
+            if not isinstance(proof, dict):
+                return "ASSISTED_FIX"
+            if code == "SCORER_MISSING_RETURN":
+                return (
+                    "AUTO_FIX"
+                    if proof
+                    and all(
+                        isinstance(item, dict)
+                        and item.get("proof_status") == "PROVEN"
+                        and item.get("auto_fix_provable") is True
+                        for item in proof.values()
+                    )
+                    else "ASSISTED_FIX"
+                )
             if any(
-                isinstance(item, dict) and item.get("auto_fix_provable") is True
+                isinstance(item, dict)
+                and item.get("auto_fix_provable") is True
                 for item in proof.values()
             ):
                 return "AUTO_FIX"
@@ -657,6 +895,10 @@ def auto_fix_operation_error(
             for proof in proofs.values()
             if isinstance(proof, dict)
             and proof.get("auto_fix_provable") is True
+            and (
+                code != "SCORER_MISSING_RETURN"
+                or proof.get("proof_status") == "PROVEN"
+            )
         ]
         new_text = str(operation.get("new", operation.get("content", "")))
         if not any(f"return {expression}" in new_text for expression in expressions):

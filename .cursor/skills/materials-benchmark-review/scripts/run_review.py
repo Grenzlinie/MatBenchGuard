@@ -751,6 +751,7 @@ def run_review(
     resource_timeout: float = 8,
     e2_smoke_plan: Path | None = None,
     allow_private_network: bool = False,
+    audit_output_dir: Path | None = None,
 ) -> dict[str, Any]:
     if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
         raise ValueError(
@@ -810,7 +811,12 @@ def run_review(
             )
         if preflight_hard_gate_codes:
             paper_mode = "no_paper"
-    context = prepare_workspace(root, paper_mode, execution_level)
+    context = prepare_workspace(
+        root,
+        paper_mode,
+        execution_level,
+        audit_output_dir=audit_output_dir,
+    )
     temp_dir = Path(context["audit_temp_dir"])
     static_result = static_audit(
         root, temp_dir / "evidence/static_checks/audit_static.json"
@@ -940,7 +946,15 @@ def run_review(
         paper_skip_reason=paper_skip_reason,
         external_bindings=external_bindings,
     )
-    return finalize_audit(root)
+    output_root = Path(context["audit_output_root"])
+    return finalize_audit(
+        root,
+        output_dir=(
+            None
+            if output_root.resolve() == root.resolve()
+            else output_root
+        ),
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -986,6 +1000,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--attestation-output",
         help="new immutable source-audit attestation path outside the Harbor 题包",
     )
+    parser.add_argument(
+        "--audit-output-dir",
+        help=(
+            "external directory that owns benchmark_audit and "
+            "benchmark_audit_history; defaults to the Harbor 题包"
+        ),
+    )
     return parser
 
 
@@ -1013,11 +1034,17 @@ def main() -> int:
                 else None
             ),
             allow_private_network=arguments.allow_private_network,
+            audit_output_dir=(
+                Path(arguments.audit_output_dir)
+                if arguments.audit_output_dir
+                else None
+            ),
         )
         if arguments.attestation_output:
             result["audit_attestation"] = write_audit_attestation(
                 Path(result["benchmark_root"]),
                 Path(arguments.attestation_output),
+                audit_dir=Path(result["audit_dir"]),
             )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0

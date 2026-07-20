@@ -90,6 +90,7 @@ NEGATIVE_PROBE_CASES = frozenset(
 )
 FIXTURE_MANIFEST_NAME = "fixture_manifest.json"
 FIXTURE_MANIFEST_SCHEMA = "materials-known-valid-fixture/1.0"
+REPAIR_FIXTURE_LINEAGE_SCHEMA = "materials-repair-fixture-lineage/1.0"
 FORBIDDEN_FIXTURE_PARTS = {
     "solution",
     "tests",
@@ -409,6 +410,64 @@ def validate_known_valid_fixture(
         if (root / role).is_file()
     }
     current_fixture_hashes = fixture_hashes(fixture, specification)
+    lineage = manifest.get("repair_reaudit_lineage")
+    lineage_provenance: dict[str, Any] | None = None
+    if lineage is not None:
+        if not isinstance(lineage, dict):
+            raise ValueError("known-valid repair fixture lineage is invalid")
+        parent_name = lineage.get("parent_manifest_file")
+        parent_path = fixture / str(parent_name)
+        if (
+            lineage.get("schema_version") != REPAIR_FIXTURE_LINEAGE_SCHEMA
+            or parent_name != "fixture_manifest.parent.json"
+            or parent_path.parent != fixture
+            or not parent_path.is_file()
+            or parent_path.is_symlink()
+            or lineage.get("parent_manifest_hash") != sha256_file(parent_path)
+            or lineage.get("fixture_bytes_preserved") is not True
+            or lineage.get("oracle_used") is not False
+            or not isinstance(lineage.get("source_audit_id"), str)
+            or not lineage["source_audit_id"]
+        ):
+            raise ValueError("known-valid repair fixture lineage is invalid")
+        parent = read_json(parent_path)
+        parent_source_hashes = (
+            parent.get("source_role_hashes")
+            if isinstance(parent, dict)
+            else None
+        )
+        changed_roles = (
+            sorted(
+                role
+                for role in set(parent_source_hashes)
+                | set(current_source_hashes)
+                if parent_source_hashes.get(role)
+                != current_source_hashes.get(role)
+            )
+            if isinstance(parent_source_hashes, dict)
+            else None
+        )
+        if (
+            not isinstance(parent, dict)
+            or parent.get("schema_version") != FIXTURE_MANIFEST_SCHEMA
+            or parent.get("source_kind") != "INDEPENDENT_PUBLIC_FIXTURE"
+            or parent.get("public") is not True
+            or parent.get("oracle_used") is not False
+            or parent.get("fixture_hashes") != current_fixture_hashes
+            or lineage.get("parent_fixture_hashes")
+            != current_fixture_hashes
+            or lineage.get("changed_source_roles") != changed_roles
+            or not changed_roles
+        ):
+            raise ValueError("known-valid repair fixture lineage is invalid")
+        lineage_provenance = {
+            "schema_version": REPAIR_FIXTURE_LINEAGE_SCHEMA,
+            "parent_manifest_hash": lineage["parent_manifest_hash"],
+            "source_audit_id": lineage["source_audit_id"],
+            "changed_source_roles": changed_roles,
+            "fixture_bytes_preserved": True,
+            "oracle_used": False,
+        }
     if (
         manifest.get("schema_version") != FIXTURE_MANIFEST_SCHEMA
         or manifest.get("source_kind") != "INDEPENDENT_PUBLIC_FIXTURE"
@@ -427,6 +486,7 @@ def validate_known_valid_fixture(
         "fixture_hashes": current_fixture_hashes,
         "source_role_hashes": current_source_hashes,
         "fixture_manifest_hash": sha256_file(manifest_path),
+        "repair_reaudit_lineage": lineage_provenance,
     }
 
 

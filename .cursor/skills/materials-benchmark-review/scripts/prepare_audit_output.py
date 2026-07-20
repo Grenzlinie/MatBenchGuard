@@ -395,7 +395,9 @@ def audit_attestation_payload(audit_dir: Path) -> dict[str, Any]:
 
 
 def write_audit_attestation(
-    benchmark_root: Path, output_path: Path
+    benchmark_root: Path,
+    output_path: Path,
+    audit_dir: Path | None = None,
 ) -> dict[str, Any]:
     benchmark_root = benchmark_root.expanduser().resolve()
     output_path = output_path.expanduser().resolve()
@@ -405,7 +407,11 @@ def write_audit_attestation(
         raise FileExistsError(
             "audit attestation output is immutable and must not already exist"
         )
-    payload = audit_attestation_payload(benchmark_root / "benchmark_audit")
+    payload = audit_attestation_payload(
+        audit_dir.expanduser().resolve()
+        if audit_dir is not None
+        else benchmark_root / "benchmark_audit"
+    )
     encoded = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
@@ -474,7 +480,10 @@ def record_paper_input_hashes(root: Path, temp_dir: Path) -> None:
 
 
 def prepare_workspace(
-    root: Path, paper_mode: str, execution_level: str
+    root: Path,
+    paper_mode: str,
+    execution_level: str,
+    audit_output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Prepare a new candidate audit without moving the authoritative prior one."""
     if execution_level != AUTHORITATIVE_EXECUTION_LEVEL:
@@ -482,8 +491,21 @@ def prepare_workspace(
             "authoritative materials review is E1-only; "
             f"received execution level {execution_level!r}"
         )
+    resolved_root = root.expanduser().resolve()
+    output_root = (
+        audit_output_dir.expanduser().resolve()
+        if audit_output_dir is not None
+        else resolved_root
+    )
+    if audit_output_dir is not None and (
+        output_root == resolved_root
+        or output_root.is_relative_to(resolved_root)
+    ):
+        raise ValueError(
+            "audit output directory must remain outside the Harbor 题包"
+        )
     parent_audit_id: str | None = None
-    previous_manifest = root / "benchmark_audit/audit_manifest.json"
+    previous_manifest = output_root / "benchmark_audit/audit_manifest.json"
     if paper_mode == "paper_grounded" and previous_manifest.is_file():
         previous = json.loads(
             previous_manifest.read_text(encoding="utf-8")
@@ -491,7 +513,7 @@ def prepare_workspace(
         candidate = previous.get("audit_id")
         if isinstance(candidate, str) and candidate:
             parent_audit_id = candidate
-    temp_dir = root / ".benchmark_audit_tmp"
+    temp_dir = output_root / ".benchmark_audit_tmp"
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
     for relative in (
@@ -578,7 +600,8 @@ def prepare_workspace(
         "audit_id": audit_id,
         "benchmark_root": str(root),
         "audit_temp_dir": str(temp_dir),
-        "final_audit_dir": str(root / "benchmark_audit"),
+        "audit_output_root": str(output_root),
+        "final_audit_dir": str(output_root / "benchmark_audit"),
         "paper_mode": paper_mode,
         "execution_level": execution_level,
     }

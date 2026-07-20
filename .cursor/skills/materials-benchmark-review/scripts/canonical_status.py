@@ -35,11 +35,12 @@ REPAIR_STATUSES = frozenset(
         # not a terminal outcome and never publishes a package.
         "DETERMINISTIC_REPAIR_REQUIRED",
         # ``PUBLISHED`` is retained only for the legacy certification archive.
-        # The Repair skill now emits the batch four-state lifecycle below.
+        # The Repair skill now emits the batch five-state lifecycle below.
         "PUBLISHED",
         "REPAIRED",
         "PARTIALLY_REPAIRED",
         "ROLLED_BACK",
+        "INFRASTRUCTURE_BLOCKED",
         "ABANDONED",
     }
 )
@@ -118,7 +119,11 @@ def canonical_fields(
         )
     if repair_status == "ABANDONED" and repair_decision != "ABANDON":
         raise ValueError("ABANDONED repair_status requires ABANDON decision")
-    if repair_status in {"ROLLED_BACK", "PARTIALLY_REPAIRED"} and (
+    if repair_status in {
+        "ROLLED_BACK",
+        "PARTIALLY_REPAIRED",
+        "INFRASTRUCTURE_BLOCKED",
+    } and (
         repair_decision
         not in {
             "AUTO_FIX",
@@ -218,12 +223,34 @@ def validate_repair_bundle_semantics(
         if not isinstance(plan.get(name), str) or not plan[name].strip():
             raise ValueError(f"repair_plan.json requires {name}")
     if is_batch:
-        plan_operations = [
-            operation
-            for finding in batch_findings
-            if isinstance(finding, dict)
-            for operation in finding.get("operations", [])
-        ]
+        plan_operations = []
+        operations_by_id: dict[str, dict[str, Any]] = {}
+        for finding in batch_findings:
+            if not isinstance(finding, dict):
+                continue
+            for operation in finding.get("operations", []):
+                operation_id = (
+                    operation.get("id")
+                    if isinstance(operation, dict)
+                    else None
+                )
+                previous = operations_by_id.get(operation_id)
+                if previous is None:
+                    if isinstance(operation_id, str):
+                        operations_by_id[operation_id] = operation
+                    plan_operations.append(operation)
+                    continue
+                comparable = lambda value: {
+                    key: item
+                    for key, item in value.items()
+                    if key != "evidence_ids"
+                }
+                if (
+                    not isinstance(operation_id, str)
+                    or operation.get("primary_finding_id") is None
+                    or comparable(previous) != comparable(operation)
+                ):
+                    plan_operations.append(operation)
         plan_regressions = [
             specification
             for finding in batch_findings

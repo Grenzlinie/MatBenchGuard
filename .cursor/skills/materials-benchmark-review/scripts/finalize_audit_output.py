@@ -3789,8 +3789,8 @@ def validate_bundle(temp_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]
     return report, findings
 
 
-def previous_audit_destination(root: Path, audit_id: str) -> Path:
-    history = root / "benchmark_audit_history"
+def previous_audit_destination(output_root: Path, audit_id: str) -> Path:
+    history = output_root / "benchmark_audit_history"
     history.mkdir(exist_ok=True)
     destination = history / audit_id
     suffix = 1
@@ -3800,9 +3800,25 @@ def previous_audit_destination(root: Path, audit_id: str) -> Path:
     return destination
 
 
-def finalize_audit(root: Path) -> dict[str, Any]:
-    temp_dir = root / ".benchmark_audit_tmp"
-    final_dir = root / "benchmark_audit"
+def finalize_audit(
+    root: Path,
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
+    resolved_root = root.expanduser().resolve()
+    output_root = (
+        output_dir.expanduser().resolve()
+        if output_dir is not None
+        else resolved_root
+    )
+    if output_dir is not None and (
+        output_root == resolved_root
+        or output_root.is_relative_to(resolved_root)
+    ):
+        raise ValueError(
+            "audit output directory must remain outside the Harbor 题包"
+        )
+    temp_dir = output_root / ".benchmark_audit_tmp"
+    final_dir = output_root / "benchmark_audit"
     if not temp_dir.is_dir():
         raise FileNotFoundError(temp_dir)
     report, findings = validate_bundle(temp_dir)
@@ -3857,7 +3873,7 @@ def finalize_audit(root: Path) -> dict[str, Any]:
                 )
             except (OSError, ValueError, json.JSONDecodeError):
                 pass
-        archived = previous_audit_destination(root, previous_id)
+        archived = previous_audit_destination(output_root, previous_id)
         final_dir.rename(archived)
     try:
         temp_dir.rename(final_dir)

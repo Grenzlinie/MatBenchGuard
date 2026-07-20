@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -53,7 +55,7 @@ from d6_core_output_scoring import (  # noqa: E402
 import sandbox_runtime  # noqa: E402
 
 DECISIONS = {"AUTO_FIX", "ASSISTED_FIX", "ABANDON"}
-# The batch four-state lifecycle mapped onto the unified terminal fields
+# The batch five-state lifecycle mapped onto the unified terminal fields
 # (disposition, publishable, repair_state).  ``ROLLED_BACK`` keeps the source
 # verdict because the authoritative package is restored unchanged.
 TERMINAL_STATE_FIELDS = {
@@ -61,7 +63,10 @@ TERMINAL_STATE_FIELDS = {
     "PARTIALLY_REPAIRED": ("CONDITIONAL", False),
     "ABANDONED": ("REJECT", False),
     "ROLLED_BACK": (None, False),
+    "INFRASTRUCTURE_BLOCKED": (None, False),
 }
+MAX_CONTROL_FAILURES_PER_FINGERPRINT = 2
+MAX_CONTROL_FAILURES_PER_SCOPE = 3
 
 
 def terminal_fields(
@@ -191,6 +196,28 @@ def write_json(path: Path, value: Any) -> None:
         json.dumps(value, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+
+
+def source_audit_dir(root: Path, plan: dict[str, Any]) -> Path:
+    raw = plan.get("source_audit_dir")
+    audit = (
+        Path(str(raw)).expanduser().resolve()
+        if raw is not None
+        else root / "benchmark_audit"
+    )
+    if raw is not None and audit.is_relative_to(root.resolve()):
+        raise ValueError("source audit directory must remain outside the Harbor 题包")
+    return audit
+
+
+def repair_output_root(root: Path, plan: dict[str, Any]) -> Path | None:
+    raw = plan.get("repair_output_dir")
+    if raw is None:
+        return None
+    output = Path(str(raw)).expanduser().resolve()
+    if output.is_relative_to(root.resolve()):
+        raise ValueError("repair output directory must remain outside the Harbor 题包")
+    return output
 
 
 def sha256_file(path: Path) -> str:
@@ -670,8 +697,9 @@ def authenticate_audit_bundle(
     report: dict[str, Any],
     manifest: dict[str, Any],
     disposition: dict[str, Any],
+    audit: Path | None = None,
 ) -> None:
-    audit = root / "benchmark_audit"
+    audit = audit or (root / "benchmark_audit")
     audit_id = manifest.get("audit_id")
     if (
         not isinstance(audit_id, str)
@@ -890,12 +918,14 @@ def validate_fresh_audit(
     plan: dict[str, Any],
     attestation_path: Path,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    audit = root / "benchmark_audit"
+    audit = source_audit_dir(root, plan)
     validate_audit_attestation(root, audit, attestation_path)
     report = read_json(audit / "audit_report.json")
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
-    authenticate_audit_bundle(root, report, manifest, disposition)
+    authenticate_audit_bundle(
+        root, report, manifest, disposition, audit=audit
+    )
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
@@ -970,7 +1000,7 @@ def evidence_index(
                     "BLOCKED_EVIDENCE",
                     "Audit evidence must bind the selected finding.",
                 )
-            local = root / "benchmark_audit/audit_report.json"
+            local = source_audit_dir(root, plan) / "audit_report.json"
             source_category = "audit_finding"
         else:
             try:
@@ -996,7 +1026,10 @@ def evidence_index(
             raise PolicyStop(
                 "BLOCKED_EVIDENCE", f"Evidence source does not exist: {source}"
             )
-        if local.is_symlink() or not local.resolve().is_relative_to(root.resolve()):
+        if local.is_symlink() or (
+            source_category != "audit_finding"
+            and not local.resolve().is_relative_to(root.resolve())
+        ):
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
                 f"Evidence source escapes the Harbor 题包: {source}",
@@ -1395,6 +1428,497 @@ def proposed_text(operation: dict[str, Any]) -> str:
     return value if isinstance(value, str) else ""
 
 
+_D3_RETURN_AUTO_CODES = frozenset(
+    {"SCORER_MISSING_RETURN", "SCORER_RETURN_NOT_TOTAL"}
+)
+_D4_NORMALIZATION_AUTO_CODES = frozenset({"WEIGHTS_NOT_ONE"})
+
+
+def _nested_dicts(value: Any) -> Iterable[dict[str, Any]]:
+    """Yield JSON object descendants without trusting a report shape."""
+
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _nested_dicts(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _nested_dicts(child)
+
+
+def _return_proofs(evidence: Any) -> list[dict[str, Any]]:
+    """Return unique nested-wrapper proofs from Review evidence."""
+
+    proofs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in _nested_dicts(evidence):
+        direct = item.get("return_proof")
+        candidates: Iterable[Any]
+        if isinstance(direct, dict):
+            if "return_expression" in direct or "proof_status" in direct:
+                candidates = (direct,)
+            else:
+                candidates = direct.values()
+        else:
+            candidates = ()
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            if "return_expression" not in candidate:
+                continue
+            marker = json.dumps(
+                candidate, ensure_ascii=False, sort_keys=True, default=str
+            )
+            if marker not in seen:
+                seen.add(marker)
+                proofs.append(candidate)
+        if "return_expression" in item and "proof_status" in item:
+            marker = json.dumps(
+                item, ensure_ascii=False, sort_keys=True, default=str
+            )
+            if marker not in seen:
+                seen.add(marker)
+                proofs.append(item)
+    return proofs
+
+
+def _proof_span(proof: dict[str, Any]) -> dict[str, int] | None:
+    """Normalize the source span spellings emitted by Review."""
+
+    raw = (
+        proof.get("function_span")
+        or proof.get("source_span")
+        or proof.get("span")
+    )
+    if not isinstance(raw, dict):
+        return None
+    if all(
+        key in raw
+        for key in ("lineno", "end_lineno", "col_offset", "end_col_offset")
+    ):
+        values = {
+            key: raw.get(key)
+            for key in ("lineno", "end_lineno", "col_offset", "end_col_offset")
+        }
+    elif all(key in raw for key in ("lineno", "end_lineno")):
+        values = {
+            "lineno": raw.get("lineno"),
+            "end_lineno": raw.get("end_lineno"),
+            "col_offset": raw.get("col_offset"),
+            "end_col_offset": raw.get("end_col_offset"),
+        }
+    elif all(key in raw for key in ("start_line", "end_line")):
+        values = {
+            "lineno": raw.get("start_line"),
+            "end_lineno": raw.get("end_line"),
+            "col_offset": raw.get("start_col", raw.get("col_offset")),
+            "end_col_offset": raw.get(
+                "end_col", raw.get("end_col_offset")
+            ),
+        }
+    elif isinstance(raw.get("start"), dict) and isinstance(
+        raw.get("end"), dict
+    ):
+        start = raw["start"]
+        end = raw["end"]
+        values = {
+            "lineno": start.get("line"),
+            "end_lineno": end.get("line"),
+            "col_offset": start.get("column", start.get("col")),
+            "end_col_offset": end.get("column", end.get("col")),
+        }
+    else:
+        return None
+    if any(
+        isinstance(value, bool) or not isinstance(value, int)
+        for value in values.values()
+        if value is not None
+    ):
+        return None
+    if values["col_offset"] is None or values["end_col_offset"] is None:
+        # Line-only proofs are still source-bound, but a supplied partial
+        # column span is not.  This keeps malformed spans fail-closed.
+        if raw.keys() & {"col_offset", "end_col_offset", "start_col", "end_col"}:
+            return None
+        values.pop("col_offset")
+        values.pop("end_col_offset")
+    return values  # type: ignore[return-value]
+
+
+def _function_name(proof: dict[str, Any]) -> str | None:
+    for key in ("function_name", "outer_function", "function"):
+        value = proof.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _source_hash(proof: dict[str, Any]) -> str | None:
+    for key in ("source_hash", "checker_source_hash"):
+        value = proof.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _node_span(node: ast.AST) -> dict[str, int]:
+    return {
+        key: getattr(node, key)
+        for key in ("lineno", "end_lineno", "col_offset", "end_col_offset")
+        if getattr(node, key, None) is not None
+    }
+
+
+def _proof_matches_function(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    proof: dict[str, Any],
+) -> bool:
+    span = _proof_span(proof)
+    if span is None:
+        return False
+    actual = _node_span(function)
+    return all(actual.get(key) == value for key, value in span.items())
+
+
+def _owned_returns(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[ast.Return]:
+    """Return statements owned by a function, excluding nested definitions."""
+
+    returns: list[ast.Return] = []
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if isinstance(child, ast.Return):
+                returns.append(child)
+                continue
+            visit(child)
+
+    visit(function)
+    return returns
+
+
+def _parse_expression(value: Any) -> ast.expr | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = ast.parse(value, mode="eval")
+    except SyntaxError:
+        return None
+    return parsed.body
+
+
+def _unique_function(
+    tree: ast.AST, name: str
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == name
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _d3_proof_is_structurally_bound(evidence: Any) -> bool:
+    proofs = _return_proofs(evidence)
+    return bool(
+        proofs
+        and any(
+            proof.get("proof_status") == "PROVEN"
+            and proof.get("auto_fix_provable", True) is True
+            and _function_name(proof)
+            and _source_hash(proof)
+            and _proof_span(proof) is not None
+            and _parse_expression(proof.get("return_expression")) is not None
+            for proof in proofs
+        )
+    )
+
+
+def _d4_proof_is_structurally_bound(evidence: Any) -> bool:
+    if not isinstance(evidence, dict):
+        return False
+    return (
+        evidence.get("ratio_preserving_normalization") is True
+        and isinstance(evidence.get("weights"), list)
+        and isinstance(evidence.get("normalized_weights"), list)
+        and bool(evidence["weights"])
+        and len(evidence["weights"]) == len(evidence["normalized_weights"])
+    )
+
+
+def is_proof_bound_d3_d4_auto_fix(
+    repair_class: str,
+    deterministic_check: str | None,
+    finding_code: str | None,
+    evidence: Any,
+) -> bool:
+    """Return whether a D3/D4 AUTO_FIX may bypass patch precision."""
+
+    if repair_class != "AUTO_FIX":
+        return False
+    if deterministic_check == "D3":
+        return (
+            finding_code in _D3_RETURN_AUTO_CODES
+            and _d3_proof_is_structurally_bound(evidence)
+        )
+    if deterministic_check == "D4":
+        return (
+            finding_code in _D4_NORMALIZATION_AUTO_CODES
+            and _d4_proof_is_structurally_bound(evidence)
+        )
+    return False
+
+
+def _validate_d3_return_operation(
+    root: Path, evidence: Any, operation: dict[str, Any]
+) -> str | None:
+    if operation.get("file") != "tests/checker.py":
+        return "D3 return AUTO_FIX must target tests/checker.py"
+    if operation.get("type") not in {"replace_text", "text_replace"}:
+        return "D3 return AUTO_FIX must replace checker source text"
+    checker = root / "tests/checker.py"
+    if not checker.is_file() or checker.is_symlink():
+        return "D3 return AUTO_FIX checker source is missing"
+    source = checker.read_text(encoding="utf-8")
+    source_hash = sha256_file(checker)
+    old = operation.get("old")
+    new = operation.get("new")
+    count = operation.get("count", 1)
+    if (
+        not isinstance(old, str)
+        or not old
+        or not isinstance(new, str)
+        or not isinstance(count, int)
+        or count != 1
+        or source.count(old) != 1
+    ):
+        return "D3 return AUTO_FIX replacement is not unique in current source"
+    try:
+        before_tree = ast.parse(source)
+        after_tree = ast.parse(source.replace(old, new, 1))
+    except SyntaxError:
+        return "D3 return AUTO_FIX would leave checker.py unparseable"
+
+    matches: list[
+        tuple[
+            dict[str, Any],
+            ast.FunctionDef | ast.AsyncFunctionDef,
+            ast.FunctionDef | ast.AsyncFunctionDef,
+            ast.expr,
+        ]
+    ] = []
+    for proof in _return_proofs(evidence):
+        if proof.get("proof_status") != "PROVEN":
+            continue
+        if proof.get("auto_fix_provable", True) is not True:
+            continue
+        if _source_hash(proof) != source_hash:
+            continue
+        name = _function_name(proof)
+        if not name:
+            continue
+        before_function = _unique_function(before_tree, name)
+        after_function = _unique_function(after_tree, name)
+        expression = _parse_expression(proof.get("return_expression"))
+        if (
+            before_function is None
+            or after_function is None
+            or expression is None
+            or not _proof_matches_function(before_function, proof)
+            or not after_function.body
+        ):
+            continue
+        appended = after_function.body[-1]
+        if (
+            isinstance(appended, ast.Return)
+            and appended.value is not None
+            and ast.dump(appended.value, include_attributes=False)
+            == ast.dump(expression, include_attributes=False)
+            and len(_owned_returns(after_function))
+            == len(_owned_returns(before_function)) + 1
+        ):
+            matches.append(
+                (proof, before_function, after_function, expression)
+            )
+    if len(matches) != 1:
+        return "D3 return AUTO_FIX source/function proof is stale or ambiguous"
+    proof, before_function, after_function, expression = matches[0]
+    before_returns = _owned_returns(before_function)
+    if before_function.body and isinstance(before_function.body[-1], ast.Return):
+        return "D3 return AUTO_FIX targets a function that already returns"
+
+    appended = after_function.body[-1]
+    if not isinstance(appended, ast.Return) or appended.value is None:
+        return "D3 return AUTO_FIX must append a value return"
+    if ast.dump(appended.value, include_attributes=False) != ast.dump(
+        expression, include_attributes=False
+    ):
+        return "D3 return AUTO_FIX operation differs from return proof"
+    if len(_owned_returns(after_function)) != len(before_returns) + 1:
+        return "D3 return AUTO_FIX changes more than the proven return path"
+
+    # Remove only the appended return and compare the complete AST.  This
+    # rejects threshold/Gold/scoring edits hidden in the same text operation.
+    after_function.body.pop()
+    if ast.dump(before_tree, include_attributes=False) != ast.dump(
+        after_tree, include_attributes=False
+    ):
+        return "D3 return AUTO_FIX contains an unproven semantic change"
+    return None
+
+
+def _d4_component_id(value: Any, index: int) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    candidate = value.get("id") or value.get("output_file") or f"step-{index}"
+    return str(candidate)
+
+
+def _validate_d4_normalization_operation(
+    root: Path, evidence: Any, operation: dict[str, Any]
+) -> str | None:
+    if operation.get("file") != "tests/grading_spec.json":
+        return "D4 normalization AUTO_FIX must target tests/grading_spec.json"
+    if operation.get("type") != "json_set":
+        return "D4 normalization AUTO_FIX must use json_set"
+    path = operation.get("path")
+    if (
+        not isinstance(path, list)
+        or len(path) < 3
+        or path[-1] != "weight"
+        or not isinstance(path[-2], int)
+        or isinstance(path[-2], bool)
+    ):
+        return "D4 normalization AUTO_FIX must target a step weight"
+    weights = evidence.get("weights") if isinstance(evidence, dict) else None
+    normalized = (
+        evidence.get("normalized_weights") if isinstance(evidence, dict) else None
+    )
+    if not isinstance(weights, list) or not isinstance(normalized, list):
+        return "D4 normalization AUTO_FIX lacks typed weight proof"
+    raw_values: dict[str, float] = {}
+    for item in weights:
+        if not isinstance(item, dict):
+            return "D4 normalization AUTO_FIX has malformed source weights"
+        component_id = item.get("component_id")
+        value = item.get("value")
+        if (
+            not isinstance(component_id, str)
+            or component_id in raw_values
+            or isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or float(value) <= 0
+        ):
+            return "D4 normalization AUTO_FIX has invalid source weights"
+        raw_values[component_id] = float(value)
+    expected = {
+        item.get("component_id"): item.get("value")
+        for item in normalized
+        if isinstance(item, dict)
+    }
+    if len(expected) != len(normalized):
+        return "D4 normalization AUTO_FIX has duplicate normalized components"
+    if set(expected) != set(raw_values):
+        return "D4 normalization AUTO_FIX source/normalized components differ"
+    total = sum(raw_values.values())
+    if not math.isfinite(total) or total <= 0:
+        return "D4 normalization AUTO_FIX source weights are not normalizable"
+    for component_id, value in expected.items():
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(float(value))
+            or float(value) <= 0
+            or not math.isclose(
+                float(value),
+                raw_values[component_id] / total,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+        ):
+            return "D4 normalization AUTO_FIX proof is not ratio-preserving"
+    document_path = root / "tests/grading_spec.json"
+    try:
+        document = read_json(document_path)
+        present, steps = json_path_value(document, path[:-2])
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return "D4 normalization AUTO_FIX grading source is unavailable"
+    if not present or not isinstance(steps, list):
+        return "D4 normalization AUTO_FIX path does not resolve to steps"
+    index = path[-2]
+    if index < 0 or index >= len(steps):
+        return "D4 normalization AUTO_FIX step index is out of range"
+    if not isinstance(steps[index], dict):
+        return "D4 normalization AUTO_FIX step is not an object"
+    component = _d4_component_id(steps[index], index)
+    if component not in expected:
+        return "D4 normalization AUTO_FIX component is not in proof"
+    raw = next(
+        (
+            item.get("value")
+            for item in weights
+            if isinstance(item, dict) and item.get("component_id") == component
+        ),
+        None,
+    )
+    if raw is None or steps[index].get("weight") != raw:
+        return "D4 normalization AUTO_FIX source/proof values drifted"
+    replacement = operation.get("value")
+    if replacement != expected[component]:
+        return "D4 normalization AUTO_FIX does not preserve the proven ratios"
+    if (
+        isinstance(replacement, bool)
+        or not isinstance(replacement, (int, float))
+        or not math.isfinite(float(replacement))
+    ):
+        return "D4 normalization AUTO_FIX replacement is not finite"
+    return None
+
+
+def proof_bound_auto_fix_operation_error(
+    root: Path,
+    finding: dict[str, Any],
+    operation: dict[str, Any],
+) -> str | None:
+    """Validate a proof-bound D3/D4 operation before it reaches apply."""
+
+    check_id = finding.get("deterministic_check")
+    code = finding.get("title", finding.get("code"))
+    evidence = finding.get("evidence")
+    if not is_proof_bound_d3_d4_auto_fix(
+        "AUTO_FIX", check_id, code, evidence
+    ):
+        return "D3/D4 AUTO_FIX is not bound to a complete deterministic proof"
+    if check_id == "D3":
+        error = _validate_d3_return_operation(root, evidence, operation)
+    else:
+        error = _validate_d4_normalization_operation(root, evidence, operation)
+    if error:
+        return error
+
+    # Keep the established Review-side validator in the path.  Older Review
+    # reports classified SCORER_MISSING_RETURN conservatively; the source/AST
+    # proof above is the narrower Repair-side authorization for that one code.
+    legacy_error = auto_fix_operation_error(finding, operation)
+    if (
+        legacy_error
+        and not (
+            check_id == "D3"
+            and code == "SCORER_MISSING_RETURN"
+            and legacy_error == "AUTO_FIX is not proven safe for this D3/D4 finding"
+        )
+    ):
+        return legacy_error
+    return None
+
+
 def solution_fragments(root: Path) -> set[str]:
     solution = root / "solution"
     if not solution.is_dir():
@@ -1477,10 +2001,20 @@ def validate_policy(
             for operation in plan["operations"]
         )
     )
+    proof_bound_auto_fix = is_proof_bound_d3_d4_auto_fix(
+        plan.get("repair_class"),
+        plan.get("deterministic_check"),
+        plan.get("finding_code"),
+        deterministic_evidence,
+    )
     if (
         plan["repair_class"] == "AUTO_FIX"
         and target_roles & {"instruction", "tests"}
-        and not (unique_scoring_wiring_auto_fix or structural_auto_fix)
+        and not (
+            unique_scoring_wiring_auto_fix
+            or structural_auto_fix
+            or proof_bound_auto_fix
+        )
     ):
         raise PolicyStop(
             "POLICY_VIOLATION",
@@ -1505,7 +2039,8 @@ def validate_policy(
                     if error:
                         raise ValueError(error)
                 elif plan.get("deterministic_check") in {"D3", "D4"}:
-                    error = auto_fix_operation_error(
+                    error = proof_bound_auto_fix_operation_error(
+                        root,
                         {
                             "deterministic_check": plan.get("deterministic_check"),
                             "title": plan.get("finding_code"),
@@ -1570,7 +2105,10 @@ def validate_policy(
                 )
         if not (
             plan["repair_class"] == "AUTO_FIX"
-            and plan.get("deterministic_check") in {"D1", "D2", "D3", "D4"}
+            and (
+                plan.get("deterministic_check") in {"D1", "D2"}
+                or proof_bound_auto_fix
+            )
         ):
             validate_precision_matrix(
                 operation,
@@ -1877,6 +2415,59 @@ def report_configuration(report: dict[str, Any]) -> tuple[str, str]:
     return paper_mode, execution_level
 
 
+def rebound_known_valid_fixture(
+    candidate: Path,
+    source: Path,
+    plan: dict[str, Any],
+) -> Path:
+    """Copy public fixture bytes and bind them to candidate quality sources."""
+
+    import dynamic_checker_probe as checker_probe
+
+    destination = candidate.parent / "re_audit_public_fixture"
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(source, destination)
+    manifest_path = destination / checker_probe.FIXTURE_MANIFEST_NAME
+    parent_manifest_path = destination / "fixture_manifest.parent.json"
+    shutil.copy2(manifest_path, parent_manifest_path)
+    parent_manifest = read_json(parent_manifest_path)
+    manifest = dict(parent_manifest)
+    specification = read_json(candidate / "tests/grading_spec.json")
+    candidate_source_hashes = {
+        role: sha256_file(candidate / role)
+        for role in sorted(checker_probe.QUALITY_EVIDENCE_ROLES)
+        if (candidate / role).is_file()
+    }
+    current_fixture_hashes = checker_probe.fixture_hashes(
+        destination, specification
+    )
+    if parent_manifest.get("fixture_hashes") != current_fixture_hashes:
+        raise ValueError(
+            "repair re-audit fixture bytes differ from the source fixture"
+        )
+    parent_source_hashes = parent_manifest.get("source_role_hashes", {})
+    changed_roles = sorted(
+        role
+        for role in set(parent_source_hashes) | set(candidate_source_hashes)
+        if parent_source_hashes.get(role) != candidate_source_hashes.get(role)
+    )
+    manifest["source_role_hashes"] = candidate_source_hashes
+    manifest["fixture_hashes"] = current_fixture_hashes
+    manifest["repair_reaudit_lineage"] = {
+        "schema_version": "materials-repair-fixture-lineage/1.0",
+        "parent_manifest_file": parent_manifest_path.name,
+        "parent_manifest_hash": sha256_file(parent_manifest_path),
+        "parent_fixture_hashes": current_fixture_hashes,
+        "source_audit_id": plan.get("audit_id"),
+        "changed_source_roles": changed_roles,
+        "fixture_bytes_preserved": True,
+        "oracle_used": False,
+    }
+    write_json(manifest_path, manifest)
+    return destination
+
+
 def run_equal_depth_review(
     candidate: Path,
     report: dict[str, Any],
@@ -1923,6 +2514,8 @@ def run_equal_depth_review(
             raise ValueError(f"{key} must remain external to the candidate")
         if not external.exists():
             raise FileNotFoundError(f"{key} is missing: {external}")
+        if key == "known_valid_output":
+            external = rebound_known_valid_fixture(candidate, external, plan)
         command.extend([flag, str(external)])
     process = subprocess.run(
         command,
@@ -1945,6 +2538,48 @@ def finding_key(finding: dict[str, Any]) -> str | None:
         if isinstance(value, str) and value:
             return value
     return None
+
+
+def finding_reference(
+    finding: dict[str, Any],
+    *,
+    audit_id: str | None,
+) -> dict[str, Any]:
+    code = finding_key(finding)
+    payload = {
+        "finding_code": code,
+        "deterministic_check": finding.get("deterministic_check"),
+        "affected_files": sorted(
+            str(item)
+            for item in finding.get("affected_files", [])
+            if isinstance(item, str)
+        ),
+        "root_cause": (
+            finding.get("evidence", {}).get("root_cause")
+            if isinstance(finding.get("evidence"), dict)
+            else None
+        ),
+    }
+    return {
+        "finding_id": finding.get("finding_id"),
+        "finding_code": code,
+        "finding_fingerprint": canonical_json_hash(payload),
+        "deterministic_check": finding.get("deterministic_check"),
+        "severity": finding.get("severity"),
+        "audit_id": audit_id,
+    }
+
+
+def blocking_finding_references(
+    findings: list[dict[str, Any]],
+    *,
+    audit_id: str | None,
+) -> list[dict[str, Any]]:
+    return [
+        finding_reference(item, audit_id=audit_id)
+        for item in findings
+        if item.get("blocking") is True
+    ]
 
 
 def canonical_publish_route(report: dict[str, Any]) -> str | None:
@@ -2201,20 +2836,161 @@ def rebase_audit_paths(candidate: Path, final_root: Path) -> None:
         write_json(manifest_path, manifest)
 
 
+def externalize_generated_bundles(
+    candidate: Path,
+    root: Path,
+    plan: dict[str, Any],
+) -> dict[str, str]:
+    output = repair_output_root(root, plan)
+    if output is None:
+        return {}
+    destinations = {
+        "benchmark_audit": output / "repair_reaudit",
+        "benchmark_repair": output / "benchmark_repair",
+    }
+    for name, destination in destinations.items():
+        source = candidate / name
+        if not source.is_dir():
+            raise FileNotFoundError(
+                f"generated {name} bundle is missing before publication"
+            )
+        if destination.exists() or destination.is_symlink():
+            raise FileExistsError(
+                f"external repair output already exists: {destination}"
+            )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source.rename(destination)
+    return {name: str(path) for name, path in destinations.items()}
+
+
 def root_cause_id(report: dict[str, Any], plan: dict[str, Any]) -> str:
     value = f"{report['audit_id']}:{plan['finding_id']}"
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
 
 
-def history_root_for(root: Path) -> Path:
+def history_root_for(root: Path, plan: dict[str, Any] | None = None) -> Path:
+    if plan is not None:
+        output = repair_output_root(root, plan)
+        if output is not None:
+            return output / "repair_history"
     return root.parent / ".benchmark_repair_history"
 
 
-def prior_failed_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
-    history_root = history_root_for(root)
+def docker_image_identity() -> str:
+    docker = shutil.which("docker")
+    tag = sandbox_runtime.image_tag()
+    if docker is None:
+        return f"docker-cli-unavailable:{tag}"
+    try:
+        result = subprocess.run(
+            [docker, "image", "inspect", "--format", "{{.Id}}", tag],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return f"docker-image-unavailable:{tag}"
+    image_id = result.stdout.strip()
+    return image_id if result.returncode == 0 and image_id else f"unavailable:{tag}"
+
+
+def control_scope_id(report: dict[str, Any]) -> str:
+    try:
+        review_hash = collect_review_implementation_hashes().get(
+            "aggregate_hash"
+        )
+    except (OSError, ValueError):
+        review_hash = None
+    dockerfile = getattr(sandbox_runtime, "DOCKERFILE", None)
+    return canonical_json_hash(
+        {
+            "audit_id": report.get("audit_id"),
+            "review_implementation_hash": review_hash,
+            "repair_implementation_hash": sha256_file(Path(__file__)),
+            "docker_image_identity": docker_image_identity(),
+            "dockerfile_hash": (
+                sha256_file(dockerfile)
+                if isinstance(dockerfile, Path) and dockerfile.is_file()
+                else None
+            ),
+        }
+    )
+
+
+def control_failure_fingerprint(
+    exc: Exception,
+    *,
+    stage: str,
+    root: Path,
+) -> str:
+    reason = str(exc).replace(str(root), "<ROOT>")
+    reason = re.sub(
+        r"(repair|audit)-\\d{8}T\\d{6}Z-[0-9a-f]+",
+        r"\\1-<ID>",
+        reason,
+    )
+    reason = re.sub(r"\\s+", " ", reason).strip()
+    return canonical_json_hash(
+        {
+            "stage": stage,
+            "exception_type": type(exc).__name__,
+            "reason": reason,
+        }
+    )
+
+
+def control_failure_retryable(exc: Exception) -> bool:
+    reason = str(exc).lower()
+    deterministic_fragments = (
+        "attestation",
+        "fixture lineage",
+        "source-bound and immutable",
+        "tampered or stale",
+        "stale audit",
+        "evidence source",
+    )
+    return not any(fragment in reason for fragment in deterministic_fragments)
+
+
+def control_failure_decision(
+    prior_controls: list[tuple[Path, dict[str, Any]]],
+    fingerprint: str,
+    *,
+    transient: bool,
+) -> dict[str, Any]:
+    same_fingerprint = (
+        sum(
+            1
+            for _, item in prior_controls
+            if item.get("control_failure_fingerprint") == fingerprint
+        )
+        + 1
+    )
+    number = len(prior_controls) + 1
+    blocked = (
+        not transient
+        or same_fingerprint >= MAX_CONTROL_FAILURES_PER_FINGERPRINT
+        or number >= MAX_CONTROL_FAILURES_PER_SCOPE
+    )
+    return {
+        "number": number,
+        "same_fingerprint": same_fingerprint,
+        "blocked": blocked,
+        "retryable": not blocked,
+    }
+
+
+def prior_control_failures(
+    root: Path,
+    root_cause: str,
+    scope_id: str,
+    plan: dict[str, Any] | None = None,
+) -> list[tuple[Path, dict[str, Any]]]:
+    history_root = history_root_for(root, plan)
     if not history_root.is_dir():
         return []
-    attempts: list[dict[str, Any]] = []
+    failures: list[tuple[Path, dict[str, Any]]] = []
     for path in history_root.glob("*/attempt_manifest.json"):
         try:
             value = read_json(path)
@@ -2223,8 +2999,54 @@ def prior_failed_attempts(root: Path, root_cause: str) -> list[dict[str, Any]]:
         if (
             isinstance(value, dict)
             and value.get("root_cause") == root_cause
+            and value.get("attempt_kind") == "CONTROL_FAILURE"
+            and value.get("control_scope_id") == scope_id
+        ):
+            validate_fixed_bundle(path.parent)
+            failures.append((path.parent, value))
+    return sorted(
+        failures,
+        key=lambda item: str(item[1].get("recorded_at", "")),
+    )
+
+
+def prior_failed_attempts(
+    root: Path,
+    root_cause: str,
+    plan: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    history_root = history_root_for(root, plan)
+    if not history_root.is_dir():
+        return []
+    attempts: list[dict[str, Any]] = []
+    for path in history_root.glob("*/attempt_manifest.json"):
+        try:
+            value = read_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(value, dict) or value.get("root_cause") != root_cause:
+            continue
+        consumes_attempt = value.get("attempt_consumed")
+        if consumes_attempt is None:
+            # Backward compatibility: old bundles had no explicit attempt
+            # kind. Only an archived, completed re-audit is a semantic attempt;
+            # ROLLED_BACK control/setup failures never consume the budget.
+            try:
+                comparison = read_json(
+                    path.parent / "re_audit_comparison.json"
+                )
+            except (OSError, ValueError, json.JSONDecodeError):
+                comparison = {}
+            consumes_attempt = (
+                value.get("status")
+                in {"PARTIALLY_REPAIRED", "ABANDONED"}
+                and comparison.get("reaudit_count") == 1
+                and isinstance(comparison.get("reaudit_audit_id"), str)
+            )
+        if (
+            consumes_attempt is True
             and value.get("status")
-            in {"ROLLED_BACK", "ABANDONED", "PARTIALLY_REPAIRED"}
+            in {"ABANDONED", "PARTIALLY_REPAIRED"}
             and isinstance(value.get("attempt_number"), int)
             and value["attempt_number"] > 0
         ):
@@ -2406,7 +3228,7 @@ def record_control_stop(
     stop: PolicyStop,
 ) -> dict[str, Any]:
     repair_id = unique_id("repair-stop")
-    history_root = history_root_for(root)
+    history_root = history_root_for(root, plan)
     destination = history_root / repair_id
     destination.mkdir(parents=True)
     write_history_bundle(
@@ -2618,7 +3440,12 @@ def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]
         "audit_id": plan["audit_id"],
         "finding_id": finding["finding_id"],
         "deterministic_check": finding.get("deterministic_check"),
-        "finding_code": finding.get("title", finding.get("code")),
+        "finding_code": finding.get(
+            "finding_code", finding.get("title", finding.get("code"))
+        ),
+        "primary_finding_id": finding.get(
+            "primary_finding_id", plan.get("primary_finding_id")
+        ),
         "repair_scope": finding.get(
             "repair_scope", plan.get("repair_scope")
         ),
@@ -2635,7 +3462,40 @@ def build_fplan(plan: dict[str, Any], finding: dict[str, Any]) -> dict[str, Any]
         "package_identity": plan.get("package_identity"),
         "known_valid_output": plan.get("known_valid_output"),
         "agent_assessment": plan.get("agent_assessment"),
+        "source_audit_dir": plan.get("source_audit_dir"),
+        "repair_output_dir": plan.get("repair_output_dir"),
     }
+
+
+def deterministic_binding_view(plan: dict[str, Any]) -> dict[str, Any]:
+    """Represent proof-bound D6 consequences by their source queue class."""
+
+    view = json.loads(json.dumps(plan))
+    findings = {
+        item.get("finding_id"): item
+        for item in view.get("findings", [])
+        if isinstance(item, dict)
+    }
+    for item in findings.values():
+        if (
+            item.get("deterministic_check") != "D6"
+            or item.get("repair_class") != "AUTO_FIX"
+        ):
+            continue
+        primary_ids = {
+            operation.get("primary_finding_id")
+            for operation in item.get("operations", [])
+            if isinstance(operation, dict)
+        }
+        primary = findings.get(next(iter(primary_ids), None))
+        if (
+            len(primary_ids) == 1
+            and primary is not None
+            and primary.get("deterministic_check") in {"D3", "D4"}
+            and primary.get("repair_class") == "AUTO_FIX"
+        ):
+            item["repair_class"] = "ASSISTED_FIX"
+    return view
 
 
 def validate_source_audit_binding_batch(
@@ -2711,7 +3571,9 @@ def validate_source_audit_binding_batch(
     if plan.get("deterministic_contract") is not None:
         try:
             validate_deterministic_contract(report.get("deterministic_contract"))
-            validate_deterministic_plan_binding(report, plan)
+            validate_deterministic_plan_binding(
+                report, deterministic_binding_view(plan)
+            )
         except ValueError as exc:
             raise PolicyStop(
                 "BLOCKED_EVIDENCE",
@@ -2725,12 +3587,14 @@ def validate_fresh_audit_batch(
     plan: dict[str, Any],
     attestation_path: Path,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]]:
-    audit = root / "benchmark_audit"
+    audit = source_audit_dir(root, plan)
     validate_audit_attestation(root, audit, attestation_path)
     report = read_json(audit / "audit_report.json")
     manifest = read_json(audit / "audit_manifest.json")
     disposition = read_json(audit / "disposition.json")
-    authenticate_audit_bundle(root, report, manifest, disposition)
+    authenticate_audit_bundle(
+        root, report, manifest, disposition, audit=audit
+    )
     report_configuration(report)
     if plan["audit_id"] != report.get("audit_id"):
         raise ValueError("stale audit: plan audit_id is not authoritative")
@@ -2770,6 +3634,22 @@ def validate_fresh_audit_batch(
     return report, manifest, findings_by_id
 
 
+def operation_primary_finding(
+    fplan: dict[str, Any], operation: dict[str, Any]
+) -> str | None:
+    value = operation.get("primary_finding_id")
+    if value is None:
+        value = fplan.get("primary_finding_id")
+    return value if isinstance(value, str) and value else None
+
+
+def is_shared_operation_reference(
+    fplan: dict[str, Any], operation: dict[str, Any]
+) -> bool:
+    primary = operation_primary_finding(fplan, operation)
+    return primary is not None and primary != fplan.get("finding_id")
+
+
 def check_operation_policy(
     root: Path,
     operation: dict[str, Any],
@@ -2781,6 +3661,7 @@ def check_operation_policy(
     finding_code: str | None = None,
     deterministic_evidence: dict[str, Any] | None = None,
     repair_scope: str | None = None,
+    shared_operation_reference: bool = False,
 ) -> None:
     """Per-operation evidence-precision policy (raises PolicyStop on failure)."""
 
@@ -2791,6 +3672,17 @@ def check_operation_policy(
         and deterministic_check in {"D1", "D2"}
         and is_structural_auto_fix_operation(operation)
     )
+    proof_bound_auto_fix = is_proof_bound_d3_d4_auto_fix(
+        repair_class,
+        deterministic_check,
+        finding_code,
+        deterministic_evidence,
+    )
+    if shared_operation_reference and repair_class != "AUTO_FIX":
+        raise PolicyStop(
+            "POLICY_VIOLATION",
+            "shared operation references must remain AUTO_FIX",
+        )
     if structural_auto_fix:
         error = structural_auto_fix_operation_error(
             operation,
@@ -2810,10 +3702,15 @@ def check_operation_policy(
             "D1/D2 AUTO_FIX is limited to unambiguous output path/file "
             "synchronization.",
         )
-    if repair_class == "AUTO_FIX" and not structural_auto_fix:
+    if (
+        repair_class == "AUTO_FIX"
+        and not structural_auto_fix
+        and not shared_operation_reference
+    ):
         try:
             if deterministic_check in {"D3", "D4"}:
-                error = auto_fix_operation_error(
+                error = proof_bound_auto_fix_operation_error(
+                    root,
                     {
                         "deterministic_check": deterministic_check,
                         "title": finding_code,
@@ -2870,7 +3767,7 @@ def check_operation_policy(
             )
     if not (
         repair_class == "AUTO_FIX"
-        and deterministic_check in {"D3", "D4"}
+        and (proof_bound_auto_fix or shared_operation_reference)
     ) and not structural_auto_fix:
         validate_precision_matrix(
             operation,
@@ -2962,6 +3859,19 @@ def classify_finding(
                     for operation in fplan["operations"]
                 )
             )
+            or (
+                all(
+                    is_proof_bound_d3_d4_auto_fix(
+                        fplan["repair_class"],
+                        fplan.get("deterministic_check"),
+                        fplan.get("finding_code"),
+                        fplan.get("deterministic_evidence"),
+                    )
+                    or is_shared_operation_reference(fplan, operation)
+                    for operation in fplan["operations"]
+                )
+                and bool(fplan["operations"])
+            )
         )
     ):
         raise PolicyStop(
@@ -2988,6 +3898,9 @@ def classify_finding(
                 finding_code=fplan.get("finding_code"),
                 deterministic_evidence=fplan.get("deterministic_evidence"),
                 repair_scope=fplan.get("repair_scope"),
+                shared_operation_reference=is_shared_operation_reference(
+                    fplan, operation
+                ),
             )
         except PolicyStop as stop:
             blocked_operations.append(
@@ -2999,6 +3912,44 @@ def classify_finding(
             continue
         valid_operations.append(operation)
     return evidence, valid_operations, blocked_operations
+
+
+def _operation_semantics(operation: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in operation.items()
+        if key not in {"id", "evidence_ids", "primary_finding_id"}
+    }
+
+
+def shared_operation_is_safe(
+    owner_fplan: dict[str, Any],
+    owner_operation: dict[str, Any],
+    consequence_fplan: dict[str, Any],
+    consequence_operation: dict[str, Any],
+) -> bool:
+    """Allow only an explicitly owned, identical proof-bound operation."""
+
+    if (
+        owner_fplan.get("repair_class") != "AUTO_FIX"
+        or consequence_fplan.get("repair_class") != "AUTO_FIX"
+        or owner_fplan.get("deterministic_check") not in {"D3", "D4"}
+        or consequence_fplan.get("deterministic_check")
+        not in {"D3", "D4", "D6"}
+    ):
+        return False
+    owner_id = owner_fplan.get("finding_id")
+    primary_id = operation_primary_finding(
+        consequence_fplan, consequence_operation
+    )
+    if not isinstance(owner_id, str) or primary_id != owner_id:
+        return False
+    owner_primary = operation_primary_finding(owner_fplan, owner_operation)
+    if owner_primary not in {None, owner_id}:
+        return False
+    return _operation_semantics(owner_operation) == _operation_semantics(
+        consequence_operation
+    )
 
 
 def compute_repair_delta(
@@ -3054,11 +4005,14 @@ def archive_batch_attempt(
     reason: str,
     history_dir: Path | None = None,
     source_verdict: str | None = None,
+    attempt_kind: str = "CONTROL",
+    attempt_consumed: bool = False,
+    control_failure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Archive a non-publishing batch attempt and return its result payload."""
 
     repair_id = history_dir.name if history_dir is not None else unique_id("repair")
-    destination = history_dir or (history_root_for(root) / repair_id)
+    destination = history_dir or (history_root_for(root, plan) / repair_id)
     destination.mkdir(parents=True, exist_ok=True)
     review_verdict = report.get(
         "review_verdict", report.get("summary", {}).get("final_verdict")
@@ -3079,6 +4033,19 @@ def archive_batch_attempt(
         review_verdict=review_verdict,
         publishability=publishability,
     )
+    control_fields = (
+        {
+            "control_scope_id": control_failure.get("scope_id"),
+            "control_failure_fingerprint": control_failure.get("fingerprint"),
+            "control_failure_number": control_failure.get("number"),
+            "control_failure_same_fingerprint": control_failure.get(
+                "same_fingerprint"
+            ),
+            "retryable": control_failure.get("retryable"),
+        }
+        if isinstance(control_failure, dict)
+        else {}
+    )
     write_json(
         destination / "attempt_manifest.json",
         {
@@ -3087,6 +4054,9 @@ def archive_batch_attempt(
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "max_attempts": 2,
+            "attempt_kind": attempt_kind,
+            "attempt_consumed": attempt_consumed,
+            **control_fields,
             "status": repair_state,
             "decision": decision,
             "audit_id": report["audit_id"],
@@ -3105,7 +4075,10 @@ def archive_batch_attempt(
         **terminal_fields(repair_state, source_verdict=source_verdict),
         "root_cause": root_cause,
         "attempt_number": attempt_number,
-        "history_root": str(history_root_for(root)),
+        "attempt_kind": attempt_kind,
+        "attempt_consumed": attempt_consumed,
+        **control_fields,
+        "history_root": str(history_root_for(root, plan)),
         "history_dir": str(destination),
         "attempt_manifest": str(destination / "attempt_manifest.json"),
         "unresolved": unresolved,
@@ -3113,6 +4086,42 @@ def archive_batch_attempt(
         if isinstance(comparison, dict)
         else None,
         "reason": reason,
+    }
+
+
+def existing_infrastructure_block(
+    history_dir: Path,
+    manifest: dict[str, Any],
+    *,
+    source_verdict: str | None,
+) -> dict[str, Any]:
+    return {
+        "repair_id": manifest.get("repair_id"),
+        "status": "INFRASTRUCTURE_BLOCKED",
+        "decision": "ASSISTED_FIX",
+        **terminal_fields(
+            "INFRASTRUCTURE_BLOCKED",
+            source_verdict=source_verdict,
+        ),
+        "root_cause": manifest.get("root_cause"),
+        "attempt_number": manifest.get("attempt_number", 0),
+        "attempt_kind": "CONTROL_FAILURE",
+        "attempt_consumed": False,
+        "control_scope_id": manifest.get("control_scope_id"),
+        "control_failure_fingerprint": manifest.get(
+            "control_failure_fingerprint"
+        ),
+        "control_failure_number": manifest.get("control_failure_number"),
+        "control_failure_same_fingerprint": manifest.get(
+            "control_failure_same_fingerprint"
+        ),
+        "retryable": False,
+        "history_root": str(history_dir.parent),
+        "history_dir": str(history_dir),
+        "attempt_manifest": str(history_dir / "attempt_manifest.json"),
+        "unresolved": read_json(history_dir / "unresolved.json"),
+        "repair_delta": None,
+        "reason": manifest.get("reason"),
     }
 
 
@@ -3127,7 +4136,7 @@ def repair_batch(
             root, plan, attestation_path
         )
     except PolicyStop as stop:
-        report = read_json(root / "benchmark_audit/audit_report.json")
+        report = read_json(source_audit_dir(root, plan) / "audit_report.json")
         root_cause = batch_root_cause(report, plan)
         return archive_batch_attempt(
             root=root,
@@ -3148,7 +4157,7 @@ def repair_batch(
         )
     root_cause = batch_root_cause(report, plan)
     source_verdict = report.get("summary", {}).get("final_verdict")
-    prior = prior_failed_attempts(root, root_cause)
+    prior = prior_failed_attempts(root, root_cause, plan)
     if len(prior) >= 2 or any(item["status"] == "ABANDONED" for item in prior):
         return archive_batch_attempt(
             root=root,
@@ -3171,12 +4180,33 @@ def repair_batch(
             reason="Two failed batch attempts exhausted the root-cause limit.",
             source_verdict=source_verdict,
         )
+    scope_id = control_scope_id(report)
+    prior_controls = prior_control_failures(
+        root, root_cause, scope_id, plan
+    )
+    blocked_control = next(
+        (
+            (path, manifest)
+            for path, manifest in reversed(prior_controls)
+            if manifest.get("status") == "INFRASTRUCTURE_BLOCKED"
+            or manifest.get("retryable") is False
+        ),
+        None,
+    )
+    if blocked_control is not None:
+        return existing_infrastructure_block(
+            blocked_control[0],
+            blocked_control[1],
+            source_verdict=source_verdict,
+        )
 
     abandoned: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
     resolved_targets: list[str] = []
     valid_ops: list[dict[str, Any]] = []
-    op_finding: dict[str, str] = {}
+    operation_owners: dict[
+        str, tuple[dict[str, Any], dict[str, Any]]
+    ] = {}
     planned_regressions: list[dict[str, Any]] = []
     evidence_all: dict[str, dict[str, Any]] = {}
     for finding in plan["findings"]:
@@ -3233,17 +4263,49 @@ def repair_batch(
                 }
             )
             continue
-        valid_ids = {operation["id"] for operation in finding_valid_ops}
+        valid_ids: set[str] = set()
         for operation in finding_valid_ops:
             for evidence_id in operation.get("evidence_ids", []):
                 evidence_all[evidence_id] = evidence[evidence_id]
-            valid_ops.append(operation)
-            op_finding[operation["id"]] = finding_id
+            operation_id = operation["id"]
+            owner = operation_owners.get(operation_id)
+            if owner is None:
+                operation_owners[operation_id] = (fplan, operation)
+                valid_ops.append(operation)
+                valid_ids.add(operation_id)
+                continue
+            owner_fplan, owner_operation = owner
+            if shared_operation_is_safe(
+                owner_fplan, owner_operation, fplan, operation
+            ):
+                # The primary proof-bound operation is applied once.  The
+                # consequence finding still gets its own causal regression and
+                # remains a targeted re-audit closure requirement.
+                valid_ids.add(operation_id)
+                continue
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "operation_id": operation_id,
+                    "reason": (
+                        "POLICY_VIOLATION: duplicate operation id is not an "
+                        "identical, explicitly owned proof-bound consequence"
+                    ),
+                }
+            )
         for specification in fplan["regression_tests"]:
             causal = specification.get("causal_operation_ids", [])
             if set(causal).issubset(valid_ids):
                 planned_regressions.append(specification)
-        resolved_targets.append(finding_id)
+        if valid_ids:
+            resolved_targets.append(finding_id)
+        else:
+            blocked.append(
+                {
+                    "finding_id": finding_id,
+                    "reason": "all operations were blocked by operation ownership",
+                }
+            )
 
     unresolved_findings = blocked + abandoned
     if not valid_ops:
@@ -3265,11 +4327,10 @@ def repair_batch(
             source_verdict=source_verdict,
         )
 
-    ensure_command_regression_env(planned_regressions)
     attempt_number = len(prior) + 1
     repair_id = unique_id("repair")
     workspace = root.parent / ".benchmark_repair_tmp" / repair_id
-    history = history_root_for(root) / repair_id
+    history = history_root_for(root, plan) / repair_id
     if workspace.exists() or history.exists():
         raise FileExistsError("repair workspace already exists")
     workspace.parent.mkdir(exist_ok=True)
@@ -3281,19 +4342,26 @@ def repair_batch(
     # whole scope, so gate the rollback branch on an unambiguous ``is not None``
     # test rather than fragile ``in dir()`` introspection.
     regression_results: list[dict[str, Any]] | None = None
+    control_stage = "sandbox_preflight"
     try:
+        ensure_command_regression_env(planned_regressions)
+        control_stage = "workspace_setup"
         shutil.copytree(root, snapshot)
         shutil.copytree(snapshot, candidate)
+        control_stage = "before_regressions"
         regression_results = run_regressions(
             snapshot, planned_regressions, "before"
         )
+        control_stage = "apply_operations"
         changes = [apply_operation(candidate, operation) for operation in valid_ops]
         operation_files = {item["file"] for item in changes}
         assert_mutation_boundary(snapshot, candidate, operation_files)
         candidate_digest = core_contract_digest(candidate)
+        control_stage = "after_regressions"
         run_regressions(
             candidate, planned_regressions, "after", regression_results
         )
+        control_stage = "equal_depth_reaudit"
         reaudit = run_equal_depth_review(candidate, report, audit_manifest, plan)
         try:
             pass_evidence = validate_authoritative_pass(reaudit)
@@ -3306,8 +4374,23 @@ def repair_batch(
             pass_evidence["authoritative_pass"] = True
         assert_mutation_boundary(snapshot, candidate, operation_files)
     except Exception as exc:  # noqa: BLE001
-        repair_state = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
-        decision = "ASSISTED_FIX" if repair_state == "ROLLED_BACK" else "ABANDON"
+        # Setup, regression harness, apply, and Review invocation failures do
+        # not constitute an authoritative semantic assessment. Preserve them
+        # as control failures without consuming the two-attempt package budget.
+        fingerprint = control_failure_fingerprint(
+            exc, stage=control_stage, root=root
+        )
+        transient = control_failure_retryable(exc)
+        control_decision = control_failure_decision(
+            prior_controls,
+            fingerprint,
+            transient=transient,
+        )
+        blocked = control_decision["blocked"]
+        repair_state = (
+            "INFRASTRUCTURE_BLOCKED" if blocked else "ROLLED_BACK"
+        )
+        decision = "ASSISTED_FIX"
         history.mkdir(parents=True, exist_ok=True)
         if snapshot.exists():
             snapshot.rename(history / "snapshot")
@@ -3332,6 +4415,17 @@ def repair_batch(
             reason=str(exc),
             history_dir=history,
             source_verdict=source_verdict,
+            attempt_kind="CONTROL_FAILURE",
+            attempt_consumed=False,
+            control_failure={
+                "scope_id": scope_id,
+                "fingerprint": fingerprint,
+                "number": control_decision["number"],
+                "same_fingerprint": control_decision[
+                    "same_fingerprint"
+                ],
+                "retryable": control_decision["retryable"],
+            },
         )
         if workspace.exists():
             shutil.rmtree(workspace, ignore_errors=True)
@@ -3370,6 +4464,15 @@ def repair_batch(
         is not None
         and target_key in reaudit_finding_keys
     ]
+    reaudit_audit_id = reaudit.get("audit_id")
+    residual_blocking = blocking_finding_references(
+        reaudit_findings,
+        audit_id=(
+            reaudit_audit_id
+            if isinstance(reaudit_audit_id, str)
+            else None
+        ),
+    )
     has_fatal = any(
         item.get("severity") == "FATAL" for item in reaudit_findings
     ) or bool(summary.get("hard_gate"))
@@ -3423,14 +4526,9 @@ def repair_batch(
         ),
         "mutation_scope_allowed": True,
         "residual_blocking_finding_ids": (
-            [
-                item.get("finding_id")
-                for item in reaudit_findings
-                if item.get("blocking") is True
-            ]
-            if isinstance(reaudit_findings, list)
-            else []
+            [item["finding_id"] for item in residual_blocking]
         ),
+        "residual_blocking_findings": residual_blocking,
         "resolved_findings": resolved_targets,
         "unresolved_findings": unresolved_findings,
         "source_finding": {
@@ -3460,17 +4558,44 @@ def repair_batch(
             decision = "ASSISTED_FIX"
         reaudit_unresolved = [
             {
-                "finding_id": item.get("finding_id"),
-                "reason": "remains open after equal-depth re-audit",
+                **item,
+                "reason": "blocking finding remains after equal-depth re-audit",
             }
-            for item in reaudit_findings
-        ] + [
-            {
-                "finding_id": finding_id,
-                "reason": "targeted finding still present in equal-depth re-audit",
-            }
-            for finding_id in targets_still_open
+            for item in residual_blocking
         ]
+        residual_codes = {
+            item.get("finding_code") for item in residual_blocking
+        }
+        for source_finding_id in targets_still_open:
+            source_key = finding_key(
+                findings_by_id.get(source_finding_id, {})
+            )
+            if source_key in residual_codes:
+                continue
+            matching = next(
+                (
+                    item
+                    for item in reaudit_findings
+                    if finding_key(item) == source_key
+                ),
+                {},
+            )
+            reaudit_unresolved.append(
+                {
+                    **finding_reference(
+                        matching,
+                        audit_id=(
+                            reaudit_audit_id
+                            if isinstance(reaudit_audit_id, str)
+                            else None
+                        ),
+                    ),
+                    "source_finding_id": source_finding_id,
+                    "reason": (
+                        "targeted finding remains after equal-depth re-audit"
+                    ),
+                }
+            )
         history.mkdir(parents=True, exist_ok=True)
         if snapshot.exists():
             snapshot.rename(history / "snapshot")
@@ -3496,6 +4621,8 @@ def repair_batch(
             ),
             history_dir=history,
             source_verdict=source_verdict,
+            attempt_kind="SEMANTIC_REAUDIT",
+            attempt_consumed=True,
         )
         result["repair_delta"] = repair_delta
         if workspace.exists():
@@ -3519,6 +4646,8 @@ def repair_batch(
         "root_cause": root_cause,
         "attempt_number": attempt_number,
         "max_attempts": 2,
+        "attempt_kind": "SEMANTIC_REAUDIT",
+        "attempt_consumed": True,
         "finding_id": None,
         "finding_ids": resolved_targets,
         "repair_class": "ASSISTED_FIX",
@@ -3600,11 +4729,16 @@ def repair_batch(
             "recorded_at": timestamp(),
         },
     )
+    generated_outputs = externalize_generated_bundles(candidate, root, plan)
     original = history / "original"
     root.rename(original)
     try:
         candidate.rename(root)
     except Exception:
+        for name, external in generated_outputs.items():
+            external_path = Path(external)
+            if external_path.exists():
+                external_path.rename(candidate / name)
         original.rename(root)
         raise
     shutil.rmtree(workspace, ignore_errors=True)
@@ -3616,12 +4750,13 @@ def repair_batch(
         **terminal_fields("REPAIRED"),
         "benchmark_root": str(root),
         "history_dir": str(history),
-        "history_root": str(history_root_for(root)),
+        "history_root": str(history_root_for(root, plan)),
         "root_cause": root_cause,
         "attempt_number": attempt_number,
         "audit_id": reaudit["audit_id"],
         "resolved_findings": resolved_targets,
         "repair_delta": repair_delta,
+        "generated_outputs": generated_outputs,
     }
 
 
@@ -3629,6 +4764,8 @@ def repair(
     root: Path,
     plan_path: Path,
     attestation_path: Path,
+    audit_dir: Path | None = None,
+    repair_output_dir: Path | None = None,
 ) -> dict[str, Any]:
     root = root.expanduser().resolve()
     if not root.is_dir() or not (root / "instruction.md").is_file() or not (
@@ -3636,6 +4773,14 @@ def repair(
     ).is_dir():
         raise ValueError("input must be a Harbor 题包 with instruction.md and tests/")
     plan = validate_external_plan(root, plan_path)
+    if audit_dir is not None:
+        plan["source_audit_dir"] = str(audit_dir.expanduser().resolve())
+    if repair_output_dir is not None:
+        plan["repair_output_dir"] = str(
+            repair_output_dir.expanduser().resolve()
+        )
+    source_audit_dir(root, plan)
+    repair_output_root(root, plan)
     plan["package_identity"] = package_identity(root)
     if isinstance(plan.get("findings"), list):
         return repair_batch(root, plan, attestation_path)
@@ -3644,7 +4789,7 @@ def repair(
             root, plan, attestation_path
         )
     except PolicyStop as stop:
-        report = read_json(root / "benchmark_audit/audit_report.json")
+        report = read_json(source_audit_dir(root, plan) / "audit_report.json")
         root_cause = root_cause_id(report, plan)
         return record_control_stop(root, report, plan, root_cause, stop)
     root_cause = root_cause_id(report, plan)
@@ -3656,7 +4801,7 @@ def repair(
             root_cause,
             PolicyStop("ABANDON", plan["justification"]),
         )
-    prior = prior_failed_attempts(root, root_cause)
+    prior = prior_failed_attempts(root, root_cause, plan)
     if len(prior) >= 2 or any(item["status"] == "ABANDONED" for item in prior):
         return {
             "status": "ABANDONED",
@@ -3671,7 +4816,7 @@ def repair(
                 repair_status="ABANDONED",
             ),
             "root_cause": root_cause,
-            "history_root": str(history_root_for(root)),
+            "history_root": str(history_root_for(root, plan)),
             "attempts": len(prior),
             "reason": "Two failed attempts exhausted the root-cause limit.",
         }
@@ -3684,7 +4829,7 @@ def repair(
     attempt_number = len(prior) + 1
     repair_id = unique_id("repair")
     workspace = root.parent / ".benchmark_repair_tmp" / repair_id
-    history = history_root_for(root) / repair_id
+    history = history_root_for(root, plan) / repair_id
     if workspace.exists() or history.exists():
         raise FileExistsError("repair workspace already exists")
     workspace.parent.mkdir(exist_ok=True)
@@ -3818,11 +4963,18 @@ def repair(
             "recorded_at": timestamp(),
         }
         write_json(history / "attempt_manifest.json", attempt_manifest)
+        generated_outputs = externalize_generated_bundles(
+            candidate, root, plan
+        )
         original = history / "original"
         root.rename(original)
         try:
             candidate.rename(root)
         except Exception:
+            for name, external in generated_outputs.items():
+                external_path = Path(external)
+                if external_path.exists():
+                    external_path.rename(candidate / name)
             original.rename(root)
             raise
         shutil.rmtree(workspace, ignore_errors=True)
@@ -3834,10 +4986,11 @@ def repair(
             **terminal_fields("REPAIRED"),
             "benchmark_root": str(root),
             "history_dir": str(history),
-            "history_root": str(history_root_for(root)),
+            "history_root": str(history_root_for(root, plan)),
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "audit_id": reaudit["audit_id"],
+            "generated_outputs": generated_outputs,
         }
     except Exception as exc:  # noqa: BLE001
         status = "ROLLED_BACK" if attempt_number == 1 else "ABANDONED"
@@ -3904,7 +5057,7 @@ def repair(
             "root_cause": root_cause,
             "attempt_number": attempt_number,
             "history_dir": str(history),
-            "history_root": str(history_root_for(root)),
+            "history_root": str(history_root_for(root, plan)),
             "attempt_manifest": str(history / "attempt_manifest.json"),
             "reason": str(exc),
         }
@@ -3917,12 +5070,28 @@ def main() -> int:
     parser.add_argument("benchmark_root")
     parser.add_argument("--plan", required=True)
     parser.add_argument("--audit-attestation", required=True)
+    parser.add_argument(
+        "--audit-dir",
+        help="authoritative source audit directory outside the Harbor 题包",
+    )
+    parser.add_argument(
+        "--repair-output-dir",
+        help="external directory for repair, re-audit, and history bundles",
+    )
     arguments = parser.parse_args()
     try:
         result = repair(
             Path(arguments.benchmark_root),
             Path(arguments.plan),
             Path(arguments.audit_attestation),
+            audit_dir=(
+                Path(arguments.audit_dir) if arguments.audit_dir else None
+            ),
+            repair_output_dir=(
+                Path(arguments.repair_output_dir)
+                if arguments.repair_output_dir
+                else None
+            ),
         )
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0 if result["status"] == "REPAIRED" else 3

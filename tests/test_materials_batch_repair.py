@@ -1,6 +1,6 @@
 """Batch repair (§8.4) tests: multi-finding apply, partial-fix, publish-only-on-
 PASS, per-audit attempt limit, per-op BLOCKED_EVIDENCE that does not block
-siblings, and the four-state -> unified terminal field mapping."""
+siblings, and the five-state -> unified terminal field mapping."""
 
 from __future__ import annotations
 
@@ -470,6 +470,49 @@ def run_repair(
 
 
 class MaterialsBatchRepairTests(unittest.TestCase):
+    def test_shared_proof_operation_requires_explicit_owner_and_identity(self) -> None:
+        module = repair_module()
+        owner_fplan = {
+            "finding_id": "d3-root",
+            "repair_class": "AUTO_FIX",
+            "deterministic_check": "D3",
+        }
+        consequence_fplan = {
+            "finding_id": "d6-consequence",
+            "repair_class": "AUTO_FIX",
+            "deterministic_check": "D6",
+        }
+        operation = {
+            "id": "append-return",
+            "type": "replace_text",
+            "file": "tests/checker.py",
+            "old": "before",
+            "new": "after",
+            "primary_finding_id": "d3-root",
+            "evidence_ids": ["root-evidence"],
+        }
+        self.assertTrue(
+            module.shared_operation_is_safe(
+                owner_fplan,
+                operation,
+                consequence_fplan,
+                dict(operation),
+            )
+        )
+        changed = dict(operation, new="different")
+        self.assertFalse(
+            module.shared_operation_is_safe(
+                owner_fplan, operation, consequence_fplan, changed
+            )
+        )
+        unowned = dict(operation)
+        unowned.pop("primary_finding_id")
+        self.assertFalse(
+            module.shared_operation_is_safe(
+                owner_fplan, operation, consequence_fplan, unowned
+            )
+        )
+
     def test_batch_multi_finding_repaired_and_published(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
@@ -706,10 +749,18 @@ class MaterialsBatchRepairTests(unittest.TestCase):
             self.assertFalse(result["publishable"])
             self.assertFalse((package / "solution/solve.sh").is_file())
             self.assertFalse((package / "benchmark_repair").exists())
-            unresolved_ids = {
-                item.get("finding_id") for item in result["unresolved"]
-            }
-            self.assertIn(FINDING_A, unresolved_ids)
+            residual = next(
+                item
+                for item in result["unresolved"]
+                if item.get("source_finding_id") == FINDING_A
+            )
+            self.assertEqual(residual["finding_id"], "reaudit-residual")
+            self.assertEqual(
+                residual["finding_code"], "SOLUTION_ENTRYPOINT_MISSING"
+            )
+            self.assertTrue(
+                residual["finding_fingerprint"].startswith("sha256:")
+            )
             repair_module().validate_fixed_bundle(Path(result["history_dir"]))
 
     def test_batch_rollback_before_regressions_preserves_package(self) -> None:
@@ -759,6 +810,27 @@ class MaterialsBatchRepairTests(unittest.TestCase):
                 original_solve,
             )
             self.assertFalse((package / "benchmark_repair").exists())
+
+            # A control/regression-harness rollback is not an authoritative
+            # semantic attempt. The repeated fingerprint trips the separate
+            # control-plane circuit breaker without converging to ABANDONED.
+            completed_again = run_repair(package, plan_path, runner)
+            self.assertEqual(completed_again.returncode, 3)
+            second = json.loads(completed_again.stdout)
+            self.assertEqual(second["status"], "INFRASTRUCTURE_BLOCKED")
+            self.assertEqual(second["attempt_number"], 1)
+            self.assertEqual(second["attempt_kind"], "CONTROL_FAILURE")
+            self.assertFalse(second["attempt_consumed"])
+            self.assertFalse(second["retryable"])
+            self.assertEqual(second["control_failure_same_fingerprint"], 2)
+
+            # Once open, the breaker returns its existing terminal record and
+            # does not create an unbounded stream of retry histories.
+            completed_third = run_repair(package, plan_path, runner)
+            self.assertEqual(completed_third.returncode, 3)
+            third = json.loads(completed_third.stdout)
+            self.assertEqual(third["status"], "INFRASTRUCTURE_BLOCKED")
+            self.assertEqual(third["history_dir"], second["history_dir"])
 
     def test_batch_attempt_limit_second_failure_is_abandoned(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

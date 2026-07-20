@@ -18,8 +18,17 @@ Keep the plan outside the 题包 and run:
 ```sh
 python scripts/run_repair.py <Harbor题包目录> \
   --plan <repair-plan.json> \
-  --audit-attestation <immutable-external-attestation.json>
+  --audit-attestation <immutable-external-attestation.json> \
+  --audit-dir <external-source-audit/benchmark_audit> \
+  --repair-output-dir <external-record-directory>
 ```
+The source audit may also live in an external sibling record directory; the
+Harbor 题包 must not receive generated audit or repair-report files.
+`--repair-output-dir` stores the re-audit, repair bundle, and attempt history
+outside the package. When a source-bound public fixture is supplied, Repair
+copies its unchanged output bytes and rebinds only the temporary re-audit
+manifest to the candidate's quality-source hashes. The derived manifest must
+carry a validated parent-manifest lineage; changing fixture bytes is rejected.
 
 Historical plans use schema `0.1` and remain readable as evidence archives.
 New deterministic plans use
@@ -65,10 +74,30 @@ publication must use the bound schema above.
 
 There is no human approval state. The closed decision classes are autonomous:
 
-- `AUTO_FIX` is deterministic and needs no scientific interpretation.
+- For D1–D6, `AUTO_FIX` is narrowly limited to restoring existing
+  contract/scoring wiring with a unique source-bound answer: synchronize an
+  existing output declaration/path, restore an existing scorer
+  registration/binding/return or final-reward connection, restore a standard
+  Harbor entrypoint around one unique existing producer, or normalize already
+  declared finite positive weights while preserving their proven ratios.
+- D1–D6 `AUTO_FIX` must not introduce or choose Gold values, targets,
+  tolerances, thresholds, formulas, scorer algorithms, fields, units,
+  scientific parameters, or science semantics. It also must not fabricate a
+  producer or make an ignored core output appear scored through a superficial
+  read.
+- `AUTO_FIX` operations require `core_science_change=false`, source-bound
+  proof, and one causal fail-before/pass-after regression. A passing
+  regression is not scientific evidence.
 - `ASSISTED_FIX` makes an evidence-backed scientific or checker correction;
-  every operation must link one or more plan evidence IDs.
+  every operation must link one or more plan evidence IDs. Changes outside the
+  narrow D1–D6 automatic boundary require this class only when the evidence
+  precision is sufficient.
 - `ABANDON` records a reason only and carries no operations.
+
+If evidence cannot support the requested semantic choice, record
+`BLOCKED_EVIDENCE` and abandon that operation rather than guessing. Oracle or
+solution content and metadata cannot support a public contract, schema,
+scoring, or science change; Oracle values must never enter repair evidence.
 
 ## Batch flow (one pass, one re-audit)
 
@@ -91,7 +120,7 @@ There is no human approval state. The closed decision classes are autonomous:
 
 ## Terminal states and unified fields
 
-The batch resolves to one of four states, mapped to the unified terminal fields
+The batch resolves to one of five states, mapped to the unified terminal fields
 `disposition` / `publishable` / `repair_state`:
 
 | repair_state | when | disposition | publishable | package |
@@ -100,21 +129,35 @@ The batch resolves to one of four states, mapped to the unified terminal fields
 | `PARTIALLY_REPAIRED` | some findings resolved but re-audit not PASS, or some `BLOCKED_EVIDENCE`/`ABANDON` remain | `CONDITIONAL` | `false` | original preserved |
 | `ABANDONED` | nothing fixable, or re-audit still FATAL / hits a Hard Gate / needs a core-science change | `REJECT` | `false` | original preserved |
 | `ROLLED_BACK` | batch apply or regression failed | source verdict | `false` | restored unchanged |
+| `INFRASTRUCTURE_BLOCKED` | a deterministic control failure occurs, one control fingerprint repeats twice, or three control failures occur in one environment scope | source verdict | `false` | restored unchanged |
 
 **Publish invariant:** for a deterministic plan, atomic publication requires
 `PASS + deterministic CLEAN + no Hard Gate + identity preserved + allowed
 mutation scope + all target findings resolved`, with `reaudit_count=1` at E1.
 Any residual deterministic blocker is a non-published
-`PARTIALLY_REPAIRED`/`ABANDONED`/`ROLLED_BACK` result. Never publish a
+`PARTIALLY_REPAIRED`/`ABANDONED`/`ROLLED_BACK`/
+`INFRASTRUCTURE_BLOCKED` result. Never publish a
 partially-fixed package. The old `PUBLISHED` state remains readable only for
 legacy certification archives.
 
 ## Attempt limit
 
-The limit is per `audit_id` batch, not per finding. The first batch that does
-not reach PASS is `ROLLED_BACK`/`PARTIALLY_REPAIRED`; a second unresolved batch,
-or any post-repair FATAL that remains, converges to `ABANDONED`. Later calls
-return the existing `ABANDONED` state and never create a third candidate.
+The limit is per `audit_id` batch, not per finding, and counts only completed
+equal-depth semantic re-audits. Setup, Docker, fixture-lineage, regression
+harness, apply, or Review invocation failures are `CONTROL_FAILURE` rollbacks
+with `attempt_consumed=false`; they never exhaust the package's semantic
+budget. They have a separate circuit breaker: deterministic attestation,
+evidence, or fixture-lineage failures block immediately; the same transient
+fingerprint blocks on its second occurrence; rotating transient failures block
+on the third occurrence in one scope. A blocked control state is
+`INFRASTRUCTURE_BLOCKED` with `retryable=false` and is returned without creating
+more histories. The scope binds the audit, Review/Repair implementation,
+Dockerfile, configured image identity, and therefore resets only after a
+relevant environment or implementation change. The first completed re-audit
+that does not reach PASS is
+`PARTIALLY_REPAIRED`; a second unresolved completed re-audit, or a post-repair
+FATAL, converges to `ABANDONED`. Later calls return the existing `ABANDONED`
+state and never create a third semantic candidate.
 
 ## Allowed changes
 
@@ -140,7 +183,8 @@ Repair **can**:
 - restore structure/config integrity (missing entrypoint, malformed JSON/CSV),
 - normalize the public instruction to the frozen scientific contract with
   paper/instruction evidence,
-- reuse the audit's 2.5 checker-coverage finding to fix C04/C02 checker gaps,
+- reuse the audit's 2.5 checker-coverage finding only to restore existing
+  C04/C02 contract or scoring wiring,
 - fix Harbor-path or add exception handling (no scientific paper required).
 
 Repair **cannot**:

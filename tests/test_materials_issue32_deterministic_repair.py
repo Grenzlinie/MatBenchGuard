@@ -253,6 +253,28 @@ def published_bundle(
 
 
 class MaterialsIssue32DeterministicRepairTests(unittest.TestCase):
+    def test_batch_fplan_preserves_finding_code_for_repair_gate(self) -> None:
+        contract = required_contract()
+        plan = deterministic_plan(
+            contract,
+            findings=[
+                {
+                    "finding_id": "F1",
+                    "deterministic_check": "D4",
+                    "finding_code": "WEIGHTS_NOT_ONE",
+                    "repair_class": "AUTO_FIX",
+                    "justification": "Normalize proven ratios.",
+                    "operations": [],
+                    "regression_tests": [],
+                    "evidence": [],
+                }
+            ],
+        )
+
+        fplan = run_repair.build_fplan(plan, plan["findings"][0])
+
+        self.assertEqual(fplan["finding_code"], "WEIGHTS_NOT_ONE")
+
     def test_complete_plan_binds_schema_queue_and_finding_owner(self) -> None:
         contract = required_contract()
         plan = deterministic_plan(contract)

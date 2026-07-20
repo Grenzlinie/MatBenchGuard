@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import tempfile
@@ -94,7 +95,198 @@ def evidence(
     return item
 
 
+def nested_return_proof(checker: Path) -> dict[str, Any]:
+    source = checker.read_text(encoding="utf-8")
+    function = next(
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.FunctionDef) and node.name == "score_0"
+    )
+    return {
+        "proof_status": "PROVEN",
+        "auto_fix_provable": True,
+        "source_file": "tests/checker.py",
+        "source_hash": sha256_file(checker),
+        "function_name": "score_0",
+        "function_span": {
+            "lineno": function.lineno,
+            "end_lineno": function.end_lineno,
+            "col_offset": function.col_offset,
+            "end_col_offset": function.end_col_offset,
+        },
+        "return_expression": "score(artifact, step, ctx)",
+    }
+
+
 class MaterialsIssue21RepairSecurityTests(unittest.TestCase):
+    def test_batch_d3_proof_allows_mechanical_return_without_harbor_patch(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            checker = root / "tests/checker.py"
+            checker.parent.mkdir()
+            source = (
+                "def score_0(artifact, step, ctx):\n"
+                "    def score(artifact, step, ctx):\n"
+                "        return 0.5\n"
+            )
+            checker.write_text(source, encoding="utf-8")
+            proof = nested_return_proof(checker)
+            report_text = "SCORER_RETURN_NOT_TOTAL\n"
+            (root / "benchmark_audit").mkdir()
+            (root / "benchmark_audit/audit_report.json").write_text(
+                report_text, encoding="utf-8"
+            )
+            operation = {
+                "id": "append-score-return",
+                "type": "replace_text",
+                "file": "tests/checker.py",
+                "old": source,
+                "new": source + "    return score(artifact, step, ctx)\n",
+                "evidence_ids": ["audit-finding"],
+            }
+            module = repair_module()
+            fplan = {
+                "finding_id": "F-D3",
+                "repair_class": "AUTO_FIX",
+                "deterministic_check": "D3",
+                "finding_code": "SCORER_RETURN_NOT_TOTAL",
+                "core_science_change": False,
+                "deterministic_evidence": {"return_proof": {"score_0": proof}},
+                "evidence": [
+                    {
+                        "id": "audit-finding",
+                        "source": "benchmark_audit:F-D3",
+                        "quote": report_text.strip(),
+                        "source_hash": sha256_file(
+                            root / "benchmark_audit/audit_report.json"
+                        ),
+                    }
+                ],
+                "operations": [operation],
+                "regression_tests": [],
+            }
+
+            _, valid, blocked = module.classify_finding(
+                root, {"findings": []}, {}, fplan
+            )
+
+        self.assertEqual(valid, [operation])
+        self.assertEqual(blocked, [])
+
+    def test_d3_proof_rejects_drift_and_unproven_semantic_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            checker = root / "tests/checker.py"
+            checker.parent.mkdir()
+            source = (
+                "def score_0(artifact, step, ctx):\n"
+                "    def score(artifact, step, ctx):\n"
+                "        return 0.5\n"
+            )
+            checker.write_text(source, encoding="utf-8")
+            proof = nested_return_proof(checker)
+            finding = {
+                "deterministic_check": "D3",
+                "title": "SCORER_RETURN_NOT_TOTAL",
+                "evidence": {"return_proof": {"score_0": proof}},
+            }
+            module = repair_module()
+            semantic_operation = {
+                "id": "bad-return",
+                "type": "replace_text",
+                "file": "tests/checker.py",
+                "old": source,
+                "new": source + "    return 0\n",
+            }
+            self.assertIsNotNone(
+                module.proof_bound_auto_fix_operation_error(
+                    root, finding, semantic_operation
+                )
+            )
+
+            checker.write_text(
+                source.replace("return 0.5", "return 0.25"), encoding="utf-8"
+            )
+            drift_operation = {
+                "id": "stale-return",
+                "type": "replace_text",
+                "file": "tests/checker.py",
+                "old": checker.read_text(encoding="utf-8"),
+                "new": checker.read_text(encoding="utf-8")
+                + "    return score(artifact, step, ctx)\n",
+            }
+            error = module.proof_bound_auto_fix_operation_error(
+                root, finding, drift_operation
+            )
+
+        self.assertIsNotNone(error)
+        self.assertIn("source/function", error)
+
+    def test_d4_normalization_rejects_source_value_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            grading = root / "tests/grading_spec.json"
+            grading.parent.mkdir()
+            grading.write_text(
+                json.dumps(
+                    {
+                        "steps": [
+                            {"id": "a", "weight": 2.0},
+                            {"id": "b", "weight": 1.0},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            evidence_value = {
+                "ratio_preserving_normalization": True,
+                "weights": [
+                    {"component_id": "a", "value": 2.0},
+                    {"component_id": "b", "value": 1.0},
+                ],
+                "normalized_weights": [
+                    {"component_id": "a", "value": 2 / 3},
+                    {"component_id": "b", "value": 1 / 3},
+                ],
+            }
+            operation = {
+                "id": "normalize-a",
+                "type": "json_set",
+                "file": "tests/grading_spec.json",
+                "path": ["steps", 0, "weight"],
+                "value": 2 / 3,
+            }
+            module = repair_module()
+            finding = {
+                "deterministic_check": "D4",
+                "title": "WEIGHTS_NOT_ONE",
+                "evidence": evidence_value,
+            }
+            self.assertIsNone(
+                module.proof_bound_auto_fix_operation_error(
+                    root, finding, operation
+                )
+            )
+            grading.write_text(
+                json.dumps(
+                    {
+                        "steps": [
+                            {"id": "a", "weight": 5.0},
+                            {"id": "b", "weight": 1.0},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            error = module.proof_bound_auto_fix_operation_error(
+                root, finding, operation
+            )
+
+        self.assertIsNotNone(error)
+        self.assertIn("drifted", error)
+
     def test_co_tampered_report_and_manifest_are_blocked_by_attestation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)

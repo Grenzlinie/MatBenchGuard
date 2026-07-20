@@ -36,8 +36,10 @@ Only proven OPEN repairable blockers enter its complete `REQUIRED` queue;
 advisory risks never block PASS. A PASS report is eligible for publication only
 when the contract is valid and `CLEAN`.
 
-Read [references/harbor-contract.md](references/harbor-contract.md) and
-[references/no-paper-e1.md](references/no-paper-e1.md).
+## Narrow D1–D6 `AUTO_FIX` boundary
+Review classifies repairability against the frozen contract and does not mutate a package. `AUTO_FIX` is limited to unique source-bound restoration of existing D1–D6 contract/scoring wiring: output declaration/path synchronization, scorer registration/binding/return/final-reward connections, a standard Harbor entrypoint around one existing producer, or ratio-preserving normalization of finite positive declared weights.
+It must not introduce or choose Gold values, targets, tolerances, thresholds, formulas, scorer algorithms, fields, units, scientific parameters, or science semantics; fabricate a producer; make an ignored core output appear scored; or use Oracle/solution content or metadata as evidence. Semantic selection is `ASSISTED_FIX` only with type-matched evidence, otherwise `ABANDON`/`BLOCKED_EVIDENCE`; Oracle values remain absent from audit evidence.
+Read [references/harbor-contract.md](references/harbor-contract.md) and [references/no-paper-e1.md](references/no-paper-e1.md).
 
 ## Contract-role mapping
 Do not treat every path under `/app/outputs` as a scored answer. Build and
@@ -134,8 +136,10 @@ paper-grounded E1 (the default path):
 python scripts/run_review.py <Harbor题包目录> \
   --paper-mode paper_grounded \
   --execution-level E1 \
+  --audit-output-dir <外部审计目录> \
   --agent-assessment <assessment.json> --attestation-output <external.json>
 ```
+`--audit-output-dir` keeps `benchmark_audit/` and its history outside the Harbor 题包.
 The optional attestation output is required before routing an audit into
 Repair. It is external, non-overwriting, read-only, and byte-binds audit and
 external-input hashes. Review provenance hashes the canonical dependency list
